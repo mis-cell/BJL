@@ -482,6 +482,7 @@ export default function SaudaEntry({
   };
 
   return (
+<<<<<<< Updated upstream
     <div className="min-h-screen bg-[#F7F5EF] flex flex-col font-sans text-slate-800">
       {/* 1. Enterprise Top Bar Header */}
       <header className="bg-[#174C2C] text-white px-6 py-3.5 shadow-md flex items-center justify-between border-b border-[#0F331D]">
@@ -497,6 +498,749 @@ export default function SaudaEntry({
               ESTD. 1979. 1979
             </span>
           </div>
+=======
+    <LegacyLayout 
+      title={initialData ? "P.O Automation » [EDIT SAUDA / ORDER]" : "P.O Automation » [NEW SAUDA / ORDER ENTRY]"} 
+      subtitle={initialData ? "Update existing Sauda Contract / Order" : "Create a new Sauda Contract / Order"} 
+      onClose={onCancel}
+    >
+      <div ref={formContainerRef} className="space-y-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+        {/* Main Header Form */}
+        <div className="grid grid-cols-12 gap-4">
+           {/* Feeding Column */}
+           <div className="col-span-12 flex flex-col gap-4">
+              {/* <LegacyFieldset legend="Basic Details">
+                 <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
+                     <div className="col-span-3 flex items-center gap-2">
+                        <label className="text-[11px] font-bold w-12 shrink-0">Session</label>
+                        <input className="flex-1 bg-slate-100 border border-gray-400 p-0.5 text-xs font-black text-slate-600" name="session" value={displaySessionValue} readOnly title="Session base path" />
+                     </div>
+
+                     <div className="col-span-3 flex items-center gap-2">
+                        <label className="text-[11px] font-bold w-20 shrink-0 text-red-900 uppercase">Order No.</label>
+                        <input className="flex-1 bg-[#ffffd0] border border-gray-400 p-0.5 text-xs font-black text-red-900" name="sauda_no" value={formData.sauda_no || ''} onChange={handleChange} placeholder="e.g. 0152" required />
+                     </div>
+                     
+                     <div className="col-span-3 flex items-center gap-2">
+                        <label className="text-[11px] font-bold w-16 shrink-0 text-blue-900 italic uppercase">P.O. Type</label>
+                        <select name="po_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.po_type} onChange={handleChange}>
+                           <option>Normal</option>
+                           <option>PTF</option>
+                        </select>
+                     </div>
+                     
+                     <div className="col-span-3 flex items-center gap-2">
+                        <label className="text-[11px] font-bold w-12 shrink-0">Date</label>
+                        <input type="date" name="date" value={formData.date} onChange={handleChange} className="flex-1 bg-white border border-gray-400 p-0.5 text-xs outline-none" />
+                     </div>
+
+                    <ComboField label="Broker" name="broker" value={formData.broker} onChange={handleChange} options={brokers.map(b => b.brok_name)} />
+                    <ComboField label="Supplier" name="supplier" value={formData.supplier} onChange={handleChange} options={suppliers.map(s => s.supp_name)} />
+                    <ComboField label="Challan Supplier" name="challan_supplier" value={formData.challan_supplier} onChange={handleChange} options={suppliers.map(s => s.supp_name)} />
+                    <ComboField label="Area" name="area" value={formData.area} onChange={handleChange} options={areas.map(a => a.area_name)} />
+
+                 </div>
+              </LegacyFieldset> */}
+
+              {/* Basic details new */}
+
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+
+                {/* Header */}
+                <div className="bg-[#1A2619] px-6 py-4">
+                    <h2 className="text-white font-bold text-lg">
+                        Basic Details
+                    </h2>
+                    <p className="text-blue-100 text-sm">
+                        Purchase Order Information
+                    </p>
+                </div>
+
+                <div className="p-6">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+
+                        {/* Session */}
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Session
+                            </label>
+
+                            <input
+                                name="session"
+                                value={displaySessionValue}
+                                readOnly
+                                className="w-full rounded-xl border bg-slate-100 border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                            />
+                        </div>
+
+                        {/* Order Number */}
+
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Order Number
+                            </label>
+
+                            <input
+                                name="sauda_no"
+                                value={formData.sauda_no || ""}
+                                onChange={handleChange}
+                                placeholder="Enter Order No."
+                                className="w-full rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-700 font-bold focus:ring-2 focus:ring-red-400 outline-none"
+                            />
+                        </div>
+
+                        {/* PO Type */}
+
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                P.O. Type
+                            </label>
+
+                            <select
+                                name="po_type"
+                                value={formData.po_type}
+                                onChange={handleChange}
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option>Normal</option>
+                                <option>PTF</option>
+                            </select>
+                        </div>
+
+                        {/* Date */}
+
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Date
+                            </label>
+
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+
+                        <ComboField
+                            label="Broker"
+                            name="broker"
+                            value={formData.broker}
+                            onChange={handleChange}
+                            options={brokers.map((b) => b.brok_name)}
+                        />
+
+                        <ComboField
+                            label="Supplier"
+                            name="supplier"
+                            value={formData.supplier}
+                            onChange={handleChange}
+                            options={suppliers.map((s) => s.supp_name)}
+                        />
+
+                        <ComboField
+                            label="Challan Supplier"
+                            name="challan_supplier"
+                            value={formData.challan_supplier}
+                            onChange={handleChange}
+                            options={suppliers.map((s) => s.supp_name)}
+                        />
+
+                        <ComboField
+                            label="Area"
+                            name="area"
+                            value={formData.area}
+                            onChange={handleChange}
+                            options={areas.map((a) => a.area_name)}
+                        />
+
+                    </div>
+
+                </div>
+
+            </div>
+              
+
+              {/* <div className="grid grid-cols-12 gap-x-4">
+                 <div className="col-span-8">
+                    <LegacyFieldset legend="Unit & Transportation Details">
+                       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mt-1 items-center px-1 pb-1">
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">No. of Lorries</label>
+                             <input type="number" name="no_of_lorries" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.no_of_lorries} onChange={handleChange} />
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Units/Lorry</label>
+                             <select name="units_per_lorry_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.units_per_lorry_type} onChange={handleChange}>
+                                {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                             </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Unit</label>
+                             <input type="number" name="total_unit" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.total_unit} onChange={handleChange} />
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Wt/Lorry</label>
+                             <input type="number" name="wt_per_lorry" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.wt_per_lorry} onChange={handleChange} />
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Unit Type</label>
+                             <select name="unit_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.unit_type} onChange={handleChange}>
+                                {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                             </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Wt. in Ton</label>
+                             <input type="number" name="total_wt_in_ton" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.total_wt_in_ton} onChange={handleChange} />
+                          </div>
+                       </div>
+                    </LegacyFieldset>
+                 </div>
+                 
+                 <div className="col-span-4">
+                    <LegacyFieldset legend="Issue">
+                       <div className="flex flex-col gap-y-3 mt-1 items-center justify-center p-4">
+                          <span className="text-gray-400 text-xs italic">No issues recorded</span>
+                       </div>
+                    </LegacyFieldset>
+                 </div>
+              </div> */}
+
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                {/* Unit & Transportation */}
+                <div className="xl:col-span-8">
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+
+                        <div className="bg-[#1A2619] px-6 py-4">
+                            <h2 className="text-white font-bold text-lg">
+                                Unit & Transportation Details
+                            </h2>
+                            <p className="text-slate-200 text-sm">
+                                Transportation & Weight Information
+                            </p>
+                        </div>
+
+                        <div className="p-6">
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                                {/* No. of Lorries */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        No. of Lorries
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        name="no_of_lorries"
+                                        value={formData.no_of_lorries}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+                                </div>
+
+                                {/* Units/Lorry */}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Units / Lorry
+                                    </label>
+
+                                    <select
+                                        name="units_per_lorry_type"
+                                        value={formData.units_per_lorry_type}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-green-700 outline-none"
+                                    >
+                                        {unitOptions.map((u) => (
+                                            <option key={u} value={u}>
+                                                {u}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Total Unit */}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Total Unit
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        name="total_unit"
+                                        value={formData.total_unit}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-right focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+                                </div>
+
+                                {/* Weight/Lorry */}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Weight / Lorry
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        name="wt_per_lorry"
+                                        value={formData.wt_per_lorry}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-right focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+                                </div>
+
+                                {/* Unit Type */}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Unit Type
+                                    </label>
+
+                                    <select
+                                        name="unit_type"
+                                        value={formData.unit_type}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-green-700 outline-none"
+                                    >
+                                        {unitOptions.map((u) => (
+                                            <option key={u} value={u}>
+                                                {u}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Total Weight */}
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        Total Weight (Ton)
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        name="total_wt_in_ton"
+                                        value={formData.total_wt_in_ton}
+                                        onChange={handleChange}
+                                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-right bg-green-50 font-semibold focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* Issue Card */}
+
+                <div className="xl:col-span-4">
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden h-full">
+
+                        <div className="bg-[#1A2619] px-6 py-4">
+                            <h2 className="text-white font-bold text-lg">
+                                Issue Status
+                            </h2>
+                            <p className="text-slate-200 text-sm">
+                                Current Order Status
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center h-[320px]">
+
+                            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+
+                                <svg
+                                    className="w-10 h-10 text-green-700"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+
+                            </div>
+
+                            <h3 className="text-lg font-semibold text-slate-700">
+                                No Issues
+                            </h3>
+
+                            <p className="text-slate-500 text-sm mt-2">
+                                Everything looks good.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+              </div>
+              
+              {/* <LegacyFieldset legend="Quality Details">
+                 <div className="flex justify-end gap-1.5 mb-1.5">
+                    <button
+                       type="button"
+                       onClick={handleAddQualityRow}
+                       className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 shadow-xs cursor-pointer"
+                    >
+                       + Spawn Row
+                    </button>
+                    <button
+                       type="button"
+                       onClick={handleDeleteQualityRow}
+                       className="bg-rose-700 hover:bg-rose-800 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 shadow-xs cursor-pointer"
+                    >
+                       - Delete Row
+                    </button>
+                 </div>
+                 <div className="grid grid-cols-12 gap-2 border-b border-gray-400 bg-gray-200 p-1">
+                    <div className="col-span-3 text-[10px] font-bold uppercase text-center">Quality</div>
+                    <div className="col-span-2 text-[10px] font-bold uppercase text-center">Qty</div>
+                    <div className="col-span-3 text-[10px] font-bold uppercase text-center">Agency</div>
+                    <div className="col-span-2 text-[10px] font-bold uppercase text-center">Marka</div>
+                    <div className="col-span-2 text-[10px] font-bold uppercase text-center">Rs.</div>
+                 </div>
+                 {formData.quality_details?.map((qd, i) => (
+                    <div key={i} className="grid grid-cols-12 gap-2 mt-1 items-center">
+                       <div className="col-span-3">
+                          <select 
+                             name="quality" 
+                             className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold" 
+                             value={grades.find(g => {
+                               const clean = (s) => (s || '').trim().replace(/\.$/, '').toUpperCase();
+                               return clean(g.grade_name) === clean(qd.quality) || clean(g.grade_code) === clean(qd.quality);
+                             })?.grade_name || qd.quality || ''} 
+                             onChange={(e) => handleQualityChange(i, e)}
+                           >
+                             <option value="">--Select Quality--</option>
+                             {qd.quality && !grades.some(g => {
+                               const clean = (s) => (s || '').trim().replace(/\.$/, '').toUpperCase();
+                               return clean(g.grade_name) === clean(qd.quality) || clean(g.grade_code) === clean(qd.quality);
+                             }) && (
+                               <option value={qd.quality}>{qd.quality}</option>
+                             )}
+                             {grades.map(g => <option key={g.grade_code} value={g.grade_name}>{g.grade_name}</option>)}
+                          </select>
+                       </div>
+                       <div className="col-span-2">
+                          <input type="number" name="qty" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.qty || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Qty" />
+                       </div>
+                       <div className="col-span-3">
+                          <input 
+                             type="text" 
+                             name="agency" 
+                             className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold uppercase" 
+                             value={qd.agency || ''} 
+                             onChange={(e) => handleQualityChange(i, e)} 
+                             list="agency_card_list"
+                             placeholder="Agency" 
+                          />
+                       </div>
+                       <div className="col-span-2">
+                          <input 
+                             type="text" 
+                             name="marka" 
+                             className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold uppercase" 
+                             value={qd.marka || ''} 
+                             onChange={(e) => handleQualityChange(i, e)} 
+                             list="marka_list_options"
+                             placeholder="Marka" 
+                          />
+                       </div>
+                       <div className="col-span-2">
+                          <input type="number" name="rs" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.rs || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Rs." />
+                       </div>
+                    </div>
+                 ))}
+                 <datalist id="marka_list_options">
+                    {markas.map((m: any, idx: number) => (
+                       <option key={idx} value={m.marka_name} />
+                    ))}
+                  </datalist>
+                  <datalist id="agency_card_list">
+                     {agencies.map((a: any, idx: number) => (
+                        <option key={idx} value={a.agency_name} />
+                     ))}
+                  </datalist>
+              </LegacyFieldset> */}
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+
+                {/* Header */}
+                <div className="bg-[#1A2619] px-6 py-4 flex items-center justify-between">
+
+                    <div>
+                        <h2 className="text-white text-lg font-bold">
+                            Quality Details
+                        </h2>
+                        <p className="text-slate-200 text-sm">
+                            Grade, Quantity & Rate Information
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3">
+
+                        <button
+                            type="button"
+                            onClick={handleAddQualityRow}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition"
+                        >
+                            + Add Row
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleDeleteQualityRow}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div className="p-6">
+
+                    {/* Table Header */}
+
+                    <div className="grid grid-cols-12 gap-4 bg-slate-100 rounded-xl px-4 py-3 mb-3 font-semibold text-sm text-slate-700">
+
+                        <div className="col-span-3">Quality</div>
+
+                        <div className="col-span-2 text-center">Qty</div>
+
+                        <div className="col-span-3">Agency</div>
+
+                        <div className="col-span-2">Marka</div>
+
+                        <div className="col-span-2 text-right">Rate (₹)</div>
+
+                    </div>
+
+                    {/* Rows */}
+
+                    <div className="space-y-3">
+
+                        {formData.quality_details?.map((qd, i) => (
+
+                            <div
+                                key={i}
+                                className="grid grid-cols-12 gap-4 bg-slate-50 rounded-xl p-3 hover:bg-green-50 transition"
+                            >
+
+                                {/* Quality */}
+
+                                <div className="col-span-3">
+
+                                    <select
+                                        name="quality"
+                                        value={
+                                            grades.find(g => {
+                                                const clean = (s:any) =>
+                                                    (s || "")
+                                                        .trim()
+                                                        .replace(/\.$/, "")
+                                                        .toUpperCase();
+
+                                                return (
+                                                    clean(g.grade_name) === clean(qd.quality) ||
+                                                    clean(g.grade_code) === clean(qd.quality)
+                                                );
+                                            })?.grade_name || qd.quality || ""
+                                        }
+                                        onChange={(e) => handleQualityChange(i, e)}
+                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-green-700 outline-none"
+                                    >
+
+                                        <option value="">
+                                            Select Quality
+                                        </option>
+
+                                        {qd.quality &&
+                                            !grades.some(g => {
+                                                const clean = (s:any) =>
+                                                    (s || "")
+                                                        .trim()
+                                                        .replace(/\.$/, "")
+                                                        .toUpperCase();
+
+                                                return (
+                                                    clean(g.grade_name) === clean(qd.quality) ||
+                                                    clean(g.grade_code) === clean(qd.quality)
+                                                );
+                                            }) && (
+                                                <option value={qd.quality}>
+                                                    {qd.quality}
+                                                </option>
+                                            )}
+
+                                        {grades.map(g => (
+                                            <option
+                                                key={g.grade_code}
+                                                value={g.grade_name}
+                                            >
+                                                {g.grade_name}
+                                            </option>
+                                        ))}
+
+                                    </select>
+
+                                </div>
+
+                                {/* Qty */}
+
+                                <div className="col-span-2">
+
+                                    <input
+                                        type="number"
+                                        name="qty"
+                                        value={qd.qty || ""}
+                                        onChange={(e) => handleQualityChange(i, e)}
+                                        placeholder="Qty"
+                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-right focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+
+                                </div>
+
+                                {/* Agency */}
+
+                                <div className="col-span-3">
+
+                                    <input
+                                        type="text"
+                                        name="agency"
+                                        value={qd.agency || ""}
+                                        onChange={(e) => handleQualityChange(i, e)}
+                                        list="agency_card_list"
+                                        placeholder="Agency"
+                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+
+                                </div>
+
+                                {/* Marka */}
+
+                                <div className="col-span-2">
+
+                                    <input
+                                        type="text"
+                                        name="marka"
+                                        value={qd.marka || ""}
+                                        onChange={(e) => handleQualityChange(i, e)}
+                                        list="marka_list_options"
+                                        placeholder="Marka"
+                                        className="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+
+                                </div>
+
+                                {/* Rate */}
+
+                                <div className="col-span-2">
+
+                                    <input
+                                        type="number"
+                                        name="rs"
+                                        value={qd.rs || ""}
+                                        onChange={(e) => handleQualityChange(i, e)}
+                                        placeholder="Rate"
+                                        className="w-full rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-right font-semibold text-green-700 focus:ring-2 focus:ring-green-700 outline-none"
+                                    />
+
+                                </div>
+
+                            </div>
+
+                        ))}
+
+                    </div>
+
+                </div>
+
+                {/* Datalists */}
+
+                <datalist id="marka_list_options">
+                    {markas.map((m: any, idx: number) => (
+                        <option key={idx} value={m.marka_name} />
+                    ))}
+                </datalist>
+
+                <datalist id="agency_card_list">
+                    {agencies.map((a: any, idx: number) => (
+                        <option key={idx} value={a.agency_name} />
+                    ))}
+                </datalist>
+
+              </div>
+
+              <LegacyFieldset legend="Shipment & Claims">
+                 <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
+                    <div className="col-span-4 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">Shipment</label>
+                       <input type="date" name="shipment_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.shipment_date} onChange={handleChange} />
+                    </div>
+                    <div className="col-span-4 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-12 shrink-0">Days</label>
+                       <input type="number" name="shipment_days" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_days} onChange={handleChange} />
+                    </div>
+                    <div className="col-span-4 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-16 shrink-0">Penalty/Day</label>
+                       <input type="number" name="shipment_penalty" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_penalty} onChange={handleChange} />
+                    </div>
+
+                    <div className="col-span-6 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">Marks Claim</label>
+                       <input type="number" name="marks_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.marks_claim} onChange={handleChange} />
+                    </div>
+                    <div className="col-span-6 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">Quantity Claim</label>
+                       <input type="number" name="quantity_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.quantity_claim} onChange={handleChange} />
+                    </div>
+                 </div>
+              </LegacyFieldset>
+
+              <LegacyFieldset legend="Remarks & Finalisation">
+                 <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
+                    <div className="col-span-12 flex flex-col gap-2">
+                       <label className="text-[11px] font-bold text-gray-700">Remarks</label>
+                       <textarea name="remarks" className="w-full bg-white border border-gray-400 p-1 text-xs outline-none" rows={2} value={formData.remarks} onChange={handleChange} />
+                    </div>
+                    
+                    <div className="col-span-6 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">B. Rate (Rs.)</label>
+                       <input type="number" name="b_rate" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right text-red-700 font-bold" value={formData.b_rate} onChange={handleChange} />
+                    </div>
+                    <div className="col-span-6 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">B. Date</label>
+                       <input type="date" name="b_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.b_date} onChange={handleChange} />
+                    </div>
+
+                    <div className="col-span-6 flex items-center gap-2">
+                       <label className="text-[11px] font-bold w-24 shrink-0">Superior/Normal</label>
+                       <input type="text" name="superior_normal_marks" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.superior_normal_marks} onChange={handleChange} />
+                    </div>
+                 </div>
+              </LegacyFieldset>
+           </div>
+>>>>>>> Stashed changes
         </div>
 
         <div className="flex items-center gap-5">
