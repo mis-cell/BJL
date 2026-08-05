@@ -642,80 +642,37 @@ function getPageMeta(pageId: string) {
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return !!JSON.parse(saved).isLoggedIn;
-    } catch(e) {}
-    return false;
-  });
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return !!JSON.parse(saved).isAdmin;
-    } catch(e) {}
-    return false;
-  });
-  const [userRole, setUserRole] = useState<string>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return JSON.parse(saved).userRole || "L1";
-    } catch(e) {}
-    return "L1";
-  });
-  const [userLevel, setUserLevel] = useState<string>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return JSON.parse(saved).userLevel || "L1";
-    } catch(e) {}
-    return "L1";
-  });
-  const [selectedYear, setSelectedYear] = useState<string>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return JSON.parse(saved).selectedYear || "2026-2027";
-    } catch(e) {}
-    return "2026-2027";
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string>("L1");
+  const [userLevel, setUserLevel] = useState<string>("L1");
+  const [selectedYear, setSelectedYear] = useState("2026-2027");
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [isTempPo, setIsTempPo] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [dashboardTab, setDashboardTab] = useState<
     "menu" | "mismatch" | "reports"
   >("menu");
-  const [allowedModules, setAllowedModules] = useState<string[]>(() => {
-    try {
-      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
-      if (saved) return JSON.parse(saved).allowedModules || ["*"];
-    } catch(e) {}
-    return ["*"];
-  });
+  const [allowedModules, setAllowedModules] = useState<string[]>(["*"]);
   const [runningPages, setRunningPages] = useState<Page[]>([]);
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
-  // Keep session stored when logged in
   React.useEffect(() => {
     try {
-      if (isLoggedIn) {
-        const sess = {
-          isLoggedIn: true,
-          isAdmin,
-          userRole,
-          userLevel,
-          selectedYear,
-          allowedModules,
-        };
-        sessionStorage.setItem("jute_user_session", JSON.stringify(sess));
-        localStorage.setItem("jute_user_session", JSON.stringify(sess));
-      } else {
-        sessionStorage.removeItem("jute_user_session");
-        localStorage.removeItem("jute_user_session");
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+        sessionStorage.clear();
+        if ("caches" in window) {
+          caches.keys().then((names) => {
+            names.forEach((name) => caches.delete(name));
+          });
+        }
       }
     } catch (e) {
-      console.warn("Session sync error:", e);
+      console.warn("Storage purge error:", e);
     }
-  }, [isLoggedIn, isAdmin, userRole, userLevel, selectedYear, allowedModules]);
+  }, []);
 
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -725,8 +682,6 @@ export default function App() {
   useIdleTimer(15 * 60 * 1000, () => {
     if (isLoggedIn) {
       setIsLoggedIn(false);
-      sessionStorage.removeItem("jute_user_session");
-      localStorage.removeItem("jute_user_session");
       window.alert("Session auto-locked due to 15 minutes of inactivity.");
     }
   });
@@ -1668,7 +1623,7 @@ export default function App() {
 
           <div className="flex gap-2 items-center">
             <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]">
-              <button
+              {/* <button
                 onClick={() => {
                   logEvent(
                     "PRINT",
@@ -1684,14 +1639,12 @@ export default function App() {
                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
                   Print
                 </span>
-              </button>
+              </button> */}
 
               <div className="h-5 w-px bg-slate-200" />
 
               <button
                 onClick={() => {
-                  sessionStorage.removeItem("jute_user_session");
-                  localStorage.removeItem("jute_user_session");
                   setIsLoggedIn(false);
                   setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
                   setCurrentPage("dashboard");
@@ -1713,12 +1666,12 @@ export default function App() {
                 </span>
               </div>
               <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5 text-indigo-800" />
                 <span className="text-[11px] font-black tabular-nums text-indigo-950 tracking-tighter uppercase italic">
                   {currentTime.toLocaleTimeString()}
                 </span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

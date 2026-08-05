@@ -518,7 +518,7 @@ export default function LegacyLayout({
         </div>
 
         {/* Status Bar */}
-        <div className="bg-[#1C3119] border-t border-[#314E28] px-4 py-1.5 flex justify-between items-center text-[10px] font-semibold text-[#E2EDDE] shrink-0">
+        {/* <div className="bg-[#1C3119] border-t border-[#314E28] px-4 py-1.5 flex justify-between items-center text-[10px] font-semibold text-[#E2EDDE] shrink-0">
            <div className="flex gap-4">
               <div className="flex items-center gap-1.5 px-2 border-r border-[#314E28]">
                  <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isOnline ? "bg-emerald-400" : "bg-rose-500")} />
@@ -552,7 +552,7 @@ export default function LegacyLayout({
                  ))}
               </div>
            </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
