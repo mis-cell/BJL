@@ -642,37 +642,80 @@ function getPageMeta(pageId: string) {
 }
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState<string>("L1");
-  const [userLevel, setUserLevel] = useState<string>("L1");
-  const [selectedYear, setSelectedYear] = useState("2026-2027");
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return !!JSON.parse(saved).isLoggedIn;
+    } catch(e) {}
+    return false;
+  });
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return !!JSON.parse(saved).isAdmin;
+    } catch(e) {}
+    return false;
+  });
+  const [userRole, setUserRole] = useState<string>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return JSON.parse(saved).userRole || "L1";
+    } catch(e) {}
+    return "L1";
+  });
+  const [userLevel, setUserLevel] = useState<string>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return JSON.parse(saved).userLevel || "L1";
+    } catch(e) {}
+    return "L1";
+  });
+  const [selectedYear, setSelectedYear] = useState<string>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return JSON.parse(saved).selectedYear || "2026-2027";
+    } catch(e) {}
+    return "2026-2027";
+  });
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [isTempPo, setIsTempPo] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [dashboardTab, setDashboardTab] = useState<
     "menu" | "mismatch" | "reports"
   >("menu");
-  const [allowedModules, setAllowedModules] = useState<string[]>(["*"]);
+  const [allowedModules, setAllowedModules] = useState<string[]>(() => {
+    try {
+      const saved = sessionStorage.getItem("jute_user_session") || localStorage.getItem("jute_user_session");
+      if (saved) return JSON.parse(saved).allowedModules || ["*"];
+    } catch(e) {}
+    return ["*"];
+  });
   const [runningPages, setRunningPages] = useState<Page[]>([]);
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
+  // Keep session stored when logged in
   React.useEffect(() => {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.clear();
-        sessionStorage.clear();
-        if ("caches" in window) {
-          caches.keys().then((names) => {
-            names.forEach((name) => caches.delete(name));
-          });
-        }
+      if (isLoggedIn) {
+        const sess = {
+          isLoggedIn: true,
+          isAdmin,
+          userRole,
+          userLevel,
+          selectedYear,
+          allowedModules,
+        };
+        sessionStorage.setItem("jute_user_session", JSON.stringify(sess));
+        localStorage.setItem("jute_user_session", JSON.stringify(sess));
+      } else {
+        sessionStorage.removeItem("jute_user_session");
+        localStorage.removeItem("jute_user_session");
       }
     } catch (e) {
-      console.warn("Storage purge error:", e);
+      console.warn("Session sync error:", e);
     }
-  }, []);
+  }, [isLoggedIn, isAdmin, userRole, userLevel, selectedYear, allowedModules]);
 
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -682,6 +725,8 @@ export default function App() {
   useIdleTimer(15 * 60 * 1000, () => {
     if (isLoggedIn) {
       setIsLoggedIn(false);
+      sessionStorage.removeItem("jute_user_session");
+      localStorage.removeItem("jute_user_session");
       window.alert("Session auto-locked due to 15 minutes of inactivity.");
     }
   });
@@ -1645,6 +1690,8 @@ export default function App() {
 
               <button
                 onClick={() => {
+                  sessionStorage.removeItem("jute_user_session");
+                  localStorage.removeItem("jute_user_session");
                   setIsLoggedIn(false);
                   setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
                   setCurrentPage("dashboard");

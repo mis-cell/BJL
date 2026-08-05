@@ -20,7 +20,9 @@ export default defineConfig(({mode}) => {
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      watch: process.env.DISABLE_HMR === 'true' ? null : {
+        ignored: ['**/emails.json', '**/requests.log', '**/payload.json', '**/*.log', '**/create_mail_logs*']
+      },
     },
   };
 });
