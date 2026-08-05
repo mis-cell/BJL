@@ -323,7 +323,7 @@ function AuthScreen({
     <div
       className="h-screen w-screen relative overflow-hidden bg-[#f5f5f5] font-sans select-none flex items-center justify-center"
       style={{
-        backgroundImage: "url('/aset/asset_bjl.png'), url('/asset_bjl.png'), url('/icon.png'), url('/assets/asset_bjl.png')",
+        backgroundImage: "url('/asset_bjl.png')",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
         backgroundSize: "contain",
