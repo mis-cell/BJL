@@ -44,7 +44,6 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
 import bjlAsset from "./assets/asset_bjl.png";
-import { BJL_BACKGROUND_DATA_URI } from "./assets/bjlBackgroundDataUri";
 import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
 import AmadEntry from "./pages/AmadEntry";
@@ -310,9 +309,7 @@ import { supabase } from "./lib/supabase";
 })();
 import { useIdleTimer } from "./hooks/useIdleTimer";
 
-// Login Screen / Year Selection - Bally Jute Limited UI (Converted to Tailwind CSS with background asset)
-const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/f_auto,q_auto/background_strdbs";
-
+// Login Screen / Year Selection - Bally Jute Limited UI
 function AuthScreen({
   onLogin,
 }: {
@@ -322,134 +319,123 @@ function AuthScreen({
   const [username, setUsername] = useState("ADMIN");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [bgSrc, setBgSrc] = useState(CLOUDINARY_BG_URL);
 
   return (
-    <div
-      className="h-screen w-screen relative overflow-hidden bg-[#f5f5f5] font-sans select-none flex items-center justify-center"
-      style={{
-        backgroundImage: `url('${bgSrc}'), url('${CLOUDINARY_BG_URL}'), url(${bjlAsset}), url('${BJL_BACKGROUND_DATA_URI}')`,
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center center",
-        backgroundSize: "contain",
-        backgroundColor: "#f5f5f5",
-      }}
-    >
-      {/* Background Image Element for direct rendering */}
-      <img
-        src={bgSrc}
-        alt="Bally Jute Logo Background"
-        className="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
-        onError={() => {
-          if (bgSrc === CLOUDINARY_BG_URL) {
-            setBgSrc(bjlAsset);
-          } else if (bgSrc === bjlAsset) {
-            setBgSrc(BJL_BACKGROUND_DATA_URI);
-          }
-        }}
-      />
-
-      {/* Login Container (Positioned at top 50%, left 68% on lg screens, centered on mobile) */}
-      <div className="absolute top-1/2 left-1/2 lg:left-[68%] -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] px-4 z-10">
+    <div className="min-h-screen w-screen bg-[#e2dac8] flex items-center justify-center p-3 sm:p-6 lg:p-8 font-sans select-none overflow-x-hidden relative">
+      
+      {/* Centered Master Card with aspect ratio container for asset_bjl.png */}
+      <div className="relative w-full max-w-[1240px] bg-[#f5f5f5] rounded-[24px] sm:rounded-[32px] border border-[#c5ba9e] shadow-2xl overflow-hidden flex items-center justify-center lg:justify-end min-h-[500px] sm:min-h-[580px] lg:aspect-[1462/962] my-auto">
         
-        {/* Login Box */}
-        <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-sm p-6 sm:p-[35px] rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-[#d6caa8]/60 transition-all">
+        {/* Single Responsive Background Image asset_bjl.png */}
+        <img
+          src={bjlAsset}
+          alt="Bally Jute Limited"
+          className="absolute inset-0 w-full h-full object-cover sm:object-contain object-center pointer-events-none z-0"
+        />
+
+        {/* Login Container (Positioned relative to master card) */}
+        <div className="relative z-10 w-full max-w-[420px] p-4 sm:p-6 lg:mr-[6%] my-auto">
           
-          {/* Header Title */}
-          <div className="text-center mb-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight">
-              Bally Jute Login
-            </h2>
-            <p className="text-[11px] text-[#5A6855] font-medium mt-0.5">
-              Enter your operational credentials
-            </p>
-          </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              onLogin(year, username, password);
-            }}
-            className="space-y-3"
-          >
-            {/* Financial Session Select */}
-            <div>
-              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
-                Financial Session
-              </label>
-              <select
-                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              >
-                <option value="2026-2027">Session 2026-2027 (Current)</option>
-                <option value="2025-2026">Session 2025-2026</option>
-              </select>
+          {/* Login Box */}
+          <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-6 sm:p-8 rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
+            
+            {/* Header Title */}
+            <div className="text-center mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight">
+                Bally Jute Login
+              </h2>
+              <p className="text-[11px] text-[#5A6855] font-medium mt-0.5">
+                Enter your operational credentials
+              </p>
             </div>
 
-            {/* Username Input */}
-            <div>
-              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
-                Username
-              </label>
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Password Input */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[10px] text-[#2e5b25] font-semibold hover:underline cursor-pointer"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
-                required
-              />
-            </div>
-
-            {/* Forgot Password Helper */}
-            <div className="flex justify-end pt-0.5">
-              <a
-                href="#forgot"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert(
-                    "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
-                  );
-                }}
-                className="text-[11px] text-[#5D6B58] hover:text-[#2e5b25] font-medium transition-colors"
-              >
-                Forgot Password?
-              </a>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              className="w-full p-[14px] sm:p-[15px] mt-2 rounded-[10px] bg-[#2e5b25] hover:bg-[#23471c] text-white font-bold text-sm tracking-wide border-none cursor-pointer transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onLogin(year, username, password);
+              }}
+              className="space-y-3"
             >
-              Login
-            </button>
-          </form>
+              {/* Financial Session Select */}
+              <div>
+                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                  Financial Session
+                </label>
+                <select
+                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                >
+                  <option value="2026-2027">Session 2026-2027 (Current)</option>
+                  <option value="2025-2026">Session 2025-2026</option>
+                </select>
+              </div>
+
+              {/* Username Input */}
+              <div>
+                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                  required
+                />
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[10px] text-[#2e5b25] font-semibold hover:underline cursor-pointer"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                  required
+                />
+              </div>
+
+              {/* Forgot Password Helper */}
+              <div className="flex justify-end pt-0.5">
+                <a
+                  href="#forgot"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    alert(
+                      "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
+                    );
+                  }}
+                  className="text-[11px] text-[#5D6B58] hover:text-[#2e5b25] font-medium transition-colors"
+                >
+                  Forgot Password?
+                </a>
+              </div>
+
+              {/* Login Button */}
+              <button
+                type="submit"
+                className="w-full p-3.5 sm:p-[15px] mt-2 rounded-[10px] bg-[#2e5b25] hover:bg-[#23471c] text-white font-bold text-sm tracking-wide border-none cursor-pointer transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+              >
+                Login
+              </button>
+            </form>
+
+          </div>
 
         </div>
 
