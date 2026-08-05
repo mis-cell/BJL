@@ -311,6 +311,8 @@ import { supabase } from "./lib/supabase";
 import { useIdleTimer } from "./hooks/useIdleTimer";
 
 // Login Screen / Year Selection - Bally Jute Limited UI (Converted to Tailwind CSS with background asset)
+const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/f_auto,q_auto/background_strdbs";
+
 function AuthScreen({
   onLogin,
 }: {
@@ -320,12 +322,13 @@ function AuthScreen({
   const [username, setUsername] = useState("ADMIN");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [bgSrc, setBgSrc] = useState(CLOUDINARY_BG_URL);
 
   return (
     <div
       className="h-screen w-screen relative overflow-hidden bg-[#f5f5f5] font-sans select-none flex items-center justify-center"
       style={{
-        backgroundImage: `url(${BJL_BACKGROUND_DATA_URI})`,
+        backgroundImage: `url('${bgSrc}'), url('${CLOUDINARY_BG_URL}'), url(${bjlAsset}), url('${BJL_BACKGROUND_DATA_URI}')`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
         backgroundSize: "contain",
@@ -334,9 +337,16 @@ function AuthScreen({
     >
       {/* Background Image Element for direct rendering */}
       <img
-        src={BJL_BACKGROUND_DATA_URI}
+        src={bgSrc}
         alt="Bally Jute Logo Background"
         className="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+        onError={() => {
+          if (bgSrc === CLOUDINARY_BG_URL) {
+            setBgSrc(bjlAsset);
+          } else if (bgSrc === bjlAsset) {
+            setBgSrc(BJL_BACKGROUND_DATA_URI);
+          }
+        }}
       />
 
       {/* Login Container (Positioned at top 50%, left 68% on lg screens, centered on mobile) */}
