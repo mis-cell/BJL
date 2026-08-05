@@ -326,7 +326,7 @@ function AuthScreen({
   return (
     <div className="min-h-screen w-screen bg-[#e2dac8] flex items-center justify-center p-2 sm:p-4 font-sans select-none overflow-hidden">
       {/* Centered Master Card Container - Enforces strict Landscape aspect ratio (1462/962) */}
-      <div className="relative w-full max-w-[1360px] aspect-[1462/962] max-h-[92vh] bg-[#f5f5f5] rounded-[20px] sm:rounded-[30px] lg:rounded-[36px] border border-[#c5ba9e] shadow-[0_25px_60px_rgba(0,0,0,0.22)] overflow-hidden flex items-center justify-center lg:justify-end my-auto transition-all">
+      <div className="relative w-full max-w-[1360px] aspect-[1462/962] max-h-[92vh] bg-[#f5f5f5] rounded-[20px] sm:rounded-[30px] lg:rounded-[36px] border border-[#c5ba9e] shadow-[0_25px_60px_rgba(0,0,0,0.22)] overflow-hidden my-auto transition-all">
         
         {/* Single Responsive Landscape Background Artwork Image */}
         <img
@@ -340,10 +340,10 @@ function AuthScreen({
           }}
         />
 
-        {/* Login Container - Positioned to neatly align right below the background's "Welcome" title */}
-        <div className="relative z-10 w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[400px] px-3 sm:px-4 lg:mr-[4%] xl:mr-[6%] mt-[22%] sm:mt-[24%] lg:mt-[22%] mb-auto">
+        {/* Login Container - Perfectly centered under "Welcome" title in right panel */}
+        <div className="absolute top-[33.5%] left-[73.2%] -translate-x-1/2 z-10 w-[88%] max-w-[330px] sm:max-w-[360px] lg:max-w-[385px]">
           {/* Login Box */}
-          <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-4 sm:p-6 rounded-[18px] sm:rounded-[20px] shadow-[0_15px_35px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
+          <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-4 sm:p-5 lg:p-6 rounded-[18px] sm:rounded-[20px] shadow-[0_15px_35px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
             {/* Header Title */}
             <div className="text-center mb-3">
               <h2 className="text-lg sm:text-xl font-bold text-[#1E331B] tracking-tight">
