@@ -308,7 +308,7 @@ import { supabase } from "./lib/supabase";
 })();
 import { useIdleTimer } from "./hooks/useIdleTimer";
 
-// Login Screen / Year Selection - Bally Jute Limited Full-Screen UI (Exact Image Match)
+// Login Screen / Year Selection - Bally Jute Limited UI (Converted to Tailwind CSS with background asset)
 function AuthScreen({
   onLogin,
 }: {
@@ -320,202 +320,104 @@ function AuthScreen({
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="min-h-screen w-screen bg-[#E2DAC8] flex items-center justify-center p-3 sm:p-6 lg:p-8 font-sans select-none overflow-x-hidden relative">
-      
-      {/* Background Subtle Organic Dot Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(#C8BFA8_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none"></div>
-
-      {/* Main Centered Master Card */}
-      <div className="w-full max-w-[1240px] bg-[#FAF7F0] rounded-[28px] sm:rounded-[36px] border border-[#C5BA9E] shadow-2xl shadow-[#1C331E]/20 flex flex-col lg:flex-row overflow-hidden relative my-auto">
+    <div
+      className="h-screen w-screen relative overflow-hidden bg-[#f5f5f5] font-sans select-none flex items-center justify-center"
+      style={{
+        backgroundImage: "url('/aset/asset_bjl.png'), url('/asset_bjl.png'), url('/icon.png'), url('/assets/asset_bjl.png')",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center center",
+        backgroundSize: "contain",
+        backgroundColor: "#f5f5f5",
+      }}
+    >
+      {/* Login Container (Positioned at top 50%, left 68% on lg screens, centered on mobile) */}
+      <div className="absolute top-1/2 left-1/2 lg:left-[68%] -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] px-4 z-10">
         
-        {/* ================= LEFT PANEL (Showcase) ================= */}
-        <div className="lg:w-[54%] bg-[#F4EFE6] p-6 sm:p-10 lg:p-11 flex flex-col justify-between relative overflow-hidden">
+        {/* Login Box */}
+        <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-sm p-6 sm:p-[35px] rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-[#d6caa8]/60 transition-all">
           
-          {/* Top Brand Header */}
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* Bj Logo Badge with Leaf in B */}
-              <div className="w-14 h-14 rounded-2xl bg-[#FAF7F0] border border-[#C8BFA8] text-[#1E331B] flex flex-col items-center justify-center shadow-sm relative shrink-0">
-                <div className="relative font-serif font-black text-2xl tracking-tighter italic leading-none flex items-center">
-                  <span>B</span>
-                  <span className="text-[#3E5C38] text-xs font-normal -ml-1.5 -mt-2">🍃</span>
-                  <span className="-ml-1">j</span>
-                </div>
-                <span className="text-[7px] font-mono tracking-widest text-[#5A6E54] uppercase mt-0.5">ESTD. 1979</span>
-              </div>
-
-              <div className="h-10 w-[1.5px] bg-[#C8BFA8]"></div>
-
-              <div>
-                <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#1E331B] tracking-tight leading-tight">
-                  Bally Jute
-                </h1>
-                <p className="text-[11px] font-serif text-[#485D45] tracking-[0.28em] uppercase font-semibold">
-                  — Limited —
-                </p>
-              </div>
-            </div>
-
-            {/* Estd Badge */}
-            <div className="hidden sm:flex items-center gap-2 bg-[#FAF7F0]/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-[#D6CAA8] text-[#1E331B] text-xs font-mono shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-              <span className="font-bold tracking-wider text-[10px] uppercase">BALLY MILL • ESTD. 1979</span>
-            </div>
-          </div>
-
-          {/* Welcome Back Headline Section */}
-          <div className="relative z-10 my-5 sm:my-6 space-y-1.5">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#1C3119] tracking-tight leading-tight">
-              Welcome Back!
+          {/* Header Title */}
+          <div className="text-center mb-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight">
+              Bally Jute Login
             </h2>
-            <p className="text-xs sm:text-sm text-[#4E604A] max-w-md leading-relaxed font-sans">
-              Login to continue to your account and explore endless possibilities.
+            <p className="text-[11px] text-[#5A6855] font-medium mt-0.5">
+              Enter your operational credentials
             </p>
-
-            {/* Accent line with leaf */}
-            <div className="flex items-center gap-2 pt-1">
-              <div className="h-[2px] w-12 bg-[#3E5C38] rounded-full"></div>
-              <span className="text-[#3E5C38] text-sm">🍃</span>
-            </div>
           </div>
 
-
-
-
-
-        </div>
-
-        {/* ================= S-CURVE CENTER DIVIDER ================= */}
-        <div className="hidden lg:block absolute left-[54%] top-0 bottom-0 w-16 -ml-8 z-20 pointer-events-none">
-          <svg className="w-full h-full text-[#FAF7F0] drop-shadow-[-3px_0_6px_rgba(0,0,0,0.06)]" viewBox="0 0 100 1000" preserveAspectRatio="none" fill="currentColor">
-            <path d="M0,0 Q60,250 10,500 T100,1000 L100,0 Z" />
-          </svg>
-          
-          {/* Green Leaf Sprout at waist curve */}
-          <div className="absolute top-[50%] -translate-y-1/2 left-2 z-30 bg-[#FAF7F0] p-1.5 rounded-full shadow-md border border-[#C8BFA8]">
-            <span className="text-base text-[#3E5C38] block animate-bounce">🍃</span>
-          </div>
-        </div>
-
-        {/* ================= RIGHT PANEL (Login Form) ================= */}
-        <div className="lg:w-[46%] bg-[#FAF7F0] p-6 sm:p-10 lg:p-12 flex flex-col justify-center relative overflow-hidden">
-          
-          {/* Wheat / Jute Stalks Vector Art Artwork in bottom right corner */}
-          <div className="absolute right-0 bottom-0 pointer-events-none opacity-25 text-[#3D5236] translate-x-2 translate-y-2 z-0">
-            <svg width="220" height="260" viewBox="0 0 200 240" fill="none" stroke="currentColor">
-              <path d="M160 240 C 150 160, 180 90, 185 30" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M185 30 Q 175 25 180 20 M 185 30 Q 195 25 190 20" strokeWidth="1.5" />
-              <path d="M182 45 Q 170 40 176 35 M 182 45 Q 194 40 188 35" strokeWidth="1.5" />
-              <path d="M178 60 Q 165 55 172 50 M 178 60 Q 190 55 184 50" strokeWidth="1.5" />
-              <path d="M174 75 Q 160 70 168 65 M 174 75 Q 186 70 180 65" strokeWidth="1.5" />
-
-              <path d="M140 240 C 130 150, 150 70, 145 20" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M145 20 Q 135 15 140 10 M 145 20 Q 155 15 150 10" strokeWidth="1.5" />
-              <path d="M147 35 Q 135 30 141 25 M 147 35 Q 159 30 153 25" strokeWidth="1.5" />
-              <path d="M149 50 Q 137 45 143 40 M 149 50 Q 161 45 155 40" strokeWidth="1.5" />
-
-              <path d="M120 240 C 110 170, 125 100, 115 50" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M115 50 Q 105 45 110 40 M 115 50 Q 125 45 120 40" strokeWidth="1.5" />
-              <path d="M117 65 Q 105 60 111 55 M 117 65 Q 129 60 123 55" strokeWidth="1.5" />
-            </svg>
-          </div>
-
-          {/* Top Circular Emblem Logo */}
-          <div className="text-center space-y-3 relative z-10">
-            <div className="w-20 h-20 mx-auto rounded-full bg-[#EFE8D8] border-2 border-dashed border-[#C5BA9E] flex items-center justify-center p-1 shadow-inner">
-              <div className="w-full h-full rounded-full bg-[#FAF7F0] border border-[#D6CAA8] flex items-center justify-center shadow-sm">
-                <span className="font-serif font-black text-[#1E331B] text-2xl tracking-tighter italic">Bj</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-[#3B5437] text-sm">🌿</span>
-                <h3 className="text-3xl sm:text-4xl font-serif font-bold text-[#1E331B]">Welcome</h3>
-                <span className="text-[#3B5437] text-sm">🌿</span>
-              </div>
-              
-              <div className="flex items-center justify-center gap-3 pt-1">
-                <div className="h-[1px] w-12 bg-[#D6CAA8]"></div>
-                <p className="text-xs text-[#5D6B58] font-sans font-medium">Sign in to your account</p>
-                <div className="h-[1px] w-12 bg-[#D6CAA8]"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Form Controls */}
-          <div className="space-y-4 my-6 relative z-10 w-full max-w-sm mx-auto">
-            
-            {/* Financial Session Selector */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onLogin(year, username, password);
+            }}
+            className="space-y-3"
+          >
+            {/* Financial Session Select */}
+            <div>
+              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
                 Financial Session
               </label>
-              <div className="relative">
-                <select
-                  className="w-full bg-[#F2EBE0] border border-[#D6CAA8] rounded-xl px-4 py-3.5 text-xs font-bold text-[#1E331B] outline-none focus:border-[#1E331B] transition-colors appearance-none"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                >
-                  <option value="2026-2027">Session 2026-2027 (Current)</option>
-                  <option value="2025-2026">Session 2025-2026</option>
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#5A6855]">
-                  <ChevronRight className="h-4 w-4 rotate-90" />
-                </div>
-              </div>
+              <select
+                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              >
+                <option value="2026-2027">Session 2026-2027 (Current)</option>
+                <option value="2025-2026">Session 2025-2026</option>
+              </select>
             </div>
 
-            {/* Username or Email Input */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
-                Username or Email
+            {/* Username Input */}
+            <div>
+              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                Username
               </label>
-              <div className="flex items-center gap-3 bg-[#F2EBE0] border border-[#D6CAA8] rounded-xl px-4 py-3.5 focus-within:border-[#1E331B] focus-within:bg-[#FAF7F0] transition-all">
-                <User className="h-4 w-4 text-[#7A8A74]" />
-                <input
-                  type="text"
-                  className="w-full bg-transparent text-xs font-semibold text-[#1E331B] outline-none placeholder:text-[#9AA894]"
-                  placeholder="Username or Email"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                required
+              />
             </div>
 
             {/* Password Input */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
-                Password
-              </label>
-              <div className="flex items-center gap-3 bg-[#F2EBE0] border border-[#D6CAA8] rounded-xl px-4 py-3.5 focus-within:border-[#1E331B] focus-within:bg-[#FAF7F0] transition-all">
-                <Lock className="h-4 w-4 text-[#7A8A74]" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full bg-transparent text-xs font-semibold text-[#1E331B] outline-none placeholder:text-[#9AA894]"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
+                  Password
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-[#7A8A74] hover:text-[#1E331B] cursor-pointer"
+                  className="text-[10px] text-[#2e5b25] font-semibold hover:underline cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-[12px] sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                required
+              />
             </div>
 
-            {/* Forgot Password Link */}
-            <div className="flex justify-end">
-              <a 
-                href="#forgot" 
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  alert("Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"); 
-                }} 
-                className="text-xs text-[#5D6B58] hover:text-[#1E331B] font-medium transition-colors"
+            {/* Forgot Password Helper */}
+            <div className="flex justify-end pt-0.5">
+              <a
+                href="#forgot"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert(
+                    "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
+                  );
+                }}
+                className="text-[11px] text-[#5D6B58] hover:text-[#2e5b25] font-medium transition-colors"
               >
                 Forgot Password?
               </a>
@@ -523,17 +425,16 @@ function AuthScreen({
 
             {/* Login Button */}
             <button
-              onClick={() => onLogin(year, username, password)}
-              className="w-full py-3.5 bg-[#314E28] hover:bg-[#22391C] text-white font-serif font-bold text-sm tracking-wide rounded-xl transition-all shadow-md active:scale-[0.99] cursor-pointer"
+              type="submit"
+              className="w-full p-[14px] sm:p-[15px] mt-2 rounded-[10px] bg-[#2e5b25] hover:bg-[#23471c] text-white font-bold text-sm tracking-wide border-none cursor-pointer transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
             >
               Login
             </button>
-          </div>
+          </form>
 
         </div>
 
       </div>
-
     </div>
   );
 }
