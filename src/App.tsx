@@ -310,7 +310,7 @@ import { supabase } from "./lib/supabase";
 import { useIdleTimer } from "./hooks/useIdleTimer";
 
 // Login Screen / Year Selection - Bally Jute Limited UI
-const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/f_auto,q_auto/background_strdbs";
+const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png";
 
 function AuthScreen({
   onLogin,
