@@ -637,26 +637,66 @@ export default function SaudaEntry({ initialData, onSave, onCancel }: { initialD
       }
 
       const qd = saudaData.quality_details;
-      delete saudaData.quality_details;
+
+      // Filter saudaData to only include valid sauda_master table columns
+      const SAUDA_MASTER_FIELDS = [
+        'sauda_id',
+        'financial_year',
+        'sauda_no',
+        'session',
+        'po_type',
+        'date',
+        'broker',
+        'supplier',
+        'challan_supplier',
+        'area',
+        'agency',
+        'marks',
+        'no_of_lorries',
+        'units_per_lorry_type',
+        'total_unit',
+        'wt_per_lorry',
+        'unit_type',
+        'total_wt_in_ton',
+        'shipment_date',
+        'shipment_days',
+        'shipment_penalty',
+        'marks_claim',
+        'quantity_claim',
+        'remarks',
+        'b_rate',
+        'b_date',
+        'superior_normal_marks',
+        'signature_url',
+        'status',
+        'created_at'
+      ];
+
+      const saudaPayload: Record<string, any> = {};
+      SAUDA_MASTER_FIELDS.forEach(field => {
+        if ((saudaData as any)[field] !== undefined) {
+          saudaPayload[field] = (saudaData as any)[field];
+        }
+      });
       
       let inserted;
-      let isEditMode = !!saudaData.sauda_id;
+      let isEditMode = !!saudaPayload.sauda_id;
 
-      if (!saudaData.sauda_id && saudaData.sauda_no) {
+      if (!saudaPayload.sauda_id && saudaPayload.sauda_no) {
          // Double-check if a Sauda with the same number and financial year already exists to prevent duplicate rows
-         const targetFYear = saudaData.financial_year || '2026-2027';
+         const targetFYear = saudaPayload.financial_year || '2026-2027';
          const allSaudas = await dbModule.fetchAll('sauda_master').catch(() => []);
-         const match = allSaudas.find((s: any) => s.sauda_no === saudaData.sauda_no && s.financial_year === targetFYear);
+         const match = allSaudas.find((s: any) => s.sauda_no === saudaPayload.sauda_no && s.financial_year === targetFYear);
          if (match) {
-            saudaData.sauda_id = match.sauda_id;
+            saudaPayload.sauda_id = match.sauda_id;
             isEditMode = true;
          }
       }
 
-      if (saudaData.sauda_id) {
-         inserted = await dbModule.update('sauda_master', 'sauda_id', saudaData.sauda_id, saudaData);
+      if (saudaPayload.sauda_id) {
+         inserted = await dbModule.update('sauda_master', 'sauda_id', saudaPayload.sauda_id, saudaPayload);
       } else {
-         inserted = await dbModule.insert('sauda_master', saudaData);
+         inserted = await dbModule.insert('sauda_master', saudaPayload);
       }
       
       if (inserted && qd) {
