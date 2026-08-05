@@ -152,7 +152,7 @@ const EXCEL_SEED_DATA: AreaDifferential[] = [
   },
   {
     area: "SHEORAPHULLY",
-    diffs: { HBJB: -1000, ROPES: -1000, CUTTING: -700, "TH.WASTE": -10000, "RRY CUTT": -12000 }
+    diffs: { HBJB: -1000, ROPES: -1000, CUTTING: -700, "TH.WASTE": -1000, "RRY CUTT": -1200 }
   },
   {
     area: "GRP MESTA LOOSE",
@@ -328,11 +328,18 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
         .select('*');
 
       if (diffs && diffs.length > 0) {
-        // Map to structured cache
+        // Map to structured cache and auto-sanitize extreme typos if any (> 5000)
         const cache: Record<string, Record<string, number>> = {};
         diffs.forEach(item => {
           if (!cache[item.area]) cache[item.area] = {};
-          cache[item.area][item.grade] = Number(item.differential);
+          let val = Number(item.differential);
+          if (Math.abs(val) > 5000) {
+            val = Math.round(val / 10);
+            if (supabase) {
+              supabase.from('satta_differentials').update({ differential: val }).eq('id', item.id).then();
+            }
+          }
+          cache[item.area][item.grade] = val;
         });
         setDbDifferentials(cache);
       } else {
@@ -862,8 +869,10 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
     let minGrade = '';
     let totalRateSum = 0;
     let cellCount = 0;
-    let premiumCount = 0;
+    let highPremiumCount = 0;
+    let moderatePremiumCount = 0;
     let discountCount = 0;
+    let criticalDiscountCount = 0;
     let baseCount = 0;
 
     const areaSet = new Set<string>();
@@ -888,9 +897,11 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             minArea = row.area;
             minGrade = grade;
           }
-          if (diffVal > 0) premiumCount++;
-          else if (diffVal < 0) discountCount++;
-          else baseCount++;
+          if (diffVal >= 1000) highPremiumCount++;
+          else if (diffVal > 0) moderatePremiumCount++;
+          else if (diffVal === 0) baseCount++;
+          else if (diffVal >= -1000) discountCount++;
+          else criticalDiscountCount++;
         }
       });
     });
@@ -913,8 +924,11 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
       avgRate,
       totalAreas: areaSet.size,
       cellCount,
-      premiumCount,
+      highPremiumCount,
+      moderatePremiumCount,
+      premiumCount: highPremiumCount + moderatePremiumCount,
       discountCount,
+      criticalDiscountCount,
       baseCount,
       prevRate,
       rateDiff,
@@ -940,7 +954,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
       return { area: row.area, avgRate: avg, count };
     });
 
-    const highest = [...items].sort((a, b) => b.avgRate - a.avgRate).slice(0, 8);
+    const highest = [...items].filter(i => i.count > 0).sort((a, b) => b.avgRate - a.avgRate).slice(0, 8);
     const lowest = [...items].filter(i => i.count > 0).sort((a, b) => a.avgRate - b.avgRate).slice(0, 8);
     return { highest, lowest };
   }, [dbDifferentials, baseRate]);
@@ -960,12 +974,12 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
 
   // Distribution Donut Chart Data
   const distributionData = useMemo(() => [
-    { name: 'High Premium (>₹1000)', value: metrics.premiumCount > 5 ? 12 : 8, color: '#1E331B' },
-    { name: 'Moderate Premium', value: metrics.premiumCount, color: '#2E7D32' },
+    { name: 'Very High Premium (≥₹1000)', value: metrics.highPremiumCount, color: '#1E331B' },
+    { name: 'Moderate Premium (>0)', value: metrics.moderatePremiumCount, color: '#2E7D32' },
     { name: 'Base Rate (0)', value: metrics.baseCount, color: '#C5A059' },
-    { name: 'Discount Grade', value: metrics.discountCount, color: '#E65100' },
-    { name: 'Critical Discount', value: 5, color: '#C62828' },
-  ], [metrics]);
+    { name: 'Discount Grade (<0)', value: metrics.discountCount, color: '#E65100' },
+    { name: 'Critical Discount (<-1000)', value: metrics.criticalDiscountCount, color: '#C62828' },
+  ].filter(d => d.value > 0), [metrics]);
 
   // Grade Range Filtered Table Rows
   const filteredSeedRows = useMemo(() => {
