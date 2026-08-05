@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
+import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
 import AmadEntry from "./pages/AmadEntry";
 import AmadRegister from "./pages/AmadRegister";
@@ -1100,62 +1101,12 @@ export default function App() {
         <AuthScreen onLogin={handleLogin} />
 
         {/* Custom HTML Alert overlay for Login Screen */}
-        <AnimatePresence>
-          {htmlAlert && (
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="w-full max-w-md bg-[#dfdfdf] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.35)] font-sans"
-              >
-                {/* Custom header */}
-                <div className="bg-gradient-to-r from-red-900 to-indigo-950 text-white px-3 py-1.5 flex justify-between items-center h-8 ">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-300 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest italic font-mono">
-                      System Notice - Action Required
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setHtmlAlert(null)}
-                    className="bg-[#dfdfdf] text-black px-1.5 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border font-bold text-xs hover:bg-[#cfcfcf] active:translate-x-[0.5px] active:translate-y-[0.5px] h-5 flex items-center justify-center cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Message body */}
-                <div className="p-6 bg-[#dfdfdf] space-y-6">
-                  <div className="flex gap-4 items-start bg-[#f0f0f0] border border-slate-400/50 p-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)]">
-                    <div className="p-2 bg-amber-50 rounded text-amber-600 shrink-0 border border-amber-200 shadow-sm">
-                      <AlertCircle className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                        Message Payload
-                      </h4>
-                      <p className="text-xs font-bold text-slate-800 break-words whitespace-pre-wrap leading-relaxed font-mono select-all">
-                        {htmlAlert.message}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Action footer */}
-                  <div className="flex justify-end pt-1">
-                    <button
-                      onClick={() => setHtmlAlert(null)}
-                      className="px-6 py-2 bg-indigo-950 hover:bg-black text-white font-black uppercase text-[10px] tracking-wider transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] border border-black/10 cursor-pointer"
-                    >
-                      Acknowledge & Close
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        {htmlAlert && (
+          <SystemNoticeModal
+            message={htmlAlert.message}
+            onClose={() => setHtmlAlert(null)}
+          />
+        )}
       </>
     );
   }
@@ -1438,7 +1389,7 @@ export default function App() {
         <AIAssistant />
 
         {/* Windows-style Taskbar */}
-        <div className="h-12 bg-[#1E331B] border-t border-[#D4AF37]/30 shadow-[0_-2px_4px_rgba(0,0,0,0.2)] flex items-center px-2 justify-between gap-4 overflow-hidden">
+        <div className="h-12 bg-legacy-bg border-t-2 border-white shadow-[0_-2px_4px_rgba(0,0,0,0.1)] flex items-center px-2 justify-between gap-4 overflow-hidden ">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-[70vw]">
 
             {/* Premium Integrated Dashboard Selection Tabs */}
@@ -1621,9 +1572,8 @@ export default function App() {
               })}
           </div>
 
-          <div className="flex gap-2 items-center  bg-[#1E331B]">
-            <div className="flex items-center gap-3 bg-[#1E331B]  rounded-xl px-4 py-2 ">
-            {/* <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]"> */}
+          <div className="flex gap-2 items-center">
+            <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]">
               {/* <button
                 onClick={() => {
                   logEvent(
@@ -1644,7 +1594,7 @@ export default function App() {
 
               <div className="h-5 w-px bg-slate-200" />
 
-              {/* <button
+              <button
                 onClick={() => {
                   setIsLoggedIn(false);
                   setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
@@ -1657,33 +1607,15 @@ export default function App() {
                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
                   Logout
                 </span>
-              </button> */}
-              <button
-                onClick={() => {
-                  setIsLoggedIn(false);
-                  setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
-                  setCurrentPage("dashboard");
-                }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all duration-200 hover:scale-105 cursor-pointer"
-                title="Logout System"
-              >
-                <Power className="h-4 w-4" />
-                <span>Logout</span>
               </button>
 
               <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#162B14] border border-[#D4AF37]/20">
-                <Calendar className="h-4 w-4 text-[#D4AF37]" />
-                <span className="text-xs font-semibold text-white">
-                  F.Y: {selectedYear}
-                </span>
-              </div>
-              {/* <div className="flex items-center gap-2 opacity-80">
+              <div className="flex items-center gap-2 opacity-80">
                 <Calendar className="h-3.5 w-3.5 text-indigo-400" />
                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter tabular-nums">
                   F.Y: {selectedYear}
                 </span>
-              </div> */}
+              </div>
               <div className="h-5 w-px bg-slate-200" />
               {/* <div className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5 text-indigo-800" />
@@ -1876,62 +1808,12 @@ export default function App() {
       )}
 
       {/* Custom HTML Alert overlay */}
-      <AnimatePresence>
-        {htmlAlert && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px]">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className="w-full max-w-md bg-[#dfdfdf] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.35)]"
-            >
-              {/* Custom header */}
-              <div className="bg-gradient-to-r from-red-900 to-indigo-950 text-white px-3 py-1.5 flex justify-between items-center h-8 ">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-300 animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest italic font-mono">
-                    System Notice - Action Required
-                  </span>
-                </div>
-                <button
-                  onClick={() => setHtmlAlert(null)}
-                  className="bg-[#dfdfdf] text-black px-1.5 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border font-bold text-xs hover:bg-[#cfcfcf] active:translate-x-[0.5px] active:translate-y-[0.5px] h-5 flex items-center justify-center cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Message body */}
-              <div className="p-6 bg-[#dfdfdf] space-y-6">
-                <div className="flex gap-4 items-start bg-[#f0f0f0] border border-slate-400/50 p-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)]">
-                  <div className="p-2 bg-amber-50 rounded text-amber-600 shrink-0 border border-amber-200 shadow-sm">
-                    <AlertCircle className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                      Message Payload
-                    </h4>
-                    <p className="text-xs font-bold text-slate-800 break-words whitespace-pre-wrap leading-relaxed font-mono select-all">
-                      {htmlAlert.message}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action footer */}
-                <div className="flex justify-end pt-1">
-                  <button
-                    onClick={() => setHtmlAlert(null)}
-                    className="px-6 py-2 bg-indigo-950 hover:bg-black text-white font-black uppercase text-[10px] tracking-wider transition-colors shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] border border-black/10 cursor-pointer"
-                  >
-                    Acknowledge & Close
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {htmlAlert && (
+        <SystemNoticeModal
+          message={htmlAlert.message}
+          onClose={() => setHtmlAlert(null)}
+        />
+      )}
 
       {/* Global Satta Warning Modal */}
       {showGlobalSattaWarning && (
