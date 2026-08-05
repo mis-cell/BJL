@@ -310,7 +310,7 @@ import { supabase } from "./lib/supabase";
 import { useIdleTimer } from "./hooks/useIdleTimer";
 
 // Login Screen / Year Selection - Bally Jute Limited UI
-const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png";
+const CLOUDINARY_BG_URL = "https://res.cloudinary.com/x6tw39wi/image/upload/f_auto,q_auto/background_strdbs";
 
 function AuthScreen({
   onLogin,
@@ -324,15 +324,15 @@ function AuthScreen({
   const [bgSrc, setBgSrc] = useState(CLOUDINARY_BG_URL);
 
   return (
-    <div className="min-h-screen w-screen bg-[#e2dac8] flex items-center justify-center p-2 sm:p-4 lg:p-6 font-sans select-none overflow-x-hidden overflow-y-auto">
-      {/* Centered Master Card Container holding both background artwork and login card synchronously */}
-      <div className="relative w-full max-w-[1440px] bg-[#f5f5f5] rounded-[20px] sm:rounded-[28px] lg:rounded-[36px] border border-[#c5ba9e] shadow-[0_25px_60px_rgba(0,0,0,0.2)] overflow-hidden flex items-center justify-center lg:justify-end min-h-[540px] sm:min-h-[600px] lg:aspect-[1462/962] my-auto transition-all">
+    <div className="min-h-screen w-screen bg-[#e2dac8] flex items-center justify-center p-2 sm:p-4 font-sans select-none overflow-hidden">
+      {/* Centered Master Card Container - Enforces strict Landscape aspect ratio (1462/962) */}
+      <div className="relative w-full max-w-[1360px] aspect-[1462/962] max-h-[92vh] bg-[#f5f5f5] rounded-[20px] sm:rounded-[30px] lg:rounded-[36px] border border-[#c5ba9e] shadow-[0_25px_60px_rgba(0,0,0,0.22)] overflow-hidden flex items-center justify-center lg:justify-end my-auto transition-all">
         
-        {/* Single Responsive Background Artwork Image */}
+        {/* Single Responsive Landscape Background Artwork Image */}
         <img
           src={bgSrc}
           alt="Bally Jute Limited Background"
-          className="absolute inset-0 w-full h-full object-cover sm:object-contain object-center pointer-events-none z-0"
+          className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0"
           onError={() => {
             if (bgSrc === CLOUDINARY_BG_URL) {
               setBgSrc(bjlAsset);
@@ -340,16 +340,16 @@ function AuthScreen({
           }}
         />
 
-        {/* Login Container (Synchronized inside the master card) */}
-        <div className="relative z-10 w-full max-w-[400px] sm:max-w-[420px] p-4 sm:p-6 lg:mr-[6%] xl:mr-[8%] my-auto">
+        {/* Login Container - Positioned to neatly align right below the background's "Welcome" title */}
+        <div className="relative z-10 w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[400px] px-3 sm:px-4 lg:mr-[4%] xl:mr-[6%] mt-[22%] sm:mt-[24%] lg:mt-[22%] mb-auto">
           {/* Login Box */}
-          <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-6 sm:p-8 rounded-[20px] shadow-[0_20px_40px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
+          <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-4 sm:p-6 rounded-[18px] sm:rounded-[20px] shadow-[0_15px_35px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
             {/* Header Title */}
-            <div className="text-center mb-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight">
+            <div className="text-center mb-3">
+              <h2 className="text-lg sm:text-xl font-bold text-[#1E331B] tracking-tight">
                 Bally Jute Login
               </h2>
-              <p className="text-[11px] text-[#5A6855] font-medium mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-[#5A6855] font-medium mt-0.5">
                 Enter your operational credentials
               </p>
             </div>
@@ -359,15 +359,15 @@ function AuthScreen({
                 e.preventDefault();
                 onLogin(year, username, password);
               }}
-              className="space-y-3"
+              className="space-y-2.5 sm:space-y-3"
             >
               {/* Financial Session Select */}
               <div>
-                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                <label className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
                   Financial Session
                 </label>
                 <select
-                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
+                  className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                 >
@@ -378,7 +378,7 @@ function AuthScreen({
 
               {/* Username Input */}
               <div>
-                <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                <label className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
                   Username
                 </label>
                 <input
@@ -386,7 +386,7 @@ function AuthScreen({
                   placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                  className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
                   required
                 />
               </div>
@@ -394,13 +394,13 @@ function AuthScreen({
               {/* Password Input */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block">
                     Password
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-[10px] text-[#2e5b25] font-semibold hover:underline cursor-pointer"
+                    className="text-[9px] sm:text-[10px] text-[#2e5b25] font-semibold hover:underline cursor-pointer"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -410,7 +410,7 @@ function AuthScreen({
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 sm:p-[14px] rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
+                  className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all"
                   required
                 />
               </div>
@@ -425,7 +425,7 @@ function AuthScreen({
                       "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
                     );
                   }}
-                  className="text-[11px] text-[#5D6B58] hover:text-[#2e5b25] font-medium transition-colors"
+                  className="text-[10px] sm:text-[11px] text-[#5D6B58] hover:text-[#2e5b25] font-medium transition-colors"
                 >
                   Forgot Password?
                 </a>
@@ -434,7 +434,7 @@ function AuthScreen({
               {/* Login Button */}
               <button
                 type="submit"
-                className="w-full p-3.5 sm:p-[15px] mt-2 rounded-[10px] bg-[#2e5b25] hover:bg-[#23471c] text-white font-bold text-sm tracking-wide border-none cursor-pointer transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
+                className="w-full p-3 sm:p-3.5 mt-1 rounded-[9px] sm:rounded-[10px] bg-[#2e5b25] hover:bg-[#23471c] text-white font-bold text-xs sm:text-sm tracking-wide border-none cursor-pointer transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
               >
                 Login
               </button>
