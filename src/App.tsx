@@ -1438,7 +1438,7 @@ export default function App() {
         <AIAssistant />
 
         {/* Windows-style Taskbar */}
-        <div className="h-12 bg-legacy-bg border-t-2 border-white shadow-[0_-2px_4px_rgba(0,0,0,0.1)] flex items-center px-2 justify-between gap-4 overflow-hidden ">
+        <div className="h-12 bg-[#1E331B] border-t border-[#D4AF37]/30 shadow-[0_-2px_4px_rgba(0,0,0,0.2)] flex items-center px-2 justify-between gap-4 overflow-hidden">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-[70vw]">
 
             {/* Premium Integrated Dashboard Selection Tabs */}
@@ -1621,8 +1621,9 @@ export default function App() {
               })}
           </div>
 
-          <div className="flex gap-2 items-center">
-            <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]">
+          <div className="flex gap-2 items-center  bg-[#1E331B]">
+            <div className="flex items-center gap-3 bg-[#1E331B]  rounded-xl px-4 py-2 ">
+            {/* <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]"> */}
               {/* <button
                 onClick={() => {
                   logEvent(
@@ -1643,7 +1644,7 @@ export default function App() {
 
               <div className="h-5 w-px bg-slate-200" />
 
-              <button
+              {/* <button
                 onClick={() => {
                   setIsLoggedIn(false);
                   setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
@@ -1656,15 +1657,33 @@ export default function App() {
                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
                   Logout
                 </span>
+              </button> */}
+              <button
+                onClick={() => {
+                  setIsLoggedIn(false);
+                  setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
+                  setCurrentPage("dashboard");
+                }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-all duration-200 hover:scale-105 cursor-pointer"
+                title="Logout System"
+              >
+                <Power className="h-4 w-4" />
+                <span>Logout</span>
               </button>
 
               <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2 opacity-80">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#162B14] border border-[#D4AF37]/20">
+                <Calendar className="h-4 w-4 text-[#D4AF37]" />
+                <span className="text-xs font-semibold text-white">
+                  F.Y: {selectedYear}
+                </span>
+              </div>
+              {/* <div className="flex items-center gap-2 opacity-80">
                 <Calendar className="h-3.5 w-3.5 text-indigo-400" />
                 <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter tabular-nums">
                   F.Y: {selectedYear}
                 </span>
-              </div>
+              </div> */}
               <div className="h-5 w-px bg-slate-200" />
               {/* <div className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5 text-indigo-800" />

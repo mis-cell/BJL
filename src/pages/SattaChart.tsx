@@ -1073,11 +1073,11 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
           </div> */}
 
         {/* Navigation Tabs */}
-        <div className="flex pt-2 gap-4 overflow-x-auto">
+        <div className="flex items-center gap-3 pl-3 pt-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('matrix')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 h-11",
               activeTab === 'matrix'
                 ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
@@ -1090,7 +1090,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
           <button
             onClick={() => setActiveTab('analytics')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 h-11",
               activeTab === 'analytics'
                 ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
@@ -1103,7 +1103,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
           <button
             onClick={() => setActiveTab('history')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 h-11",
               activeTab === 'history'
                 ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
