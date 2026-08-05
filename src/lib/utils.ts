@@ -1,0 +1,104 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function getApiUrl(apiPath: string): string {
+  const cleanPath = apiPath.startsWith('/') ? apiPath.substring(1) : apiPath;
+  
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isCloudRun = hostname.endsWith('run.app');
+
+    // Email sending has no server on GitHub Pages (static hosting can't run
+    // Node/SMTP). It is handled by a Supabase Edge Function that holds the Gmail
+    // credentials as secrets and returns proper CORS headers. When we are NOT on
+    // localhost (where server.ts runs directly), route send-email there.
+    const SUPABASE_FUNCTIONS_BASE = 'https://lxuapkccxaadwixjpirs.supabase.co/functions/v1';
+    if (!isLocalhost && cleanPath.endsWith('api/send-email')) {
+      return `${SUPABASE_FUNCTIONS_BASE}/send-email`;
+    }
+
+    // Any other API path on an external host / GitHub Pages still needs a live
+    // full-stack backend. Update this URL if you deploy server.ts somewhere
+    // permanent (Render, Railway, a permanent Cloud Run service, etc.).
+    if (!isLocalhost && !isCloudRun) {
+      const fallbackBackend = "https://ais-pre-4f3hdjf75hjoch6vttiz2o-892280559951.asia-southeast1.run.app/";
+      return `${fallbackBackend}${cleanPath}`;
+    }
+
+    const pathname = window.location.pathname;
+    
+    // In the user's environment, the app runs behind "/Jute-Purchase-Automation" subpath
+    if (pathname.includes('Jute-Purchase-Automation')) {
+      return `/Jute-Purchase-Automation/${cleanPath}`;
+    }
+    
+    const parts = pathname.split('/');
+    if (parts.length > 1 && parts[1] === 'Jute-Purchase-Automation') {
+      return `/Jute-Purchase-Automation/${cleanPath}`;
+    }
+  }
+  
+  return `/${cleanPath}`;
+}
+
+export function formatDate(date: string | Date) {
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Sanitizes data for CSV export to prevent Formula Injection Attacks (CSV Injection)
+ * Escapes fields that start with '=', '+', '-', or '@'.
+ */
+export function sanitizeCsvData(data: any[]): any[] {
+  if (!Array.isArray(data)) return data;
+  
+  return data.map(row => {
+    if (typeof row !== 'object' || row === null) return row;
+    
+    const sanitizedRow: any = {};
+    for (const key in row) {
+      if (Object.prototype.hasOwnProperty.call(row, key)) {
+        let value = row[key];
+        
+        if (typeof value === 'string' && /^[=+\-@]/.test(value)) {
+          // Prepend with a single quote to force Excel/Calc to treat as text
+          value = "'" + value;
+        }
+        
+        sanitizedRow[key] = value;
+      }
+    }
+    return sanitizedRow;
+  });
+}
+
+import { getCurrentUserContext } from './permissions';
+
+export function canDeleteData(): boolean {
+  const ctx = getCurrentUserContext();
+  return (ctx.userRole || '').toUpperCase() === 'ADMIN';
+}
+
+export function canApproveMismatch(): boolean {
+  const ctx = getCurrentUserContext();
+  const role = (ctx.userRole || '').toUpperCase();
+  const level = (ctx.userLevel || '').toUpperCase();
+  return (
+    role === 'ADMIN' ||
+    role === 'ADMINISTRATOR' ||
+    level === 'L3' ||
+    level === 'L5' ||
+    level === 'MAX' ||
+    level === 'ADMIN' ||
+    level === 'ADMINISTRATOR'
+  );
+}

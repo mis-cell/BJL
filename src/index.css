@@ -1,0 +1,404 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --color-legacy-bg: #e8eff9;
+  --color-legacy-border: #1a56db;
+  --color-legacy-blue: #1e40af;
+  --color-legacy-navy: #0d47a1;
+  --color-legacy-teal: #0284c7;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-slate-100 text-slate-900 antialiased selection:bg-indigo-600 selection:text-white;
+  }
+
+  /* Modern input, select, and textarea global enhancements */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  select,
+  textarea {
+    border-radius: 0.375rem !important;
+    transition: all 0.15s ease-in-out !important;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+    outline: none !important;
+  }
+
+  /* Modern table styling */
+  table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  table th {
+    font-weight: 700 !important;
+    letter-spacing: 0.025em !important;
+  }
+
+  table tbody tr {
+    transition: background-color 0.15s ease-in-out !important;
+  }
+
+  table tbody tr:hover {
+    background-color: rgba(238, 242, 255, 0.6) !important;
+  }
+
+  /* Modern fieldset styling */
+  fieldset {
+    border-radius: 0.5rem !important;
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(4px) !important;
+    border: 1px solid rgba(203, 213, 225, 0.8) !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+  }
+
+  /* Modern modal overlays */
+  [role="dialog"],
+  .modal-overlay {
+    backdrop-filter: blur(6px) !important;
+    background-color: rgba(15, 23, 42, 0.55) !important;
+  }
+}
+
+@media print {
+  html, body {
+    background: white !important;
+    background-color: white !important;
+    color: black !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Prevent clipping from viewport height constraints on outer containers */
+  #root, 
+  .h-screen,
+  .overflow-hidden,
+  .overflow-y-auto {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Set paper dimension rules and margins to eliminate empty 2nd pages */
+  @page {
+    size: A4 portrait;
+    margin: 6mm 10mm 6mm 10mm !important;
+  }
+
+  /* Compact and fitting rule for standard A4 slips, receipts, and vouchers */
+  #print-modal-inner, 
+  .print-modal, 
+  .print-full-sheet,
+  #printable-voucher-stage {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    max-height: 98vh !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide background content only when a print modal/portal is active to prevent blank print previews */
+  body:has(#print-modal-backdrop) > *:not(#print-modal-backdrop) {
+    display: none !important;
+  }
+  body:has(.print-modal) > *:not(.print-modal) {
+    display: none !important;
+  }
+
+  /* Target the material receive print backdrop directly */
+  #print-modal-backdrop {
+    position: static !important;
+    background: white !important;
+    background-color: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: auto !important;
+  }
+
+  #print-modal-inner {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .print-continuous-paper-container {
+    display: flex !important;
+    flex-direction: row !important;
+    background-color: white !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  #tractor-feed-holes-left, #tractor-feed-holes-right {
+    display: flex !important;
+    width: 32px !important;
+    background-color: #faf8f5 !important;
+    border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Sprocket hole visual indicators for high contrast print */
+  #tractor-feed-holes-left div, #tractor-feed-holes-right div {
+    background-color: #000000 !important;
+    border: 1px solid #000000 !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+  }
+
+  #print-sheet-wrapper {
+    position: static !important;
+    flex-grow: 1 !important;
+    width: calc(100% - 64px) !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4mm 8mm !important;
+    margin: 0 !important;
+    background-color: white !important;
+  }
+
+  /* Force display of inputs as plain text on high contrast paper */
+  #print-sheet-wrapper input, 
+  #print-sheet-wrapper textarea,
+  #print-sheet-wrapper select {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Convert all Brand Colors (Reds) to high contrast crisp black/dark gray for readable physical print */
+  [class*="text-red-"], [class*="text-rose-"] {
+    color: #000000 !important;
+  }
+
+  /* Force convert red outlines/borders to solid sharp black borders */
+  [class*="border-red-"], [class*="border-rose-"], [class*="border-gray-"], [class*="border-slate-"] {
+    border-color: #000000 !important;
+  }
+
+  /* Ensure th/td and legend borders are black */
+  th, td, legend {
+    border-color: #000000 !important;
+  }
+
+  /* Override custom B&W backgrounds and headers to clear colors */
+  [class*="bg-red-"], [class*="bg-rose-"], thead tr {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* High contrast table header background for print */
+  th {
+    background-color: #e6e6e6 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    border: 1px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print, .print-only, .print-hidden, button {
+    display: none !important;
+  }
+
+  .h-screen {
+    height: auto !important;
+  }
+}
+
+/* Responsive adjustments for mobile/tablet viewports to prevent horizontal overflow */
+@media (max-width: 767px) {
+  /* Prevent horizontal layout bleed */
+  body, html { /* removed to allow horizontal scroll on zoom */ }
+
+  /* Make sure wide data tables scroll horizontally beautifully instead of breaking page width */
+  table {
+    min-width: 600px !important; /* Ensure data-heavy tables maintain responsive structure while scrolling */
+  }
+
+  /* Aggressive 'mobile-first' strategy for forms and grids below 768px: collapse all grid layouts to single-column */
+  form .grid,
+  fieldset .grid,
+  .form-grid,
+  [class*="grid-cols-"] {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Force col-span items to fill single columns fully when collapsed */
+  form [class*="col-span-"],
+  fieldset [class*="col-span-"],
+  .form-grid [class*="col-span-"],
+  [class*="col-span-"] {
+    grid-column: span 1 / span 1 !important;
+  }
+
+  /* Form fields height and padding optimization for tap-friendliness */
+  input, 
+  select, 
+  textarea, 
+  .single-combo-box, 
+  .dual-combo-box,
+  button {
+    min-height: 44px !important; /* Finger-friendly minimum height */
+    font-size: 14px !important; /* Absolute protection against auto-zooming on focus */
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Responsive stack for row-aligned form labels and fields */
+  .flex.items-center:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.25rem !important;
+  }
+
+  .flex.items-center:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) > label {
+    text-align: left !important;
+    width: auto !important;
+    min-width: unset !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* Keep checklist items/inline radios properly row-aligned */
+  .flex.items-center:has(input[type="checkbox"]),
+  .flex.items-center:has(input[type="radio"]) {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Balanced grids on mobile auto-fit */
+  .grid-cols-2 {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  }
+}
+
+/* Touch-friendly overflow container with kinetic momentum scrolling for all data-heavy scroll regions */
+.touch-overflow-container,
+.overflow-x-auto,
+.overflow-y-auto,
+div:has(> table) {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important; /* Momentum kinetic scrolling for iOS/WebKit */
+  scroll-behavior: smooth !important;
+  overscroll-behavior-x: contain !important;
+}
+
+/* Elegant, non-intrusive scrollbar design optimized for mobile interaction */
+.touch-overflow-container::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+div:has(> table)::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+}
+.touch-overflow-container::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+div:has(> table)::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+.touch-overflow-container::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+div:has(> table)::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+/* Expand the hit target area of all interactive buttons, links, checkbox/radio inputs, and action links 
+   to a minimum of 44x44px using invisible CSS pseudo-elements, without altering their visual appearance. */
+@media (max-width: 1024px) {
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  .clickable-action,
+  [role="button"] {
+    position: relative !important;
+  }
+
+  button::after,
+  a::after,
+  input[type="checkbox"]::after,
+  input[type="radio"]::after,
+  .clickable-action::after,
+  [role="button"]::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+  }
+}
+
+/* Dynamic font-size reduction for table headers and cells on screens smaller than 480px */
+@media (max-width: 480px) {
+  table th {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+    padding: 4px 2px !important;
+    letter-spacing: -0.02em !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+  }
+  
+  table td {
+    font-size: 10px !important;
+    padding: 4px 2px !important;
+    line-height: 1.2 !important;
+    word-break: break-word !important;
+  }
+}
+

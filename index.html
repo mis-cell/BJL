@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head><script>window.addEventListener("error", function(e) { console.error("GLOBAL ERROR:", e.error && e.error.stack ? e.error.stack : e.message); });</script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>JuteDesk | Raw Jute Purchase Desk</title>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch || globalThis.fetch;
+          if (originalFetch) {
+            var fetchValue = originalFetch;
+            var descriptor = {
+              get: function() {
+                return fetchValue;
+              },
+              set: function(val) {
+                fetchValue = val;
+              },
+              configurable: true,
+              enumerable: true
+            };
+            Object.defineProperty(window, 'fetch', descriptor);
+            if (typeof globalThis !== 'undefined' && globalThis !== window) {
+              Object.defineProperty(globalThis, 'fetch', descriptor);
+            }
+          }
+        } catch (e) {
+          console.error("Could not define fetch redirect:", e);
+        }
+      })();
+    </script>
+      <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "G-XXXXXXXXXX");
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
