@@ -45,7 +45,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
 
 import AmadEntry from "./pages/AmadEntry";
-import AmadRegister from "./pages/AmadRegister"; 
+import AmadRegister from "./pages/AmadRegister";
 import SaudaEntry from "./pages/SaudaEntry";
 import BardanaVouchers from "./pages/BardanaVouchers";
 import DirectoryView from "./pages/DirectoryView";

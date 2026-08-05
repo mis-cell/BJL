@@ -251,32 +251,34 @@ export default function ExecutiveBiDashboard({
       return acc + wt;
     }, 0);
 
-    const totalSaudaWeight = totalSaudaWeightRaw > 0 ? Number(totalSaudaWeightRaw.toFixed(2)) : 2845.60;
-    const totalSaudaRecordsCount = saudas.length > 0 ? saudas.length : 156;
+    const totalSaudaWeight = Number(totalSaudaWeightRaw.toFixed(2));
+    const totalSaudaRecordsCount = saudas.length;
 
     const saudaBrokersSet = new Set<string>();
     saudas.forEach(s => {
       const b = s.broker || s.broker_name;
       if (b && String(b).trim()) saudaBrokersSet.add(String(b).trim());
     });
-    const saudaBrokersCount = saudaBrokersSet.size > 0 ? saudaBrokersSet.size : 18;
+    const saudaBrokersCount = saudaBrokersSet.size;
 
     const saudaSuppliersSet = new Set<string>();
     saudas.forEach(s => {
       const sup = s.supplier || s.supplier_name;
       if (sup && String(sup).trim()) saudaSuppliersSet.add(String(sup).trim());
     });
-    const saudaSuppliersCount = saudaSuppliersSet.size > 0 ? saudaSuppliersSet.size : 42;
+    const saudaSuppliersCount = saudaSuppliersSet.size;
 
-    const pendingShipmentsCount = saudas.length > 0
-      ? saudas.filter(s => !s.shipment_date || String(s.status || '').toLowerCase().includes('pending') || String(s.status || '').toLowerCase().includes('open')).length
-      : 9;
+    const pendingShipmentsCount = saudas.filter(s => {
+      const st = String(s.status || '').toLowerCase();
+      return st === 'pending' || st === 'open';
+    }).length;
 
-    const activeSaudaCount = saudas.length > 0
-      ? saudas.filter(s => !s.status || String(s.status || '').toLowerCase() === 'active').length
-      : 132;
+    const activeSaudaCount = saudas.filter(s => {
+      const st = String(s.status || '').toLowerCase();
+      return !st || st === 'active' || st === 'completed';
+    }).length;
 
-    let latestSaudaDate = "03-Aug-2026";
+    let latestSaudaDate = "N/A";
     if (saudas.length > 0) {
       const sortedDates = saudas
         .map(s => s.date || s.b_date || s.created_at)

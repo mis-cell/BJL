@@ -232,6 +232,7 @@ export default function Dashboard({
 
 
   const [smsSaudas, setSmsSaudas] = React.useState<any[]>([]);
+  const [rawSaudas, setRawSaudas] = React.useState<any[]>([]);
   const [payments, setPayments] = React.useState<any[]>([]);
   const [recentAmad, setRecentAmad] = React.useState<any[]>([]);
   const [rawArrivals, setRawArrivals] = React.useState<any[]>([]);
@@ -496,13 +497,22 @@ export default function Dashboard({
       setRecentAmad(arrivals.slice(0, 5));
       setRawArrivals(arrivals || []);
       setRawPos(pos || []);
+      setRawSaudas(saudas || []);
 
-      // Direct queries to custom Views / Tables: amad_register and material_inspection in Supabase
+      // Direct queries to custom Views / Tables: amad_register, material_inspection, and sauda_master in Supabase
       let amadRegisterData: any[] = [];
       let materialInspectionData: any[] = [];
       const settledMrNos = new Set<string>();
 
       if (supabase) {
+        try {
+          const { data: sMaster, error: sMasterErr } = await supabase.from('sauda_master').select('*');
+          if (!sMasterErr && sMaster) {
+            setRawSaudas(sMaster);
+          }
+        } catch (e) {
+          console.warn("Direct query to sauda_master failed, utilizing fallback:", e);
+        }
         try {
           const { data: amReg, error: amRegErr } = await supabase.from('amad_register').select('*');
           if (!amRegErr && amReg) {
@@ -1366,7 +1376,7 @@ export default function Dashboard({
         {currentTab === 'menu' && (
           <ExecutiveBiDashboard
             arrivals={rawArrivals}
-            saudas={smsSaudas}
+            saudas={rawSaudas}
             traders={[]}
             pos={rawPos}
             settlements={[]}

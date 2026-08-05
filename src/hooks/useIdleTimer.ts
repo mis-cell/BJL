@@ -1,42 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function useIdleTimer(timeoutMs = 15 * 60 * 1000, onIdle: () => void) {
   const [isIdle, setIsIdle] = useState(false);
+  const onIdleRef = useRef(onIdle);
+
+  // Keep onIdleRef up-to-date without restarting timer on parent re-renders
+  useEffect(() => {
+    onIdleRef.current = onIdle;
+  }, [onIdle]);
+
+  const lastActivityRef = useRef<number>(Date.now());
+  const isIdleRef = useRef<boolean>(false);
 
   useEffect(() => {
-    let timeoutId: number;
+    lastActivityRef.current = Date.now();
+    isIdleRef.current = false;
 
-    const handleActivity = () => {
-      if (isIdle) {
+    const recordActivity = () => {
+      lastActivityRef.current = Date.now();
+      if (isIdleRef.current) {
+        isIdleRef.current = false;
         setIsIdle(false);
       }
-      clearTimeout(timeoutId);
-      // @ts-ignore
-      timeoutId = setTimeout(() => {
-        setIsIdle(true);
-        onIdle();
-      }, timeoutMs);
     };
 
-    // Initial setup
-    handleActivity();
+    const checkIdle = () => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityRef.current;
 
-    // Event listeners for user activity
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('mousedown', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+      if (timeSinceLastActivity >= timeoutMs) {
+        if (!isIdleRef.current) {
+          isIdleRef.current = true;
+          setIsIdle(true);
+          if (onIdleRef.current) {
+            onIdleRef.current();
+          }
+        }
+      }
+    };
+
+    // User activity listeners
+    const events: (keyof WindowEventMap)[] = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'touchstart',
+      'scroll',
+      'click',
+      'wheel',
+      'pointerdown',
+    ];
+
+    events.forEach((evt) => {
+      window.addEventListener(evt, recordActivity, { passive: true });
+    });
+
+    // Check periodically every 2 seconds
+    const intervalId = setInterval(checkIdle, 2000);
+
+    // Immediate check on tab focus or visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkIdle();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkIdle);
 
     return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('mousedown', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('touchstart', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
+      events.forEach((evt) => {
+        window.removeEventListener(evt, recordActivity);
+      });
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkIdle);
     };
-  }, [timeoutMs, isIdle, onIdle]);
+  }, [timeoutMs]);
 
   return isIdle;
 }
+
