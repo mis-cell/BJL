@@ -43,6 +43,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
+import bjlAsset from "./assets/asset_bjl.png";
+import { BJL_BACKGROUND_DATA_URI } from "./assets/bjlBackgroundDataUri";
 import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
 import AmadEntry from "./pages/AmadEntry";
@@ -323,13 +325,20 @@ function AuthScreen({
     <div
       className="h-screen w-screen relative overflow-hidden bg-[#f5f5f5] font-sans select-none flex items-center justify-center"
       style={{
-        backgroundImage: "url('/asset_bjl.png')",
+        backgroundImage: `url(${BJL_BACKGROUND_DATA_URI})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center center",
         backgroundSize: "contain",
         backgroundColor: "#f5f5f5",
       }}
     >
+      {/* Background Image Element for direct rendering */}
+      <img
+        src={BJL_BACKGROUND_DATA_URI}
+        alt="Bally Jute Logo Background"
+        className="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+      />
+
       {/* Login Container (Positioned at top 50%, left 68% on lg screens, centered on mobile) */}
       <div className="absolute top-1/2 left-1/2 lg:left-[68%] -translate-x-1/2 -translate-y-1/2 w-full max-w-[420px] px-4 z-10">
         
