@@ -24,7 +24,8 @@ import {
   CheckSquare,
   Square,
   Eye,
-  X
+  X,
+  CheckCircle2
 } from 'lucide-react';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -81,7 +82,7 @@ export const calculateNetWeightVal = (
   return netWeight.toFixed(3);
 };
 
-export default function AmadRegister({ onClose, onNew }: { onClose?: () => void; onNew?: () => void }) {
+export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onClose?: () => void; onNew?: () => void; onCreateFinalMr?: (amad: Amad) => void }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -871,6 +872,18 @@ export default function AmadRegister({ onClose, onNew }: { onClose?: () => void;
                            </div>
                         ) : (
                         <div className="flex justify-center gap-1.5">
+                          {onCreateFinalMr && (
+                            <button 
+                              onClick={() => onCreateFinalMr(amad)} 
+                              className={cn(
+                                "p-1 hover:bg-black/15 rounded transition-colors text-emerald-600 hover:text-emerald-800",
+                                isSelected && "text-emerald-300 hover:text-white"
+                              )}
+                              title="Convert to Final M.R"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button 
                             onClick={() => handlePreparePrint(amad)} 
                             className={cn(

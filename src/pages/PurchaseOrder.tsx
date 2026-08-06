@@ -28,7 +28,8 @@ import {
   CheckCircle2,
   Clock,
   Mail,
-  Truck
+  Truck,
+  Users
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -2819,64 +2820,62 @@ function isPoMismatchResolved(poNo: string): boolean {
 
   return (
     <div className="w-full h-full flex flex-col text-[11px]  text-slate-900 font-sans">
-      {viewMode === 'register' ? (
+      {viewMode === 'register' && (
         <LegacyLayout title={isArchiveView ? "FINAL P.O ARCHIVE" : (isTempPo ? "SAUDA CHECK POINT" : "FINAL P.O")} subtitle={isArchiveView ? "Archived & Settled Purchase Orders Register" : ""} onClose={onClose}>
           <div className="space-y-3">
             {/* Top Stat Cards & Chart layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-2 shadow-sm rounded-sm">
-              {/* Left Column: Metrics Belt */}
-              <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between">
-                  <div>
-                    <p className="text-[14px] font-black text-rose-700 tracking-tight">{totalPendingPos}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Pending P.O.</p>
-                  </div>
-                  <div className="p-2 bg-rose-50 border border-rose-150 rounded">
-                    <TrendingUp className="h-5 w-5 text-rose-600" />
-                  </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Pending POs */}
+              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active Pending P.O.</p>
+                  <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">{totalPendingPos}</p>
                 </div>
-
-                <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between col-span-1">
-                  <div>
-                    <p className="text-[14px] font-black text-indigo-900 tracking-tight">{totalGeneratedPos}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Generated POs</p>
-                  </div>
-                  <div className="p-2 bg-indigo-50 border border-indigo-150 rounded">
-                    <FileText className="h-5 w-5 text-indigo-600" />
-                  </div>
-                </div>
-
-                <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between col-span-1">
-                  <div>
-                    <p className="text-[14px] font-black text-amber-800 tracking-tight">
-                      {cumulativeWeight.toFixed(2)} Tons
-                    </p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cumulative PO Weight</p>
-                  </div>
-                  <div className="p-2 bg-amber-50 border border-amber-150 rounded">
-                    <Calculator className="h-5 w-5 text-amber-600" />
-                  </div>
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 shadow-xs">
+                  <Clock className="h-6 w-6" />
                 </div>
               </div>
 
-              {/* Right Column: Status Distribution Pie Chart Widget */}
-              <div className="bg-white border border-slate-300 p-2 shadow-sm flex flex-row items-center justify-between gap-2 overflow-hidden h-[54px] lg:h-auto">
-                <div className="flex-1 min-w-[70px]">
-                  <p className="text-[9px] font-black text-slate-800 uppercase tracking-tight leading-none mb-1">Status Mix</p>
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full inline-block bg-[#be123c]" />
-                      <span className="text-[8px] font-black text-rose-700 leading-none">Pending ({totalPendingPos})</span>
+              {/* Card 2: Generated POs */}
+              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Generated POs</p>
+                  <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">{totalGeneratedPos}</p>
+                </div>
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-blue-600 shadow-xs">
+                  <ClipboardList className="h-6 w-6" />
+                </div>
+              </div>
+
+              {/* Card 3: Cumulative PO Weight */}
+              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cumulative PO Weight</p>
+                  <p className="text-2xl font-black text-emerald-800 font-mono tracking-tight">{cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-slate-500">Tons</span></p>
+                </div>
+                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600 shadow-xs">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+              </div>
+
+              {/* Card 4: Status Distribution Pie Chart Widget */}
+              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-[90px]">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status Mix</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full inline-block bg-rose-600" />
+                      <span className="text-xs font-bold text-rose-700">Pending ({totalPendingPos})</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full inline-block bg-[#15803d]" />
-                      <span className="text-[8px] font-black text-green-700 leading-none">Completed ({totalCompletedPos})</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full inline-block bg-emerald-600" />
+                      <span className="text-xs font-bold text-emerald-700">Completed ({totalCompletedPos})</span>
                     </div>
                   </div>
                 </div>
-                <div className="w-16 h-10 flex-none relative flex justify-center items-center">
+                <div className="w-16 h-12 relative flex justify-center items-center shrink-0">
                   {scopedPos.length === 0 ? (
-                    <div className="text-slate-400 text-[8px] font-bold">No Data</div>
+                    <div className="text-slate-400 text-[9px] font-bold">No Data</div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                       <PieChart>
@@ -2884,8 +2883,8 @@ function isPoMismatchResolved(poNo: string): boolean {
                           data={statusPieData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={8}
-                          outerRadius={16}
+                          innerRadius={10}
+                          outerRadius={20}
                           paddingAngle={2}
                           dataKey="value"
                         >
@@ -2894,7 +2893,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                           ))}
                         </Pie>
                         <RechartsTooltip 
-                          contentStyle={{ background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: '8px', padding: '1px 3px' }}
+                          contentStyle={{ background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: '9px', borderRadius: '8px', padding: '2px 6px' }}
                           itemStyle={{ padding: 0 }}
                           formatter={(value: any, name: any) => [`${value} POs`, name]}
                         />
@@ -2906,95 +2905,114 @@ function isPoMismatchResolved(poNo: string): boolean {
             </div>
 
             {/* Register Search and Mode Controls */}
-            <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center">
-              <div className="flex bg-white border border-gray-400 p-px flex-1">
+            <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
+              <div className="relative flex-1 min-w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input 
-                  className="flex-1 text-xs px-2 outline-none py-1 bg-white text-black font-semibold" 
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
                   placeholder="Search by PO No, Broker Name, Supplier Name, Station/Area..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                
               </div>
-              <div className="flex bg-white border border-gray-400 p-px items-center shadow-sm">
-                <span className="text-[10px] font-bold px-2 text-gray-600 border-r border-gray-300">From</span>
-                <input type="date" className="text-[10px] uppercase font-bold px-1 py-1 outline-none text-gray-700 bg-transparent" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                <span className="text-[10px] font-bold px-2 text-gray-600 border-l border-r border-gray-300">To</span>
-                <input type="date" className="text-[10px] uppercase font-bold px-1 py-1 outline-none text-gray-700 bg-transparent" value={endDate} onChange={e => setEndDate(e.target.value)} />
+
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs">
+                <span className="text-[10px] font-bold text-slate-500 uppercase px-2">From</span>
+                <input type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                <span className="text-[10px] font-bold text-slate-500 uppercase px-2">To</span>
+                <input type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
               </div>
-              <div className="flex gap-1 h-full">
+
+              <div className="flex items-center gap-2 shrink-0">
                 <button 
                   onClick={handleCsvDownload} 
-                  className="bg-[#24a148] hover:bg-[#1e853c] text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors"
+                  className="bg-[#174C2C] hover:bg-[#103A20] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                   title="Download filtered records as CSV"
                 >
-                  <Download className="h-3.5 w-3.5 text-emerald-100" /> Export to CSV
+                  <Download className="h-3.5 w-3.5 text-emerald-200" /> Export CSV
                 </button>
                 <button
                   onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setStatusFilter('all'); }}
                   title="Clear search and status filter"
-                  className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1 text-[10px] font-bold flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)]"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <X className="h-3 w-3" /> Clear
+                  <X className="h-3.5 w-3.5" /> Clear
                 </button>
                 <button 
                   onClick={fetchPosAndMasters}
                   title="Refresh Purchase Orders from database"
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1 text-[10px] font-bold flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-wait" disabled={loading}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50" disabled={loading}
                 >
-                  <RefreshCcw className={`h-3 w-3 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+                  <RefreshCcw className={`h-3.5 w-3.5 text-emerald-600 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
                 </button>
               </div>
             </div>
 
             {/* Top Toolbar Action Belt */}
-            <div className="flex gap-1.5 justify-between bg-[#d4d0c8] p-1 border-b border-slate-400">
-               <div className="flex gap-1">
-                 <LegacyButton icon={Plus} label="New Manual P.O (PTF)" onClick={handleGlobalAdd} active title="Create empty PTF PO directly" />
-                 <LegacyButton icon={Printer} label="Print Selected" onClick={() => {
-                   if (selectedPoNo) {
-                     const match = poList.find(p => p.po_no === selectedPoNo);
-                     if (match) handlePrintPo(match);
-                   } else {
-                     alert("Please select a Purchase Order row in the table first.");
-                   }
-                 }} />
-                 {canEditOrDelete() && (
-                   <LegacyButton icon={Trash2} label="Delete Selected" onClick={() => {
+            <div className="bg-white border border-slate-200 rounded-[18px] p-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+               <div className="flex flex-wrap items-center gap-2">
+                 <button
+                   onClick={handleGlobalAdd}
+                   className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                   title="Create empty PTF PO directly"
+                 >
+                   <Plus className="w-4 h-4 text-emerald-300" /> New Manual P.O (PTF)
+                 </button>
+
+                 <button
+                   onClick={() => {
                      if (selectedPoNo) {
-                       handleDeletePo(selectedPoNo);
+                       const match = poList.find(p => p.po_no === selectedPoNo);
+                       if (match) handlePrintPo(match);
                      } else {
-                       alert("Please select a Purchase Order in the table first.");
+                       alert("Please select a Purchase Order row in the table first.");
                      }
-                   }} />
+                   }}
+                   className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                 >
+                   <Printer className="w-4 h-4 text-slate-600" /> Print Selected
+                 </button>
+
+                 {canEditOrDelete() && (
+                   <button
+                     onClick={() => {
+                       if (selectedPoNo) {
+                         handleDeletePo(selectedPoNo);
+                       } else {
+                         alert("Please select a Purchase Order in the table first.");
+                       }
+                     }}
+                     className="bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 hover:border-rose-400 px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                   >
+                     <Trash2 className="w-4 h-4 text-rose-600" /> Delete Selected
+                   </button>
                  )}
-                 
-                 
                </div>
-               <div className="text-[10px] text-slate-600 font-bold flex items-center pr-1 italic ">
-                 <span>Click any row to select. Double-click any row to view and edit details.</span>
+
+               <div className="text-xs text-slate-500 font-medium italic">
+                 Click any row to select. Double-click to open and edit details.
                </div>
             </div>
 
             {/* PO Grid Table */}
-            <div className="border border-gray-400 bg-white overflow-x-auto min-h-[360px]">
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden min-h-[360px]">
                <table className="w-full border-collapse text-xs text-black">
-                  <thead className="bg-[#c0c0c0] sticky top-0 z-10 font-bold ">
-                     <tr className="border-b border-gray-400 h-9 text-slate-800">
-                        <th className="px-2 w-28 text-left border-r border-slate-300 whitespace-nowrap">PO / PTF No</th>
-                        <th className="px-2 w-20 text-center border-r border-slate-300 whitespace-nowrap">Date</th>
-                        <th className="px-2 w-24 text-center border-r border-slate-300 font-bold whitespace-nowrap">Type</th>
-                        <th className="px-3 text-left border-r border-slate-300 whitespace-nowrap">Supplier</th>
-                        <th className="px-3 text-left border-r border-slate-300 whitespace-nowrap">Broker</th>
-                        <th className="px-2 text-center border-r border-slate-300 w-24 whitespace-nowrap">Unit / Lorry</th>
-                        <th className="px-2 text-right border-r border-slate-300 w-24 whitespace-nowrap">Total Units</th>
-                        <th className="px-2 text-right border-r border-slate-300 w-24 whitespace-nowrap">Weight<br/><span className="text-[8px] font-normal leading-tight opacity-80">Rcvd / Contract (MT)</span></th>
-                        <th className="px-2 text-center border-r border-slate-300 w-24 whitespace-nowrap">Status</th>
-                        {isTempPo && <th className="px-2 text-center border-r border-slate-300 w-24 whitespace-nowrap">Pass / Mismatch</th>}
-                        <th className="px-2 text-center w-28 whitespace-nowrap">Actions</th>
+                  <thead className="bg-slate-100/90 sticky top-0 z-10 font-bold border-b border-slate-200">
+                     <tr className="h-10 text-slate-700">
+                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">PO / PTF No</th>
+                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Date</th>
+                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Type</th>
+                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Supplier</th>
+                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Broker</th>
+                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Unit / Lorry</th>
+                        <th className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Total Units</th>
+                        <th className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Weight (MT)<br/><span className="text-[8px] font-medium opacity-70 normal-case">Rcvd / Contract</span></th>
+                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Status</th>
+                        {isTempPo && <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Pass / Mismatch</th>}
+                        <th className="px-3 text-center whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Actions</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-normal">
+                  <tbody className="divide-y divide-slate-100 font-normal">
                      {filteredPos.map((item, idx) => {
                         const isSelected = selectedPoNo === item.po_no;
                         const isPoPending = item.pending === true || item.pending === 'Yes' || item.pending === 1 || String(item.pending).toLowerCase() === 'true';
@@ -3004,31 +3022,32 @@ function isPoMismatchResolved(poNo: string): boolean {
                            key={item.po_no} 
                            onClick={() => setSelectedPoNo(item.po_no)}
                            onDoubleClick={() => { if(!isVoid) handleLoadSelectedPo(item); }}
-                           className={`h-9 cursor-pointer hover:bg-amber-100/50 ${
-                              isSelected ? "bg-indigo-50 text-indigo-950 font-bold border-y border-indigo-200" : 
-                              isVoid ? "bg-red-50/40 text-gray-400 line-through decoration-red-500/50" :
-                              (idx % 2 === 0 ? "bg-white" : "bg-gray-50/50")
-                           }`}
+                           className={cn(
+                              "h-10 cursor-pointer transition-colors text-xs font-medium",
+                              isSelected ? "bg-[#174C2C] text-white" : 
+                              isVoid ? "bg-rose-50/40 text-slate-400 line-through decoration-rose-400/50" :
+                              (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
+                           )}
                         >
-                           <td className={cn("px-2 font-mono font-bold select-text whitespace-nowrap border-r border-slate-200", isVoid ? "text-red-400" : (isSelected ? "text-indigo-900" : "text-slate-800"))}>{item.po_no}</td>
-                           <td className="px-2 text-center font-mono whitespace-nowrap border-r border-slate-200">{item.po_date || item.created_at?.slice(0, 10) || ''}</td>
-                           <td className="px-2 text-center whitespace-nowrap border-r border-slate-200">
-                              <span className={`px-1.5 py-0.2 rounded-sm text-[9.5px] font-black tracking-tight ${item.ptf_no ? 'bg-orange-100 text-orange-700 border border-orange-255' : 'bg-emerald-100 text-emerald-700 border border-emerald-255'}`}>
+                           <td className={cn("px-3 font-mono font-bold select-text whitespace-nowrap border-r border-slate-200/60", isVoid ? "text-rose-400" : (isSelected ? "text-white" : "text-slate-900"))}>{item.po_no}</td>
+                           <td className={cn("px-3 text-center font-mono whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.po_date || item.created_at?.slice(0, 10) || ''}</td>
+                           <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60">
+                              <span className={cn("px-2 py-0.5 rounded-md text-[9.5px] font-black tracking-tight", item.ptf_no ? (isSelected ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-800 border border-orange-200") : (isSelected ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800 border border-emerald-200"))}>
                                  {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
                               </span>
                            </td>
-                           <td className={cn("px-3 uppercase truncate font-bold text-slate-900 self-center max-w-[200px] whitespace-nowrap border-r border-slate-200", isSelected && "text-indigo-950")}>{item.supplier}</td>
-                           <td className={cn("px-3 uppercase truncate text-slate-700 max-w-[150px] whitespace-nowrap border-r border-slate-200", isSelected && "text-indigo-900/90")}>{item.broker}</td>
-                           <td className="px-2 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200 text-[10px] text-slate-700">{item.purchase_unit_name || 'BALES'}</td>
-                           <td className="px-2 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200">{item.total_units || 0}</td>
-                           <td className="px-2.5 py-1.5 text-left font-mono border-r border-slate-200 min-w-[210px]">
+                           <td className={cn("px-3 uppercase truncate font-bold self-center max-w-[200px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.supplier}</td>
+                           <td className={cn("px-3 uppercase truncate max-w-[150px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.broker}</td>
+                           <td className={cn("px-3 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200/60 text-[10px]", isSelected ? "text-slate-200" : "text-slate-700")}>{item.purchase_unit_name || 'BALES'}</td>
+                           <td className={cn("px-3 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.total_units || 0}</td>
+                           <td className="px-3 py-1.5 text-left font-mono border-r border-slate-200/60 min-w-[210px]">
                               <div className="flex items-center justify-between gap-1 text-[10px]">
-                                 <span className="font-black text-emerald-800 whitespace-nowrap">
-                                    {(item.received_weight_mt || 0).toFixed(3)} MT Received
+                                 <span className={cn("font-black whitespace-nowrap", isSelected ? "text-emerald-200" : "text-emerald-800")}>
+                                    {(item.received_weight_mt || 0).toFixed(3)} MT Rcvd
                                  </span>
-                                 <span className="text-slate-400 font-sans text-[8.5px]">of</span>
-                                 <span className="font-bold text-slate-800 whitespace-nowrap">
-                                    {parseFloat(item.total_contract_mt || 0).toFixed(3)} MT Contracted
+                                 <span className={cn("font-sans text-[8.5px]", isSelected ? "text-slate-200" : "text-slate-400")}>of</span>
+                                 <span className={cn("font-bold whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
+                                    {parseFloat(item.total_contract_mt || 0).toFixed(3)} MT
                                  </span>
                               </div>
                               {(() => {
@@ -3042,43 +3061,37 @@ function isPoMismatchResolved(poNo: string): boolean {
                                     : 'from-slate-300 to-slate-400';
                                  return (
                                     <div className="mt-1 space-y-0.5">
-                                       <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden border border-slate-300/50 p-0.2" title={`${pct.toFixed(1)}% received (${(item.received_weight_mt || 0).toFixed(3)} / ${parseFloat(item.total_contract_mt || 0).toFixed(3)} MT)`}>
+                                       <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden p-0.2" title={`${pct.toFixed(1)}% received`}>
                                           <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${pct}%` }} />
-                                       </div>
-                                       <div className="flex justify-between items-center text-[8.5px] font-sans font-bold">
-                                          <span className="text-slate-500">Progress</span>
-                                          <span className={cn("font-mono", pct >= 99.9 ? "text-emerald-700 font-extrabold" : "text-indigo-700")}>
-                                             {pct.toFixed(1)}%
-                                          </span>
                                        </div>
                                     </div>
                                  );
                               })()}
                            </td>
-                           <td className="px-2 text-center whitespace-nowrap border-r border-slate-200">
+                           <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60">
                               {(() => {
                                  const isOverdue = isPoPending && item.delivery_to &&
                                     new Date(item.delivery_to) < new Date(new Date().toDateString());
                                  return (
                                     <div className="flex flex-col items-center gap-0.5">
                                        {isPoPending ? (
-                                         <span className="text-[9.5px] font-extrabold px-1.5 py-0.2 text-rose-700 bg-rose-100/80 rounded border border-rose-200">PENDING</span>
+                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
                                        ) : (
-                                         <span className="text-[9.5px] font-extrabold px-1.5 py-0.2 text-green-700 bg-green-100/80 rounded border border-green-200">COMPLETED</span>
+                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-200")}>COMPLETED</span>
                                        )}
                                        {isOverdue && (
-                                         <span title={`Delivery was due ${item.delivery_to}`} className="text-[8px] font-black px-1 text-amber-800 bg-amber-100 rounded border border-amber-300 uppercase">Overdue</span>
+                                         <span title={`Delivery was due ${item.delivery_to}`} className="text-[8px] font-black px-1.5 text-amber-800 bg-amber-100 rounded border border-amber-300 uppercase">Overdue</span>
                                        )}
                                     </div>
                                  );
                               })()}
                            </td>
                            {isTempPo && (
-                           <td className="px-2 text-center border-r border-slate-200">
+                           <td className="px-3 text-center border-r border-slate-200/60">
                               {(() => {
                                  const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
                                  if (isFinalized) {
-                                    return <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-300 uppercase" title="Passed to Final P.O">Pass ✓</span>;
+                                    return <span className="text-[9px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase" title="Passed to Final P.O">Pass ✓</span>;
                                  }
                                  const isPtf = !!(item.ptf_no && String(item.ptf_no).trim());
                                  const mr = matchResults[item.po_no];
@@ -3087,7 +3100,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                                        <button
                                           onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
                                           title="PTF entry — direct Final P.O. Click to move."
-                                          className="text-[9px] font-black px-2 py-0.5 rounded bg-green-600 hover:bg-green-700 text-white border border-green-700 uppercase shadow-sm"
+                                          className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer"
                                        >Pass</button>
                                     );
                                  }
@@ -3098,8 +3111,8 @@ function isPoMismatchResolved(poNo: string): boolean {
                                     return (
                                        <button
                                           onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="All fields match Material Inspection (weight within ±5%) — click to move to Final P.O"
-                                          className="text-[9px] font-black px-2 py-0.5 rounded bg-green-600 hover:bg-green-700 text-white border border-green-700 uppercase shadow-sm"
+                                          title="All fields match Material Inspection — click to move to Final P.O"
+                                          className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer"
                                        >Pass</button>
                                     );
                                  }
@@ -3107,26 +3120,26 @@ function isPoMismatchResolved(poNo: string): boolean {
                                     isPoMismatchResolved(item.po_no) ? (
                                        <button
                                           onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="Material Mismatch approved by auditor — click to move to Final P.O"
-                                          className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 uppercase shadow-sm whitespace-nowrap"
+                                          title="Material Mismatch approved — click to move to Final P.O"
+                                          className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-emerald-700 text-white uppercase shadow-xs whitespace-nowrap cursor-pointer"
                                        >MISMATCH PASS</button>
                                     ) : (
                                        <span
-                                          className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help"
-                                          title={`Mismatch in: ${mr.mismatches.map((m: any) => m.field).join(', ')} — resolve in Material Mismatch. This P.O is locked from editing.`}
+                                          className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help"
+                                          title={`Mismatch in: ${mr.mismatches.map((m: any) => m.field).join(', ')}`}
                                        >Mismatch</span>
                                     )
                                  );
                               })()}
                            </td>
                            )}
-                           <td className="px-2 text-center">
+                           <td className="px-3 text-center">
                               {isVoid ? (
                                  <div className="flex items-center justify-center gap-2">
-                                   <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 font-bold text-[10px] uppercase border border-red-200">VOID</span>
+                                   <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">VOID</span>
                                    <button
                                      onClick={(e) => { e.stopPropagation(); handleDeletePo(item.po_no); }}
-                                     className="p-1 text-red-600 hover:text-red-800 hover:bg-black/10 rounded transition-colors"
+                                     className="p-1 text-rose-600 hover:text-rose-800 rounded transition-colors cursor-pointer"
                                      title="Delete Permanently"
                                    >
                                      <Trash2 className="w-3.5 h-3.5" />
@@ -3140,7 +3153,10 @@ function isPoMismatchResolved(poNo: string): boolean {
                                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                      setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
                                    }}
-                                   className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-[10px] uppercase flex items-center gap-1 shadow-sm"
+                                   className={cn(
+                                     "px-3 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 shadow-xs transition-colors cursor-pointer",
+                                     isSelected ? "bg-white/20 text-white border-white/30 hover:bg-white/30" : "bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700"
+                                   )}
                                    title="Actions"
                                  >
                                    Actions <ChevronDown className="w-3 h-3" />
@@ -3157,39 +3173,94 @@ function isPoMismatchResolved(poNo: string): boolean {
                            </td>
                         </tr>
                      )}
-                     {Array.from({ length: Math.max(0, 8 - filteredPos.length) }).map((_, i) => (
-                        <tr key={i} className="h-8 border-b border-slate-50 opacity-20"><td colSpan={isTempPo ? 11 : 10}></td></tr>
-                     ))}
                   </tbody>
                </table>
             </div>
 
             {/* Pagination / Total bar */}
-            <div className="bg-[#808080] p-1 flex justify-between gap-1 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.2)] ">
-               <div className="flex gap-1 h-full font-bold">
-                  <div className="bg-white px-3 py-1 border border-gray-400 min-w-[100px]">
-                     <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Cumulative Wt</p>
-                     <p className="text-xs font-black text-indigo-950">
-                       {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} Ton
-                     </p>
+            <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap justify-between items-center gap-3">
+               <div className="flex flex-wrap gap-3 items-center">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Weight:</span>
+                     <span className="text-xs font-black text-slate-900 font-mono">
+                       {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} MT
+                     </span>
                   </div>
-                  <div className="bg-white px-3 py-1 border border-gray-400 min-w-[100px]">
-                     <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Closed Pos</p>
-                     <p className="text-xs font-black text-emerald-600">
-                       {filteredPos.filter(p => p.pending === false || p.pending === 'No').length} Done
-                     </p>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase">Closed P.O.s:</span>
+                     <span className="text-xs font-black text-emerald-700 font-mono">
+                       {filteredPos.filter(p => p.pending === false || p.pending === 'No').length} Closed
+                     </span>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase">Total Records:</span>
+                     <span className="text-xs font-black text-slate-900 font-mono">
+                       {filteredPos.length} POs
+                     </span>
                   </div>
                </div>
-               <div className="flex gap-1 items-center px-1">
-                  <span className="text-[10px] font-bold text-white px-2">Page 1 of 1</span>
+               <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500">Page 1 of 1</span>
                </div>
             </div>
+
+            {/* Floating Quick Add Button */}
+            <button
+              onClick={handleGlobalAdd}
+              className="fixed bottom-12 right-8 z-30 bg-[#174C2C] hover:bg-[#103A20] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#0d301b] group"
+              title="Create New Manual P.O"
+            >
+              <Plus className="w-5 h-5 text-emerald-300 group-hover:rotate-90 transition-transform duration-300" />
+              <span>New P.O</span>
+            </button>
           </div>
         </LegacyLayout>
-      ) : (
-        // Form Mode (Purchase Order Editor Form)
-        <LegacyLayout title={isTempPo ? "SAUDA CHECK POINT" : "FINAL P.O"} subtitle={isTempPo ? "Purchase Order Generation Mode" : "Purchase Order Generation Mode"} onBack={() => setViewMode('register')} onClose={() => setViewMode('register')}>
-          <div ref={poFormRef} className="space-y-4 text-[11px] font-bold">
+      )}
+
+      {/* Form Mode Popup Modal */}
+      {viewMode === 'form' && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden text-xs">
+            
+            {/* Modal Header Bar - Sauda Dark Green Theme */}
+            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] px-6 py-4 flex items-center justify-between border-b border-[#0d301b] shrink-0 text-white shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#103A20] border border-[#235E39] rounded-xl text-amber-300 shadow-xs">
+                  <FileText className="h-5 w-5 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-black text-white tracking-tight uppercase">
+                      {formData.no ? "EDIT PURCHASE ORDER" : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-[#103A20] tracking-wider uppercase">
+                      {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-200/90 font-medium">
+                    {formData.no ? `P.O No: ${formData.no}` : "Fill purchase order parameters, broker & supplier details, and item rates"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2 shadow-xs">
+                  <span className="text-emerald-200/80 font-medium">Session:</span>
+                  <span className="font-bold text-amber-300 font-mono text-xs">BJCL/2026-2027/</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('register')}
+                  className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  title="Close P.O Form (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div ref={poFormRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             
             {/* Optional Calculator Modal */}
             {isCalcOpen && (
@@ -3303,1684 +3374,604 @@ function isPoMismatchResolved(poNo: string): boolean {
                 </div>
               </div>
             )}
-            
-            <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-              <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
-                {/* Background Mill Illustration Artwork on the Right with light opacity */}
-                <div 
-                  className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
-                  style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
-                />
-      
-                <div className="relative z-10 flex flex-col gap-1">
-                  <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
-                    Sauda Check Point Desk
-                  </h2>
+
+            <LegacyFieldset legend="Purchase Order Information Header">
+              <div className="grid grid-cols-12 gap-x-2 gap-y-1">
+                {isSaudaActive && (
+                  <div className="col-span-12 mb-1 p-1 bg-amber-50 border border-amber-300 text-[10px] text-amber-850 flex items-center gap-1.5 font-normal rounded-sm">
+                    <span className="font-bold">⚡ Sauda Live Link Connected:</span> Sauda details automatically pull into form fields below.
+                  </div>
+                )}
+                
+                {/* ROW 1 */}
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className="whitespace-nowrap min-w-[70px]">Purchase Order</label>
+                  <SingleComboBox value={formData.purchase_order} onChange={(val) => setFormData({...formData, purchase_order: val})} options={[{text: 'FINAL PO', value: 'FINAL PO'}]} textField="text" valueField="value" />
                 </div>
-      
-                {/* Action Controls & Session Badge */}
-                <div className="relative z-10 flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
-                    title="Back to Sauda Desk (Esc)"
-                  >
-                    <ArrowLeft className="h-4 w-4 text-amber-300" />
-                    <span>Back (Esc)</span>
-                  </button>
-                  <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-                    <span className="text-emerald-200/80 font-medium">Session:</span>
-                    <span className="font-bold text-amber-300 font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
-                  </div>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className="ml-0 sm:ml-2 min-w-[30px]">Type</label>
+                  <SingleComboBox value={formData.po_type} onChange={(val) => setFormData({...formData, po_type: val})} options={[{text: 'Normal', value: 'Normal'}, {text: 'Special', value: 'Special'}]} textField="text" valueField="value" />
                 </div>
-              </div>
-              
-               
-              <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#0F351E] bg-white shadow-lg overflow-hidden">
-                {/* Header */}
-                <div className="px-6 py-4 bg-white text-[#174C2C] border-b border-[#174C2C]">
-                  <h2 className="text-lg font-bold">
-                    Purchase Order Information
-                  </h2>
-                </div>
-                <div className="grid grid-cols-12 gap-x-2 gap-y-1">
-                  {isSaudaActive && (
-                    <div className="col-span-12 mb-1 p-1 bg-amber-50 border border-amber-300 text-[10px] text-amber-850 flex items-center gap-1.5 font-normal rounded-sm">
-                      <span className="font-bold">⚡ Sauda Live Link Connected:</span> Sauda details automatically pull into form fields below.
-                    </div>
-                  )}
-                  
-                  {/* ROW 1 */}
-                  {/* ================= Purchase Order Details ================= */}
-                  <div className="col-span-12 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
-
-                      {/* Purchase Order */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                          Purchase Order
-                        </label>
-                        <SingleComboBox
-                          value={formData.purchase_order}
-                          onChange={(val) =>
-                            setFormData({ ...formData, purchase_order: val })
-                          }
-                          options={[{ text: "FINAL PO", value: "FINAL PO" }]}
-                          textField="text"
-                          valueField="value"
-                        />
-                      </div>
-
-                      {/* Type */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                          Type
-                        </label>
-                        <SingleComboBox
-                          value={formData.po_type}
-                          onChange={(val) =>
-                            setFormData({ ...formData, po_type: val })
-                          }
-                          options={[
-                            { text: "Normal", value: "Normal" },
-                            { text: "Special", value: "Special" },
-                          ]}
-                          textField="text"
-                          valueField="value"
-                        />
-                      </div>
-
-                      {/* PTF Mode */}
-                      <div className="flex flex-col gap-2">
-                        <label className="flex items-center gap-2 text-xs font-semibold text-[#7c2d12]">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 accent-[#7c2d12] cursor-pointer"
-                            checked={formData.is_ptf}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              const defaultItems =
-                                formData.items.length > 0
-                                  ? formData.items
-                                  : [
-                                      {
-                                        srl: 1,
-                                        crop: getCropYear(),
-                                        grade_code: "",
-                                        grade_name: "",
-                                        agency_code: "",
-                                        agency_name: "",
-                                        marka_code: "",
-                                        marka_name: "",
-                                        qty: 200,
-                                        weight: 10,
-                                        rate: 0,
-                                      },
-                                    ];
-
-                              setFormData({
-                                ...formData,
-                                is_ptf: isChecked,
-                                no: isChecked ? "" : formData.no,
-                                ptf_no: isChecked
-                                  ? formData.ptf_no ||
-                                    `PTF/${Math.floor(Math.random() * 1000)}/26`
-                                  : "",
-                                items: defaultItems,
-                              });
-                            }}
-                          />
-                          P.T.F Mode
-                        </label>
-
-                        <input
-                          type="text"
-                          value={formData.ptf_no}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              ptf_no: e.target.value,
-                            })
-                          }
-                          readOnly={!formData.is_ptf}
-                          className={`w-full rounded-md border px-3 py-2 text-sm font-semibold outline-none ${
-                            formData.is_ptf
-                              ? "bg-white border-slate-300 text-black"
-                              : "bg-slate-100 border-slate-300 text-slate-400"
-                          }`}
-                        />
-                      </div>
-
-                      {/* Pending */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                          Pending
-                        </label>
-
-                        <div className="flex items-center gap-5 rounded-md border border-slate-300 bg-white px-3 py-2">
-
-                          <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input
-                              type="radio"
-                              value="Yes"
-                              checked={formData.pending === "Yes"}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  pending: e.target.value,
-                                })
-                              }
-                              name="pending_radio"
-                            />
-                            Yes
-                          </label>
-
-                          <label className="flex items-center gap-2 cursor-pointer text-sm">
-                            <input
-                              type="radio"
-                              value="No"
-                              checked={formData.pending === "No"}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  pending: e.target.value,
-                                })
-                              }
-                              name="pending_radio"
-                            />
-                            No
-                          </label>
-
-                        </div>
-                      </div>
-
-                      {/* PO Contract */}
-                      <div className="flex flex-col gap-1">
-                        <label
-                          className={`text-xs font-semibold uppercase tracking-wide ${
-                            formData.is_ptf
-                              ? "text-slate-400"
-                              : "text-slate-600"
-                          }`}
-                        >
-                          P.O Contract
-                        </label>
-
-                        {formData.is_ptf ? (
-                          <input
-                            type="text"
-                            disabled
-                            value=""
-                            className="w-full rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-slate-400"
-                          />
-                        ) : (
-                          <SingleComboBox
-                            value={formData.no}
-                            onChange={handleSaudaSelect}
-                            options={displaySaudas}
-                            textField="po_display_no"
-                            valueField="po_display_no"
-                          />
-                        )}
-                      </div>
-
-                      {/* Date */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                          Date
-                        </label>
-
-                        <input
-                          type="date"
-                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-black outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                          value={formData.date}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              date: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                    </div>
-                  </div>
-                  {/* <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                    <label className="whitespace-nowrap min-w-[70px]">Purchase Order</label>
-                    <SingleComboBox value={formData.purchase_order} onChange={(val) => setFormData({...formData, purchase_order: val})} options={[{text: 'FINAL PO', value: 'FINAL PO'}]} textField="text" valueField="value" />
-                  </div>
-                  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                    <label className="ml-0 sm:ml-2 min-w-[30px]">Type</label>
-                    <SingleComboBox value={formData.po_type} onChange={(val) => setFormData({...formData, po_type: val})} options={[{text: 'Normal', value: 'Normal'}, {text: 'Special', value: 'Special'}]} textField="text" valueField="value" />
-                  </div>
-                  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                    <label className="whitespace-nowrap flex items-center cursor-pointer gap-1 text-[11px] font-extrabold text-[#7c2d12]">
-                      <input 
-                        type="checkbox" 
-                        className="w-3.5 h-3.5 cursor-pointer accent-[#7c2d12]" 
-                        checked={formData.is_ptf} 
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          const defaultItems = formData.items.length > 0 ? formData.items : [
-                            {
-                              srl: 1,
-                              crop: getCropYear(),
-                              grade_code: '',
-                              grade_name: '',
-                              agency_code: '',
-                              agency_name: '',
-                              marka_code: '',
-                              marka_name: '',
-                              qty: 200,
-                              weight: 10,
-                              rate: 0
-                            }
-                          ];
-                          setFormData({
-                            ...formData, 
-                            is_ptf: isChecked, 
-                            no: isChecked ? '' : formData.no,
-                            ptf_no: isChecked ? (formData.ptf_no || `PTF/${Math.floor(Math.random()*1000)}/26`) : '',
-                            items: defaultItems
-                          });
-                        }} 
-                      />
-                      P.T.F Mode
-                    </label>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className="whitespace-nowrap flex items-center cursor-pointer gap-1 text-[11px] font-extrabold text-[#7c2d12]">
                     <input 
-                      type="text" 
-                      className={`flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black ${!formData.is_ptf ? 'bg-slate-100 text-slate-400' : ''}`}
-                      value={formData.ptf_no} 
-                      onChange={(e) => setFormData({...formData, ptf_no: e.target.value})} 
-                      readOnly={!formData.is_ptf}
-                    />
-                  </div>
-                  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 justify-center sm:justify-start whitespace-nowrap">
-                    <label className="mr-1 min-w-[50px] text-center sm:text-left">Pending</label>
-                    <input type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
-                    <input type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
-                  </div>
-                  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                    <label className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
-                    {formData.is_ptf ? (
-                      <input type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
-                    ) : (
-                      <SingleComboBox value={formData.no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
-                    )}
-                  </div>
-                  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                    <label className="ml-0 sm:ml-2 min-w-[30px]">Date</label>
-                    <input type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
-                  </div> */}
-
-                  {/* ROW 2 */}
-                  {/* ================= Broker / Supplier Information ================= */}
-                  <div className="col-span-12 rounded-xl border border-slate-200 bg-white shadow-sm p-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-                      {/* Broker */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Broker
-                        </label>
-
-                        <DualComboBox
-                          hasSaudaHighlight={isSaudaActive}
-                          showCode={false}
-                          code={formData.broker_code}
-                          name={formData.broker}
-                          onCodeChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              broker_code: val,
-                            }))
+                      type="checkbox" 
+                      className="w-3.5 h-3.5 cursor-pointer accent-[#7c2d12]" 
+                      checked={formData.is_ptf} 
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        const defaultItems = formData.items.length > 0 ? formData.items : [
+                          {
+                            srl: 1,
+                            crop: getCropYear(),
+                            grade_code: '',
+                            grade_name: '',
+                            agency_code: '',
+                            agency_name: '',
+                            marka_code: '',
+                            marka_name: '',
+                            qty: 200,
+                            weight: 10,
+                            rate: 0
                           }
-                          onNameChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              broker: val,
-                            }))
-                          }
-                          options={brokerList}
-                          codeField="brok_code"
-                          nameField="brok_name"
-                        />
-                      </div>
-
-                      {/* Supplier */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Supplier
-                        </label>
-
-                        <DualComboBox
-                          hasSaudaHighlight={isSaudaActive}
-                          showCode={false}
-                          code={formData.supplier_code}
-                          name={formData.supplier}
-                          onCodeChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              supplier_code: val,
-                            }))
-                          }
-                          onNameChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              supplier: val,
-                            }))
-                          }
-                          options={supplierList}
-                          codeField="supp_code"
-                          nameField="supp_name"
-                        />
-                      </div>
-
-                      {/* Challan Supplier */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Challan Supplier
-                        </label>
-
-                        <DualComboBox
-                          hasSaudaHighlight={isSaudaActive}
-                          showCode={false}
-                          code={formData.challan_supplier_code}
-                          name={formData.challan_supplier}
-                          onCodeChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              challan_supplier_code: val,
-                            }))
-                          }
-                          onNameChange={(val) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              challan_supplier: val,
-                            }))
-                          }
-                          options={supplierList}
-                          codeField="supp_code"
-                          nameField="supp_name"
-                        />
-                      </div>
-
-                    </div>
-
-                  </div>
-                  {/* <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
-                    <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Broker</label>
-                    <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.broker_code} name={formData.broker} onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))} options={brokerList} codeField="brok_code" nameField="brok_name" />
-                  </div>
-                  <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
-                    <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Supplier</label>
-                    <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.supplier_code} name={formData.supplier} onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
-                  </div> */}
-
-                  {/* ROW 3 */}
-                  {/* <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
-                    <label className="w-24 sm:w-32 md:w-40 whitespace-nowrap text-right shrink-0">Challan Supplier</label>
-                    <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.challan_supplier_code} name={formData.challan_supplier} onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
-                  </div> */}
-
-                  {/* ROW 4 */}
-                  {/* <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
-                    <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Area</label>
-                    <DualComboBox 
-                      hasSaudaHighlight={isSaudaActive} 
-                      code={formData.area_code} 
-                      name={formData.area} 
-                      onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))} 
-                      onNameChange={(val) => {
-                        const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val);
-                        setFormData(prev => ({
-                          ...prev, 
-                          area: val,
-                          items: updatedItems
-                        }));
+                        ];
+                        setFormData({
+                          ...formData, 
+                          is_ptf: isChecked, 
+                          no: isChecked ? '' : formData.no,
+                          ptf_no: isChecked ? (formData.ptf_no || `PTF/${Math.floor(Math.random()*1000)}/26`) : '',
+                          items: defaultItems
+                        });
                       }} 
-                      options={areaList} 
-                      codeField="area_code" 
-                      nameField="area_name" 
                     />
-                  </div>
-                  <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
-                    <label className="whitespace-nowrap w-24 sm:w-32 md:w-48 text-right shrink-0">Transportation Charges paid by</label>
-                    <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.trans_paid_by} onChange={(e) => setFormData({...formData, trans_paid_by: e.target.value})}>
-                      <option>PARTY</option>
-                      <option>COMPANY</option>
-                    </select>
-                  </div> */}
-                  {/* Area & Transportation Block */}
-                  <div className="col-span-12 mt-3">
-                    <div className="rounded-2xl border border-slate-300 bg-gradient-to-r from-slate-50 to-white p-5 shadow-sm">
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                        {/* Area */}
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-slate-700">
-                            Area
-                          </label>
-
-                          <div className="rounded-xl border border-slate-300 bg-white p-2">
-                            <DualComboBox
-                              hasSaudaHighlight={isSaudaActive}
-                              code={formData.area_code}
-                              name={formData.area}
-                              onCodeChange={(val) =>
-                                setFormData(prev => ({ ...prev, area_code: val }))
-                              }
-                              onNameChange={(val) => {
-                                const updatedItems = recalculateAllRates(
-                                  formData.items,
-                                  formData.s_date,
-                                  formData.b_rate,
-                                  sattaBaseRates,
-                                  sattaCalculatedRates,
-                                  sattaDifferentials,
-                                  val
-                                );
-
-                                setFormData(prev => ({
-                                  ...prev,
-                                  area: val,
-                                  items: updatedItems,
-                                }));
-                              }}
-                              options={areaList}
-                              codeField="area_code"
-                              nameField="area_name"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Transportation */}
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-slate-700">
-                            Transportation Charges Paid By
-                          </label>
-
-                          <select
-                            className="w-full h-11 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium shadow-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                            value={formData.trans_paid_by}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                trans_paid_by: e.target.value,
-                              })
-                            }
-                          >
-                            <option>PARTY</option>
-                            <option>COMPANY</option>
-                          </select>
-                        </div>
-
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* ROW 5 */}
-                  {/* <div className="col-span-12 flex flex-wrap items-center gap-y-2 gap-x-4 mb-1 mt-1 font-normal">
-                    <div className="flex items-center gap-2">
-                        <label className="w-24 sm:w-32 md:w-40 text-right whitespace-nowrap font-bold shrink-0">Against Cancellation</label>
-                        <select className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold" value={formData.against_cancellation} onChange={(e) => setFormData({...formData, against_cancellation: e.target.value})}>
-                          <option>No</option>
-                          <option>Yes</option>
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="whitespace-nowrap font-bold">Purchase Unit</label>
-                        <input className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-center text-black font-bold font-mono" value={formData.purchase_unit_code || '1'} onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData(prev => ({ ...prev, purchase_unit_code: val }));
-                        }} />
-                        <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold cursor-pointer" value={formData.purchase_unit_name} onChange={(e) => {
-                          const name = e.target.value;
-                          handlePurchaseUnitChange(name, formData.purchase_unit_code || '1');
-                        }}>
-                          {Array.from(new Set([...unitList, formData.purchase_unit_name].filter(Boolean))).map((u: string) => (
-                              <option key={u} value={u}>{u}</option>
-                          ))}
-                        </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="whitespace-nowrap font-bold">Weight/Unit (Kgs.)</label>
-                        <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-bold text-black" value={formData.weight_unit_kgs} readOnly />
-                        <button onClick={(e) => { 
-                            e.preventDefault(); 
-                            setCalcData({
-                              total_lorries: formData.total_no_of_lorries || '0',
-                              units_per_lorry: formData.units_per_lorry || '0',
-                              weight_per_lorry: formData.weight_per_lorry || '0'
-                            });
-                            setIsCalcOpen(true); 
-                        }} className="bg-slate-200 border border-slate-400 px-3.5 py-0.5 hover:bg-slate-300 ml-2 shadow-sm font-bold text-black">Calculate Helper</button>
-                    </div>
-                  </div> */}
-                  {/* Purchase Unit & Calculation Block */}
-                  <div className="col-span-12 mt-3">
-                    <div className="bg-slate-50 border border-slate-300 rounded-2xl p-5 shadow-sm">
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
-                        {/* Against Cancellation */}
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700">
-                            Against Cancellation
-                          </label>
-
-                          <select
-                            className="h-10 rounded-xl border border-slate-300 bg-white px-3 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                            value={formData.against_cancellation}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                against_cancellation: e.target.value,
-                              })
-                            }
-                          >
-                            <option>No</option>
-                            <option>Yes</option>
-                          </select>
-                        </div>
-
-                        {/* Purchase Unit */}
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700">
-                            Purchase Unit
-                          </label>
-
-                          <div className="flex gap-2">
-                            <input
-                              className="w-16 h-10 rounded-xl border border-slate-300 bg-white text-center font-semibold outline-none"
-                              value={formData.purchase_unit_code || "1"}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  purchase_unit_code: val,
-                                }));
-                              }}
-                            />
-
-                            <select
-                              className="flex-1 h-10 rounded-xl border border-slate-300 bg-white px-3 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                              value={formData.purchase_unit_name}
-                              onChange={(e) => {
-                                const name = e.target.value;
-                                handlePurchaseUnitChange(
-                                  name,
-                                  formData.purchase_unit_code || "1"
-                                );
-                              }}
-                            >
-                              {Array.from(
-                                new Set([...unitList, formData.purchase_unit_name].filter(Boolean))
-                              ).map((u) => (
-                                <option key={u} value={u}>
-                                  {u}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Weight */}
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700">
-                            Weight / Unit (Kgs.)
-                          </label>
-
-                          <div className="flex gap-2">
-                            <input
-                              className="flex-1 h-10 rounded-xl border border-slate-300 bg-slate-100 px-3 text-right font-bold"
-                              value={formData.weight_unit_kgs}
-                              readOnly
-                            />
-
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCalcData({
-                                  total_lorries: formData.total_no_of_lorries || "0",
-                                  units_per_lorry: formData.units_per_lorry || "0",
-                                  weight_per_lorry: formData.weight_per_lorry || "0",
-                                });
-                                setIsCalcOpen(true);
-                              }}
-                              className="px-5 h-10 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
-                            >
-                              Calculate
-                            </button>
-                          </div>
-                        </div>
-
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* ROW 6 */}
-                  {/* <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
-                    <div className="flex items-center gap-1 justify-between">
-                        <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
-                        <input className="w-12 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} readOnly />
-                    </div>
-                    <div className="flex items-center gap-1 justify-between">
-                        <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
-                        <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} readOnly />
-                    </div>
-                    <div className="flex items-center gap-1 justify-between">
-                        <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
-                        <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} readOnly />
-                    </div>
-                    <div className="flex items-center gap-1 justify-between">
-                        <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
-                        <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} readOnly />
-                    </div>
-                    <div className="flex items-center gap-1 justify-between col-span-2 sm:col-span-1">
-                        <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
-                        <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} readOnly />
-                    </div>
-                  </div> */}
-                  {/* Contract Summary */}
-                  <div className="col-span-12">
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-
-                      {/* Total No of Lorries */}
-                      <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Total No. of Lorries
-                        </p>
-                        <input
-                          className="mt-2 w-full bg-transparent border-0 text-2xl font-bold text-blue-700 text-center outline-none"
-                          value={formData.total_no_of_lorries}
-                          readOnly
-                        />
-                      </div>
-
-                      {/* Units / Lorry */}
-                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Units / Lorry
-                        </p>
-                        <input
-                          className="mt-2 w-full bg-transparent border-0 text-2xl font-bold text-emerald-700 text-center outline-none"
-                          value={formData.units_per_lorry}
-                          readOnly
-                        />
-                      </div>
-
-                      {/* Total Units */}
-                      <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Total Units
-                        </p>
-                        <input
-                          className="mt-2 w-full bg-transparent border-0 text-2xl font-bold text-amber-700 text-center outline-none"
-                          value={formData.total_units}
-                          readOnly
-                        />
-                      </div>
-
-                      {/* Weight / Lorry */}
-                      <div className="rounded-xl border border-purple-100 bg-purple-50 p-4 shadow-sm">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Weight / Lorry (M.T.)
-                        </p>
-                        <input
-                          className="mt-2 w-full bg-transparent border-0 text-2xl font-bold text-purple-700 text-center outline-none"
-                          value={formData.weight_per_lorry}
-                          readOnly
-                        />
-                      </div>
-
-                      {/* Total Contract */}
-                      <div className="rounded-xl border border-red-100 bg-red-50 p-4 shadow-sm">
-                        <p className="text-xs font-semibold text-slate-600">
-                          Total Contract (M.T.)
-                        </p>
-                        <input
-                          className="mt-2 w-full bg-transparent border-0 text-2xl font-bold text-red-700 text-center outline-none"
-                          value={formData.total_contract_mt}
-                          readOnly
-                        />
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* ROW 7 */}
-                  {/* <div className="col-span-12 grid grid-cols-12 gap-2 mb-2 mt-1">
-                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                        <label className="w-24 text-right shrink-0">Marka Type</label>
-                        <select className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black">
-                          <option>{formData.marka_type}</option>
-                        </select>
-                    </div>
-                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                        <label className="w-24 sm:w-32 text-right shrink-0">Marka Penalty</label>
-                        <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.marka_penalty} onChange={(e) => setFormData({...formData, marka_penalty: e.target.value})} />
-                    </div>
-                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                        <label className="w-24 sm:w-32 text-right shrink-0">Quantity Penalty</label>
-                        <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.qty_penalty} onChange={(e) => setFormData({...formData, qty_penalty: e.target.value})} />
-                    </div>
-                  </div> */}
-                  {/* Marka Details */}
-                  <div className="col-span-12 mt-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-                        {/* Marka Type */}
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-slate-700">
-                            Marka Type
-                          </label>
-
-                          <select className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                            <option>{formData.marka_type}</option>
-                          </select>
-                        </div>
-
-                        {/* Marka Penalty */}
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-slate-700">
-                            Marka Penalty
-                          </label>
-
-                          <input
-                            className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-right text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                            value={formData.marka_penalty}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                marka_penalty: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-
-                        {/* Quantity Penalty */}
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-slate-700">
-                            Quantity Penalty
-                          </label>
-
-                          <input
-                            className="w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-right text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                            value={formData.qty_penalty}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                qty_penalty: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-
-                      </div>
-
-                    </div>
-                  </div>
-                  
-                  {/* Divider */}
-                  {/* <div className="col-span-12 border-b border-slate-400 mb-2"></div> */}
-                  <div className="col-span-12 my-5">
-                    <div className="border-t-2 border-slate-200"></div>
-                  </div>
-                  
-                  {/* Detailed sections below */}
-                  {/* ===================== Delivery Information ===================== */}
-                  <div className="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-
-                    <div className="grid grid-cols-12 gap-4">
-
-                      {/* Delivery From / To */}
-                      <div className="col-span-12 lg:col-span-7 flex flex-wrap items-center gap-3">
-                        <label className="font-semibold text-slate-700 w-24">
-                          Delivery
-                        </label>
-
-                        <span className="text-sm text-slate-500">From</span>
-
-                        <input
-                          type="date"
-                          className={`rounded-xl border px-3 py-2 text-sm outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300"
-                              : "border-slate-300"
-                          }`}
-                          value={formData.delivery_from}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              delivery_from: e.target.value,
-                            })
-                          }
-                        />
-
-                        <span className="text-sm text-slate-500">To</span>
-
-                        <input
-                          type="date"
-                          className={`rounded-xl border px-3 py-2 text-sm outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300"
-                              : "border-slate-300"
-                          }`}
-                          value={formData.delivery_to}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              delivery_to: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Grace Days */}
-                      <div className="col-span-6 lg:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Grace Days
-                        </label>
-
-                        <input
-                          className={`w-full rounded-xl border px-3 py-2 text-right ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300"
-                              : "border-slate-300"
-                          }`}
-                          value={formData.grace_days}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              grace_days: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Delivery Penalty */}
-                      <div className="col-span-6 lg:col-span-3">
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Delivery Penalty
-                        </label>
-
-                        <input
-                          className={`w-full rounded-xl border px-3 py-2 text-right ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300"
-                              : "border-slate-300"
-                          }`}
-                          value={formData.delivery_penalty}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              delivery_penalty: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Contract / PO No */}
-                      <div className="col-span-12 lg:col-span-6">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Contract / P.O No
-                        </label>
-
-                        <SingleComboBox
-                          value={formData.contract_po_no}
-                          onChange={handleSaudaSelect}
-                          options={displaySaudas}
-                          textField="po_display_no"
-                          valueField="po_display_no"
-                        />
-                      </div>
-
-                      {/* Contract Date */}
-                      <div className="col-span-12 md:col-span-6 lg:col-span-3">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Contract Date
-                        </label>
-
-                        <input
-                          type="date"
-                          className={`w-full rounded-xl border px-3 py-2 outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300 text-[#7c2d12]"
-                              : "bg-white border-slate-300"
-                          }`}
-                          value={formData.contract_date}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              contract_date: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Rate Detail */}
-                      <div className="col-span-12 md:col-span-6 lg:col-span-3">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Rate Detail
-                        </label>
-
-                        <input
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-200"
-                          value={formData.rate_detail}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              rate_detail: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      {/* Delivery Schedule */}
-                      <div className="col-span-12">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Delivery Schedule
-                        </label>
-
-                        <input
-                          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                          value={formData.delivery_schedule}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              delivery_schedule: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Terms & Condition */}
-                      <div className="col-span-12">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Terms & Conditions
-                        </label>
-
-                        <textarea
-                          rows={4}
-                          className={`w-full rounded-xl border px-4 py-3 resize-none outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300 text-[#7c2d12]"
-                              : "bg-white border-slate-300"
-                          }`}
-                          value={formData.terms_condition}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              terms_condition: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-
-                      {/* Remarks */}
-                      <div className="col-span-12">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          Remarks
-                        </label>
-
-                        <input
-                          className={`w-full rounded-xl border px-4 py-2.5 outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300 text-[#7c2d12]"
-                              : "bg-white border-slate-300"
-                          }`}
-                          value={formData.remarks}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              remarks: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      {/* PO Identification */}
-                      <div className="col-span-12 lg:col-span-5">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          PO Identification
-                        </label>
-
-                        <select className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400">
-                          <option>{formData.po_identification}</option>
-                        </select>
-                      </div>
-
-                      {/* S Date */}
-                      <div className="col-span-12 md:col-span-6 lg:col-span-3">
-                        <label className="block mb-2 text-sm font-semibold text-slate-700">
-                          S Date
-                        </label>
-
-                        <input
-                          type="date"
-                          className={`w-full rounded-xl border px-4 py-2.5 outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300 text-[#7c2d12]"
-                              : "bg-white border-slate-300"
-                          }`}
-                          value={formData.s_date}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const updatedItems = recalculateAllRates(
-                              formData.items,
-                              val,
-                              formData.b_rate
-                            );
-
-                            setFormData({
-                              ...formData,
-                              s_date: val,
-                              items: updatedItems,
-                            });
-                          }}
-                        />
-                      </div>
-
-                      {/* B Rate */}
-                      <div className="col-span-12 md:col-span-6 lg:col-span-4">
-                        <label className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-700">
-                          B Rate
-
-                          <span className="group relative">
-                            <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center cursor-help">
-                              i
-                            </span>
-
-                            <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-60 rounded-lg bg-slate-900 p-3 text-xs text-white shadow-xl z-50">
-                              <strong className="text-yellow-300">DB Reference</strong>
-
-                              <div className="font-mono mt-1">
-                                purchase_master.b_rate
-                              </div>
-
-                              <p className="mt-2 text-slate-300">
-                                Numeric brokerage rate per ton/unit.
-                              </p>
-                            </div>
-                          </span>
-                        </label>
-
-                        <input
-                          className={`w-full rounded-xl border px-4 py-2.5 text-right font-semibold outline-none transition-all ${
-                            isSaudaActive
-                              ? "bg-amber-50 border-amber-300 text-[#7c2d12]"
-                              : "bg-white border-slate-300"
-                          }`}
-                          value={formData.b_rate}
-                          onChange={(e) => {
-                            const val = e.target.value;
-
-                            const updatedItems = recalculateAllRates(
-                              formData.items,
-                              formData.s_date,
-                              val
-                            );
-
-                            setFormData({
-                              ...formData,
-                              b_rate: val,
-                              items: updatedItems,
-                            });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* <div className="col-span-12 grid grid-cols-12 gap-x-2 gap-y-1.5">
-                    <div className="col-span-12 flex flex-wrap items-center gap-2 mt-1">
-                      <label className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
-                      <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.delivery_from} onChange={(e) => setFormData({...formData, delivery_from: e.target.value})} />
-                      <label className="mx-2 shrink-0">To</label>
-                      <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.delivery_to} onChange={(e) => setFormData({...formData, delivery_to: e.target.value})} />
-                      <label className="ml-2 shrink-0">Grace Days</label>
-                      <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
-                      }`} value={formData.grace_days} onChange={(e) => setFormData({...formData, grace_days: e.target.value})} />
-                      <label className="ml-2 shrink-0">Delivery Penalty</label>
-                      <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
-                      }`} value={formData.delivery_penalty} onChange={(e) => setFormData({...formData, delivery_penalty: e.target.value})} />
-                    </div>
-
-                    <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
-                      <label className="w-24 sm:w-32 text-right shrink-0">Contract / P.O No</label>
-                      <div className="flex-1">
-                        <SingleComboBox value={formData.contract_po_no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
-                      </div>
-                    </div>
-                    <div className="col-span-12 lg:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-2">
-                      <label className="w-24 text-right shrink-0">Date</label>
-                      <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.contract_date} onChange={(e) => setFormData({...formData, contract_date: e.target.value})} />
-                      <label className="w-24 text-right shrink-0">Rate Detail</label>
-                      <input className="flex-1 min-w-[120px] bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.rate_detail} onChange={(e) => setFormData({...formData, rate_detail: e.target.value})} />
-                    </div> 
-
-                    <div className="col-span-12 flex items-center gap-2">
-                      <label className="w-24 sm:w-32 text-right shrink-0">Delivery Schedule</label>
-                      <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.delivery_schedule} onChange={(e) => setFormData({...formData, delivery_schedule: e.target.value})} />
-                    </div>
-
-                    <div className="col-span-12 flex items-start gap-2">
-                      <label className="w-24 sm:w-32 text-right leading-none mt-1 shrink-0">Terms & Condition</label>
-                      <textarea className={`flex-1 p-0.5 outline-none h-12 text-[10px] font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.terms_condition} onChange={(e) => setFormData({...formData, terms_condition: e.target.value})} />
-                    </div>
-
-                    <div className="col-span-12 flex items-center gap-2 mt-1">
-                      <label className="w-24 sm:w-32 text-right shrink-0">Remarks</label>
-                      <input className={`flex-1 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.remarks} onChange={(e) => setFormData({...formData, remarks: e.target.value})} />
-                    </div> 
-
-                    <div className="col-span-12 flex flex-wrap items-center gap-2 pb-1">
-                      <label className="w-24 sm:w-32 text-right shrink-0">PO Identification</label>
-                      <select className="w-48 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black">
-                          <option>{formData.po_identification}</option>
+                    P.T.F Mode
+                  </label>
+                  <input 
+                    type="text" 
+                    className={`flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black ${!formData.is_ptf ? 'bg-slate-100 text-slate-400' : ''}`}
+                    value={formData.ptf_no} 
+                    onChange={(e) => setFormData({...formData, ptf_no: e.target.value})} 
+                    readOnly={!formData.is_ptf}
+                  />
+                </div>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 justify-center sm:justify-start whitespace-nowrap">
+                  <label className="mr-1 min-w-[50px] text-center sm:text-left">Pending</label>
+                  <input type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
+                  <input type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
+                </div>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
+                  {formData.is_ptf ? (
+                    <input type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
+                  ) : (
+                    <SingleComboBox value={formData.no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
+                  )}
+                </div>
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className="ml-0 sm:ml-2 min-w-[30px]">Date</label>
+                  <input type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+                </div>
+
+                {/* ROW 2 */}
+                <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
+                  <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Broker</label>
+                  <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.broker_code} name={formData.broker} onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))} options={brokerList} codeField="brok_code" nameField="brok_name" />
+                </div>
+                <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
+                  <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Supplier</label>
+                  <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.supplier_code} name={formData.supplier} onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
+                </div>
+
+                {/* ROW 3 */}
+                <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
+                   <label className="w-24 sm:w-32 md:w-40 whitespace-nowrap text-right shrink-0">Challan Supplier</label>
+                   <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.challan_supplier_code} name={formData.challan_supplier} onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
+                </div>
+
+                {/* ROW 4 */}
+                <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
+                  <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Area</label>
+                  <DualComboBox 
+                    hasSaudaHighlight={isSaudaActive} 
+                    code={formData.area_code} 
+                    name={formData.area} 
+                    onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))} 
+                    onNameChange={(val) => {
+                      const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val);
+                      setFormData(prev => ({
+                        ...prev, 
+                        area: val,
+                        items: updatedItems
+                      }));
+                    }} 
+                    options={areaList} 
+                    codeField="area_code" 
+                    nameField="area_name" 
+                  />
+                </div>
+                <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
+                  <label className="whitespace-nowrap w-24 sm:w-32 md:w-48 text-right shrink-0">Transportation Charges paid by</label>
+                  <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.trans_paid_by} onChange={(e) => setFormData({...formData, trans_paid_by: e.target.value})}>
+                     <option>PARTY</option>
+                     <option>COMPANY</option>
+                  </select>
+                </div>
+
+                {/* ROW 5 */}
+                <div className="col-span-12 flex flex-wrap items-center gap-y-2 gap-x-4 mb-1 mt-1 font-normal">
+                   <div className="flex items-center gap-2">
+                      <label className="w-24 sm:w-32 md:w-40 text-right whitespace-nowrap font-bold shrink-0">Against Cancellation</label>
+                      <select className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold" value={formData.against_cancellation} onChange={(e) => setFormData({...formData, against_cancellation: e.target.value})}>
+                         <option>No</option>
+                         <option>Yes</option>
                       </select>
-                      <label className="ml-0 sm:ml-4 shrink-0">S Date</label>
-                      <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
-                      }`} value={formData.s_date} onChange={(e) => {
-                          const val = e.target.value;
-                          const updatedItems = recalculateAllRates(formData.items, val, formData.b_rate);
-                          setFormData({
-                            ...formData, 
-                            s_date: val,
-                            items: updatedItems
-                          });
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <label className="whitespace-nowrap font-bold">Purchase Unit</label>
+                      <input className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-center text-black font-bold font-mono" value={formData.purchase_unit_code || '1'} onChange={(e) => {
+                         const val = e.target.value;
+                         setFormData(prev => ({ ...prev, purchase_unit_code: val }));
                       }} />
-                      <label className="ml-0 sm:ml-4 flex items-center gap-1 group relative cursor-help shrink-0">
-                          <span>B Rate</span>
-                          <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
-                          <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
-                            DB Reference: <code className="text-yellow-400 font-mono">purchase_master.b_rate</code>
-                            <p className="mt-1">Format: Numeric decimal representing Brokerage rate per ton/unit.</p>
-                          </div>
-                      </label>
-                      <input className={`flex-1 min-w-[60px] p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
-                      }`} value={formData.b_rate} onChange={(e) => {
-                          const val = e.target.value;
-                          const updatedItems = recalculateAllRates(formData.items, formData.s_date, val);
-                          setFormData({
-                            ...formData, 
-                            b_rate: val,
-                            items: updatedItems
+                      <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold cursor-pointer" value={formData.purchase_unit_name} onChange={(e) => {
+                         const name = e.target.value;
+                         handlePurchaseUnitChange(name, formData.purchase_unit_code || '1');
+                      }}>
+                         {Array.from(new Set([...unitList, formData.purchase_unit_name].filter(Boolean))).map((u: string) => (
+                            <option key={u} value={u}>{u}</option>
+                         ))}
+                      </select>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <label className="whitespace-nowrap font-bold">Weight/Unit (Kgs.)</label>
+                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-bold text-black" value={formData.weight_unit_kgs} readOnly />
+                      <button onClick={(e) => { 
+                          e.preventDefault(); 
+                          setCalcData({
+                             total_lorries: formData.total_no_of_lorries || '0',
+                             units_per_lorry: formData.units_per_lorry || '0',
+                             weight_per_lorry: formData.weight_per_lorry || '0'
                           });
-                      }} />
-                    </div>
-                  </div> */}
+                          setIsCalcOpen(true); 
+                      }} className="bg-slate-200 border border-slate-400 px-3.5 py-0.5 hover:bg-slate-300 ml-2 shadow-sm font-bold text-black">Calculate Helper</button>
+                   </div>
                 </div>
-              </div>
 
-
-              <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#0F351E] bg-white shadow-lg overflow-hidden">
-                {/* Header */}
-                <div className="px-6 py-4 bg-white text-[#174C2C] border-b border-[#174C2C]">
-                  <h2 className="text-lg font-bold">
-                    Purchase Order Details
-                  </h2>
+                {/* ROW 6 */}
+                <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
+                   <div className="flex items-center gap-1 justify-between">
+                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
+                      <input className="w-12 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} readOnly />
+                   </div>
+                   <div className="flex items-center gap-1 justify-between">
+                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
+                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} readOnly />
+                   </div>
+                   <div className="flex items-center gap-1 justify-between">
+                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
+                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} readOnly />
+                   </div>
+                   <div className="flex items-center gap-1 justify-between">
+                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
+                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} readOnly />
+                   </div>
+                   <div className="flex items-center gap-1 justify-between col-span-2 sm:col-span-1">
+                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
+                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} readOnly />
+                   </div>
                 </div>
-                <div className="flex items-center justify-between px-4 py-2 bg-[#174C2C] border-b border-[#123D23]">
-                  {/* Left Side */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                      <span className="text-sm">⚡</span>
-                    </div>
 
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-white tracking-wide">
-                          Grid Row Status
-                      </span>
-
-                      {selectedItemSrl ? (
-                        <span className="text-[11px] text-emerald-100 font-medium">
-                          Active Row #{selectedItemSrl}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-emerald-200">
-                          Select any row to edit details
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Side */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAddItem}
-                      className="flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-[11px] font-semibold text-[#174C2C] shadow hover:bg-emerald-50 transition"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add Row
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleDeleteItem}
-                      className="flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow hover:bg-red-600 transition"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete Row
-                    </button>
-                  </div>
-
+                {/* ROW 7 */}
+                <div className="col-span-12 grid grid-cols-12 gap-2 mb-2 mt-1">
+                   <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
+                      <label className="w-24 text-right shrink-0">Marka Type</label>
+                      <select className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black">
+                         <option>{formData.marka_type}</option>
+                      </select>
+                   </div>
+                   <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
+                      <label className="w-24 sm:w-32 text-right shrink-0">Marka Penalty</label>
+                      <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.marka_penalty} onChange={(e) => setFormData({...formData, marka_penalty: e.target.value})} />
+                   </div>
+                   <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
+                      <label className="w-24 sm:w-32 text-right shrink-0">Quantity Penalty</label>
+                      <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.qty_penalty} onChange={(e) => setFormData({...formData, qty_penalty: e.target.value})} />
+                   </div>
                 </div>
                 
-                {/* <div className="flex items-center gap-2 p-1 bg-[#d4d0c8] border-b border-slate-400 justify-between ">
-                  <div className="text-[10px] font-bold text-slate-800 italic pl-1 flex items-center gap-1">
-                      <span>⚡ Grid Row Status:</span>
-                      {selectedItemSrl ? (
-                        <span className="text-blue-900 bg-blue-100/90 px-1.5 py-0.5 rounded-sm border border-blue-300 font-black">Active Item Row #{selectedItemSrl}</span>
-                      ) : (
-                        <span className="text-slate-600 font-normal">Click on any cell below to edit quantities or select items</span>
-                      )}
+                {/* Divider */}
+                <div className="col-span-12 border-b border-slate-400 mb-2"></div>
+                
+                {/* Detailed sections below */}
+                <div className="col-span-12 grid grid-cols-12 gap-x-2 gap-y-1.5">
+                  <div className="col-span-12 flex flex-wrap items-center gap-2 mt-1">
+                    <label className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
+                    <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
+                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                    }`} value={formData.delivery_from} onChange={(e) => setFormData({...formData, delivery_from: e.target.value})} />
+                    <label className="mx-2 shrink-0">To</label>
+                    <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
+                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                    }`} value={formData.delivery_to} onChange={(e) => setFormData({...formData, delivery_to: e.target.value})} />
+                    <label className="ml-2 shrink-0">Grace Days</label>
+                    <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                    }`} value={formData.grace_days} onChange={(e) => setFormData({...formData, grace_days: e.target.value})} />
+                    <label className="ml-2 shrink-0">Delivery Penalty</label>
+                    <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                    }`} value={formData.delivery_penalty} onChange={(e) => setFormData({...formData, delivery_penalty: e.target.value})} />
                   </div>
-                  <div className="flex gap-1.5 pr-1">
-                      <button 
-                        type="button"
-                        onClick={handleAddItem}
-                        className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 text-black"
-                      >
-                        <Plus className="w-3 h-3 text-emerald-800" /> Spawn Row
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={handleDeleteItem}
-                        className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 pointer-events-auto text-black"
-                      >
-                        <Trash2 className="w-3 h-3 text-rose-800" /> Delete Row
-                      </button>
+
+                  <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
+                    <label className="w-24 sm:w-32 text-right shrink-0">Contract / P.O No</label>
+                    <div className="flex-1">
+                      <SingleComboBox value={formData.contract_po_no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
+                    </div>
                   </div>
-                </div> */}
+                  <div className="col-span-12 lg:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-2">
+                     <label className="w-24 text-right shrink-0">Date</label>
+                     <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                     }`} value={formData.contract_date} onChange={(e) => setFormData({...formData, contract_date: e.target.value})} />
+                     <label className="w-24 text-right shrink-0">Rate Detail</label>
+                     <input className="flex-1 min-w-[120px] bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.rate_detail} onChange={(e) => setFormData({...formData, rate_detail: e.target.value})} />
+                   </div>
 
-                <div className="overflow-x-auto rounded-b-xl border border-t-0 border-[#174C2C] bg-white shadow-sm">
-                  <table className="w-full border-collapse text-[10px]">
-                    
-                      <thead className="bg-gradient-to-r from-[#174C2C] to-[#2A6B3F] text-white border-b border-[#0F351E]">
-                          <tr className="divide-x divide-emerald-700 uppercase font-bold tracking-wide">
-                            <th className="px-1 py-1 w-10">Srl. No.</th>
-                            <th className="px-1 py-1 w-16">Crop Year</th>
-                            <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Grade</th>
-                            <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Agency</th>
-                            <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Marka</th>
-                            <th className="px-1 py-1 w-16 text-right group relative cursor-help">
-                                <div className="flex items-center justify-end gap-1">
-                                  <span>Rate/ m.T</span>
-                                  <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
-                                </div>
-                                <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
-                                  DB Reference: <code className="text-yellow-400 font-mono">purchase_detail_master.rate_qntl</code>
-                                  <p className="mt-1">Format: Numeric decimal representing Jute rate per Metric Ton (1000 kg). Must be a positive numeric value.</p>
-                                </div>
-                            </th>
-                          </tr>
-                        <tr className="h-6 bg-[#1F3A5F] text-white divide-x divide-emerald-600 border-t border-[#2F6B46] text-[9px] font-semibold">
-                            <th colSpan={2}></th>
-                            <th className="w-10">Code</th>
-                            <th className="w-max">Name</th>
-                            <th className="w-10">Code</th>
-                            <th className="w-max">Name</th>
-                            <th className="w-10">Code</th>
-                            <th className="w-max">Name</th>
-                            <th colSpan={1}></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-300">
-                        {formData.items.map((row) => (
-                            <tr 
-                              key={row.srl} 
-                              onClick={() => setSelectedItemSrl(row.srl)}
-                              className={`divide-x divide-slate-300 transition-colors ${
-                                  row.srl === selectedItemSrl ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
-                              }`}
-                            >
-                              <td className="px-1 py-1 text-center bg-slate-50  font-bold text-slate-700">{row.srl}</td>
-                              <td className="px-0 py-0 text-center font-bold">
-                                  <select 
-                                    className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-905 text-slate-900 cursor-pointer" 
-                                    value={row.crop || getCropYear()} 
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      const updated = formData.items.map(item => item.srl === row.srl ? { ...item, crop: val } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }} 
-                                  >
-                                    <option value="2025-26">2025-26</option>
-                                    <option value="2026-27">2026-27</option>
-                                    <option value="2027-28">2027-28</option>
-                                    {row.crop && row.crop !== "2025-26" && row.crop !== "2026-27" && row.crop !== "2027-28" && (
-                                      <option value={row.crop}>{row.crop}</option>
-                                    )}
-                                  </select>
-                              </td>
-                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <input 
-                                    type="text" 
-                                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
-                                    value={row.grade_code || ''} 
-                                    onChange={(e) => {
-                                      const codeVal = e.target.value.toUpperCase();
-                                      const match = gradeList.find(g => g.grade_code.toUpperCase() === codeVal);
-                                      const gName = match ? match.grade_name : row.grade_name;
-                                      const computedRate = getSattaRateForRow(row.agency_name, gName, formData.s_date, formData.b_rate);
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          grade_code: codeVal,
-                                          grade_name: gName,
-                                          rate: computedRate !== null ? computedRate : item.rate
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                    placeholder="-"
-                                  />
-                              </td>
-                              <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <TableComboBox 
-                                    value={row.grade_name || ''}
-                                    options={gradeList}
-                                    textField="grade_name"
-                                    valueField="grade_code"
-                                    placeholder="Grade Name"
-                                    onChange={(nameVal) => {
-                                      const match = gradeList.find(g => g.grade_name.toUpperCase() === nameVal.toUpperCase());
-                                      const gCode = match ? match.grade_code : row.grade_code;
-                                      const computedRate = getSattaRateForRow(row.agency_name, nameVal, formData.s_date, formData.b_rate);
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          grade_name: nameVal,
-                                          grade_code: gCode,
-                                          rate: computedRate !== null ? computedRate : item.rate
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                  />
-                              </td>
-                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <input 
-                                    type="text" 
-                                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
-                                    value={row.agency_code || ''} 
-                                    onChange={(e) => {
-                                      const codeVal = e.target.value.toUpperCase();
-                                      const match = agencyList.find(a => a.agency_code.toUpperCase() === codeVal);
-                                      const aName = match ? match.agency_name : row.agency_name;
-                                      const computedRate = getSattaRateForRow(aName, row.grade_name, formData.s_date, formData.b_rate);
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          agency_code: codeVal,
-                                          agency_name: aName,
-                                          rate: computedRate !== null ? computedRate : item.rate
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                    placeholder="-"
-                                  />
-                              </td>
-                              <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <TableComboBox 
-                                    value={row.agency_name || ''}
-                                    options={agencyList}
-                                    textField="agency_name"
-                                    valueField="agency_code"
-                                    placeholder="Agency Name"
-                                    onChange={(nameVal) => {
-                                      const match = agencyList.find(a => a.agency_name.toUpperCase() === nameVal.toUpperCase());
-                                      const aCode = match ? match.agency_code : row.agency_code;
-                                      const computedRate = getSattaRateForRow(nameVal, row.grade_name, formData.s_date, formData.b_rate);
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          agency_name: nameVal,
-                                          agency_code: aCode,
-                                          rate: computedRate !== null ? computedRate : item.rate
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                  />
-                              </td>
-                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <input 
-                                    type="text" 
-                                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
-                                    value={row.marka_code || ''} 
-                                    onChange={(e) => {
-                                      const codeVal = e.target.value.toUpperCase();
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          marka_code: codeVal
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                    placeholder="-"
-                                  />
-                              </td>
-                              <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                  <TableComboBox 
-                                    value={row.marka_name || ''}
-                                    options={markaList}
-                                    textField="marka_name"
-                                    valueField="marka_code"
-                                    placeholder="Marka Name"
-                                    onChange={(nameVal) => {
-                                      const match = markaList.find(m => m.marka_name.toUpperCase() === nameVal.toUpperCase());
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          marka_name: nameVal,
-                                          marka_code: match ? match.marka_code : item.marka_code
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                  />
-                              </td>
+                  <div className="col-span-12 flex items-center gap-2">
+                     <label className="w-24 sm:w-32 text-right shrink-0">Delivery Schedule</label>
+                     <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.delivery_schedule} onChange={(e) => setFormData({...formData, delivery_schedule: e.target.value})} />
+                  </div>
 
-                              <td className="px-0 py-0 text-right font-normal">
-                                  <input 
-                                    type="number" 
-                                    className="w-full text-right bg-transparent border-none p-1 outline-none font-extrabold tabular-nums focus:bg-amber-50 text-blue-900"
-                                    value={row.rate || ''}
-                                    onChange={(e) => {
-                                      const valStr = e.target.value;
-                                      const nextVal = valStr === '' ? 0 : parseFloat(valStr) || 0;
-                                      const updated = formData.items.map(item => item.srl === row.srl ? {
-                                          ...item,
-                                          rate: nextVal
-                                      } : item);
-                                      setFormData(prev => ({ ...prev, items: updated }));
-                                    }}
-                                  />
-                              </td>
-                            </tr>
-                        ))}
-                        {Array.from({ length: Math.max(1, 3 - formData.items.length) }).map((_, i) => (
-                            <tr key={i} className="h-6.5 divide-x divide-slate-300">
-                              <td className="px-1 py-1 text-center bg-slate-50"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                              <td className="px-1 py-1"></td>
-                            </tr>
-                        ))}
-                      </tbody>
-                  </table>
+                  <div className="col-span-12 flex items-start gap-2">
+                     <label className="w-24 sm:w-32 text-right leading-none mt-1 shrink-0">Terms & Condition</label>
+                     <textarea className={`flex-1 p-0.5 outline-none h-12 text-[10px] font-normal border text-black transition-colors duration-150 ${
+                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                     }`} value={formData.terms_condition} onChange={(e) => setFormData({...formData, terms_condition: e.target.value})} />
+                  </div>
+
+                  <div className="col-span-12 flex items-center gap-2 mt-1">
+                     <label className="w-24 sm:w-32 text-right shrink-0">Remarks</label>
+                     <input className={`flex-1 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                     }`} value={formData.remarks} onChange={(e) => setFormData({...formData, remarks: e.target.value})} />
+                  </div>
+
+                  <div className="col-span-12 flex flex-wrap items-center gap-2 pb-1">
+                     <label className="w-24 sm:w-32 text-right shrink-0">PO Identification</label>
+                     <select className="w-48 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black">
+                        <option>{formData.po_identification}</option>
+                     </select>
+                     <label className="ml-0 sm:ml-4 shrink-0">S Date</label>
+                     <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                     }`} value={formData.s_date} onChange={(e) => {
+                        const val = e.target.value;
+                        const updatedItems = recalculateAllRates(formData.items, val, formData.b_rate);
+                        setFormData({
+                           ...formData, 
+                           s_date: val,
+                           items: updatedItems
+                        });
+                     }} />
+                     <label className="ml-0 sm:ml-4 flex items-center gap-1 group relative cursor-help shrink-0">
+                        <span>B Rate</span>
+                        <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
+                        <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
+                           DB Reference: <code className="text-yellow-400 font-mono">purchase_master.b_rate</code>
+                           <p className="mt-1">Format: Numeric decimal representing Brokerage rate per ton/unit.</p>
+                        </div>
+                     </label>
+                     <input className={`flex-1 min-w-[60px] p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                     }`} value={formData.b_rate} onChange={(e) => {
+                        const val = e.target.value;
+                        const updatedItems = recalculateAllRates(formData.items, formData.s_date, val);
+                        setFormData({
+                           ...formData, 
+                           b_rate: val,
+                           items: updatedItems
+                        });
+                     }} />
+                  </div>
                 </div>
               </div>
-              <div className="relative px-6 py-3 bg-[#174C2C] border border-[#0F351E] rounded-xl shadow-md overflow-hidden max-w-7xl mx-auto w-full">
-  {/* Background Logo */}
-  <div
-    className="absolute right-0 top-0 bottom-0 w-1/4 opacity-10 pointer-events-none bg-no-repeat bg-right bg-contain"
-    style={{
-      backgroundImage:
-        "url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')",
-    }}
-  />
+            </LegacyFieldset>
 
-  <div className="relative z-10 flex flex-wrap justify-center items-center gap-3">
-    {/* <LegacyButton
-      icon={FileText}
-      label="View All P.O"
-      onClick={() => setViewMode("register")}
-      title="Switch back to records ledger overview"
-    /> */}
-    <button
-      type="button"
-      onClick={() => setViewMode("register")}
-      title="Switch back to records ledger overview"
-      className="min-w-[150px] h-8 px-5 flex items-center justify-center gap-2 rounded-md bg-[#FFB900] hover:bg-[#E6A700] border border-[#C99700] text-gray-900 font-bold text-[11px] shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
-    >
-      
-      <FileText className="w-5 h-5" /><span>View All P.O</span>
-    </button>
+            <LegacyFieldset legend="Purchase Order Details (Items Table Matrix)">
+              <div className="flex items-center gap-2 p-1 bg-[#d4d0c8] border-b border-slate-400 justify-between ">
+                 <div className="text-[10px] font-bold text-slate-800 italic pl-1 flex items-center gap-1">
+                    <span>⚡ Grid Row Status:</span>
+                    {selectedItemSrl ? (
+                       <span className="text-blue-900 bg-blue-100/90 px-1.5 py-0.5 rounded-sm border border-blue-300 font-black">Active Item Row #{selectedItemSrl}</span>
+                    ) : (
+                       <span className="text-slate-600 font-normal">Click on any cell below to edit quantities or select items</span>
+                    )}
+                 </div>
+                 <div className="flex gap-1.5 pr-1">
+                    <button 
+                      type="button"
+                      onClick={handleAddItem}
+                      className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 text-black"
+                    >
+                      <Plus className="w-3 h-3 text-emerald-800" /> Spawn Row
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleDeleteItem}
+                      className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 pointer-events-auto text-black"
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-800" /> Delete Row
+                    </button>
+                 </div>
+              </div>
 
-    <button
-      type="button"
-      onClick={handleSave}
-      title="Validate and save changes to DB"
-      className="min-w-[150px] h-8 px-5 flex items-center justify-center gap-2 rounded-md bg-[#FFB900] hover:bg-[#E6A700] border border-[#C99700] text-gray-900 font-bold text-[11px] shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
-    >
-      
-      <Save className="w-5 h-5" /><span>{loading ? "Saving..." : "Save"}</span>
-    </button>
+              <div className="border border-slate-400 bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
+                 <table className="w-full border-collapse text-[10px]">
+                    <thead className="bg-[#d4d0c8] border-b border-slate-400">
+                       <tr className="divide-x divide-slate-400 uppercase font-black">
+                          <th className="px-1 py-1 w-10">Srl. No.</th>
+                          <th className="px-1 py-1 w-16">Crop Year</th>
+                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Grade</th>
+                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Agency</th>
+                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Marka</th>
+                          <th className="px-1 py-1 w-16 text-right group relative cursor-help">
+                              <div className="flex items-center justify-end gap-1">
+                                 <span>Rate/ m.T</span>
+                                 <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
+                              </div>
+                              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
+                                 DB Reference: <code className="text-yellow-400 font-mono">purchase_detail_master.rate_qntl</code>
+                                 <p className="mt-1">Format: Numeric decimal representing Jute rate per Metric Ton (1000 kg). Must be a positive numeric value.</p>
+                              </div>
+                           </th>
+                       </tr>
+                       <tr className="bg-[#e4e2de] divide-x divide-slate-400 border-t border-slate-400 text-[9px] font-bold">
+                          <th colSpan={2}></th>
+                          <th className="w-10">Code</th>
+                          <th className="w-max">Name</th>
+                          <th className="w-10">Code</th>
+                          <th className="w-max">Name</th>
+                          <th className="w-10">Code</th>
+                          <th className="w-max">Name</th>
+                          <th colSpan={1}></th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300">
+                       {formData.items.map((row) => (
+                          <tr 
+                             key={row.srl} 
+                             onClick={() => setSelectedItemSrl(row.srl)}
+                             className={`divide-x divide-slate-300 transition-colors ${
+                                row.srl === selectedItemSrl ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
+                             }`}
+                          >
+                             <td className="px-1 py-1 text-center bg-slate-50  font-bold text-slate-700">{row.srl}</td>
+                             <td className="px-0 py-0 text-center font-bold">
+                                <select 
+                                  className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-905 text-slate-900 cursor-pointer" 
+                                  value={row.crop || getCropYear()} 
+                                  onChange={(e) => {
+                                     const val = e.target.value;
+                                     const updated = formData.items.map(item => item.srl === row.srl ? { ...item, crop: val } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }} 
+                                >
+                                   <option value="2025-26">2025-26</option>
+                                   <option value="2026-27">2026-27</option>
+                                   <option value="2027-28">2027-28</option>
+                                   {row.crop && row.crop !== "2025-26" && row.crop !== "2026-27" && row.crop !== "2027-28" && (
+                                     <option value={row.crop}>{row.crop}</option>
+                                   )}
+                                </select>
+                             </td>
+                             <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <input 
+                                  type="text" 
+                                  className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                                  value={row.grade_code || ''} 
+                                  onChange={(e) => {
+                                     const codeVal = e.target.value.toUpperCase();
+                                     const match = gradeList.find(g => g.grade_code.toUpperCase() === codeVal);
+                                     const gName = match ? match.grade_name : row.grade_name;
+                                     const computedRate = getSattaRateForRow(row.agency_name, gName, formData.s_date, formData.b_rate);
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        grade_code: codeVal,
+                                        grade_name: gName,
+                                        rate: computedRate !== null ? computedRate : item.rate
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                  placeholder="-"
+                                />
+                             </td>
+                             <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <TableComboBox 
+                                  value={row.grade_name || ''}
+                                  options={gradeList}
+                                  textField="grade_name"
+                                  valueField="grade_code"
+                                  placeholder="Grade Name"
+                                  onChange={(nameVal) => {
+                                     const match = gradeList.find(g => g.grade_name.toUpperCase() === nameVal.toUpperCase());
+                                     const gCode = match ? match.grade_code : row.grade_code;
+                                     const computedRate = getSattaRateForRow(row.agency_name, nameVal, formData.s_date, formData.b_rate);
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        grade_name: nameVal,
+                                        grade_code: gCode,
+                                        rate: computedRate !== null ? computedRate : item.rate
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                />
+                             </td>
+                             <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <input 
+                                  type="text" 
+                                  className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                                  value={row.agency_code || ''} 
+                                  onChange={(e) => {
+                                     const codeVal = e.target.value.toUpperCase();
+                                     const match = agencyList.find(a => a.agency_code.toUpperCase() === codeVal);
+                                     const aName = match ? match.agency_name : row.agency_name;
+                                     const computedRate = getSattaRateForRow(aName, row.grade_name, formData.s_date, formData.b_rate);
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        agency_code: codeVal,
+                                        agency_name: aName,
+                                        rate: computedRate !== null ? computedRate : item.rate
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                  placeholder="-"
+                                />
+                             </td>
+                             <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <TableComboBox 
+                                  value={row.agency_name || ''}
+                                  options={agencyList}
+                                  textField="agency_name"
+                                  valueField="agency_code"
+                                  placeholder="Agency Name"
+                                  onChange={(nameVal) => {
+                                     const match = agencyList.find(a => a.agency_name.toUpperCase() === nameVal.toUpperCase());
+                                     const aCode = match ? match.agency_code : row.agency_code;
+                                     const computedRate = getSattaRateForRow(nameVal, row.grade_name, formData.s_date, formData.b_rate);
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        agency_name: nameVal,
+                                        agency_code: aCode,
+                                        rate: computedRate !== null ? computedRate : item.rate
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                />
+                             </td>
+                             <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <input 
+                                  type="text" 
+                                  className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                                  value={row.marka_code || ''} 
+                                  onChange={(e) => {
+                                     const codeVal = e.target.value.toUpperCase();
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        marka_code: codeVal
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                  placeholder="-"
+                                />
+                             </td>
+                             <td className={`px-0 py-0 font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                                <TableComboBox 
+                                  value={row.marka_name || ''}
+                                  options={markaList}
+                                  textField="marka_name"
+                                  valueField="marka_code"
+                                  placeholder="Marka Name"
+                                  onChange={(nameVal) => {
+                                     const match = markaList.find(m => m.marka_name.toUpperCase() === nameVal.toUpperCase());
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        marka_name: nameVal,
+                                        marka_code: match ? match.marka_code : item.marka_code
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                />
+                             </td>
 
-    {/* <LegacyButton
-      icon={Save}
-      label={loading ? "Saving..." : "Save"}
-      active={!loading}
-      onClick={handleSave}
-      title="Validate and save changes to DB"
-    /> */}
-    {canEditOrDelete() && (
-    <button
-      type="button"
-      onClick={handleGlobalAmend}
-      title="Revise PO number and increment amend counter"
-      className="min-w-[150px] h-8 px-5 flex items-center justify-center gap-2 rounded-md bg-[#FFB900] hover:bg-[#E6A700] border border-[#C99700] text-gray-900 font-bold text-[11px] shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
-    >
-      
-      <Edit className="w-5 h-5" /><span>Amend / Revise</span>
-    </button>
-    )}
-    {/* {canEditOrDelete() && (
-      <LegacyButton
-        icon={Edit}
-        label="Amend / Revise"
-        onClick={handleGlobalAmend}
-        title="Revise PO number and increment amend counter"
-      />
-    )} */}
-    <button
-      type="button"
-      onClick={() => {
-        if (confirm("Discard active edits? Changes will be lost.")) {
-          setViewMode("register");
-        }
-      }}
-      title="Revise PO number and increment amend counter"
-      className="min-w-[150px] h-8 px-5 flex items-center justify-center gap-2 rounded-md bg-[#FFB900] hover:bg-[#E6A700] border border-[#C99700] text-gray-900 font-bold text-[11px] shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
-    >
-      
-      <X className="w-5 h-5" /><span>Discard</span>
-    </button>
-    {/* <LegacyButton
-      icon={X}
-      label="Discard"
-      onClick={() => {
-        if (confirm("Discard active edits? Changes will be lost.")) {
-          setViewMode("register");
-        }
-      }}
-    /> */}
-    <button
-      type="button"
-      onClick={() => setViewMode("register")}
-      title="Revise PO number and increment amend counter"
-      className="min-w-[150px] h-8 px-5 flex items-center justify-center gap-2 rounded-md bg-[#FFB900] hover:bg-[#E6A700] border border-[#C99700] text-gray-900 font-bold text-[11px] shadow-sm transition-all duration-150 cursor-pointer active:scale-95"
-    >
-      
-      <X className="w-5 h-5" /><span>Close Form</span>
-    </button>
-    {/* <LegacyButton
-      icon={X}
-      label="Close Form"
-      onClick={() => setViewMode("register")}
-    /> */}
-  </div>
-</div>
-              
-              
-            </div>
-        
+                             <td className="px-0 py-0 text-right font-normal">
+                                <input 
+                                  type="number" 
+                                  className="w-full text-right bg-transparent border-none p-1 outline-none font-extrabold tabular-nums focus:bg-amber-50 text-blue-900"
+                                  value={row.rate || ''}
+                                  onChange={(e) => {
+                                     const valStr = e.target.value;
+                                     const nextVal = valStr === '' ? 0 : parseFloat(valStr) || 0;
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        rate: nextVal
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                />
+                             </td>
+                          </tr>
+                       ))}
+                       {Array.from({ length: Math.max(1, 3 - formData.items.length) }).map((_, i) => (
+                          <tr key={i} className="h-6.5 divide-x divide-slate-300">
+                             <td className="px-1 py-1 text-center bg-slate-50"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                             <td className="px-1 py-1"></td>
+                          </tr>
+                       ))}
+                    </tbody>
+                 </table>
+              </div>
+            </LegacyFieldset>
 
             {/* Global Actions Block inside Form */}
-            {/* <div className="bg-[#d4d0c8] p-1 border-t border-slate-400 flex flex-wrap justify-center items-center gap-1.5 shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
+            <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs flex flex-wrap justify-center items-center gap-3">
                
-               
-               <LegacyButton 
-                 icon={FileText} 
-                 label="View All P.O" 
-                 onClick={() => setViewMode('register')} 
-                 title="Switch back to records ledger overview" 
-               />
-               
-               <LegacyButton 
-                 icon={Save} 
-                 label={loading ? "Saving..." : "Save"} 
-                 active={!loading} 
+               <button 
                  onClick={handleSave} 
+                 disabled={loading}
+                 className="bg-[#174C2C] hover:bg-[#103A20] text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                  title="Validate and save changes to DB" 
-               />
-               
+               >
+                 <Save className="w-4 h-4 text-emerald-200" /> {loading ? "Saving..." : "Save P.O"}
+               </button>
+
+               <button 
+                 onClick={() => setViewMode('register')} 
+                 className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 hover:border-[#174C2C] px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                 title="Switch back to records ledger overview" 
+               >
+                 <FileText className="w-4 h-4 text-slate-600" /> View All P.O
+               </button>
+
                {canEditOrDelete() && (
-                 <LegacyButton 
-                   icon={Edit} 
-                   label="Amend / Revise" 
+                 <button 
                    onClick={handleGlobalAmend} 
+                   className="bg-white hover:bg-amber-50 text-amber-800 border border-amber-300 hover:border-amber-400 px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                    title="Revise PO number and increment amend counter" 
-                 />
+                 >
+                   <Edit className="w-4 h-4 text-amber-700" /> Amend / Revise
+                 </button>
                )}
-               
-               <LegacyButton 
-                 icon={X} 
-                 label="Discard" 
+
+               <button 
                  onClick={() => {
                    if(confirm("Discard active edits? Changes will be lost.")) {
                      setViewMode('register');
                    }
                  }} 
-               />
-               
-               <LegacyButton 
-                 icon={X} 
-                 label="Close form" 
+                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+               >
+                 <X className="w-4 h-4 text-slate-500" /> Discard
+               </button>
+
+               <button 
                  onClick={() => setViewMode('register')} 
-               />
-            </div> */}
+                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+               >
+                 <X className="w-4 h-4 text-slate-500" /> Close Form
+               </button>
+            </div>
 
           </div>
-        </LegacyLayout>
-      )}
+        </div>
+      </div>
+    )}
 
       {/* Actions dropdown — used in BOTH Temporary P.O and Final P.O rows. */}
       {actionMenu && createPortal(

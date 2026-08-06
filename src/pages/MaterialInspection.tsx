@@ -855,7 +855,7 @@ export default function MaterialInspection({
           setMoistureLogicRules(mL);
         }
       } else {
-        const [b, s, g, ar, ag, m, av] = await Promise.all([
+        const [b, s, g, ar, ag, m, av, fa] = await Promise.all([
           dbModule.fetchAll('broker_master').catch(() => []),
           dbModule.fetchAll('supply_master').catch(() => []),
           dbModule.fetchAll('grade_master').catch(() => []),
@@ -863,6 +863,7 @@ export default function MaterialInspection({
           dbModule.fetchAll('agency_master').catch(() => []),
           dbModule.fetchAll('marka_master').catch(() => []),
           dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
+          dbModule.fetchAll('final_arrival', 'created_at', false).catch(() => []),
         ]);
         if (b) setBrokers(b.map((x: any) => ({ name: x.brok_name })));
         if (s) setSuppliers(s.map((x: any) => ({ name: x.supp_name })));
@@ -870,7 +871,11 @@ export default function MaterialInspection({
         if (ar) setAreas(ar.map((x: any) => ({ name: x.area_name })));
         if (ag) setAgencies(ag.map((x: any) => ({ name: x.agency_name })));
         if (m) setMarkas(m.map((x: any) => ({ name: x.marka_name })));
-        if (av) setArrivalVouchers(av);
+        const mergedVouchers = [...(av || []), ...(fa || []).map((f: any) => ({
+          ...f,
+          temporary_arrival_no: f.final_arrival_no || f.temporary_arrival_no || f.arrival_no,
+        }))];
+        setArrivalVouchers(mergedVouchers);
       }
     } catch (err) {
       console.warn("Failed to load autocomplete lists:", err);

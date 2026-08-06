@@ -487,8 +487,8 @@ const allSidebarItems = [
   { id: "po", label: "Sauda Check Point", icon: FileText },
   { id: "final_po", label: "Final P.O", icon: FileText },
   { id: "amad", label: "Temporary M.R", icon: Archive },
+  { id: "final_arrival", label: "Final M.R", icon: CheckCircle2 },
   { id: "material_inspection", label: "Quality Audit", icon: ShieldCheck },
-  { id: "final_arrival", label: "Final Arrival", icon: CheckCircle2 },
   { id: "mismatch", label: "Mismatch Case", icon: AlertTriangle },
   { id: "club_po_mr", label: "Club P.O & M.R", icon: Link },
   { id: "mr_settlement", label: "M.R. Settlement", icon: FileCheck },
@@ -563,6 +563,7 @@ export default function App() {
   >("menu");
   const [allowedModules, setAllowedModules] = useState<string[]>(["*"]);
   const [runningPages, setRunningPages] = useState<Page[]>([]);
+  const [selectedAmadForFinalMr, setSelectedAmadForFinalMr] = useState<any>(null);
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -1079,6 +1080,10 @@ export default function App() {
                 <AmadRegister
                   onClose={() => closePage("amad", "dashboard")}
                   onNew={() => globalNavigate("amad_entry")}
+                  onCreateFinalMr={(amad) => {
+                    setSelectedAmadForFinalMr(amad);
+                    globalNavigate("final_arrival");
+                  }}
                 />
               </div>
               {currentPage === "amad_entry" && (
@@ -1277,7 +1282,11 @@ export default function App() {
                 className={currentPage === "final_arrival" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
                 <FinalArrival
-                  onClose={() => closePage("final_arrival", "dashboard")}
+                  initialData={selectedAmadForFinalMr}
+                  onClose={() => {
+                    setSelectedAmadForFinalMr(null);
+                    closePage("final_arrival", "dashboard");
+                  }}
                 />
               </div>
               <div
