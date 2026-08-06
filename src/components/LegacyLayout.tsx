@@ -512,45 +512,6 @@ export default function LegacyLayout({
             setUnreadCount={setUnreadCount}
           />
         </div>
-
-        {/* Deep Green Status Bar Footer */}
-        <div className="bg-[#174C2C] border-t border-[#103A20] px-4 py-2 flex justify-between items-center text-[10px] font-semibold text-[#E2EDDE] shrink-0">
-           <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-1.5 px-2 border-r border-[#235E39]">
-                 <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-400 shadow-xs" : "bg-rose-500")} />
-                 <span className={cn("uppercase tracking-tighter font-mono font-bold text-[11px]", !isOnline && "text-rose-400")}>
-                    {isOnline ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE (NO SYNC)'}
-                 </span>
-              </div>
-              <span className="text-amber-300 font-mono font-extrabold uppercase tracking-wider text-[11px] hidden sm:inline">
-                BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE
-              </span>
-              <span className="text-[#A2C49D] font-mono tracking-tighter opacity-80 text-[10px] hidden md:inline">v2.4.0</span>
-           </div>
-           <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-2 px-3 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-[#FAF7F0]">
-                 <Clock className="h-3.5 w-3.5 text-amber-300" />
-                 <span className="tabular-nums font-mono font-bold text-xs">{currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-              <div className="flex gap-1 hidden sm:flex">
-                 {[
-                   { id: 'NUM', active: keyState.num },
-                   { id: 'CAPS', active: keyState.caps },
-                   { id: 'SCRL', active: keyState.scrl }
-                 ].map(item => (
-                   <div 
-                     key={item.id} 
-                     className={cn(
-                       "px-2 py-0.5 text-[9px] border border-[#235E39] font-mono rounded transition-colors",
-                       item.active ? "bg-emerald-700 text-white font-bold" : "bg-[#103A20] text-[#A2C49D]"
-                     )}
-                   >
-                     {item.id}
-                   </div>
-                 ))}
-              </div>
-           </div>
-        </div>
       </div>
     </div>
   );

@@ -588,6 +588,31 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [keyState, setKeyState] = useState({ num: true, caps: false, scrl: false });
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.getModifierState) {
+        setKeyState({
+          num: e.getModifierState('NumLock'),
+          caps: e.getModifierState('CapsLock'),
+          scrl: e.getModifierState('ScrollLock'),
+        });
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   useIdleTimer(15 * 60 * 1000, () => {
     if (isLoggedIn) {
       setIsLoggedIn(false);
@@ -1296,126 +1321,56 @@ export default function App() {
 
         <AIAssistant />
 
-        {/* Windows-style Taskbar */}
-        <div className="h-12 bg-legacy-bg border-t-2 border-white shadow-[0_-2px_4px_rgba(0,0,0,0.1)] flex items-center px-2 justify-between gap-4 overflow-hidden ">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-[70vw]">
-
-            {/* Premium Integrated Dashboard Selection Tabs */}
-            <div className="hidden items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => {
-                  logEvent("NAVIGATION", 'Clicked "Menu Dashboard" on Taskbar');
-                  setDashboardTab("menu");
-                  globalNavigate("dashboard");
-                }}
-                className={cn(
-                  "h-8 px-3 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-md cursor-pointer shrink-0",
-                  currentPage === "dashboard" && dashboardTab === "menu"
-                    ? "bg-indigo-100 border-indigo-600 text-indigo-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.15)] font-extrabold"
-                    : "bg-[#f0f4ff] border-indigo-200 text-indigo-600 hover:bg-white",
-                )}
-              >
-                <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
-                <span className="text-[11px] font-black uppercase italic tracking-[0.05em] whitespace-nowrap text-slate-800">
-                  Menu Dashboard
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
-                  logEvent(
-                    "NAVIGATION",
-                    'Clicked "Mismatch Dashboard" on Taskbar',
-                  );
-                  setDashboardTab("mismatch");
-                  globalNavigate("dashboard");
-                }}
-                className={cn(
-                  "h-8 px-3 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-md cursor-pointer shrink-0",
-                  currentPage === "dashboard" && dashboardTab === "mismatch"
-                    ? "bg-amber-100 border-amber-600 text-amber-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.15)] font-extrabold"
-                    : "bg-amber-50/50 border-amber-200 text-amber-700 hover:bg-amber-50",
-                )}
-              >
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                <span className="text-[11px] font-black uppercase italic tracking-[0.05em] whitespace-nowrap text-slate-800">
-                  Mismatch Dashboard
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
-                  logEvent(
-                    "NAVIGATION",
-                    'Clicked "Report Dashboard" on Taskbar',
-                  );
-                  setDashboardTab("reports");
-                  globalNavigate("dashboard");
-                }}
-                className={cn(
-                  "h-8 px-3 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-md cursor-pointer shrink-0",
-                  currentPage === "dashboard" && dashboardTab === "reports"
-                    ? "bg-emerald-100 border-emerald-600 text-emerald-950 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.15)] font-extrabold"
-                    : "bg-emerald-50/50 border-emerald-200 text-emerald-700 hover:bg-emerald-50",
-                )}
-              >
-                <BarChart3 className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-[11px] font-black uppercase italic tracking-[0.05em] whitespace-nowrap text-slate-800">
-                  Report Dashboard
-                </span>
-              </button>
+        {/* Single Unified Dark Green Footer */}
+        <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 overflow-x-auto scrollbar-none">
+          {/* Left Section: Online status & Navigation tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
+            {/* System Online Status Badge */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-[#E2EDDE] shrink-0">
+              <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-400 shadow-xs" : "bg-rose-500")} />
+              <span className={cn("uppercase tracking-wider font-mono font-bold text-[10px]", isOnline ? "text-emerald-300" : "text-rose-400")}>
+                {isOnline ? 'SYSTEM ONLINE' : 'OFFLINE'}
+              </span>
             </div>
 
-            <div className="h-7 w-px bg-slate-300 mx-2 shadow-[1px_0_0_0_white] shrink-0" />
+            <div className="h-5 w-px bg-[#235E39] shrink-0" />
 
             {/* Admin Desk Taskbar Item */}
-            {(runningPages.includes("admindesk") ||
-              currentPage === "admindesk") && (
-              <>
-                <div className="relative flex items-center group/item shrink-0">
-                  <button
-                    onClick={() => {
-                      if (currentPage === "admindesk") {
-                        logEvent(
-                          "MINIMIZE",
-                          'Minimized "admindesk" to dashboard',
-                        );
-                        globalNavigate("dashboard");
-                      } else {
-                        logEvent(
-                          "RESTORE",
-                          'Restored "admindesk" from taskbar',
-                        );
-                        globalNavigate("admindesk");
-                      }
-                    }}
-                    className={cn(
-                      "pl-4 pr-8 h-8 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-md cursor-pointer shrink-0",
-                      currentPage === "admindesk"
-                        ? "bg-indigo-100 border-indigo-600 text-indigo-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)]"
-                        : "bg-[#f0f4ff] border-indigo-200 text-indigo-600 hover:bg-white",
-                    )}
-                  >
-                    <LayoutDashboard className="h-3.5 w-3.5" />
-                    <span className="text-[11px] font-black uppercase italic tracking-[0.05em] whitespace-nowrap">
-                      Admin Desk
-                    </span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closePage("admindesk", "dashboard");
-                    }}
-                    className={cn(
-                      "absolute right-2 p-0.5 rounded-full flex items-center justify-center h-4 w-4 transition-all duration-150 cursor-pointer text-indigo-400 hover:text-red-600 hover:bg-red-50",
-                    )}
-                    title="Terminate Admin Desk"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-                <div className="h-7 w-px bg-slate-200 mx-1 shrink-0" />
-              </>
+            {(runningPages.includes("admindesk") || currentPage === "admindesk") && (
+              <div className="relative flex items-center group/item shrink-0">
+                <button
+                  onClick={() => {
+                    if (currentPage === "admindesk") {
+                      logEvent("MINIMIZE", 'Minimized "admindesk" to dashboard');
+                      globalNavigate("dashboard");
+                    } else {
+                      logEvent("RESTORE", 'Restored "admindesk" from taskbar');
+                      globalNavigate("admindesk");
+                    }
+                  }}
+                  className={cn(
+                    "pl-3 pr-7 h-7 border rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs",
+                    currentPage === "admindesk"
+                      ? "bg-[#215E38] border-[#3A8A57] text-amber-300 font-extrabold shadow-xs"
+                      : "bg-[#103A20] border-[#235E39] text-emerald-200 hover:bg-[#1C5130] hover:text-white"
+                  )}
+                >
+                  <LayoutDashboard className="h-3.5 w-3.5 text-amber-300" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                    Admin Desk
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closePage("admindesk", "dashboard");
+                  }}
+                  className="absolute right-1.5 p-0.5 rounded-full flex items-center justify-center h-4 w-4 text-emerald-300 hover:text-rose-300 hover:bg-rose-900/60 transition-colors cursor-pointer"
+                  title="Terminate Admin Desk"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
             )}
 
             {/* RUNNING_PROCS: Dynamic page instances in current session */}
@@ -1432,34 +1387,23 @@ export default function App() {
                     <button
                       onClick={() => {
                         if (isActive) {
-                          logEvent(
-                            "MINIMIZE",
-                            `Minimized page "${pageId}" to dashboard`,
-                          );
-                          globalNavigate("dashboard"); // Minimize if already active
+                          logEvent("MINIMIZE", `Minimized page "${pageId}" to dashboard`);
+                          globalNavigate("dashboard");
                         } else {
-                          logEvent(
-                            "RESTORE",
-                            `Restored page "${pageId}" from taskbar`,
-                          );
-                          globalNavigate(pageId); // Restore if minimized
+                          logEvent("RESTORE", `Restored page "${pageId}" from taskbar`);
+                          globalNavigate(pageId);
                         }
                       }}
                       className={cn(
-                        "pl-4 pr-8 h-8 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-md cursor-pointer shrink-0",
+                        "pl-3 pr-7 h-7 border rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs",
                         isActive
-                          ? "bg-indigo-100 border-indigo-600 text-indigo-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] font-extrabold"
-                          : "bg-[#f0f4ff] border-indigo-200 text-indigo-600 hover:bg-white",
+                          ? "bg-[#215E38] border-[#3A8A57] text-amber-300 font-extrabold shadow-xs"
+                          : "bg-[#103A20] border-[#235E39] text-emerald-200 hover:bg-[#1C5130] hover:text-white"
                       )}
                       title={isActive ? "Minimize" : "Restore"}
                     >
-                      <Icon
-                        className={cn(
-                          "h-3.5 w-3.5",
-                          isActive ? "text-indigo-600" : "text-indigo-450",
-                        )}
-                      />
-                      <span className="text-[11px] font-black uppercase italic tracking-[0.05em] whitespace-nowrap">
+                      <Icon className={cn("h-3.5 w-3.5", isActive ? "text-amber-300" : "text-emerald-300")} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
                         {label}
                       </span>
                     </button>
@@ -1468,9 +1412,7 @@ export default function App() {
                         e.stopPropagation();
                         closePage(pageId, "dashboard");
                       }}
-                      className={cn(
-                        "absolute right-2 p-0.5 rounded-full flex items-center justify-center h-4 w-4 transition-all duration-150 cursor-pointer text-indigo-400 hover:text-red-600 hover:bg-red-50",
-                      )}
+                      className="absolute right-1.5 p-0.5 rounded-full flex items-center justify-center h-4 w-4 text-emerald-300 hover:text-rose-300 hover:bg-rose-900/60 transition-colors cursor-pointer"
                       title="Terminate Page"
                     >
                       <X className="h-2.5 w-2.5" />
@@ -1480,58 +1422,60 @@ export default function App() {
               })}
           </div>
 
-          <div className="flex gap-2 items-center">
-            <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]">
-              {/* <button
-                onClick={() => {
-                  logEvent(
-                    "PRINT",
-                    `Triggered print cascade for current active module view: "${currentPage}"`,
-                  );
-                  window.print();
-                }}
-                className="flex items-center gap-2 group hover:text-indigo-600 transition-colors cursor-pointer"
-                title="Print Module View"
-                id="btn-print"
-              >
-                <Printer className="h-3.5 w-3.5 text-indigo-700 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
-                  Print
-                </span>
-              </button> */}
+          {/* Center Section: Company Branding */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-[#103A20] rounded-md border border-[#235E39] shrink-0">
+            <span className="text-[11px] font-extrabold text-amber-300 font-serif tracking-wider uppercase">
+              BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE
+            </span>
+            <span className="text-[9px] font-mono text-emerald-300/80">v2.4.0</span>
+          </div>
 
-              <div className="h-5 w-px bg-slate-200" />
-
-              <button
-                onClick={() => {
-                  setIsLoggedIn(false);
-                  setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
-                  setCurrentPage("dashboard");
-                }}
-                className="flex items-center gap-2 group hover:text-rose-600 transition-colors"
-                title="Logout System"
-              >
-                <Power className="h-3.5 w-3.5 text-rose-600 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
-                  Logout
-                </span>
-              </button>
-
-              <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2 opacity-80">
-                <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter tabular-nums">
-                  F.Y: {selectedYear}
-                </span>
-              </div>
-              <div className="h-5 w-px bg-slate-200" />
-              {/* <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-indigo-800" />
-                <span className="text-[11px] font-black tabular-nums text-indigo-950 tracking-tighter uppercase italic">
-                  {currentTime.toLocaleTimeString()}
-                </span>
-              </div> */}
+          {/* Right Section: Time, Locks, Fiscal Year, Logout */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Clock */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-amber-300 font-mono font-bold text-xs shrink-0">
+              <Clock className="h-3.5 w-3.5 text-amber-300" />
+              <span className="tabular-nums">{currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
+
+            {/* Key Indicators */}
+            <div className="hidden sm:flex gap-1 shrink-0">
+              {[
+                { id: 'NUM', active: keyState.num },
+                { id: 'CAPS', active: keyState.caps },
+                { id: 'SCRL', active: keyState.scrl }
+              ].map(item => (
+                <div 
+                  key={item.id} 
+                  className={cn(
+                    "px-1.5 py-0.5 text-[9px] border border-[#235E39] font-mono rounded transition-colors",
+                    item.active ? "bg-emerald-700 text-white font-bold" : "bg-[#103A20] text-[#A2C49D]"
+                  )}
+                >
+                  {item.id}
+                </div>
+              ))}
+            </div>
+
+            {/* Fiscal Year */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-emerald-200 font-mono font-bold text-[10px] shrink-0">
+              <Calendar className="h-3.5 w-3.5 text-amber-300" />
+              <span>F.Y: {selectedYear}</span>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                setIsLoggedIn(false);
+                setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
+                setCurrentPage("dashboard");
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] hover:bg-rose-950/80 rounded-md border border-[#235E39] hover:border-rose-700 text-rose-300 hover:text-rose-100 transition-colors text-[10px] font-extrabold uppercase tracking-wider shrink-0 cursor-pointer"
+              title="Logout System"
+            >
+              <Power className="h-3.5 w-3.5 text-rose-400" />
+              <span className="hidden xs:inline">LOGOUT</span>
+            </button>
           </div>
         </div>
       </div>
