@@ -1297,7 +1297,7 @@ export default function App() {
         <AIAssistant />
 
         {/* Windows-style Taskbar */}
-        <div className="h-12 bg-legacy-bg border-t-2 border-white shadow-[0_-2px_4px_rgba(0,0,0,0.1)] flex items-center px-2 justify-between gap-4 overflow-hidden ">
+        <div className="h-12 bg-gradient-to-r from-[#1A2619] via-[#243523] to-[#1A2619] border-t border-[#3B5338] shadow-lg flex items-center px-3 justify-between gap-4 overflow-hidden">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none max-w-[70vw]">
 
             {/* Premium Integrated Dashboard Selection Tabs */}
@@ -1480,59 +1480,52 @@ export default function App() {
               })}
           </div>
 
+          
+
           <div className="flex gap-2 items-center">
-            <div className="bg-white/40 border-2 border-white px-4 py-1.5 flex items-center gap-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)]">
-              {/* <button
-                onClick={() => {
-                  logEvent(
-                    "PRINT",
-                    `Triggered print cascade for current active module view: "${currentPage}"`,
-                  );
-                  window.print();
-                }}
-                className="flex items-center gap-2 group hover:text-indigo-600 transition-colors cursor-pointer"
-                title="Print Module View"
-                id="btn-print"
-              >
-                <Printer className="h-3.5 w-3.5 text-indigo-700 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
-                  Print
-                </span>
-              </button> */}
+            <div className="flex items-center gap-4 px-5 py-2.5 rounded-xl bg-[#1A2619] border border-[#1A2619] shadow-lg">
 
-              <div className="h-5 w-px bg-slate-200" />
+              {/* Divider */}
+              <div className="h-6 w-px bg-[#425240]" />
 
+              {/* Logout Button */}
               <button
                 onClick={() => {
-                  setIsLoggedIn(false);
-                  setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
-                  setCurrentPage("dashboard");
-                }}
-                className="flex items-center gap-2 group hover:text-rose-600 transition-colors"
+                            setIsLoggedIn(false);
+                            setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
+                            setCurrentPage("dashboard");
+                          }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg
+                      bg-gradient-to-r from-red-600 to-red-800
+                      hover:from-red-700 hover:to-red-900
+                      text-white font-semibold
+                      shadow-lg transition-all duration-300
+                      hover:scale-105 cursor-pointer"
                 title="Logout System"
               >
-                <Power className="h-3.5 w-3.5 text-rose-600 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter cursor-pointer">
+                <Power className="h-4 w-4 text-red-400" />
+                <span className="text-xs font-semibold uppercase tracking-wide">
                   Logout
                 </span>
               </button>
 
-              <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2 opacity-80">
-                <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-                <span className="text-[10px] font-black text-slate-500 uppercase italic tracking-tighter tabular-nums">
-                  F.Y: {selectedYear}
+              {/* Divider */}
+              <div className="h-6 w-px bg-[#425240]" />
+
+              {/* Financial Year */}
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#243322] border border-[#425240]">
+                <Calendar className="h-4 w-4 text-emerald-400" />
+                <span className="text-xs font-semibold text-white">
+                  F.Y : {selectedYear}
                 </span>
               </div>
-              <div className="h-5 w-px bg-slate-200" />
-              {/* <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-indigo-800" />
-                <span className="text-[11px] font-black tabular-nums text-indigo-950 tracking-tighter uppercase italic">
-                  {currentTime.toLocaleTimeString()}
-                </span>
-              </div> */}
+
+              {/* Divider */}
+              <div className="h-6 w-px bg-[#425240]" />
+
             </div>
           </div>
+
         </div>
       </div>
 
