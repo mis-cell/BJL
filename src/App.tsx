@@ -344,20 +344,12 @@ function AuthScreen({
         <div className="absolute top-[33.5%] left-[73.2%] -translate-x-1/2 z-10 w-[88%] max-w-[330px] sm:max-w-[360px] lg:max-w-[385px]">
           {/* Login Box */}
           <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-4 sm:p-5 lg:p-6 rounded-[18px] sm:rounded-[20px] shadow-[0_15px_35px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
-            {/* Header Title & Company Logo */}
+            {/* Header Title */}
             <div className="text-center mb-3">
-              <img 
-                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1786000718/ballymil_icon_qbpvkn.png" 
-                alt="Bally Jute Limited Logo" 
-                className="h-14 w-auto mx-auto object-contain mb-1.5 pointer-events-none" 
-              />
-              <h2 className="text-lg sm:text-xl font-serif font-extrabold text-[#174C2C] tracking-tight">
-                Bally Jute Limited
+              <h2 className="text-lg sm:text-xl font-bold text-[#1E331B] tracking-tight">
+                Bally Jute Login
               </h2>
-              <p className="text-[10px] font-mono text-[#D4AF37] font-extrabold tracking-[0.2em] uppercase mt-0.5">
-                ESTD. 1979
-              </p>
-              <p className="text-[10px] text-[#64748B] font-semibold mt-1">
+              <p className="text-[10px] sm:text-[11px] text-[#5A6855] font-medium mt-0.5">
                 Enter your operational credentials
               </p>
             </div>
