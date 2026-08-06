@@ -24,7 +24,10 @@ import {
   Edit,
   Trash2,
   Mail,
-  Send
+  Send,
+  ClipboardList,
+  Scale,
+  IndianRupee
 } from 'lucide-react';
 import { cn, sanitizeCsvData, getApiUrl } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -763,213 +766,332 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const completedSaudasCount = saudaStatusList.filter(st => st.status === 'completed').length;
   const totalWeightTons = saudaList.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const totalSaudas = saudaList.length;
+  const bookTotalValue = filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate || 0) * Number(s.total_wt_in_ton || 0)), 0);
 
   return (
-    <LegacyLayout title="Sauda" subtitle="" onClose={onClose}>
-      <div className="space-y-3">
-        {/* Top Stat Cards & Chart layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 bg-slate-50 border border-slate-250 p-2 shadow-sm rounded-sm">
-          {/* Left Column: Metrics Belt */}
-          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-[14px] font-black text-rose-700 tracking-tight">{pendingSaudasCount}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Active Pending Saudas</p>
-              </div>
-              <div className="p-2 bg-rose-50 border border-rose-150 rounded">
-                <Clock className="h-5 w-5 text-rose-600" />
-              </div>
+    <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Limited ERP Console" onClose={onClose}>
+      <div className="space-y-4 relative pb-10 font-sans">
+        {/* 1. Four Modern Enterprise KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Active Pending Saudas */}
+          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{pendingSaudasCount}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
             </div>
-
-            <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between col-span-1">
-              <div>
-                <p className="text-[14px] font-black text-indigo-900 tracking-tight">{totalSaudas}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Registered Saudas</p>
-              </div>
-              <div className="p-2 bg-indigo-50 border border-indigo-150 rounded">
-                <HandCoins className="h-5 w-5 text-indigo-600" />
-              </div>
-            </div>
-
-            <div className="bg-white border border-slate-300 p-2 shadow-sm flex items-center justify-between col-span-1">
-              <div>
-                <p className="text-[14px] font-black text-amber-800 tracking-tight">
-                  {totalWeightTons.toFixed(2)} Tons
-                </p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cumulative Sauda Weight</p>
-              </div>
-              <div className="p-2 bg-amber-50 border border-amber-150 rounded">
-                <Calculator className="h-5 w-5 text-amber-600" />
-              </div>
+            <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-2xl text-rose-600 shadow-2xs">
+              <Clock className="h-6 w-6" />
             </div>
           </div>
 
+          {/* Card 2: Total Registered Saudas */}
+          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{totalSaudas}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
+            </div>
+            <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-2xl text-blue-600 shadow-2xs">
+              <ClipboardList className="h-6 w-6" />
+            </div>
           </div>
-        {/* Top Control Bar */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center">
-           <div className="flex bg-white border border-gray-400 p-px flex-1">
+
+          {/* Card 3: Cumulative Sauda Weight */}
+          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
+                {totalWeightTons.toFixed(2)} <span className="text-sm font-semibold text-slate-500">Tons</span>
+              </p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Cumulative Sauda Weight</p>
+            </div>
+            <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-emerald-700 shadow-2xs">
+              <Scale className="h-6 w-6" />
+            </div>
+          </div>
+
+          {/* Card 4: Book Total Value */}
+          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
+                ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Book Total Value</p>
+            </div>
+            <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl text-amber-600 shadow-2xs">
+              <IndianRupee className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Large Search & Date Filter Section */}
+        <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
+          {/* Large Search Box */}
+          <div className="relative flex-1 min-w-[280px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input 
+              type="text"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
+              placeholder="Search Broker or Supplier..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          {/* Date Filters & Quick Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">From</span>
               <input 
-                className="flex-1 text-xs px-2 outline-none py-1" 
-                placeholder="Search Broker or Supplier..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                type="date" 
+                className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)} 
               />
-              <button className="bg-[#d4d0c8] px-2 border-l border-gray-400 hover:bg-gray-300 transition-colors"><Search className="h-3.5 w-3.5" /></button>
-           </div>
-           
-           <div className="flex bg-white border border-gray-400 p-px items-center shadow-sm">
-             <span className="text-[10px] font-bold px-2 text-gray-600 border-r border-gray-300">From</span>
-             <input type="date" className="text-xs px-2 py-1 outline-none text-gray-700 bg-transparent" value={startDate} onChange={e => setStartDate(e.target.value)} />
-             <span className="text-[10px] font-bold px-2 text-gray-600 border-l border-r border-gray-300">To</span>
-             <input type="date" className="text-xs px-2 py-1 outline-none text-gray-700 bg-transparent" value={endDate} onChange={e => setEndDate(e.target.value)} />
-           </div>
+            </div>
 
-           <div className="flex gap-1 h-full">
-              <button className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)]" onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); }} title="Clear search and filter"><X className="h-3 w-3" /> Clear</button>
-              <button 
-                onClick={fetchSaudas}
-                title="Refresh Sauda database"
-                className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-wait" disabled={isRefreshing}
-              >
-                <RefreshCcw className={`h-3 w-3 text-emerald-100 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-              
-           </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">To</span>
+              <input 
+                type="date" 
+                className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)} 
+              />
+            </div>
+
+            <button 
+              onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); }}
+              className="px-3.5 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer active:scale-95" 
+              title="Clear search and filter"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Clear</span>
+            </button>
+
+            <button 
+              onClick={fetchSaudas}
+              disabled={isRefreshing}
+              className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Refresh Sauda database"
+            >
+              <RefreshCcw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Action Toolbar */}
-        <div className="flex gap-1">
-           <LegacyButton icon={Plus} label="New Sauda" active onClick={onNew} />
-           <LegacyButton icon={Printer} label="Print Book" onClick={() => {
-              if (selectedSaudaId) {
-                const sauda = saudaList.find(s => s.sauda_id === selectedSaudaId);
-                if (sauda) handlePrint(sauda);
-              } else {
-                setPrintingBook(true);
-              }
-           }} />
-           <LegacyButton icon={Download} label="Export CSV" onClick={handleCsvDownload} active title="Download full Sauda Contract database as CSV" />
-           <LegacyButton icon={Calculator} label="Accounts" onClick={() => setIsAccountsModalOpen(true)} />
-           <div className="flex-1" />
-           <div className="flex flex-col text-right justify-end pr-2">
-              <span className="text-[9px] font-bold uppercase text-gray-500">Book Total Value</span>
-              <span className="text-sm font-black text-blue-800 tabular-nums">
-                {/* Dummy calculation for UI */}
-                Rs. {filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate) * Number(s.total_wt_in_ton)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-           </div>
+        {/* 3. Action Toolbar (Green Filled & White Outline Buttons) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 my-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={onNew}
+              className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Plus className="h-4 w-4 text-amber-300" />
+              <span>New Sauda</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (selectedSaudaId) {
+                  const sauda = saudaList.find(s => s.sauda_id === selectedSaudaId);
+                  if (sauda) handlePrint(sauda);
+                } else {
+                  setPrintingBook(true);
+                }
+              }}
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print Book</span>
+            </button>
+
+            <button
+              onClick={handleCsvDownload}
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              title="Download full Sauda Contract database as CSV"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export CSV</span>
+            </button>
+
+            <button
+              onClick={() => setIsAccountsModalOpen(true)}
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Calculator className="h-4 w-4" />
+              <span>Accounts</span>
+            </button>
+          </div>
+
+          <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-4 py-1.5 flex flex-col text-right">
+            <span className="text-[10px] font-extrabold uppercase text-amber-800 tracking-wider">Book Total Value</span>
+            <span className="text-base font-black text-[#174C2C] font-mono">
+              ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
 
-        {/* Data Table */}
-        <div className="border border-gray-400 bg-white overflow-x-auto min-h-[400px]">
-           <table className="w-full border-collapse text-[10px]">
-              <thead className="bg-[#c0c0c0] sticky top-0 z-10">
-                 <tr className="border-b border-gray-400 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)] h-8">
-                    <Th label="Date" className="min-w-[70px]" />
-                    <Th label="Order No." className="min-w-[60px]" />
-                    <Th label="Session" className="min-w-[120px]" />
-                    <Th label="Broker" className="text-left px-4 min-w-[150px]" />
-                    <Th label="Supplier" className="text-left px-4 min-w-[150px]" />
-                    <Th label="Unit/Lorry" />
-                    <Th label="T. Unit" className="text-right" />
-                    <Th label="B. Rate" className="text-right px-4 bg-blue-50/50 text-blue-900" />
-                    <Th label="Status" className="text-center" />
-                    <Th label="Action" className="text-center" />
-                 </tr>
+        {/* 4. Data Table */}
+        <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full border-collapse text-xs">
+              <thead className="bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10">
+                <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center">Date</th>
+                  <th className="px-3 py-2 text-center">Order No.</th>
+                  <th className="px-3 py-2 text-center">Session</th>
+                  <th className="px-4 py-2 text-left">Broker</th>
+                  <th className="px-4 py-2 text-left">Supplier</th>
+                  <th className="px-3 py-2 text-center">Unit/Lorry</th>
+                  <th className="px-3 py-2 text-right">T. Unit</th>
+                  <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>
+                  <th className="px-3 py-2 text-center">Status</th>
+                  <th className="px-3 py-2 text-center">Actions</th>
+                </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                 {filteredSaudas.map((entry, idx) => {
-                    const isSelected = selectedSaudaId === entry.sauda_id;
-                    return (
+              <tbody className="divide-y divide-slate-100">
+                {filteredSaudas.map((entry, idx) => {
+                  const isSelected = selectedSaudaId === entry.sauda_id;
+                  const { status: st } = getSaudaStatusAndWeight(entry);
+                  return (
                     <tr 
-                       key={entry.sauda_id} 
-                       onClick={() => setSelectedSaudaId(entry.sauda_id!)}
-                       onDoubleClick={() => { if (canEditOrDelete()) handleEdit(entry); }}
-                       className={cn(
-                          "h-8 cursor-pointer group hover:bg-[#ffffd0] ", 
-                          isSelected ? "bg-[#0a246a] text-white" : (idx % 2 === 0 ? "bg-white" : "bg-gray-50/30")
-                       )}
+                      key={entry.sauda_id} 
+                      onClick={() => setSelectedSaudaId(entry.sauda_id!)}
+                      onDoubleClick={() => { if (canEditOrDelete()) handleEdit(entry); }}
+                      className={cn(
+                        "h-10 cursor-pointer transition-colors text-xs font-medium", 
+                        isSelected 
+                          ? "bg-[#174C2C] text-white" 
+                          : (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
+                      )}
                     >
-                       <td className={cn("text-center font-mono", isSelected ? "text-white" : "text-gray-500")}>{new Date(entry.date).toLocaleDateString('en-GB')}</td>
-                       <td className={cn("text-center font-black", isSelected ? "text-white" : "text-gray-800")}>#{entry.sauda_no}</td>
-                       <td className="text-center text-[9px]">{entry.session}</td>
-                       <td className="px-4 font-bold truncate uppercase">{entry.broker}</td>
-                       <td className={cn("px-4 truncate uppercase", isSelected ? "text-white" : "text-gray-600")}>{entry.supplier}</td>
-                       <td className="text-center">{entry.units_per_lorry_type}</td>
-                       <td className="text-right px-2 font-black tabular-nums">{entry.total_unit}</td>
-                       <td className={cn("text-right px-4 font-black tabular-nums", isSelected ? "text-white bg-red-800/80" : "text-red-700 bg-red-50/5")}>₹{Number(entry.b_rate).toLocaleString()}</td>
-                       <td className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                             {(() => {
-                                const { status: st } = getSaudaStatusAndWeight(entry);
-                                const dot = st === 'completed' ? 'bg-green-500' : st === 'partial' ? 'bg-blue-500' : 'bg-orange-400';
-                                return <span title={st.toUpperCase()} className={cn("inline-block w-2 h-2 rounded-full shrink-0", isSelected ? "ring-1 ring-white " + dot : dot)} />;
-                             })()}
-                             <span className={cn("font-black tabular-nums text-[11px] whitespace-nowrap", isSelected ? "text-white" : "text-indigo-900")}>
-                                {(Number(entry.total_wt_in_ton) || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} Ton
-                             </span>
-                          </div>
-                       </td>
-                       <td className="text-center">
-                          <div className="flex justify-center gap-1">
-                             {canEditOrDelete() && (
-                               <>
-                                 <button onClick={(e) => { e.stopPropagation(); handleEdit(entry); }} className="p-1 hover:bg-black/20 rounded"><Edit className={cn("w-3 h-3", isSelected ? "text-white" : "text-blue-600")} /></button>
-                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.sauda_id!); }} className="p-1 hover:bg-black/20 rounded"><Trash2 className={cn("w-3 h-3", isSelected ? "text-white" : "text-red-600")} /></button>
-                               </>
-                             )}
-                             <button onClick={(e) => { e.stopPropagation(); handlePrint(entry); }} className="p-1 hover:bg-black/20 rounded"><Printer className={cn("w-3 h-3", isSelected ? "text-white" : "text-gray-600")} /></button>
+                      <td className={cn("px-3 text-center font-mono text-[11px]", isSelected ? "text-white" : "text-slate-500")}>
+                        {new Date(entry.date).toLocaleDateString('en-GB')}
+                      </td>
+                      <td className={cn("px-3 text-center font-bold", isSelected ? "text-amber-300" : "text-slate-900")}>
+                        #{entry.sauda_no}
+                      </td>
+                      <td className={cn("px-3 text-center text-[10px] font-mono", isSelected ? "text-emerald-100" : "text-slate-500")}>
+                        {entry.session}
+                      </td>
+                      <td className="px-4 font-bold uppercase truncate max-w-[150px]">
+                        {entry.broker}
+                      </td>
+                      <td className={cn("px-4 uppercase truncate max-w-[150px]", isSelected ? "text-emerald-100" : "text-slate-600")}>
+                        {entry.supplier}
+                      </td>
+                      <td className="px-3 text-center text-slate-700">
+                        {entry.units_per_lorry_type}
+                      </td>
+                      <td className="px-3 text-right font-bold font-mono">
+                        {entry.total_unit}
+                      </td>
+                      <td className={cn("px-4 text-right font-black font-mono", isSelected ? "text-amber-300 bg-[#123e24]" : "text-rose-700 bg-rose-50/30")}>
+                        ₹{Number(entry.b_rate).toLocaleString()}
+                      </td>
+                      <td className="px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span 
+                            className={cn(
+                              "inline-block w-2 h-2 rounded-full shrink-0", 
+                              st === 'completed' ? 'bg-emerald-500' : st === 'partial' ? 'bg-blue-500' : 'bg-amber-500'
+                            )} 
+                          />
+                          <span className={cn("font-bold text-[11px] font-mono whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
+                            {(Number(entry.total_wt_in_ton) || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} Ton
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {canEditOrDelete() && (
+                            <>
                               <button 
-                                 onClick={(e) => { e.stopPropagation(); handleSendMail(entry); }} 
-                                 className={cn(
-                                    "p-1 hover:bg-black/20 rounded cursor-pointer transition-all",
-                                    emailSendingStatus[entry.sauda_id || ''] === 'sending' && "text-amber-600 bg-amber-50 border border-amber-300",
-                                    emailSendingStatus[entry.sauda_id || ''] === 'success' && "text-emerald-700 bg-emerald-50 border border-emerald-300",
-                                    emailSendingStatus[entry.sauda_id || ''] === 'error' && "text-red-600 bg-red-50 border border-red-300",
-                                    (!emailSendingStatus[entry.sauda_id || ''] || emailSendingStatus[entry.sauda_id || ''] === 'idle') && (isSelected ? "text-white" : "text-indigo-600 hover:text-indigo-900")
-                                 )}
-                                 disabled={emailSendingStatus[entry.sauda_id || ''] === 'sending'}
-                                 title="Send Sauda Contract Slip via Email to rawjute@ballyjute.com + prosunmajhi@gmail.com"
+                                onClick={(e) => { e.stopPropagation(); handleEdit(entry); }} 
+                                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Sauda"
                               >
-                                 <Mail className="w-3 h-3" />
+                                <Edit className={cn("w-3.5 h-3.5", isSelected ? "text-white" : "text-blue-600")} />
                               </button>
-                          </div>
-                       </td>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleDelete(entry.sauda_id!); }} 
+                                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Sauda"
+                              >
+                                <Trash2 className={cn("w-3.5 h-3.5", isSelected ? "text-white" : "text-rose-600")} />
+                              </button>
+                            </>
+                          )}
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handlePrint(entry); }} 
+                            className="p-1.5 hover:bg-black/10 rounded-lg transition-colors cursor-pointer"
+                            title="Print Sauda Slip"
+                          >
+                            <Printer className={cn("w-3.5 h-3.5", isSelected ? "text-white" : "text-slate-600")} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleSendMail(entry); }} 
+                            className={cn(
+                              "p-1.5 rounded-lg cursor-pointer transition-all",
+                              emailSendingStatus[entry.sauda_id || ''] === 'sending' && "text-amber-600 bg-amber-50 border border-amber-300",
+                              emailSendingStatus[entry.sauda_id || ''] === 'success' && "text-emerald-700 bg-emerald-50 border border-emerald-300",
+                              emailSendingStatus[entry.sauda_id || ''] === 'error' && "text-rose-600 bg-rose-50 border border-rose-300",
+                              (!emailSendingStatus[entry.sauda_id || ''] || emailSendingStatus[entry.sauda_id || ''] === 'idle') && (isSelected ? "text-white hover:bg-white/20" : "text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50")
+                            )}
+                            disabled={emailSendingStatus[entry.sauda_id || ''] === 'sending'}
+                            title="Send Sauda Contract Slip via Email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                 )})}
-                 {filteredSaudas.length === 0 && (
-                    <tr>
-                       <td colSpan={10} className="py-8 text-center text-gray-500 font-bold uppercase">No Sauda Contracts Found</td>
-                    </tr>
-                 )}
-                 {/* Empty rows to maintain UI height */}
-                 {Array.from({ length: Math.max(0, 10 - filteredSaudas.length) }).map((_, i) => (
-                    <tr key={i} className="h-8 border-b border-gray-50 opacity-20">
-                       <td colSpan={10}></td>
-                    </tr>
-                 ))}
+                  );
+                })}
+                {filteredSaudas.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="py-12 text-center text-slate-500 font-bold uppercase text-xs">
+                      No Sauda Contracts Found
+                    </td>
+                  </tr>
+                )}
               </tbody>
-           </table>
+            </table>
+          </div>
+
+          {/* Quick Summary Footer Bar inside Card */}
+          <div className="bg-slate-50 border-t border-slate-200 p-3 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Saudas</p>
+                <p className="text-xs font-black text-slate-800">{filteredSaudas.length}</p>
+              </div>
+              <div className="bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cumulative Weight</p>
+                <p className="text-xs font-black text-slate-800 font-mono">
+                  {filteredSaudas.reduce((acc, s) => acc + Number(s.total_wt_in_ton || 0), 0).toFixed(2)} Ton
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white px-4 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-right">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtered Book Value</p>
+              <p className="text-xs font-black text-[#174C2C] font-mono">
+                ₹{bookTotalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Quick Footer Summary */}
-        <div className="bg-[#808080] p-1 flex justify-between gap-1 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.2)]">
-           <div className="flex gap-1 h-full flex-wrap">
-              <div className="bg-white px-3 py-1 border border-gray-400 min-w-[70px]">
-                 <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Saudas</p>
-                 <p className="text-xs font-black">{filteredSaudas.length}</p>
-              </div>
-              <div className="bg-white px-3 py-1 border border-gray-400 min-w-[80px]">
-                 <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Cumulative Wt</p>
-                 <p className="text-xs font-black">{filteredSaudas.reduce((acc, s) => acc + Number(s.total_wt_in_ton || 0), 0).toFixed(2)} Ton</p>
-              </div>
-           </div>
-
-           <div className="bg-white px-3 py-1 border border-gray-400 min-w-[120px] text-right self-stretch flex flex-col justify-center">
-              <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Book Value</p>
-              <p className="text-xs font-black text-blue-800 tabular-nums">Rs. {filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate) * Number(s.total_wt_in_ton)), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-           </div>
-        </div>
+        {/* 5. Floating Quick Action Button */}
+        <button
+          onClick={onNew}
+          className="fixed bottom-12 right-8 z-30 bg-[#174C2C] hover:bg-[#103A20] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#0d301b] group"
+          title="Quick Add New Sauda"
+        >
+          <Plus className="h-5 w-5 text-amber-300 group-hover:rotate-90 transition-transform duration-300" />
+          <span className="pr-1">Quick Add</span>
+        </button>
       </div>
 
       {printingBook && (

@@ -3,6 +3,7 @@ import { Sauda } from '../types';
 
 interface Props {
   sauda: Sauda;
+  onClose?: () => void;
 }
 
 export default function SaudaPrintSlip({ sauda }: Props) {
