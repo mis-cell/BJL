@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
@@ -474,58 +474,43 @@ export default function SaudaEntry({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#F7F5EF] font-sans text-slate-800 overflow-y-auto">
-      {/* 1. Sleek Integrated Sub-Header */}
-      <div className="sticky top-0 z-20 px-6 py-3.5 bg-gradient-to-r from-[#F7F5EF] via-[#F3EFE3] to-[#F7F5EF] border-b border-[#E2DFD5] flex items-center justify-between shadow-2xs backdrop-blur-md bg-opacity-95">
-        <div className="flex items-center gap-3">
+      {/* 1. Integrated Sub-Header Banner (Exact Match to Image 2) */}
+      <div className="relative px-8 py-5 bg-[#FAF8F5] border-b border-[#E2DFD5] flex items-center justify-between overflow-hidden shadow-2xs">
+        {/* Background Mill Illustration Artwork on the Right */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-2/5 opacity-30 pointer-events-none bg-no-repeat bg-right bg-contain"
+          style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
+        />
+
+        <div className="relative z-10 flex flex-col gap-1">
+          <h2 className="font-serif font-black text-2xl sm:text-3xl text-[#174C2C] tracking-tight">
+            Sauda Desk
+          </h2>
+          <nav className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <span className="hover:text-[#174C2C] cursor-pointer" onClick={onCancel}>Home</span>
+            <span>›</span>
+            <span className="hover:text-[#174C2C] cursor-pointer" onClick={onCancel}>Sauda Desk</span>
+            <span>›</span>
+            <span className="font-bold text-[#174C2C]">
+              {initialData ? `Modify #${formData.sauda_no}` : "Add Sauda"}
+            </span>
+          </nav>
+        </div>
+
+        {/* Action Controls & Session Badge */}
+        <div className="relative z-10 flex items-center gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 hover:bg-[#E2DDD0] text-[#174C2C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            className="px-3.5 py-1.5 hover:bg-[#E2DDD0] text-[#174C2C] bg-white border border-[#D8D3C5] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
             title="Back to Sauda Desk (Esc)"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back</span>
+            <span>Back (Esc)</span>
           </button>
-
-          <div className="h-4 w-px bg-slate-300" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-white border border-[#D8D3C5] p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
-              <img 
-                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-                alt="Bally Jute Logo" 
-                className="h-full w-auto object-contain" 
-              />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-serif font-black text-xl text-[#174C2C] tracking-tight">
-                  {initialData ? "Modify Sauda Contract" : "New Sauda Contract"}
-                </h2>
-                <span className="bg-[#174C2C]/10 text-[#174C2C] border border-[#174C2C]/20 text-[11px] font-black px-2 py-0.5 rounded font-mono">
-                  #{formData.sauda_no || '0153'}
-                </span>
-              </div>
-              <nav className="flex items-center gap-1.5 text-[11px] font-medium text-amber-900/80 mt-0.5">
-                <span className="hover:underline cursor-pointer" onClick={onCancel}>Sauda Desk</span>
-                <span>›</span>
-                <span className="font-bold text-[#174C2C]">
-                  {initialData ? `Edit #${formData.sauda_no}` : "Add Contract Entry"}
-                </span>
-              </nav>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Info Badges */}
-        <div className="flex items-center gap-2.5">
-          <div className="hidden md:flex bg-white/80 border border-[#D8D3C5] px-3 py-1 rounded-lg text-xs items-center gap-1.5 shadow-2xs">
+          <div className="bg-white/90 border border-[#D8D3C5] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
             <span className="text-slate-500 font-medium">Session:</span>
-            <span className="font-bold text-slate-800 font-mono text-[11px]">{formData.session || 'BJCL/2026-2027/'}</span>
-          </div>
-          <div className="bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs flex items-center gap-1.5 shadow-2xs">
-            <span className="text-emerald-800 font-medium">Status:</span>
-            <span className="font-bold text-[#174C2C] uppercase font-mono text-[11px]">{formData.status || 'PENDING'}</span>
+            <span className="font-bold text-[#174C2C] font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
           </div>
         </div>
       </div>

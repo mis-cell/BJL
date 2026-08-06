@@ -35,11 +35,9 @@ export default function SaudaPrintSlip({ sauda }: Props) {
        {/* Invoice/Contract Header */}
        <div className="flex justify-between items-center mb-2 flex-none border-b-2 border-black pb-2">
           <div className="flex items-center gap-3">
-             <img 
-                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-                alt="Bally Jute Logo" 
-                className="h-10 w-auto object-contain" 
-             />
+             <div className="w-8 h-8 rounded border-2 border-black flex items-center justify-center font-serif font-black text-xs text-black shrink-0">
+                BJ
+             </div>
              <div className="flex flex-col">
                 <div className="font-extrabold text-[15px] text-black leading-tight tracking-tight">BALLY JUTE COMPANY LIMITED</div>
                 <div className="text-[10px] font-bold text-neutral-800 tracking-wider font-mono">SAUDA CONTRACT SLIP • {yearStr}</div>

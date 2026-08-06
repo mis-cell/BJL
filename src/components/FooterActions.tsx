@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Loader2, Building2 } from 'lucide-react';
 
 interface FooterActionsProps {
   onPrint?: () => void;
@@ -15,13 +15,13 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E2DFD5] px-6 py-3.5 shadow-lg flex items-center justify-between mt-6">
+    <div className="sticky bottom-0 z-30 bg-white border-t border-slate-200 px-6 py-3.5 shadow-lg flex items-center justify-between mt-6">
       <div className="flex items-center gap-3">
         {/* Print Button */}
         <button
           type="button"
           onClick={onPrint}
-          className="border border-[#174C2C] text-[#174C2C] hover:bg-[#174C2C]/10 bg-white font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
+          className="border-2 border-[#174C2C] text-[#174C2C] hover:bg-[#174C2C]/10 bg-white font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
         >
           <Printer className="h-4 w-4 text-[#174C2C]" />
           <span>Print</span>
@@ -31,24 +31,11 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="border border-[#D4AF37] text-[#8B6D1B] bg-amber-50/60 hover:bg-amber-100/60 font-bold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
+          className="border-2 border-[#D4AF37] text-[#8B6D1B] bg-white hover:bg-amber-50/60 font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
         >
           <ArrowLeft className="h-4 w-4 text-[#8B6D1B]" />
           <span>Back (Esc)</span>
         </button>
-      </div>
-
-      {/* Center Branding Seal */}
-      <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-[#F7F5EF] rounded-xl border border-[#E2DFD5] shadow-2xs">
-        <img 
-          src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-          alt="Bally Jute Logo" 
-          className="h-6 w-auto object-contain" 
-        />
-        <div className="flex flex-col">
-          <span className="text-[11px] font-extrabold text-[#174C2C] leading-none">Bally Jute Limited</span>
-          <span className="text-[9px] font-mono text-[#8B6D1B] mt-0.5 uppercase tracking-wider">ESTD. 1979</span>
-        </div>
       </div>
 
       {/* Save Contract Button */}
@@ -56,7 +43,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
         type="button"
         onClick={onSave}
         disabled={isLoading}
-        className="bg-[#174C2C] hover:bg-[#113A21] disabled:opacity-50 text-white font-bold text-sm px-8 py-2.5 rounded-xl flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+        className="bg-[#174C2C] hover:bg-[#123E23] disabled:opacity-50 text-white font-black text-xs sm:text-sm px-8 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95 tracking-wider uppercase"
       >
         {isLoading ? (
           <>

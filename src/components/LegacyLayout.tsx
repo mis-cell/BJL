@@ -279,23 +279,11 @@ export default function LegacyLayout({
             onClick={() => handleNavNavigation('dashboard')} 
             className="flex items-center gap-3 cursor-pointer group select-none"
           >
-            {/* Logo Image */}
-            <div className="h-10 w-10 rounded-xl bg-white border border-[#D8D3C5] p-1 flex items-center justify-center shadow-xs group-hover:border-[#1E331B] transition-colors shrink-0">
-              <img 
-                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-                alt="Bally Jute Logo" 
-                className="h-full w-auto object-contain" 
-              />
-            </div>
-
-            <div>
-              <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors">
-                Bally Jute Limited
-              </h1>
-              <p className="text-[9px] font-mono text-[#5A6E54] tracking-[0.25em] uppercase font-semibold mt-0.5">
-                ESTD. 1979
-              </p>
-            </div>
+            <img 
+              src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
+              alt="Bally Jute Limited" 
+              className="h-10 sm:h-11 w-auto object-contain" 
+            />
           </div>
 
           <div className="flex gap-1.5 shrink-0 z-10 items-center">

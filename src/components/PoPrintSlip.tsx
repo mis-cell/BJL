@@ -170,11 +170,9 @@ export default function PoPrintSlip({ po }: Props) {
 
             <div className="flex justify-between items-start mt-1 pb-1 text-[11.5px]">
               <div className="flex items-center gap-2.5">
-                <img 
-                  src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-                  alt="Bally Jute Logo" 
-                  className="h-10 w-auto object-contain" 
-                />
+                <div className="w-8 h-8 rounded border-2 border-black flex items-center justify-center font-serif font-black text-xs text-black shrink-0">
+                  BJ
+                </div>
                 <div className="leading-tight">
                   <div className="font-extrabold text-[13px]">BALLY JUTE COMPANY LIMITED</div>
                   <div className="font-normal text-[10px] uppercase">AUTHORIZED MILL PREMISES, ESTD. 1979</div>
