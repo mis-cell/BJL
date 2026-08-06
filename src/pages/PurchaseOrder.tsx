@@ -28,7 +28,8 @@ import {
   CheckCircle2,
   Clock,
   Mail,
-  Truck
+  Truck,
+  Users
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -2819,7 +2820,7 @@ function isPoMismatchResolved(poNo: string): boolean {
 
   return (
     <div className="w-full h-full flex flex-col text-[11px]  text-slate-900 font-sans">
-      {viewMode === 'register' ? (
+      {viewMode === 'register' && (
         <LegacyLayout title={isArchiveView ? "FINAL P.O ARCHIVE" : (isTempPo ? "SAUDA CHECK POINT" : "FINAL P.O")} subtitle={isArchiveView ? "Archived & Settled Purchase Orders Register" : ""} onClose={onClose}>
           <div className="space-y-3">
             {/* Top Stat Cards & Chart layout */}
@@ -3214,10 +3215,52 @@ function isPoMismatchResolved(poNo: string): boolean {
             </button>
           </div>
         </LegacyLayout>
-      ) : (
-        // Form Mode (Purchase Order Editor Form)
-        <LegacyLayout title={isTempPo ? "SAUDA CHECK POINT" : "FINAL P.O"} subtitle={isTempPo ? "Purchase Order Generation Mode" : "Purchase Order Generation Mode"} onBack={() => setViewMode('register')} onClose={() => setViewMode('register')}>
-          <div ref={poFormRef} className="space-y-4 text-[11px] font-bold">
+      )}
+
+      {/* Form Mode Popup Modal */}
+      {viewMode === 'form' && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-fade-in">
+          <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden text-xs">
+            
+            {/* Modal Header Bar - Sauda Dark Green Theme */}
+            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] px-6 py-4 flex items-center justify-between border-b border-[#0d301b] shrink-0 text-white shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#103A20] border border-[#235E39] rounded-xl text-amber-300 shadow-xs">
+                  <FileText className="h-5 w-5 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-black text-white tracking-tight uppercase">
+                      {formData.no ? "EDIT PURCHASE ORDER" : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-[#103A20] tracking-wider uppercase">
+                      {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-200/90 font-medium">
+                    {formData.no ? `P.O No: ${formData.no}` : "Fill purchase order parameters, broker & supplier details, and item rates"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2 shadow-xs">
+                  <span className="text-emerald-200/80 font-medium">Session:</span>
+                  <span className="font-bold text-amber-300 font-mono text-xs">BJCL/2026-2027/</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('register')}
+                  className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  title="Close P.O Form (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div ref={poFormRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
             
             {/* Optional Calculator Modal */}
             {isCalcOpen && (
@@ -3926,8 +3969,9 @@ function isPoMismatchResolved(poNo: string): boolean {
             </div>
 
           </div>
-        </LegacyLayout>
-      )}
+        </div>
+      </div>
+    )}
 
       {/* Actions dropdown — used in BOTH Temporary P.O and Final P.O rows. */}
       {actionMenu && createPortal(
