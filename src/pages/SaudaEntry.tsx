@@ -490,7 +490,13 @@ export default function SaudaEntry({
           <div className="h-4 w-px bg-slate-300" />
 
           <div className="flex items-center gap-2.5">
-            <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-8 w-auto object-contain shrink-0" />
+            <div className="h-8 w-8 rounded-lg bg-white border border-[#D8D3C5] p-0.5 flex items-center justify-center shrink-0 shadow-2xs">
+              <img 
+                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
+                alt="Bally Jute Logo" 
+                className="h-full w-auto object-contain" 
+              />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-serif font-black text-xl text-[#174C2C] tracking-tight">

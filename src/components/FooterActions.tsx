@@ -40,7 +40,11 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
 
       {/* Center Branding Seal */}
       <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-[#F7F5EF] rounded-xl border border-[#E2DFD5] shadow-2xs">
-        <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-6 w-auto object-contain" />
+        <img 
+          src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
+          alt="Bally Jute Logo" 
+          className="h-6 w-auto object-contain" 
+        />
         <div className="flex flex-col">
           <span className="text-[11px] font-extrabold text-[#174C2C] leading-none">Bally Jute Limited</span>
           <span className="text-[9px] font-mono text-[#8B6D1B] mt-0.5 uppercase tracking-wider">ESTD. 1979</span>

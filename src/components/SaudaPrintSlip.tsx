@@ -35,7 +35,11 @@ export default function SaudaPrintSlip({ sauda }: Props) {
        {/* Invoice/Contract Header */}
        <div className="flex justify-between items-center mb-2 flex-none border-b-2 border-black pb-2">
           <div className="flex items-center gap-3">
-             <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-10 w-auto object-contain" />
+             <img 
+                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
+                alt="Bally Jute Logo" 
+                className="h-10 w-auto object-contain" 
+             />
              <div className="flex flex-col">
                 <div className="font-extrabold text-[15px] text-black leading-tight tracking-tight">BALLY JUTE COMPANY LIMITED</div>
                 <div className="text-[10px] font-bold text-neutral-800 tracking-wider font-mono">SAUDA CONTRACT SLIP • {yearStr}</div>
@@ -220,10 +224,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              </div>
           </div>
           <div className="flex justify-between items-center text-[9px] font-mono text-neutral-600 pt-1">
-             <div className="flex items-center gap-1.5">
-                <img src="/asset_bjl.png" alt="BJL Logo" className="h-4 w-auto object-contain opacity-75" />
-                <span>BALLY JUTE CO. LTD. • AUTHORIZED COMPUTER GENERATED SYSTEM CONTRACT</span>
-             </div>
+             <div>BALLY JUTE CO. LTD. • AUTHORIZED COMPUTER GENERATED SYSTEM CONTRACT</div>
              <div>Page 1 of 1</div>
           </div>
        </div>

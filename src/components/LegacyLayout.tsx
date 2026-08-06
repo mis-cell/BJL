@@ -280,8 +280,12 @@ export default function LegacyLayout({
             className="flex items-center gap-3 cursor-pointer group select-none"
           >
             {/* Logo Image */}
-            <div className="h-11 w-11 rounded-xl bg-[#FAF7F0] border-2 border-[#1E331B] p-1 flex items-center justify-center shadow-sm group-hover:border-amber-600 transition-colors shrink-0">
-              <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-full w-auto object-contain" />
+            <div className="h-10 w-10 rounded-xl bg-white border border-[#D8D3C5] p-1 flex items-center justify-center shadow-xs group-hover:border-[#1E331B] transition-colors shrink-0">
+              <img 
+                src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
+                alt="Bally Jute Logo" 
+                className="h-full w-auto object-contain" 
+              />
             </div>
 
             <div>
