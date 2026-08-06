@@ -1080,6 +1080,7 @@ export default function App() {
                 <AmadRegister
                   onClose={() => closePage("amad", "dashboard")}
                   onNew={() => globalNavigate("amad_entry")}
+                  onNavigate={(page) => globalNavigate(page as Page)}
                   onCreateFinalMr={(amad) => {
                     setSelectedAmadForFinalMr(amad);
                     globalNavigate("final_arrival");

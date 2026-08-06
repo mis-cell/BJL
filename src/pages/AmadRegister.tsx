@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import { 
   Archive, 
@@ -7,8 +6,6 @@ import {
   Printer, 
   ArrowLeft,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   RefreshCcw,
   FileText,
@@ -16,19 +13,26 @@ import {
   Trash2,
   Calendar,
   Layers,
-  TrendingUp,
   Truck,
   FileSpreadsheet,
-  History,
   Clock,
-  CheckSquare,
-  Square,
-  Eye,
+  CheckCircle2,
+  Bell,
+  User,
+  ShieldCheck,
+  Scale,
+  PackageCheck,
+  Building2,
+  Power,
+  Leaf,
+  ChevronDown,
   X,
-  CheckCircle2
+  ClipboardCheck,
+  Package,
+  TrendingUp,
+  FileCheck
 } from 'lucide-react';
 import { cn, sanitizeCsvData } from '../lib/utils';
-import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import PrintModal from '../components/PrintModal';
 import AmadEntry from './AmadEntry';
 import { dbModule } from '../services/dbModule';
@@ -82,7 +86,71 @@ export const calculateNetWeightVal = (
   return netWeight.toFixed(3);
 };
 
-export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onClose?: () => void; onNew?: () => void; onCreateFinalMr?: (amad: Amad) => void }) {
+// Vector Illustrations matching Bally Jute Limited branding
+const FactorySketchIllustration = () => (
+  <svg className="w-32 h-20 opacity-80" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Background hills */}
+    <path d="M10 100 Q 50 70 100 95 Q 150 110 190 90 L 190 110 L 10 110 Z" fill="#E6DDC8" opacity="0.5" />
+    {/* Factory Chimney */}
+    <rect x="150" y="30" width="14" height="70" fill="#476A35" opacity="0.8" />
+    <polygon points="148,30 166,30 164,25 150,25" fill="#1E4D2B" />
+    {/* Chimney Smoke */}
+    <path d="M157 20 Q 152 10 162 5 T 155 -5" stroke="#C6A15B" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
+    {/* Factory Main Building */}
+    <rect x="30" y="55" width="115" height="45" fill="#1E4D2B" opacity="0.85" rx="1" />
+    {/* Roof sawteeth */}
+    <polygon points="30,55 50,40 50,55 70,40 70,55 90,40 90,55 110,40 110,55 130,40 130,55 145,55" fill="#476A35" />
+    {/* Factory Windows */}
+    <rect x="40" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="60" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="80" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="100" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="120" y="65" width="15" height="25" fill="#C6A15B" />
+    {/* Ground line */}
+    <line x1="10" y1="100" x2="190" y2="100" stroke="#1E4D2B" strokeWidth="2" strokeLinecap="round" />
+    {/* Small Jute plants */}
+    <path d="M15 100 Q 12 90 8 85 M15 100 Q 18 88 22 84 M15 100 L 15 82" stroke="#476A35" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
+const JuteBagStackIllustration = () => (
+  <svg className="w-24 h-20" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Bottom Sack 1 */}
+    <rect x="10" y="50" width="55" height="35" rx="6" fill="#C6A15B" stroke="#8C6D33" strokeWidth="2" />
+    <path d="M10 58 Q 37 62 65 58" stroke="#A88342" strokeWidth="1.5" />
+    {/* Bottom Sack 2 */}
+    <rect x="58" y="52" width="52" height="33" rx="6" fill="#B8944D" stroke="#8C6D33" strokeWidth="2" />
+    {/* Top Sack */}
+    <rect x="30" y="24" width="60" height="36" rx="6" fill="#D9B76E" stroke="#8C6D33" strokeWidth="2" />
+    {/* Sack Tie / Rope */}
+    <path d="M30 32 L 90 32" stroke="#476A35" strokeWidth="2.5" strokeDasharray="3 2" />
+    {/* BJ Stamp on Top Sack */}
+    <rect x="48" y="38" width="24" height="16" rx="2" fill="#F9F5EC" stroke="#1E4D2B" strokeWidth="1" />
+    <text x="60" y="47" fontSize="8" fontWeight="bold" fill="#1E4D2B" textAnchor="middle" fontFamily="serif">Bj</text>
+    <text x="60" y="52" fontSize="4" fontWeight="bold" fill="#476A35" textAnchor="middle">BALLY JUTE</text>
+  </svg>
+);
+
+const JuteRopeLeavesIllustration = () => (
+  <svg className="w-24 h-20" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Coiled Rope */}
+    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#C6A15B" strokeWidth="6" strokeLinecap="round" fill="none" />
+    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#8C6D33" strokeWidth="1.5" strokeDasharray="2 3" strokeLinecap="round" fill="none" />
+    {/* Botanical Leaves */}
+    <path d="M60 40 Q 75 20 85 25 Q 70 38 60 40 Z" fill="#476A35" />
+    <path d="M60 40 Q 80 35 90 42 Q 72 50 60 40 Z" fill="#1E4D2B" />
+    <path d="M40 30 Q 30 10 20 15 Q 32 28 40 30 Z" fill="#2E7D32" />
+  </svg>
+);
+
+interface AmadRegisterProps {
+  onClose?: () => void;
+  onNew?: () => void;
+  onCreateFinalMr?: (amad: Amad) => void;
+  onNavigate?: (page: string) => void;
+}
+
+export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNavigate }: AmadRegisterProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -96,8 +164,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
   const [printData, setPrintData] = useState<any | null>(null);
   const [isPrintingModalOpen, setIsPrintingModalOpen] = useState(false);
 
-  // Audit Modal trail system
-      
   // Column picker selection state
   const [printColumns, setPrintColumns] = useState({
     crop_year: true,
@@ -115,34 +181,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
   });
 
   // Pending PO Arrivals State & Tab Selection
-    const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [inspectionsList, setInspectionsList] = useState<any[]>([]);
-
-  const updatePrintRow = (idx: number, field: string, val: any) => {
-    if (!printData) return;
-    const updatedRows = [...printData.rows];
-    updatedRows[idx] = { ...updatedRows[idx], [field]: val };
-
-    // Calculate Net Wt on parameter change inputs
-    if (field === 'gross_wt' || field === 'moisture_pct' || field === 'dust_pct' || field === 'ncv_pct') {
-      const gross = Number(updatedRows[idx].gross_wt) || 0;
-      const moisture = Number(updatedRows[idx].moisture_pct) || 0;
-      const dust = Number(updatedRows[idx].dust_pct) || 0;
-      const ncv = Number(updatedRows[idx].ncv_pct) || 0;
-      
-      updatedRows[idx].net_wt = calculateNetWeightVal(
-        gross,
-        moisture,
-        dust,
-        ncv,
-        printData.arrival_area_name || '',
-        printData.po_date || '',
-        printData.date || ''
-      );
-    }
-
-    setPrintData({ ...printData, rows: updatedRows });
-  };
 
   const handlePreparePrint = async (amad: Amad) => {
     setLoading(true);
@@ -395,7 +435,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
 
   // Filter list
   const filteredAmads = amadList.filter(a => {
-    // Check if status is cancelled. We can choose to hide or show them. Let's show them but marked.
     const term = searchTerm.toLowerCase();
     const matchSearch = 
       (a.temporary_arrival_no || a.amad_no || '').toLowerCase().includes(term) ||
@@ -459,12 +498,12 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
     try {
       const sanitizedData = sanitizeCsvData(dataToExport);
       const csv = Papa.unparse(sanitizedData);
-      const csvContent = "\uFEFF" + csv; // UTF-8 BOM
+      const csvContent = "\uFEFF" + csv;
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Arrival_Register_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Temporary_MR_Report_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -474,12 +513,16 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
     }
   };
 
-  // Calculate top quick summaries based on filtered list
+  // Metrics
   const totalBales = filteredAmads.reduce((acc, a) => acc + (Number(a.total_packets || a.packets || 0)), 0);
-  // Weight is stored in qtl (quintals); 10 Quintals = 1 M.T
   const totalWeightMt = filteredAmads.reduce((acc, a) => acc + (Number(a.weight_qtl || a.weight || 0) / 10), 0);
 
-  // Group by Date for the "Date Wise Show total Arrival Report" Card
+  // Inspection status counts
+  const inspectedSet = new Set(inspectionsList.map(i => String(i.arrival_no || '').trim().toUpperCase()));
+  const pendingCount = filteredAmads.filter(a => !inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase())).length;
+  const completedCount = filteredAmads.length - pendingCount;
+
+  // Group by Date
   const dateWiseArrivalsMap: { [date: string]: { count: number; packets: number; weight: number } } = {};
   amadList.forEach(a => {
     const d = a.date || 'No Date';
@@ -491,435 +534,519 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
     dateWiseArrivalsMap[d].weight += (Number(a.weight_qtl || a.weight || 0) / 10);
   });
 
-  // Convert map to sorted list of objects
   const dateWiseArrivalList = Object.entries(dateWiseArrivalsMap)
     .map(([date, stats]) => ({ date, ...stats }))
-    .sort((a, b) => b.date.localeCompare(a.date)); // descending dates
+    .sort((a, b) => b.date.localeCompare(a.date));
 
-  // Calculate totals for active printData slip in parent scope to avoid JSX parse issues
-  const printTotalQty = printData && printData.rows
-    ? printData.rows.reduce((sum: number, r: any) => sum + (Number(r.quantity_rcpt) || 0), 0)
-    : 0;
-  const printTotalGrossWt = printData && printData.rows
-    ? printData.rows.reduce((sum: number, r: any) => sum + (Number(r.gross_wt) || 0), 0)
-    : 0;
-  const printTotalNetWt = printData && printData.rows
-    ? printData.rows.reduce((sum: number, r: any) => sum + (Number(r.net_wt) || 0), 0)
-    : 0;
+  // Top Nav Items
+  const navTabs = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'maingate', label: 'Main Gate' },
+    { id: 'mill', label: 'Mill' },
+    { id: 'po', label: 'Purchase' },
+    { id: 'satta', label: 'Satta' },
+    { id: 'amad', label: 'T.M.R', active: true },
+    { id: 'material_inspection', label: 'Quality' },
+    { id: 'stock', label: 'Inventory' },
+    { id: 'production', label: 'Production' },
+    { id: 'reports', label: 'Reports' },
+    { id: 'vyapari', label: 'Masters' },
+    { id: 'admindesk', label: 'Administration' },
+  ];
 
   return (
-    <LegacyLayout title="Temporary M.R" subtitle="" onClose={onClose}>
-      <div className="space-y-4">
-        
-        {/* Top Operational Metrics Hub */}
-        <div className="grid grid-cols-12 gap-3">
-          {/* Card 1: Cumulative Statistics */}
-          <div className="col-span-12 md:col-span-4 bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm">
-            <h3 className="text-xs font-bold text-gray-700 border-b border-gray-400 pb-1 mb-1.5 flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-blue-800" /> Operational Overview
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="bg-white border border-gray-400 p-1">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Filtered Loads</p>
-                <p className="text-sm font-black text-gray-900 font-mono">{filteredAmads.length} Lorries</p>
-              </div>
-              <div className="bg-white border border-gray-400 p-1">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Total Packets</p>
-                <p className="text-sm font-black text-blue-800 font-mono">{totalBales.toLocaleString()} Bales</p>
-              </div>
-              <div className="bg-white border border-gray-400 p-1 col-span-2">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Total Weight</p>
-                <p className="text-sm font-black text-red-700 font-mono">{totalWeightMt.toFixed(3)} MT</p>
-              </div>
+    <div className="min-h-screen bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white">
+      
+      {/* 1. TOP NAVIGATION HEADER */}
+      <header className="bg-[#F9F5EC] border-b border-[#E6DDC8] px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0">
+        {/* Left Branding */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#1E4D2B] text-[#C6A15B] flex flex-col items-center justify-center font-serif font-black shadow-md border border-[#C6A15B]/40 shrink-0">
+            <span className="text-sm leading-none">Bj</span>
+          </div>
+          <div>
+            <h1 className="font-serif font-extrabold text-lg text-[#1E4D2B] leading-tight tracking-wide">
+              Bally Jute Limited
+            </h1>
+            <p className="text-[10px] font-semibold text-[#8C6D33] tracking-wider uppercase font-mono">
+              ESTD. 1979 — Raw Jute ERP
+            </p>
+          </div>
+        </div>
+
+        {/* Center Navigation Bar */}
+        <nav className="flex items-center gap-1 bg-[#EAE3D2]/60 p-1 rounded-full border border-[#D9CEB4] overflow-x-auto max-w-full">
+          {navTabs.map((tab) => {
+            const isActive = tab.active;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (onNavigate) onNavigate(tab.id);
+                  else if (tab.id === 'dashboard' && onClose) onClose();
+                }}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-full transition-all duration-150 flex items-center gap-1 whitespace-nowrap cursor-pointer",
+                  isActive
+                    ? "bg-[#1E4D2B] text-white font-semibold shadow-xs"
+                    : "text-slate-700 hover:text-[#1E4D2B] hover:bg-[#D9CEB4]/40"
+                )}
+              >
+                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />}
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Right Admin Controls */}
+        <div className="flex items-center gap-3 shrink-0">
+          <button className="relative p-2 rounded-full hover:bg-[#EAE3D2] text-[#1E4D2B] transition-colors cursor-pointer" title="Notifications">
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1 right-1 w-4 h-4 bg-[#D32F2F] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              3
+            </span>
+          </button>
+          <div className="h-6 w-px bg-[#D9CEB4]" />
+          <div className="flex items-center gap-2 pl-1 cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-[#1E4D2B] text-white flex items-center justify-center font-bold text-xs shadow-xs border border-[#C6A15B]">
+              A
+            </div>
+            <div className="text-left hidden sm:block">
+              <p className="text-xs font-bold text-slate-800 leading-none">Admin User</p>
+              <p className="text-[10px] font-medium text-[#8C6D33] leading-tight">Company Owner</p>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 p-4 md:p-6 space-y-5 max-w-[1700px] w-full mx-auto">
+
+        {/* 2. HERO BANNER HEADER */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 md:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
+          <div className="flex items-center gap-3.5 z-10">
+            <div className="w-12 h-12 rounded-xl bg-[#1E4D2B]/10 text-[#1E4D2B] flex items-center justify-center border border-[#1E4D2B]/20 shrink-0">
+              <ClipboardCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-serif font-bold text-2xl text-[#1E4D2B] tracking-wide flex items-center gap-2">
+                Temporary M.R Dashboard
+              </h2>
+              <p className="text-xs text-slate-600 font-medium flex items-center gap-1.5 mt-0.5">
+                Live Overview of Temporary Market Rate Operations <Leaf className="w-3.5 h-3.5 text-[#476A35]" />
+              </p>
             </div>
           </div>
 
-          {/* Card 2: Date-Wise Total Arrival Hub Card */}
-          <div className="col-span-12 md:col-span-8 bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center border-b border-gray-400 pb-1 mb-1.5">
-              <h3 className="text-xs font-bold text-gray-700 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-red-700" /> Date Wise Total Arrival Report (Global Summary)
-              </h3>
-              <span className="text-[8px] uppercase tracking-wider font-extrabold text-gray-500 bg-white/50 px-1 border border-gray-300">Latest Days</span>
+          {/* Right Hero Controls & Artwork */}
+          <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-between md:justify-end">
+            <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700">
+              <Calendar className="w-3.5 h-3.5 text-[#1E4D2B]" />
+              <span>27 Jul 2026</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </div>
-            
-            {/* Scrollable list inside the report card */}
-            <div className="bg-white border border-gray-400 h-[83px] overflow-y-auto">
-              <table className="w-full text-left text-[9px] border-collapse font-mono">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-300 sticky top-0 font-bold text-gray-600 ">
-                    <th className="px-2 py-0.5 border-r border-gray-200">Arrival Date</th>
-                    <th className="px-2 py-0.5 text-center border-r border-gray-200">Lorry Count</th>
-                    <th className="px-2 py-0.5 text-right border-r border-gray-200">Total Bales (Rcpt)</th>
-                    <th className="px-2 py-0.5 text-right">Weight</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {dateWiseArrivalList.map((rep) => {
-                    const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                    return (
-                      <tr 
-                        key={rep.date} 
-                        className="hover:bg-blue-50 cursor-pointer"
-                        onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
-                      >
-                        <td className="px-2 py-0.5 font-bold text-gray-700 flex items-center gap-1">
-                          <span className={cn("w-1.5 h-1.5 rounded-full bg-blue-600 inline-block", isSelectedDate && "bg-red-600 animate-pulse")} />
-                          {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-2 py-0.5 text-center font-black text-slate-800">{rep.count} Trucks</td>
-                        <td className="px-2 py-0.5 text-right font-black text-blue-700">{rep.packets}</td>
-                        <td className="px-2 py-0.5 text-right font-black text-red-600">{rep.weight.toFixed(3)} MT</td>
-                      </tr>
-                    );
-                  })}
-                  {dateWiseArrivalList.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center py-4 text-gray-400 uppercase font-bold text-[9px]">No historical calendar data loaded.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between items-center mt-1 text-[8px] text-gray-500 font-bold ">
-              <span>* Click on any date row to immediately load that day's files in the ledger table.</span>
-              {(startDateFilter || endDateFilter) && (
-                <button 
-                  onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                  className="text-red-700 font-extrabold border border-red-300 hover:bg-red-50 px-1 bg-white"
-                >
-                  Clear Date Filter {startDateFilter === endDateFilter ? `(${new Date(startDateFilter).toLocaleDateString('en-GB')})` : `(${startDateFilter} to ${endDateFilter})`}
-                </button>
-              )}
+            <button className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer">
+              <Filter className="w-3.5 h-3.5" />
+              Filter
+            </button>
+            <div className="hidden lg:block ml-2">
+              <FactorySketchIllustration />
             </div>
           </div>
         </div>
 
-        {/* Action Controls & Searching Strip */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center flex-wrap">
-          {/* SEARCH FIELD */}
-          <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[200px]">
-            <input 
-              className="flex-1 text-xs px-2 outline-none py-1 font-sans" 
+        {/* 3. KPI CARDS GRID */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          {/* KPI 1 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Filtered Loads</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#1E4D2B] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Truck className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-slate-900">{filteredAmads.length} <span className="text-xs font-sans font-semibold text-slate-600">Lorries</span></p>
+            <p className="text-[10px] font-medium text-emerald-700 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active Loads
+            </p>
+          </div>
+
+          {/* KPI 2 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Packets</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#8C6D33] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Package className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-blue-900">{totalBales.toLocaleString()} <span className="text-xs font-sans font-semibold text-slate-600">Bales</span></p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1">Total Arrived Packets</p>
+          </div>
+
+          {/* KPI 3 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Weight</span>
+              <div className="w-8 h-8 rounded-lg bg-[#F9F5EC] text-[#1E4D2B] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Scale className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-xs font-sans font-semibold text-slate-600">MT</span></p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1">Total Net Weight</p>
+          </div>
+
+          {/* KPI 4 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Pending Inspection</span>
+              <div className="w-8 h-8 rounded-lg bg-orange-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-amber-800">{pendingCount}</p>
+            <p className="text-[10px] font-medium text-amber-600 mt-1">Awaiting Inspection</p>
+          </div>
+
+          {/* KPI 5 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Completed Inspection</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-emerald-800">{completedCount}</p>
+            <p className="text-[10px] font-medium text-emerald-600 mt-1">Completed Today</p>
+          </div>
+
+          {/* KPI 6 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Last Updated</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <RefreshCcw className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-base font-bold font-mono text-slate-800">09:30 AM</p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1">Today 27 Jul 2026</p>
+          </div>
+        </div>
+
+        {/* 4. OPERATIONAL OVERVIEW SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          
+          {/* Left Table Panel: DATE WISE TOTAL ARRIVAL REPORT */}
+          <div className="lg:col-span-7 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
+                <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#C6A15B]" />
+                  DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY)
+                </h3>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#F9F5EC] text-[#8C6D33] px-2 py-0.5 rounded border border-[#E6DDC8]">
+                  Latest Days
+                </span>
+              </div>
+
+              <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="bg-[#F9F5EC] text-slate-600 border-b border-[#E6DDC8] text-[11px]">
+                      <th className="py-1.5 px-3 font-bold">Arrival Date</th>
+                      <th className="py-1.5 px-3 font-bold text-center">Lorry Count</th>
+                      <th className="py-1.5 px-3 font-bold text-right">Total Bales (Rpt)</th>
+                      <th className="py-1.5 px-3 font-bold text-right">Weight (MT)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dateWiseArrivalList.slice(0, 5).map((rep) => {
+                      const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
+                      return (
+                        <tr
+                          key={rep.date}
+                          onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
+                          className={cn(
+                            "hover:bg-[#F9F5EC] cursor-pointer transition-colors text-xs",
+                            isSelectedDate && "bg-[#1E4D2B]/10 font-bold"
+                          )}
+                        >
+                          <td className="py-1.5 px-3 flex items-center gap-2 text-slate-800">
+                            <span className={cn("w-2 h-2 rounded-full bg-blue-600", isSelectedDate && "bg-[#1E4D2B]")} />
+                            {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="py-1.5 px-3 text-center text-slate-700 font-semibold">{rep.count} Trucks</td>
+                          <td className="py-1.5 px-3 text-right text-blue-700 font-bold">{rep.packets}</td>
+                          <td className="py-1.5 px-3 text-right text-rose-700 font-bold">{rep.weight.toFixed(3)} MT</td>
+                        </tr>
+                      );
+                    })}
+                    {dateWiseArrivalList.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-4 text-center text-slate-400 italic text-xs">No records available</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 font-medium italic mt-2">
+              * Click on any date row to immediately load that day's files in the ledger table.
+            </p>
+          </div>
+
+          {/* Right Graphic Panel: OPERATIONAL OVERVIEW */}
+          <div className="lg:col-span-5 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
+              <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#C6A15B]" />
+                OPERATIONAL OVERVIEW
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center my-auto">
+              {/* Lorries Graphic */}
+              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
+                <p className="text-xl font-bold font-mono text-slate-900">{filteredAmads.length}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Lorries</p>
+                <div className="w-12 h-1 bg-[#1E4D2B] rounded-full mb-1" />
+                <Truck className="w-8 h-8 text-[#1E4D2B] opacity-80" />
+              </div>
+
+              {/* Bales Graphic */}
+              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
+                <p className="text-xl font-bold font-mono text-blue-900">{totalBales}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Bales</p>
+                <div className="w-12 h-1 bg-blue-800 rounded-full mb-1" />
+                <Package className="w-8 h-8 text-blue-800 opacity-80" />
+              </div>
+
+              {/* Weight Graphic */}
+              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
+                <p className="text-xl font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-[10px] text-slate-500">MT</span></p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Net Weight</p>
+                <div className="w-12 h-1 bg-rose-700 rounded-full mb-1" />
+                <Scale className="w-8 h-8 text-rose-700 opacity-80" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. SEARCH & FILTER TOOLBAR */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 flex-1 min-w-[280px]">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input
+              type="text"
               placeholder="Search by Voucher No, Supplier, Broker Name or Lorry plate..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent text-xs w-full outline-none text-slate-800 placeholder:text-slate-400 font-sans"
             />
-            <div className="bg-[#d4d0c8] px-2 border-l border-gray-400 flex items-center justify-center">
-              <Search className="h-3.5 w-3.5 text-gray-600" />
+          </div>
+
+          {/* Date Pickers */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="bg-transparent outline-none text-xs font-mono text-slate-800"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="bg-transparent outline-none text-xs font-mono text-slate-800"
+              />
             </div>
           </div>
 
-          {/* DATE RANGE FILTER FIELDS */}
-          <div className="flex items-center gap-1.5 bg-white border border-gray-400 p-px">
-            <span className="text-[9px] font-black uppercase text-gray-500 pl-1">From:</span>
-            <input 
-              type="date"
-              className="text-xs px-1 py-0.5 outline-none font-bold"
-              value={startDateFilter}
-              onChange={(e) => setStartDateFilter(e.target.value)}
-            />
-            <span className="text-[9px] font-black uppercase text-gray-500">To:</span>
-            <input 
-              type="date"
-              className="text-xs px-1 py-0.5 outline-none font-bold"
-              value={endDateFilter}
-              onChange={(e) => setEndDateFilter(e.target.value)}
-            />
-            {(startDateFilter || endDateFilter) && (
-              <button 
-                onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                className="text-gray-400 hover:text-red-600 px-1.5 border-l border-gray-200 font-bold"
-                title="Clear date range"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* ACT BUTTONS */}
-          <div className="flex gap-1">
-            <button 
-              onClick={handleExportToExcel} 
-              className="bg-[#24a148] hover:bg-[#1e853c] text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors"
-              title="Download filtered records as CSV"
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportToExcel}
+              className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-100" /> Export to CSV
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#C6A15B]" />
+              Export to CSV
             </button>
-            <button 
-              onClick={() => { setSearchTerm(''); setStartDateFilter(''); setEndDateFilter(''); }} 
-              className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] hover:bg-[#c8c4bc]"
-              title="Clear Search & Filters"
+            <button
+              onClick={() => { setSearchTerm(''); setStartDateFilter(''); setEndDateFilter(''); }}
+              className="bg-[#F9F5EC] hover:bg-[#EAE3D2] text-slate-700 border border-[#E6DDC8] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <X className="h-3 w-3" /> Clear
+              <X className="w-3.5 h-3.5" />
+              Clear
             </button>
-            <button 
-              onClick={fetchAmads} 
-              className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors disabled:opacity-50"
-              title="Refresh records"
+            <button
+              onClick={fetchAmads}
               disabled={loading}
+              className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              <RefreshCcw className={`h-3.5 w-3.5 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+              <RefreshCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+              Refresh
             </button>
           </div>
-        </div>
-        {/* Primary Command Desk Launcher */}
-        <div className="flex gap-1 items-center">
-          <LegacyButton icon={Plus} label="New Arrival Entry" onClick={onNew} />
-          
-          
-          
-          
-          {true && (
-            <LegacyButton 
-              icon={Printer} 
-              label="Print Selected Slip" 
-              onClick={() => {
-                if (selectedAmadId) {
-                  const target = amadList.find(a => a.amad_id === selectedAmadId);
-                  if (target) {
-                    handlePreparePrint(target);
-                  } else {
-                    alert("Selected Arrival record not found.");
-                  }
-                } else {
-                  alert("Please select an Arrival row in the table first.");
-                }
-              }} 
-            />
-          )}
-          
-          <div className="flex-1" />
-          <div className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-3 py-1.5 shadow-[inset_1px_1px_0_white]">
-            <Truck className="w-4 h-4 text-gray-600" /> 
-            {true ? (
-              <>
-                Total Filtered Metric Tons : 
-                <span className="text-blue-800 font-extrabold">{totalWeightMt.toFixed(3)} MT</span>
-              </>
-            ) : (
-              <>
-                Total Outstanding Balance : 
-                <span className="text-red-800 font-extrabold">
-                  {(() => {
-                    const amadPoNosSet = new Set(amadList.map(a => String(a.po_no || '').trim().toUpperCase()).filter(Boolean));
-                    const pendingPOs = purchaseOrders.filter(po => {
-                      const cleanPoNo = String(po.po_no || '').trim().toUpperCase();
-                      return cleanPoNo && !amadPoNosSet.has(cleanPoNo);
-                    });
-                    return pendingPOs.reduce((sum, po) => sum + (Number(po.pending_received || 0)), 0);
-                  })().toFixed(3)} MT
-                </span>
-              </>
-            )}
+
+          {/* Metric counter */}
+          <div className="text-xs font-mono font-bold text-slate-700 bg-[#F9F5EC] border border-[#E6DDC8] px-3 py-1.5 rounded-lg">
+            TOTAL FILTERED METRIC TONS : <span className="text-[#1E4D2B] font-extrabold">{totalWeightMt.toFixed(3)} MT</span>
           </div>
         </div>
 
+        {/* 6. PRIMARY LAUNCHER BAR */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onNew}
+            className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-[#C6A15B]" />
+            New Arrival Entry
+          </button>
+          <button
+            onClick={() => {
+              if (selectedAmadId) {
+                const target = amadList.find(a => a.amad_id === selectedAmadId);
+                if (target) handlePreparePrint(target);
+                else alert("Selected record not found");
+              } else {
+                alert("Please select a row from the table first");
+              }
+            }}
+            className="bg-white border border-[#E6DDC8] hover:bg-[#F9F5EC] text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-[#1E4D2B]" />
+            Print Selected Slip
+          </button>
+        </div>
+
+        {/* REFRESH MESSAGE FEEDBACK */}
         {refreshMessage && (
           <div className={cn(
-            "mb-2.5 px-4 py-2 border-2 text-[11.5px] font-black uppercase tracking-wider flex items-center justify-between shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] rounded border-white",
-            refreshMessage.includes("failed") || refreshMessage.includes("Sync failed")
-              ? "bg-[#fee2e2] text-red-900 border-red-400"
-              : "bg-[#e2f0d9] text-[#1e4620] border-emerald-400"
+            "p-3 rounded-lg border text-xs font-semibold flex items-center justify-between shadow-xs",
+            refreshMessage.includes("failed") ? "bg-red-50 text-red-800 border-red-200" : "bg-emerald-50 text-emerald-900 border-emerald-200"
           )}>
-            <div className="flex items-center gap-2">
-              <span className={refreshMessage.includes("failed") || refreshMessage.includes("Sync failed") ? "text-red-600 animate-pulse font-extrabold" : "text-emerald-600 animate-pulse font-extrabold text-base"}>●</span>
-              <span>{refreshMessage}</span>
-            </div>
-            <button 
-              onClick={() => setRefreshMessage(null)} 
-              className="text-gray-500 hover:text-gray-800 font-extrabold cursor-pointer px-1.5 py-0.5 rounded hover:bg-black/5"
-            >
-              [ CLOSE ]
-            </button>
+            <span>{refreshMessage}</span>
+            <button onClick={() => setRefreshMessage(null)} className="text-xs font-bold underline cursor-pointer">Close</button>
           </div>
         )}
 
-        {/* Ledger Table Container */}
-        <div className="border border-gray-400 bg-white overflow-x-auto min-h-[350px] shadow-sm relative">
+        {/* 7. LEDGER DATA TABLE */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-hidden relative">
           {loading && (
-            <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center z-40 ">
-              <div className="bg-[#d4d0c8] border-2 border-white shadow-lg p-5 flex flex-col items-center gap-3">
-                <RefreshCcw className="h-6 w-6 text-[#0d47a1] animate-spin" />
-                <span className="text-[10px] uppercase font-black tracking-widest text-[#0d47a1]">Syncing with Supabase Live Ledger...</span>
-              </div>
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center z-20">
+              <RefreshCcw className="w-8 h-8 text-[#1E4D2B] animate-spin mb-2" />
+              <p className="text-xs font-bold text-[#1E4D2B]">Updating Ledger Data...</p>
             </div>
           )}
-          {true ? (
-            <table className="w-full border-collapse text-xs font-sans">
-              <thead className="bg-[#c0c0c0] sticky top-0 z-10 ">
-                <tr className="border-b border-gray-400 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)] h-9">
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-24 whitespace-nowrap">Voucher Date</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-20 whitespace-nowrap">Temp Arrival #</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-26 whitespace-nowrap">PO #</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left text-gray-800 whitespace-nowrap">Supplier Name</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left text-gray-800 whitespace-nowrap">Broker Reference</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-28 whitespace-nowrap">Lorry Number</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-20 whitespace-nowrap">Unit</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right text-gray-800 w-20 whitespace-nowrap">Qty</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right text-gray-800 w-24 bg-red-50/50 text-red-900 whitespace-nowrap">Weight</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-28 whitespace-nowrap">Inspection Status</th>
-                  <th className="px-2 font-bold text-center text-gray-800 w-24 whitespace-nowrap">Actions</th>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-[#1E4D2B] text-white font-serif text-xs">
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Voucher Date</th>
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Temp Arrival #</th>
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">PO #</th>
+                  <th className="py-3 px-3 font-semibold border-r border-[#1E4D2B]/30">Supplier Name</th>
+                  <th className="py-3 px-3 font-semibold border-r border-[#1E4D2B]/30">Broker Reference</th>
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Lorry Number</th>
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Unit</th>
+                  <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Qty</th>
+                  <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Weight (MT)</th>
+                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Inspection Status</th>
+                  <th className="py-3 px-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 font-mono text-xs">
+              <tbody className="divide-y divide-[#E6DDC8]/60 font-mono text-xs">
                 {filteredAmads.map((amad, idx) => {
                   const isSelected = selectedAmadId === amad.amad_id;
                   const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '--';
                   const bales = Number(amad.total_packets || amad.packets || 0);
                   const weightMt = (Number(amad.weight_qtl || amad.weight || 0) / 10);
                   const isVoid = amad.status === 'cancelled';
-                  
+                  const isInspected = inspectedSet.has(String(amad.amad_no || amad.temporary_arrival_no || '').trim().toUpperCase());
+
                   return (
-                    <tr 
-                      key={amad.amad_id || idx} 
+                    <tr
+                      key={amad.amad_id || idx}
                       onClick={() => setSelectedAmadId(amad.amad_id || null)}
                       onDoubleClick={() => { if(!isVoid) handleEditAmad(amad); }}
                       className={cn(
-                        "h-9.5 cursor-pointer group hover:bg-[#ffffd0]/60 text-xs", 
-                        isSelected ? "bg-indigo-50 text-indigo-950 font-bold border-y border-indigo-200" : 
-                        isVoid ? "bg-red-50/40 text-gray-400 line-through decoration-red-500/50" :
-                        (idx % 2 === 0 ? "bg-white text-gray-900" : "bg-gray-50/40 text-gray-900")
+                        "hover:bg-[#F9F5EC] transition-colors cursor-pointer h-10",
+                        isSelected ? "bg-[#1E4D2B]/10 font-bold" : (idx % 2 === 0 ? "bg-white" : "bg-[#F9F5EC]/40")
                       )}
                     >
-                      {/* Voucher Date */}
-                      <td className={cn("text-center font-bold whitespace-nowrap", isSelected ? "text-indigo-900" : isVoid ? "text-red-400" : "text-gray-500")}>
-                        {formattedDate}
+                      <td className="py-2 px-3 text-center text-slate-600">{formattedDate}</td>
+                      <td className="py-2 px-3 text-center font-bold text-slate-900">
+                        #{amad.temporary_arrival_no || amad.amad_no || amad.amad_id || '--'}
                       </td>
-
-                      {/* Arrival ID/No. */}
-                      <td className={cn("text-center font-black whitespace-nowrap", isSelected ? "text-indigo-950" : "text-gray-900")}>
-                        #{amad.temporary_arrival_no || amad.amad_no || (amad as any).arrival_no || (amad as any).mr_no || amad.amad_id || '--'}
-                      </td>
-
-                      {/* PO No. */}
-                      <td className={cn("text-center font-bold font-mono text-xs px-1 whitespace-nowrap", isSelected ? "text-indigo-950 bg-indigo-100/40" : "text-amber-800 bg-amber-50/10")}>
-                        {amad.po_no || '--'}
-                      </td>
-
-                      {/* Supplier */}
-                      <td className="px-3 truncate uppercase font-sans font-semibold text-left whitespace-nowrap max-w-[200px]">
-                        {amad.supplier || '--'}
-                        {amad.agency_name && (
-                          <span className={cn("text-[10px] ml-1.5 px-1.5 py-0.5 rounded font-mono uppercase font-normal border", isSelected ? "bg-indigo-100 border-indigo-200 text-indigo-900" : "bg-indigo-50 border-indigo-100 text-indigo-700")}>
-                            {amad.agency_name}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Broker */}
-                      <td className={cn("px-3 truncate uppercase font-sans text-left whitespace-nowrap max-w-[150px]", isSelected ? "text-indigo-900/90" : "text-gray-600")}>
-                        {amad.broker || 'DIRECT'}
-                      </td>
-
-                      {/* Lorry Number */}
-                      <td className="text-center font-extrabold uppercase whitespace-nowrap">
+                      <td className="py-2 px-3 text-center font-bold text-amber-800">{amad.po_no || '--'}</td>
+                      <td className="py-2 px-3 font-sans font-semibold text-slate-800 uppercase">{amad.supplier || '--'}</td>
+                      <td className="py-2 px-3 font-sans text-slate-600 uppercase">{amad.broker || 'DIRECT'}</td>
+                      <td className="py-2 px-3 text-center font-bold text-slate-800 uppercase">
                         {amad.lorry_number || (amad as any).lorry_no || (amad as any).vehicle_no || '--'}
                       </td>
-
-                      {/* Unit */}
-                      <td className="text-center whitespace-nowrap">
-                        <span className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase border bg-blue-50 text-blue-800 border-blue-200"
-                        )}>
+                      <td className="py-2 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-800 border border-blue-200">
                           {amad.unit_name || amad.unit_code || 'BALES'}
                         </span>
                       </td>
-
-                      {/* Total Packets (Chln/Rcpt) */}
-                      <td className={cn("text-right px-2 font-black tabular-nums font-mono whitespace-nowrap", isSelected ? "text-indigo-950" : "text-blue-700 group-hover:text-blue-900")}>
-                        {bales}
+                      <td className="py-2 px-3 text-right font-bold text-blue-900">{bales}</td>
+                      <td className="py-2 px-3 text-right font-bold text-rose-700">{weightMt.toFixed(3)}</td>
+                      <td className="py-2 px-3 text-center">
+                        <span className={cn(
+                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border tracking-wider",
+                          isInspected
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                            : "bg-amber-50 text-amber-800 border-amber-300"
+                        )}>
+                          {isInspected ? '✓ DONE' : '⏳ PENDING'}
+                        </span>
                       </td>
-
-                      {/* Total Weight in Net MT */}
-                      <td className={cn("text-right px-2 font-black tabular-nums font-mono whitespace-nowrap", isSelected ? "text-red-800 bg-red-100/50" : "text-red-700 bg-red-50/20")}>
-                        {weightMt.toFixed(3)}
-                      </td>
-
-                      {/* Inspection Status */}
-                      <td className="text-center whitespace-nowrap">
-                        {(() => {
-                          const isInspected = inspectionsList.some(
-                            (insp) => String(insp.arrival_no || '').trim().toUpperCase() === String(amad.amad_no || '').trim().toUpperCase()
-                          );
-                          return (
-                            <span className={cn(
-                              "text-[10px] px-2 py-0.5 rounded font-black uppercase border tracking-wider",
-                              isInspected 
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                                : "bg-rose-100 text-rose-800 border-rose-200"
-                            )}>
-                              {isInspected ? '✓ DONE' : '⏳ PENDING'}
-                            </span>
-                          );
-                        })()}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="text-center" onClick={(e) => e.stopPropagation()}>
-                        {isVoid ? (
-                           <div className="flex items-center justify-center gap-2">
-                             <span className="px-2 py-0.5 rounded bg-red-100 text-red-800 font-bold text-[10px] uppercase border border-red-200">VOID</span>
-                             {canEditOrDelete() && (
-                               <button
-                                 onClick={(e) => { e.stopPropagation(); handleDelete(amad.amad_id, amad.amad_no); }}
-                                 className="p-1 text-red-600 hover:text-red-800 hover:bg-black/10 rounded transition-colors"
-                                 title="Delete Permanently"
-                               >
-                                 <Trash2 className="w-3.5 h-3.5" />
-                               </button>
-                             )}
-                           </div>
-                        ) : (
-                        <div className="flex justify-center gap-1.5">
+                      <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1.5">
                           {onCreateFinalMr && (
-                            <button 
-                              onClick={() => onCreateFinalMr(amad)} 
-                              className={cn(
-                                "p-1 hover:bg-black/15 rounded transition-colors text-emerald-600 hover:text-emerald-800",
-                                isSelected && "text-emerald-300 hover:text-white"
-                              )}
+                            <button
+                              onClick={() => onCreateFinalMr(amad)}
+                              className="p-1 hover:bg-[#1E4D2B]/10 rounded text-emerald-700 hover:text-emerald-900 transition-colors"
                               title="Convert to Final M.R"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <CheckCircle2 className="w-4 h-4" />
                             </button>
                           )}
-                          <button 
-                            onClick={() => handlePreparePrint(amad)} 
-                            className={cn(
-                              "p-1 hover:bg-black/15 rounded transition-colors",
-                              isSelected ? "text-red-200 hover:text-white" : "text-red-600 hover:text-red-800"
-                            )}
-                            title="Print Marks & Quality Received Slip"
+                          <button
+                            onClick={() => handlePreparePrint(amad)}
+                            className="p-1 hover:bg-[#1E4D2B]/10 rounded text-slate-600 hover:text-slate-900 transition-colors"
+                            title="Print Slip"
                           >
-                            <Printer className="w-3.5 h-3.5" />
+                            <Printer className="w-4 h-4" />
                           </button>
                           {canEditOrDelete() && (
                             <>
-                              <button 
-                                onClick={() => handleEditAmad(amad)} 
-                                className={cn(
-                                  "p-1 hover:bg-black/15 rounded transition-colors",
-                                  isSelected ? "text-blue-200 hover:text-white" : "text-blue-600 hover:text-blue-800"
-                                )}
-                                title="Edit Voucher Details"
+                              <button
+                                onClick={() => handleEditAmad(amad)}
+                                className="p-1 hover:bg-[#1E4D2B]/10 rounded text-blue-600 hover:text-blue-800 transition-colors"
+                                title="Edit Record"
                               >
-                                <Edit className="w-3.5 h-3.5" />
+                                <Edit className="w-4 h-4" />
                               </button>
-                              <button 
-                                onClick={() => handleDelete(amad.amad_id!, amad.amad_no)} 
-                                className={cn(
-                                  "p-1 hover:bg-black/15 rounded transition-colors",
-                                  isSelected ? "text-gray-200 hover:text-red-200" : "text-gray-500 hover:text-red-700"
-                                )}
-                                title="Cancel Voucher"
+                              <button
+                                onClick={() => handleDelete(amad.amad_id!, amad.amad_no)}
+                                className="p-1 hover:bg-[#1E4D2B]/10 rounded text-rose-600 hover:text-rose-800 transition-colors"
+                                title="Delete Record"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </>
                           )}
                         </div>
-                        )}
                       </td>
                     </tr>
                   );
@@ -927,571 +1054,212 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr }: { onCl
 
                 {filteredAmads.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-gray-500 font-bold uppercase text-[11px] leading-relaxed">
-                      No Registered Arrival Vouchers Found Matching Search Constraints.
+                    <td colSpan={11} className="py-12 text-center text-slate-400 font-sans italic text-xs">
+                      No matching Temporary M.R records found.
                     </td>
                   </tr>
                 )}
-                
-                {/* Vertical padding space for retro feel */}
-                {Array.from({ length: Math.max(0, 10 - filteredAmads.length) }).map((_, i) => (
-                  <tr key={i} className="h-8.5 border-b border-gray-100 opacity-25">
-                    <td colSpan={11}></td>
-                  </tr>
-                ))}
               </tbody>
             </table>
-          ) : (
-            <table className="w-full border-collapse text-[11px] font-sans">
-              <thead className="bg-[#c0c0c0] sticky top-0 z-10 ">
-                <tr className="border-b border-gray-400 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)] h-8">
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-24">P.O. Date</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center text-gray-800 w-32">P.O. Reference</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left text-gray-800">Supplier Name</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left text-gray-800">Broker Reference</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right text-gray-800 w-36">Contract Weight (M.T)</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right text-gray-800 w-36 bg-red-50/50 text-red-900">Outstanding Bal (M.T)</th>
-                  <th className="px-2 font-bold text-center text-gray-800 w-32">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 font-mono">
-                {(() => {
-                  const amadPoNosSet = new Set(
-                    amadList
-                      .filter(a => a.status !== 'cancelled')
-                      .map(a => String(a.po_no || '').trim().toUpperCase())
-                      .filter(Boolean)
-                  );
-                  const pendingPOs = purchaseOrders.filter(po => {
-                    const cleanPoNo = String(po.po_no || '').trim().toUpperCase();
-                    if (!cleanPoNo) return false;
-                    const hasNoArrival = !amadPoNosSet.has(cleanPoNo);
-                    if (!hasNoArrival) return false;
-
-                    if (searchTerm.trim()) {
-                      const term = searchTerm.toLowerCase();
-                      const matchPo = cleanPoNo.toLowerCase().includes(term);
-                      const matchSupplier = String(po.supplier || '').toLowerCase().includes(term);
-                      const matchBroker = String(po.broker || '').toLowerCase().includes(term);
-                      return matchPo || matchSupplier || matchBroker;
-                    }
-                    return true;
-                  });
-
-                  return (
-                    <>
-                      {pendingPOs.map((po, idx) => {
-                        const formattedDate = po.po_date ? new Date(po.po_date).toLocaleDateString('en-GB') : '--';
-                        return (
-                          <tr key={po.po_id || po.po_no || idx} className="h-8.5 hover:bg-amber-50/40 transition-colors border-b border-gray-100">
-                            <td className="text-center font-bold text-gray-500">
-                              {formattedDate}
-                            </td>
-                            <td className="text-center font-black">
-                              #{po.po_no}
-                            </td>
-                            <td className="px-3 font-sans font-bold uppercase truncate max-w-[200px]" title={po.supplier}>
-                              {po.supplier || 'N/A'}
-                            </td>
-                            <td className="px-3 font-sans text-stone-600 truncate max-w-[150px]" title={po.broker}>
-                              {po.broker || '-'}
-                            </td>
-                            <td className="text-right pr-3 font-black text-sky-850">
-                              {Number(po.total_contract_mt || 0).toFixed(3)} MT
-                            </td>
-                            <td className="text-right pr-3 font-black text-red-700 bg-red-50/10">
-                              {Number(po.pending_received || 0).toFixed(3)} MT
-                            </td>
-                            <td className="text-center">
-                              <button
-                                onClick={() => {
-                                  const fakeAmad: Amad = {
-                                    financial_year: "",
-                                    amad_no: "",
-                                    po_no: po.po_no,
-                                    supplier: po.supplier,
-                                    broker: po.broker,
-                                    date: new Date().toISOString().split('T')[0]
-                                  };
-                                  setEditingAmad(fakeAmad);
-                                }}
-                                className="bg-[#0a246a] hover:bg-blue-800 text-white font-black text-[9px] uppercase px-2.5 py-1 shadow-[1px_1px_0_0_black] border border-white active:shadow-[inset_1px_1px_0_0_black] rounded cursor-pointer transition-colors"
-                              >
-                                Receive Arrival
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                      {pendingPOs.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="py-12 text-center text-gray-500 font-bold uppercase text-[11px] leading-relaxed">
-                            No Outstanding Pending POs Found. All contracted purchase orders have recorded arrivals.
-                          </td>
-                        </tr>
-                      )}
-                      
-                      {/* Vertical padding space for retro feel */}
-                      {Array.from({ length: Math.max(0, 10 - pendingPOs.length) }).map((_, i) => (
-                        <tr key={i} className="h-8.5 border-b border-gray-100 opacity-25">
-                          <td colSpan={7}></td>
-                        </tr>
-                      ))}
-                    </>
-                  );
-                })()}
-              </tbody>
-            </table>
-          )}
+          </div>
         </div>
 
-        {/* Summary aggregate footer panel */}
-        <div className="bg-[#808080] p-1 flex justify-between gap-1 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.2)] ">
-          <div className="flex gap-1 h-full">
-            <div className="bg-white px-3 py-1 border border-gray-400 min-w-[120px]">
-              <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Cumulative Loads</p>
-              <p className="text-xs font-black">{filteredAmads.length} Lorries</p>
-            </div>
-            <div className="bg-white px-3 py-1 border border-gray-400 min-w-[120px]">
-              <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Cumulative Packets</p>
-              <p className="text-xs font-black text-blue-800">{totalBales} Bales</p>
-            </div>
-            <div className="bg-white px-3 py-1 border border-gray-400 min-w-[150px]">
-              <p className="text-[8px] font-bold text-gray-400 leading-none uppercase">Cumulative Net Weight</p>
-              <p className="text-xs font-black text-red-700">{totalWeightMt.toFixed(3)} MT</p>
+        {/* 8. BOTTOM SUMMARY CARDS & JUTE DECORATIONS */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden">
+          {/* Bottom Left Jute Bags Illustration */}
+          <div className="flex items-center gap-3">
+            <JuteBagStackIllustration />
+            <div>
+              <p className="font-serif font-bold text-sm text-[#1E4D2B]">Bally Jute Quality Assurance</p>
+              <p className="text-[11px] text-slate-500 max-w-xs leading-snug">
+                Verified weight bridge counts and raw material inspection logs synced in real time.
+              </p>
             </div>
           </div>
-          <div className="bg-[#d4d0c8] px-3 py-1 border border-white text-right flex items-center justify-center">
-            <span className="text-[10px] font-bold uppercase text-gray-700 font-sans tracking-wide">STATUS: OPERATIONAL HUB ONLINE</span>
+
+          {/* Center Cumulative Cards */}
+          <div className="flex items-center gap-4 text-center">
+            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Loads</p>
+              <p className="text-lg font-bold font-mono text-slate-900">{filteredAmads.length} <span className="text-xs text-slate-500 font-sans">Lorries</span></p>
+            </div>
+            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Packets</p>
+              <p className="text-lg font-bold font-mono text-blue-900">{totalBales} <span className="text-xs text-slate-500 font-sans">Bales</span></p>
+            </div>
+            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Net Weight</p>
+              <p className="text-lg font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-xs text-slate-500 font-sans">MT</span></p>
+            </div>
+          </div>
+
+          {/* Bottom Right Operational Status Badge */}
+          <div className="flex items-center gap-3">
+            <div className="bg-[#1E4D2B] text-white p-2.5 rounded-lg flex items-center gap-2 shadow-xs">
+              <ShieldCheck className="w-5 h-5 text-[#C6A15B]" />
+              <div>
+                <p className="text-[10px] font-bold tracking-wider text-[#C6A15B] uppercase leading-none">STATUS</p>
+                <p className="text-xs font-bold leading-tight">OPERATIONAL HUB ONLINE</p>
+              </div>
+            </div>
+            <JuteRopeLeavesIllustration />
           </div>
         </div>
 
       </div>
 
-      {/* =========================================================================
-          HIGH-FIDELITY PRINT PREVIEW OVERLAY: MARKS & QUALITY RECEIVED (MILL COPY) 
-          ========================================================================= */}
-      <PrintModal
-        isOpen={isPrintingModalOpen}
-        onClose={() => setIsPrintingModalOpen(false)}
-        title="MARKS & QUALITY RECEIVED [MILL COPY - CONTINUOUS PRINT FORM]"
-        showTip={false}
-      >
-        {printData && (
-            <div className="p-4 bg-[#a0a0a0] flex justify-center overflow-x-auto print:bg-white print:p-0">
-              <div className="print-continuous-paper-container flex bg-white shadow-2xl border border-gray-400 select-text pr-px print:shadow-none print:border-none">
-                    
-                    {/* Left Tractor Feed band with holes */}
-                    <div id="tractor-feed-holes-left" className="w-[32px] bg-[#fdfaf2] border-r border-red-200 flex flex-col justify-between py-6 shrink-0 ">
-                      {Array.from({ length: 18 }).map((_, i) => (
-                        <div key={i} className="w-3.5 h-3.5 bg-[#403c34]/50 rounded-full mx-auto shadow-[inset_1.5px_1.5px_2.5px_rgba(0,0,0,0.7)] opacity-85 border border-amber-900/10"></div>
-                      ))}
-                    </div>
+      {/* 9. BOTTOM SYSTEM FOOTER BAR */}
+      <footer className="bg-[#1E4D2B] text-white px-4 py-2 mt-auto border-t border-[#C6A15B]/30 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px] tracking-wider uppercase">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            SYSTEM ONLINE
+          </span>
+          <div className="h-4 w-px bg-white/20" />
+          <div className="flex items-center gap-1">
+            <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] text-white/80">SAUDA CHECK POINT ✕</span>
+            <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] text-white/80">FINAL P.O ✕</span>
+            <span className="bg-[#C6A15B] text-[#1E4D2B] px-2 py-0.5 rounded text-[10px] font-bold">TEMPORARY M.R</span>
+          </div>
+        </div>
 
-                    {/* Main Print Slip Sheet */}
-                    <div id="print-sheet-wrapper" className="w-[840px] bg-white p-6 md:p-8 flex flex-col justify-between select-text text-black print:p-0 print:w-full">
-                      
-                      {/* Slip Header */}
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <div className="text-left max-w-[320px]">
-                            <h1 className="font-sans font-black text-xl tracking-tight text-red-600 leading-none">BALLY JUTE COMPANY LIMITED</h1>
-                            <p className="text-[10px] font-bold text-red-700/95 tracking-wide mt-1 uppercase font-mono">AUTHORIZED MILL PREMISES</p>
-                          </div>
-                          
-                          <div className="text-center shrink-0 border-b-2 border-red-600 pb-1.5 px-4">
-                            <h2 className="font-serif font-black text-[20px] text-red-600 uppercase tracking-widest leading-none">Temporary M.R</h2>
-                            <p className="text-[10px] font-black tracking-widest text-red-700 uppercase mt-1">MARKS & QUALITY RECEIVED</p>
-                          </div>
+        <div className="text-[11px] font-mono text-white/90 text-center font-medium">
+          BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE v2.4.0
+        </div>
 
-                          <div className="text-right shrink-0">
-                            <span className="font-extrabold text-[11px] text-red-700 uppercase border-2 border-red-600 px-2 py-0.5 tracking-widest font-mono">MILL COPY</span>
-                          </div>
-                        </div>
+        <div className="flex items-center gap-3 text-[11px] font-mono">
+          <span className="text-[#C6A15B]">15:43</span>
+          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">NUM</span>
+          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">CAPS</span>
+          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">SCRL</span>
+          <span className="text-white/80">F.Y. 2026-2027</span>
+          <button className="text-rose-300 hover:text-white p-0.5 cursor-pointer">
+            <Power className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </footer>
 
-                        {/* Master Metadata Box-Wise Grid */}
-                        <div className="border border-red-600 mt-5 text-[11px] font-bold text-red-700 bg-white">
-                          {/* Row 1 */}
-                          <div className="grid grid-cols-12 border-b border-red-600">
-                            <div className="col-span-8 flex items-center px-2 py-1.5 border-r border-red-600">
-                              <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">FROM :</span>
-                              <input 
-                                value={printData.supplier || ''} 
-                                onChange={(e) => setPrintData({...printData, supplier: e.target.value})}
-                                className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-black text-[11.5px]"
-                              />
-                            </div>
-                            <div className="col-span-4 flex items-center px-2 py-1.5">
-                              <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">M.R. NO. :</span>
-                              <input 
-                                value={printData.mr_no || ''} 
-                                onChange={(e) => setPrintData({...printData, mr_no: e.target.value})}
-                                className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-mono font-black text-[11.5px]"
-                              />
-                            </div>
-                          </div>
-                          {/* Row 2 */}
-                          <div className="grid grid-cols-12">
-                            <div className="col-span-4 flex items-center px-2 py-1.5 border-r border-red-600">
-                              <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">DATE :</span>
-                              <input 
-                                type="date"
-                                value={printData.mr_date || ''} 
-                                onChange={(e) => setPrintData({...printData, mr_date: e.target.value})}
-                                className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none text-black font-black text-xs"
-                              />
-                            </div>
-                            <div className="col-span-4 flex items-center px-2 py-1.5 border-r border-red-600">
-                              <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">ORDER NO. :</span>
-                              <input 
-                                value={printData.po_no || ''} 
-                                onChange={(e) => setPrintData({...printData, po_no: e.target.value})}
-                                className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-mono font-black text-[11.5px]"
-                              />
-                            </div>
-                            <div className="col-span-4 flex items-center px-2 py-1.5">
-                              <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">DATE :</span>
-                              <input 
-                                type="date"
-                                value={printData.po_date || ''} 
-                                onChange={(e) => setPrintData({...printData, po_date: e.target.value})}
-                                className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none text-black font-black text-xs"
-                              />
-                            </div>
-                          </div>
-                        </div>
+      {/* PRINT SLIP MODAL */}
+      {isPrintingModalOpen && printData && (
+        <PrintModal 
+          isOpen={isPrintingModalOpen} 
+          onClose={() => setIsPrintingModalOpen(false)} 
+          title={`MARKS & QUALITY RECEIVED SLIP #${printData.amad_no}`}
+        >
+          <div className="bg-white p-6 rounded-lg text-slate-800 text-xs font-mono max-w-4xl mx-auto space-y-4 printable-slip">
+            {/* Header */}
+            <div className="text-center border-b-2 border-slate-900 pb-3">
+              <h2 className="text-xl font-bold font-serif text-[#1E4D2B]">BALLY JUTE COMPANY LIMITED</h2>
+              <p className="text-xs font-sans font-semibold text-slate-600">P.O. BALLY, DIST. HOWRAH (WEST BENGAL)</p>
+              <h3 className="text-sm font-bold text-[#1E4D2B] mt-2 underline tracking-wider uppercase font-serif">
+                MARKS & QUALITY RECEIVED SLIP (TEMPORARY M.R)
+              </h3>
+            </div>
 
-                        {/* Table Container */}
-                        <div className="mt-4 border border-red-600 bg-white">
-                          <table className="w-full border-collapse text-[10px]">
-                            <thead>
-                              {/* Row 1 of headers */}
-                              <tr className="bg-red-600 text-white font-extrabold border-b border-red-600 shrink-0 h-9">
-                                {printColumns.crop_year && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[50px] text-[9.5px]" rowSpan={2}>Crop</th>}
-                                {printColumns.marka && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[65px] text-[9.5px]" rowSpan={2}>Mark</th>}
-                                {printColumns.quality && <th className="border-r border-red-600 text-left uppercase pl-2 p-0.5 w-[140px] text-[9.5px]" rowSpan={2}>Quality</th>}
-                                {printColumns.quantity_rcpt && <th className="border-r border-red-600 text-right uppercase pr-2 p-0.5 w-[65px] text-[9.5px]" rowSpan={2}>Quantity</th>}
-                                {printColumns.claim && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[60px] text-[9.5px]" rowSpan={2}>Claim</th>}
-                                {printColumns.gross_wt && <th className="border-r border-red-600 text-right uppercase pr-2 p-0.5 w-[75px] text-[9.5px]" rowSpan={2}>Gross Wt.</th>}
-                                {printColumns.moisture_pct && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[50px] text-[8.5px] no-print" rowSpan={2}>Moisture<br/>% Kg.</th>}
-                                {printColumns.dust_pct && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[50px] text-[8.5px] no-print" rowSpan={2}>Dust<br/>% Kg.</th>}
-                                {printColumns.ncv_pct && <th className="border-r border-red-600 text-center uppercase p-0.5 w-[50px] text-[8.5px] no-print" rowSpan={2}>NCV<br/>% Kg.</th>}
-                                {printColumns.net_wt && <th className="border-r border-red-600 text-right uppercase pr-2 p-0.5 w-[75px] text-[9.5px]" rowSpan={2}>Net Wt.</th>}
-                                {printColumns.settlement && <th className="border-r border-red-600 text-center uppercase p-0.5" colSpan={4}>Settlement</th>}
-                                {printColumns.rate && <th className="text-right uppercase pr-2 p-0.5 w-[60px] text-[9.5px]" rowSpan={2}>Rate</th>}
-                              </tr>
-                              {/* Row 2 of headers for settlement subdivisions */}
-                              {printColumns.settlement && (
-                                <tr className="bg-red-600 text-white font-bold border-b border-red-600 h-6">
-                                  <th className="border-r border-red-500 text-center p-0.5 text-[8.2px] uppercase w-[55px]">Grade</th>
-                                  <th className="border-r border-red-500 text-center p-0.5 text-[8.2px] uppercase w-[50px] no-print">Moisture</th>
-                                  <th className="border-r border-red-500 text-center p-0.5 text-[8.2px] uppercase w-[45px] no-print">Dust</th>
-                                  <th className="border-r border-red-600 text-center p-0.5 text-[8.2px] uppercase w-[55px]">Prem./Less</th>
-                                </tr>
-                              )}
-                            </thead>
-                            <tbody className="divide-y divide-red-200">
-                              {printData.rows.map((row: any, rIdx: number) => {
-                                const isRowEmpty = !row.crop_year && !row.marka && !row.quality;
-                                return (
-                                  <tr key={rIdx} className="h-7.5 hover:bg-red-50/50">
-                                    {/* Crop Year */}
-                                    {printColumns.crop_year && (
-                                      <td className="border-r border-red-200 text-center p-0">
-                                        <input 
-                                          value={row.crop_year || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'crop_year', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Marka */}
-                                    {printColumns.marka && (
-                                      <td className="border-r border-red-200 text-center p-0">
-                                        <input 
-                                          value={row.marka || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'marka', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold uppercase text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Quality */}
-                                    {printColumns.quality && (
-                                      <td className="border-r border-red-200 px-1 p-0">
-                                        <input 
-                                          value={row.quality || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'quality', e.target.value)}
-                                          className="w-full bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-[10px] uppercase font-bold text-black pl-1.5"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Quantity / Packet Bales */}
-                                    {printColumns.quantity_rcpt && (
-                                      <td className="border-r border-red-200 text-right p-0">
-                                        <input 
-                                          type={isRowEmpty ? "text" : "number"}
-                                          value={row.quantity_rcpt || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'quantity_rcpt', e.target.value)}
-                                          className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-blue-800 pr-1.5"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Claim */}
-                                    {printColumns.claim && (
-                                      <td className="border-r border-red-200 text-center p-0">
-                                        <input 
-                                          value={row.claim_val || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'claim_val', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px] text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Gross Wt */}
-                                    {printColumns.gross_wt && (
-                                      <td className="border-r border-red-200 text-right p-0">
-                                        <input 
-                                          value={row.gross_wt || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'gross_wt', e.target.value)}
-                                          className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black pr-1.5"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Moisture % */}
-                                    {printColumns.moisture_pct && (
-                                      <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
-                                          value={row.moisture_pct || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'moisture_pct', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Dust % */}
-                                    {printColumns.dust_pct && (
-                                      <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
-                                          value={row.dust_pct || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'dust_pct', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* NCV % */}
-                                    {printColumns.ncv_pct && (
-                                      <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
-                                          value={row.ncv_pct || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'ncv_pct', e.target.value)}
-                                          className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Net Wt */}
-                                    {printColumns.net_wt && (
-                                      <td className="border-r border-red-200 text-right p-0">
-                                        <input 
-                                          value={row.net_wt || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'net_wt', e.target.value)}
-                                          className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-black font-mono text-red-700 pr-1.5"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                    {/* Settlement: Grade, Moisture, Dust, Premium */}
-                                    {printColumns.settlement && (
-                                      <>
-                                        <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
-                                            value={row.settlement_grade || ''} 
-                                            onChange={(e) => updatePrintRow(rIdx, 'settlement_grade', e.target.value)}
-                                            className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px] uppercase"
-                                            placeholder="--"
-                                          />
-                                        </td>
-                                        <td className="border-r border-red-200 p-0 text-center no-print">
-                                          <input 
-                                            value={row.settlement_moisture || ''} 
-                                            onChange={(e) => updatePrintRow(rIdx, 'settlement_moisture', e.target.value)}
-                                            className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
-                                            placeholder="--"
-                                          />
-                                        </td>
-                                        <td className="border-r border-red-200 p-0 text-center no-print">
-                                          <input 
-                                            value={row.settlement_dust || ''} 
-                                            onChange={(e) => updatePrintRow(rIdx, 'settlement_dust', e.target.value)}
-                                            className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
-                                            placeholder="--"
-                                          />
-                                        </td>
-                                        <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
-                                            value={row.settlement_prem_less || ''} 
-                                            onChange={(e) => updatePrintRow(rIdx, 'settlement_prem_less', e.target.value)}
-                                            className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
-                                            placeholder="--"
-                                          />
-                                        </td>
-                                      </>
-                                    )}
-                                    {/* Rate */}
-                                    {printColumns.rate && (
-                                      <td className="text-right p-0">
-                                        <input 
-                                          value={row.rate || ''} 
-                                          onChange={(e) => updatePrintRow(rIdx, 'rate', e.target.value)}
-                                          className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black pr-1.5"
-                                          placeholder="--"
-                                        />
-                                      </td>
-                                    )}
-                                  </tr>
-                                );
-                              })}
+            {/* Meta Details Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#F9F5EC] p-3 rounded border border-[#E6DDC8]">
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Voucher #</span>
+                <span className="font-bold text-slate-900">#{printData.amad_no}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Date</span>
+                <span className="font-bold text-slate-900">{printData.date}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">P.O. Number</span>
+                <span className="font-bold text-amber-800">{printData.po_no || 'DIRECT'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">M.R Number</span>
+                <span className="font-bold text-emerald-800">{printData.mr_no}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Supplier Name</span>
+                <span className="font-bold text-slate-900 uppercase">{printData.supplier}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Transporter</span>
+                <span className="font-bold text-slate-900 uppercase">{printData.transporter_name || '--'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Lorry Number</span>
+                <span className="font-bold text-slate-900 uppercase">{printData.lorry_number || '--'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Area</span>
+                <span className="font-bold text-slate-900 uppercase">{printData.arrival_area_name || '--'}</span>
+              </div>
+            </div>
 
-                              {/* TOTAL ROW */}
-                              <tr className="h-8.5 border-t-2 border-red-600 bg-red-50/30 text-red-700 font-extrabold ">
-                                {((printColumns.crop_year ? 1 : 0) + (printColumns.marka ? 1 : 0) + (printColumns.quality ? 1 : 0)) > 0 && (
-                                  <td className="border-r border-red-600 text-center border-b border-red-600" colSpan={(printColumns.crop_year ? 1 : 0) + (printColumns.marka ? 1 : 0) + (printColumns.quality ? 1 : 0)}>
-                                    <span className="text-[10px] tracking-widest font-black uppercase">TOTALS:</span>
-                                  </td>
-                                )}
-                                {/* Total Qty (bales) */}
-                                {printColumns.quantity_rcpt && (
-                                  <td className="border-r border-red-600 text-right pr-1.5 font-mono text-black font-black text-[11px]">
-                                    {printTotalQty > 0 ? printTotalQty.toLocaleString() : '--'}
-                                  </td>
-                                )}
-                                {printColumns.claim && <td className="border-r border-red-600 border-b border-red-600"></td>}
-                                {/* Total Gross Wt. */}
-                                {printColumns.gross_wt && (
-                                  <td className="border-r border-red-600 text-right pr-1.5 font-mono text-black font-black text-[11px]">
-                                    {printTotalGrossWt > 0 ? printTotalGrossWt.toFixed(3) : '--'}
-                                  </td>
-                                )}
-                                {/* Deduction Column spacers */}
-                                {printColumns.moisture_pct && <td className="border-r border-red-200 border-b border-red-600 no-print"></td>}
-                                {printColumns.dust_pct && <td className="border-r border-red-200 border-b border-red-600 no-print"></td>}
-                                {printColumns.ncv_pct && <td className="border-r border-red-600 border-b border-red-600 no-print"></td>}
-                                {/* Total Net Wt. */}
-                                {printColumns.net_wt && (
-                                  <td className="border-r border-red-600 text-right pr-1.5 font-mono text-red-700 font-black text-[11.5px]">
-                                    {printTotalNetWt > 0 ? printTotalNetWt.toFixed(3) : '--'}
-                                  </td>
-                                )}
-                                {/* Right subdivisions and Rate spacers */}
-                                {printColumns.settlement && <td className="border-r border-red-600 border-b border-red-600" colSpan={4}></td>}
-                                {printColumns.rate && <td className="text-right border-b border-red-600"></td>}
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
+            {/* Column toggles */}
+            <div className="flex flex-wrap gap-2 text-[10px] font-sans bg-slate-50 p-2 rounded border border-slate-200">
+              <span className="font-bold text-slate-700 my-auto">Display Columns:</span>
+              {Object.keys(printColumns).map((col) => (
+                <label key={col} className="flex items-center gap-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={(printColumns as any)[col]}
+                    onChange={(e) => setPrintColumns(prev => ({ ...prev, [col]: e.target.checked }))}
+                    className="rounded text-[#1E4D2B]"
+                  />
+                  <span className="capitalize">{col.replace(/_/g, ' ')}</span>
+                </label>
+              ))}
+            </div>
 
+            {/* Particulars Table */}
+            <div className="overflow-x-auto border border-slate-900 rounded">
+              <table className="w-full text-left text-[11px] border-collapse">
+                <thead>
+                  <tr className="bg-[#1E4D2B] text-white font-serif">
+                    {printColumns.crop_year && <th className="p-1.5 border-r border-slate-700 text-center">Crop Year</th>}
+                    {printColumns.marka && <th className="p-1.5 border-r border-slate-700">Marka</th>}
+                    {printColumns.quality && <th className="p-1.5 border-r border-slate-700">Quality / Grade</th>}
+                    {printColumns.quantity_rcpt && <th className="p-1.5 border-r border-slate-700 text-right">Qty (Bales)</th>}
+                    {printColumns.gross_wt && <th className="p-1.5 border-r border-slate-700 text-right">Gross Wt</th>}
+                    {printColumns.moisture_pct && <th className="p-1.5 border-r border-slate-700 text-right">Moisture %</th>}
+                    {printColumns.dust_pct && <th className="p-1.5 border-r border-slate-700 text-right">Dust %</th>}
+                    {printColumns.ncv_pct && <th className="p-1.5 border-r border-slate-700 text-right">NCV %</th>}
+                    {printColumns.net_wt && <th className="p-1.5 text-right">Net Wt (MT)</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-300">
+                  {printData.rows.map((row: any, i: number) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                      {printColumns.crop_year && <td className="p-1.5 text-center border-r border-slate-300">{row.crop_year || '--'}</td>}
+                      {printColumns.marka && <td className="p-1.5 border-r border-slate-300 font-bold uppercase">{row.marka || '--'}</td>}
+                      {printColumns.quality && <td className="p-1.5 border-r border-slate-300 font-bold uppercase">{row.quality || '--'}</td>}
+                      {printColumns.quantity_rcpt && <td className="p-1.5 border-r border-slate-300 text-right font-bold text-blue-900">{row.quantity_rcpt || '--'}</td>}
+                      {printColumns.gross_wt && <td className="p-1.5 border-r border-slate-300 text-right">{row.gross_wt || '--'}</td>}
+                      {printColumns.moisture_pct && <td className="p-1.5 border-r border-slate-300 text-right">{row.moisture_pct || '--'}</td>}
+                      {printColumns.dust_pct && <td className="p-1.5 border-r border-slate-300 text-right">{row.dust_pct || '--'}</td>}
+                      {printColumns.ncv_pct && <td className="p-1.5 border-r border-slate-300 text-right">{row.ncv_pct || '--'}</td>}
+                      {printColumns.net_wt && <td className="p-1.5 text-right font-bold text-rose-700">{row.net_wt || '--'}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-
-                        {/* Remarks Section */}
-                        <div className="mt-3 text-[11px] font-bold text-red-700">
-                          <div className="flex items-start gap-1.5">
-                            <span className="shrink-0 mt-0.5 uppercase tracking-wide">Remarks:</span>
-                            <textarea 
-                              rows={2}
-                              value={printData.remarks || ''} 
-                              onChange={(e) => setPrintData({...printData, remarks: e.target.value})}
-                              className="flex-1 bg-transparent border-b border-dashed border-red-300 p-0 focus:ring-0 focus:outline-none text-black text-[11px] font-black h-11 w-full resize-none leading-tight"
-                              placeholder="No remarks registered. Click to write any custom remarks or specifications on-form..."
-                            />
-                          </div>
-                        </div>
-
-                        {/* Sub Footer Box */}
-                        <div className="grid grid-cols-12 border border-red-600 mt-4 text-[10px] font-bold text-red-700 divide-x divide-red-600">
-                          <div className="col-span-5 p-2 flex flex-col justify-center">
-                            <div className="flex items-center gap-1.5">
-                              <span className="shrink-0 uppercase">Challan No & Date :</span>
-                              <input 
-                                value={printData.challan_rr_no || ''} 
-                                onChange={(e) => setPrintData({...printData, challan_rr_no: e.target.value})}
-                                className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold uppercase text-[10.5px]"
-                              />
-                            </div>
-                          </div>
-                          <div className="col-span-4 p-2 flex flex-col justify-center">
-                            <div className="flex items-center gap-1.5">
-                              <span className="shrink-0 uppercase">Lorry Number :</span>
-                              <input 
-                                value={printData?.lorry_number || (printData as any)?.lorry_no || (printData as any)?.vehicle_no || ''} 
-                                onChange={(e) => setPrintData({...printData, lorry_number: e.target.value})}
-                                className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold font-mono uppercase text-[10.5px]"
-                              />
-                            </div>
-                          </div>
-                          <div className="col-span-3 p-2 flex flex-col justify-center">
-                            <div className="flex items-center gap-1.5">
-                              <span className="shrink-0 uppercase">Stations :</span>
-                              <input 
-                                value={printData.arrival_area_name || ''} 
-                                onChange={(e) => setPrintData({...printData, arrival_area_name: e.target.value})}
-                                className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold uppercase text-[10.5px]"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Notes Terms & Conditions & Signatures Section */}
-                      <div className="grid grid-cols-12 mt-4 text-[8.2px] leading-tight text-red-700/90 pt-2.5">
-                        <div className="col-span-7 flex flex-col gap-1 border-r border-red-300 pr-4">
-                          <p className="font-black uppercase tracking-wider text-[8.5px] text-red-800">Note:</p>
-                          <p>1. Initiate your offer of settlement at an early date failing which we shall refer the matter to B.C.C.I for arbitrator.</p>
-                          <p>2. Seller must remove the bales within three days from the date of serving the Mill Receipt if the rates given on the Mill Receipt by the Buyers are not acceptable to them, failing which Buyer will treat the consignment as having been accepted and will not be responsible for its being used up.</p>
-                          <p>3. Net weight is reduced from gross weight to account for seasonal moisture excess exceeding DAISEE or standard limits, along with dust allowances. Deductions are determined strictly from authorized material inspections.</p>
-                          <p className="font-extrabold text-[9px] text-red-700 uppercase tracking-wide mt-1">ORIGINAL MUST BE ATTACHED WITH BILL/COPY</p>
-                        </div>
-                        <div className="col-span-5 flex flex-col justify-between pl-4 text-center">
-                          <p className="font-black text-[12px] tracking-wide uppercase font-sans text-red-800/90">For, BALLY JUTE COMPANY LIMITED</p>
-                          <div className="mt-7 flex flex-col items-center">
-                            <div className="w-56 border-t border-dashed border-red-400"></div>
-                            <p className="font-bold text-[9px] mt-1 text-red-700/80 uppercase">Authorised Signatory</p>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* Right Tractor Feed band with holes */}
-                    <div id="tractor-feed-holes-right" className="w-[32px] bg-[#fdfaf2] border-l border-[#dcd8cc] flex flex-col justify-between py-6 shrink-0 ">
-                      {Array.from({ length: 18 }).map((_, i) => (
-                        <div key={i} className="w-3.5 h-3.5 bg-[#403c34]/50 rounded-full mx-auto shadow-[inset_1.5px_1.5px_2.5px_rgba(0,0,0,0.7)] opacity-85 border border-amber-900/10"></div>
-                      ))}
-                    </div>
-                  </div>
+            {/* Remarks & Signatures */}
+            <div className="pt-4 flex items-end justify-between border-t border-slate-300 text-[10px] font-sans">
+              <div>
+                <p className="font-bold text-slate-700">Remarks: {printData.remarks || 'NIL'}</p>
+                <p className="text-slate-500 mt-1">Generated by Bally Jute Company Limited ERP</p>
+              </div>
+              <div className="flex gap-12">
+                <div className="text-center pt-6 border-t border-slate-400 min-w-[100px]">
+                  <p className="font-bold">Weighbridge Clerk</p>
                 </div>
-        )}
-      </PrintModal>
-
-
-
-      
-
-    </LegacyLayout>
-  );
-}
-
-function Th({ label, className }: { label: string; className?: string }) {
-  return (
-    <th className={cn("px-4 py-2 border-r border-gray-300 font-bold text-[#202020] uppercase  text-center", className)}>
-      {label}
-    </th>
+                <div className="text-center pt-6 border-t border-slate-400 min-w-[100px]">
+                  <p className="font-bold">Receiving In-Charge</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </PrintModal>
+      )}
+    </div>
   );
 }
