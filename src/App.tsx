@@ -74,7 +74,6 @@ import FinalArrival from "./pages/FinalArrival";
 import RequisitionDesk from "./pages/RequisitionDesk";
 import PaymentModule from "./pages/PaymentModule";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
-import AIAssistant from "./components/AIAssistant";
 import { setCurrentUserContext, getCurrentUserContext } from "./lib/permissions";
 
 import { supabase } from "./lib/supabase";
@@ -1318,8 +1317,6 @@ export default function App() {
             </div>
           </div>
         </div>
-
-        <AIAssistant />
 
         {/* Single Unified Dark Green Footer */}
         <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 overflow-x-auto scrollbar-none">
