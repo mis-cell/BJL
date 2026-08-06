@@ -489,22 +489,25 @@ export default function SaudaEntry({
 
           <div className="h-4 w-px bg-slate-300" />
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-serif font-black text-xl text-[#174C2C] tracking-tight">
-                {initialData ? "Modify Sauda Contract" : "New Sauda Contract"}
-              </h2>
-              <span className="bg-[#174C2C]/10 text-[#174C2C] border border-[#174C2C]/20 text-[11px] font-black px-2 py-0.5 rounded font-mono">
-                #{formData.sauda_no || '0153'}
-              </span>
+          <div className="flex items-center gap-2.5">
+            <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-8 w-auto object-contain shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-serif font-black text-xl text-[#174C2C] tracking-tight">
+                  {initialData ? "Modify Sauda Contract" : "New Sauda Contract"}
+                </h2>
+                <span className="bg-[#174C2C]/10 text-[#174C2C] border border-[#174C2C]/20 text-[11px] font-black px-2 py-0.5 rounded font-mono">
+                  #{formData.sauda_no || '0153'}
+                </span>
+              </div>
+              <nav className="flex items-center gap-1.5 text-[11px] font-medium text-amber-900/80 mt-0.5">
+                <span className="hover:underline cursor-pointer" onClick={onCancel}>Sauda Desk</span>
+                <span>›</span>
+                <span className="font-bold text-[#174C2C]">
+                  {initialData ? `Edit #${formData.sauda_no}` : "Add Contract Entry"}
+                </span>
+              </nav>
             </div>
-            <nav className="flex items-center gap-1.5 text-[11px] font-medium text-amber-900/80 mt-0.5">
-              <span className="hover:underline cursor-pointer" onClick={onCancel}>Sauda Desk</span>
-              <span>›</span>
-              <span className="font-bold text-[#174C2C]">
-                {initialData ? `Edit #${formData.sauda_no}` : "Add Contract Entry"}
-              </span>
-            </nav>
           </div>
         </div>
 

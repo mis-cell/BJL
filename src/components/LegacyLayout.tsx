@@ -279,13 +279,9 @@ export default function LegacyLayout({
             onClick={() => handleNavNavigation('dashboard')} 
             className="flex items-center gap-3 cursor-pointer group select-none"
           >
-            {/* Bj Logo Badge with Leaf */}
-            <div className="w-11 h-11 rounded-xl bg-[#FAF7F0] border-2 border-[#1E331B] text-[#1E331B] flex flex-col items-center justify-center shadow-sm relative group-hover:bg-[#1E331B] group-hover:text-[#FAF7F0] transition-colors">
-              <div className="relative font-serif font-black text-xl tracking-tighter italic leading-none flex items-center">
-                <span>B</span>
-                <span className="text-emerald-600 group-hover:text-amber-300 text-[10px] font-normal -ml-1 -mt-1.5">🍃</span>
-                <span className="-ml-0.5">j</span>
-              </div>
+            {/* Logo Image */}
+            <div className="h-11 w-11 rounded-xl bg-[#FAF7F0] border-2 border-[#1E331B] p-1 flex items-center justify-center shadow-sm group-hover:border-amber-600 transition-colors shrink-0">
+              <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-full w-auto object-contain" />
             </div>
 
             <div>

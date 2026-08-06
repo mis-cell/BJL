@@ -33,23 +33,20 @@ export default function SaudaPrintSlip({ sauda }: Props) {
   return (
     <div className="bg-white w-[148mm] h-[210mm] min-h-[210mm] max-h-[210mm] mx-auto p-6 flex flex-col font-sans text-black print:w-[148mm] print:h-[210mm] print:max-h-[210mm] print:p-6 print:m-0 box-border text-[11px] leading-relaxed relative overflow-hidden page-break-inside-avoid shadow-lg print:shadow-none">
        {/* Invoice/Contract Header */}
-       <div className="flex justify-between items-start mb-2.5 flex-none ">
-          <div className="flex flex-col gap-0.5">
-             <div className="font-bold text-[18px] text-black">BJCL/ {sauda.sauda_no}</div>
-             {/* Simulated Barcode */}
-             <div className="font-mono text-[11px] tracking-[0.05em] font-medium text-black leading-none my-0.5">
-                || || || | | ||| | ||
+       <div className="flex justify-between items-center mb-2 flex-none border-b-2 border-black pb-2">
+          <div className="flex items-center gap-3">
+             <img src="/asset_bjl.png" alt="Bally Jute Logo" className="h-10 w-auto object-contain" />
+             <div className="flex flex-col">
+                <div className="font-extrabold text-[15px] text-black leading-tight tracking-tight">BALLY JUTE COMPANY LIMITED</div>
+                <div className="text-[10px] font-bold text-neutral-800 tracking-wider font-mono">SAUDA CONTRACT SLIP • {yearStr}</div>
              </div>
-             <div className="font-bold text-[12px] text-black mt-0.5">{yearStr}</div>
           </div>
-          <div className="text-right flex flex-col justify-end text-[12px]">
-             <div className="font-bold mb-1 text-black">P.O. : {sauda.po_type || 'Normal/PTF'}</div>
-             <div className="font-bold text-black text-right">Date {sauda.date ? new Date(sauda.date).toLocaleDateString('en-GB') : ''}</div>
+          <div className="flex flex-col items-end text-right">
+             <div className="font-bold text-[16px] text-black">BJCL / {sauda.sauda_no}</div>
+             <div className="text-[11px] font-bold text-black">Date: {sauda.date ? new Date(sauda.date).toLocaleDateString('en-GB') : ''}</div>
+             <div className="text-[10px] font-mono text-black">P.O. : {sauda.po_type || 'Normal/PTF'}</div>
           </div>
        </div>
-
-       {/* Solid horizontal division line */}
-       <div className="border-b-[1.5px] border-black mb-3.5 "></div>
 
        {/* Parties Block */}
        <div className="flex flex-col gap-3 font-semibold mb-4 flex-none">
@@ -211,14 +208,23 @@ export default function SaudaPrintSlip({ sauda }: Props) {
           </div>
        </div>
 
-       {/* Signatures Area */}
-       <div className="flex justify-between items-end mt-auto pt-6 mb-1 font-semibold flex-none  font-sans">
-          <div className="text-left pl-1">
-             <p className="text-black font-bold text-[11px]">Superior / Normal (Marks)</p>
+       {/* Signatures & Footer Branding Area */}
+       <div className="flex flex-col gap-2 mt-auto pt-4 mb-1 font-semibold flex-none font-sans border-t border-black/30">
+          <div className="flex justify-between items-end">
+             <div className="text-left pl-1">
+                <p className="text-black font-bold text-[11px]">Superior / Normal (Marks)</p>
+             </div>
+             <div className="text-center w-40">
+                <div className="w-32 border-t border-black mb-1 mx-auto"></div>
+                <p className="text-black font-bold text-[11px]">Signature</p>
+             </div>
           </div>
-          <div className="text-center w-40">
-             <div className="w-32 border-t border-black mb-1 mx-auto"></div>
-             <p className="text-black font-bold text-[11px]">Signature</p>
+          <div className="flex justify-between items-center text-[9px] font-mono text-neutral-600 pt-1">
+             <div className="flex items-center gap-1.5">
+                <img src="/asset_bjl.png" alt="BJL Logo" className="h-4 w-auto object-contain opacity-75" />
+                <span>BALLY JUTE CO. LTD. • AUTHORIZED COMPUTER GENERATED SYSTEM CONTRACT</span>
+             </div>
+             <div>Page 1 of 1</div>
           </div>
        </div>
     </div>
