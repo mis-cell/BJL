@@ -477,7 +477,7 @@ export default function SaudaEntry({
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
         {/* 1. Integrated Sub-Header Banner */}
-        <div className="relative px-6 py-4 bg-[#FAF8F5] border border-[#E2DFD5] rounded-xl flex items-center justify-between shrink-0 shadow-xs overflow-hidden">
+        <div className="relative px-6 py-4 bg-[#FAF8F5] border border-[#E2DFD5] rounded-xl flex items-center justify-between shrink-0 shadow-xs overflow-hidden max-w-7xl mx-auto w-full">
           {/* Background Mill Illustration Artwork on the Right */}
           <div 
             className="absolute right-0 top-0 bottom-0 w-1/3 opacity-25 pointer-events-none bg-no-repeat bg-right bg-contain"
