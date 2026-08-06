@@ -15,7 +15,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="sticky bottom-0 z-30 bg-[#174C2C] border border-[#0F351E] rounded-xl px-6 py-3 shadow-xl flex items-center justify-between mt-2 shrink-0 text-white max-w-7xl mx-auto w-full">
+    <div className="bg-[#174C2C] border border-[#0F351E] rounded-xl px-6 py-3 shadow-lg flex items-center justify-between text-white w-full">
       <div className="flex items-center gap-3">
         {/* Print Button */}
         <button

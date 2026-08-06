@@ -560,15 +560,15 @@ export default function SaudaEntry({
             onChange={handleChange}
             onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
           />
-        </main>
 
-        {/* 3. Sticky Footer Actions */}
-        <FooterActions
-          onPrint={() => setShowPrintSlip(true)}
-          onBack={onCancel}
-          onSave={handleSave}
-          isLoading={loading}
-        />
+          {/* Section 6: Action Footer Card */}
+          <FooterActions
+            onPrint={() => setShowPrintSlip(true)}
+            onBack={onCancel}
+            onSave={handleSave}
+            isLoading={loading}
+          />
+        </main>
 
         {/* Print Slip Modal */}
         {showPrintSlip && (
