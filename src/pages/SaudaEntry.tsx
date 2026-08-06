@@ -554,15 +554,11 @@ export default function SaudaEntry({
             onChange={handleChange}
           />
 
-          {/* Section 5: Remarks & Finalisation */}
+          {/* Section 5: Remarks & Finalisation (with Attached Action Footer) */}
           <RemarksCard
             formData={formData}
             onChange={handleChange}
             onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
-          />
-
-          {/* Section 6: Action Footer Card */}
-          <FooterActions
             onPrint={() => setShowPrintSlip(true)}
             onBack={onCancel}
             onSave={handleSave}

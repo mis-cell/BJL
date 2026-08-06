@@ -2,19 +2,32 @@ import React from 'react';
 import { FileText } from 'lucide-react';
 import SectionHeader from './SectionHeader';
 import FileUploader from './FileUploader';
+import FooterActions from './FooterActions';
 
 interface RemarksCardProps {
   formData: any;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onSignatureChange: (url: string) => void;
+  onPrint?: () => void;
+  onBack?: () => void;
+  onSave?: () => void;
+  isLoading?: boolean;
 }
 
-export const RemarksCard: React.FC<RemarksCardProps> = ({ formData, onChange, onSignatureChange }) => {
+export const RemarksCard: React.FC<RemarksCardProps> = ({
+  formData,
+  onChange,
+  onSignatureChange,
+  onPrint,
+  onBack,
+  onSave,
+  isLoading = false
+}) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-xs border border-[#E5E7EB] transition-all hover:shadow-sm">
+    <div className="bg-white rounded-[18px] p-5 shadow-xs border border-[#E5E7EB] transition-all hover:shadow-sm overflow-hidden">
       <SectionHeader icon={FileText} title="Remarks & Finalisation" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-2">
         {/* Remarks Textarea */}
         <div className="lg:col-span-7 flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-700">Remarks</label>
@@ -77,6 +90,16 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({ formData, onChange, on
           />
         </div>
       </div>
+
+      {/* Embedded Action Footer */}
+      {(onPrint || onBack || onSave) && (
+        <FooterActions
+          onPrint={onPrint || (() => {})}
+          onBack={onBack || (() => {})}
+          onSave={onSave || (() => {})}
+          isLoading={isLoading}
+        />
+      )}
     </div>
   );
 };
