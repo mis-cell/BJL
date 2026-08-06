@@ -23,6 +23,7 @@ import {
   Clock,
   ChevronDown,
   Loader2,
+  ArrowLeft
 } from "lucide-react";
 import LegacyLayout from "../components/LegacyLayout";
 import { supabase } from "../lib/supabase";
@@ -2863,6 +2864,177 @@ export default function MaterialInspection({
         </datalist>
 
         {/* MAIN VISUAL CARD CONTAINER */}
+        
+        <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
+          <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+            {/* Background Mill Illustration Artwork on the Right with light opacity */}
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
+              style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
+            />
+  
+            <div className="relative z-10 flex flex-col gap-1">
+              <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
+                Mill Inspection Information
+              </h2>
+            </div>
+  
+            {/* Action Controls & Session Badge */}
+            <div className="relative z-10 flex items-center gap-3">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                title="Back to Sauda Desk (Esc)"
+              >
+                <ArrowLeft className="h-4 w-4 text-amber-300" />
+                <span>Back </span>
+              </button>
+              <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+                <span className="text-emerald-200/80 font-medium">Session:</span>
+                <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
+
+  {/* Header */}
+  <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
+    <h2 className="text-sm font-bold text-white tracking-wide">
+      Material Receipt Information
+    </h2>
+  </div>
+
+  {/* Body */}
+  <div className="p-5">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
+
+      {/* M.R. No */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          M. R. No.
+        </label>
+        <input
+          type="text"
+          name="mr_no"
+          value={masterData.mr_no}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+        />
+      </div>
+
+      {/* M.R. Date */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          M. R. Date
+        </label>
+        <input
+          type="date"
+          name="mr_date"
+          value={masterData.mr_date}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+        />
+      </div>
+
+      {/* Temporary Arrival No */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          Temporary Arrival No.
+        </label>
+
+        <SupabaseAutoCompleteInput
+          label="Temporary Arrival No."
+          name="arrival_no"
+          fieldColumn="temporary_arrival_no"
+          value={masterData.arrival_no}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          onSelectOption={(_val, record) => {
+            if (record) handleAutoFillFromVoucher(record);
+          }}
+          placeholder="Temporary Arrival Number"
+          savedInspections={savedInspections}
+        />
+      </div>
+
+      {/* Arrival Date */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          Arrival Date
+        </label>
+        <input
+          type="date"
+          name="arrival_date"
+          value={masterData.arrival_date}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+        />
+      </div>
+
+      {/* Lorry Number */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold text-amber-900">
+          Lorry Number
+        </label>
+        <input
+          type="text"
+          name="lorry_number"
+          value={masterData.lorry_number || ""}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          className="flex-1 h-8 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs"
+        />
+      </div>
+
+      <div></div>
+
+      {/* P.O. No */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          P. O. No.
+        </label>
+
+        <SupabaseAutoCompleteInput
+          label="P. O. No."
+          name="po_no"
+          fieldColumn="po_no"
+          value={masterData.po_no}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          onSelectOption={(_val, record) => {
+            if (record) handleAutoFillFromVoucher(record);
+          }}
+          placeholder="P. O. Number"
+          savedInspections={savedInspections}
+        />
+      </div>
+
+      {/* P.O. Date */}
+      <div className="flex items-center gap-3">
+        <label className="w-36 text-[11px] font-bold">
+          P. O. Date
+        </label>
+        <input
+          type="date"
+          name="po_date"
+          value={masterData.po_date}
+          disabled={!isEditMode}
+          onChange={handleMasterChange}
+          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+        />
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+        </div>
+
         <div className="bg-white border-2 border-slate-300 shadow-xl rounded-md overflow-hidden">
           {/* Header Bar with slanted Yellow stripes on blue background */}
           <div className="relative bg-[#0d47a1] text-white py-3.5 text-center border-b-4 border-yellow-400  overflow-hidden">
