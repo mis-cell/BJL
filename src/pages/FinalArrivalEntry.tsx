@@ -41,6 +41,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const [inspectionsList, setInspectionsList] = useState<any[]>([]);
   const [existingArrivals, setExistingArrivals] = useState<any[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+  const [temporaryArrivalList, setTemporaryArrivalList] = useState<any[]>([]);
 
   const getPaddedDetails = (initialFA?: any) => {
     let pDetails: ArrivalDetailRow[] = [];
@@ -204,7 +205,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   useEffect(() => {
     async function loadMastersAndIncrement() {
       try {
-        const [brokData, suppData, areaData, agcData, gradeData, markaData, allArrivals, inspectionData, poData, tempPoData] = await Promise.all([
+        const [brokData, suppData, areaData, agcData, gradeData, markaData, allArrivals, inspectionData, poData, tempPoData, tempArrivalData] = await Promise.all([
           dbModule.fetchAll('broker_master').catch(() => []),
           dbModule.fetchAll('supply_master').catch(() => []),
           dbModule.fetchAll('area_master').catch(() => []),
@@ -214,7 +215,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           dbModule.fetchAll('final_arrival').catch(() => []),
           supabase ? supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || []) : [],
           dbModule.fetchAll('purchase_master').catch(() => []),
-          dbModule.fetchAll('sauda_check_point').catch(() => [])
+          dbModule.fetchAll('sauda_check_point').catch(() => []),
+          dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => [])
         ]);
 
         setBrokers((brokData || []).map((b: any) => ({ ...b, brok_name: (b.brok_name || '').toUpperCase() })));
@@ -224,6 +226,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         setGrades(gradeData || []);
         setInspectionsList(inspectionData || []);
         setExistingArrivals(allArrivals || []);
+        setTemporaryArrivalList(tempArrivalData || []);
         const normalizedTempPoData = (tempPoData || []).map(po => ({ ...po, status: po.status || 'temp' }));
         const mergedPos = [...(poData || []), ...normalizedTempPoData];
         const uniquePos = Array.from(new Map(mergedPos.map(po => [po.po_no, po])).values());
@@ -275,6 +278,87 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     }
     loadMastersAndIncrement();
   }, [initialData]);
+
+  const loadDetailsFromAmad = async (tempMrNo: string) => {
+    if (!tempMrNo) {
+      alert("Please select or enter a Temporary M.R. Number.");
+      return;
+    }
+    try {
+      const searchVal = tempMrNo.trim().toUpperCase();
+      let matchedAmad = temporaryArrivalList.find(a => 
+        String(a.temporary_arrival_no || a.amad_no || a.arrival_no || a.amad_id || '').trim().toUpperCase() === searchVal
+      );
+
+      if (!matchedAmad && supabase) {
+        const { data } = await supabase
+          .from('temporary_material_received')
+          .select('*')
+          .or(`temporary_arrival_no.eq.${searchVal},amad_no.eq.${searchVal}`);
+        if (data && data.length > 0) matchedAmad = data[0];
+      }
+
+      if (matchedAmad) {
+        const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(matchedAmad.po_no || '').trim().toUpperCase());
+
+        setFormData(prev => ({
+          ...prev,
+          temporary_arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
+          temporary_arrival_date: matchedAmad.date || matchedAmad.temporary_arrival_date || prev.temporary_arrival_date,
+          po_no: matchedAmad.po_no || prev.po_no,
+          po_date: matchedAmad.po_date || matchedAmad.date || matchedPo?.po_date || matchedPo?.date || prev.po_date,
+          jci: matchedAmad.jci || prev.jci,
+          supplier: (matchedAmad.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
+          challan_supplier: (matchedAmad.challan_supplier || matchedAmad.supplier || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
+          broker: (matchedAmad.broker || matchedPo?.broker || prev.broker || '').toUpperCase(),
+          date: matchedAmad.date || prev.date,
+          lorry_number: matchedAmad.lorry_number || matchedAmad.lorry_no || matchedAmad.vehicle_no || prev.lorry_number,
+          transporter_name: matchedAmad.transporter_name || prev.transporter_name,
+          challan_rr_no: matchedAmad.challan_rr_no || prev.challan_rr_no,
+          challan_rr_date: matchedAmad.challan_rr_date || matchedAmad.date || prev.challan_rr_date,
+          pan_no: matchedAmad.pan_no || prev.pan_no,
+          consignment_note_no: matchedAmad.consignment_note_no || prev.consignment_note_no,
+          di_no: matchedAmad.di_no || prev.di_no,
+          di_date: matchedAmad.di_date || prev.di_date,
+          invoice_no: matchedAmad.invoice_no || prev.invoice_no,
+          invoice_date: matchedAmad.invoice_date || prev.invoice_date,
+          ptf: matchedAmad.ptf || prev.ptf,
+          lorry_returned: matchedAmad.lorry_returned || prev.lorry_returned,
+          lorry_returned_other_mill: matchedAmad.lorry_returned_other_mill || prev.lorry_returned_other_mill,
+          arrival_area_code: matchedAmad.arrival_area_code || prev.arrival_area_code,
+          arrival_area_name: (matchedAmad.arrival_area_name || prev.arrival_area_name || '').toUpperCase(),
+          unit_code: matchedAmad.unit_code || prev.unit_code,
+          unit_name: (matchedAmad.unit_name || prev.unit_name || '').toUpperCase(),
+          way_bill_no: matchedAmad.way_bill_no || prev.way_bill_no,
+          way_bill_date: matchedAmad.way_bill_date || prev.way_bill_date,
+          apmc_fees: matchedAmad.apmc_fees || prev.apmc_fees,
+          remarks: matchedAmad.remarks || prev.remarks,
+          challan_material_weight: Number(matchedAmad.challan_material_weight) || Number(prev.challan_material_weight),
+          actual_gross_weight: Number(matchedAmad.actual_gross_weight) || Number(prev.actual_gross_weight),
+          actual_tare_weight: Number(matchedAmad.actual_tare_weight) || Number(prev.actual_tare_weight),
+          supplier_net_weight: Number(matchedAmad.supplier_net_weight) || Number(prev.supplier_net_weight),
+          electronic_net_weight: Number(matchedAmad.electronic_net_weight) || Number(prev.electronic_net_weight),
+        }));
+
+        const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
+        if (rawGrid) {
+          let parsedGrid: any[] = [];
+          if (typeof rawGrid === 'string') {
+            try { parsedGrid = JSON.parse(rawGrid); } catch (e) {}
+          } else if (Array.isArray(rawGrid)) {
+            parsedGrid = rawGrid;
+          }
+          if (parsedGrid && parsedGrid.length > 0) {
+            setDetails(parsedGrid.map((row: any, idx: number) => ({ ...row, srl_no: idx + 1 })));
+          }
+        }
+      } else {
+        alert(`No Temporary M.R record found matching "${tempMrNo}".`);
+      }
+    } catch (e) {
+      console.error("Error loading Temporary M.R details:", e);
+    }
+  };
 
   const loadDetailsFromInspection = async (mrNo: string) => {
     if (!mrNo) {
@@ -816,61 +900,97 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   };
 
   return (
-    <LegacyLayout title="FINAL ARRIVAL" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
-      <div className="bg-[#eae7e1]  text-xs font-sans min-h-full flex flex-col">
+    <LegacyLayout title="FINAL M.R" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel}>
+      <div className="bg-[#eae7e1] text-xs font-sans min-h-full flex flex-col">
 
         {/* ERP Sync Integration Bar */}
-        <div className="shrink-0 bg-[#f0ece6] border-b border-[#c0c0c0] px-4 py-1.5 flex flex-wrap gap-2 items-center text-xs text-gray-700 ">
-        <span className="font-bold text-[#ac0000]">Quality Sync Integration:</span>
-        <select
-          value={formData.mr_no}
-          onChange={(e) => {
-            handleInputChange('mr_no', e.target.value);
-            loadDetailsFromInspection(e.target.value);
-          }}
-          className="border border-[#808080] bg-white px-2 py-0.5 text-xs text-gray-800 focus:bg-amber-50 outline-none"
-        >
-          <option value="">-- Sync Quality Inspection Record --</option>
-          {inspectionsList
-            .filter((ins) => {
-              const isCurrentlySelected = formData.mr_no && String(formData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
-              const isCurrentlyLinked = initialData && initialData.mr_no && String(initialData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
-              if (isCurrentlySelected || isCurrentlyLinked) return true;
+        <div className="shrink-0 bg-[#f0ece6] border-b border-[#c0c0c0] px-4 py-1.5 flex flex-wrap gap-3 items-center text-xs text-gray-700">
+          {/* Temporary M.R Sync */}
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-[#ac0000]">Temp M.R Source:</span>
+            <select
+              value={formData.temporary_arrival_no || ''}
+              onChange={(e) => {
+                handleInputChange('temporary_arrival_no', e.target.value);
+                if (e.target.value) loadDetailsFromAmad(e.target.value);
+              }}
+              className="border border-[#808080] bg-white px-2 py-0.5 text-xs text-gray-800 focus:bg-amber-50 outline-none"
+            >
+              <option value="">-- Select Temporary M.R Record --</option>
+              {temporaryArrivalList.map((tArr) => {
+                const tNo = tArr.temporary_arrival_no || tArr.amad_no || tArr.arrival_no || '';
+                return (
+                  <option key={tArr.amad_id || tNo} value={tNo}>
+                    Temp MR #{tNo} — {tArr.supplier || 'No Supp'} (Lorry: {tArr.lorry_number || tArr.lorry_no || 'N/A'})
+                  </option>
+                );
+              })}
+            </select>
+            <button
+              type="button"
+              onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
+              disabled={!formData.temporary_arrival_no}
+              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[11px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
+            >
+              Load Temp M.R
+            </button>
+          </div>
 
-              const isAlreadySynced = existingArrivals.some(arr => 
-                arr.mr_no && 
-                String(arr.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase() &&
-                (!initialData || arr.final_arrival_id !== initialData.final_arrival_id)
-              );
-              return !isAlreadySynced;
-            })
-            .map((ins) => (
-              <option key={ins.mr_no} value={ins.mr_no}>
-                MR: {ins.mr_no} - PO: {ins.po_no || 'N/A'} [Supp: {ins.supplier_name}]
-              </option>
-            ))}
-        </select>
-        
-        <button
-          type="button"
-          onClick={() => loadDetailsFromInspection(formData.mr_no)}
-          disabled={!formData.mr_no}
-          className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[11px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans"
-        >
-          Force Sync
-        </button>
+          <span className="text-gray-400">|</span>
 
-        {formData.mr_no && (
-          <span className="text-emerald-800 font-bold px-2 py-0.5 bg-emerald-100 border border-emerald-400 text-[10px]">
-            Linked MR #{formData.mr_no}
-          </span>
-        )}
-      </div>
+          {/* Quality Sync */}
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-slate-700">Quality Inspection Sync:</span>
+            <select
+              value={formData.mr_no}
+              onChange={(e) => {
+                handleInputChange('mr_no', e.target.value);
+                loadDetailsFromInspection(e.target.value);
+              }}
+              className="border border-[#808080] bg-white px-2 py-0.5 text-xs text-gray-800 focus:bg-amber-50 outline-none"
+            >
+              <option value="">-- Sync Quality Inspection Record --</option>
+              {inspectionsList
+                .filter((ins) => {
+                  const isCurrentlySelected = formData.mr_no && String(formData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
+                  const isCurrentlyLinked = initialData && initialData.mr_no && String(initialData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
+                  if (isCurrentlySelected || isCurrentlyLinked) return true;
+
+                  const isAlreadySynced = existingArrivals.some(arr => 
+                    arr.mr_no && 
+                    String(arr.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase() &&
+                    (!initialData || arr.final_arrival_id !== initialData.final_arrival_id)
+                  );
+                  return !isAlreadySynced;
+                })
+                .map((ins) => (
+                  <option key={ins.mr_no} value={ins.mr_no}>
+                    MR: {ins.mr_no} - PO: {ins.po_no || 'N/A'} [Supp: {ins.supplier_name}]
+                  </option>
+                ))}
+            </select>
+            
+            <button
+              type="button"
+              onClick={() => loadDetailsFromInspection(formData.mr_no)}
+              disabled={!formData.mr_no}
+              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[11px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
+            >
+              Force Sync
+            </button>
+
+            {formData.mr_no && (
+              <span className="text-emerald-800 font-bold px-2 py-0.5 bg-emerald-100 border border-emerald-400 text-[10px]">
+                Linked MR #{formData.mr_no}
+              </span>
+            )}
+          </div>
+        </div>
 
       <div className="flex-1 p-4 flex flex-col gap-3">
         {/* Title Heading */}
         <div className="text-center py-1">
-          <h1 className="text-3xl font-bold tracking-wide text-[#ac0000] font-sans">Final Approval</h1>
+          <h1 className="text-3xl font-bold tracking-wide text-[#ac0000] font-sans">Final M.R Entry</h1>
         </div>
 
         {/* Master Details Frame Mockup */}
@@ -882,8 +1002,19 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               type="text" 
               value={formData.temporary_arrival_no || ''} 
               onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
-              className="w-[180px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+              onBlur={() => {
+                if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
+              }}
+              className="w-[140px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
             />
+            <button
+              type="button"
+              onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
+              disabled={!formData.temporary_arrival_no}
+              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[10px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
+            >
+              Fetch
+            </button>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
             <input 
               type="date" 

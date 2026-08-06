@@ -87,7 +87,7 @@ const TABLES: TableDef[] = [
   { name: "sauda_master", label: "Sauda Master", icon: FileText, pk: "sauda_id" },
   { name: "satta_master", label: "Satta Master", icon: FileText, pk: "satta_id" },
   { name: "temporary_material_received", label: "Temporary M.R (Current)", icon: Archive, pk: "amad_id" },
-  { name: "final_arrival", label: "Final Arrival", icon: CheckCircle2, pk: "final_arrival_id" },
+  { name: "final_arrival", label: "Final M.R", icon: CheckCircle2, pk: "final_arrival_id" },
   { name: "issue_master", label: "Issue Master", icon: Layers, pk: "amad_id" },
   { name: "mill_issue_master", label: "Mill Issue Master", icon: Layers, pk: "issue_id" },
   { name: "mill_issue_detail", label: "Mill Issue Detail", icon: Layers, pk: "id" },

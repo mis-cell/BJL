@@ -83,6 +83,7 @@ interface FinalArrivalRecord {
 interface FinalArrivalProps {
   onClose?: () => void;
   isArchiveView?: boolean;
+  initialData?: any;
 }
 
 export const calculateNetWeightVal = (
@@ -131,7 +132,7 @@ export const calculateNetWeightVal = (
   return netWeight.toFixed(3);
 };
 
-export default function FinalArrival({ onClose, isArchiveView = false }: FinalArrivalProps) {
+export default function FinalArrival({ onClose, isArchiveView = false, initialData }: FinalArrivalProps) {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<FinalArrivalRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,8 +142,15 @@ export default function FinalArrival({ onClose, isArchiveView = false }: FinalAr
   const [selectedRecord, setSelectedRecord] = useState<FinalArrivalRecord | null>(null);
   
   // View states
-  const [viewState, setViewState] = useState<'list' | 'entry' | 'reconciliation'>('list');
-  const [editingRecord, setEditingRecord] = useState<FinalArrivalRecord | null>(null);
+  const [viewState, setViewState] = useState<'list' | 'entry' | 'reconciliation'>(() => initialData ? 'entry' : 'list');
+  const [editingRecord, setEditingRecord] = useState<FinalArrivalRecord | null>(() => initialData || null);
+
+  useEffect(() => {
+    if (initialData) {
+      setEditingRecord(initialData);
+      setViewState('entry');
+    }
+  }, [initialData]);
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
 
   useEffect(() => {
