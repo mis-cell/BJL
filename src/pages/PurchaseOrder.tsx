@@ -4543,12 +4543,12 @@ function isPoMismatchResolved(poNo: string): boolean {
                   {/* Left Side */}
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                      <span className="text-sm">📋</span>
+                      <span className="text-sm">⚡</span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-white tracking-wide">
-                        Purchase Order Item Grid
+                          Grid Row Status
                       </span>
 
                       {selectedItemSrl ? (
@@ -4615,7 +4615,8 @@ function isPoMismatchResolved(poNo: string): boolean {
 
                 <div className="overflow-x-auto rounded-b-xl border border-t-0 border-[#174C2C] bg-white shadow-sm">
                   <table className="w-full border-collapse text-[10px]">
-                      <thead className="bg-[#1E40AF] text-white border-b border-[#1E4532]">
+                    
+                      <thead className="bg-gradient-to-r from-[#174C2C] to-[#2A6B3F] text-white border-b border-[#0F351E]">
                           <tr className="divide-x divide-emerald-700 uppercase font-bold tracking-wide">
                             <th className="px-1 py-1 w-10">Srl. No.</th>
                             <th className="px-1 py-1 w-16">Crop Year</th>
