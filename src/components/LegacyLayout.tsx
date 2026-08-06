@@ -279,11 +279,19 @@ export default function LegacyLayout({
             onClick={() => handleNavNavigation('dashboard')} 
             className="flex items-center gap-3 cursor-pointer group select-none"
           >
-            <img 
-              src="https://res.cloudinary.com/x6tw39wi/image/upload/v1785993277/Headers_f5gf4g.png" 
-              alt="Bally Jute Limited" 
-              className="h-10 sm:h-11 w-auto object-contain" 
-            />
+            {/* BJ Monogram Badge */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
+              BJ
+            </div>
+
+            <div>
+              <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors">
+                Bally Jute Limited
+              </h1>
+              <p className="text-[9px] font-mono text-[#5A6E54] tracking-[0.25em] uppercase font-semibold mt-0.5">
+                ESTD. 1979
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-1.5 shrink-0 z-10 items-center">
