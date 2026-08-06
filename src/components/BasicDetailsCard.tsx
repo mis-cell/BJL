@@ -21,7 +21,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
   areas
 }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-xs border border-[#E5E7EB] transition-all hover:shadow-sm">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={ClipboardList} title="Basic Details" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

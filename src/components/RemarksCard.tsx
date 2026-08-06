@@ -24,7 +24,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-xs border border-[#E5E7EB] transition-all hover:shadow-sm overflow-hidden">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all overflow-hidden">
       <SectionHeader icon={FileText} title="Remarks & Finalisation" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-2">

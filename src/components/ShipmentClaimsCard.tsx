@@ -9,7 +9,7 @@ interface ShipmentClaimsCardProps {
 
 export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData, onChange }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-xs border border-[#E5E7EB] transition-all hover:shadow-sm">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={Calendar} title="Shipment & Claims" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">

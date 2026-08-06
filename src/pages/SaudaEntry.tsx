@@ -476,24 +476,24 @@ export default function SaudaEntry({
   return (
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-        {/* 1. Integrated Sub-Header Banner */}
-        <div className="relative px-6 py-4 bg-[#FAF8F5] border border-[#E2DFD5] rounded-xl flex items-center justify-between shrink-0 shadow-xs overflow-hidden max-w-7xl mx-auto w-full">
-          {/* Background Mill Illustration Artwork on the Right */}
+        {/* 1. Integrated Sub-Header Banner (Deep Green) */}
+        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+          {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
-            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-25 pointer-events-none bg-no-repeat bg-right bg-contain"
+            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
             style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
           />
 
           <div className="relative z-10 flex flex-col gap-1">
-            <h2 className="font-serif font-black text-2xl text-[#174C2C] tracking-tight leading-none">
+            <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
               Sauda Desk
             </h2>
-            <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mt-1">
-              <span className="hover:text-[#174C2C] cursor-pointer transition-colors" onClick={onCancel}>Home</span>
+            <nav className="flex items-center gap-1.5 text-xs font-semibold text-emerald-200/90 mt-1">
+              <span className="hover:text-amber-300 cursor-pointer transition-colors" onClick={onCancel}>Home</span>
               <span>›</span>
-              <span className="hover:text-[#174C2C] cursor-pointer transition-colors" onClick={onCancel}>Sauda Desk</span>
+              <span className="hover:text-amber-300 cursor-pointer transition-colors" onClick={onCancel}>Sauda Desk</span>
               <span>›</span>
-              <span className="font-bold text-[#174C2C]">
+              <span className="font-bold text-white">
                 {initialData ? `Modify #${formData.sauda_no}` : "Add Sauda"}
               </span>
             </nav>
@@ -504,15 +504,15 @@ export default function SaudaEntry({
             <button
               type="button"
               onClick={onCancel}
-              className="px-3.5 py-1.5 hover:bg-[#E2DDD0] text-[#174C2C] bg-white border border-[#D8D3C5] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 text-amber-300" />
               <span>Back (Esc)</span>
             </button>
-            <div className="bg-white/90 border border-[#D8D3C5] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-              <span className="text-slate-500 font-medium">Session:</span>
-              <span className="font-bold text-[#174C2C] font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-emerald-200/80 font-medium">Session:</span>
+              <span className="font-bold text-amber-300 font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
             </div>
           </div>
         </div>
