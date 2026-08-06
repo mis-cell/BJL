@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, ArrowLeft, Save, Loader2, Building2 } from 'lucide-react';
+import { Printer, ArrowLeft, Save, Loader2 } from 'lucide-react';
 
 interface FooterActionsProps {
   onPrint?: () => void;
@@ -15,15 +15,15 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
   isLoading = false
 }) => {
   return (
-    <div className="sticky bottom-0 z-30 bg-white border-t border-slate-200 px-6 py-3.5 shadow-lg flex items-center justify-between mt-6">
+    <div className="sticky bottom-0 z-30 bg-[#174C2C] border-t-2 border-[#0F351E] px-6 py-3 shadow-2xl flex items-center justify-between mt-6 shrink-0 text-white">
       <div className="flex items-center gap-3">
         {/* Print Button */}
         <button
           type="button"
           onClick={onPrint}
-          className="border-2 border-[#174C2C] text-[#174C2C] hover:bg-[#174C2C]/10 bg-white font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
+          className="bg-[#215E38] hover:bg-[#2A7546] active:bg-[#1C5130] text-white border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
         >
-          <Printer className="h-4 w-4 text-[#174C2C]" />
+          <Printer className="h-4 w-4 text-emerald-200" />
           <span>Print</span>
         </button>
 
@@ -31,11 +31,17 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="border-2 border-[#D4AF37] text-[#8B6D1B] bg-white hover:bg-amber-50/60 font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
+          className="bg-[#215E38] hover:bg-[#2A7546] active:bg-[#1C5130] text-amber-200 border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
         >
-          <ArrowLeft className="h-4 w-4 text-[#8B6D1B]" />
+          <ArrowLeft className="h-4 w-4 text-amber-300" />
           <span>Back (Esc)</span>
         </button>
+      </div>
+
+      {/* Center Branding */}
+      <div className="hidden md:flex items-center gap-2 px-4 py-1 bg-[#103A20] rounded-lg border border-[#235E39]">
+        <span className="text-[11px] font-extrabold text-amber-300 tracking-wider font-serif">BALLY JUTE COMPANY LIMITED</span>
+        <span className="text-[9px] font-mono text-emerald-200 uppercase tracking-widest">• ESTD. 1979</span>
       </div>
 
       {/* Save Contract Button */}
@@ -43,16 +49,16 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
         type="button"
         onClick={onSave}
         disabled={isLoading}
-        className="bg-[#174C2C] hover:bg-[#123E23] disabled:opacity-50 text-white font-black text-xs sm:text-sm px-8 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95 tracking-wider uppercase"
+        className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 active:from-amber-500 disabled:opacity-50 text-[#0B2A17] font-black text-xs sm:text-sm px-8 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95 tracking-wider uppercase border border-amber-200/50"
       >
         {isLoading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin text-white" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#0B2A17]" />
             <span>SAVING CONTRACT...</span>
           </>
         ) : (
           <>
-            <Save className="h-4 w-4 text-white" />
+            <Save className="h-4 w-4 text-[#0B2A17]" />
             <span>SAVE CONTRACT</span>
           </>
         )}

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 
+import LegacyLayout from '../components/LegacyLayout';
 import BasicDetailsCard from '../components/BasicDetailsCard';
 import TransportationCard from '../components/TransportationCard';
 import QualityDetailsTable from '../components/QualityDetailsTable';
@@ -473,108 +474,110 @@ export default function SaudaEntry({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F7F5EF] font-sans text-slate-800 overflow-y-auto">
-      {/* 1. Integrated Sub-Header Banner (Exact Match to Image 2) */}
-      <div className="relative px-8 py-5 bg-[#FAF8F5] border-b border-[#E2DFD5] flex items-center justify-between overflow-hidden shadow-2xs">
-        {/* Background Mill Illustration Artwork on the Right */}
-        <div 
-          className="absolute right-0 top-0 bottom-0 w-2/5 opacity-30 pointer-events-none bg-no-repeat bg-right bg-contain"
-          style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
-        />
+    <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
+        {/* 1. Integrated Sub-Header Banner */}
+        <div className="relative px-6 py-4 bg-[#FAF8F5] border border-[#E2DFD5] rounded-xl flex items-center justify-between shrink-0 shadow-xs overflow-hidden">
+          {/* Background Mill Illustration Artwork on the Right */}
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-25 pointer-events-none bg-no-repeat bg-right bg-contain"
+            style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
+          />
 
-        <div className="relative z-10 flex flex-col gap-1">
-          <h2 className="font-serif font-black text-2xl sm:text-3xl text-[#174C2C] tracking-tight">
-            Sauda Desk
-          </h2>
-          <nav className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-            <span className="hover:text-[#174C2C] cursor-pointer" onClick={onCancel}>Home</span>
-            <span>›</span>
-            <span className="hover:text-[#174C2C] cursor-pointer" onClick={onCancel}>Sauda Desk</span>
-            <span>›</span>
-            <span className="font-bold text-[#174C2C]">
-              {initialData ? `Modify #${formData.sauda_no}` : "Add Sauda"}
-            </span>
-          </nav>
-        </div>
+          <div className="relative z-10 flex flex-col gap-1">
+            <h2 className="font-serif font-black text-2xl text-[#174C2C] tracking-tight leading-none">
+              Sauda Desk
+            </h2>
+            <nav className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mt-1">
+              <span className="hover:text-[#174C2C] cursor-pointer transition-colors" onClick={onCancel}>Home</span>
+              <span>›</span>
+              <span className="hover:text-[#174C2C] cursor-pointer transition-colors" onClick={onCancel}>Sauda Desk</span>
+              <span>›</span>
+              <span className="font-bold text-[#174C2C]">
+                {initialData ? `Modify #${formData.sauda_no}` : "Add Sauda"}
+              </span>
+            </nav>
+          </div>
 
-        {/* Action Controls & Session Badge */}
-        <div className="relative z-10 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-3.5 py-1.5 hover:bg-[#E2DDD0] text-[#174C2C] bg-white border border-[#D8D3C5] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
-            title="Back to Sauda Desk (Esc)"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back (Esc)</span>
-          </button>
-          <div className="bg-white/90 border border-[#D8D3C5] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-            <span className="text-slate-500 font-medium">Session:</span>
-            <span className="font-bold text-[#174C2C] font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
+          {/* Action Controls & Session Badge */}
+          <div className="relative z-10 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-3.5 py-1.5 hover:bg-[#E2DDD0] text-[#174C2C] bg-white border border-[#D8D3C5] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              title="Back to Sauda Desk (Esc)"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back (Esc)</span>
+            </button>
+            <div className="bg-white/90 border border-[#D8D3C5] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-slate-500 font-medium">Session:</span>
+              <span className="font-bold text-[#174C2C] font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
+            </div>
           </div>
         </div>
+
+        {/* 2. Main Form Content */}
+        <main ref={formContainerRef} className="flex-1 space-y-5 max-w-7xl mx-auto w-full">
+          {/* Section 1: Basic Details */}
+          <BasicDetailsCard
+            formData={formData}
+            onChange={handleChange}
+            onSelectChange={handleSelectChange}
+            brokers={brokers}
+            suppliers={suppliers}
+            areas={areas}
+          />
+
+          {/* Section 2: Transportation Details */}
+          <TransportationCard
+            formData={formData}
+            onChange={handleChange}
+            unitOptions={UNIT_OPTIONS}
+          />
+
+          {/* Section 3: Quality Details Table */}
+          <QualityDetailsTable
+            qualityDetails={formData.quality_details || []}
+            onQualityChange={handleQualityChange}
+            onAddRow={handleAddQualityRow}
+            onDeleteRow={handleDeleteQualityRow}
+            onRemoveRowAt={handleRemoveQualityRowAt}
+            grades={grades}
+            agencies={agencies}
+            markas={markas}
+          />
+
+          {/* Section 4: Shipment & Claims */}
+          <ShipmentClaimsCard
+            formData={formData}
+            onChange={handleChange}
+          />
+
+          {/* Section 5: Remarks & Finalisation */}
+          <RemarksCard
+            formData={formData}
+            onChange={handleChange}
+            onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
+          />
+        </main>
+
+        {/* 3. Sticky Footer Actions */}
+        <FooterActions
+          onPrint={() => setShowPrintSlip(true)}
+          onBack={onCancel}
+          onSave={handleSave}
+          isLoading={loading}
+        />
+
+        {/* Print Slip Modal */}
+        {showPrintSlip && (
+          <SaudaPrintSlip
+            sauda={formData}
+            onClose={() => setShowPrintSlip(false)}
+          />
+        )}
       </div>
-
-      {/* 2. Main Form Content */}
-      <main ref={formContainerRef} className="flex-1 px-6 py-5 space-y-5 max-w-7xl mx-auto w-full">
-        {/* Section 1: Basic Details */}
-        <BasicDetailsCard
-          formData={formData}
-          onChange={handleChange}
-          onSelectChange={handleSelectChange}
-          brokers={brokers}
-          suppliers={suppliers}
-          areas={areas}
-        />
-
-        {/* Section 2: Transportation Details */}
-        <TransportationCard
-          formData={formData}
-          onChange={handleChange}
-          unitOptions={UNIT_OPTIONS}
-        />
-
-        {/* Section 3: Quality Details Table */}
-        <QualityDetailsTable
-          qualityDetails={formData.quality_details || []}
-          onQualityChange={handleQualityChange}
-          onAddRow={handleAddQualityRow}
-          onDeleteRow={handleDeleteQualityRow}
-          onRemoveRowAt={handleRemoveQualityRowAt}
-          grades={grades}
-          agencies={agencies}
-          markas={markas}
-        />
-
-        {/* Section 4: Shipment & Claims */}
-        <ShipmentClaimsCard
-          formData={formData}
-          onChange={handleChange}
-        />
-
-        {/* Section 5: Remarks & Finalisation */}
-        <RemarksCard
-          formData={formData}
-          onChange={handleChange}
-          onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
-        />
-      </main>
-
-      {/* 3. Sticky Footer Actions */}
-      <FooterActions
-        onPrint={() => setShowPrintSlip(true)}
-        onBack={onCancel}
-        onSave={handleSave}
-        isLoading={loading}
-      />
-
-      {/* Print Slip Modal */}
-      {showPrintSlip && (
-        <SaudaPrintSlip
-          sauda={formData}
-          onClose={() => setShowPrintSlip(false)}
-        />
-      )}
-    </div>
+    </LegacyLayout>
   );
 }
