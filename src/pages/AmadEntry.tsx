@@ -6,7 +6,8 @@ import {
   Trash2,
   RefreshCw,
   Archive,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
@@ -1020,15 +1021,1076 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
   };
 
   return (
+    
     <LegacyLayout title="Temporary M.R" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
-      <div ref={amadContainerRef} className="flex flex-col min-h-full gap-3  p-2">
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
+        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+          {/* Background Mill Illustration Artwork on the Right with light opacity */}
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
+            style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
+          />
+
+          <div className="relative z-10 flex flex-col gap-1">
+            <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
+              New Arrival
+            </h2>
+          </div>
+
+          {/* Action Controls & Session Badge */}
+          <div className="relative z-10 flex items-center gap-3">
+            <button
+              type="button"
+              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              title="Back to Sauda Desk (Esc)"
+            >
+              <ArrowLeft className="h-4 w-4 text-amber-300" />
+              <span>Back </span>
+            </button>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-emerald-200/80 font-medium">Session:</span>
+              <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= Receipt Voucher Info ================= */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
+          {/* Header */}
+          <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
+            <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+              Receipt Voucher Info
+            </h2>
+          </div>
+          {/* Body */}
+          <div className="p-5">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              {/* LEFT COLUMN */}
+              <div className="space-y-3">
+
+                {/* Temporary M.R No. */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Temporary M.R No.
+                  </label>
+                  <input
+                    type="text"
+                    name="arrival_no"
+                    value={formData.arrival_no}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold focus:outline-none focus:ring-2 focus:ring-[#174C2C]/30"
+                  />
+                </div>
+
+                {/* P.O Number */}
+                <div className="flex items-start gap-3 relative">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0 pt-2">
+                    P.O. Number
+                  </label>
+
+                  <div className="flex-1 flex gap-1 relative overflow-visible">
+                    <div className="flex-1 flex relative">
+                      <input
+                        type="text"
+                        name="po_no"
+                        value={formData.po_no}
+                        onChange={(e) => {
+                          handleChange(e);
+                          setShowPoDropdown(true);
+                        }}
+                        onFocus={() => {
+                          setShowPoDropdown(true);
+                          fetchPurchaseOrders();
+                        }}
+                        onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
+                        autoComplete="off"
+                        placeholder="-- TYPE OR SELECT P.O. --"
+                        className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold uppercase font-mono text-xs pr-8"
+                      />
+
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-pointer text-gray-500 hover:text-black"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          const nextState = !showPoDropdown;
+                          setShowPoDropdown(nextState);
+                          if (nextState) fetchPurchaseOrders();
+                        }}
+                      >
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
+
+                    {showPoDropdown && (
+                      <div className="absolute top-10 left-0 w-full bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
+                        {/* KEEP YOUR EXISTING DROPDOWN CONTENT HERE */}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Receipt Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Receipt Date
+                  </label>
+
+                  <div className="flex-1 flex gap-3">
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-red-700 text-xs">J.C.I</span>
+
+                      <select
+                        name="jci"
+                        value={formData.jci}
+                        onChange={handleChange}
+                        className="border border-gray-400 rounded-md bg-white px-2 h-9 font-bold"
+                      >
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Challan Supplier */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Challan Supplier
+                  </label>
+
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      name="challan_supplier"
+                      value={formData.challan_supplier}
+                      onChange={handleChange}
+                      list="challan_supplier_list"
+                      placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
+                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                    />
+
+                    <datalist id="challan_supplier_list">
+                      {suppliers.map((s) => (
+                        <option key={s.id || s.supp_name} value={s.supp_name}>
+                          {s.supp_name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+
+                {/* Supplier */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Supplier
+                  </label>
+
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      name="supplier"
+                      value={formData.supplier}
+                      onChange={handleChange}
+                      list="supplier_list"
+                      placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
+                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                    />
+
+                    <datalist id="supplier_list">
+                      {suppliers.map((s) => (
+                        <option key={s.id || s.supp_name} value={s.supp_name}>
+                          {s.supp_name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* RIGHT COLUMN */}
+              <div className="space-y-3">
+
+                {/* Broker */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Broker
+                  </label>
+
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      name="broker"
+                      value={formData.broker}
+                      onChange={handleChange}
+                      list="broker_list"
+                      placeholder="-- TYPE OR SELECT BROKER --"
+                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                    />
+
+                    <datalist id="broker_list">
+                      <option value="DIRECT" />
+                      {brokers.map((b) => (
+                        <option key={b.id || b.brok_name} value={b.brok_name}>
+                          {b.brok_name}
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+
+                {/* Transporter */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Transporter Name
+                  </label>
+
+                  <input
+                    type="text"
+                    name="transporter_name"
+                    value={formData.transporter_name}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                  />
+                </div>
+
+                {/* Challan */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Challan / R.R. No.
+                  </label>
+
+                  <input
+                    type="text"
+                    name="challan_rr_no"
+                    value={formData.challan_rr_no}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                  />
+                </div>
+
+                {/* Lorry */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Lorry Number
+                  </label>
+
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      name="lorry_prefix"
+                      value={formData.lorry_prefix}
+                      onChange={handleChange}
+                      placeholder="PREFIX"
+                      className="w-28 text-center uppercase border border-gray-400 rounded-md h-9 font-bold"
+                    />
+
+                    <input
+                      type="text"
+                      name="lorry_suffix"
+                      value={formData.lorry_suffix}
+                      onChange={handleChange}
+                      placeholder="SUFFIX"
+                      className="flex-1 text-center uppercase border border-gray-400 rounded-md h-9 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Pan */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Pan No.
+                  </label>
+
+                  <input
+                    type="text"
+                    name="pan_no"
+                    value={formData.pan_no}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold font-mono"
+                  />
+                </div>
+
+                {/* Dispatch Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                    Lorry Dispatch Date
+                  </label>
+
+                  <input
+                    type="date"
+                    name="lorry_date"
+                    value={formData.lorry_date}
+                    onChange={handleChange}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                  />
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ===========================Transport & Document Info=========================== */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+
+          {/* Header */}
+          <div className="bg-[#174C2C] px-5 py-3">
+            <h3 className="text-white text-sm font-bold tracking-wide">
+              Transport & Document Information
+            </h3>
+          </div>
+
+          {/* Body */}
+          <div className="p-5">
+
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+
+              {/* ================= LEFT ================= */}
+              <div className="space-y-4">
+
+                {/* Consignment */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Consignment Note No.
+                  </label>
+
+                  <input
+                    type="text"
+                    name="consignment_note_no"
+                    value={formData.consignment_note_no}
+                    onChange={handleChange}
+                    className="w-full h-10 rounded-lg border border-gray-300 px-3 font-semibold outline-none focus:border-[#174C2C]"
+                  />
+                </div>
+
+                {/* DI */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    D.I. Details
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+
+                    <input
+                      type="text"
+                      name="di_no"
+                      placeholder="DI Number"
+                      value={formData.di_no}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    />
+
+                    <input
+                      type="date"
+                      name="di_date"
+                      value={formData.di_date}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3"
+                    />
+
+                  </div>
+                </div>
+
+                {/* Invoice */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Invoice Details
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+
+                    <input
+                      type="text"
+                      name="invoice_no"
+                      placeholder="Invoice Number"
+                      value={formData.invoice_no}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    />
+
+                    <input
+                      type="date"
+                      name="invoice_date"
+                      value={formData.invoice_date}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3"
+                    />
+
+                  </div>
+                </div>
+
+                {/* PTF */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    P.T.F
+                  </label>
+
+                  <select
+                    name="ptf"
+                    value={formData.ptf}
+                    onChange={handleChange}
+                    className="w-full h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                  >
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+
+                {/* Lorry */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Lorry Returned
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+
+                    <select
+                      name="lorry_returned"
+                      value={formData.lorry_returned}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    >
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
+                    </select>
+
+                    <select
+                      name="lorry_returned_other_mill"
+                      value={formData.lorry_returned_other_mill}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    >
+                      <option value="No">Ret. Other Mill : No</option>
+                      <option value="Yes">Ret. Other Mill : Yes</option>
+                    </select>
+
+                  </div>
+                </div>
+
+                {/* Arrival Area */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Arrival Area
+                  </label>
+
+                  <div className="flex gap-2">
+
+                    <input
+                      type="text"
+                      name="arrival_area_code"
+                      value={formData.arrival_area_code}
+                      readOnly
+                      className="w-20 h-10 rounded-lg border border-gray-300 bg-slate-100 text-center font-bold"
+                    />
+
+                    <select
+                      name="arrival_area_name"
+                      value={formData.arrival_area_name}
+                      onChange={(e) => {
+                        const matchedArea = areas.find(
+                          a => a.area_name === e.target.value
+                        );
+
+                        setFormData(prev => ({
+                          ...prev,
+                          arrival_area_name: e.target.value,
+                          arrival_area_code: matchedArea
+                            ? matchedArea.area_code
+                            : prev.arrival_area_code
+                        }));
+                      }}
+                      className="flex-1 h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    >
+                      <option value="">-- SELECT AREA --</option>
+
+                      {areas.map(a => (
+                        <option key={a.id} value={a.area_name}>
+                          {a.area_name}
+                        </option>
+                      ))}
+                    </select>
+
+                  </div>
+                </div>
+
+              </div>
+
+              {/* ================= RIGHT ================= */}
+
+              <div className="space-y-4">
+
+                {/* Unit */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Unit
+                  </label>
+
+                  <div className="flex gap-2">
+
+                    <input
+                      type="text"
+                      name="unit_code"
+                      value={formData.unit_code}
+                      readOnly
+                      className="w-20 h-10 rounded-lg border border-gray-300 bg-slate-100 text-center font-bold"
+                    />
+
+                    <select
+                      name="unit_name"
+                      value={formData.unit_name || "BALES"}
+                      onChange={(e) => {
+                        const uVal = e.target.value;
+
+                        const codeMap = {
+                          BALES: "I",
+                          LOOSE: "II",
+                          DRUMS: "2",
+                          "P.BALES": "4",
+                          "H.BALES": "5",
+                        };
+
+                        setFormData(prev => ({
+                          ...prev,
+                          unit_name: uVal,
+                          unit_code:
+                            codeMap[uVal] ||
+                            prev.unit_code ||
+                            "1",
+                        }));
+                      }}
+                      className="flex-1 h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    >
+                      {Array.from(
+                        new Set(
+                          [...unitList, formData.unit_name].filter(Boolean)
+                        )
+                      ).map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+
+                  </div>
+                </div>
+
+                {/* Way Bill */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Way Bill
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+
+                    <input
+                      type="text"
+                      name="way_bill_no"
+                      value={formData.way_bill_no}
+                      onChange={handleChange}
+                      placeholder="Way Bill No."
+                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    />
+
+                    <input
+                      type="date"
+                      name="way_bill_date"
+                      value={formData.way_bill_date}
+                      onChange={handleChange}
+                      className="h-10 rounded-lg border border-gray-300 px-3"
+                    />
+
+                  </div>
+                </div>
+
+                {/* APMC */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    A.P.M.C Fees (Rs.)
+                  </label>
+
+                  <input
+                    type="number"
+                    name="apmc_fees"
+                    placeholder="0.00"
+                    value={formData.apmc_fees || ""}
+                    onChange={handleChange}
+                    className="w-full h-10 rounded-lg border border-gray-300 px-3 text-right font-semibold"
+                  />
+                </div>
+
+                {/* Remarks */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Remarks
+                  </label>
+
+                  <textarea
+                    name="remarks"
+                    rows={6}
+                    value={formData.remarks}
+                    onChange={handleChange}
+                    placeholder="Enter Remarks..."
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-semibold resize-none"
+                  />
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* ===========================Receipt Grade Details=========================== */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+
+          {/* Header */}
+          <div className="bg-[#174C2C] px-5 py-3 flex items-center justify-between">
+            <h3 className="text-white text-sm font-bold tracking-wide">
+              Receipt Grade Details
+            </h3>
+            <span className="text-[11px] text-green-100 font-medium">
+              Grade / Agency / Marka / Quantity Information
+            </span>
+          </div>
+          {/* Body */}
+          <div className="p-4 bg-[#F8FAFC]">
+            <div className="flex items-center justify-between p-1.5 bg-[#174C2C] border-b border-slate-300">
+             <span className="text-[10px] font-bold uppercase text-slate-700"></span>
+             <div className="flex items-center gap-1.5">
+                <button
+                   type="button"
+                   onClick={handleAddRow}
+                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
+                >
+                   + Spawn Row
+                </button>
+                <button
+                   type="button"
+                   onClick={handleDeleteRow}
+                   className="bg-rose-700 hover:bg-rose-800 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
+                >
+                   - Delete Row
+                </button>
+             </div>
+          </div>
+          <table className="w-full table-fixed min-w-[950px] border-collapse text-left text-[11px] font-sans">
+            <thead className="sticky top-0 bg-slate-100 z-10 shadow-sm">
+              <tr className="bg-slate-800 text-white font-bold uppercase text-[9px]/tight text-center">
+                <th className="p-1 border border-gray-400 w-10 shrink-0" rowSpan={2}>Srl</th>
+                <th className="p-1 border border-gray-400 text-center w-52" colSpan={2}>Receipt Grade</th>
+                <th className="p-1 border border-gray-400 w-24" rowSpan={2}>Crop Year</th>
+                <th className="p-1 border border-gray-400 w-28" rowSpan={2}>Challan Grade</th>
+                <th className="p-1 border border-gray-400 text-center w-48" colSpan={2}>Agency</th>
+                <th className="p-1 border border-gray-400 text-center w-48" colSpan={2}>Challan Marka</th>
+                <th className="p-1 border border-gray-400 w-24" rowSpan={2}>Netto (M.T)</th>
+                <th className="p-1 border border-gray-400 w-32" colSpan={2}>Quantity</th>
+                <th className="p-1 border border-gray-400 w-36" rowSpan={2}>Remarks</th>
+              </tr>
+              <tr className="bg-slate-200 text-black font-extrabold text-[8px] text-center border-b border-gray-400">
+                <th className="p-0.5 border border-gray-400 w-16">Code</th>
+                <th className="p-0.5 border border-gray-400 w-36">Name</th>
+                <th className="p-0.5 border border-gray-400 w-14">Code</th>
+                <th className="p-0.5 border border-gray-400 w-34">Name</th>
+                <th className="p-0.5 border border-gray-400 w-14">Code</th>
+                <th className="p-0.5 border border-gray-400 w-34">Name</th>
+                <th className="p-0.5 border border-gray-400 w-16">Chln</th>
+                <th className="p-0.5 border border-gray-400 w-16">Rcpt</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-300">
+              {details.map((detail, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 transition-colors h-7 text-[10.5px]">
+                  {/* Srl */}
+                  <td className="p-1 text-center font-bold text-gray-900 border border-gray-300 bg-slate-100 w-10">{detail.srl_no}</td>
+
+                  {/* Receipt Grade Code */}
+                  <td className="p-0.5 border border-gray-300 w-16 bg-slate-50 text-center">
+                    <input
+                      type="text"
+                      value={detail.receipt_grade_code}
+                      readOnly
+                      placeholder="--"
+                      className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none"
+                    />
+                  </td>
+
+                  {/* Receipt Grade Name */}
+                  <td className="p-0.5 border border-gray-300 w-36">
+                    <select
+                      value={detail.receipt_grade_name}
+                      onChange={(e) => handleDetailChange(idx, 'receipt_grade_name', e.target.value)}
+                      className="w-full bg-white border border-gray-300 p-0 text-left font-bold text-gray-900 outline-none h-6"
+                    >
+                      <option value=""></option>
+                      {detail.receipt_grade_name && !grades.some(g => g.grade_name === detail.receipt_grade_name) && (
+                        <option value={detail.receipt_grade_name}>{detail.receipt_grade_name}</option>
+                      )}
+                      {grades.map(g => (
+                        <option key={g.id || g.grade_code} value={g.grade_name}>{g.grade_name}</option>
+                      ))}
+                    </select>
+                  </td>
+
+                  {/* Crop Year */}
+                  <td className="p-0.5 border border-gray-300 w-24">
+                    <select 
+                      value={detail.crop_year} 
+                      onChange={(e) => handleDetailChange(idx, 'crop_year', e.target.value)}
+                      className="w-full bg-white border border-gray-300 p-0 text-center font-bold text-gray-900 outline-none h-6 text-xs" 
+                    >
+                      <option value=""></option>
+                      {detail.crop_year && !['2024-25', '2025-26', '2026-27', '2027-28', '2028-29'].includes(detail.crop_year) && (
+                        <option value={detail.crop_year}>{detail.crop_year}</option>
+                      )}
+                      <option value="2024-25">2024-25</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2026-27">2026-27</option>
+                      <option value="2027-28">2027-28</option>
+                      <option value="2028-29">2028-29</option>
+                    </select>
+                  </td>
+
+                  {/* Challan Grade Name */}
+                  <td className="p-0.5 border border-gray-300 w-28">
+                    <input 
+                      type="text" 
+                      value={detail.challan_grade_name} 
+                      onChange={(e) => handleDetailChange(idx, 'challan_grade_name', e.target.value)}
+                      className="w-full bg-transparent border-0 p-0 outline-none px-1" 
+                    />
+                  </td>
+
+                  {/* Agency Code */}
+                  <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
+                    <input
+                      type="text"
+                      value={detail.agency_code || ''}
+                      onChange={(e) => handleDetailChange(idx, 'agency_code', e.target.value)}
+                      placeholder="--"
+                      className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none uppercase font-mono"
+                    />
+                  </td>
+
+                  {/* Agency Name */}
+                  <td className="p-0.5 border border-gray-300 w-34">
+                    <input
+                      type="text"
+                      list="agencies_list"
+                      placeholder="Type/Select Agency..."
+                      value={detail.agency_name || ''}
+                      onChange={(e) => handleDetailChange(idx, 'agency_name', e.target.value)}
+                      className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0"
+                    />
+                  </td>
+
+                  {/* Challan Marka Code */}
+                  <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
+                    <input
+                      type="text"
+                      value={detail.challan_marka_code}
+                      readOnly
+                      placeholder="--"
+                      className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none"
+                    />
+                  </td>
+
+                  {/* Challan Marka Name */}
+                  <td className="p-0.5 border border-gray-300 w-34">
+                    <input
+                      type="text"
+                      list="markas_list"
+                      placeholder="Type/Select Marka..."
+                      value={detail.challan_marka_name || ''}
+                      onChange={(e) => handleDetailChange(idx, 'challan_marka_name', e.target.value)}
+                      className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0"
+                    />
+                  </td>
+
+                  {/* Netto Pnto */}
+                  <td className="p-0.5 border border-gray-300 w-24">
+                    <input 
+                      type="number" 
+                      step="0.001"
+                      placeholder="0.000"
+                      value={detail.netto_pnto ? detail.netto_pnto : ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
+                      }}
+                      className="w-full bg-white border border-gray-300 p-0 text-right font-bold text-gray-900 outline-none pr-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600" 
+                    />
+                  </td>
+
+                  {/* Quantity Chln */}
+                  <td className="p-0.5 border border-gray-300 w-16">
+                    <input 
+                      type="number" 
+                      step="1"
+                      placeholder="0"
+                      value={detail.quantity_chln ? detail.quantity_chln : ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleDetailChange(idx, 'quantity_chln', val === '' ? 0 : Number(val));
+                      }}
+                      className="w-full bg-white border border-blue-200 p-0 text-center font-bold text-blue-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" 
+                    />
+                  </td>
+
+                  {/* Quantity Rcpt */}
+                  <td className="p-0.5 border border-gray-300 w-16">
+                    <input 
+                      type="number" 
+                      step="1"
+                      placeholder="0"
+                      value={detail.quantity_rcpt ? detail.quantity_rcpt : ''} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleDetailChange(idx, 'quantity_rcpt', val === '' ? 0 : Number(val));
+                      }}
+                      className="w-full bg-white border border-indigo-200 p-0 text-center font-bold text-indigo-900 outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" 
+                    />
+                  </td>
+
+                  {/* Remarks */}
+                  <td className="p-0.5 border border-gray-300 w-36">
+                    <input 
+                      type="text" 
+                      value={detail.remarks} 
+                      onChange={(e) => handleDetailChange(idx, 'remarks', e.target.value)}
+                      className="w-full bg-transparent border-0 p-0 text-left outline-none px-1" 
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+
+        </div>
+
+        {/* ================= Weight Information ================= */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+
+          {/* Header */}
+          <div className="bg-[#174C2C] text-white px-4 py-2 border-b border-[#0F351E]">
+            <h3 className="text-sm font-bold tracking-wide uppercase">
+              Weight Information
+            </h3>
+          </div>
+
+          {/* Body */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-300">
+
+            {/* Net Weight */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Net Weight
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">CHALLAN WT</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="challan_material_weight"
+                  value={formData.challan_material_weight || 0}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">SUPPLIER NET</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="supplier_net_weight"
+                  value={formData.supplier_net_weight || 0}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ELECTRONIC NET</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="electronic_net_weight"
+                  value={formData.electronic_net_weight || 0}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Gross Weight */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Gross Weight
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ACTUAL GROSS</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="actual_gross_weight"
+                  value={formData.actual_gross_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">SUPPLIER GROSS</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="supplier_challan_gross"
+                  value={formData.supplier_challan_gross || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ELECTRONIC GROSS</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="electronic_gross_weight"
+                  value={formData.electronic_gross_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Tare Weight */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Tare Weight
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ACTUAL TARE</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="actual_tare_weight"
+                  value={formData.actual_tare_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">SUPPLIER TARE</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="supplier_tare_weight"
+                  value={formData.supplier_tare_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ELECTRONIC TARE</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  name="electronic_tare_weight"
+                  value={formData.electronic_tare_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-gray-300 bg-gray-50 px-4 py-2 flex justify-center items-center gap-3">
+            <span className="text-[11px] font-bold text-[#174C2C] uppercase">
+              Weight Reduced in Discrepancy (M.Ton)
+            </span>
+
+            <input
+              type="number"
+              step="0.001"
+              name="weight_reduced"
+              value={formData.weight_reduced || ""}
+              onChange={handleChange}
+              className="w-32 h-8 border border-red-300 rounded bg-white text-right px-2 font-black font-mono text-red-700"
+            />
+          </div>
+
+        </div>
+        
+
+        {/* Bottom Action Bar */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-md overflow-hidden mt-5">
+          <div className="flex justify-end items-center gap-3">
+            <button
+              onClick={clearForm}
+              className="flex items-center gap-2 h-9 px-5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow transition-all duration-200 hover:scale-[1.02] active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Clear (F2)
+            </button>
+
+            <button
+              onClick={onCancel}
+              className="flex items-center gap-2 h-9 px-5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow transition-all duration-200 hover:scale-[1.02] active:scale-95"
+            >
+              <X className="w-3.5 h-3.5" />
+              Exit (Esc)
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className={`flex items-center gap-2 h-9 px-6 rounded-lg text-xs font-semibold shadow transition-all duration-200 active:scale-95 ${
+                loading
+                  ? "bg-gray-500 text-white cursor-not-allowed"
+                  : "bg-[#ffb900] hover:bg-[#e6a700] text-black"
+              }`}
+            >
+              <Save className="w-3.5 h-3.5" />
+              {loading ? "SAVING..." : "SAVE ARRIVAL"}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+
+
+
+      {/* <div ref={amadContainerRef} className="flex flex-col min-h-full gap-3  p-2"> */}
         
         {/* Core Inputs layout styled matching exact SaudaEntry themes */}
-        <div className="grid grid-cols-12 gap-3 shrink-0">
+        {/* <div className="grid grid-cols-12 gap-3 shrink-0"> */}
           
           {/* Column Group 1 - Primary Details */}
-          <div className="col-span-12 lg:col-span-6 flex flex-col gap-2">
-            <LegacyFieldset legend="Receipt Voucher Info">
+          {/* <div className="col-span-12 lg:col-span-6 flex flex-col gap-2">
+            <LegacyFieldset legend="Receipt Voucher Info1">
               <div className="grid grid-cols-12 gap-x-3 gap-y-1.5 text-[11px] items-center">
                 
                 <span className="col-span-4 font-bold text-gray-800 text-right">Temporary M.R No.</span>
@@ -1291,10 +2353,10 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                 />
               </div>
             </LegacyFieldset>
-          </div>
+          </div> */}
 
           {/* Column Group 2 - Delivery and Invoicing */}
-          <div className="col-span-12 lg:col-span-6 flex flex-col gap-2">
+          {/* <div className="col-span-12 lg:col-span-6 flex flex-col gap-2">
             <LegacyFieldset legend="Logistics & Compliance Tracker">
               <div className="grid grid-cols-12 gap-x-3 gap-y-1.5 text-[11px] items-center">
                 
@@ -1488,10 +2550,10 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               </div>
             </LegacyFieldset>
           </div>
-        </div>
+        </div> */}
 
         {/* TRANS-GRADE BATCH LEDGER TABLE */}
-        <div className="flex-1 min-h-[180px] border-2 border-slate-300 overflow-x-auto bg-white">
+        {/* <div className="flex-1 min-h-[180px] border-2 border-slate-300 overflow-x-auto bg-white">
           <div className="flex items-center justify-between p-1.5 bg-slate-200 border-b border-slate-300">
              <span className="text-[10px] font-bold uppercase text-slate-700">Receipt Grid Items</span>
              <div className="flex items-center gap-1.5">
@@ -1538,10 +2600,10 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
             <tbody className="divide-y divide-gray-300">
               {details.map((detail, idx) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors h-7 text-[10.5px]">
-                  {/* Srl */}
+                 
                   <td className="p-1 text-center font-bold text-gray-900 border border-gray-300 bg-slate-100 w-10">{detail.srl_no}</td>
 
-                  {/* Receipt Grade Code */}
+                  
                   <td className="p-0.5 border border-gray-300 w-16 bg-slate-50 text-center">
                     <input
                       type="text"
@@ -1552,7 +2614,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Receipt Grade Name */}
+                  
                   <td className="p-0.5 border border-gray-300 w-36">
                     <select
                       value={detail.receipt_grade_name}
@@ -1569,7 +2631,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     </select>
                   </td>
 
-                  {/* Crop Year */}
+                  
                   <td className="p-0.5 border border-gray-300 w-24">
                     <select 
                       value={detail.crop_year} 
@@ -1588,7 +2650,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     </select>
                   </td>
 
-                  {/* Challan Grade Name */}
+                  
                   <td className="p-0.5 border border-gray-300 w-28">
                     <input 
                       type="text" 
@@ -1598,7 +2660,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Agency Code */}
+                  
                   <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
                     <input
                       type="text"
@@ -1609,7 +2671,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Agency Name */}
+                  
                   <td className="p-0.5 border border-gray-300 w-34">
                     <input
                       type="text"
@@ -1621,7 +2683,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Challan Marka Code */}
+                  
                   <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
                     <input
                       type="text"
@@ -1632,7 +2694,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Challan Marka Name */}
+                  
                   <td className="p-0.5 border border-gray-300 w-34">
                     <input
                       type="text"
@@ -1644,7 +2706,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Netto Pnto */}
+                  
                   <td className="p-0.5 border border-gray-300 w-24">
                     <input 
                       type="number" 
@@ -1659,7 +2721,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Quantity Chln */}
+                  
                   <td className="p-0.5 border border-gray-300 w-16">
                     <input 
                       type="number" 
@@ -1674,7 +2736,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Quantity Rcpt */}
+                  
                   <td className="p-0.5 border border-gray-300 w-16">
                     <input 
                       type="number" 
@@ -1689,7 +2751,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
                   </td>
 
-                  {/* Remarks */}
+                  
                   <td className="p-0.5 border border-gray-300 w-36">
                     <input 
                       type="text" 
@@ -1702,15 +2764,15 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               ))}
             </tbody>
           </table>
-        </div>
+        </div> */}
 
         {/* WEIGHMENT SCALE BLOCKS */}
-        <div className="shrink-0">
+        {/* <div className="shrink-0">
           <LegacyFieldset legend="Automatic Weighment Ledger & Verification Weights (in metric tons)">
-            <div className="grid grid-cols-12 gap-4 text-[10.5px] items-center">
+            <div className="grid grid-cols-12 gap-4 text-[10.5px] items-center"> */}
               
               {/* Box Column 1 */}
-              <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
+              {/* <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-[10px] text-slate-700">CHALLAN WEIGHT</span>
                   <input 
@@ -1744,10 +2806,10 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     className="w-24 border border-gray-400 text-right px-2 py-0.5 font-mono bg-white font-bold" 
                   />
                 </div>
-              </div>
+              </div> */}
 
               {/* Box Column 2 */}
-              <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
+              {/* <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-[10px] text-slate-700">ACTUAL GROSS (LORRY+TARE)</span>
                   <input 
@@ -1781,10 +2843,10 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     className="w-24 border border-gray-400 text-right px-2 py-0.5 font-mono bg-white" 
                   />
                 </div>
-              </div>
+              </div> */}
 
               {/* Box Column 3 */}
-              <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
+              {/* <div className="col-span-12 md:col-span-4 bg-slate-100/50 p-2 border border-gray-300 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="font-extrabold text-[10px] text-slate-700">ACTUAL TARE (EMPTY LORRY)</span>
                   <input 
@@ -1818,12 +2880,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     className="w-24 border border-gray-400 text-right px-2 py-0.5 font-mono bg-white" 
                   />
                 </div>
-              </div>
+              </div> */}
 
-            </div>
+           {/*  </div> */}
 
             {/* Weight Shortage reduction info helper bottom centered */}
-            <div className="mt-2.5 flex justify-center border-t border-gray-200 pt-2.5">
+            {/* <div className="mt-2.5 flex justify-center border-t border-gray-200 pt-2.5">
               <div className="flex items-center gap-3">
                 <span className="font-bold text-gray-800 text-[10.5px]">WEIGHT REDUCED IN DISCREPANCY (M.Ton)</span>
                 <input 
@@ -1835,33 +2897,30 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   className="w-32 border border-gray-400 text-right px-2 py-0.5 font-mono font-black text-rose-700 bg-white" 
                 />
               </div>
-            </div>
-          </LegacyFieldset>
-        </div>
+            </div> */}
+          {/* </LegacyFieldset> 
+        </div>*/}
 
-        {/* UNIFIED RETRO TASK ACTION BAR */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-1 shrink-0">
+        {/* <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-1 shrink-0">
           <LegacyButton icon={Plus} label="Clear (F2)" onClick={clearForm} />
           <div className="flex-1" />
           <LegacyButton icon={X} label="Exit (Esc)" onClick={onCancel} />
           <LegacyButton icon={Save} label={loading ? "SAVING..." : "SAVE ARRIVAL"} active={!loading} onClick={handleSave} />
-        </div>
-
-        {/* Dynamic Global Datalist for Brand/Markas Auto-Complete Dropdown */}
+        </div>*/}
+        <div>
         <datalist id="markas_list">
           {markas.map((m, mIdx) => (
             <option key={m.id || mIdx} value={m.marka_name} />
           ))}
         </datalist>
 
-        {/* Dynamic Global Datalist for Agencies Auto-Complete Dropdown */}
         <datalist id="agencies_list">
           {agencies.map((a, aIdx) => (
             <option key={a.id || aIdx} value={a.agency_name} />
           ))}
         </datalist>
 
-      </div>
+      </div> 
     </LegacyLayout>
   );
 }
