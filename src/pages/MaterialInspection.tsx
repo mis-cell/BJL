@@ -2901,149 +2901,1129 @@ export default function MaterialInspection({
             </div>
           </div>
           
+          
           <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
 
-  {/* Header */}
-  <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
-    <h2 className="text-sm font-bold text-white tracking-wide">
-      Material Receipt Information
-    </h2>
-  </div>
+            {/* Header */}
+            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
+              <h2 className="text-sm font-bold text-white tracking-wide">
+                Material Receipt Information
+              </h2>
+            </div>
 
-  {/* Body */}
-  <div className="p-5">
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
+            {/* Body */}
+            <div className="p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
 
-      {/* M.R. No */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          M. R. No.
-        </label>
-        <input
-          type="text"
-          name="mr_no"
-          value={masterData.mr_no}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
-        />
-      </div>
+                {/* M.R. No */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    M. R. No.
+                  </label>
+                  <input
+                    type="text"
+                    name="mr_no"
+                    value={masterData.mr_no}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
 
-      {/* M.R. Date */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          M. R. Date
-        </label>
-        <input
-          type="date"
-          name="mr_date"
-          value={masterData.mr_date}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
-        />
-      </div>
+                {/* M.R. Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    M. R. Date
+                  </label>
+                  <input
+                    type="date"
+                    name="mr_date"
+                    value={masterData.mr_date}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
 
-      {/* Temporary Arrival No */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          Temporary Arrival No.
-        </label>
+                {/* Temporary Arrival No */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    Temporary Arrival No.
+                  </label>
 
-        <SupabaseAutoCompleteInput
-          label="Temporary Arrival No."
-          name="arrival_no"
-          fieldColumn="temporary_arrival_no"
-          value={masterData.arrival_no}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          onSelectOption={(_val, record) => {
-            if (record) handleAutoFillFromVoucher(record);
-          }}
-          placeholder="Temporary Arrival Number"
-          savedInspections={savedInspections}
-        />
-      </div>
+                  <SupabaseAutoCompleteInput
+                    label="Temporary Arrival No."
+                    name="arrival_no"
+                    fieldColumn="temporary_arrival_no"
+                    value={masterData.arrival_no}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    onSelectOption={(_val, record) => {
+                      if (record) handleAutoFillFromVoucher(record);
+                    }}
+                    placeholder="Temporary Arrival Number"
+                    savedInspections={savedInspections}
+                  />
+                </div>
 
-      {/* Arrival Date */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          Arrival Date
-        </label>
-        <input
-          type="date"
-          name="arrival_date"
-          value={masterData.arrival_date}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
-        />
-      </div>
+                {/* Arrival Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    Arrival Date
+                  </label>
+                  <input
+                    type="date"
+                    name="arrival_date"
+                    value={masterData.arrival_date}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
 
-      {/* Lorry Number */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold text-amber-900">
-          Lorry Number
-        </label>
-        <input
-          type="text"
-          name="lorry_number"
-          value={masterData.lorry_number || ""}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          className="flex-1 h-8 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs"
-        />
-      </div>
+                {/* Lorry Number */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold text-amber-900">
+                    Lorry Number
+                  </label>
+                  <input
+                    type="text"
+                    name="lorry_number"
+                    value={masterData.lorry_number || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs"
+                  />
+                </div>
 
-      <div></div>
+                <div></div>
 
-      {/* P.O. No */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          P. O. No.
-        </label>
+                {/* P.O. No */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    P. O. No.
+                  </label>
 
-        <SupabaseAutoCompleteInput
-          label="P. O. No."
-          name="po_no"
-          fieldColumn="po_no"
-          value={masterData.po_no}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          onSelectOption={(_val, record) => {
-            if (record) handleAutoFillFromVoucher(record);
-          }}
-          placeholder="P. O. Number"
-          savedInspections={savedInspections}
-        />
-      </div>
+                  <SupabaseAutoCompleteInput
+                    label="P. O. No."
+                    name="po_no"
+                    fieldColumn="po_no"
+                    value={masterData.po_no}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    onSelectOption={(_val, record) => {
+                      if (record) handleAutoFillFromVoucher(record);
+                    }}
+                    placeholder="P. O. Number"
+                    savedInspections={savedInspections}
+                  />
+                </div>
 
-      {/* P.O. Date */}
-      <div className="flex items-center gap-3">
-        <label className="w-36 text-[11px] font-bold">
-          P. O. Date
-        </label>
-        <input
-          type="date"
-          name="po_date"
-          value={masterData.po_date}
-          disabled={!isEditMode}
-          onChange={handleMasterChange}
-          className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
-        />
-      </div>
+                {/* P.O. Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-36 text-[11px] font-bold">
+                    P. O. Date
+                  </label>
+                  <input
+                    type="date"
+                    name="po_date"
+                    value={masterData.po_date}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
 
-    </div>
-  </div>
-</div>
+              </div>
+            </div>
+          </div>
+          {/* ================= Broker & Supplier Information ================= */}
+          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
+
+            {/* Header */}
+            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
+              <h2 className="text-sm font-bold text-white tracking-wide">
+                Broker & Supplier Information
+              </h2>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+
+              {/* Broker Name */}
+              <div className="flex items-center gap-4">
+                <label className="w-44 text-[11px] font-bold text-slate-700">
+                  Broker Name
+                </label>
+
+                <input
+                  type="text"
+                  name="broker_name"
+                  list="brokersList"
+                  value={masterData.broker_name}
+                  disabled={!isEditMode}
+                  onChange={handleMasterChange}
+                  placeholder="Enter or Select Broker Name"
+                  className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-xs font-semibold uppercase bg-white focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
+                />
+              </div>
+
+              {/* Supplier Name */}
+              <div className="flex items-center gap-4">
+                <label className="w-44 text-[11px] font-bold text-slate-700">
+                  Supplier Name
+                </label>
+
+                <input
+                  type="text"
+                  name="supplier_name"
+                  list="suppliersList"
+                  value={masterData.supplier_name}
+                  disabled={!isEditMode}
+                  onChange={handleMasterChange}
+                  placeholder="Enter or Select Jute Merchant Supplier"
+                  className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-xs font-semibold uppercase bg-white focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* ================= Moisture & Technical Parameters ================= */}
+          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
+
+            {/* Header */}
+            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
+              <h2 className="text-sm font-bold text-white tracking-wide">
+                Moisture & Technical Parameters
+              </h2>
+            </div>
+
+            {/* Body */}
+            <div className="p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
+
+                {/* LEFT SIDE */}
+
+                {/* Actual Moisture */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Actual Moisture %
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="actual_moisture"
+                    value={masterData.actual_moisture || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="0.0"
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
+                  />
+                </div>
+
+                {/* Claim Moisture */}
+                {(() => {
+                  const currentVal = Number(masterData.claim_moisture ?? 0);
+
+                  const isOverridden =
+                    !adminApproved.claim_moisture &&
+                    (
+                      overriddenFields.claim_moisture ||
+                      Math.abs(currentVal - autoValues.claim_moisture) > 0.05
+                    );
+
+                  return (
+                    <div className="flex items-center gap-3 relative">
+
+                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
+                        <span>Claim Moisture %</span>
+
+                        {isOverridden && (
+                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
+                            Manual
+                          </span>
+                        )}
+                      </label>
+
+                      <div
+                        className="relative flex-1 flex items-center"
+                        onMouseEnter={() => setHoveredField("claim_moisture")}
+                        onMouseLeave={() => setHoveredField(null)}
+                      >
+
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="claim_moisture"
+                          value={masterData.claim_moisture ?? ""}
+                          disabled={!isEditMode}
+                          onChange={handleMasterChange}
+                          placeholder="0.0"
+                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
+                            isOverridden
+                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
+                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
+                          }`}
+                        />
+
+                        {isOverridden && (
+                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
+                            📌
+                          </span>
+                        )}
+
+                        {isOverridden &&
+                          hoveredField === "claim_moisture" && (
+                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
+
+                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
+                                <span className="font-black text-red-700">
+                                  📌 Sticky Note: Manual Entry
+                                </span>
+
+                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
+                                  Modified
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+
+                                <div className="flex justify-between">
+                                  <span>Past Automatic Value</span>
+
+                                  <span className="font-bold text-blue-900">
+                                    {autoValues.claim_moisture}%
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                  <span>Current Manual Entry</span>
+
+                                  <span className="font-bold text-red-700">
+                                    {masterData.claim_moisture}%
+                                  </span>
+                                </div>
+
+                              </div>
+
+                              <div className="mt-3 flex gap-2">
+
+                                <button
+                                  type="button"
+                                  onClick={() => revertToAuto("claim_moisture")}
+                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
+                                >
+                                  Reset Auto ({autoValues.claim_moisture}%)
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => markAsNormal("claim_moisture")}
+                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
+                                >
+                                  Accept Normal
+                                </button>
+
+                              </div>
+
+                            </div>
+                          )}
+
+                      </div>
+
+                    </div>
+                  );
+                })()}
+
+                {/* Actual Dust */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Actual Dust %
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="actual_dust"
+                    value={masterData.actual_dust || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="0.0"
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
+                  />
+                </div>
+
+                {/* ================= Claim Dust ================= */}
+                {(() => {
+                  const currentVal = Number(masterData.claim_dust ?? 0);
+
+                  const isOverridden =
+                    !adminApproved.claim_dust &&
+                    (
+                      overriddenFields.claim_dust ||
+                      Math.abs(currentVal - autoValues.claim_dust) > 0.05
+                    );
+
+                  return (
+                    <div className="flex items-center gap-3 relative">
+
+                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
+                        <span>Claim Dust %</span>
+
+                        {isOverridden && (
+                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
+                            Manual
+                          </span>
+                        )}
+                      </label>
+
+                      <div
+                        className="relative flex-1 flex items-center"
+                        onMouseEnter={() => setHoveredField("claim_dust")}
+                        onMouseLeave={() => setHoveredField(null)}
+                      >
+
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="claim_dust"
+                          value={masterData.claim_dust ?? ""}
+                          disabled={!isEditMode}
+                          onChange={handleMasterChange}
+                          placeholder="0.0"
+                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
+                            isOverridden
+                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
+                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
+                          }`}
+                        />
+
+                        {isOverridden && (
+                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
+                            📌
+                          </span>
+                        )}
+
+                        {isOverridden &&
+                          hoveredField === "claim_dust" && (
+                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
+
+                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
+                                <span className="font-black text-red-700">
+                                  📌 Sticky Note: Manual Entry
+                                </span>
+
+                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
+                                  Modified
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+
+                                <div className="flex justify-between">
+                                  <span>Past Automatic Value</span>
+
+                                  <span className="font-bold text-blue-900">
+                                    {autoValues.claim_dust}%
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                  <span>Current Manual Entry</span>
+
+                                  <span className="font-bold text-red-700">
+                                    {masterData.claim_dust}%
+                                  </span>
+                                </div>
+
+                              </div>
+
+                              <div className="mt-3 flex gap-2">
+
+                                <button
+                                  type="button"
+                                  onClick={() => revertToAuto("claim_dust")}
+                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
+                                >
+                                  Reset Auto ({autoValues.claim_dust}%)
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => markAsNormal("claim_dust")}
+                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
+                                >
+                                  Accept Normal
+                                </button>
+
+                              </div>
+
+                            </div>
+                          )}
+
+                      </div>
+
+                    </div>
+                  );
+                })()}
+
+                {/* Actual NCV */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Actual NCV %
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="actual_ncv"
+                    value={masterData.actual_ncv || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="0.0"
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
+                  />
+                </div>
+
+                {/* ================= Claim NCV ================= */}
+                {(() => {
+                  const currentVal = Number(masterData.claim_ncv ?? 0);
+
+                  const isOverridden =
+                    !adminApproved.claim_ncv &&
+                    (
+                      overriddenFields.claim_ncv ||
+                      Math.abs(currentVal - autoValues.claim_ncv) > 0.05
+                    );
+
+                  return (
+                    <div className="flex items-center gap-3 relative">
+
+                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
+                        <span>Claim NCV %</span>
+
+                        {isOverridden && (
+                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
+                            Manual
+                          </span>
+                        )}
+                      </label>
+
+                      <div
+                        className="relative flex-1 flex items-center"
+                        onMouseEnter={() => setHoveredField("claim_ncv")}
+                        onMouseLeave={() => setHoveredField(null)}
+                      >
+
+                        <input
+                          type="number"
+                          step="0.1"
+                          name="claim_ncv"
+                          value={masterData.claim_ncv ?? ""}
+                          disabled={!isEditMode}
+                          onChange={handleMasterChange}
+                          placeholder="0.0"
+                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
+                            isOverridden
+                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
+                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
+                          }`}
+                        />
+
+                        {isOverridden && (
+                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
+                            📌
+                          </span>
+                        )}
+
+                        {isOverridden &&
+                          hoveredField === "claim_ncv" && (
+                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
+
+                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
+                                <span className="font-black text-red-700">
+                                  📌 Sticky Note: Manual Entry
+                                </span>
+
+                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
+                                  Modified
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+
+                                <div className="flex justify-between">
+                                  <span>Past Automatic Value</span>
+
+                                  <span className="font-bold text-blue-900">
+                                    {autoValues.claim_ncv}%
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                  <span>Current Manual Entry</span>
+
+                                  <span className="font-bold text-red-700">
+                                    {masterData.claim_ncv}%
+                                  </span>
+                                </div>
+
+                              </div>
+
+                              <div className="mt-3 flex gap-2">
+
+                                <button
+                                  type="button"
+                                  onClick={() => revertToAuto("claim_ncv")}
+                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
+                                >
+                                  Reset Auto ({autoValues.claim_ncv}%)
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => markAsNormal("claim_ncv")}
+                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
+                                >
+                                  Accept Normal
+                                </button>
+
+                              </div>
+
+                            </div>
+                          )}
+
+                      </div>
+
+                    </div>
+                  );
+                })()}
+
+                {/* Detention Days */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Detention Days
+                  </label>
+
+                  <input
+                    type="number"
+                    name="detention_days"
+                    value={masterData.detention_days || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
+                  />
+                </div>
+
+                {/* Unloading Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Unloading Date
+                  </label>
+
+                  <input
+                    type="date"
+                    name="unloading_date"
+                    value={masterData.unloading_date || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
+
+                {/* Mill P.O. No. */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Mill P.O. No.
+                  </label>
+
+                  <input
+                    type="text"
+                    name="mill_po_no"
+                    value={masterData.mill_po_no || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
+
+                {/* Mill P.O. Date */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold">
+                    Mill P.O. Date
+                  </label>
+
+                  <input
+                    type="date"
+                    name="mill_po_date"
+                    value={masterData.mill_po_date || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ================= Special Print & Remarks ================= */}
+          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md">
+            <div className="p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+
+                {/* MR. Spcl Print */}
+                <div className="flex items-center gap-3">
+                  <label className="w-40 text-[11px] font-bold text-slate-700">
+                    MR. Spcl Print
+                  </label>
+
+                  <input
+                    type="text"
+                    name="mr_spcl_print"
+                    value={masterData.mr_spcl_print || ""}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="Enter Special Print"
+                    className="flex-1 h-8 rounded-md border border-gray-300 px-3 text-xs font-semibold focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
+                  />
+                </div>
+
+                {/* Empty column for alignment */}
+                <div></div>
+
+                {/* Remarks */}
+                <div className="lg:col-span-2 flex items-start gap-3">
+                  <label className="w-40 text-[11px] font-bold text-slate-700 pt-2">
+                    Remarks
+                  </label>
+
+                  <textarea
+                    name="remarks"
+                    rows={3}
+                    value={masterData.remarks}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="Inspection remarks, dampness details, parameters observation, log details..."
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold resize-none focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
+                  />
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* ========================= INSPECTION DETAILS ========================= */}
+          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
+
+            {/* Section Header */}
+            <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-[#174C2C] to-[#1F6B3D] border-b border-[#0F351E]">
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+                  Inspection Details
+                </h2>
+                <p className="text-[10px] text-emerald-100 mt-0.5">
+                  Grade • Area • Agency • Marka • Quantity • Challan Details
+                </p>
+              </div>
+            </div>
+
+            {/* Table Body */}
+            <div className="p-4 bg-slate-50 overflow-x-auto">
+              {/* GRID TABLE */}
+              <table className="w-full border-collapse border border-slate-300 min-w-[1000px]">
+                <thead className="bg-[#0c48a1] text-white text-[10px] uppercase font-bold text-center  divide-y divide-blue-800">
+                  <tr className="divide-x divide-blue-800">
+                    <th rowSpan={2} className="px-1.5 py-1.5 w-12 text-center">
+                      Srl No.
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[90px] text-left"
+                    >
+                      Arrival Grade
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="px-2 py-1 text-center border-b border-blue-900"
+                    >
+                      Stock Grade
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[120px] text-left"
+                    >
+                      Area
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[120px] text-left"
+                    >
+                      Agency
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[120px] text-left"
+                    >
+                      Marka
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[85px] text-center"
+                    >
+                      Crop Year
+                    </th>
+                    <th
+                      rowSpan={2}
+                      className="px-2 py-1.5 min-w-[70px] text-left"
+                    >
+                      Lot
+                    </th>
+                    <th rowSpan={2} className="px-2 py-1.5 w-24 text-right">
+                      Quantity
+                    </th>
+                    <th rowSpan={2} className="px-2 py-1.5 w-20 text-center">
+                      Unit
+                    </th>
+                    <th rowSpan={2} className="px-2 py-1.5 w-28 text-right">
+                      Challan Gross Wt
+                    </th>
+                  </tr>
+                  <tr className="divide-x divide-blue-800 text-center">
+                    <th className="px-2 py-1 min-w-[75px] text-left">Code</th>
+                    <th className="px-2 py-1 min-w-[140px] text-left">Name</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-300 text-[11px] font-semibold">
+                  {detailsList.map((row, index) => (
+                    <tr
+                      key={index}
+                      className="hover:bg-blue-50/50 bg-white transition-colors"
+                    >
+                      {/* Srl No (with double click detection to trigger single record clear) */}
+                      <td
+                        onDoubleClick={() => handleRowDoubleClick(index)}
+                        className="px-1.5 py-1 text-center font-bold text-red-900 bg-red-50/60 border-r border-slate-300 cursor-cell "
+                        title="Double-click to clear row"
+                      >
+                        {row.srl_no}
+                      </td>
+
+                      {/* Arrival Grade */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          list="gradesList"
+                          value={row.arrival_grade}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(
+                              index,
+                              "arrival_grade",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none font-bold text-slate-805 disabled:text-slate-500 uppercase"
+                          placeholder="Grade"
+                        />
+                      </td>
+
+                      {/* Stock Grade Code */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          list="gradesList"
+                          value={row.stock_grade_code}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(
+                              index,
+                              "stock_grade_code",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none font-bold text-indigo-900 disabled:text-slate-500 uppercase"
+                          placeholder="Code"
+                        />
+                      </td>
+
+                      {/* Stock Grade Name */}
+                      <td className="p-1 border-r border-slate-300 bg-slate-50/60">
+                        <input
+                          type="text"
+                          value={row.stock_grade_name}
+                          readOnly
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-500 font-medium cursor-not-allowed uppercase"
+                          placeholder="Auto loaded grade name"
+                        />
+                      </td>
+
+                      {/* Area */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          list="areasList"
+                          value={row.area}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "area", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
+                          placeholder="Area block"
+                        />
+                      </td>
+
+                      {/* Agency */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          list="agenciesList"
+                          value={row.agency}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "agency", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
+                          placeholder="Select Agency"
+                        />
+                      </td>
+
+                      {/* Marka */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          list="markasList"
+                          value={row.marka}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "marka", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
+                          placeholder="Marka code"
+                        />
+                      </td>
+
+                      {/* Crop Year */}
+                      <td className="p-0.5 border-r border-slate-300">
+                        <input
+                          type="text"
+                          value={row.crop_year || ""}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "crop_year", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-[10px] font-bold text-center uppercase disabled:text-slate-500"
+                          placeholder="2026-27"
+                        />
+                      </td>
+
+                      {/* Lot */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="text"
+                          value={row.lot}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "lot", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-center uppercase"
+                          placeholder="Lot No"
+                        />
+                      </td>
+
+                      {/* Quantity */}
+                      <td className="p-1 border-r border-slate-300">
+                        <input
+                          type="number"
+                          value={row.quantity}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "quantity", e.target.value)
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-right font-bold text-slate-800 disabled:text-slate-500"
+                          placeholder="0"
+                        />
+                      </td>
+
+                      {/* Unit */}
+                      <td className="p-0.5 border-r border-slate-300">
+                        <select
+                          value={row.unit || 'BALES'}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(index, "unit", e.target.value)
+                          }
+                          className="w-full bg-transparent py-0.5 text-center font-bold text-[10px] cursor-pointer"
+                        >
+                          {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Challan Gross Wt. */}
+                      <td className="p-1">
+                        <input
+                          type="number"
+                          value={row.challan_gross_wt}
+                          disabled={!isEditMode}
+                          onChange={(e) =>
+                            handleDetailChange(
+                              index,
+                              "challan_gross_wt",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-transparent px-1 py-0.5 outline-none text-right font-bold text-slate-800 disabled:text-slate-500"
+                          placeholder="0.0"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Note banner double-click cleared notification */}
+              <div className="bg-sky-50 border border-sky-300 px-3 py-2 text-stone-900 border-dashed text-[10.5px] mt-2 text-center rounded flex items-center justify-center gap-1.5">
+                <Info className="h-4 w-4 text-sky-600 animate-bounce" />
+                <span>
+                  To Delete a Single Record Double Click on Srl No. ( Inspection
+                  Details )
+                </span>
+                {isEditMode && (
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleAddNewGridRow}
+                      className="bg-[#0d47a1] hover:bg-blue-900 text-white px-2 py-0.5 text-[9.5px] uppercase font-black tracking-tight rounded border border-blue-600 active:scale-95 shadow-sm flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-emerald-300" /> [+] Spawn Row
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteLastGridRow}
+                      className="bg-rose-800 hover:bg-rose-900 text-white px-2 py-0.5 text-[9.5px] uppercase font-black tracking-tight rounded border border-rose-900 active:scale-95 shadow-sm flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-200" /> [-] Delete Row
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ======================= ACTION BUTTONS ======================= */}
+          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-lg">
+
+            <div className="p-4 flex flex-wrap justify-center items-center gap-3">
+
+              {/* Add Button */}
+              <button
+                type="button"
+                onClick={handleAddAction}
+                disabled={loading}
+                className="min-w-[130px] bg-white hover:bg-emerald-50 border border-white text-emerald-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </button>
+
+              {/* Edit & Delete */}
+              {canEditOrDelete() && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleEditAction}
+                    disabled={loading || isEditMode}
+                    className="min-w-[130px] bg-white hover:bg-blue-50 border border-white text-blue-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteAction}
+                    disabled={loading || !masterData.mr_no}
+                    className="min-w-[130px] bg-white hover:bg-rose-50 border border-white text-rose-700 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </>
+              )}
+
+              {/* Print */}
+              <button
+                type="button"
+                onClick={() => handlePreparePrintInspection(masterData)}
+                disabled={loading || !masterData.mr_no}
+                className="min-w-[140px] bg-white hover:bg-emerald-50 border border-white text-emerald-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <Printer className="h-4 w-4" />
+                Print Form
+              </button>
+
+              {/* Save */}
+              <button
+                type="button"
+                onClick={() => handleSaveAction()}
+                disabled={loading || !isEditMode}
+                className="min-w-[140px] bg-emerald-600 hover:bg-emerald-700 border border-emerald-800 text-white font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <Save className="h-4 w-4" />
+                {loading ? "Processing..." : "Save"}
+              </button>
+
+              {/* Cancel */}
+              <button
+                type="button"
+                onClick={handleCancelAction}
+                disabled={loading}
+                className="min-w-[130px] bg-white hover:bg-amber-50 border border-white text-amber-700 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+
+              {/* Exit */}
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode("dashboard");
+                  loadSavedInspectionsList();
+                }}
+                disabled={loading}
+                className="min-w-[130px] bg-white hover:bg-slate-100 border border-white text-slate-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <XCircle className="h-4 w-4 text-rose-600" />
+                Exit
+              </button>
+
+              {/* View Register */}
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode("dashboard");
+                  loadSavedInspectionsList();
+                }}
+                disabled={loading}
+                className="min-w-[150px] bg-amber-500 hover:bg-amber-400 border border-amber-600 text-[#174C2C] font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+              >
+                <Search className="h-4 w-4" />
+                View Register
+              </button>
+
+            </div>
+          </div>
 
 
         </div>
 
-        <div className="bg-white border-2 border-slate-300 shadow-xl rounded-md overflow-hidden">
+        {/* <div className="bg-white border-2 border-slate-300 shadow-xl rounded-md overflow-hidden"> */}
           {/* Header Bar with slanted Yellow stripes on blue background */}
-          <div className="relative bg-[#0d47a1] text-white py-3.5 text-center border-b-4 border-yellow-400  overflow-hidden">
-            {/* Slanted lines left */}
+          {/* <div className="relative bg-[#0d47a1] text-white py-3.5 text-center border-b-4 border-yellow-400  overflow-hidden">
             <div
               className="absolute left-0 top-0 h-full w-24 opacity-90 pointer-events-none"
               style={{
@@ -3052,7 +4032,6 @@ export default function MaterialInspection({
               }}
             />
 
-            {/* Slanted lines right */}
             <div
               className="absolute right-0 top-0 h-full w-24 opacity-90 pointer-events-none"
               style={{
@@ -3064,14 +4043,12 @@ export default function MaterialInspection({
             <h2 className="text-lg md:text-xl font-black uppercase tracking-widest relative z-10 drop-shadow-[1px_2px_2px_rgba(0,0,0,0.8)]">
               Mill Inspection Information
             </h2>
-          </div>
+          </div> */}
 
           {/* FORM GRID LAYOUT */}
-          <div className="p-4 bg-slate-50/50">
+          {/* <div className="p-4 bg-slate-50/50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2 text-[12px]">
-              {/* Left Column blocks */}
               <div className="space-y-2">
-                {/* M. R. No */}
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     M. R. No.
@@ -3086,8 +4063,6 @@ export default function MaterialInspection({
                     className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-black text-blue-900 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
                   />
                 </div>
-
-                {/* Temporary Arrival No */}
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     Temporary Arrival No.
@@ -3109,7 +4084,7 @@ export default function MaterialInspection({
                   />
                 </div>
 
-                {/* Lorry Number */}
+                
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0 text-amber-900">
                     Lorry Number
@@ -3125,7 +4100,7 @@ export default function MaterialInspection({
                   />
                 </div>
 
-                {/* P. O No */}
+               
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     P. O. No.
@@ -3148,9 +4123,8 @@ export default function MaterialInspection({
                 </div>
               </div>
 
-              {/* Right Column blocks */}
+              
               <div className="space-y-2">
-                {/* M. R. Date */}
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     M. R. Date
@@ -3165,7 +4139,7 @@ export default function MaterialInspection({
                   />
                 </div>
 
-                {/* Arrival Date */}
+                
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     Arrival Date
@@ -3180,7 +4154,7 @@ export default function MaterialInspection({
                   />
                 </div>
 
-                {/* P.O Date */}
+               
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     P.O Date
@@ -3196,9 +4170,8 @@ export default function MaterialInspection({
                 </div>
               </div>
 
-              {/* Spanning full width elements */}
+              
               <div className="col-span-1 md:col-span-2 space-y-2 mt-2">
-                {/* Broker Name */}
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     Broker Name
@@ -3215,7 +4188,7 @@ export default function MaterialInspection({
                   />
                 </div>
 
-                {/* Supplier Name */}
+               
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     Supplier Name
@@ -3233,11 +4206,9 @@ export default function MaterialInspection({
                 </div>
               </div>
 
-              {/* Moisture & Technical Parameters rows split evenly */}
+              
               <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-12 mt-2 border-t border-slate-200 pt-3">
-                {/* Moisture %, Dust %, NCV Left elements */}
                 <div className="space-y-2">
-                  {/* Actual Moisture */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Actual Moisture %
@@ -3253,7 +4224,6 @@ export default function MaterialInspection({
                       className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-bold text-center focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                     />
                   </div>
-                  {/* Actual Dust */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Actual Dust %
@@ -3269,7 +4239,6 @@ export default function MaterialInspection({
                       className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-bold text-center focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                     />
                   </div>
-                  {/* Actual NCV */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Actual NCV %
@@ -3285,7 +4254,6 @@ export default function MaterialInspection({
                       className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-bold text-center focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                     />
                   </div>
-                  {/* Detention Days */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Detention Days
@@ -3300,7 +4268,6 @@ export default function MaterialInspection({
                       className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-bold text-center focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                     />
                   </div>
-                  {/* Mill P. O. No. */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Mill P. O. No.
@@ -3317,9 +4284,7 @@ export default function MaterialInspection({
                   </div>
                 </div>
 
-                {/* Moisture %, Dust %, NCV Right elements */}
                 <div className="space-y-2">
-                  {/* Claim Moisture */}
                   {(() => {
                     const currentVal = Number(masterData.claim_moisture ?? 0);
                     const isOverridden = !adminApproved.claim_moisture && (overriddenFields.claim_moisture || Math.abs(currentVal - autoValues.claim_moisture) > 0.05);
@@ -3357,7 +4322,6 @@ export default function MaterialInspection({
                               📌
                             </span>
                           )}
-                          {/* Sticky note tooltip on hover */}
                           {isOverridden && hoveredField === "claim_moisture" && (
                             <div className="absolute bottom-full mb-1 -left-12 w-80 z-50 bg-amber-100 border-2 border-amber-400 text-amber-950 text-[11px] p-2 rounded-lg shadow-2xl animate-in fade-in zoom-in duration-150 pointer-events-auto">
                               <div className="flex items-center justify-between font-black border-b border-amber-300 pb-1 mb-1 text-amber-900">
@@ -3401,7 +4365,6 @@ export default function MaterialInspection({
                     );
                   })()}
 
-                  {/* Claim Dust */}
                   {(() => {
                     const currentVal = Number(masterData.claim_dust ?? 0);
                     const isOverridden = !adminApproved.claim_dust && (overriddenFields.claim_dust || Math.abs(currentVal - autoValues.claim_dust) > 0.05);
@@ -3439,7 +4402,6 @@ export default function MaterialInspection({
                               📌
                             </span>
                           )}
-                          {/* Sticky note tooltip on hover */}
                           {isOverridden && hoveredField === "claim_dust" && (
                             <div className="absolute bottom-full mb-1 -left-12 w-80 z-50 bg-amber-100 border-2 border-amber-400 text-amber-950 text-[11px] p-2 rounded-lg shadow-2xl animate-in fade-in zoom-in duration-150 pointer-events-auto">
                               <div className="flex items-center justify-between font-black border-b border-amber-300 pb-1 mb-1 text-amber-900">
@@ -3482,8 +4444,6 @@ export default function MaterialInspection({
                       </div>
                     );
                   })()}
-
-                  {/* Claim NCV */}
                   {(() => {
                     const currentVal = Number(masterData.claim_ncv ?? 0);
                     const isOverridden = !adminApproved.claim_ncv && (overriddenFields.claim_ncv || Math.abs(currentVal - autoValues.claim_ncv) > 0.05);
@@ -3521,7 +4481,6 @@ export default function MaterialInspection({
                               📌
                             </span>
                           )}
-                          {/* Sticky note tooltip on hover */}
                           {isOverridden && hoveredField === "claim_ncv" && (
                             <div className="absolute bottom-full mb-1 -left-12 w-80 z-50 bg-amber-100 border-2 border-amber-400 text-amber-950 text-[11px] p-2 rounded-lg shadow-2xl animate-in fade-in zoom-in duration-150 pointer-events-auto">
                               <div className="flex items-center justify-between font-black border-b border-amber-300 pb-1 mb-1 text-amber-900">
@@ -3564,7 +4523,6 @@ export default function MaterialInspection({
                       </div>
                     );
                   })()}
-                  {/* Unloading Date */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Unloading Date
@@ -3578,7 +4536,6 @@ export default function MaterialInspection({
                       className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                     />
                   </div>
-                  {/* Mill P.O Date */}
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] font-bold w-32 shrink-0">
                       Mill P.O Date
@@ -3595,9 +4552,8 @@ export default function MaterialInspection({
                 </div>
               </div>
 
-              {/* Special print and general remarks section */}
+              
               <div className="col-span-1 md:col-span-2 space-y-2 mt-2 pt-2 border-t border-slate-200">
-                {/* Special print */}
                 <div className="flex items-center gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0">
                     MR. Spcl Print
@@ -3612,8 +4568,6 @@ export default function MaterialInspection({
                     className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
                   />
                 </div>
-
-                {/* Remarks */}
                 <div className="flex items-start gap-2">
                   <label className="text-[11px] font-bold w-32 shrink-0 pt-1">
                     Remarks
@@ -3630,16 +4584,14 @@ export default function MaterialInspection({
                 </div>
               </div>
             </div>{" "}
-            {/* GRID END */}
-          </div>
+          </div> */}
 
           {/* INSPECTION DETAILS PARTITION */}
-          <div className="relative bg-[#0d47a1] text-white py-2 text-center uppercase tracking-widest font-black text-xs  border-t-2 border-yellow-400 mt-4 shadow flex items-center justify-center">
+          {/* <div className="relative bg-[#0d47a1] text-white py-2 text-center uppercase tracking-widest font-black text-xs  border-t-2 border-yellow-400 mt-4 shadow flex items-center justify-center">
             Inspection Details
-          </div>
+          </div> */}
 
-          <div className="p-4 bg-slate-50 overflow-x-auto">
-            {/* GRID TABLE */}
+          {/* <div className="p-4 bg-slate-50 overflow-x-auto">
             <table className="w-full border-collapse border border-slate-300 min-w-[1000px]">
               <thead className="bg-[#0c48a1] text-white text-[10px] uppercase font-bold text-center  divide-y divide-blue-800">
                 <tr className="divide-x divide-blue-800">
@@ -3709,7 +4661,6 @@ export default function MaterialInspection({
                     key={index}
                     className="hover:bg-blue-50/50 bg-white transition-colors"
                   >
-                    {/* Srl No (with double click detection to trigger single record clear) */}
                     <td
                       onDoubleClick={() => handleRowDoubleClick(index)}
                       className="px-1.5 py-1 text-center font-bold text-red-900 bg-red-50/60 border-r border-slate-300 cursor-cell "
@@ -3718,7 +4669,6 @@ export default function MaterialInspection({
                       {row.srl_no}
                     </td>
 
-                    {/* Arrival Grade */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3737,7 +4687,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Stock Grade Code */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3756,7 +4705,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Stock Grade Name */}
                     <td className="p-1 border-r border-slate-300 bg-slate-50/60">
                       <input
                         type="text"
@@ -3767,7 +4715,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Area */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3782,7 +4729,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Agency */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3797,7 +4743,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Marka */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3812,7 +4757,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Crop Year */}
                     <td className="p-0.5 border-r border-slate-300">
                       <input
                         type="text"
@@ -3826,7 +4770,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Lot */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="text"
@@ -3840,7 +4783,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Quantity */}
                     <td className="p-1 border-r border-slate-300">
                       <input
                         type="number"
@@ -3854,7 +4796,6 @@ export default function MaterialInspection({
                       />
                     </td>
 
-                    {/* Unit */}
                     <td className="p-0.5 border-r border-slate-300">
                       <select
                         value={row.unit || 'BALES'}
@@ -3870,7 +4811,6 @@ export default function MaterialInspection({
                       </select>
                     </td>
 
-                    {/* Challan Gross Wt. */}
                     <td className="p-1">
                       <input
                         type="number"
@@ -3892,7 +4832,6 @@ export default function MaterialInspection({
               </tbody>
             </table>
 
-            {/* Note banner double-click cleared notification */}
             <div className="bg-sky-50 border border-sky-300 px-3 py-2 text-stone-900 border-dashed text-[10.5px] mt-2 text-center rounded flex items-center justify-center gap-1.5">
               <Info className="h-4 w-4 text-sky-600 animate-bounce" />
               <span>
@@ -3918,11 +4857,10 @@ export default function MaterialInspection({
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* LOWER ACTION CONTROL PANEL DIRECTORY */}
-          <div className="bg-[#cbd5e1] border-t-2 border-slate-400 p-3.5 flex flex-wrap justify-center items-center gap-3 md:gap-4 ">
-            {/* Add Button */}
+          {/* <div className="bg-[#cbd5e1] border-t-2 border-slate-400 p-3.5 flex flex-wrap justify-center items-center gap-3 md:gap-4 ">
             <button
               type="button"
               onClick={handleAddAction}
@@ -3933,7 +4871,6 @@ export default function MaterialInspection({
               Add
             </button>
 
-            {/* Edit Button */}
             {canEditOrDelete() && (
               <>
                 <button
@@ -3946,7 +4883,6 @@ export default function MaterialInspection({
                   Edit
                 </button>
 
-                {/* Delete Button */}
                 <button
                   type="button"
                   onClick={handleDeleteAction}
@@ -3959,7 +4895,6 @@ export default function MaterialInspection({
               </>
             )}
 
-            {/* Print Button */}
             <button
               type="button"
               onClick={() => handlePreparePrintInspection(masterData)}
@@ -3970,7 +4905,6 @@ export default function MaterialInspection({
               Print Form
             </button>
 
-            {/* Save Button */}
             <button
               type="button"
               onClick={() => handleSaveAction()}
@@ -3981,7 +4915,6 @@ export default function MaterialInspection({
               {loading ? "Processing..." : "Save"}
             </button>
 
-            {/* Cancel Button */}
             <button
               type="button"
               onClick={handleCancelAction}
@@ -3992,7 +4925,6 @@ export default function MaterialInspection({
               Cancel
             </button>
 
-            {/* Exit Button */}
             <button
               type="button"
               onClick={() => {
@@ -4006,7 +4938,6 @@ export default function MaterialInspection({
               Exit
             </button>
 
-            {/* View Button */}
             <button
               type="button"
               onClick={() => {
@@ -4019,8 +4950,8 @@ export default function MaterialInspection({
               <Search className="h-4 w-4" />
               View Register
             </button>
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
 
         {/* --- DIALOG MODAL: HISTORIC INSPECTIONS SELECTOR --- */}
         <AnimatePresence>
