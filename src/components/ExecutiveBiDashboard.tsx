@@ -939,7 +939,7 @@ export default function ExecutiveBiDashboard({
         </div>
 
         {/* KPI 6: Average Moisture Level */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Avg Moisture Content</span>
             <div className="p-2 rounded-xl bg-cyan-50 text-cyan-800 border border-cyan-200">
@@ -956,7 +956,7 @@ export default function ExecutiveBiDashboard({
             </span>
             <span className="text-[#556952]">Standard</span>
           </div>
-        </div>
+        </div> */}
 
         {/* KPI 7: Daily Production Output */}
         <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
@@ -1013,7 +1013,7 @@ export default function ExecutiveBiDashboard({
         </div>
 
         {/* KPI 10: Quality Score rating */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Quality Rating</span>
             <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
@@ -1028,7 +1028,7 @@ export default function ExecutiveBiDashboard({
             <span className="text-amber-700 font-bold">Inspection</span>
             <span className="text-[#556952]">Passed</span>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* 5. POWER BI ANALYTICAL VISUALS GRID */}
