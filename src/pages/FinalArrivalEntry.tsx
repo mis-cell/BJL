@@ -7,7 +7,8 @@ import {
   RefreshCw,
   Archive,
   ChevronDown,
-  Layers
+  Layers,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
@@ -901,11 +902,1519 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
   return (
     <LegacyLayout title="FINAL M.R" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel}>
-      <div className="bg-[#eae7e1] text-xs font-sans min-h-full flex flex-col">
 
-        {/* ERP Sync Integration Bar */}
-        <div className="shrink-0 bg-[#f0ece6] border-b border-[#c0c0c0] px-4 py-1.5 flex flex-wrap gap-3 items-center text-xs text-gray-700">
-          {/* Temporary M.R Sync */}
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
+        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+          {/* Background Mill Illustration Artwork on the Right with light opacity */}
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
+            style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
+          />
+
+          <div className="relative z-10 flex flex-col gap-1">
+            <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
+              Final M.R Entry
+            </h2>
+          </div>
+
+          {/* Action Controls & Session Badge */}
+          <div className="relative z-10 flex items-center gap-3">
+            <button
+              type="button"
+              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              title="Back to Sauda Desk (Esc)"
+            >
+              <ArrowLeft className="h-4 w-4 text-amber-300" />
+              <span>Back </span>
+            </button>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-emerald-200/80 font-medium">Session:</span>
+              <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
+            </div>
+          </div>
+        </div>
+        {/* ================= M.R Source & Quality Inspection ================= */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-visible mt-4">
+
+          {/* Body */}
+          <div className="p-5">
+            <div className="grid grid-cols-1 gap-3">
+
+              {/* Temporary M.R Source */}
+              <div className="flex items-center gap-3">
+                <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  Temporary M.R Source
+                </label>
+
+                <div className="flex-1 flex gap-2">
+                  <select
+                    value={formData.temporary_arrival_no || ''}
+                    onChange={(e) => {
+                      handleInputChange(
+                        'temporary_arrival_no',
+                        e.target.value
+                      );
+
+                      if (e.target.value) {
+                        loadDetailsFromAmad(e.target.value);
+                      }
+                    }}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#174C2C]/30"
+                  >
+                    <option value="">
+                      -- Select Temporary M.R Record --
+                    </option>
+
+                    {temporaryArrivalList.map((tArr) => {
+                      const tNo =
+                        tArr.temporary_arrival_no ||
+                        tArr.amad_no ||
+                        tArr.arrival_no ||
+                        '';
+
+                      return (
+                        <option
+                          key={tArr.amad_id || tNo}
+                          value={tNo}
+                        >
+                          Temp MR #{tNo} — {tArr.supplier || 'No Supp'} (Lorry:{' '}
+                          {tArr.lorry_number ||
+                            tArr.lorry_no ||
+                            'N/A'}
+                          )
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      loadDetailsFromAmad(
+                        formData.temporary_arrival_no
+                      )
+                    }
+                    disabled={!formData.temporary_arrival_no}
+                    className="px-3 h-9 bg-[#174C2C] hover:bg-[#1C5130] text-amber-300 border border-[#0F351E] rounded-md text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    Load Temp M.R
+                  </button>
+                </div>
+              </div>
+
+              {/* Quality Inspection Sync */}
+              <div className="flex items-center gap-3">
+                <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  Quality Inspection Sync
+                </label>
+
+                <div className="flex-1 flex gap-2">
+                  <select
+                    value={formData.mr_no}
+                    onChange={(e) => {
+                      handleInputChange('mr_no', e.target.value);
+                      loadDetailsFromInspection(e.target.value);
+                    }}
+                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#174C2C]/30"
+                  >
+                    <option value="">
+                      -- Sync Quality Inspection Record --
+                    </option>
+
+                    {inspectionsList
+                      .filter((ins) => {
+                        const isCurrentlySelected =
+                          formData.mr_no &&
+                          String(formData.mr_no).trim().toUpperCase() ===
+                            String(ins.mr_no).trim().toUpperCase();
+
+                        const isCurrentlyLinked =
+                          initialData &&
+                          initialData.mr_no &&
+                          String(initialData.mr_no).trim().toUpperCase() ===
+                            String(ins.mr_no).trim().toUpperCase();
+
+                        if (
+                          isCurrentlySelected ||
+                          isCurrentlyLinked
+                        ) {
+                          return true;
+                        }
+
+                        const isAlreadySynced =
+                          existingArrivals.some(
+                            (arr) =>
+                              arr.mr_no &&
+                              String(arr.mr_no).trim().toUpperCase() ===
+                                String(ins.mr_no).trim().toUpperCase() &&
+                              (!initialData ||
+                                arr.final_arrival_id !==
+                                  initialData.final_arrival_id)
+                          );
+
+                        return !isAlreadySynced;
+                      })
+                      .map((ins) => (
+                        <option
+                          key={ins.mr_no}
+                          value={ins.mr_no}
+                        >
+                          MR: {ins.mr_no} - PO: {ins.po_no || 'N/A'} [Supp:{' '}
+                          {ins.supplier_name}]
+                        </option>
+                      ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      loadDetailsFromInspection(formData.mr_no)
+                    }
+                    disabled={!formData.mr_no}
+                    className="px-3 h-9 bg-[#174C2C] hover:bg-[#1C5130] text-amber-300 border border-[#0F351E] rounded-md text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    Force Sync
+                  </button>
+
+                  {formData.mr_no && (
+                    <span className="flex items-center px-3 h-9 bg-emerald-100 border border-emerald-400 rounded-md text-emerald-800 text-[10px] font-bold whitespace-nowrap">
+                      Linked MR #{formData.mr_no}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ================= Master Details Frame Mockup ================= */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-visible mt-4">
+          <div className="p-5">
+            <div className="space-y-2">
+
+              {/* Row 1 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Temporary M.R No
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.temporary_arrival_no || ''}
+                  onChange={(e) =>
+                    handleInputChange('temporary_arrival_no', e.target.value)
+                  }
+                  onBlur={() => {
+                    if (formData.temporary_arrival_no) {
+                      loadDetailsFromAmad(formData.temporary_arrival_no);
+                    }
+                  }}
+                  className="w-[140px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    loadDetailsFromAmad(formData.temporary_arrival_no)
+                  }
+                  disabled={!formData.temporary_arrival_no}
+                  className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[10px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
+                >
+                  Fetch
+                </button>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.temporary_arrival_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'temporary_arrival_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 2 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Arrival No
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.arrival_no || ''}
+                  onChange={(e) =>
+                    handleInputChange('arrival_no', e.target.value)
+                  }
+                  className="w-[180px] h-6 bg-white border border-[#ac0000] px-2 outline-none font-mono text-xs text-red-900 font-bold focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.date || ''}
+                  onChange={(e) =>
+                    handleInputChange('date', e.target.value)
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '100px' }}
+                >
+                  Mill P.O No.
+                </span>
+
+                <div className="relative flex items-center">
+                  <div className="relative w-[180px]">
+                    <input
+                      type="text"
+                      value={formData.po_no || ''}
+                      onChange={(e) =>
+                        handleInputChange('po_no', e.target.value)
+                      }
+                      onFocus={() => setShowPoDropdown(true)}
+                      onBlur={() =>
+                        setTimeout(() => setShowPoDropdown(false), 200)
+                      }
+                      autoComplete="new-password"
+                      placeholder="-- SELECT PO --"
+                      className="w-full h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50 uppercase pr-6"
+                    />
+
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-pointer text-gray-500 hover:text-black"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setShowPoDropdown(!showPoDropdown);
+                      }}
+                    >
+                      <ChevronDown size={14} />
+                    </div>
+
+                    {showPoDropdown && purchaseOrders.length > 0 && (
+                      <div className="absolute top-6 left-0 w-[400px] bg-white border border-gray-400 max-h-48 overflow-y-auto z-[9999] shadow-2xl">
+                        {purchaseOrders
+                          .filter(
+                            (po) =>
+                              !formData.po_no ||
+                              po.po_no
+                                .toLowerCase()
+                                .includes(
+                                  formData.po_no.toLowerCase()
+                                )
+                          )
+                          .map((po) => (
+                            <div
+                              key={po.po_id || po.po_no}
+                              className="px-2 py-1 text-xs font-mono cursor-pointer hover:bg-blue-100 uppercase border-b border-gray-100 last:border-b-0"
+                              onClick={() => {
+                                handleInputChange(
+                                  'po_no',
+                                  po.po_no
+                                );
+                                handleInputChange(
+                                  'supplier',
+                                  po.supplier ||
+                                    po.merchant ||
+                                    formData.supplier
+                                );
+                                handleInputChange(
+                                  'broker',
+                                  po.broker ||
+                                    formData.broker
+                                );
+                                handleInputChange(
+                                  'po_date',
+                                  po.po_date ||
+                                    formData.po_date
+                                );
+                                setShowPoDropdown(false);
+                              }}
+                            >
+                              <span className="font-bold text-indigo-900">
+                                {po.po_no}
+                              </span>{' '}
+                              -{' '}
+                              <span className="text-gray-600">
+                                {po.supplier || po.merchant}
+                              </span>{' '}
+                              <span className="text-gray-400">
+                                (
+                                {po.quantity ||
+                                  po.total_contract_mt}{' '}
+                                MT)
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.po_date || ''}
+                  onChange={(e) =>
+                    handleInputChange('po_date', e.target.value)
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  J.C.I
+                </span>
+
+                <select
+                  value={formData.jci || 'No'}
+                  onChange={(e) =>
+                    handleInputChange('jci', e.target.value)
+                  }
+                  className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none font-sans text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              {/* Row 3 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Challan Supplier
+                </span>
+
+                <input
+                  type="text"
+                  list="suppliers_dl"
+                  value={formData.challan_supplier || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'challan_supplier',
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 4 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Supplier
+                </span>
+
+                <input
+                  type="text"
+                  list="suppliers_dl"
+                  value={formData.supplier || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'supplier',
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 5 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Broker
+                </span>
+
+                <input
+                  type="text"
+                  list="brokers_dl"
+                  value={formData.broker || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'broker',
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 6 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Transporter Name
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.transporter_name || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'transporter_name',
+                      e.target.value
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-sans text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 7 */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span
+                    className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                    style={{ width: '180px' }}
+                  >
+                    Challan / Railway Receipt No.
+                  </span>
+
+                  <input
+                    type="text"
+                    value={formData.challan_rr_no || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'challan_rr_no',
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                  />
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.challan_rr_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'challan_rr_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 8 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Lorry Number
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.lorry_number || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'lorry_number',
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  placeholder="e.g. WB-25K-9901"
+                  className="w-[200px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 font-bold focus:border-black focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '80px' }}
+                >
+                  Pan No
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.pan_no || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'pan_no',
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 9 */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span
+                    className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                    style={{ width: '180px' }}
+                  >
+                    Consignment Note No.
+                  </span>
+
+                  <input
+                    type="text"
+                    value={formData.consignment_note_no || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'consignment_note_no',
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                  />
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.consignment_note_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'consignment_note_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 10 */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span
+                    className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                    style={{ width: '180px' }}
+                  >
+                    D.I. No.
+                  </span>
+
+                  <input
+                    type="text"
+                    value={formData.di_no || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'di_no',
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                  />
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.di_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'di_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 11 */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span
+                    className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                    style={{ width: '180px' }}
+                  >
+                    Invoice No.
+                  </span>
+
+                  <input
+                    type="text"
+                    value={formData.invoice_no || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'invoice_no',
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                  />
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.invoice_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'invoice_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 12 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  P.T.F
+                </span>
+
+                <select
+                  value={formData.ptf || 'No'}
+                  onChange={(e) =>
+                    handleInputChange('ptf', e.target.value)
+                  }
+                  className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '140px' }}
+                >
+                  Lorry Returned
+                </span>
+
+                <select
+                  value={formData.lorry_returned || 'No'}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'lorry_returned',
+                      e.target.value
+                    )
+                  }
+                  className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '240px' }}
+                >
+                  Lorry Returned from Other Mill
+                </span>
+
+                <select
+                  value={formData.lorry_returned_other_mill || 'No'}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'lorry_returned_other_mill',
+                      e.target.value
+                    )
+                  }
+                  className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+
+              {/* Row 13 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  Arrival Area
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.arrival_area_code || ''}
+                  onChange={(e) =>
+                    handleAreaCodeChange(e.target.value)
+                  }
+                  className="bg-white border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center"
+                />
+
+                <input
+                  type="text"
+                  list="areas_dl"
+                  value={formData.arrival_area_name || ''}
+                  onChange={(e) =>
+                    handleAreaChange(e.target.value)
+                  }
+                  placeholder="SEARCH / CHOOSE TRANSIT AREA"
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none text-xs font-bold text-slate-800 uppercase focus:border-black focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Unit
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.unit_code || ''}
+                  onChange={(e) =>
+                    handleUnitCodeChange(e.target.value)
+                  }
+                  className="border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center bg-slate-50"
+                  readOnly
+                />
+
+                <select
+                  value={formData.unit_name || 'BALES'}
+                  onChange={(e) =>
+                    handleUnitNameChange(e.target.value)
+                  }
+                  className="border border-[#808080] px-1 h-6 outline-none text-xs w-[120px] bg-white font-bold cursor-pointer"
+                >
+                  {Array.from(
+                    new Set(
+                      [...unitList, formData.unit_name].filter(Boolean)
+                    )
+                  ).map((u: string) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 14 */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span
+                    className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                    style={{ width: '180px' }}
+                  >
+                    Way Bill No.
+                  </span>
+
+                  <input
+                    type="text"
+                    value={formData.way_bill_no || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'way_bill_no',
+                        e.target.value
+                      )
+                    }
+                    className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                  />
+                </div>
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '50px' }}
+                >
+                  Date
+                </span>
+
+                <input
+                  type="date"
+                  value={formData.way_bill_date || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'way_bill_date',
+                      e.target.value
+                    )
+                  }
+                  className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+              {/* Row 15 */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '180px' }}
+                >
+                  A.P.M.C Fees
+                </span>
+
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.apmc_fees || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'apmc_fees',
+                      e.target.value === ''
+                        ? ''
+                        : Number(e.target.value)
+                    )
+                  }
+                  className="bg-white border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[120px] text-right focus:border-black focus:bg-amber-50"
+                />
+
+                <span
+                  className="text-xs font-semibold text-gray-800 text-right shrink-0"
+                  style={{ width: '80px' }}
+                >
+                  Remarks
+                </span>
+
+                <input
+                  type="text"
+                  value={formData.remarks || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'remarks',
+                      e.target.value
+                    )
+                  }
+                  className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                />
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ================= Dual Level Receipt Grid Header ================= */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-visible mt-4">
+
+          {/* Header Bar */}
+          <div className="px-4 py-2 bg-[#174C2C] border-b border-[#0F351E] rounded-t-xl flex items-center justify-between">
+            <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+              Final MR Receipt Grid Items
+            </h2>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddRow}
+                className="px-3 py-1 bg-[#ffb900] hover:bg-[#e0a500] border border-[#c58f00] rounded-md text-[11px] font-bold text-black shadow-sm cursor-pointer transition-colors"
+              >
+                + Spawn Row
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteRow}
+                className="px-3 py-1 bg-[#ac0000] hover:bg-[#8f0000] border border-[#7a0000] rounded-md text-[11px] font-bold text-white shadow-sm cursor-pointer transition-colors"
+              >
+                - Delete Row
+              </button>
+            </div>
+          </div>
+
+          {/* Grid Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed min-w-[950px]">
+              <thead className="bg-[#ac0000] text-white font-sans text-[10px] uppercase border-b border-slate-500">
+                <tr className="border-b border-red-800 text-center font-bold">
+                  <th rowSpan={2} className="border-r border-red-800 w-10 text-center py-1">Srl. No</th>
+                  <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Receipt Grade</th>
+                  <th rowSpan={2} className="border-r border-red-800 w-20 text-center py-1">Crop Year</th>
+                  <th rowSpan={2} className="border-r border-red-800 w-32 text-left py-1 pl-2">Challan Grade Name</th>
+                  <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Agency</th>
+                  <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Challan Marka</th>
+                  <th rowSpan={2} className="border-r border-red-800 w-24 text-center py-1">Marks (Phota)</th>
+                  <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Quantity</th>
+                  <th rowSpan={2} className="border-r border-red-800 w-16 text-center py-1">Unit</th>
+                  <th rowSpan={2} className="text-left py-1 pl-2">Remarks</th>
+                </tr>
+                <tr className="text-center font-semibold">
+                  <th className="border-r border-red-800 w-12 py-0.5">Code</th>
+                  <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
+                  <th className="border-r border-red-800 w-12 py-0.5">Code</th>
+                  <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
+                  <th className="border-r border-red-800 w-12 py-0.5">Code</th>
+                  <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
+                  <th className="border-r border-red-800 w-14 text-right pr-2">Chln.</th>
+                  <th className="border-r border-red-800 w-14 text-right pr-2">Rcpt.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {details.map((row, index) => (
+                  <tr key={index} className="border-b border-slate-300 hover:bg-amber-50/30 transition-colors h-7 text-xs font-mono">
+                    {/* Srl. No */}
+                    <td className="bg-slate-200 border-r border-slate-300 text-center font-bold text-gray-700 text-[11px]">
+                      {row.srl_no}
+                    </td>
+                    
+                    {/* Receipt Grade Code */}
+                    <td className="border-r border-slate-300">
+                      <select
+                        value={row.receipt_grade_code}
+                        onChange={(e) => handleRowChange(index, 'receipt_grade_code', e.target.value)}
+                        className="w-full h-full bg-slate-50 border-0 outline-none px-1 text-center font-bold text-slate-800 text-[11px]"
+                      >
+                        <option value="">--</option>
+                        {grades.map(g => (
+                          <option key={g.grade_code} value={g.grade_code}>{g.grade_code}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Receipt Grade Name */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        list="grades_dl"
+                        value={row.receipt_grade_name}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = grades.find(g => String(g.grade_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              receipt_grade_name: val,
+                              receipt_grade_code: matched ? matched.grade_code : next[index].receipt_grade_code,
+                              challan_grade_name: matched ? matched.grade_name : next[index].challan_grade_name
+                            };
+                            return next;
+                          });
+                        }}
+                        className="w-full h-full bg-white border-0 outline-none px-1 uppercase text-[11px]"
+                      />
+                    </td>
+
+                    {/* Crop Year */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        value={row.crop_year}
+                        onChange={(e) => handleRowChange(index, 'crop_year', e.target.value)}
+                        className="w-full h-full bg-white border-0 outline-none px-1 text-center text-[11px]"
+                      />
+                    </td>
+
+                    {/* Challan Grade Name */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        value={row.challan_grade_name}
+                        onChange={(e) => handleRowChange(index, 'challan_grade_name', e.target.value.toUpperCase())}
+                        className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
+                      />
+                    </td>
+
+                    {/* Agency Code */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        value={row.agency_code || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = agencies.find(a => String(a.agency_code).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              agency_code: val,
+                              agency_name: matched ? String(matched.agency_name).toUpperCase() : next[index].agency_name
+                            };
+                            return next;
+                          });
+                        }}
+                        className="w-full h-full bg-[#ffffd2] border-0 outline-none px-1 text-center font-bold text-[11px]"
+                      />
+                    </td>
+
+                    {/* Agency Name */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        list="agencies_dl"
+                        value={row.agency_name || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = agencies.find(a => String(a.agency_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              agency_name: val,
+                              agency_code: matched ? String(matched.agency_code).toUpperCase() : next[index].agency_code
+                            };
+                            return next;
+                          });
+                        }}
+                        className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
+                      />
+                    </td>
+
+                    {/* Challan Marka Code */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        value={row.challan_marka_code || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = markas.find(m => String(m.marka_code).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              challan_marka_code: val,
+                              challan_marka_name: matched ? String(matched.marka_name).toUpperCase() : next[index].challan_marka_name
+                            };
+                            return next;
+                          });
+                        }}
+                        className="w-full h-full bg-[#ffffd2] border-0 outline-none px-1 text-center font-bold text-[11px]"
+                      />
+                    </td>
+
+                    {/* Challan Marka Name */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        list="markas_dl"
+                        value={row.challan_marka_name || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = markas.find(m => String(m.marka_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              challan_marka_name: val,
+                              challan_marka_code: matched ? String(matched.marka_code).toUpperCase() : next[index].challan_marka_code
+                            };
+                            return next;
+                          });
+                        }}
+                        className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
+                      />
+                    </td>
+
+                    {/* Marks (Phota) */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="text"
+                        value={row.marks_phota || ''}
+                        onChange={(e) => handleRowChange(index, 'marks_phota', e.target.value)}
+                        className="w-full h-full bg-white border-0 outline-none px-2 text-[11px]"
+                      />
+                    </td>
+
+                    {/* Quantity Chln. */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="number"
+                        step="1"
+                        value={row.quantity_chln !== undefined ? row.quantity_chln : 0}
+                        onChange={(e) => handleRowChange(index, 'quantity_chln', e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full h-full bg-white border-0 outline-none px-1 text-right text-[11px] font-bold"
+                      />
+                    </td>
+
+                    {/* Quantity Rcpt. */}
+                    <td className="border-r border-slate-300">
+                      <input 
+                        type="number"
+                        step="1"
+                        value={row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0}
+                        onChange={(e) => handleRowChange(index, 'quantity_rcpt', e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full h-full bg-amber-50 border-0 outline-none px-1 text-right text-[11px] font-bold text-indigo-950"
+                      />
+                    </td>
+
+                    {/* Unit */}
+                    <td className="border-r border-slate-300">
+                      <select
+                        value={row.unit || 'BALES'}
+                        onChange={(e) => handleRowChange(index, 'unit', e.target.value)}
+                        className="w-full h-full bg-white border-0 outline-none px-1 text-[10px] uppercase font-bold text-slate-700 cursor-pointer"
+                      >
+                        {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Remarks */}
+                    <td>
+                      <input 
+                        type="text"
+                        value={row.remarks}
+                        onChange={(e) => handleRowChange(index, 'remarks', e.target.value)}
+                        className="w-full h-full bg-white border-0 outline-none px-2 text-[11px]"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {/* Grid Total Footer summary row */}
+              <tfoot className="bg-slate-200 border-t border-slate-400 text-xs font-sans text-gray-700 h-8">
+                <tr className="font-bold">
+                  <td colSpan={10} className="text-right pr-4 font-bold uppercase text-[10px]">Grid Total:</td>
+                  <td className="text-right pr-2 border-r border-slate-300 text-slate-800 font-mono font-black">{totalChallanQuantity}</td>
+                  <td className="text-right pr-2 border-r border-slate-300 text-blue-900 font-mono font-black">{totalReceiptQuantity}</td>
+                  <td className="border-r border-slate-300"></td>
+                  <td className="pl-4 uppercase text-[9px] text-gray-500">Auto-Calculated Summary</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        {/* Triple Column Bottom Weighments Desk */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
+
+          {/* Header */}
+          <div className="bg-[#174C2C] text-white px-4 py-2 border-b border-[#0F351E]">
+            <h3 className="text-sm font-bold tracking-wide uppercase">
+              Weight Information
+            </h3>
+          </div>
+
+          {/* Three Column Body */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-300">
+
+            {/* Column 1 - Supplier Weights */}
+            <div className="p-4 space-y-3">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Supplier Weights Reference
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Challan Material Weight (M.T)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.challan_material_weight || 0}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'challan_material_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-amber-50 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Supplier Net Weight (M.Ton)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.supplier_net_weight || 0}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'supplier_net_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-[#f0fff0] border border-emerald-400 rounded px-2 text-right font-bold font-mono text-xs text-emerald-950 focus:bg-amber-50 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Electronic Weighbridge Net
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.electronic_net_weight || 0}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'electronic_net_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-[#fff0f0] border border-red-400 rounded px-2 text-right font-bold font-mono text-xs text-red-950 focus:bg-[#ffffd2] outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Column 2 - Actual Weighbridge */}
+            <div className="p-4 space-y-3">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Actual Weighbridge Metrics
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Actual Gross Weight (Lorry+RAW)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.actual_gross_weight || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'actual_gross_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-amber-50 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Supplier Challan Gross (M.Ton)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.supplier_challan_gross || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'supplier_challan_gross',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-amber-50 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Electronic Gross Weight Scale
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.electronic_gross_weight || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'electronic_gross_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-[#ffffd2] outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-[#ac0000]">
+                  Weight Reduced (Moisture Red M.T)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.weight_reduced || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'weight_reduced',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-[#ffffdf] border border-amber-400 rounded px-2 text-right font-bold font-mono text-xs text-amber-900 focus:bg-amber-50 outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Column 3 - Tare Weights */}
+            <div className="p-4 space-y-3">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Empty Lorry Tare Metrics
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Actual Tare Weight (Empty Lorry)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.actual_tare_weight || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'actual_tare_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-amber-50 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Supplier Tare Weight (M.Ton)
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.supplier_tare_weight || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'supplier_tare_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-amber-50 outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">
+                  Electronic Tare Weight Scale
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.electronic_tare_weight || ''}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'electronic_tare_weight',
+                      e.target.value === '' ? '' : Number(e.target.value)
+                    )
+                  }
+                  className="w-28 h-7 bg-white border border-gray-300 rounded px-2 text-right font-bold font-mono text-xs focus:bg-[#ffffd2] outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Operational Flow Button Bar */}
+        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
+          {/* Button Body */}
+          <div className="h-[58px] px-4 bg-[#174C2C] flex items-center justify-end gap-2.5">
+
+            {/* Add New */}
+            <LegacyButton
+              onClick={onCancel}
+              icon={Plus}
+              variant="default"
+              className="bg-[#ffb900] text-black border-2 border-[#d69b00] uppercase px-5 h-8 font-bold font-sans hover:bg-[#e6a700] active:border-black"
+            >
+              Add New
+            </LegacyButton>
+
+            {/* Delete */}
+            {initialData && (
+              <LegacyButton
+                onClick={deleteCurrentVoucher}
+                icon={Trash2}
+                variant="danger"
+                className="bg-red-50 border-2 border-red-500 uppercase px-4 h-8 font-bold font-sans text-red-900 hover:bg-red-100 active:border-red-900"
+              >
+                Delete
+              </LegacyButton>
+            )}
+
+            {/* Save */}
+            <LegacyButton
+              onClick={handleSave}
+              icon={Save}
+              variant="default"
+              disabled={loading}
+              className={`uppercase px-6 h-8 font-black font-sans border-2 ${
+                loading
+                  ? "bg-gray-500 text-white border-gray-700 cursor-not-allowed"
+                  : "bg-[#ffb900] text-black border-[#d69b00] hover:bg-[#e6a700]"
+              }`}
+            >
+              {loading ? "SAVING..." : "Save"}
+            </LegacyButton>
+
+            {/* Cancel */}
+            <LegacyButton
+              onClick={onCancel}
+              icon={X}
+              variant="default"
+              className="bg-gray-100 border-2 border-gray-400 uppercase px-5 h-8 font-bold font-sans text-gray-800 hover:bg-gray-200 active:border-black"
+            >
+              Cancel
+            </LegacyButton>
+
+            {/* Exit */}
+            <LegacyButton
+              onClick={onCancel}
+              icon={Archive}
+              variant="default"
+              className="bg-red-600 border-2 border-red-700 uppercase px-5 h-8 font-bold font-sans text-white hover:bg-red-700 active:border-black"
+            >
+              Exit
+            </LegacyButton>
+
+            {/* View List */}
+            <LegacyButton
+              onClick={onCancel}
+              icon={Layers}
+              variant="default"
+              className="bg-slate-100 border-2 border-gray-400 uppercase px-5 h-8 font-bold font-sans text-teal-950 hover:bg-slate-200 active:border-black"
+            >
+              View List
+            </LegacyButton>
+
+          </div>
+        </div>
+
+      </div>
+
+      {/* <div className="bg-[#eae7e1] text-xs font-sans min-h-full flex flex-col">
+
+        
+       <div className="shrink-0 bg-[#f0ece6] border-b border-[#c0c0c0] px-4 py-1.5 flex flex-wrap gap-3 items-center text-xs text-gray-700">
+         
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-[#ac0000]">Temp M.R Source:</span>
             <select
@@ -938,7 +2447,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
           <span className="text-gray-400">|</span>
 
-          {/* Quality Sync */}
+          
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-slate-700">Quality Inspection Sync:</span>
             <select
@@ -985,17 +2494,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </span>
             )}
           </div>
-        </div>
+        </div> 
 
       <div className="flex-1 p-4 flex flex-col gap-3">
-        {/* Title Heading */}
         <div className="text-center py-1">
-          <h1 className="text-3xl font-bold tracking-wide text-[#ac0000] font-sans">Final M.R Entry</h1>
+          <h1 className="text-3xl font-bold tracking-wide text-[#ac0000] font-sans">Final M.R Entry1</h1>
         </div>
-
-        {/* Master Details Frame Mockup */}
         <div className="shrink-0 border border-[#808080] p-4 bg-white flex flex-col gap-1.5 shadow-sm">
-          {/* Row 1 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Temporary M.R No</span>
             <input 
@@ -1023,8 +2528,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
             />
           </div>
-
-          {/* Row 2 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival No</span>
             <input 
@@ -1099,8 +2602,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <option value="Yes">Yes</option>
             </select>
           </div>
-
-          {/* Row 3 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan Supplier</span>
             <input 
@@ -1112,7 +2613,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 4 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Supplier</span>
             <input 
@@ -1124,7 +2624,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 5 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Broker</span>
             <input 
@@ -1136,7 +2635,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 6 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Transporter Name</span>
             <input 
@@ -1147,7 +2645,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 7 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan / Railway Receipt No.</span>
@@ -1167,7 +2664,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 8 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Lorry Number</span>
             <input 
@@ -1186,7 +2682,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 9 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Consignment Note No.</span>
@@ -1206,7 +2701,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 10 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>D.I. No.</span>
@@ -1226,7 +2720,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 11 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Invoice No.</span>
@@ -1246,7 +2739,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 12 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>P.T.F</span>
             <select 
@@ -1278,7 +2770,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             </select>
           </div>
 
-          {/* Row 13 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival Area</span>
             <input 
@@ -1313,8 +2804,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               ))}
             </select>
           </div>
-
-          {/* Row 14 */}
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Way Bill No.</span>
@@ -1334,7 +2823,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
           </div>
 
-          {/* Row 15 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>A.P.M.C Fees</span>
             <input 
@@ -1355,8 +2843,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </div>
         </div>
 
-        {/* Dual level Receipt Grid Table */}
-        <div className="flex-1 min-h-[180px] border border-slate-400 bg-[#dfdfdf] shadow-sm overflow-auto">
+        
+        div className="flex-1 min-h-[180px] border border-slate-400 bg-[#dfdfdf] shadow-sm overflow-auto">
           <div className="flex items-center justify-between p-1.5 bg-[#d4d0c8] border-b border-slate-400">
              <span className="text-[10px] font-bold uppercase text-slate-800">Final MR Receipt Grid Items</span>
              <div className="flex items-center gap-1.5">
@@ -1404,12 +2892,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             <tbody>
               {details.map((row, index) => (
                 <tr key={index} className="border-b border-slate-300 hover:bg-amber-50/30 transition-colors h-7 text-xs font-mono">
-                  {/* Srl. No */}
                   <td className="bg-slate-200 border-r border-slate-300 text-center font-bold text-gray-700 text-[11px]">
                     {row.srl_no}
                   </td>
-                  
-                  {/* Receipt Grade Code */}
                   <td className="border-r border-slate-300">
                     <select
                       value={row.receipt_grade_code}
@@ -1422,8 +2907,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                       ))}
                     </select>
                   </td>
-
-                  {/* Receipt Grade Name */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1447,7 +2930,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Crop Year */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1456,8 +2938,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                       className="w-full h-full bg-white border-0 outline-none px-1 text-center text-[11px]"
                     />
                   </td>
-
-                  {/* Challan Grade Name */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1467,7 +2947,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Agency Code */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1489,7 +2968,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Agency Name */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1512,7 +2990,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Challan Marka Code */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1534,7 +3011,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Challan Marka Name */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1557,7 +3033,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Marks (Phota) */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="text"
@@ -1567,7 +3042,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Quantity Chln. */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="number"
@@ -1578,7 +3052,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Quantity Rcpt. */}
                   <td className="border-r border-slate-300">
                     <input 
                       type="number"
@@ -1589,7 +3062,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     />
                   </td>
 
-                  {/* Unit */}
                   <td className="border-r border-slate-300">
                     <select
                       value={row.unit || 'BALES'}
@@ -1602,7 +3074,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     </select>
                   </td>
 
-                  {/* Remarks */}
                   <td>
                     <input 
                       type="text"
@@ -1614,7 +3085,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 </tr>
               ))}
             </tbody>
-            {/* Grid Total Footer summary row */}
             <tfoot className="bg-slate-200 border-t border-slate-400 text-xs font-sans text-gray-700 h-8">
               <tr className="font-bold">
                 <td colSpan={10} className="text-right pr-4 font-bold uppercase text-[10px]">Grid Total:</td>
@@ -1627,9 +3097,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </table>
         </div>
 
-        {/* Triple Column Bottom Weighments Desk precisely matching Jute Screen layout */}
+        
         <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Column 1 */}
           <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
             <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1 flex items-center justify-between">
               <span>Supplier Weights Reference</span>
@@ -1677,8 +3146,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
             </div>
           </div>
-
-          {/* Column 2 */}
           <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
             <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1">Actual Weighbridge Metrics</h3>
             <div className="flex flex-col gap-1.5 mt-1">
@@ -1724,8 +3191,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
             </div>
           </div>
-
-          {/* Column 3 */}
           <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
             <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1">Empty Lorry Tare Metrics</h3>
             <div className="flex flex-col gap-1.5 mt-1">
@@ -1763,7 +3228,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </div>
         </div>
 
-        {/* Operational Flow Button bar strictly based on Jute Screen visuals */}
         <div className="bg-[#dfdfdf] border border-slate-400 p-2.5 flex flex-wrap justify-between items-center gap-2 shadow-inner">
           <div className="flex gap-2.5">
             <LegacyButton
@@ -1825,11 +3289,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               View List
             </LegacyButton>
           </div>
-        </div>
+        </div> 
 
-      </div>
+      </div> */}
 
-      {/* Structured suggestions Datalists for premium user flow experience */}
       <datalist id="brokers_dl">
         {brokers.map((b, idx) => (
           <option key={b.id || idx} value={String(b.brok_name).toUpperCase()} />
@@ -1865,7 +3328,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <option key={m.id || idx} value={String(m.marka_name).toUpperCase()} />
         ))}
       </datalist>
-      </div>
     </LegacyLayout>
   );
 }
