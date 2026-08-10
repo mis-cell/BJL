@@ -1062,16 +1062,16 @@ export default function App() {
         );
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-legacy-bg font-sans">
+    <div className="flex h-screen w-full max-w-full min-w-0 overflow-hidden bg-legacy-bg font-sans">
       {/* Master Wrapper */}
-      <div className="flex flex-1 flex-col w-full min-w-0 h-full overflow-hidden">
+      <div className="flex flex-1 flex-col w-full max-w-full min-w-0 h-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden w-full min-w-0">
+        <div className="flex-1 flex overflow-hidden w-full max-w-full min-w-0">
           {/* Sidebar removed per user request */}
 
           {/* Dynamic Page Rendering */}
-          <div className="flex-1 flex flex-col overflow-auto">
-            <div className="flex-1 flex flex-col overflow-auto relative">
+          <div className="flex-1 flex flex-col overflow-auto w-full max-w-full min-w-0">
+            <div className="flex-1 flex flex-col overflow-auto relative w-full max-w-full min-w-0">
               <div
                 className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >

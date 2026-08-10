@@ -954,7 +954,8 @@ export default function LorryDispatchSystem({
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col select-none overflow-x-hidden">
+    <LegacyLayout title="4.1 – Main Gate Lorry Entry & Exit" subtitle="Bally Jute Mill Gate Pass & Dispatch Management">
+      <div className="relative w-full min-h-full bg-[#FAF7F0] text-[#1E331B] font-sans flex flex-col select-none overflow-x-hidden p-2 sm:p-4 space-y-4">
       
       {/* SCREEN CAPTURE PROTECTION OVERLAY (TRIGGERS WHEN FOCUS LOST IF PROTECTION ENABLED) */}
       {isScreenBlurred && (
@@ -988,31 +989,31 @@ export default function LorryDispatchSystem({
       )}
 
       {/* ==========================================
-          1. TOP NAVIGATION BAR
+          1. TOP NAVIGATION BAR (BASE THEME)
          ========================================== */}
-      <header className="bg-slate-950 border-b border-slate-800 px-3 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-xl z-40 gap-3">
+      <header className="bg-[#EAE2D2] border border-[#C5BA9E] px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between shrink-0 shadow-sm rounded-xl gap-3 text-[#1E331B]">
         {/* Left Brand Title & Role Info */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 bg-blue-600/20 border border-blue-500/30 rounded-xl shrink-0">
-            <Truck className="w-5 h-5 text-blue-400" />
+          <div className="p-2 bg-[#1E331B] text-[#FAF7F0] border border-[#2D4D28] rounded-xl shrink-0">
+            <Truck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm sm:text-base font-black tracking-tight text-white uppercase truncate font-mono">
+              <h1 className="text-sm sm:text-base font-black tracking-tight uppercase truncate font-mono text-[#1E331B]">
                 Bally Jute Mill Dispatch
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-400/20 text-blue-300 rounded text-[10px] font-mono font-bold uppercase">
+              <span className="hidden sm:inline-block px-2 py-0.5 bg-[#1E331B]/10 border border-[#1E331B]/20 text-[#1E331B] rounded text-[10px] font-mono font-bold uppercase">
                 v4.8 Live
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 truncate">
-              Active Station: <strong className="text-blue-300 uppercase">{currentUserRole.replace("_", " ")}</strong>
+            <p className="text-[11px] text-[#5A6E54] truncate">
+              Active Station: <strong className="text-[#1E331B] uppercase">{currentUserRole.replace("_", " ")}</strong>
             </p>
           </div>
         </div>
 
-        {/* Center Role Switcher Quick Pill (For multi-role desktop operations) */}
-        <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/80 p-1 border border-slate-800 rounded-xl">
+        {/* Center Role Switcher Quick Pill */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-[#FAF7F0] p-1 border border-[#C5BA9E] rounded-xl">
           {(["SUPER_ADMIN", "MAIN_GATE", "MILL_WEIGHTMENT", "ELECTRIC_WEIGHTMENT", "STORE_DEPT"] as UserRole[]).map((r) => (
             <button
               key={r}
@@ -1023,8 +1024,8 @@ export default function LorryDispatchSystem({
               className={cn(
                 "px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase transition-all cursor-pointer whitespace-nowrap",
                 currentUserRole === r
-                  ? "bg-blue-600 text-white shadow-md"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                  : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#EAE2D2]"
               )}
             >
               {r === "SUPER_ADMIN" ? "Admin" : r.replace("_", " ")}
@@ -1041,8 +1042,8 @@ export default function LorryDispatchSystem({
             className={cn(
               "px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer",
               isInsideGeofence
-                ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/80"
-                : "bg-rose-950/60 border-rose-500/40 text-rose-400 hover:bg-rose-900/80"
+                ? "bg-emerald-100 border-emerald-400 text-emerald-900 hover:bg-emerald-200"
+                : "bg-rose-100 border-rose-400 text-rose-900 hover:bg-rose-200"
             )}
             title="Click to open Geofence GPS Location Simulator"
           >
@@ -1054,12 +1055,12 @@ export default function LorryDispatchSystem({
           {/* Real-time Notification Bell */}
           <button
             onClick={() => setIsAlertDrawerOpen(true)}
-            className="relative p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 transition-colors cursor-pointer"
+            className="relative p-2 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] rounded-xl text-[#1E331B] transition-colors cursor-pointer"
             title="Real-time Dispatch Alerts"
           >
             <Bell className="w-4 h-4" />
             {unreadAlertsCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-bold rounded-full animate-pulse border border-slate-950">
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-bold rounded-full animate-pulse">
                 {unreadAlertsCount}
               </span>
             )}
@@ -1070,7 +1071,7 @@ export default function LorryDispatchSystem({
             <select
               value={currentUserRole}
               onChange={(e) => setCurrentUserRole(e.target.value as UserRole)}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-xl px-2 py-1.5 font-bold outline-none"
+              className="bg-[#FAF7F0] border border-[#C5BA9E] text-[#1E331B] text-xs rounded-xl px-2 py-1.5 font-bold outline-none"
             >
               <option value="SUPER_ADMIN">Admin</option>
               <option value="MAIN_GATE">Main Gate</option>
@@ -1083,7 +1084,7 @@ export default function LorryDispatchSystem({
           {/* Logout Button */}
           <button
             onClick={() => setIsLogoutConfirmOpen(true)}
-            className="p-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 text-rose-300 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+            className="p-2 bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
             title="Exit Session"
           >
             <LogOut className="w-4 h-4" />
@@ -1095,7 +1096,7 @@ export default function LorryDispatchSystem({
       {/* ==========================================
           2. SECONDARY SUB-NAVIGATION BAR
          ========================================== */}
-      <div className="bg-slate-950/80 border-b border-slate-800/80 px-4 sm:px-6 py-1.5 flex items-center justify-between shrink-0 text-xs overflow-x-auto scrollbar-none gap-4">
+      <div className="bg-[#EAE2D2] border border-[#C5BA9E] px-4 sm:px-6 py-1.5 flex items-center justify-between shrink-0 text-xs overflow-x-auto scrollbar-none gap-4 rounded-xl">
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 min-w-max">
           <button
@@ -1103,8 +1104,8 @@ export default function LorryDispatchSystem({
             className={cn(
               "px-3.5 py-1.5 rounded-lg font-extrabold uppercase text-[11px] tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
               activeTab === "operations"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#FAF7F0]"
             )}
           >
             <Activity className="w-3.5 h-3.5" />
@@ -1118,8 +1119,8 @@ export default function LorryDispatchSystem({
                 className={cn(
                   "px-3.5 py-1.5 rounded-lg font-extrabold uppercase text-[11px] tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
                   activeTab === "settings"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                    : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#FAF7F0]"
                 )}
               >
                 <Sliders className="w-3.5 h-3.5" />
@@ -1131,8 +1132,8 @@ export default function LorryDispatchSystem({
                 className={cn(
                   "px-3.5 py-1.5 rounded-lg font-extrabold uppercase text-[11px] tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
                   activeTab === "masters"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                    : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#FAF7F0]"
                 )}
               >
                 <Database className="w-3.5 h-3.5" />
@@ -1144,8 +1145,8 @@ export default function LorryDispatchSystem({
                 className={cn(
                   "px-3.5 py-1.5 rounded-lg font-extrabold uppercase text-[11px] tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
                   activeTab === "users"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                    : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#FAF7F0]"
                 )}
               >
                 <Users className="w-3.5 h-3.5" />
@@ -1157,8 +1158,8 @@ export default function LorryDispatchSystem({
                 className={cn(
                   "px-3.5 py-1.5 rounded-lg font-extrabold uppercase text-[11px] tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
                   activeTab === "audit"
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
+                    : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#FAF7F0]"
                 )}
               >
                 <Lock className="w-3.5 h-3.5" />
@@ -1172,17 +1173,17 @@ export default function LorryDispatchSystem({
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={generateShiftLedgerPdf}
-            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg text-slate-300 font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="px-2.5 py-1 bg-[#FAF7F0] hover:bg-[#D6CAA8] border border-[#C5BA9E] rounded-lg text-[#1E331B] font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
           >
-            <Printer className="w-3.5 h-3.5 text-blue-400" />
+            <Printer className="w-3.5 h-3.5 text-[#1E331B]" />
             <span className="hidden sm:inline">Shift PDF</span>
           </button>
 
           <button
             onClick={exportCsvLog}
-            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg text-slate-300 font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors"
+            className="px-2.5 py-1 bg-[#FAF7F0] hover:bg-[#D6CAA8] border border-[#C5BA9E] rounded-lg text-[#1E331B] font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
         </div>
@@ -2126,7 +2127,8 @@ export default function LorryDispatchSystem({
         </div>
       )}
 
-    </div>
+      </div>
+    </LegacyLayout>
   );
 }
 
