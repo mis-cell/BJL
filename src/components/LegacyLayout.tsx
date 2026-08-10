@@ -29,7 +29,9 @@ import {
   ClipboardList,
   Scale,
   Archive,
-  Lock
+  Lock,
+  DoorClosed,
+  Truck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -187,6 +189,15 @@ export default function LegacyLayout({
       label: 'Dashboard',
       icon: LayoutDashboard,
       pageId: 'dashboard'
+    },
+    {
+      id: 'gate_module',
+      label: 'Gate Module',
+      icon: DoorClosed,
+      subItems: [
+        { id: 'main_gate', label: 'Main Gate', icon: Truck, pageId: 'amad' },
+        { id: 'weighbridge_gate', label: 'Weight Bridge', icon: Scale, pageId: 'weight_bridge' },
+      ]
     },
     {
       id: 'sauda_po',

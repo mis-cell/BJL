@@ -40,6 +40,8 @@ import {
   EyeOff,
   Leaf,
   Globe,
+  DoorClosed,
+  Truck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
@@ -482,6 +484,7 @@ type Page =
 
 const allSidebarItems = [
   { id: "dashboard", label: "Operational Hub", icon: LayoutDashboard },
+  { id: "main_gate", label: "Main Gate (T.M.R)", icon: Truck },
   { id: "sms_sauda", label: "SMS Sauda Desk", icon: MessageSquare },
   { id: "sauda", label: "Sauda Desk", icon: HandCoins },
   { id: "po", label: "Sauda Check Point", icon: FileText },
@@ -513,6 +516,9 @@ function getPageMeta(pageId: string) {
   }
 
   // 2. Custom mappings
+  if (pageId === "main_gate" || pageId === "maingate") {
+    return { label: "Main Gate", icon: Truck };
+  }
   if (pageId === "amad_entry") {
     return { label: "Amad Entry", icon: PlusCircle };
   }
@@ -745,6 +751,8 @@ export default function App() {
       actualTarget = 'final_po';
     } else if (subId === 'po_temp') {
       actualTarget = 'po';
+    } else if (targetPage === 'main_gate' as any || targetPage === 'maingate' as any) {
+      actualTarget = 'amad';
     }
 
     setCurrentPage(actualTarget);
