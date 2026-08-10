@@ -68,7 +68,6 @@ export default function LegacyLayout({
   const [unreadCount, setUnreadCount] = React.useState(3);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = React.useState<string | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const currentUser = getCurrentUserContext().username || "Admin User";
   
@@ -336,21 +335,10 @@ export default function LegacyLayout({
         </div>
 
         {/* Main Header & Navigation Bar */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-3 sm:px-6 py-2 flex items-center justify-between shrink-0 shadow-sm relative z-20 gap-2 min-w-0">
+        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-20 gap-2 min-w-0">
           
-          {/* Mobile / Tablet Menu Button Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="xl:hidden p-1.5 rounded-lg bg-[#1E331B] text-[#FAF7F0] hover:bg-[#345230] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0"
-            title="Toggle Menu"
-          >
-            <Menu className="w-4 h-4" />
-            <span className="text-[11px] uppercase tracking-wider hidden sm:inline">Menu</span>
-          </button>
-
-          {/* Center Top Navigation Menu Bar with Sub-Menu Dropdowns (Scrollable on laptop/desktop screens) */}
-          <nav className="hidden xl:flex items-center gap-1 overflow-x-auto max-w-full py-0.5 shrink min-w-0 scrollbar-none">
+          {/* Top Navigation Menu Bar with Sub-Menu Dropdowns (Always visible for Laptop & Desktop) */}
+          <nav className="flex items-center gap-1 overflow-x-auto py-0.5 min-w-0 flex-1 scrollbar-none">
             {navMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
@@ -363,7 +351,7 @@ export default function LegacyLayout({
                     key={menu.id}
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
+                      "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
                       isActive
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
@@ -373,7 +361,7 @@ export default function LegacyLayout({
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110",
                       isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
                     )} />
-                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
                     )}
@@ -395,7 +383,7 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(isDropdownOpen ? null : menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
+                      "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
                       isDropdownOpen
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
@@ -408,10 +396,10 @@ export default function LegacyLayout({
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 pt-1 z-[100] min-w-[220px]">
+                    <div className="absolute top-full left-0 pt-1 z-[100] min-w-[210px]">
                       <div className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         <div className="px-3 py-1 border-b border-[#EAE2D2] mb-1 bg-[#F3ECE0]/50">
-                          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#5A6E54]">
+                          <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#5A6E54]">
                             {menu.label} Menu
                           </span>
                         </div>
@@ -430,12 +418,12 @@ export default function LegacyLayout({
                                 e.stopPropagation();
                                 handleNavNavigation(sub.pageId);
                               }}
-                              className="w-full text-left px-3 py-2 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
+                              className="w-full text-left px-3 py-1.5 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
                             >
-                              <div className="w-6 h-6 rounded-md bg-[#EAE2D2]/80 group-hover/item:bg-[#FAF7F0] group-hover/item:text-[#1E331B] text-[#1E331B] flex items-center justify-center transition-colors shrink-0">
-                                <SubIcon className="w-3.5 h-3.5" />
+                              <div className="w-5 h-5 rounded-md bg-[#EAE2D2]/80 group-hover/item:bg-[#FAF7F0] group-hover/item:text-[#1E331B] text-[#1E331B] flex items-center justify-center transition-colors shrink-0">
+                                <SubIcon className="w-3 h-3" />
                               </div>
-                              <span className="truncate font-semibold text-[12px] uppercase tracking-tight">{sub.label}</span>
+                              <span className="truncate font-semibold text-[11.5px] uppercase tracking-tight">{sub.label}</span>
                             </button>
                           );
                         })}
@@ -507,63 +495,6 @@ export default function LegacyLayout({
           </div>
 
         </header>
-
-        {/* Mobile / Tablet Drawer Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="xl:hidden bg-[#FAF7F0] border-b border-[#D6CAA8] px-4 py-3 shadow-2xl z-50 flex flex-col gap-2 max-h-[75vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-[#EAE2D2]">
-              <span className="text-xs font-mono font-bold uppercase text-[#1E331B]">Navigation Modules</span>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-[#1E331B] hover:bg-[#EAE2D2] rounded">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            {navMenuItems.map((menu) => {
-              const IconComp = menu.icon;
-              const hasSubItems = menu.subItems && menu.subItems.length > 0;
-              return (
-                <div key={menu.id} className="flex flex-col gap-1">
-                  {!hasSubItems ? (
-                    <button
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleNavNavigation(menu.pageId!);
-                      }}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-[#1E331B] bg-[#EAE2D2]/60 hover:bg-[#EAE2D2] text-left cursor-pointer"
-                    >
-                      <IconComp className="w-4 h-4 text-[#1E331B]" />
-                      <span className="text-[13px]">{menu.label}</span>
-                    </button>
-                  ) : (
-                    <div className="bg-[#F3ECE0]/80 border border-[#EAE2D2] rounded-lg p-2.5 flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2 px-1 py-0.5 text-[11px] font-bold text-[#1E331B] uppercase tracking-wider">
-                        <IconComp className="w-4 h-4 text-[#1E331B]" />
-                        <span>{menu.label}</span>
-                      </div>
-                      <div className="pl-3 flex flex-col gap-1 border-l-2 border-[#D6CAA8] ml-2 pt-1">
-                        {menu.subItems.map((sub) => {
-                          const SubIcon = sub.icon;
-                          return (
-                            <button
-                              key={sub.id}
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                handleNavNavigation(sub.pageId);
-                              }}
-                              className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-[#1E331B] hover:bg-[#1E331B] hover:text-[#FAF7F0] transition-colors text-left cursor-pointer"
-                            >
-                              <SubIcon className="w-3.5 h-3.5" />
-                              <span className="text-[12px] uppercase">{sub.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* Form Body */}
         <div className="flex-1 overflow-auto p-4 bg-[#F4EFE6]/70">
