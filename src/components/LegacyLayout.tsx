@@ -335,10 +335,10 @@ export default function LegacyLayout({
         </div>
 
         {/* Main Header & Navigation Bar */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 min-w-0 overflow-visible">
+        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 w-full min-w-0">
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
-          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 overflow-visible">
+          <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50">
             {navMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
@@ -362,7 +362,7 @@ export default function LegacyLayout({
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110",
                       isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
                     )} />
-                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
                     )}
@@ -381,7 +381,7 @@ export default function LegacyLayout({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActiveMenuDropdown(isDropdownOpen ? null : menu.id);
+                      setActiveMenuDropdown(menu.id);
                     }}
                     className={cn(
                       "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
@@ -391,7 +391,7 @@ export default function LegacyLayout({
                     )}
                   >
                     <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors" />
-                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74]", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
                   </button>
 
@@ -412,6 +412,7 @@ export default function LegacyLayout({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setActiveMenuDropdown(null);
                                 handleNavNavigation(sub.pageId);
                               }}
                               className="w-full text-left px-3 py-2 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
@@ -431,8 +432,8 @@ export default function LegacyLayout({
             })}
           </nav>
 
-          {/* Right Notification & Profile User Menu */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Right Notification & Profile User Menu - Anchored right */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto z-50">
             {/* Notification Badge Bell */}
             <button
               onClick={() => setIsNotifOpen(true)}

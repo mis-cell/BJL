@@ -699,7 +699,7 @@ export default function ExecutiveBiDashboard({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3">
           {/* Date Filter */}
           <div>
             <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Date Range</label>
@@ -819,7 +819,7 @@ export default function ExecutiveBiDashboard({
       </div>
 
       {/* 4. TOP 10 EXECUTIVE KPI SCORECARDS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* KPI 1: Sauda Master Summary Card */}
         <div 
           onClick={() => onNavigate && onNavigate('sauda')}
