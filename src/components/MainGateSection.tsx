@@ -697,7 +697,7 @@ export default function MainGateSection({
                     list="broker-options"
                     placeholder="Type or select Broker..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
-                    defaultValue={masters.brokers[0] || ""}
+                    defaultValue=""
                   />
                   <datalist id="broker-options">
                     {masters.brokers.map((b) => (
@@ -712,7 +712,7 @@ export default function MainGateSection({
                     list="quality-options"
                     placeholder="Type or select Quality..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
-                    defaultValue={masters.qualities[0] || ""}
+                    defaultValue=""
                   />
                   <datalist id="quality-options">
                     {masters.qualities.map((q) => (
@@ -729,7 +729,7 @@ export default function MainGateSection({
                     list="mokam-options"
                     placeholder="Type or select Mokam..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
-                    defaultValue={masters.mokams[0] || ""}
+                    defaultValue=""
                   />
                   <datalist id="mokam-options">
                     {masters.mokams.map((m) => (
@@ -744,7 +744,7 @@ export default function MainGateSection({
                     list="marka-options"
                     placeholder="Type or select Marka..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
-                    defaultValue={masters.markas[0] || ""}
+                    defaultValue=""
                   />
                   <datalist id="marka-options">
                     {masters.markas.map((mk) => (
