@@ -340,7 +340,7 @@ export default function MainGateSection({
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               {[
                 { id: "MAIN_GATE", title: "1. Main Gate", desc: "Entry Verification", icon: Truck },
-                { id: "MILL_SCALE", title: "2. Mill Scale", desc: "Gross / Tare Weight", icon: Scale },
+                { id: "MILL_SCALE", title: "2. Mill Scale", desc: "Gross / Tare Weighment", icon: Scale },
                 { id: "YARDS", title: "3. Unloading Yards", desc: "Jute / Store / Finish", icon: LayoutGrid },
                 { id: "ELECTRIC_SCALE", title: "4. Electric Scale", desc: "Gross / Tare Check", icon: Scale },
                 { id: "EXIT_GATE", title: "5. Exit Gate", desc: "Final Pass & Out", icon: CheckCircle2 },
@@ -695,6 +695,7 @@ export default function MainGateSection({
                   <input
                     name="broker"
                     list="broker-options"
+                    autoComplete="off"
                     placeholder="Type or select Broker..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
@@ -710,6 +711,7 @@ export default function MainGateSection({
                   <input
                     name="quality"
                     list="quality-options"
+                    autoComplete="off"
                     placeholder="Type or select Quality..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
@@ -727,6 +729,7 @@ export default function MainGateSection({
                   <input
                     name="mokam"
                     list="mokam-options"
+                    autoComplete="off"
                     placeholder="Type or select Mokam..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
@@ -742,6 +745,7 @@ export default function MainGateSection({
                   <input
                     name="marka"
                     list="marka-options"
+                    autoComplete="off"
                     placeholder="Type or select Marka..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
