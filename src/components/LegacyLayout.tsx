@@ -268,28 +268,28 @@ export default function LegacyLayout({
       <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-visible">
         
         {/* Top Control Bar (Yellow/Black Hazard Striped Sub-header & Window Controls) */}
-        <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30">
+        <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30 w-full min-w-0 gap-2">
           {/* Left Brand Logo Area */}
           <div 
             onClick={() => handleNavNavigation('dashboard')} 
-            className="flex items-center gap-3 cursor-pointer group select-none shrink-0"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none min-w-0 flex-1"
           >
             {/* BJ Monogram Badge */}
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
               BJ
             </div>
 
-            <div>
-              <h1 className="font-serif text-lg sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-serif text-sm sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors truncate">
                 Bally Jute Limited
               </h1>
-              <p className="text-[9px] font-mono text-[#5A6E54] tracking-[0.2em] sm:tracking-[0.25em] uppercase font-semibold mt-0.5">
+              <p className="text-[8px] sm:text-[9px] font-mono text-[#5A6E54] tracking-[0.15em] sm:tracking-[0.25em] uppercase font-semibold mt-0.5 truncate">
                 ESTD. 1979
               </p>
             </div>
           </div>
 
-          <div className="flex gap-1.5 shrink-0 z-10 items-center">
+          <div className="flex gap-1 sm:gap-1.5 shrink-0 z-10 items-center">
              <button 
                onClick={handleMinimizeClick}
                title="Minimize"
@@ -315,10 +315,10 @@ export default function LegacyLayout({
         </div>
 
         {/* Main Header & Navigation Bar */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 w-full min-w-0">
+        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 w-full min-w-0">
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
-          <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50">
+          <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 max-w-full">
             {navMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
@@ -332,17 +332,17 @@ export default function LegacyLayout({
                     type="button"
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
+                      "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs font-semibold transition-all relative cursor-pointer group max-w-full min-w-0",
                       isActive
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
                     )}
                   >
                     <IconComp className={cn(
-                      "w-3.5 h-3.5 transition-transform group-hover:scale-110",
+                      "w-3.5 h-3.5 transition-transform group-hover:scale-110 shrink-0",
                       isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
                     )} />
-                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[11px] sm:text-[12.5px] tracking-tight truncate max-w-[120px] sm:max-w-none">{menu.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
                     )}
@@ -353,7 +353,7 @@ export default function LegacyLayout({
               return (
                 <div 
                   key={menu.id}
-                  className="relative nav-dropdown-container shrink-0 z-50"
+                  className="relative nav-dropdown-container max-w-full min-w-0 z-50"
                   onMouseEnter={() => setActiveMenuDropdown(menu.id)}
                   onMouseLeave={() => setActiveMenuDropdown(null)}
                 >
@@ -364,20 +364,20 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
+                      "flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none max-w-full min-w-0",
                       isDropdownOpen
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
                     )}
                   >
-                    <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors" />
-                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
-                    <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74]", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
+                    <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors shrink-0" />
+                    <span className="text-[11px] sm:text-[12.5px] tracking-tight truncate max-w-[120px] sm:max-w-none">{menu.label}</span>
+                    <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74] shrink-0", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
                   </button>
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 pt-1 z-[999] min-w-[220px]">
+                    <div className="absolute top-full left-0 pt-1 z-[999] min-w-[200px] max-w-[calc(100vw-16px)]">
                       <div className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         <div className="px-3 py-1 border-b border-[#EAE2D2] mb-1 bg-[#F3ECE0]/50">
                           <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#5A6E54]">
@@ -474,7 +474,7 @@ export default function LegacyLayout({
         </header>
 
         {/* Form Body */}
-        <div className="flex-1 overflow-auto p-4 bg-[#F4EFE6]/70">
+        <div className="flex-1 overflow-auto p-2 sm:p-4 bg-[#F4EFE6]/70 w-full max-w-full min-w-0">
           {children}
           <NotificationCenter
             isOpen={isNotifOpen}
