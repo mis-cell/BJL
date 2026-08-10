@@ -31,7 +31,8 @@ import {
   Archive,
   Lock,
   DoorClosed,
-  Truck
+  Truck,
+  Menu
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -67,6 +68,7 @@ export default function LegacyLayout({
   const [unreadCount, setUnreadCount] = React.useState(3);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = React.useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const currentUser = getCurrentUserContext().username || "Admin User";
   
@@ -262,44 +264,27 @@ export default function LegacyLayout({
   ];
 
   return (
-    <div className="bg-[#F4EFE6] h-full w-full overflow-auto min-w-[1200px] font-sans selection:bg-[#1E331B] selection:text-white flex flex-col">
+    <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col overflow-x-hidden">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] overflow-auto shadow-xl">
+      <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] overflow-hidden shadow-xl">
         
         {/* Top Control Bar (Yellow/Black Hazard Striped Sub-header & Window Controls) */}
         <div className="relative bg-[#faf7f0] border-b border-[#faf7f0] px-3.5 py-1.5 flex items-center justify-between text-white overflow-hidden shrink-0 shadow-xs">
-          {/* Yellow/Gold diagonal stripes on the left */}
-          {/* <div className="absolute left-0 top-0 h-full w-16 pointer-events-none opacity-40" style={{
-            backgroundImage: 'repeating-linear-gradient(45deg, #fbbf24, #fbbf24 6px, transparent 6px, transparent 15px)'
-          }} /> */}
-          
-          {/* Yellow/Gold diagonal stripes on the right */}
-          {/* <div className="absolute right-0 top-0 h-full w-16 pointer-events-none opacity-40" style={{
-            backgroundImage: 'repeating-linear-gradient(-45deg, #fbbf24, #fbbf24 6px, transparent 6px, transparent 15px)'
-          }} /> */}
-
-          {/* Centered content with z-index */}
-          {/* <div className="flex items-center gap-2.5 z-10 mx-auto">
-             <div className="w-5 h-5 bg-[#FAF7F0] text-[#1E331B] rounded border border-[#D6CAA8] flex items-center justify-center font-serif font-black text-[10px] italic shadow-xs">Bj</div>
-             <span className="text-[11px] font-bold uppercase tracking-wider font-mono text-[#E2EDDE] drop-shadow-xs">
-               BALLY JUTE LIMITED • {title} {subtitle && `» [${subtitle}]`}
-             </span>
-          </div> */}
           {/* Left Brand Logo Area */}
           <div 
             onClick={() => handleNavNavigation('dashboard')} 
-            className="flex items-center gap-3 cursor-pointer group select-none"
+            className="flex items-center gap-3 cursor-pointer group select-none shrink-0"
           >
             {/* BJ Monogram Badge */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
               BJ
             </div>
 
             <div>
-              <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors">
+              <h1 className="font-serif text-lg sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors">
                 Bally Jute Limited
               </h1>
-              <p className="text-[9px] font-mono text-[#5A6E54] tracking-[0.25em] uppercase font-semibold mt-0.5">
+              <p className="text-[9px] font-mono text-[#5A6E54] tracking-[0.2em] sm:tracking-[0.25em] uppercase font-semibold mt-0.5">
                 ESTD. 1979
               </p>
             </div>
@@ -350,12 +335,22 @@ export default function LegacyLayout({
           </div>
         </div>
 
-        {/* Main Header & Navigation Bar (Exact Match to Screenshot 2) */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-20">
+        {/* Main Header & Navigation Bar */}
+        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-3 sm:px-6 py-2 flex items-center justify-between shrink-0 shadow-sm relative z-20 gap-2 min-w-0">
           
+          {/* Mobile / Tablet Menu Button Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="xl:hidden p-1.5 rounded-lg bg-[#1E331B] text-[#FAF7F0] hover:bg-[#345230] transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0"
+            title="Toggle Menu"
+          >
+            <Menu className="w-4 h-4" />
+            <span className="text-[11px] uppercase tracking-wider hidden sm:inline">Menu</span>
+          </button>
 
-          {/* Center Top Navigation Menu Bar with Sub-Menu Dropdowns */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Center Top Navigation Menu Bar with Sub-Menu Dropdowns (Scrollable on laptop/desktop screens) */}
+          <nav className="hidden xl:flex items-center gap-1 overflow-x-auto max-w-full py-0.5 shrink min-w-0 scrollbar-none">
             {navMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
@@ -368,17 +363,17 @@ export default function LegacyLayout({
                     key={menu.id}
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all relative cursor-pointer group",
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
                       isActive
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
                     )}
                   >
                     <IconComp className={cn(
-                      "w-4 h-4 transition-transform group-hover:scale-110",
+                      "w-3.5 h-3.5 transition-transform group-hover:scale-110",
                       isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
                     )} />
-                    <span className="text-[14px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
                     )}
@@ -389,7 +384,7 @@ export default function LegacyLayout({
               return (
                 <div 
                   key={menu.id}
-                  className="relative nav-dropdown-container"
+                  className="relative nav-dropdown-container shrink-0"
                   onMouseEnter={() => setActiveMenuDropdown(menu.id)}
                   onMouseLeave={() => setActiveMenuDropdown(null)}
                 >
@@ -400,14 +395,14 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(isDropdownOpen ? null : menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer group select-none",
+                      "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
                       isDropdownOpen
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
                     )}
                   >
-                    <IconComp className="w-4 h-4 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors" />
-                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors" />
+                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74]", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
                   </button>
 
@@ -453,7 +448,7 @@ export default function LegacyLayout({
           </nav>
 
           {/* Right Notification & Profile User Menu */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Notification Badge Bell */}
             <button
               onClick={() => setIsNotifOpen(true)}
@@ -472,10 +467,10 @@ export default function LegacyLayout({
             <div className="relative">
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-2 bg-[#EAE2D2]/60 hover:bg-[#D6CAA8]/60 border border-[#D6CAA8] rounded-full px-3 py-1 text-xs font-semibold text-[#1E331B] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 bg-[#EAE2D2]/60 hover:bg-[#D6CAA8]/60 border border-[#D6CAA8] rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#1E331B] transition-colors cursor-pointer"
               >
-                <div className="w-6 h-6 rounded-full bg-[#1E331B] text-[#FAF7F0] flex items-center justify-center text-[11px] font-bold">
-                  <User className="w-3.5 h-3.5" />
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E331B] text-[#FAF7F0] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
+                  <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
                 <span className="hidden sm:inline font-bold">{currentUser}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-[#5A6E54]" />
@@ -512,6 +507,63 @@ export default function LegacyLayout({
           </div>
 
         </header>
+
+        {/* Mobile / Tablet Drawer Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="xl:hidden bg-[#FAF7F0] border-b border-[#D6CAA8] px-4 py-3 shadow-2xl z-50 flex flex-col gap-2 max-h-[75vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-[#EAE2D2]">
+              <span className="text-xs font-mono font-bold uppercase text-[#1E331B]">Navigation Modules</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 text-[#1E331B] hover:bg-[#EAE2D2] rounded">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {navMenuItems.map((menu) => {
+              const IconComp = menu.icon;
+              const hasSubItems = menu.subItems && menu.subItems.length > 0;
+              return (
+                <div key={menu.id} className="flex flex-col gap-1">
+                  {!hasSubItems ? (
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleNavNavigation(menu.pageId!);
+                      }}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-[#1E331B] bg-[#EAE2D2]/60 hover:bg-[#EAE2D2] text-left cursor-pointer"
+                    >
+                      <IconComp className="w-4 h-4 text-[#1E331B]" />
+                      <span className="text-[13px]">{menu.label}</span>
+                    </button>
+                  ) : (
+                    <div className="bg-[#F3ECE0]/80 border border-[#EAE2D2] rounded-lg p-2.5 flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2 px-1 py-0.5 text-[11px] font-bold text-[#1E331B] uppercase tracking-wider">
+                        <IconComp className="w-4 h-4 text-[#1E331B]" />
+                        <span>{menu.label}</span>
+                      </div>
+                      <div className="pl-3 flex flex-col gap-1 border-l-2 border-[#D6CAA8] ml-2 pt-1">
+                        {menu.subItems.map((sub) => {
+                          const SubIcon = sub.icon;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => {
+                                setIsMobileMenuOpen(false);
+                                handleNavNavigation(sub.pageId);
+                              }}
+                              className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-[#1E331B] hover:bg-[#1E331B] hover:text-[#FAF7F0] transition-colors text-left cursor-pointer"
+                            >
+                              <SubIcon className="w-3.5 h-3.5" />
+                              <span className="text-[12px] uppercase">{sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Form Body */}
         <div className="flex-1 overflow-auto p-4 bg-[#F4EFE6]/70">
