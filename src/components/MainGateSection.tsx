@@ -692,29 +692,65 @@ export default function MainGateSection({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Broker / Supplier</label>
-                  <select name="broker" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs">
-                    {masters.brokers.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <input
+                    name="broker"
+                    list="broker-options"
+                    placeholder="Type or select Broker..."
+                    className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
+                    defaultValue={masters.brokers[0] || ""}
+                  />
+                  <datalist id="broker-options">
+                    {masters.brokers.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </datalist>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Quality</label>
-                  <select name="quality" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs">
-                    {masters.qualities.map((q) => <option key={q} value={q}>{q}</option>)}
-                  </select>
+                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Quality / Grade</label>
+                  <input
+                    name="quality"
+                    list="quality-options"
+                    placeholder="Type or select Quality..."
+                    className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
+                    defaultValue={masters.qualities[0] || ""}
+                  />
+                  <datalist id="quality-options">
+                    {masters.qualities.map((q) => (
+                      <option key={q} value={q}>{q}</option>
+                    ))}
+                  </datalist>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Mokam</label>
-                  <select name="mokam" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs">
-                    {masters.mokams.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
+                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Mokam / Origin</label>
+                  <input
+                    name="mokam"
+                    list="mokam-options"
+                    placeholder="Type or select Mokam..."
+                    className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
+                    defaultValue={masters.mokams[0] || ""}
+                  />
+                  <datalist id="mokam-options">
+                    {masters.mokams.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Marka</label>
-                  <select name="marka" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs">
-                    {masters.markas.map((mk) => <option key={mk} value={mk}>{mk}</option>)}
-                  </select>
+                  <input
+                    name="marka"
+                    list="marka-options"
+                    placeholder="Type or select Marka..."
+                    className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
+                    defaultValue={masters.markas[0] || ""}
+                  />
+                  <datalist id="marka-options">
+                    {masters.markas.map((mk) => (
+                      <option key={mk} value={mk}>{mk}</option>
+                    ))}
+                  </datalist>
                 </div>
               </div>
 

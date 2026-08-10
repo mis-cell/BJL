@@ -57,6 +57,7 @@ import MainGateSection from "../components/MainGateSection";
 import MillWeighmentSection from "../components/MillWeighmentSection";
 import ElectricWeighbridgeSection from "../components/ElectricWeighbridgeSection";
 import DepartmentDashboardSection from "../components/DepartmentDashboardSection";
+import { MASTER_BROKERS, MASTER_QUALITIES, MASTER_MOKAMS, MASTER_MARKAS } from "../data/masterData";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -191,10 +192,10 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 const DEFAULT_MASTERS: MasterOptions = {
-  brokers: ["Jute Traders India", "Bally Raw Jute Syndicate", "Eastern Fiber Co", "Bengal Jute Suppliers", "Ganga Commercial"],
-  qualities: ["TD-5 Super", "TD-4 Grade A", "W-5 White Jute", "B-Bottom Raw", "Mesta Fiber Grade I", "Hessian Grade B"],
-  mokams: ["Cuttack Yard", "Forbesganj Depot", "Kishanganj Mandi", "Purnea Hub", "Samsi Terminal"],
-  markas: ["BJL-SUPER", "STAR-JUTE", "GOLD-BALE", "BALLY-PRIME", "EAGLE-FIBER"],
+  brokers: MASTER_BROKERS,
+  qualities: MASTER_QUALITIES,
+  mokams: MASTER_MOKAMS,
+  markas: MASTER_MARKAS,
 };
 
 const DEFAULT_USERS: SystemUser[] = [

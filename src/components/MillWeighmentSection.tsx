@@ -342,15 +342,19 @@ export default function MillWeighmentSection({
                   <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Party Name (Supplier) *
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={partyName}
                     onChange={(e) => setPartyName(e.target.value)}
+                    list="mill-party-options"
+                    placeholder="Type or select Party..."
                     className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#1E331B] outline-none"
-                  >
+                  />
+                  <datalist id="mill-party-options">
                     {masters.brokers.map((b) => (
                       <option key={b} value={b}>{b}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
 
                 <div>
@@ -383,15 +387,19 @@ export default function MillWeighmentSection({
                   <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Mokam
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={mokam}
                     onChange={(e) => setMokam(e.target.value)}
+                    list="mill-mokam-options"
+                    placeholder="Type or select Mokam..."
                     className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#1E331B] outline-none"
-                  >
+                  />
+                  <datalist id="mill-mokam-options">
                     {masters.mokams.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
             </div>
@@ -418,18 +426,24 @@ export default function MillWeighmentSection({
                     <span className="text-xs font-mono font-bold text-[#5A6E54]">#{idx + 1}</span>
                     
                     <div className="flex-1 grid grid-cols-3 gap-2">
-                      <select
-                        value={g.quality}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setGrades((prev) => prev.map((x) => (x.id === g.id ? { ...x, quality: val } : x)));
-                        }}
-                        className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#1E331B]"
-                      >
-                        {masters.qualities.map((q) => (
-                          <option key={q} value={q}>{q}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={g.quality}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setGrades((prev) => prev.map((x) => (x.id === g.id ? { ...x, quality: val } : x)));
+                          }}
+                          list="mill-quality-options"
+                          placeholder="Select Grade..."
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#1E331B]"
+                        />
+                        <datalist id="mill-quality-options">
+                          {masters.qualities.map((q) => (
+                            <option key={q} value={q}>{q}</option>
+                          ))}
+                        </datalist>
+                      </div>
 
                       <input
                         type="number"
