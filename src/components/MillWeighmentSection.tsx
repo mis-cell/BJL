@@ -273,7 +273,7 @@ export default function MillWeighmentSection({
         </div>
       )}
 
-      {/* SCREEN 2: PARTY CHALAN & MILL GROSS/TARE FORM */}
+      {/* SCREEN 2: PARTY CHALLAN & MILL GROSS/TARE FORM */}
       {currentScreen === "FORM" && (
         <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-6">
           
@@ -288,7 +288,7 @@ export default function MillWeighmentSection({
             </button>
 
             <h2 className="text-sm font-black uppercase font-mono text-[#1E331B]">
-              Party Chalan & Mill Weighment Entry
+              Party Challan & Mill Weighment Entry
             </h2>
           </div>
 

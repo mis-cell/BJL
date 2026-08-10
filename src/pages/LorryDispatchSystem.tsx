@@ -206,66 +206,7 @@ const DEFAULT_USERS: SystemUser[] = [
   { id: "usr_5", username: "store_mgr", name: "Pradeep Ghosh (Store/Yard)", role: "STORE_DEPT", active: true, lastActive: "10 mins ago" },
 ];
 
-const INITIAL_LORRIES: LorryRecord[] = [
-  {
-    id: "9dc43115-a7e9-466e-91d3-e8135cab4c89",
-    gatePassNo: "JUTE-20260810-8541",
-    lorryNo: "WB26AY4444",
-    driverPhone: "+91 98300 00000",
-    department: "Jute",
-    broker: "PHUL CHAND ABHISEK KUMAR",
-    quality: "WN4",
-    mokam: "AMBAGAN",
-    marka: "MJ",
-    status: "COMPLETED",
-    inTime: "2026-08-10T11:36:00.000Z",
-    outTime: "2026-08-10T11:40:00.000Z",
-    millGrossWeight: 9800,
-    millTareWeight: 1600,
-    electricGrossWeight: 9800,
-    electricTareWeight: 1800,
-    millNetWeight: 8200,
-    electricNetWeight: 8000,
-    finalNetWeight: 8000,
-    remarks: "Lorry Out - Weight Clearance Passed",
-  },
-  {
-    id: "aa00d1d3-2312-4288-bd81-924b434a0961",
-    gatePassNo: "JUTE-20260810-7413",
-    lorryNo: "WB126/2312",
-    driverPhone: "+91 98300 00000",
-    department: "Jute",
-    broker: "FIBRE COM",
-    quality: "WN4",
-    mokam: "AMBAGAN",
-    marka: "MJ",
-    status: "COMPLETED",
-    inTime: "2026-08-10T11:27:00.000Z",
-    outTime: "2026-08-10T11:32:00.000Z",
-    millGrossWeight: 9600,
-    millTareWeight: 1600,
-    electricGrossWeight: 9800,
-    electricTareWeight: 1800,
-    millNetWeight: 8000,
-    electricNetWeight: 8000,
-    finalNetWeight: 8000,
-    remarks: "Lorry Out - Weight Clearance Passed",
-  },
-  {
-    id: "bc0b72d3-08cf-4940-a5ce-3aa4d4491ef3",
-    gatePassNo: "JUTE-20260810-9355",
-    lorryNo: "WBIIB 2324",
-    driverPhone: "+91 98300 00000",
-    department: "Jute",
-    broker: "Jute Traders",
-    quality: "Jute",
-    mokam: "AMBAGAN",
-    marka: "MJ",
-    status: "WAITING_FOR_MILL_GROSS",
-    inTime: "2026-08-10T12:28:00.000Z",
-    remarks: "Department: Jute",
-  },
-];
+const INITIAL_LORRIES: LorryRecord[] = [];
 
 // Calculate Haversine distance in meters
 function getHaversineDistance(
@@ -334,7 +275,7 @@ export default function LorryDispatchSystem({
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const loaded: LorryRecord[] = data.map((row: any) => {
             const millGross = Number(row.mill_gross_weight ?? row.stage1_gross_weight ?? 0);
             const millTare = Number(row.mill_tare_weight ?? row.stage1_tare_weight ?? 0);
@@ -365,8 +306,8 @@ export default function LorryDispatchSystem({
             }
 
             return {
-              id: row.id,
-              gatePassNo: row.gate_pass || row.ticket_number || `GP-${row.id.slice(0, 8)}`,
+              id: String(row.id),
+              gatePassNo: row.gate_pass || row.ticket_number || `GP-${String(row.id).slice(0, 8)}`,
               lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
               driverPhone: row.driver_phone || "+91 98300 00000",
               department: dept,
@@ -395,6 +336,10 @@ export default function LorryDispatchSystem({
       }
     }
     loadLorryWeighments();
+
+    // 4-second polling to ensure live synchronization across all desks/terminals
+    const interval = setInterval(loadLorryWeighments, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
@@ -406,6 +351,92 @@ export default function LorryDispatchSystem({
     const saved = localStorage.getItem("bjl_masters");
     return saved ? JSON.parse(saved) : DEFAULT_MASTERS;
   });
+
+  // Fetch reference tables from Supabase and merge with DEFAULT_MASTERS so dropdown options are never blank
+  useEffect(() => {
+    async function loadMasterDataFromSupabase() {
+      if (!supabase) return;
+      try {
+        const fetchSafe = async (fn: () => PromiseLike<any>) => {
+          try {
+            const res = await fn();
+            return (res as any)?.data || [];
+          } catch {
+            return [];
+          }
+        };
+
+        const [bRes, gRes, aRes, mRes, pRes, sRes] = await Promise.all([
+          fetchSafe(() => supabase.from("broker_master").select("*")),
+          fetchSafe(() => supabase.from("grade_master").select("*")),
+          fetchSafe(() => supabase.from("agency_master").select("*")),
+          fetchSafe(() => supabase.from("marka_master").select("*")),
+          fetchSafe(() => supabase.from("purchase_master").select("broker, supplier")),
+          fetchSafe(() => supabase.from("sauda_master").select("broker, supplier")),
+        ]);
+
+        const brokersSet = new Set<string>(MASTER_BROKERS);
+        const qualitiesSet = new Set<string>(MASTER_QUALITIES);
+        const mokamsSet = new Set<string>(MASTER_MOKAMS);
+        const markasSet = new Set<string>(MASTER_MARKAS);
+
+        if (Array.isArray(bRes)) {
+          bRes.forEach((r: any) => {
+            const val = r.broker_name || r.broker || r.name;
+            if (val && typeof val === "string") brokersSet.add(val.trim());
+          });
+        }
+
+        if (Array.isArray(pRes)) {
+          pRes.forEach((r: any) => {
+            if (r.broker) brokersSet.add(String(r.broker).trim());
+            if (r.supplier) brokersSet.add(String(r.supplier).trim());
+          });
+        }
+
+        if (Array.isArray(sRes)) {
+          sRes.forEach((r: any) => {
+            if (r.broker) brokersSet.add(String(r.broker).trim());
+            if (r.supplier) brokersSet.add(String(r.supplier).trim());
+          });
+        }
+
+        if (Array.isArray(gRes)) {
+          gRes.forEach((r: any) => {
+            const val = r.grade_name || r.stock_grade_code || r.grade || r.code;
+            if (val && typeof val === "string") qualitiesSet.add(val.trim());
+          });
+        }
+
+        if (Array.isArray(aRes)) {
+          aRes.forEach((r: any) => {
+            const val = r.agency_name || r.agency || r.area_name || r.area;
+            if (val && typeof val === "string") mokamsSet.add(val.trim());
+          });
+        }
+
+        if (Array.isArray(mRes)) {
+          mRes.forEach((r: any) => {
+            const val = r.marka_name || r.marka || r.marks;
+            if (val && typeof val === "string") markasSet.add(val.trim());
+          });
+        }
+
+        const updatedMasters: MasterOptions = {
+          brokers: Array.from(brokersSet).filter(Boolean).sort(),
+          qualities: Array.from(qualitiesSet).filter(Boolean).sort(),
+          mokams: Array.from(mokamsSet).filter(Boolean).sort(),
+          markas: Array.from(markasSet).filter(Boolean).sort(),
+        };
+
+        setMasters(updatedMasters);
+        localStorage.setItem("bjl_masters", JSON.stringify(updatedMasters));
+      } catch (err) {
+        console.warn("Error fetching reference master tables:", err);
+      }
+    }
+    loadMasterDataFromSupabase();
+  }, []);
 
   const [users, setUsers] = useState<SystemUser[]>(() => {
     const saved = localStorage.getItem("bjl_users");
@@ -674,6 +705,29 @@ export default function LorryDispatchSystem({
     };
 
     setLorries((prev) => [newRecord, ...prev]);
+
+    // Persist to Supabase lorry_weighments table
+    if (supabase) {
+      supabase.from("lorry_weighments").insert({
+        ticket_number: gatePassNo,
+        gate_pass: gatePassNo,
+        lorry_no: formData.lorryNo.toUpperCase(),
+        driver_phone: formData.driverPhone,
+        department: formData.department,
+        party_name: formData.broker,
+        broker: formData.broker,
+        quality: formData.quality,
+        grade: formData.quality,
+        mokam: formData.mokam,
+        marka: formData.marka,
+        status: initialStatus,
+        in_time: newRecord.inTime,
+        created_at: newRecord.inTime,
+      }).then((res) => {
+        if (res.error) console.warn("Supabase insert lorry error:", res.error);
+      });
+    }
+
     logAuditAction("GATE_ENTRY_REGISTERED", `Gate pass ${gatePassNo} generated for Lorry ${newRecord.lorryNo} (${formData.department})`);
 
     // Real-Time Notification
@@ -789,6 +843,33 @@ export default function LorryDispatchSystem({
         }
 
         logAuditAction(`${station}_${type}_SAVED`, `Lorry ${l.lorryNo}: Recorded ${station} ${type} = ${weightKg} kg`);
+
+        // Update database table
+        if (supabase && l.id) {
+          const updatePayload: any = { status: updated.status };
+          if (station === "MILL" && type === "GROSS") {
+            updatePayload.mill_gross_weight = weightKg;
+            updatePayload.stage1_gross_weight = weightKg;
+          } else if (station === "ELECTRIC" && type === "GROSS") {
+            updatePayload.electric_gross_weight = weightKg;
+            updatePayload.stage2_gross_weight = weightKg;
+          } else if (station === "MILL" && type === "TARE") {
+            updatePayload.mill_tare_weight = weightKg;
+            updatePayload.stage1_tare_weight = weightKg;
+            if (updated.millNetWeight) updatePayload.gate_net_weight = updated.millNetWeight;
+          } else if (station === "ELECTRIC" && type === "TARE") {
+            updatePayload.electric_tare_weight = weightKg;
+            updatePayload.stage2_tare_weight = weightKg;
+            if (updated.finalNetWeight) updatePayload.gate_net_weight = updated.finalNetWeight;
+          }
+
+          if (l.id.includes("-")) {
+            supabase.from("lorry_weighments").update(updatePayload).eq("id", l.id).then();
+          } else {
+            supabase.from("lorry_weighments").update(updatePayload).eq("gate_pass", l.gatePassNo).then();
+          }
+        }
+
         return updated;
       })
     );
@@ -828,6 +909,14 @@ export default function LorryDispatchSystem({
     setLorries((prev) =>
       prev.map((l) => (l.id === lorry.id ? { ...l, status: "COMPLETED", outTime: nowIso } : l))
     );
+
+    if (supabase && lorry.id) {
+      if (lorry.id.includes("-")) {
+        supabase.from("lorry_weighments").update({ status: "COMPLETED", out_time: nowIso }).eq("id", lorry.id).then();
+      } else {
+        supabase.from("lorry_weighments").update({ status: "COMPLETED", out_time: nowIso }).eq("gate_pass", lorry.gatePassNo).then();
+      }
+    }
 
     logAuditAction("GATE_OUT_COMPLETED", `Lorry ${lorry.lorryNo} gate-out completed`);
     setSelectedLorryForReceipt({ ...lorry, status: "COMPLETED", outTime: nowIso });
