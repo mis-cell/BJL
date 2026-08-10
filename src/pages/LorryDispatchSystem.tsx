@@ -53,6 +53,10 @@ import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import MainGateSection from "../components/MainGateSection";
+import MillWeighmentSection from "../components/MillWeighmentSection";
+import ElectricWeighbridgeSection from "../components/ElectricWeighbridgeSection";
+import DepartmentDashboardSection from "../components/DepartmentDashboardSection";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -1341,322 +1345,45 @@ export default function LorryDispatchSystem({
 
             {/* B. MAIN GATE INTERFACE */}
             {(currentUserRole === "MAIN_GATE" || currentUserRole === "SUPER_ADMIN") && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Gate Entry Form */}
-                <div className="lg:col-span-5 bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
-                  <div className="flex items-center gap-2.5 border-b border-[#C5BA9E] pb-3">
-                    <Truck className="w-5 h-5 text-[#1E331B]" />
-                    <div>
-                      <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
-                        Main Gate Lorry Entry Registration
-                      </h2>
-                      <p className="text-[11px] text-[#5A6E54]">Generates unique Gate Pass & logs entry timestamp</p>
-                    </div>
-                  </div>
-
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = e.currentTarget;
-                      const formData = {
-                        lorryNo: (form.elements.namedItem("lorryNo") as HTMLInputElement).value,
-                        driverPhone: (form.elements.namedItem("driverPhone") as HTMLInputElement).value,
-                        department: (form.elements.namedItem("department") as HTMLSelectElement).value as DepartmentType,
-                        broker: (form.elements.namedItem("broker") as HTMLSelectElement).value,
-                        quality: (form.elements.namedItem("quality") as HTMLSelectElement).value,
-                        mokam: (form.elements.namedItem("mokam") as HTMLSelectElement).value,
-                        marka: (form.elements.namedItem("marka") as HTMLSelectElement).value,
-                      };
-                      handleRegisterGateEntry(formData);
-                      form.reset();
-                    }}
-                    className="space-y-3.5"
-                  >
-                    <div>
-                      <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                        Lorry Registration No *
-                      </label>
-                      <input
-                        required
-                        name="lorryNo"
-                        type="text"
-                        placeholder="e.g. WB-04-E-1234"
-                        className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] uppercase font-mono outline-none focus:border-[#1E331B]"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Driver Phone No *
-                        </label>
-                        <input
-                          required
-                          name="driverPhone"
-                          type="text"
-                          placeholder="+91 98300 00000"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] font-mono outline-none focus:border-[#1E331B]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Designated Dept *
-                        </label>
-                        <select
-                          name="department"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] font-bold outline-none focus:border-[#1E331B]"
-                        >
-                          <option value="Jute">Jute Raw Material</option>
-                          <option value="Store">Store Spares</option>
-                          <option value="Finish Good">Finish Good Dispatch</option>
-                          <option value="Other">Other Material</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Broker / Supplier *
-                        </label>
-                        <select
-                          name="broker"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
-                        >
-                          {masters.brokers.map((b) => (
-                            <option key={b} value={b}>{b}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Quality / Grade *
-                        </label>
-                        <select
-                          name="quality"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
-                        >
-                          {masters.qualities.map((q) => (
-                            <option key={q} value={q}>{q}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Mokam / Origin
-                        </label>
-                        <select
-                          name="mokam"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
-                        >
-                          {masters.mokams.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
-                          Marka
-                        </label>
-                        <select
-                          name="marka"
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
-                        >
-                          {masters.markas.map((mk) => (
-                            <option key={mk} value={mk}>{mk}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] font-extrabold text-xs uppercase tracking-wider text-[#FAF7F0] rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Register Gate Pass & Print Entry Tag</span>
-                    </button>
-                  </form>
-                </div>
-
-                {/* Gate Out & Pending Exit Queue */}
-                <div className="lg:col-span-7 bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
-                  <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-700" />
-                      <div>
-                        <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
-                          Ready For Gate Out Exit
-                        </h2>
-                        <p className="text-[11px] text-[#5A6E54]">Lorries cleared by Mill/Electric weighments or departments</p>
-                      </div>
-                    </div>
-
-                    <span className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-mono font-bold rounded-full">
-                      {lorries.filter((l) => l.status === "READY_FOR_GATE_EXIT").length} Ready
-                    </span>
-                  </div>
-
-                  <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                    {lorries.filter((l) => l.status === "READY_FOR_GATE_EXIT").length === 0 ? (
-                      <div className="text-center py-10 text-[#5A6E54] text-xs font-mono">
-                        No lorries currently awaiting gate exit clearance.
-                      </div>
-                    ) : (
-                      lorries
-                        .filter((l) => l.status === "READY_FOR_GATE_EXIT")
-                        .map((l) => (
-                          <div
-                            key={l.id}
-                            className="bg-[#FAF7F0] border border-emerald-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-emerald-600 transition-all shadow-xs"
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
-                                <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-[10px] font-mono font-bold rounded">
-                                  {l.gatePassNo}
-                                </span>
-                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase rounded">
-                                  {l.department}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-[#5A6E54]">
-                                Broker: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong>
-                              </p>
-                              {l.finalNetWeight && (
-                                <p className="text-xs text-emerald-800 font-mono font-bold">
-                                  Final Net Dispatch: {l.finalNetWeight.toLocaleString()} KG
-                                </p>
-                              )}
-                            </div>
-
-                            <button
-                              onClick={() => handleGateOutExit(l)}
-                              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
-                            >
-                              <Printer className="w-4 h-4" />
-                              <span>Complete Gate Out & Print Slip</span>
-                            </button>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-              </div>
+              <MainGateSection
+                lorries={lorries}
+                masters={masters}
+                onRegisterGateEntry={handleRegisterGateEntry}
+                onGateOutExit={handleGateOutExit}
+                onSelectLorry={(lorry) => {
+                  setSelectedLorryForReceipt(lorry);
+                  setIsReceiptModalOpen(true);
+                }}
+                triggerNotification={triggerNotification}
+              />
             )}
 
-            {/* C. WEIGHMENT INTERFACES (MILL & ELECTRIC WEIGHBRIDGE) */}
-            {(currentUserRole === "MILL_WEIGHTMENT" ||
-              currentUserRole === "ELECTRIC_WEIGHTMENT" ||
-              currentUserRole === "SUPER_ADMIN") && (
-              <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-6 text-[#1E331B]">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C5BA9E] pb-4 gap-3">
-                  <div className="flex items-center gap-3">
-                    <Scale className="w-6 h-6 text-[#1E331B] shrink-0" />
-                    <div>
-                      <h2 className="text-base font-black text-[#1E331B] uppercase tracking-wider font-mono">
-                        {currentUserRole === "ELECTRIC_WEIGHTMENT" ? "Electric Scale Weighbridge Station" : "Mill Yard Scale Weighbridge Station"}
-                      </h2>
-                      <p className="text-xs text-[#5A6E54]">
-                        Zero Offset Applied: <strong className="text-[#1E331B] font-mono">
-                          {currentUserRole === "ELECTRIC_WEIGHTMENT" ? settings.electricZeroOffsetKg : settings.millZeroOffsetKg} KG
-                        </strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-amber-100 border border-amber-300 text-amber-900 text-xs font-mono font-bold rounded-full">
-                      Live Industrial Scale Connected
-                    </span>
-                  </div>
-                </div>
-
-                {/* Queue of Lorries Pending Weighment */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {lorries
-                    .filter((l) => {
-                      if (l.department !== "Jute") return false;
-                      if (currentUserRole === "MILL_WEIGHTMENT") {
-                        return l.status === "WAITING_FOR_MILL_GROSS" || l.status === "MILL_TARE_PENDING";
-                      }
-                      if (currentUserRole === "ELECTRIC_WEIGHTMENT") {
-                        return l.status === "ELECTRIC_GROSS_PENDING" || l.status === "ELECTRIC_TARE_PENDING";
-                      }
-                      return l.status !== "COMPLETED";
-                    })
-                    .map((l) => (
-                      <WeighmentOperatorCard
-                        key={l.id}
-                        lorry={l}
-                        currentUserRole={currentUserRole}
-                        settings={settings}
-                        onSaveWeighment={handleSaveWeighment}
-                      />
-                    ))}
-                </div>
-              </div>
+            {/* C. MILL WEIGHMENT INTERFACE */}
+            {(currentUserRole === "MILL_WEIGHTMENT" || currentUserRole === "SUPER_ADMIN") && (
+              <MillWeighmentSection
+                lorries={lorries}
+                masters={masters}
+                currentUserRole={currentUserRole}
+                onSaveWeighment={handleSaveWeighment}
+              />
             )}
 
-            {/* D. STORE / FINISH GOOD / OTHER DEPARTMENTS INTERFACE */}
+            {/* D. ELECTRIC WEIGHBRIDGE STATION INTERFACE */}
+            {(currentUserRole === "ELECTRIC_WEIGHTMENT" || currentUserRole === "SUPER_ADMIN") && (
+              <ElectricWeighbridgeSection
+                lorries={lorries}
+                currentUserRole={currentUserRole}
+                onSaveWeighment={handleSaveWeighment}
+              />
+            )}
+
+            {/* E. STORE & DEPARTMENT DASHBOARD INTERFACE */}
             {(currentUserRole === "STORE_DEPT" || currentUserRole === "SUPER_ADMIN") && (
-              <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
-                <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <PackageCheck className="w-5 h-5 text-[#1E331B]" />
-                    <div>
-                      <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
-                        Store & Material Department Clearance
-                      </h2>
-                      <p className="text-[11px] text-[#5A6E54]">Verify material unloading & sign-off for gate release</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {lorries.filter((l) => ["STORE_PENDING", "FINISH_GOOD_PENDING", "OTHER_PENDING"].includes(l.status)).length === 0 ? (
-                    <div className="text-center py-10 text-[#5A6E54] text-xs font-mono">
-                      No store or department lorries currently pending verification.
-                    </div>
-                  ) : (
-                    lorries
-                      .filter((l) => ["STORE_PENDING", "FINISH_GOOD_PENDING", "OTHER_PENDING"].includes(l.status))
-                      .map((l) => (
-                        <div
-                          key={l.id}
-                          className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
-                              <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-xs font-mono rounded">{l.gatePassNo}</span>
-                              <span className="px-2 py-0.5 bg-cyan-100 text-cyan-900 text-xs font-bold uppercase rounded">{l.department}</span>
-                            </div>
-                            <p className="text-xs text-[#5A6E54]">
-                              Broker: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong>
-                            </p>
-                            <p className="text-[11px] text-[#5A6E54]">In Time: {new Date(l.inTime).toLocaleString("en-IN")}</p>
-                          </div>
-
-                          <button
-                            onClick={() => handleDepartmentApprove(l.id)}
-                            className="px-4 py-2 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>Verify Unloading & Approve Gate Exit</span>
-                          </button>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
+              <DepartmentDashboardSection
+                lorries={lorries}
+                currentUserRole={currentUserRole}
+                onDepartmentApprove={handleDepartmentApprove}
+              />
             )}
 
             {/* E. ALL DISPATCHES MASTER TABLE (WITH FILTERS & SEARCH) */}
