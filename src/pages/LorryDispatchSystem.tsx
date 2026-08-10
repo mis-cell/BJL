@@ -203,61 +203,62 @@ const DEFAULT_USERS: SystemUser[] = [
 
 const INITIAL_LORRIES: LorryRecord[] = [
   {
-    id: "lorry_101",
-    gatePassNo: "GP-2026-0810-001",
-    lorryNo: "WB-04-E-8821",
-    driverPhone: "+91 98310 12345",
+    id: "9dc43115-a7e9-466e-91d3-e8135cab4c89",
+    gatePassNo: "JUTE-20260810-8541",
+    lorryNo: "WB26AY4444",
+    driverPhone: "+91 98300 00000",
     department: "Jute",
-    broker: "Jute Traders India",
-    quality: "TD-5 Super",
-    mokam: "Forbesganj Depot",
-    marka: "BJL-SUPER",
-    status: "READY_FOR_GATE_EXIT",
-    inTime: new Date(Date.now() - 3600000 * 2.5).toISOString(),
-    millGrossWeight: 38450,
-    millGrossTime: new Date(Date.now() - 3600000 * 2.2).toISOString(),
-    electricGrossWeight: 38480,
-    electricGrossTime: new Date(Date.now() - 3600000 * 2.0).toISOString(),
-    millTareWeight: 14200,
-    millTareTime: new Date(Date.now() - 3600000 * 0.8).toISOString(),
-    electricTareWeight: 14210,
-    electricTareTime: new Date(Date.now() - 3600000 * 0.3).toISOString(),
-    millNetWeight: 24250,
-    electricNetWeight: 24270,
-    finalNetWeight: 24260,
-    remarks: "Raw jute bales verified in good condition.",
+    broker: "PHUL CHAND ABHISEK KUMAR",
+    quality: "WN4",
+    mokam: "AMBAGAN",
+    marka: "MJ",
+    status: "COMPLETED",
+    inTime: "2026-08-10T11:36:00.000Z",
+    outTime: "2026-08-10T11:40:00.000Z",
+    millGrossWeight: 9800,
+    millTareWeight: 1600,
+    electricGrossWeight: 9800,
+    electricTareWeight: 1800,
+    millNetWeight: 8200,
+    electricNetWeight: 8000,
+    finalNetWeight: 8000,
+    remarks: "Lorry Out - Weight Clearance Passed",
   },
   {
-    id: "lorry_102",
-    gatePassNo: "GP-2026-0810-002",
-    lorryNo: "WB-25-C-4410",
-    driverPhone: "+91 98301 98765",
+    id: "aa00d1d3-2312-4288-bd81-924b434a0961",
+    gatePassNo: "JUTE-20260810-7413",
+    lorryNo: "WB126/2312",
+    driverPhone: "+91 98300 00000",
     department: "Jute",
-    broker: "Bally Raw Jute Syndicate",
-    quality: "W-5 White Jute",
-    mokam: "Cuttack Yard",
-    marka: "STAR-JUTE",
-    status: "MILL_TARE_PENDING",
-    inTime: new Date(Date.now() - 3600000 * 1.5).toISOString(),
-    millGrossWeight: 42100,
-    millGrossTime: new Date(Date.now() - 3600000 * 1.2).toISOString(),
-    electricGrossWeight: 42120,
-    electricGrossTime: new Date(Date.now() - 3600000 * 1.0).toISOString(),
-    remarks: "Currently unloading at Jute Yard #3.",
+    broker: "FIBRE COM",
+    quality: "WN4",
+    mokam: "AMBAGAN",
+    marka: "MJ",
+    status: "COMPLETED",
+    inTime: "2026-08-10T11:27:00.000Z",
+    outTime: "2026-08-10T11:32:00.000Z",
+    millGrossWeight: 9600,
+    millTareWeight: 1600,
+    electricGrossWeight: 9800,
+    electricTareWeight: 1800,
+    millNetWeight: 8000,
+    electricNetWeight: 8000,
+    finalNetWeight: 8000,
+    remarks: "Lorry Out - Weight Clearance Passed",
   },
   {
-    id: "lorry_103",
-    gatePassNo: "GP-2026-0810-003",
-    lorryNo: "WB-19-B-1192",
-    driverPhone: "+91 97482 33441",
-    department: "Store",
-    broker: "Eastern Fiber Co",
-    quality: "Machine Spare Parts",
-    mokam: "Kishanganj Mandi",
-    marka: "BALLY-PRIME",
-    status: "STORE_PENDING",
-    inTime: new Date(Date.now() - 3600000 * 0.5).toISOString(),
-    remarks: "Store hardware delivery.",
+    id: "bc0b72d3-08cf-4940-a5ce-3aa4d4491ef3",
+    gatePassNo: "JUTE-20260810-9355",
+    lorryNo: "WBIIB 2324",
+    driverPhone: "+91 98300 00000",
+    department: "Jute",
+    broker: "Jute Traders",
+    quality: "Jute",
+    mokam: "AMBAGAN",
+    marka: "MJ",
+    status: "WAITING_FOR_MILL_GROSS",
+    inTime: "2026-08-10T12:28:00.000Z",
+    remarks: "Department: Jute",
   },
 ];
 
@@ -298,8 +299,98 @@ export default function LorryDispatchSystem({
   // System Data
   const [lorries, setLorries] = useState<LorryRecord[]>(() => {
     const saved = localStorage.getItem("bjl_lorries");
-    return saved ? JSON.parse(saved) : INITIAL_LORRIES;
+    if (saved) {
+      try {
+        const parsed: LorryRecord[] = JSON.parse(saved);
+        const filtered = parsed.filter(
+          (l) =>
+            l.id !== "lorry_101" &&
+            l.id !== "lorry_102" &&
+            l.id !== "lorry_103" &&
+            l.lorryNo !== "WB-04-E-8821" &&
+            l.lorryNo !== "WB-25-C-4410" &&
+            l.lorryNo !== "WB-19-B-1192"
+        );
+        if (filtered.length > 0) return filtered;
+      } catch (e) {
+        console.warn("Error parsing saved lorries:", e);
+      }
+    }
+    return INITIAL_LORRIES;
   });
+
+  // Load live data from Supabase table lorry_weighments
+  useEffect(() => {
+    async function loadLorryWeighments() {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from("lorry_weighments")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const loaded: LorryRecord[] = data.map((row: any) => {
+            const millGross = Number(row.mill_gross_weight ?? row.stage1_gross_weight ?? 0);
+            const millTare = Number(row.mill_tare_weight ?? row.stage1_tare_weight ?? 0);
+            const elecGross = Number(row.electric_gross_weight ?? row.stage2_gross_weight ?? 0);
+            const elecTare = Number(row.electric_tare_weight ?? row.stage2_tare_weight ?? 0);
+
+            const millNet = millGross > 0 && millTare > 0 ? millGross - millTare : Number(row.gate_net_weight ?? 0);
+            const elecNet = elecGross > 0 && elecTare > 0 ? elecGross - elecTare : 0;
+
+            let finalNet = Number(row.gate_net_weight ?? 0);
+            if (millNet > 0 && elecNet > 0) {
+              finalNet = Math.round((millNet + elecNet) / 2);
+            } else if (millNet > 0 || elecNet > 0) {
+              finalNet = elecNet || millNet;
+            }
+
+            let dept: DepartmentType = "Jute";
+            if (row.department) {
+              const dStr = String(row.department).toLowerCase();
+              if (dStr.includes("store")) dept = "Store";
+              else if (dStr.includes("finish")) dept = "Finish Good";
+              else if (dStr.includes("other")) dept = "Other";
+            }
+
+            let statusVal: LorryStatus = (row.status as LorryStatus) || "GATE_ENTRY";
+            if (row.status === "GATE_ENTRY" && dept === "Jute") {
+              statusVal = "WAITING_FOR_MILL_GROSS";
+            }
+
+            return {
+              id: row.id,
+              gatePassNo: row.gate_pass || row.ticket_number || `GP-${row.id.slice(0, 8)}`,
+              lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
+              driverPhone: row.driver_phone || "+91 98300 00000",
+              department: dept,
+              broker: row.party_name || row.broker || "N/A",
+              quality: row.description || row.grade || row.quality || "WN4",
+              mokam: row.mokam || "AMBAGAN",
+              marka: row.marka || "MJ",
+              status: statusVal,
+              inTime: row.in_time || row.created_at || new Date().toISOString(),
+              outTime: row.out_time || row.out_date,
+              millGrossWeight: millGross || undefined,
+              millTareWeight: millTare || undefined,
+              electricGrossWeight: elecGross || undefined,
+              electricTareWeight: elecTare || undefined,
+              millNetWeight: millNet || undefined,
+              electricNetWeight: elecNet || undefined,
+              finalNetWeight: finalNet || undefined,
+              remarks: row.mill_remarks || row.out_remarks || row.remarks || "",
+            };
+          });
+
+          setLorries(loaded);
+        }
+      } catch (err) {
+        console.warn("Failed to load lorry_weighments:", err);
+      }
+    }
+    loadLorryWeighments();
+  }, []);
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const saved = localStorage.getItem("bjl_settings");

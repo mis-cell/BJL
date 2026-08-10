@@ -197,7 +197,6 @@ export default function LegacyLayout({
       icon: DoorClosed,
       subItems: [
         { id: 'main_gate', label: 'Main Gate', icon: Truck, pageId: 'main_gate' },
-        { id: 'weighbridge_gate', label: 'Weight Bridge', icon: Scale, pageId: 'weight_bridge' },
       ]
     },
     {
