@@ -12,6 +12,21 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  *, ::before, ::after {
+    box-sizing: border-box;
+  }
+
   body {
     @apply font-sans bg-slate-100 text-slate-900 antialiased selection:bg-indigo-600 selection:text-white;
   }
@@ -248,75 +263,6 @@
   }
 }
 
-/* Responsive adjustments for mobile/tablet viewports to prevent horizontal overflow */
-@media (max-width: 767px) {
-  /* Prevent horizontal layout bleed */
-  body, html { /* removed to allow horizontal scroll on zoom */ }
-
-  /* Make sure wide data tables scroll horizontally beautifully instead of breaking page width */
-  table {
-    min-width: 600px !important; /* Ensure data-heavy tables maintain responsive structure while scrolling */
-  }
-
-  /* Aggressive 'mobile-first' strategy for forms and grids below 768px: collapse all grid layouts to single-column */
-  form .grid,
-  fieldset .grid,
-  .form-grid,
-  [class*="grid-cols-"] {
-    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-    gap: 0.75rem !important;
-  }
-
-  /* Force col-span items to fill single columns fully when collapsed */
-  form [class*="col-span-"],
-  fieldset [class*="col-span-"],
-  .form-grid [class*="col-span-"],
-  [class*="col-span-"] {
-    grid-column: span 1 / span 1 !important;
-  }
-
-  /* Form fields height and padding optimization for tap-friendliness */
-  input, 
-  select, 
-  textarea, 
-  .single-combo-box, 
-  .dual-combo-box,
-  button {
-    min-height: 44px !important; /* Finger-friendly minimum height */
-    font-size: 14px !important; /* Absolute protection against auto-zooming on focus */
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-  }
-
-  /* Responsive stack for row-aligned form labels and fields */
-  .flex.items-center:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.25rem !important;
-  }
-
-  .flex.items-center:not(:has(input[type="checkbox"])):not(:has(input[type="radio"])) > label {
-    text-align: left !important;
-    width: auto !important;
-    min-width: unset !important;
-    margin-right: 0 !important;
-    margin-left: 0 !important;
-  }
-
-  /* Keep checklist items/inline radios properly row-aligned */
-  .flex.items-center:has(input[type="checkbox"]),
-  .flex.items-center:has(input[type="radio"]) {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 0.5rem !important;
-  }
-
-  /* Balanced grids on mobile auto-fit */
-  .grid-cols-2 {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-  }
-}
-
 /* Touch-friendly overflow container with kinetic momentum scrolling for all data-heavy scroll regions */
 .touch-overflow-container,
 .overflow-x-auto,
@@ -348,39 +294,6 @@ div:has(> table)::-webkit-scrollbar-track {
 div:has(> table)::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
-}
-
-/* Expand the hit target area of all interactive buttons, links, checkbox/radio inputs, and action links 
-   to a minimum of 44x44px using invisible CSS pseudo-elements, without altering their visual appearance. */
-@media (max-width: 1024px) {
-  button,
-  a,
-  input[type="checkbox"],
-  input[type="radio"],
-  .clickable-action,
-  [role="button"] {
-    position: relative !important;
-  }
-
-  button::after,
-  a::after,
-  input[type="checkbox"]::after,
-  input[type="radio"]::after,
-  .clickable-action::after,
-  [role="button"]::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 100% !important;
-    min-height: 100% !important;
-    transform: translate(-50%, -50%) !important;
-    z-index: 10 !important;
-    pointer-events: auto !important;
-    cursor: pointer !important;
-  }
 }
 
 /* Dynamic font-size reduction for table headers and cells on screens smaller than 480px */
