@@ -263,12 +263,12 @@ export default function LegacyLayout({
   ];
 
   return (
-    <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col overflow-x-hidden">
+    <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] overflow-hidden shadow-xl">
+      <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-visible">
         
         {/* Top Control Bar (Yellow/Black Hazard Striped Sub-header & Window Controls) */}
-        <div className="relative bg-[#faf7f0] border-b border-[#faf7f0] px-3.5 py-1.5 flex items-center justify-between text-white overflow-hidden shrink-0 shadow-xs">
+        <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30">
           {/* Left Brand Logo Area */}
           <div 
             onClick={() => handleNavNavigation('dashboard')} 
@@ -335,10 +335,10 @@ export default function LegacyLayout({
         </div>
 
         {/* Main Header & Navigation Bar */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-20 gap-2 min-w-0">
+        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 min-w-0 overflow-visible">
           
-          {/* Top Navigation Menu Bar with Sub-Menu Dropdowns (Always visible for Laptop & Desktop) */}
-          <nav className="flex items-center gap-1 overflow-x-auto py-0.5 min-w-0 flex-1 scrollbar-none">
+          {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
+          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 overflow-visible">
             {navMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
@@ -349,9 +349,10 @@ export default function LegacyLayout({
                 return (
                   <button
                     key={menu.id}
+                    type="button"
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all relative cursor-pointer group shrink-0",
                       isActive
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
@@ -361,7 +362,7 @@ export default function LegacyLayout({
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110",
                       isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
                     )} />
-                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     {isActive && (
                       <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
                     )}
@@ -372,7 +373,7 @@ export default function LegacyLayout({
               return (
                 <div 
                   key={menu.id}
-                  className="relative nav-dropdown-container shrink-0"
+                  className="relative nav-dropdown-container shrink-0 z-50"
                   onMouseEnter={() => setActiveMenuDropdown(menu.id)}
                   onMouseLeave={() => setActiveMenuDropdown(null)}
                 >
@@ -383,20 +384,20 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(isDropdownOpen ? null : menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
+                      "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none shrink-0",
                       isDropdownOpen
                         ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
                         : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
                     )}
                   >
                     <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors" />
-                    <span className="text-[12.5px] tracking-tight whitespace-nowrap">{menu.label}</span>
+                    <span className="text-[13px] tracking-tight whitespace-nowrap">{menu.label}</span>
                     <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74]", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
                   </button>
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 pt-1 z-[100] min-w-[210px]">
+                    <div className="absolute top-full left-0 pt-1 z-[999] min-w-[220px]">
                       <div className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                         <div className="px-3 py-1 border-b border-[#EAE2D2] mb-1 bg-[#F3ECE0]/50">
                           <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#5A6E54]">
@@ -409,21 +410,16 @@ export default function LegacyLayout({
                             <button
                               key={sub.id}
                               type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleNavNavigation(sub.pageId);
-                              }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleNavNavigation(sub.pageId);
                               }}
-                              className="w-full text-left px-3 py-1.5 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
+                              className="w-full text-left px-3 py-2 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
                             >
                               <div className="w-5 h-5 rounded-md bg-[#EAE2D2]/80 group-hover/item:bg-[#FAF7F0] group-hover/item:text-[#1E331B] text-[#1E331B] flex items-center justify-center transition-colors shrink-0">
-                                <SubIcon className="w-3 h-3" />
+                                <SubIcon className="w-3.5 h-3.5" />
                               </div>
-                              <span className="truncate font-semibold text-[11.5px] uppercase tracking-tight">{sub.label}</span>
+                              <span className="truncate font-semibold text-[12px] uppercase tracking-tight">{sub.label}</span>
                             </button>
                           );
                         })}
