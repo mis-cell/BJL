@@ -959,12 +959,12 @@ export default function LorryDispatchSystem({
       
       {/* SCREEN CAPTURE PROTECTION OVERLAY (TRIGGERS WHEN FOCUS LOST IF PROTECTION ENABLED) */}
       {isScreenBlurred && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-6 space-y-4">
-          <ShieldAlert className="w-16 h-16 text-rose-500 animate-pulse" />
-          <h2 className="text-2xl font-black uppercase text-rose-400 tracking-wide">
+        <div className="fixed inset-0 z-[9999] bg-[#1E331B]/95 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-6 space-y-4">
+          <ShieldAlert className="w-16 h-16 text-rose-400 animate-pulse" />
+          <h2 className="text-2xl font-black uppercase text-rose-200 tracking-wide">
             SENSITIVE INDUSTRIAL DATA PROTECTED
           </h2>
-          <p className="text-slate-300 max-w-md text-sm leading-relaxed">
+          <p className="text-[#FAF7F0] max-w-md text-sm leading-relaxed">
             Screen capture & background recording is restricted by Bally Jute Mill security policy. Return focus to active browser tab to resume operations.
           </p>
         </div>
@@ -972,16 +972,16 @@ export default function LorryDispatchSystem({
 
       {/* INACTIVITY WARNING BANNER */}
       {showInactivityWarning && (
-        <div className="bg-amber-500 text-slate-950 px-4 py-2 font-bold text-xs flex items-center justify-between shadow-lg animate-bounce z-50">
+        <div className="bg-amber-100 border border-amber-300 text-amber-950 px-4 py-2 font-bold text-xs flex items-center justify-between shadow-md animate-bounce z-50 rounded-xl">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-slate-950" />
+            <AlertTriangle className="w-4 h-4 text-amber-800" />
             <span>
               INACTIVITY WARNING: Session will automatically lock in 30 seconds due to operator inactivity.
             </span>
           </div>
           <button
             onClick={() => setInactivitySeconds(0)}
-            className="px-3 py-1 bg-slate-900 text-amber-300 rounded hover:bg-slate-800 text-[11px] uppercase tracking-wider"
+            className="px-3 py-1 bg-[#1E331B] text-[#FAF7F0] rounded hover:bg-[#2D4D28] text-[11px] uppercase tracking-wider font-extrabold cursor-pointer transition-colors"
           >
             I'm Active
           </button>
@@ -1203,47 +1203,47 @@ export default function LorryDispatchSystem({
             {/* A. SUPER ADMIN DASHBOARD SUMMARY GRID */}
             {currentUserRole === "SUPER_ADMIN" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-4 rounded-2xl shadow-sm text-[#1E331B]">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Dispatches</span>
-                    <Truck className="w-5 h-5 text-blue-400" />
+                    <span className="text-xs font-bold text-[#5A6E54] uppercase tracking-wider">Total Dispatches</span>
+                    <Truck className="w-5 h-5 text-[#1E331B]" />
                   </div>
-                  <div className="text-2xl font-black text-white mt-2 font-mono">{lorries.length}</div>
-                  <p className="text-[11px] text-slate-500 mt-1">Active & completed lorry entries</p>
+                  <div className="text-2xl font-black text-[#1E331B] mt-2 font-mono">{lorries.length}</div>
+                  <p className="text-[11px] text-[#5A6E54] mt-1">Active & completed lorry entries</p>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-4 rounded-2xl shadow-sm text-[#1E331B]">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">In-Yard Pending</span>
-                    <Clock className="w-5 h-5 text-amber-400" />
+                    <span className="text-xs font-bold text-[#5A6E54] uppercase tracking-wider">In-Yard Pending</span>
+                    <Clock className="w-5 h-5 text-amber-700" />
                   </div>
-                  <div className="text-2xl font-black text-amber-400 mt-2 font-mono">
+                  <div className="text-2xl font-black text-amber-800 mt-2 font-mono">
                     {lorries.filter((l) => l.status !== "COMPLETED").length}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Awaiting weighment / unloading</p>
+                  <p className="text-[11px] text-[#5A6E54] mt-1">Awaiting weighment / unloading</p>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-4 rounded-2xl shadow-sm text-[#1E331B]">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ready for Exit</span>
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    <span className="text-xs font-bold text-[#5A6E54] uppercase tracking-wider">Ready for Exit</span>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-700" />
                   </div>
-                  <div className="text-2xl font-black text-emerald-400 mt-2 font-mono">
+                  <div className="text-2xl font-black text-emerald-800 mt-2 font-mono">
                     {lorries.filter((l) => l.status === "READY_FOR_GATE_EXIT").length}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Cleared for Main Gate Exit</p>
+                  <p className="text-[11px] text-[#5A6E54] mt-1">Cleared for Main Gate Exit</p>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-4 rounded-2xl shadow-sm text-[#1E331B]">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Geofence Status</span>
-                    <ShieldCheck className="w-5 h-5 text-cyan-400" />
+                    <span className="text-xs font-bold text-[#5A6E54] uppercase tracking-wider">Geofence Status</span>
+                    <ShieldCheck className="w-5 h-5 text-[#1E331B]" />
                   </div>
-                  <div className="text-sm font-bold text-white mt-2 font-mono flex items-center gap-2">
-                    <span className={cn("w-2.5 h-2.5 rounded-full", settings.enforceGeofence ? "bg-emerald-400 animate-pulse" : "bg-slate-600")} />
+                  <div className="text-sm font-bold text-[#1E331B] mt-2 font-mono flex items-center gap-2">
+                    <span className={cn("w-2.5 h-2.5 rounded-full", settings.enforceGeofence ? "bg-emerald-600 animate-pulse" : "bg-slate-400")} />
                     {settings.enforceGeofence ? "ENFORCED (500m)" : "DISABLED"}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Bally Jute Mill coordinates</p>
+                  <p className="text-[11px] text-[#5A6E54] mt-1">Bally Jute Mill coordinates</p>
                 </div>
               </div>
             )}
@@ -1253,14 +1253,14 @@ export default function LorryDispatchSystem({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 {/* Gate Entry Form */}
-                <div className="lg:col-span-5 bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
-                  <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
-                    <Truck className="w-5 h-5 text-blue-400" />
+                <div className="lg:col-span-5 bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+                  <div className="flex items-center gap-2.5 border-b border-[#C5BA9E] pb-3">
+                    <Truck className="w-5 h-5 text-[#1E331B]" />
                     <div>
-                      <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                      <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                         Main Gate Lorry Entry Registration
                       </h2>
-                      <p className="text-[11px] text-slate-400">Generates unique Gate Pass & logs entry timestamp</p>
+                      <p className="text-[11px] text-[#5A6E54]">Generates unique Gate Pass & logs entry timestamp</p>
                     </div>
                   </div>
 
@@ -1283,7 +1283,7 @@ export default function LorryDispatchSystem({
                     className="space-y-3.5"
                   >
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                         Lorry Registration No *
                       </label>
                       <input
@@ -1291,13 +1291,13 @@ export default function LorryDispatchSystem({
                         name="lorryNo"
                         type="text"
                         placeholder="e.g. WB-04-E-1234"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase font-mono outline-none focus:border-blue-500"
+                        className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] uppercase font-mono outline-none focus:border-[#1E331B]"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Driver Phone No *
                         </label>
                         <input
@@ -1305,17 +1305,17 @@ export default function LorryDispatchSystem({
                           name="driverPhone"
                           type="text"
                           placeholder="+91 98300 00000"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] font-mono outline-none focus:border-[#1E331B]"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Designated Dept *
                         </label>
                         <select
                           name="department"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] font-bold outline-none focus:border-[#1E331B]"
                         >
                           <option value="Jute">Jute Raw Material</option>
                           <option value="Store">Store Spares</option>
@@ -1327,12 +1327,12 @@ export default function LorryDispatchSystem({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Broker / Supplier *
                         </label>
                         <select
                           name="broker"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
                         >
                           {masters.brokers.map((b) => (
                             <option key={b} value={b}>{b}</option>
@@ -1341,12 +1341,12 @@ export default function LorryDispatchSystem({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Quality / Grade *
                         </label>
                         <select
                           name="quality"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
                         >
                           {masters.qualities.map((q) => (
                             <option key={q} value={q}>{q}</option>
@@ -1357,12 +1357,12 @@ export default function LorryDispatchSystem({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Mokam / Origin
                         </label>
                         <select
                           name="mokam"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
                         >
                           {masters.mokams.map((m) => (
                             <option key={m} value={m}>{m}</option>
@@ -1371,12 +1371,12 @@ export default function LorryDispatchSystem({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block mb-1">
                           Marka
                         </label>
                         <select
                           name="marka"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-2 text-xs text-[#1E331B] outline-none focus:border-[#1E331B]"
                         >
                           {masters.markas.map((mk) => (
                             <option key={mk} value={mk}>{mk}</option>
@@ -1387,7 +1387,7 @@ export default function LorryDispatchSystem({
 
                     <button
                       type="submit"
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 font-extrabold text-xs uppercase tracking-wider text-white rounded-xl shadow-lg transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] font-extrabold text-xs uppercase tracking-wider text-[#FAF7F0] rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Register Gate Pass & Print Entry Tag</span>
@@ -1396,26 +1396,26 @@ export default function LorryDispatchSystem({
                 </div>
 
                 {/* Gate Out & Pending Exit Queue */}
-                <div className="lg:col-span-7 bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="lg:col-span-7 bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+                  <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-700" />
                       <div>
-                        <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                        <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                           Ready For Gate Out Exit
                         </h2>
-                        <p className="text-[11px] text-slate-400">Lorries cleared by Mill/Electric weighments or departments</p>
+                        <p className="text-[11px] text-[#5A6E54]">Lorries cleared by Mill/Electric weighments or departments</p>
                       </div>
                     </div>
 
-                    <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold rounded-full">
+                    <span className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-mono font-bold rounded-full">
                       {lorries.filter((l) => l.status === "READY_FOR_GATE_EXIT").length} Ready
                     </span>
                   </div>
 
                   <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
                     {lorries.filter((l) => l.status === "READY_FOR_GATE_EXIT").length === 0 ? (
-                      <div className="text-center py-10 text-slate-500 text-xs font-mono">
+                      <div className="text-center py-10 text-[#5A6E54] text-xs font-mono">
                         No lorries currently awaiting gate exit clearance.
                       </div>
                     ) : (
@@ -1424,23 +1424,23 @@ export default function LorryDispatchSystem({
                         .map((l) => (
                           <div
                             key={l.id}
-                            className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-emerald-500/60 transition-all"
+                            className="bg-[#FAF7F0] border border-emerald-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-emerald-600 transition-all shadow-xs"
                           >
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-white font-mono">{l.lorryNo}</span>
-                                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-300 text-[10px] font-mono rounded">
+                                <span className="text-xs font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
+                                <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-[10px] font-mono font-bold rounded">
                                   {l.gatePassNo}
                                 </span>
-                                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase rounded">
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 text-[10px] font-bold uppercase rounded">
                                   {l.department}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-400">
-                                Broker: <strong>{l.broker}</strong> | Quality: <strong>{l.quality}</strong>
+                              <p className="text-[11px] text-[#5A6E54]">
+                                Broker: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong>
                               </p>
                               {l.finalNetWeight && (
-                                <p className="text-xs text-emerald-400 font-mono font-bold">
+                                <p className="text-xs text-emerald-800 font-mono font-bold">
                                   Final Net Dispatch: {l.finalNetWeight.toLocaleString()} KG
                                 </p>
                               )}
@@ -1448,7 +1448,7 @@ export default function LorryDispatchSystem({
 
                             <button
                               onClick={() => handleGateOutExit(l)}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
                             >
                               <Printer className="w-4 h-4" />
                               <span>Complete Gate Out & Print Slip</span>
@@ -1465,16 +1465,16 @@ export default function LorryDispatchSystem({
             {(currentUserRole === "MILL_WEIGHTMENT" ||
               currentUserRole === "ELECTRIC_WEIGHTMENT" ||
               currentUserRole === "SUPER_ADMIN") && (
-              <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+              <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-6 text-[#1E331B]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C5BA9E] pb-4 gap-3">
                   <div className="flex items-center gap-3">
-                    <Scale className="w-6 h-6 text-amber-400 shrink-0" />
+                    <Scale className="w-6 h-6 text-[#1E331B] shrink-0" />
                     <div>
-                      <h2 className="text-base font-black text-white uppercase tracking-wider font-mono">
+                      <h2 className="text-base font-black text-[#1E331B] uppercase tracking-wider font-mono">
                         {currentUserRole === "ELECTRIC_WEIGHTMENT" ? "Electric Scale Weighbridge Station" : "Mill Yard Scale Weighbridge Station"}
                       </h2>
-                      <p className="text-xs text-slate-400">
-                        Zero Offset Applied: <strong className="text-amber-300 font-mono">
+                      <p className="text-xs text-[#5A6E54]">
+                        Zero Offset Applied: <strong className="text-[#1E331B] font-mono">
                           {currentUserRole === "ELECTRIC_WEIGHTMENT" ? settings.electricZeroOffsetKg : settings.millZeroOffsetKg} KG
                         </strong>
                       </p>
@@ -1482,7 +1482,7 @@ export default function LorryDispatchSystem({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold rounded-full">
+                    <span className="px-3 py-1 bg-amber-100 border border-amber-300 text-amber-900 text-xs font-mono font-bold rounded-full">
                       Live Industrial Scale Connected
                     </span>
                   </div>
@@ -1516,22 +1516,22 @@ export default function LorryDispatchSystem({
 
             {/* D. STORE / FINISH GOOD / OTHER DEPARTMENTS INTERFACE */}
             {(currentUserRole === "STORE_DEPT" || currentUserRole === "SUPER_ADMIN") && (
-              <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+                <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
                   <div className="flex items-center gap-2.5">
-                    <PackageCheck className="w-5 h-5 text-cyan-400" />
+                    <PackageCheck className="w-5 h-5 text-[#1E331B]" />
                     <div>
-                      <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                      <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                         Store & Material Department Clearance
                       </h2>
-                      <p className="text-[11px] text-slate-400">Verify material unloading & sign-off for gate release</p>
+                      <p className="text-[11px] text-[#5A6E54]">Verify material unloading & sign-off for gate release</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {lorries.filter((l) => ["STORE_PENDING", "FINISH_GOOD_PENDING", "OTHER_PENDING"].includes(l.status)).length === 0 ? (
-                    <div className="text-center py-10 text-slate-500 text-xs font-mono">
+                    <div className="text-center py-10 text-[#5A6E54] text-xs font-mono">
                       No store or department lorries currently pending verification.
                     </div>
                   ) : (
@@ -1540,23 +1540,23 @@ export default function LorryDispatchSystem({
                       .map((l) => (
                         <div
                           key={l.id}
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-white font-mono">{l.lorryNo}</span>
-                              <span className="px-2 py-0.5 bg-blue-500/10 text-blue-300 text-xs font-mono rounded">{l.gatePassNo}</span>
-                              <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-xs font-bold uppercase rounded">{l.department}</span>
+                              <span className="text-sm font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
+                              <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-xs font-mono rounded">{l.gatePassNo}</span>
+                              <span className="px-2 py-0.5 bg-cyan-100 text-cyan-900 text-xs font-bold uppercase rounded">{l.department}</span>
                             </div>
-                            <p className="text-xs text-slate-400">
-                              Broker: <strong>{l.broker}</strong> | Quality: <strong>{l.quality}</strong>
+                            <p className="text-xs text-[#5A6E54]">
+                              Broker: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong>
                             </p>
-                            <p className="text-[11px] text-slate-500">In Time: {new Date(l.inTime).toLocaleString("en-IN")}</p>
+                            <p className="text-[11px] text-[#5A6E54]">In Time: {new Date(l.inTime).toLocaleString("en-IN")}</p>
                           </div>
 
                           <button
                             onClick={() => handleDepartmentApprove(l.id)}
-                            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                            className="px-4 py-2 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
                           >
                             <Check className="w-4 h-4" />
                             <span>Verify Unloading & Approve Gate Exit</span>
@@ -1569,11 +1569,11 @@ export default function LorryDispatchSystem({
             )}
 
             {/* E. ALL DISPATCHES MASTER TABLE (WITH FILTERS & SEARCH) */}
-            <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#C5BA9E] pb-3">
                 <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                  <Database className="w-5 h-5 text-[#1E331B]" />
+                  <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                     All Dispatch Ledger Register ({filteredLorries.length})
                   </h2>
                 </div>
@@ -1581,20 +1581,20 @@ export default function LorryDispatchSystem({
                 {/* Filters */}
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    <Search className="w-3.5 h-3.5 text-[#5A6E54] absolute left-2.5 top-2.5" />
                     <input
                       type="text"
                       placeholder="Search lorry, gate pass, broker..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="bg-slate-900 border border-slate-800 text-xs text-white pl-8 pr-3 py-1.5 rounded-xl outline-none focus:border-blue-500 w-48 sm:w-64 font-mono"
+                      className="bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] pl-8 pr-3 py-1.5 rounded-xl outline-none focus:border-[#1E331B] w-48 sm:w-64 font-mono"
                     />
                   </div>
 
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 text-xs text-slate-300 px-2.5 py-1.5 rounded-xl outline-none"
+                    className="bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] px-2.5 py-1.5 rounded-xl outline-none font-medium"
                   >
                     <option value="ALL">All Statuses</option>
                     <option value="WAITING_FOR_MILL_GROSS">Waiting Mill Gross</option>
@@ -1608,7 +1608,7 @@ export default function LorryDispatchSystem({
                   <select
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 text-xs text-slate-300 px-2.5 py-1.5 rounded-xl outline-none"
+                    className="bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] px-2.5 py-1.5 rounded-xl outline-none font-medium"
                   >
                     <option value="ALL">All Departments</option>
                     <option value="Jute">Jute</option>
@@ -1620,44 +1620,44 @@ export default function LorryDispatchSystem({
               </div>
 
               {/* Table */}
-              <div className="w-full overflow-x-auto rounded-xl border border-slate-800">
-                <table className="w-full text-left text-xs text-slate-300 min-w-[900px]">
-                  <thead className="bg-slate-900 text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
+              <div className="w-full overflow-x-auto rounded-xl border border-[#C5BA9E] bg-[#FAF7F0]">
+                <table className="w-full text-left text-xs text-[#1E331B] min-w-[900px]">
+                  <thead className="bg-[#EAE2D2] text-[#1E331B] font-mono text-[10px] uppercase border-b border-[#C5BA9E]">
                     <tr>
-                      <th className="p-3">Gate Pass</th>
-                      <th className="p-3">Lorry No</th>
-                      <th className="p-3">Dept</th>
-                      <th className="p-3">Broker / Supplier</th>
-                      <th className="p-3">Quality</th>
-                      <th className="p-3 text-right">Mill Net</th>
-                      <th className="p-3 text-right">Elec Net</th>
-                      <th className="p-3 text-right">Final Net</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-center">Action</th>
+                      <th className="p-3 font-bold">Gate Pass</th>
+                      <th className="p-3 font-bold">Lorry No</th>
+                      <th className="p-3 font-bold">Dept</th>
+                      <th className="p-3 font-bold">Broker / Supplier</th>
+                      <th className="p-3 font-bold">Quality</th>
+                      <th className="p-3 text-right font-bold">Mill Net</th>
+                      <th className="p-3 text-right font-bold">Elec Net</th>
+                      <th className="p-3 text-right font-bold">Final Net</th>
+                      <th className="p-3 font-bold">Status</th>
+                      <th className="p-3 text-center font-bold">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 font-mono">
+                  <tbody className="divide-y divide-[#C5BA9E] font-mono">
                     {filteredLorries.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="p-8 text-center text-slate-500">
+                        <td colSpan={10} className="p-8 text-center text-[#5A6E54]">
                           No matching dispatch entries found in ledger.
                         </td>
                       </tr>
                     ) : (
                       filteredLorries.map((l) => (
-                        <tr key={l.id} className="hover:bg-slate-900/60 transition-colors">
-                          <td className="p-3 font-bold text-blue-400">{l.gatePassNo}</td>
-                          <td className="p-3 font-bold text-white">{l.lorryNo}</td>
+                        <tr key={l.id} className="hover:bg-[#EAE2D2]/50 transition-colors">
+                          <td className="p-3 font-black text-[#1E331B]">{l.gatePassNo}</td>
+                          <td className="p-3 font-black text-[#1E331B]">{l.lorryNo}</td>
                           <td className="p-3">{l.department}</td>
                           <td className="p-3 font-sans">{l.broker}</td>
                           <td className="p-3 font-sans">{l.quality}</td>
-                          <td className="p-3 text-right font-bold text-slate-200">
+                          <td className="p-3 text-right font-bold text-[#1E331B]">
                             {l.millNetWeight ? `${l.millNetWeight.toLocaleString()} kg` : "-"}
                           </td>
-                          <td className="p-3 text-right font-bold text-slate-200">
+                          <td className="p-3 text-right font-bold text-[#1E331B]">
                             {l.electricNetWeight ? `${l.electricNetWeight.toLocaleString()} kg` : "-"}
                           </td>
-                          <td className="p-3 text-right font-bold text-emerald-400">
+                          <td className="p-3 text-right font-bold text-emerald-800">
                             {l.finalNetWeight ? `${l.finalNetWeight.toLocaleString()} kg` : "-"}
                           </td>
                           <td className="p-3">
@@ -1665,10 +1665,10 @@ export default function LorryDispatchSystem({
                               className={cn(
                                 "px-2 py-0.5 text-[10px] font-bold rounded-full uppercase border",
                                 l.status === "COMPLETED"
-                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                  ? "bg-emerald-100 border-emerald-300 text-emerald-900"
                                   : l.status === "READY_FOR_GATE_EXIT"
-                                  ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"
-                                  : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                                  ? "bg-cyan-100 border-cyan-300 text-cyan-900"
+                                  : "bg-amber-100 border-amber-300 text-amber-900"
                               )}
                             >
                               {l.status.replace(/_/g, " ")}
@@ -1680,7 +1680,7 @@ export default function LorryDispatchSystem({
                                 setSelectedLorryForReceipt(l);
                                 setIsReceiptModalOpen(true);
                               }}
-                              className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-slate-700 rounded text-[10px] font-bold cursor-pointer"
+                              className="px-2 py-1 bg-[#FAF7F0] hover:bg-[#D6CAA8] text-[#1E331B] border border-[#C5BA9E] rounded text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
                               title="View & Print Slip"
                             >
                               Slip
@@ -1701,22 +1701,22 @@ export default function LorryDispatchSystem({
             TAB 2: SUPER ADMIN CONFIGURATION SETTINGS
            ========================================== */}
         {activeTab === "settings" && currentUserRole === "SUPER_ADMIN" && (
-          <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6 max-w-3xl mx-auto">
-            <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-              <Sliders className="w-6 h-6 text-blue-400" />
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-6 rounded-2xl shadow-sm space-y-6 max-w-3xl mx-auto text-[#1E331B]">
+            <div className="flex items-center gap-3 border-b border-[#C5BA9E] pb-4">
+              <Sliders className="w-6 h-6 text-[#1E331B]" />
               <div>
-                <h2 className="text-base font-black text-white uppercase tracking-wider font-mono">
+                <h2 className="text-base font-black text-[#1E331B] uppercase tracking-wider font-mono">
                   System Configuration Panel
                 </h2>
-                <p className="text-xs text-slate-400">Adjust zero offsets, geofence parameters, and auto-logout rules</p>
+                <p className="text-xs text-[#5A6E54]">Adjust zero offsets, geofence parameters, and auto-logout rules</p>
               </div>
             </div>
 
             <div className="space-y-5 text-xs">
               {/* Zero Offsets */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#FAF7F0] p-4 rounded-xl border border-[#C5BA9E]">
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1">
+                  <label className="font-bold text-[#1E331B] uppercase block mb-1">
                     Mill Zero Offset Adjustment (KG): {settings.millZeroOffsetKg} kg
                   </label>
                   <input
@@ -1727,12 +1727,12 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, millZeroOffsetKg: Number(e.target.value) })
                     }
-                    className="w-full accent-blue-500"
+                    className="w-full accent-[#1E331B]"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1">
+                  <label className="font-bold text-[#1E331B] uppercase block mb-1">
                     Electric Zero Offset Adjustment (KG): {settings.electricZeroOffsetKg} kg
                   </label>
                   <input
@@ -1743,17 +1743,17 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, electricZeroOffsetKg: Number(e.target.value) })
                     }
-                    className="w-full accent-blue-500"
+                    className="w-full accent-[#1E331B]"
                   />
                 </div>
               </div>
 
               {/* Geofence Settings */}
-              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="bg-[#FAF7F0] p-4 rounded-xl border border-[#C5BA9E] space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-bold text-white uppercase">Enforce Geofencing Boundary</h3>
-                    <p className="text-[11px] text-slate-400">Restrict weighment submission to Bally Jute Mill campus</p>
+                    <h3 className="font-bold text-[#1E331B] uppercase">Enforce Geofencing Boundary</h3>
+                    <p className="text-[11px] text-[#5A6E54]">Restrict weighment submission to Bally Jute Mill campus</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1761,12 +1761,12 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, enforceGeofence: e.target.checked })
                     }
-                    className="w-5 h-5 accent-blue-600 cursor-pointer"
+                    className="w-5 h-5 accent-[#1E331B] cursor-pointer"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1">
+                  <label className="font-bold text-[#1E331B] uppercase block mb-1">
                     Allowed Geofence Radius (Meters): {settings.geofenceRadiusMeters} meters
                   </label>
                   <input
@@ -1778,15 +1778,15 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, geofenceRadiusMeters: Number(e.target.value) })
                     }
-                    className="w-full accent-blue-500"
+                    className="w-full accent-[#1E331B]"
                   />
                 </div>
               </div>
 
               {/* Inactivity & Security Controls */}
-              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="bg-[#FAF7F0] p-4 rounded-xl border border-[#C5BA9E] space-y-3">
                 <div>
-                  <label className="font-bold text-slate-300 uppercase block mb-1">
+                  <label className="font-bold text-[#1E331B] uppercase block mb-1">
                     Inactivity Auto-Logout Timeout (Minutes)
                   </label>
                   <input
@@ -1797,14 +1797,14 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, inactivityTimeoutMinutes: Number(e.target.value) })
                     }
-                    className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-white font-mono text-xs w-32 outline-none focus:border-blue-500"
+                    className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg px-3 py-1.5 text-[#1E331B] font-mono text-xs w-32 outline-none focus:border-[#1E331B]"
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between pt-2 border-t border-[#C5BA9E]">
                   <div>
-                    <h3 className="font-bold text-white uppercase">Allow Screen Capture & Screenshots</h3>
-                    <p className="text-[11px] text-slate-400">When OFF, blurs screen upon focus loss to protect sensitive data</p>
+                    <h3 className="font-bold text-[#1E331B] uppercase">Allow Screen Capture & Screenshots</h3>
+                    <p className="text-[11px] text-[#5A6E54]">When OFF, blurs screen upon focus loss to protect sensitive data</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1812,7 +1812,7 @@ export default function LorryDispatchSystem({
                     onChange={(e) =>
                       setSettings({ ...settings, allowScreenCapture: e.target.checked })
                     }
-                    className="w-5 h-5 accent-blue-600 cursor-pointer"
+                    className="w-5 h-5 accent-[#1E331B] cursor-pointer"
                   />
                 </div>
               </div>
@@ -1822,7 +1822,7 @@ export default function LorryDispatchSystem({
                   logAuditAction("SETTINGS_UPDATED", "Super Admin updated system parameters");
                   alert("System parameters updated successfully!");
                 }}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer"
+                className="w-full py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
               >
                 Save Configuration Settings
               </button>
@@ -1874,11 +1874,11 @@ export default function LorryDispatchSystem({
             TAB 4: STAFF USERS MANAGEMENT
            ========================================== */}
         {activeTab === "users" && currentUserRole === "SUPER_ADMIN" && (
-          <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-6 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-400" />
-                <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                <Users className="w-5 h-5 text-[#1E331B]" />
+                <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                   Station Operator Login Accounts
                 </h2>
               </div>
@@ -1886,15 +1886,15 @@ export default function LorryDispatchSystem({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {users.map((u) => (
-                <div key={u.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
+                <div key={u.id} className="bg-[#FAF7F0] border border-[#C5BA9E] p-4 rounded-xl space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-black text-white font-mono">{u.username}</span>
-                    <span className="px-2 py-0.5 bg-blue-500/10 text-blue-300 text-[10px] font-bold rounded uppercase">
+                    <span className="text-sm font-black text-[#1E331B] font-mono">{u.username}</span>
+                    <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-[10px] font-bold rounded uppercase">
                       {u.role.replace("_", " ")}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">{u.name}</p>
-                  <p className="text-[10px] text-slate-500 font-mono">Last active: {u.lastActive}</p>
+                  <p className="text-xs text-[#5A6E54]">{u.name}</p>
+                  <p className="text-[10px] text-[#5A6E54] font-mono">Last active: {u.lastActive}</p>
                 </div>
               ))}
             </div>
@@ -1905,33 +1905,33 @@ export default function LorryDispatchSystem({
             TAB 5: AUDIT LOGS
            ========================================== */}
         {activeTab === "audit" && currentUserRole === "SUPER_ADMIN" && (
-          <div className="bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-6 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <div className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-blue-400" />
-                <h2 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                <Lock className="w-5 h-5 text-[#1E331B]" />
+                <h2 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                   System Audit Log Trail ({auditLogs.length})
                 </h2>
               </div>
             </div>
 
-            <div className="max-h-[500px] overflow-y-auto rounded-xl border border-slate-800">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
+            <div className="max-h-[500px] overflow-y-auto rounded-xl border border-[#C5BA9E] bg-[#FAF7F0]">
+              <table className="w-full text-left text-xs text-[#1E331B]">
+                <thead className="bg-[#EAE2D2] text-[#1E331B] font-mono text-[10px] uppercase border-b border-[#C5BA9E]">
                   <tr>
-                    <th className="p-3">Timestamp</th>
-                    <th className="p-3">Station / User</th>
-                    <th className="p-3">Action</th>
-                    <th className="p-3">Details</th>
+                    <th className="p-3 font-bold">Timestamp</th>
+                    <th className="p-3 font-bold">Station / User</th>
+                    <th className="p-3 font-bold">Action</th>
+                    <th className="p-3 font-bold">Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 font-mono text-[11px]">
+                <tbody className="divide-y divide-[#C5BA9E] font-mono text-[11px]">
                   {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-900/50">
-                      <td className="p-3 text-slate-500">{new Date(log.timestamp).toLocaleString("en-IN")}</td>
-                      <td className="p-3 font-bold text-blue-400">{log.role} ({log.username})</td>
-                      <td className="p-3 font-bold text-emerald-400">{log.action}</td>
-                      <td className="p-3 text-slate-300">{log.details}</td>
+                    <tr key={log.id} className="hover:bg-[#EAE2D2]/50">
+                      <td className="p-3 text-[#5A6E54]">{new Date(log.timestamp).toLocaleString("en-IN")}</td>
+                      <td className="p-3 font-bold text-[#1E331B]">{log.role} ({log.username})</td>
+                      <td className="p-3 font-bold text-emerald-800">{log.action}</td>
+                      <td className="p-3 text-[#1E331B]">{log.details}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1946,18 +1946,18 @@ export default function LorryDispatchSystem({
           4. REAL-TIME ALERT DRAWER (SLIDE-OUT)
          ========================================== */}
       {isAlertDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-md bg-slate-950 border-l border-slate-800 h-full flex flex-col shadow-2xl p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
+          <div className="w-full max-w-md bg-[#F4EFE6] border-l border-[#C5BA9E] h-full flex flex-col shadow-2xl p-4 space-y-4 text-[#1E331B]">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-amber-400" />
-                <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                <Bell className="w-5 h-5 text-amber-800" />
+                <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                   Station Dispatch Alerts
                 </h3>
               </div>
               <button
                 onClick={() => setIsAlertDrawerOpen(false)}
-                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+                className="p-1 hover:bg-[#EAE2D2] rounded text-[#1E331B]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1965,7 +1965,7 @@ export default function LorryDispatchSystem({
 
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {alerts.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-xs">No active alerts.</div>
+                <div className="text-center py-10 text-[#5A6E54] text-xs">No active alerts.</div>
               ) : (
                 alerts.map((a) => (
                   <div
@@ -1973,10 +1973,10 @@ export default function LorryDispatchSystem({
                     className={cn(
                       "p-3 rounded-xl border space-y-1 transition-all",
                       a.type === "success"
-                        ? "bg-emerald-950/30 border-emerald-500/30 text-emerald-300"
+                        ? "bg-emerald-100 border-emerald-300 text-emerald-950"
                         : a.type === "alert"
-                        ? "bg-rose-950/30 border-rose-500/30 text-rose-300"
-                        : "bg-blue-950/30 border-blue-500/30 text-blue-300"
+                        ? "bg-rose-100 border-rose-300 text-rose-950"
+                        : "bg-[#FAF7F0] border-[#C5BA9E] text-[#1E331B]"
                     )}
                   >
                     <div className="flex items-center justify-between text-xs font-bold font-mono">
@@ -1985,7 +1985,7 @@ export default function LorryDispatchSystem({
                         {new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300">{a.message}</p>
+                    <p className="text-xs">{a.message}</p>
                   </div>
                 ))
               )}
@@ -1998,21 +1998,21 @@ export default function LorryDispatchSystem({
           5. GEOFENCE GPS SIMULATOR MODAL
          ========================================== */}
       {isGpsSimOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 w-full max-w-lg p-5 rounded-2xl shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-lg p-5 rounded-2xl shadow-2xl space-y-4 text-[#1E331B]">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <div className="flex items-center gap-2">
-                <Navigation className="w-5 h-5 text-blue-400" />
-                <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+                <Navigation className="w-5 h-5 text-[#1E331B]" />
+                <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
                   GPS Location Simulator (Development)
                 </h3>
               </div>
-              <button onClick={() => setIsGpsSimOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setIsGpsSimOpen(false)} className="text-[#5A6E54] hover:text-[#1E331B]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#5A6E54]">
               Mock operator device location to test Bally Jute Mill geofence boundary enforcement ({settings.geofenceRadiusMeters}m radius).
             </p>
 
@@ -2030,10 +2030,10 @@ export default function LorryDispatchSystem({
                     setIsGpsSimOpen(false);
                     logAuditAction("GPS_SIMULATED", `GPS position set to ${loc.label}`);
                   }}
-                  className="w-full text-left p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-white flex items-center justify-between cursor-pointer transition-colors"
+                  className="w-full text-left p-3 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] rounded-xl text-xs font-bold text-[#1E331B] flex items-center justify-between cursor-pointer transition-colors"
                 >
                   <span>{loc.label}</span>
-                  <span className="font-mono text-[10px] text-slate-400">
+                  <span className="font-mono text-[10px] text-[#5A6E54]">
                     {loc.lat}, {loc.lng}
                   </span>
                 </button>
@@ -2047,22 +2047,22 @@ export default function LorryDispatchSystem({
           6. 3-INCH RECEIPT MODAL & PRINT PREVIEW
          ========================================== */}
       {isReceiptModalOpen && selectedLorryForReceipt && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 w-full max-w-sm p-5 rounded-2xl shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-xs font-black text-white uppercase tracking-wider font-mono">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-sm p-5 rounded-2xl shadow-2xl space-y-4 text-[#1E331B]">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
+              <h3 className="text-xs font-black text-[#1E331B] uppercase tracking-wider font-mono">
                 3-Inch Thermal Receipt Preview
               </h3>
-              <button onClick={() => setIsReceiptModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setIsReceiptModalOpen(false)} className="text-[#5A6E54] hover:text-[#1E331B]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Printed Ticket Card */}
-            <div className="bg-white text-slate-900 p-4 rounded-xl text-xs font-mono space-y-2 border border-slate-300 shadow-inner">
-              <div className="text-center border-b border-slate-300 pb-2">
+            <div className="bg-[#FAF7F0] text-[#1E331B] p-4 rounded-xl text-xs font-mono space-y-2 border border-[#C5BA9E] shadow-xs">
+              <div className="text-center border-b border-[#C5BA9E] pb-2">
                 <p className="font-black text-sm uppercase">BALLY JUTE LIMITED</p>
-                <p className="text-[9px]">Lorry Weighment & Dispatch Slip</p>
+                <p className="text-[9px] text-[#5A6E54]">Lorry Weighment & Dispatch Slip</p>
               </div>
 
               <div className="space-y-1 text-[11px]">
@@ -2074,12 +2074,12 @@ export default function LorryDispatchSystem({
                 <p><strong>In Time:</strong> {new Date(selectedLorryForReceipt.inTime).toLocaleString("en-IN")}</p>
               </div>
 
-              <div className="border-t border-slate-300 pt-2 space-y-1 text-[11px]">
+              <div className="border-t border-[#C5BA9E] pt-2 space-y-1 text-[11px]">
                 {selectedLorryForReceipt.millGrossWeight && <p>Mill Gross: {selectedLorryForReceipt.millGrossWeight.toLocaleString()} kg</p>}
                 {selectedLorryForReceipt.millTareWeight && <p>Mill Tare: {selectedLorryForReceipt.millTareWeight.toLocaleString()} kg</p>}
                 {selectedLorryForReceipt.electricGrossWeight && <p>Elec Gross: {selectedLorryForReceipt.electricGrossWeight.toLocaleString()} kg</p>}
                 {selectedLorryForReceipt.electricTareWeight && <p>Elec Tare: {selectedLorryForReceipt.electricTareWeight.toLocaleString()} kg</p>}
-                <p className="font-bold text-sm text-slate-950 pt-1 border-t border-slate-400">
+                <p className="font-bold text-sm text-[#1E331B] pt-1 border-t border-[#C5BA9E]">
                   FINAL NET: {(selectedLorryForReceipt.finalNetWeight || 0).toLocaleString()} KG
                 </p>
               </div>
@@ -2087,7 +2087,7 @@ export default function LorryDispatchSystem({
 
             <button
               onClick={() => generateReceiptSlipPdf(selectedLorryForReceipt)}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <FileDown className="w-4 h-4" />
               <span>Download / Print 3-Inch Slip PDF</span>
@@ -2098,17 +2098,17 @@ export default function LorryDispatchSystem({
 
       {/* LOGOUT CONFIRMATION MODAL */}
       {isLogoutConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 w-full max-w-xs p-5 rounded-2xl shadow-2xl space-y-4 text-center">
-            <LogOut className="w-10 h-10 text-rose-400 mx-auto" />
-            <h3 className="text-sm font-black text-white uppercase tracking-wider font-mono">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-xs p-5 rounded-2xl shadow-2xl space-y-4 text-center text-[#1E331B]">
+            <LogOut className="w-10 h-10 text-rose-800 mx-auto" />
+            <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
               Confirm Station Exit?
             </h3>
-            <p className="text-xs text-slate-400">Are you sure you want to end your current operator session?</p>
+            <p className="text-xs text-[#5A6E54]">Are you sure you want to end your current operator session?</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsLogoutConfirmOpen(false)}
-                className="flex-1 py-2 bg-slate-900 text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+                className="flex-1 py-2 bg-[#EAE2D2] text-[#1E331B] text-xs font-bold rounded-xl cursor-pointer hover:bg-[#D6CAA8]"
               >
                 Cancel
               </button>
@@ -2118,7 +2118,7 @@ export default function LorryDispatchSystem({
                   setCurrentUserRole("MAIN_GATE");
                   logAuditAction("MANUAL_LOGOUT", "Operator exited active session");
                 }}
-                className="flex-1 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl cursor-pointer"
+                className="flex-1 py-2 bg-rose-800 hover:bg-rose-900 text-white text-xs font-bold rounded-xl cursor-pointer"
               >
                 Logout
               </button>
@@ -2169,24 +2169,24 @@ function WeighmentOperatorCard({
   const displayWeight = simulatedWeight + zeroOffset;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 hover:border-amber-500/40 transition-all">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+    <div className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-2xl p-4 space-y-4 hover:border-[#1E331B] transition-all text-[#1E331B] shadow-xs">
+      <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-2.5">
         <div>
-          <span className="text-sm font-black text-white font-mono">{lorry.lorryNo}</span>
-          <p className="text-[10px] text-slate-400 font-mono">{lorry.gatePassNo} • {lorry.broker}</p>
+          <span className="text-sm font-black text-[#1E331B] font-mono">{lorry.lorryNo}</span>
+          <p className="text-[10px] text-[#5A6E54] font-mono">{lorry.gatePassNo} • {lorry.broker}</p>
         </div>
-        <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold rounded-full uppercase">
+        <span className="px-2.5 py-1 bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-mono font-bold rounded-full uppercase">
           {type} WEIGHMENT PENDING
         </span>
       </div>
 
       {/* Large Industrial LED Digital Weight Display */}
-      <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-1 shadow-inner">
-        <span className="text-[10px] font-mono font-bold uppercase text-slate-500 tracking-wider">
+      <div className="bg-[#1E331B] p-4 rounded-xl border border-[#C5BA9E] text-center space-y-1 shadow-inner">
+        <span className="text-[10px] font-mono font-bold uppercase text-[#EAE2D2] tracking-wider">
           LIVE SCALE SIMULATED WEIGHT (KG)
         </span>
-        <div className="text-3xl font-black font-mono text-emerald-400 tracking-widest drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
-          {displayWeight.toLocaleString()} <span className="text-sm font-bold text-emerald-600">KG</span>
+        <div className="text-3xl font-black font-mono text-[#FAF7F0] tracking-widest">
+          {displayWeight.toLocaleString()} <span className="text-sm font-bold text-amber-400">KG</span>
         </div>
       </div>
 
@@ -2194,13 +2194,13 @@ function WeighmentOperatorCard({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setSimulatedWeight((prev) => Math.max(0, prev - 100))}
-          className="flex-1 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded text-slate-300 text-xs font-mono font-bold cursor-pointer"
+          className="flex-1 py-1 bg-[#EAE2D2] hover:bg-[#D6CAA8] border border-[#C5BA9E] rounded text-[#1E331B] text-xs font-mono font-bold cursor-pointer transition-colors"
         >
           -100 KG
         </button>
         <button
           onClick={() => setSimulatedWeight((prev) => prev + 100)}
-          className="flex-1 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded text-slate-300 text-xs font-mono font-bold cursor-pointer"
+          className="flex-1 py-1 bg-[#EAE2D2] hover:bg-[#D6CAA8] border border-[#C5BA9E] rounded text-[#1E331B] text-xs font-mono font-bold cursor-pointer transition-colors"
         >
           +100 KG
         </button>
@@ -2208,7 +2208,7 @@ function WeighmentOperatorCard({
 
       <button
         onClick={() => onSaveWeighment(lorry.id, station, type, displayWeight)}
-        className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+        className="w-full py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
       >
         <Scale className="w-4 h-4" />
         <span>Save & Confirm {station} {type} ({displayWeight.toLocaleString()} KG)</span>
@@ -2235,8 +2235,8 @@ function MasterListEditor({
   const [inputVal, setInputVal] = useState("");
 
   return (
-    <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
-      <h3 className="text-xs font-black text-white uppercase tracking-wider font-mono border-b border-slate-800 pb-2">
+    <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4 text-[#1E331B]">
+      <h3 className="text-xs font-black text-[#1E331B] uppercase tracking-wider font-mono border-b border-[#C5BA9E] pb-2">
         {title} ({items.length})
       </h3>
 
@@ -2246,7 +2246,7 @@ function MasterListEditor({
           placeholder={`Add new ${title.toLowerCase()}...`}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
-          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-blue-500 font-mono"
+          className="flex-1 bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl px-3 py-1.5 text-xs text-[#1E331B] outline-none focus:border-[#1E331B] font-mono"
         />
         <button
           onClick={() => {
@@ -2255,7 +2255,7 @@ function MasterListEditor({
               setInputVal("");
             }
           }}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase rounded-xl cursor-pointer"
+          className="px-3 py-1.5 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-bold text-xs uppercase rounded-xl cursor-pointer transition-colors"
         >
           Add
         </button>
@@ -2265,12 +2265,12 @@ function MasterListEditor({
         {items.map((it) => (
           <div
             key={it}
-            className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl flex items-center justify-between text-xs text-slate-200"
+            className="bg-[#FAF7F0] border border-[#C5BA9E] px-3 py-2 rounded-xl flex items-center justify-between text-xs text-[#1E331B]"
           >
             <span>{it}</span>
             <button
               onClick={() => onDelete(it)}
-              className="p-1 text-slate-500 hover:text-rose-400 cursor-pointer"
+              className="p-1 text-[#5A6E54] hover:text-rose-800 cursor-pointer transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
