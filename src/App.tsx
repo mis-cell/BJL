@@ -1060,11 +1060,11 @@ export default function App() {
         );
 
   return (
-    <div className="flex h-screen w-full overflow-auto bg-legacy-bg font-sans">
+    <div className="flex h-screen w-full overflow-hidden bg-legacy-bg font-sans">
       {/* Master Wrapper */}
-      <div className="flex flex-1 flex-col min-w-[1200px] min-h-[700px]">
+      <div className="flex flex-1 flex-col w-full min-w-0 h-full overflow-hidden">
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-auto">
+        <div className="flex-1 flex overflow-hidden w-full min-w-0">
           {/* Sidebar removed per user request */}
 
           {/* Dynamic Page Rendering */}
