@@ -45,6 +45,10 @@ import {
   Radio,
   FileDown
 } from "lucide-react";
+import LegacyLayout, {
+  LegacyFieldset,
+  LegacyButton
+} from "../components/LegacyLayout";
 import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
 import jsPDF from "jspdf";
