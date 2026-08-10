@@ -290,26 +290,6 @@ export default function LegacyLayout({
           </div>
 
           <div className="flex gap-1.5 shrink-0 z-10 items-center">
-             <button
-               onClick={() => setIsNotifOpen(true)}
-               title="Notification & Highlight Center"
-               className="h-5 px-2 bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 rounded flex items-center justify-center text-[10px] font-bold transition-all hover:scale-105 active:scale-95 mr-2 cursor-pointer shadow-xs gap-1 relative"
-             >
-               <Bell className="h-3 w-3" />
-               <span className="hidden sm:inline text-[9px] font-mono uppercase">Notif Center</span>
-               {unreadCount > 0 && (
-                 <span className="bg-red-600 text-white text-[8px] font-extrabold px-1 rounded-full animate-pulse">
-                   {unreadCount}
-                 </span>
-               )}
-             </button>
-             <button 
-               onClick={handleBackClick}
-               title="Back"
-               className="h-5 w-5 bg-[#274024] hover:bg-[#345230] text-[#E2EDDE] border border-[#486343] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 mr-1 cursor-pointer"
-             >
-               <ArrowLeft className="h-3 w-3 stroke-[2.5]" />
-             </button>
              <button 
                onClick={handleMinimizeClick}
                title="Minimize"
