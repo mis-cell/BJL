@@ -75,6 +75,7 @@ import ClubPOMR from "./pages/ClubPOMR";
 import FinalArrival from "./pages/FinalArrival";
 import RequisitionDesk from "./pages/RequisitionDesk";
 import PaymentModule from "./pages/PaymentModule";
+import LorryDispatchSystem from "./pages/LorryDispatchSystem";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext } from "./lib/permissions";
 
@@ -480,7 +481,8 @@ type Page =
   | "sms_sauda"
   | "po_archive"
   | "mr_archive"
-  | "weight_bridge";
+  | "weight_bridge"
+  | "main_gate";
 
 const allSidebarItems = [
   { id: "dashboard", label: "Operational Hub", icon: LayoutDashboard },
@@ -752,7 +754,7 @@ export default function App() {
     } else if (subId === 'po_temp') {
       actualTarget = 'po';
     } else if (targetPage === 'main_gate' as any || targetPage === 'maingate' as any) {
-      actualTarget = 'amad';
+      actualTarget = 'main_gate';
     }
 
     setCurrentPage(actualTarget);
@@ -1080,6 +1082,13 @@ export default function App() {
                   allowedModules={allowedModules}
                   currentTab={dashboardTab}
                   setCurrentTab={setDashboardTab}
+                />
+              </div>
+              <div
+                className={currentPage === "main_gate" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+              >
+                <LorryDispatchSystem
+                  onNavigate={(page) => globalNavigate(page as Page)}
                 />
               </div>
               <div
