@@ -539,6 +539,13 @@ export default function LorryDispatchSystem({
 
   // 2. INACTIVITY AUTO-LOGOUT MONITOR
   useEffect(() => {
+    // Disable auto-logout for MAIN_GATE as login/logout is not required for gate operations
+    if (currentUserRole === "MAIN_GATE") {
+      setInactivitySeconds(0);
+      setShowInactivityWarning(false);
+      return;
+    }
+
     const resetTimer = () => {
       setInactivitySeconds(0);
       setShowInactivityWarning(false);
@@ -570,7 +577,7 @@ export default function LorryDispatchSystem({
       events.forEach((evt) => window.removeEventListener(evt, resetTimer));
       clearInterval(interval);
     };
-  }, [settings.inactivityTimeoutMinutes]);
+  }, [settings.inactivityTimeoutMinutes, currentUserRole]);
 
   // 3. SCREEN & SCREENSHOT CAPTURE PROTECTION
   useEffect(() => {
@@ -1176,15 +1183,17 @@ export default function LorryDispatchSystem({
             </select>
           </div>
 
-          {/* Logout Button */}
-          <button
-            onClick={() => setIsLogoutConfirmOpen(true)}
-            className="p-2 bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Exit Session"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          {/* Logout Button (Not required for Main Gate station) */}
+          {currentUserRole !== "MAIN_GATE" && (
+            <button
+              onClick={() => setIsLogoutConfirmOpen(true)}
+              className="p-2 bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-900 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              title="Exit Session"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          )}
         </div>
       </header>
 
