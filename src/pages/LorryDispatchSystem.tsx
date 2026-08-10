@@ -419,7 +419,7 @@ export default function LorryDispatchSystem({
         id: "alt_1",
         timestamp: new Date().toISOString(),
         title: "System Initialization",
-        message: "Lorry Weightment & Dispatch System Online (Bally Jute Mill)",
+        message: "Lorry Weighment & Dispatch System Online (Bally Jute Mill)",
         targetRole: "ALL",
         read: false,
         type: "info"
@@ -708,7 +708,7 @@ export default function LorryDispatchSystem({
     weightKg: number
   ) => {
     if (settings.enforceGeofence && !isInsideGeofence) {
-      alert(`GEOFENCE BREACH: Weightment recording blocked. Device is ${currentDistanceMeters}m from Bally Jute Mill.`);
+      alert(`GEOFENCE BREACH: Weighment recording blocked. Device is ${currentDistanceMeters}m from Bally Jute Mill.`);
       return;
     }
 

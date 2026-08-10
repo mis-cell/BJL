@@ -661,10 +661,10 @@ export default function MainGateSection({
                   lorryNo: (form.elements.namedItem("lorryNo") as HTMLInputElement).value,
                   driverPhone: (form.elements.namedItem("driverPhone") as HTMLInputElement).value,
                   department: (form.elements.namedItem("department") as HTMLSelectElement).value as DepartmentType,
-                  broker: (form.elements.namedItem("broker") as HTMLSelectElement).value,
-                  quality: (form.elements.namedItem("quality") as HTMLSelectElement).value,
-                  mokam: (form.elements.namedItem("mokam") as HTMLSelectElement).value,
-                  marka: (form.elements.namedItem("marka") as HTMLSelectElement).value,
+                  broker: (form.elements.namedItem("broker") as HTMLInputElement).value,
+                  quality: (form.elements.namedItem("quality") as HTMLInputElement).value,
+                  mokam: (form.elements.namedItem("mokam") as HTMLInputElement).value,
+                  marka: (form.elements.namedItem("marka") as HTMLInputElement).value,
                 });
                 setActiveModal(null);
               }}
