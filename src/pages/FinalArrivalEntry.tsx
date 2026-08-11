@@ -286,6 +286,30 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     }
     try {
       const searchVal = tempMrNo.trim().toUpperCase();
+
+      // Check if there is an associated Quality Inspection record in Inspection Section
+      let matchedInsp = inspectionsList.find(ins => {
+        const arrNo = String(ins.arrival_no || ins.ref_arrival_no || '').trim().toUpperCase();
+        const mrNo = String(ins.mr_no || '').trim().toUpperCase();
+        return arrNo === searchVal || mrNo === searchVal || mrNo.endsWith(`/${searchVal}`) || mrNo.includes(`/${searchVal}`);
+      });
+
+      if (!matchedInsp && supabase) {
+        const { data: dbInsp } = await supabase
+          .from('mill_inspection_master')
+          .select('*')
+          .or(`arrival_no.eq.${searchVal},ref_arrival_no.eq.${searchVal},mr_no.ilike.%${searchVal}%`);
+        if (dbInsp && dbInsp.length > 0) {
+          matchedInsp = dbInsp[0];
+        }
+      }
+
+      if (matchedInsp) {
+        // Automatically sync and load directly from Quality Inspection Section!
+        await loadDetailsFromInspection(matchedInsp.mr_no);
+        return;
+      }
+
       let matchedAmad = temporaryArrivalList.find(a => 
         String(a.temporary_arrival_no || a.amad_no || a.arrival_no || a.amad_id || '').trim().toUpperCase() === searchVal
       );
@@ -352,6 +376,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             setDetails(parsedGrid.map((row: any, idx: number) => ({ ...row, srl_no: idx + 1 })));
           }
         }
+        alert(`Loaded Temporary M.R record #${tempMrNo}. Note: No matching Quality Inspection Report found.`);
       } else {
         alert(`No Temporary M.R record found matching "${tempMrNo}".`);
       }
@@ -903,89 +928,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     <LegacyLayout title="FINAL M.R" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel}>
       <div className="bg-[#eae7e1] text-xs font-sans min-h-full flex flex-col">
 
-        {/* ERP Sync Integration Bar */}
-        <div className="shrink-0 bg-[#f0ece6] border-b border-[#c0c0c0] px-4 py-1.5 flex flex-wrap gap-3 items-center text-xs text-gray-700">
-          {/* Temporary M.R Sync */}
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-[#ac0000]">Temp M.R Source:</span>
-            <select
-              value={formData.temporary_arrival_no || ''}
-              onChange={(e) => {
-                handleInputChange('temporary_arrival_no', e.target.value);
-                if (e.target.value) loadDetailsFromAmad(e.target.value);
-              }}
-              className="border border-[#808080] bg-white px-2 py-0.5 text-xs text-gray-800 focus:bg-amber-50 outline-none"
-            >
-              <option value="">-- Select Temporary M.R Record --</option>
-              {temporaryArrivalList.map((tArr) => {
-                const tNo = tArr.temporary_arrival_no || tArr.amad_no || tArr.arrival_no || '';
-                return (
-                  <option key={tArr.amad_id || tNo} value={tNo}>
-                    Temp MR #{tNo} — {tArr.supplier || 'No Supp'} (Lorry: {tArr.lorry_number || tArr.lorry_no || 'N/A'})
-                  </option>
-                );
-              })}
-            </select>
-            <button
-              type="button"
-              onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
-              disabled={!formData.temporary_arrival_no}
-              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[11px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
-            >
-              Load Temp M.R
-            </button>
-          </div>
 
-          <span className="text-gray-400">|</span>
-
-          {/* Quality Sync */}
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-700">Quality Inspection Sync:</span>
-            <select
-              value={formData.mr_no}
-              onChange={(e) => {
-                handleInputChange('mr_no', e.target.value);
-                loadDetailsFromInspection(e.target.value);
-              }}
-              className="border border-[#808080] bg-white px-2 py-0.5 text-xs text-gray-800 focus:bg-amber-50 outline-none"
-            >
-              <option value="">-- Sync Quality Inspection Record --</option>
-              {inspectionsList
-                .filter((ins) => {
-                  const isCurrentlySelected = formData.mr_no && String(formData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
-                  const isCurrentlyLinked = initialData && initialData.mr_no && String(initialData.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase();
-                  if (isCurrentlySelected || isCurrentlyLinked) return true;
-
-                  const isAlreadySynced = existingArrivals.some(arr => 
-                    arr.mr_no && 
-                    String(arr.mr_no).trim().toUpperCase() === String(ins.mr_no).trim().toUpperCase() &&
-                    (!initialData || arr.final_arrival_id !== initialData.final_arrival_id)
-                  );
-                  return !isAlreadySynced;
-                })
-                .map((ins) => (
-                  <option key={ins.mr_no} value={ins.mr_no}>
-                    MR: {ins.mr_no} - PO: {ins.po_no || 'N/A'} [Supp: {ins.supplier_name}]
-                  </option>
-                ))}
-            </select>
-            
-            <button
-              type="button"
-              onClick={() => loadDetailsFromInspection(formData.mr_no)}
-              disabled={!formData.mr_no}
-              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[11px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
-            >
-              Force Sync
-            </button>
-
-            {formData.mr_no && (
-              <span className="text-emerald-800 font-bold px-2 py-0.5 bg-emerald-100 border border-emerald-400 text-[10px]">
-                Linked MR #{formData.mr_no}
-              </span>
-            )}
-          </div>
-        </div>
 
       <div className="flex-1 p-4 flex flex-col gap-3">
         {/* Title Heading */}

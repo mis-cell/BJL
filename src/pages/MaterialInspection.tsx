@@ -835,6 +835,22 @@ export default function MaterialInspection({
   });
 
   const [qualityMatrix, setQualityMatrix] = useState<any>(initialQualityMatrix());
+  const [showAllFourSpecs, setShowAllFourSpecs] = useState(false);
+
+  const hasDataInRow = (i: number) => {
+    const row = detailsList[i];
+    if (!row) return false;
+    return Boolean(
+      (row.arrival_grade && row.arrival_grade.trim()) ||
+      (row.quantity && String(row.quantity).trim() !== '' && Number(row.quantity) > 0) ||
+      (row.challan_gross_wt && String(row.challan_gross_wt).trim() !== '' && Number(row.challan_gross_wt) > 0) ||
+      (row.agency && row.agency.trim()) ||
+      (row.area && row.area.trim()) ||
+      (row.marka && row.marka.trim())
+    );
+  };
+
+  const show3rdAnd4th = showAllFourSpecs || hasDataInRow(2) || hasDataInRow(3);
 
   const updateMatrixVal = (rowKey: string, colKey: string, subKey: string, val: string) => {
     setQualityMatrix((prev: any) => ({
@@ -3325,200 +3341,124 @@ export default function MaterialInspection({
 
           {/* CARD 3: INSPECTION DETAILS */}
           <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
-            <div className="bg-slate-100 border-b border-slate-200 px-5 py-2.5 flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-blue-700" />
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                INSPECTION DETAILS
-              </h2>
+            <div className="bg-slate-100 border-b border-slate-200 px-5 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-700" />
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  INSPECTION DETAILS
+                </h2>
+              </div>
+              {isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllFourSpecs(!show3rdAnd4th)}
+                  className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3 py-1 rounded transition-all cursor-pointer flex items-center gap-1"
+                >
+                  {show3rdAnd4th ? "- Hide 3rd & 4th Item Specifications" : "+ Show 3rd & 4th Item Specifications"}
+                </button>
+              )}
             </div>
             <div className="p-5 space-y-6">
               {/* Commodity Spec Blocks (Side-by-Side Cards) */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Spec Block 1 */}
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-blue-900">
-                    <span>1st Item Specification</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Grade</label>
-                      <input
-                        type="text"
-                        list="gradesList"
-                        value={detailsList[0]?.arrival_grade || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'arrival_grade', e.target.value)}
-                        placeholder="Grade"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 font-bold uppercase disabled:bg-slate-100"
-                      />
+                {[0, 1, 2, 3].map((idx) => {
+                  if (idx >= 2 && !show3rdAnd4th) return null;
+                  const ordinals = ["1st", "2nd", "3rd", "4th"];
+                  const itemLabel = `${ordinals[idx]} Item Specification`;
+                  return (
+                    <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-blue-900">
+                        <span>{itemLabel}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Grade</label>
+                          <input
+                            type="text"
+                            list="gradesList"
+                            value={detailsList[idx]?.arrival_grade || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'arrival_grade', e.target.value)}
+                            placeholder="Grade"
+                            className="flex-1 h-7 rounded border border-slate-300 px-2 font-bold uppercase disabled:bg-slate-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Area</label>
+                          <input
+                            type="text"
+                            list="areasList"
+                            value={detailsList[idx]?.area || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'area', e.target.value)}
+                            placeholder="Area"
+                            className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Agency</label>
+                          <input
+                            type="text"
+                            list="agenciesList"
+                            value={detailsList[idx]?.agency || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'agency', e.target.value)}
+                            placeholder="Agency"
+                            className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Marks</label>
+                          <input
+                            type="text"
+                            list="markasList"
+                            value={detailsList[idx]?.marka || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'marka', e.target.value)}
+                            placeholder="Marka"
+                            className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
+                          <input
+                            type="text"
+                            value={detailsList[idx]?.crop_year || '2026-2027'}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'crop_year', e.target.value)}
+                            placeholder="2026-2027"
+                            className="flex-1 h-7 rounded border border-slate-300 px-2 text-center font-semibold disabled:bg-slate-100"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="w-16 font-semibold text-slate-600">Quantity</label>
+                          <input
+                            type="number"
+                            value={detailsList[idx]?.quantity || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'quantity', e.target.value)}
+                            placeholder="0"
+                            className="w-20 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                          />
+                          <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                            {detailsList[idx]?.unit || 'BALES'}
+                          </span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2">
+                          <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
+                          <input
+                            type="number"
+                            value={detailsList[idx]?.challan_gross_wt || ''}
+                            disabled={!isEditMode}
+                            onChange={(e) => handleDetailChange(idx, 'challan_gross_wt', e.target.value)}
+                            placeholder="0.00"
+                            className="w-32 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Area</label>
-                      <input
-                        type="text"
-                        list="areasList"
-                        value={detailsList[0]?.area || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'area', e.target.value)}
-                        placeholder="Area"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Agency</label>
-                      <input
-                        type="text"
-                        list="agenciesList"
-                        value={detailsList[0]?.agency || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'agency', e.target.value)}
-                        placeholder="Agency"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Marks</label>
-                      <input
-                        type="text"
-                        list="markasList"
-                        value={detailsList[0]?.marka || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'marka', e.target.value)}
-                        placeholder="Marka"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
-                      <input
-                        type="text"
-                        value={detailsList[0]?.crop_year || '2026-2027'}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'crop_year', e.target.value)}
-                        placeholder="2026-2027"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 text-center font-semibold disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Quantity</label>
-                      <input
-                        type="number"
-                        value={detailsList[0]?.quantity || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'quantity', e.target.value)}
-                        placeholder="0"
-                        className="w-20 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
-                      />
-                      <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
-                        {detailsList[0]?.unit || 'BALES'}
-                      </span>
-                    </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
-                      <input
-                        type="number"
-                        value={detailsList[0]?.challan_gross_wt || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(0, 'challan_gross_wt', e.target.value)}
-                        placeholder="0.00"
-                        className="w-32 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Spec Block 2 */}
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-blue-900">
-                    <span>2nd Item Specification</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Grade</label>
-                      <input
-                        type="text"
-                        list="gradesList"
-                        value={detailsList[1]?.arrival_grade || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'arrival_grade', e.target.value)}
-                        placeholder="Grade"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 font-bold uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Area</label>
-                      <input
-                        type="text"
-                        list="areasList"
-                        value={detailsList[1]?.area || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'area', e.target.value)}
-                        placeholder="Area"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Agency</label>
-                      <input
-                        type="text"
-                        list="agenciesList"
-                        value={detailsList[1]?.agency || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'agency', e.target.value)}
-                        placeholder="Agency"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Marks</label>
-                      <input
-                        type="text"
-                        list="markasList"
-                        value={detailsList[1]?.marka || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'marka', e.target.value)}
-                        placeholder="Marka"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
-                      <input
-                        type="text"
-                        value={detailsList[1]?.crop_year || '2026-2027'}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'crop_year', e.target.value)}
-                        placeholder="2026-2027"
-                        className="flex-1 h-7 rounded border border-slate-300 px-2 text-center font-semibold disabled:bg-slate-100"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="w-16 font-semibold text-slate-600">Quantity</label>
-                      <input
-                        type="number"
-                        value={detailsList[1]?.quantity || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'quantity', e.target.value)}
-                        placeholder="0"
-                        className="w-20 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
-                      />
-                      <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
-                        {detailsList[1]?.unit || 'BALES'}
-                      </span>
-                    </div>
-                    <div className="col-span-2 flex items-center gap-2">
-                      <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
-                      <input
-                        type="number"
-                        value={detailsList[1]?.challan_gross_wt || ''}
-                        disabled={!isEditMode}
-                        onChange={(e) => handleDetailChange(1, 'challan_gross_wt', e.target.value)}
-                        placeholder="0.00"
-                        className="w-32 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
 
               {/* Quality Breakdown Matrix Table */}
