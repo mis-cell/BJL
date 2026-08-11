@@ -2349,7 +2349,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       />
                       <datalist id="godown_op_datalist">
                         {mergedGodowns.map((g, i) => (
-                          <option key={i} value={g.gdn_name} />
+                          <option key={g.gdn_code} value={g.gdn_name} />
                         ))}
                       </datalist>
                     </div>
@@ -2555,7 +2555,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       >
                         <option value="">-- SELECT STORAGE LOCATION --</option>
                         {mergedGodowns.map((g, i) => (
-                          <option key={i} value={g.gdn_name}>
+                          <option key={g.gdn_code} value={g.gdn_name}>
                             {g.gdn_name} {g.gdn_code ? `[${g.gdn_code}]` : ''}
                           </option>
                         ))}

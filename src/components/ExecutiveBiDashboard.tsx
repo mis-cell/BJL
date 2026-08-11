@@ -128,11 +128,32 @@ export default function ExecutiveBiDashboard({
     return Array.from(set).filter(Boolean).sort();
   }, [arrivals, saudas]);
 
-  const uniqueGodowns = useMemo(() => {
+  /* const uniqueGodowns = useMemo(() => {
     if (godowns && godowns.length > 0) {
       return godowns.map(g => g.gdn_name || `GDN-${g.gdn_code}`);
     }
     return ['GDN 1', 'GDN 2', 'GDN 3', 'GDN 4', 'GDN 5', 'OUTSIDE', 'MILL SHED'];
+  }, [godowns]); */
+  const uniqueGodowns = useMemo(() => {
+    if (godowns && godowns.length > 0) {
+      return [
+        ...new Set(
+          godowns
+            .map(g => g.gdn_name || `GDN-${g.gdn_code}`)
+            .filter(Boolean)
+        )
+      ];
+    }
+
+    return [
+      'GDN 1',
+      'GDN 2',
+      'GDN 3',
+      'GDN 4',
+      'GDN 5',
+      'OUTSIDE',
+      'MILL SHED'
+    ];
   }, [godowns]);
 
   const uniqueGrades = useMemo(() => {
