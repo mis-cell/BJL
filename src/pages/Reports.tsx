@@ -1932,7 +1932,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                           <span>No transaction records found</span>
                        </div>
                      ) : (
-                       <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                       <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                          <BarChart data={saudaChartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                            <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
@@ -2149,7 +2149,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                                     <span>No analytical dimensions to map with current filters</span>
                                  </div>
                               ) : (
-                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                 <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                                     {saudaReportOutput.chartType === 'area' ? (
                                        <AreaChart data={saudaReportOutput.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
                                           <defs>

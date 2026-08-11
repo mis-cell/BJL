@@ -266,7 +266,7 @@ export default function FormsChartsTab() {
               <div className="border border-slate-100 rounded-2xl p-4 shadow-xs bg-slate-50/10">
                 <h4 className="text-sm font-bold text-slate-800 mb-2">Weekly Bales Transactions Metric</h4>
                 <div className="h-64 w-full text-xs font-semibold  pr-4">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <LineChart data={simpleLineData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis dataKey="name" stroke="#94a3b8" />
@@ -284,7 +284,7 @@ export default function FormsChartsTab() {
               <div className="border border-slate-100 rounded-2xl p-4 shadow-xs bg-slate-50/10">
                 <h4 className="text-sm font-bold text-slate-800 mb-2">Category Comparison bar</h4>
                 <div className="h-64 w-full text-xs font-semibold  pr-4">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <BarChart data={simpleLineData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis dataKey="name" stroke="#94a3b8" />

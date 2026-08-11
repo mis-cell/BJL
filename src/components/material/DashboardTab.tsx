@@ -187,7 +187,7 @@ export default function DashboardTab({
           </div>
 
           <div className="my-2 flex justify-center relative h-32">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
               <PieChart>
                 <Pie
                   data={revenueData}
@@ -293,7 +293,7 @@ export default function DashboardTab({
                 <span className="text-xs font-bold text-slate-700">{serverLoad[serverLoad.length-1]?.cpu}% @ 3.3Ghz</span>
               </div>
               <div className="flex-1 h-8 rounded-md overflow-hidden bg-blue-50/20 border border-blue-100/30 p-0.5">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={serverLoad}>
                     <Line type="monotone" dataKey="cpu" stroke="#3f51b5" strokeWidth={2} dot={false} isAnimationActive={false} />
                   </LineChart>
@@ -308,7 +308,7 @@ export default function DashboardTab({
                 <span className="text-xs font-bold text-slate-700">{serverLoad[serverLoad.length-1]?.temp}°C Safe</span>
               </div>
               <div className="flex-1 h-8 rounded-md overflow-hidden bg-pink-50/20 border border-pink-100/30 p-0.5">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={serverLoad}>
                     <Line type="monotone" dataKey="temp" stroke="#ec407a" strokeWidth={2} dot={false} isAnimationActive={false} />
                   </LineChart>
@@ -323,7 +323,7 @@ export default function DashboardTab({
                 <span className="text-xs font-bold text-slate-700">{serverLoad[serverLoad.length-1]?.disk}% Volume</span>
               </div>
               <div className="flex-1 h-8 rounded-md overflow-hidden bg-amber-50/20 border border-amber-100/30 p-0.5">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={serverLoad}>
                     <Line type="monotone" dataKey="disk" stroke="#ff9800" strokeWidth={2} dot={false} isAnimationActive={false} />
                   </LineChart>
@@ -368,7 +368,7 @@ export default function DashboardTab({
         </div>
 
         <div className="h-72 w-full pr-4 text-xs font-semibold ">
-          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
             <AreaChart data={lineChartData} margin={{ top: 10, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTablet" x1="0" y1="0" x2="0" y2="1">

@@ -1758,7 +1758,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 <span className="text-[10px] font-bold text-slate-500 font-mono">{rateTrendData.length} Historic Dates</span>
               </div>
               <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={rateTrendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} />
@@ -1780,7 +1780,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 <span className="text-[10px] font-bold text-slate-500">TD5 / TD6 Series</span>
               </div>
               <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={rateTrendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} />
@@ -1806,7 +1806,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 <span className="text-[10px] font-bold text-emerald-700">Top 8 Regions</span>
               </div>
               <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <BarChart data={areaChartData.highest}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="area" tick={{ fontSize: 9, fill: '#1E331B', fontWeight: 'bold' }} interval={0} angle={-15} textAnchor="end" />
@@ -1828,7 +1828,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 <span className="text-[10px] font-bold text-slate-500">Premium vs Discount</span>
               </div>
               <div className="h-72 w-full flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <PieChart>
                     <Pie
                       data={distributionData}

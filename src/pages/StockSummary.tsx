@@ -1669,7 +1669,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         </div>
 
                         <div className="h-[210px] w-full pt-4 font-mono text-[9px]">
-                          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                             <BarChart
                               layout="vertical"
                               data={Object.values(
@@ -1779,7 +1779,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                             <div className="space-y-3 pt-0.5 animate-in fade-in duration-200">
                               <div className="flex items-center gap-2">
                                 <div className="h-[105px] w-[105px] shrink-0 relative">
-                                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                                     <PieChart>
                                       <Pie
                                         data={[

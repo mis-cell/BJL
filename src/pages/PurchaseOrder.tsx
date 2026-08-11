@@ -2877,7 +2877,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                   {scopedPos.length === 0 ? (
                     <div className="text-slate-400 text-[9px] font-bold">No Data</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                       <PieChart>
                         <Pie
                           data={statusPieData}

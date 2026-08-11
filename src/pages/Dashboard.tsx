@@ -1712,7 +1712,7 @@ export default function Dashboard({
                      </h4>
                      <div className="h-44 w-full">
                         {arrivalTrendsData.length > 0 ? (
-                           <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                           <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                               <BarChart data={arrivalTrendsData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                  <XAxis dataKey="name" tick={{ fontSize: 7 }} />
@@ -1736,7 +1736,7 @@ export default function Dashboard({
                      </h4>
                      <div className="h-44 w-full">
                         {poDistributionData.length > 0 ? (
-                           <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                           <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                               <AreaChart data={poDistributionData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                  <XAxis dataKey="name" tick={{ fontSize: 6.5, width: 50 }} interval={0} />
@@ -1762,7 +1762,7 @@ export default function Dashboard({
                         {settlementPieData.length > 0 ? (
                            <>
                               <div className="w-1/2 h-full">
-                                 <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                 <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                                     <PieChart>
                                        <Pie
                                          data={settlementPieData}
@@ -1810,7 +1810,7 @@ export default function Dashboard({
                      </h4>
                      <div className="h-44 w-full">
                         {gradeArrivalTrendsData.trends.length > 0 ? (
-                           <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                           <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                               <BarChart data={gradeArrivalTrendsData.trends} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                  <XAxis dataKey="date" tick={{ fontSize: 7 }} />
@@ -1840,7 +1840,7 @@ export default function Dashboard({
                      </h4>
                      <div className="h-44 w-full">
                         {gradeStockLevelsData.length > 0 ? (
-                           <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                           <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                               <BarChart data={gradeStockLevelsData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
                                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                  <XAxis dataKey="grade" tick={{ fontSize: 7 }} />

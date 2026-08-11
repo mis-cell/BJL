@@ -1439,7 +1439,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                     <span>No purchase master records exist following current filters.</span>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <BarChart 
                       data={groupedChartData} 
                       margin={{ top: 15, right: 10, left: -25, bottom: 10 }}
@@ -1897,7 +1897,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                       <span className="text-[9.5px]">No matching data points located within chosen filters scope.</span>
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                       
                       {/* Custom Trend Charts for Monthly Procurement Summary (r1) */}
                       {activePoReportKey === 'r1' && (

@@ -969,7 +969,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                 <LegacyFieldset legend="Godown Allotment Breakdown Visualization">
                   <div className="bg-white p-2 border border-slate-355 flex flex-col justify-between items-center h-[340px] shadow-inner mt-1">
                     <span className="text-[9px] font-extrabold uppercase italic pb-1 text-slate-500">Stacked Warehouse Bag Counts for Bottleneck Auditing</span>
-                    <ResponsiveContainer width="100%" height="90%" minWidth={1} minHeight={1}>
+                    <ResponsiveContainer width="100%" height="90%" minWidth={100} minHeight={100}>
                       <BarChart data={Object.values(godownsStock).map((g: any) => ({
                         name: g.gdn_name.replace(' GODOWN', '').replace('(RAW MAIN)', '').trim(),
                         'Jute Bales': g.jute,

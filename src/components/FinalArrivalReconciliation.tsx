@@ -1204,7 +1204,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
           ) : (
             <div className="space-y-2 animate-fade-in">
               <div className="h-64 md:h-72 w-full pr-2">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <RechartsBarChart
                     data={chartData}
                     margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
@@ -1338,7 +1338,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
         {showTrendChart ? (
           <div className="space-y-3 animate-fade-in">
             <div className="h-64 md:h-72 w-full pr-2">
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                 <RechartsLineChart
                   data={trendData}
                   margin={{ top: 10, right: 15, left: -20, bottom: 5 }}
