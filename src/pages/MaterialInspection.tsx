@@ -40,6 +40,39 @@ import { sanitizeCsvData } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
 
+// Helper function to parse date string without timezone offset shifts
+function parseDateOnly(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s) return null;
+  if (s.includes('T')) {
+    const parts = s.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  if (s.includes('-')) {
+    const parts = s.split('-');
+    if (parts[0].length === 4) {
+      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    } else if (parts[2].length === 4) {
+      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts[2].length === 4) {
+      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  const parsed = new Date(s);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Type declarations matching the schema created in Supabase
 interface InspectionMaster {
   id?: string;
@@ -64,6 +97,12 @@ interface InspectionMaster {
   mill_po_date: string;
   mr_spcl_print: string;
   remarks: string;
+  delivery_claim?: number;
+  deduction_type?: string;
+  deduction_types?: string[];
+  deduction_rate?: number;
+  deduction_qty?: number;
+  deduction_amount?: number;
 }
 
 interface InspectionDetailRow {
@@ -326,6 +365,10 @@ export default function MaterialInspection({
   const [agencies, setAgencies] = useState<any[]>([]);
   const [markas, setMarkas] = useState<any[]>([]);
   const [arrivalVouchers, setArrivalVouchers] = useState<any[]>([]);
+  const [deductionMasterList, setDeductionMasterList] = useState<any[]>([]);
+  const [selectedPoData, setSelectedPoData] = useState<any>(null);
+  const [selectedDeductionTypes, setSelectedDeductionTypes] = useState<string[]>([]);
+  const [isDeductionDropdownOpen, setIsDeductionDropdownOpen] = useState(false);
 
   // Page States
   const [viewMode, setViewMode] = useState<"dashboard" | "entry">("dashboard");
@@ -698,6 +741,12 @@ export default function MaterialInspection({
     mill_po_date: new Date().toISOString().split("T")[0],
     mr_spcl_print: "",
     remarks: "",
+    delivery_claim: 0,
+    deduction_type: "",
+    deduction_types: [],
+    deduction_rate: 0,
+    deduction_qty: 0,
+    deduction_amount: 0,
   });
 
   const createEmptyRow = (srl: number): InspectionDetailRow => ({
@@ -879,6 +928,7 @@ export default function MaterialInspection({
           { data: av },
           { data: uData },
           { data: mL },
+          dData,
         ] = await Promise.all([
           supabase
             .from("broker_master")
@@ -909,6 +959,7 @@ export default function MaterialInspection({
             .limit(250),
           supabase.from("unit_master").select("unit_name").order("unit_name").limit(150),
           supabase.from("moisture_logic").select("*"),
+          supabase.from("deduction_master").select("*").then(r => r.data || [], () => []),
         ]);
 
         if (b) setBrokers(b.map(x => ({ name: x.brok_name })));
@@ -924,6 +975,25 @@ export default function MaterialInspection({
         }
         if (mL && mL.length > 0) {
           setMoistureLogicRules(mL);
+        }
+
+        const defaultDeductions = [
+          { deduction: "Shortage", rate_per_qntl: 0 },
+          { deduction: "Moisture Excess", rate_per_qntl: 0 },
+          { deduction: "Tare Loss", rate_per_qntl: 0 },
+          { deduction: "Quality Rebate", rate_per_qntl: 0 },
+          { deduction: "Freight Penalty", rate_per_qntl: 0 },
+          { deduction: "Insurance Claim", rate_per_qntl: 0 },
+          { deduction: "Late Delivery", rate_per_qntl: 0 },
+          { deduction: "Grade Down Claim", rate_per_qntl: 0 },
+          { deduction: "Dust Claim", rate_per_qntl: 0 },
+          { deduction: "NCV Claim", rate_per_qntl: 0 },
+          { deduction: "Miscellaneous", rate_per_qntl: 0 },
+        ];
+        if (dData && dData.length > 0) {
+          setDeductionMasterList(dData);
+        } else {
+          setDeductionMasterList(defaultDeductions);
         }
       } else {
         const [b, s, g, ar, ag, m, av, fa] = await Promise.all([
@@ -993,31 +1063,103 @@ export default function MaterialInspection({
 
   // Draft auto-save and restore disabled to ensure form is always a fresh blank form on open, per user request
 
-  // Automatically retrieve the exact P.O. date from purchase_master whenever po_no changes
+  // Automatically retrieve full P.O. data from purchase_master whenever po_no changes
   useEffect(() => {
-    if (!supabase || !masterData.po_no) return;
-    const fetchActualPoDate = async () => {
+    if (!supabase || !masterData.po_no) {
+      setSelectedPoData(null);
+      return;
+    }
+    const fetchActualPoData = async () => {
       try {
         const { data, error } = await supabase
           .from("purchase_master")
-          .select("po_date")
+          .select("*")
           .eq("po_no", masterData.po_no.trim())
           .maybeSingle();
         if (error) throw error;
-        if (data && data.po_date) {
-          setMasterData((prev) => {
-            if (prev.po_date !== data.po_date) {
-              return { ...prev, po_date: data.po_date };
-            }
-            return prev;
-          });
+        if (data) {
+          setSelectedPoData(data);
+          if (data.po_date) {
+            setMasterData((prev) => {
+              if (prev.po_date !== data.po_date) {
+                return { ...prev, po_date: data.po_date };
+              }
+              return prev;
+            });
+          }
         }
       } catch (err) {
-        console.warn("Failed to fetch exact PO date from purchase_master:", err);
+        console.warn("Failed to fetch exact PO from purchase_master:", err);
       }
     };
-    fetchActualPoDate();
+    fetchActualPoData();
   }, [masterData.po_no]);
+
+  // Calculate Delivery Claim logic (Delivery To vs Receipt Date)
+  const calculateDeliveryClaimVal = (): number => {
+    if (!selectedPoData || !selectedPoData.delivery_to) return 0;
+    const deliveryToObj = parseDateOnly(selectedPoData.delivery_to);
+    const receiptDateObj = parseDateOnly(masterData.unloading_date || masterData.arrival_date || masterData.mr_date);
+
+    if (deliveryToObj && receiptDateObj && receiptDateObj.getTime() > deliveryToObj.getTime()) {
+      const diffMs = receiptDateObj.getTime() - deliveryToObj.getTime();
+      const lateDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      const penaltyPerDay = Number(selectedPoData.delivery_penalty) || Number(selectedPoData.shipment_penalty) || Number(selectedPoData.qty_penalty) || 0;
+
+      const totalGrossWtMt = detailsList.reduce((acc, r) => acc + (Number(r.challan_gross_wt) || 0), 0);
+      const totalQtyBalesOrQtl = detailsList.reduce((acc, r) => acc + (Number(r.quantity) || 0), 0);
+      const scaleQuintals = totalGrossWtMt > 0 ? (totalGrossWtMt * 10) : (totalQtyBalesOrQtl > 0 ? totalQtyBalesOrQtl : 100);
+
+      return Number((lateDays * penaltyPerDay * scaleQuintals).toFixed(2));
+    }
+    return 0;
+  };
+
+  // Auto-update Delivery Claim when dates/PO/details change
+  useEffect(() => {
+    const autoClaim = calculateDeliveryClaimVal();
+    if (autoClaim > 0 && !(masterData as any).delivery_claim) {
+      setMasterData((prev) => ({
+        ...prev,
+        delivery_claim: autoClaim,
+      }));
+    }
+  }, [selectedPoData, masterData.unloading_date, masterData.arrival_date, masterData.mr_date, detailsList]);
+
+  // Handler for Multi-Select Deduction Type
+  const handleToggleDeduction = (dedName: string) => {
+    setSelectedDeductionTypes((prev) => {
+      let next: string[];
+      if (prev.includes(dedName)) {
+        next = prev.filter((d) => d !== dedName);
+      } else {
+        next = [...prev, dedName];
+      }
+      const deductionStr = next.join(", ");
+
+      let totalRate = 0;
+      next.forEach((d) => {
+        const matchObj = deductionMasterList.find((item) => item.deduction === d);
+        if (matchObj) {
+          totalRate += Number(matchObj.rate_per_unit || matchObj.rate_per_qntl || 0);
+        }
+      });
+
+      const currentQty = Number((masterData as any).deduction_qty) || 1;
+      const currentRate = totalRate > 0 ? totalRate : (Number((masterData as any).deduction_rate) || 0);
+      const calculatedAmt = Number((currentRate * currentQty).toFixed(2));
+
+      setMasterData((m) => ({
+        ...m,
+        deduction_type: deductionStr,
+        deduction_types: next,
+        deduction_rate: currentRate,
+        deduction_qty: currentQty,
+        deduction_amount: calculatedAmt,
+      }));
+      return next;
+    });
+  };
 
   // Sync / Load inspection records for Modal View search
   const loadSavedInspectionsList = async () => {
@@ -1078,6 +1220,12 @@ export default function MaterialInspection({
         lorry_number: insp.lorry_number || (voucher as any)?.lorry_number || (voucher as any)?.lorry_no || (voucher as any)?.vehicle_no || "",
       };
       setMasterData(mappedInsp);
+
+      const dedStr = (insp as any).deduction_type || "";
+      const dedArr = dedStr
+        ? dedStr.split(",").map((s: string) => s.trim()).filter(Boolean)
+        : Array.isArray((insp as any).deduction_types) ? (insp as any).deduction_types : [];
+      setSelectedDeductionTypes(dedArr);
 
       // Fetch corresponding details rows
       const { data, error } = await supabase
@@ -1634,6 +1782,11 @@ export default function MaterialInspection({
             mr_spcl_print: masterData.mr_spcl_print,
             remarks: masterData.remarks,
             lorry_number: masterData.lorry_number,
+            delivery_claim: (masterData as any).delivery_claim || 0,
+            deduction_type: (masterData as any).deduction_type || selectedDeductionTypes.join(', '),
+            deduction_rate: (masterData as any).deduction_rate || 0,
+            deduction_qty: (masterData as any).deduction_qty || 0,
+            deduction_amount: (masterData as any).deduction_amount || 0,
           })
           .eq("mr_no", masterData.mr_no);
 
@@ -1664,6 +1817,11 @@ export default function MaterialInspection({
             mr_spcl_print: masterData.mr_spcl_print,
             remarks: masterData.remarks,
             lorry_number: masterData.lorry_number,
+            delivery_claim: (masterData as any).delivery_claim || 0,
+            deduction_type: (masterData as any).deduction_type || selectedDeductionTypes.join(', '),
+            deduction_rate: (masterData as any).deduction_rate || 0,
+            deduction_qty: (masterData as any).deduction_qty || 0,
+            deduction_amount: (masterData as any).deduction_amount || 0,
           });
 
         if (masterInsertErr) throw masterInsertErr;
@@ -3333,6 +3491,257 @@ export default function MaterialInspection({
                       onChange={handleMasterChange}
                       className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* SETTLEMENT CLAIMS & DEDUCTION DETAILS SUB-SECTION */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckSquare className="w-3.5 h-3.5 text-blue-700" />
+                  <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                    Settlement Claims & Deduction Details
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-xs">
+                  {/* Left: Delivery Claim (Auto Calculate) */}
+                  <div className="bg-amber-50/70 border border-amber-200 rounded-lg p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <label className="font-bold text-amber-950 text-xs">
+                          Delivery Claim (Auto Calculate)
+                        </label>
+                        {selectedPoData?.delivery_to && (
+                          <div className="group relative">
+                            <span className="text-[8px] font-black bg-amber-900 border border-amber-300 text-amber-100 rounded-full w-4 h-4 inline-flex items-center justify-center cursor-help">
+                              i
+                            </span>
+                            <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2.5 text-[9px] rounded-md border border-slate-700 shadow-xl leading-relaxed">
+                              <p className="text-yellow-300 font-bold border-b border-slate-700 pb-1 mb-1">
+                                Delivery Claim Calculation Breakdown
+                              </p>
+                              <p>Delivery Deadline (PO): <code className="text-cyan-300">{selectedPoData.delivery_to}</code></p>
+                              <p>Arrival / Unloading Date: <code className="text-cyan-300">{masterData.unloading_date || masterData.arrival_date || masterData.mr_date || 'N/A'}</code></p>
+                              {(() => {
+                                const rD = parseDateOnly(masterData.unloading_date || masterData.arrival_date || masterData.mr_date);
+                                const dT = parseDateOnly(selectedPoData.delivery_to);
+                                if (rD && dT && rD.getTime() > dT.getTime()) {
+                                  const lDays = Math.round((rD.getTime() - dT.getTime()) / (1000 * 60 * 60 * 24));
+                                  const penalty = Number(selectedPoData.delivery_penalty) || Number(selectedPoData.shipment_penalty) || Number(selectedPoData.qty_penalty) || 0;
+                                  const totalGrossWtMt = detailsList.reduce((acc, r) => acc + (Number(r.challan_gross_wt) || 0), 0);
+                                  const scaleQtl = totalGrossWtMt > 0 ? (totalGrossWtMt * 10) : 100;
+                                  const totalClaim = lDays * penalty * scaleQtl;
+                                  return (
+                                    <div className="mt-1 space-y-0.5 text-slate-200">
+                                      <p>Late Days: <code className="text-amber-300 font-bold">{lDays} days</code></p>
+                                      <p>Penalty Rate: <code className="text-emerald-300 font-bold">₹{penalty} / Qtl / Day</code></p>
+                                      <p>Weight (Qtl): <code className="text-cyan-300 font-bold">{scaleQtl.toFixed(2)} Qtl</code></p>
+                                      <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold text-[10px]">Auto Claim: ₹{totalClaim.toFixed(2)}</p>
+                                    </div>
+                                  );
+                                }
+                                return <p className="text-emerald-400 font-bold mt-1">Status: On Time (No Delay Penalty)</p>;
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {isEditMode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const claim = calculateDeliveryClaimVal();
+                            setMasterData(prev => ({ ...prev, delivery_claim: claim }));
+                          }}
+                          className="text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2 py-0.5 rounded transition-all cursor-pointer"
+                        >
+                          Auto Calculate
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-amber-900 text-sm">₹</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="delivery_claim"
+                        value={(masterData as any).delivery_claim || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setMasterData(prev => ({ ...prev, delivery_claim: val }));
+                        }}
+                        placeholder="0.00"
+                        className="flex-1 h-8 rounded border border-amber-300 bg-white px-2.5 font-mono font-bold text-right text-amber-900 disabled:bg-slate-100"
+                      />
+                    </div>
+                    {selectedPoData?.delivery_to && (
+                      <p className="text-[10px] text-amber-800 italic">
+                        PO Delivery Deadline: <span className="font-semibold">{selectedPoData.delivery_to}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: Deduction Type (Multi Selection) & Details */}
+                  <div className="bg-red-50/60 border border-red-200 rounded-lg p-3 space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="font-bold text-red-900 text-xs">
+                          Deduction Type (Multi Selection)
+                        </label>
+                        {selectedDeductionTypes.length > 0 && (
+                          <span className="text-[10px] font-bold bg-red-100 text-red-800 border border-red-300 px-1.5 py-0.5 rounded-full">
+                            {selectedDeductionTypes.length} Selected
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Selected Badges */}
+                      <div className="flex flex-wrap gap-1 my-1">
+                        {selectedDeductionTypes.length === 0 ? (
+                          <span className="text-[11px] text-slate-400 italic">No deductions selected</span>
+                        ) : (
+                          selectedDeductionTypes.map((ded, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 bg-red-100 border border-red-300 text-red-900 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                            >
+                              {ded}
+                              {isEditMode && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDeduction(ded)}
+                                  className="hover:text-red-600 font-black cursor-pointer text-xs"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Multi-Selection Dropdown / Checklist Popover */}
+                      {isEditMode && (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsDeductionDropdownOpen(!isDeductionDropdownOpen)}
+                            className="w-full h-8 bg-white border border-red-300 rounded px-2.5 text-left text-xs font-semibold text-slate-700 flex items-center justify-between hover:bg-slate-50 cursor-pointer"
+                          >
+                            <span>-- Select / Toggle Deductions --</span>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+
+                          {isDeductionDropdownOpen && (
+                            <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-300 rounded-md shadow-xl p-2 max-h-48 overflow-y-auto space-y-1">
+                              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                                <span className="text-[10px] font-bold text-slate-600 uppercase">Select Deduction Types</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsDeductionDropdownOpen(false)}
+                                  className="text-[10px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                                >
+                                  Done
+                                </button>
+                              </div>
+                              {deductionMasterList.map((dItem, idx) => {
+                                const name = dItem.deduction;
+                                if (!name) return null;
+                                const isChecked = selectedDeductionTypes.includes(name);
+                                return (
+                                  <label
+                                    key={idx}
+                                    className="flex items-center gap-2 px-2 py-1 hover:bg-red-50 rounded cursor-pointer text-xs font-medium text-slate-800 select-none"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => handleToggleDeduction(name)}
+                                      className="rounded border-slate-300 text-red-600 focus:ring-red-500 h-3.5 w-3.5"
+                                    />
+                                    <span>{name}</span>
+                                    {dItem.rate_per_qntl ? (
+                                      <span className="text-[10px] text-slate-400 ml-auto">₹{dItem.rate_per_qntl}/Qtl</span>
+                                    ) : dItem.rate_per_unit ? (
+                                      <span className="text-[10px] text-slate-400 ml-auto">₹{dItem.rate_per_unit}/Unit</span>
+                                    ) : null}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rate, Qty, and Amount Inputs */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-red-200">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Deduction Rate (₹)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          disabled={!isEditMode}
+                          value={(masterData as any).deduction_rate || ''}
+                          onChange={(e) => {
+                            const rate = parseFloat(e.target.value) || 0;
+                            const qty = Number((masterData as any).deduction_qty) || 0;
+                            const amt = Number((rate * qty).toFixed(2));
+                            setMasterData(m => ({
+                              ...m,
+                              deduction_rate: rate,
+                              deduction_amount: amt
+                            }));
+                          }}
+                          placeholder="0.00"
+                          className="w-full h-7 rounded border border-slate-300 bg-white px-2 font-mono text-xs font-semibold text-right disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Qty / Units</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          disabled={!isEditMode}
+                          value={(masterData as any).deduction_qty || ''}
+                          onChange={(e) => {
+                            const qty = parseFloat(e.target.value) || 0;
+                            const rate = Number((masterData as any).deduction_rate) || 0;
+                            const amt = Number((rate * qty).toFixed(2));
+                            setMasterData(m => ({
+                              ...m,
+                              deduction_qty: qty,
+                              deduction_amount: amt
+                            }));
+                          }}
+                          placeholder="0"
+                          className="w-full h-7 rounded border border-slate-300 bg-white px-2 font-mono text-xs font-semibold text-right disabled:bg-slate-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-red-800 block mb-0.5">Total Ded Amt (-)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          disabled={!isEditMode}
+                          value={(masterData as any).deduction_amount || ''}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            setMasterData(m => ({
+                              ...m,
+                              deduction_amount: amt
+                            }));
+                          }}
+                          placeholder="0.00"
+                          className="w-full h-7 rounded border border-red-300 bg-red-100/80 px-2 font-mono text-xs font-black text-right text-red-800 disabled:bg-slate-100"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

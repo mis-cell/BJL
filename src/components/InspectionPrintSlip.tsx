@@ -36,6 +36,9 @@ interface InspectionData {
   mill_po_date?: string;
   mr_spcl_print?: string;
   remarks?: string;
+  delivery_claim?: number;
+  deduction_type?: string;
+  deduction_amount?: number;
 }
 
 interface Props {
