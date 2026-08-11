@@ -116,219 +116,299 @@ export default function PoPrintSlip({ po }: Props) {
   };
 
   return (
-    <div className="bg-[#525659] p-4 sm:p-8 min-h-[190mm] flex justify-center items-center print:bg-white print:p-0 font-mono select-text w-full overflow-x-auto">
-      <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          .print-full-sheet {
-            width: 210mm !important;
-            height: 165mm !important;
-            min-height: 165mm !important;
-            max-height: 165mm !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
-          .sprocket-strip {
-            display: flex !important;
-          }
-        }
-        .dot-matrix-text {
-          font-family: 'Courier New', Courier, Monaco, monospace;
-          letter-spacing: -0.1px;
-        }
-      `}</style>
+    <div className="w-full min-h-[190mm] bg-slate-100 print:bg-white p-4 sm:p-8 print:p-0 flex justify-center items-center overflow-x-auto font-sans text-slate-900">
 
-      {/* Main Continuous Form Sheet Container (Width = A4 portrait 210mm, Height optimized to fit exactly 165mm) */}
-      <div className="print-full-sheet bg-white w-[210mm] max-w-[210mm] min-h-[165mm] h-[165mm] max-h-[165mm] flex flex-row border border-neutral-300 shadow-xl relative overflow-hidden text-black text-[11px] leading-relaxed select-text dot-matrix-text">
-        
-        {/* Left Hand Sprocket Margin Strip */}
-        <div className="sprocket-strip w-[13mm] min-w-[13mm] flex flex-col justify-around items-center bg-white border-r border-dotted border-neutral-300 py-3  relative z-10">
-          {sprocketHoles.map((_, idx) => (
-            <div 
-              key={`left-hole-${idx}`} 
-              className="w-3 h-3 rounded-full border border-neutral-300 bg-neutral-50 flex items-center justify-center text-[5px]"
-            >
-            </div>
-          ))}
-        </div>
+      {/* PRINT SHEET */}
+      <div className="print-full-sheet relative w-[210mm] h-[165mm] min-h-[165mm] max-h-[165mm] bg-white overflow-hidden border border-slate-300 print:border-0 shadow-2xl print:shadow-none flex">
 
-        {/* Core Jute Mill Slip Workspace (Print Content Area Width = ~184mm) */}
-        <div className="flex-1 px-5 py-3 flex flex-col justify-between overflow-hidden">
-          
-          {/* Top Address & Header Layout */}
-          <div>
-            <div className="flex justify-between items-start text-[11px]">
-              <span className="font-bold tracking-wider">{po.po_identification || 'DR/4-2'}</span>
-              <span className="font-bold text-[14px] text-center tracking-wide pr-8">RAW JUTE PURCHASE ORDER</span>
-              <span className="text-[10px] text-white ">.</span>
-            </div>
+        {/* MAIN DOCUMENT */}
+        <div className="flex-1 min-w-0 px-[6mm] py-[4mm] flex flex-col overflow-hidden">
 
-            <div className="flex justify-between items-start mt-1 pb-1 text-[11.5px]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded border-2 border-black flex items-center justify-center font-serif font-black text-xs text-black shrink-0">
+          {/* HEADER */}
+          <header className="border-b-2 border-[#174C2C] pb-2">
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg bg-[#174C2C] text-white flex items-center justify-center font-black text-sm">
                   BJ
                 </div>
+
                 <div className="leading-tight">
-                  <div className="font-extrabold text-[13px]">BALLY JUTE COMPANY LIMITED</div>
-                  <div className="font-normal text-[10px] uppercase">AUTHORIZED MILL PREMISES, ESTD. 1979</div>
-                  <div className="font-normal text-[10px] uppercase">HOWRAH, WEST BENGAL • RAW JUTE DIVISION</div>
+                  <div className="font-black text-[16px] tracking-tight text-[#174C2C]">
+                    BALLY JUTE COMPANY LIMITED
+                  </div>
+                  <div className="text-[9px] font-semibold tracking-[0.12em] text-slate-500 uppercase">
+                    Authorized Mill Premises • Estd. 1979
+                  </div>
+                  <div className="text-[9px] font-medium text-slate-500 uppercase">
+                    Howrah, West Bengal • Raw Jute Division
+                  </div>
                 </div>
               </div>
-              <div className="text-right leading-relaxed font-bold whitespace-pre pr-2">
-                <div>Order No : {poDisplayNo}</div>
-                <div>Date     : {formatDateDotMatrix(po.date)}</div>
-              </div>
-            </div>
 
-            {/* Parties Details Section */}
-            <div className="mt-3 text-[11.5px] leading-relaxed">
-              <div className="flex">
-                <span className="font-normal shrink-0">Broker's Name           :</span>
-                <span className="font-extrabold uppercase">{(po.broker || 'N/A').toUpperCase()}</span>
-              </div>
-              <div className="flex justify-between items-center w-full">
-                <div className="flex flex-1">
-                  <span className="font-normal shrink-0">Supplier Name           :</span>
-                  <span className="font-extrabold uppercase">{(po.supplier || 'N/A').toUpperCase()}</span>
+              <div className="text-right shrink-0">
+                <div className="text-[16px] font-black tracking-[0.08em] text-[#174C2C]">
+                  RAW JUTE
                 </div>
-                <div className="pl-4 font-bold text-[10.5px] shrink-0 pr-2">
-                  JC Registration No: WBK00S202201929
+                <div className="text-[11px] font-bold tracking-[0.18em] text-slate-500">
+                  PURCHASE ORDER
                 </div>
               </div>
-              <div className="flex">
-                <span className="font-normal shrink-0">Challan Supplier Name   :</span>
-                <span className="font-extrabold uppercase">{(po.challan_supplier || po.supplier || 'N/A').toUpperCase()}</span>
+            </div>
+
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-4 text-[10px]">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-semibold">PO ID</span>
+                <span className="font-bold">{po.po_identification || 'DR/4-2'}</span>
+              </div>
+
+              <div className="flex gap-5 font-bold">
+                <span>
+                  <span className="text-slate-500 font-semibold">ORDER NO:</span>{' '}
+                  {poDisplayNo}
+                </span>
+                <span>
+                  <span className="text-slate-500 font-semibold">DATE:</span>{' '}
+                  {formatDateDotMatrix(po.date)}
+                </span>
               </div>
             </div>
-          </div>
+          </header>
 
-          {/* Core spreadsheet details Table */}
-          <div className="flex-1 flex flex-col justify-start mt-2">
-            {/* Header dashed separator */}
-            <div className="border-t border-dashed border-neutral-950 w-full my-0.5"></div>
-            
-            {/* Minimalist table with aligned typewriter text spacing columns */}
-            <table className="w-full text-[11px] text-left border-collapse">
-              <thead>
-                <tr className="font-bold text-[11px] leading-6">
-                  <th className="w-[8%] text-left font-bold">Lorries</th>
-                  <th className="w-[12%] text-left font-bold">Crop Year</th>
-                  <th className="w-[20%] text-left font-bold">Agency</th>
-                  <th className="w-[20%] text-left font-bold">Marka</th>
-                  <th className="w-[16%] text-left font-bold">Quality</th>
-                  <th className="w-[11%] text-right font-bold">Grade/Qty</th>
-                  <th className="w-[13%] text-right font-bold pr-2">Rate/m.T</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Dashed Separator */}
-                <tr>
-                  <td colSpan={7} className="p-0">
-                    <div className="border-t border-dashed border-neutral-950 w-full my-0.5"></div>
-                  </td>
-                </tr>
-                {paddedItems.map((item, idx) => {
-                  const isFirstRow = idx === 0;
-                  return (
-                    <tr key={idx} className="h-5 text-[11px] font-semibold leading-normal">
-                      <td className="text-left font-extrabold py-0.5">{isFirstRow ? po.total_no_of_lorries || '1' : ''}</td>
-                      <td className="text-left py-0.5">{isFirstRow ? (item.crop || '2025-26') : ''}</td>
-                      <td className="text-left uppercase truncate py-0.5">{isFirstRow ? (item.agency_name || po.area) : ''}</td>
-                      <td className="text-left uppercase truncate py-0.5">{isFirstRow ? (item.marka_name || 'NO MARK') : ''}</td>
-                      <td className="text-left uppercase py-0.5 font-extrabold">{formatQualityName(item.grade_name)}</td>
-                      <td className="text-right font-bold py-0.5">{item.qty ? item.qty : ''}</td>
-                      <td className="text-right font-extrabold py-0.5 pr-2">{item.rate ? (Number(item.rate) * 10).toLocaleString(undefined, {minimumFractionDigits: 2}) : ''}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* PARTIES */}
+          <section className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-1 text-[10px]">
 
-            {/* Bottom Dashed Separator */}
-            <div className="border-t border-dashed border-neutral-950 w-full mt-1 mb-1"></div>
-          </div>
+              <div className="flex min-w-0">
+                <span className="w-[115px] shrink-0 text-slate-500 font-semibold">
+                  Broker's Name
+                </span>
+                <span className="font-bold uppercase truncate">
+                  : {(po.broker || 'N/A').toUpperCase()}
+                </span>
+              </div>
 
-          {/* Unit Quantities and parameters summary */}
-          <div className="text-[11.5px]">
-            <div className="flex justify-between items-center w-full uppercase py-0.5 leading-none">
-              <div className="w-[22%]">Unit : {po.purchase_unit_name || 'DRUMS'}</div>
-              <div className="w-[28%]">{po.purchase_unit_name || 'DRUMS'} / Lorry : {po.units_per_lorry || '200'}</div>
-              <div className="w-[28%]">Total {po.purchase_unit_name || 'DRUMS'} : {po.total_units || '200'}</div>
-              <div className="w-[22%] text-right pr-2 whitespace-nowrap">Wt/Lry (M.Ton) : {Number(po.weight_per_lorry || '10.000').toFixed(3)}</div>
+              <div className="flex min-w-0">
+                <span className="w-[115px] shrink-0 text-slate-500 font-semibold">
+                  Supplier Name
+                </span>
+                <span className="font-bold uppercase truncate">
+                  : {(po.supplier || 'N/A').toUpperCase()}
+                </span>
+              </div>
+
+              <div className="flex min-w-0">
+                <span className="w-[115px] shrink-0 text-slate-500 font-semibold">
+                  Challan Supplier
+                </span>
+                <span className="font-bold uppercase truncate">
+                  : {(po.challan_supplier || po.supplier || 'N/A').toUpperCase()}
+                </span>
+              </div>
+
+              <div className="flex min-w-0">
+                <span className="w-[115px] shrink-0 text-slate-500 font-semibold">
+                  JC Registration
+                </span>
+                <span className="font-bold truncate">
+                  : WBK00S202201929
+                </span>
+              </div>
+
             </div>
-            <div className="flex w-full uppercase py-1 leading-none mt-0.5">
-              <div className="w-[22%]">Area : {po.area || 'DAISSE'}</div>
-              <div className="flex-1">Total No. of Lorries  :{po.total_no_of_lorries || '1'} [ {numberToWords(Number(po.total_no_of_lorries) || 1)} ]</div>
+          </section>
+
+          {/* ORDER TABLE */}
+          <section className="mt-2 flex-1 min-h-0">
+            <div className="rounded-md border border-slate-300 overflow-hidden">
+
+              <table className="w-full table-fixed border-collapse text-[10px]">
+                <thead>
+                  <tr className="bg-[#174C2C] text-white">
+                    <th className="w-[8%] px-2 py-1.5 text-left font-bold">Lorries</th>
+                    <th className="w-[12%] px-2 py-1.5 text-left font-bold">Crop Year</th>
+                    <th className="w-[20%] px-2 py-1.5 text-left font-bold">Agency</th>
+                    <th className="w-[20%] px-2 py-1.5 text-left font-bold">Marka</th>
+                    <th className="w-[16%] px-2 py-1.5 text-left font-bold">Quality</th>
+                    <th className="w-[11%] px-2 py-1.5 text-right font-bold">Grade/Qty</th>
+                    <th className="w-[13%] px-2 py-1.5 text-right font-bold">Rate/m.T</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {paddedItems.map((item, idx) => {
+                    const isFirstRow = idx === 0;
+
+                    return (
+                      <tr
+                        key={idx}
+                        className={`h-5 border-t border-slate-200 ${
+                          idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'
+                        }`}
+                      >
+                        <td className="px-2 py-1 text-left font-extrabold">
+                          {isFirstRow ? po.total_no_of_lorries || '1' : ''}
+                        </td>
+
+                        <td className="px-2 py-1 text-left">
+                          {isFirstRow ? (item.crop || '2025-26') : ''}
+                        </td>
+
+                        <td className="px-2 py-1 text-left uppercase truncate">
+                          {isFirstRow ? (item.agency_name || po.area) : ''}
+                        </td>
+
+                        <td className="px-2 py-1 text-left uppercase truncate">
+                          {isFirstRow ? (item.marka_name || 'NO MARK') : ''}
+                        </td>
+
+                        <td className="px-2 py-1 text-left uppercase font-extrabold truncate">
+                          {formatQualityName(item.grade_name)}
+                        </td>
+
+                        <td className="px-2 py-1 text-right font-bold">
+                          {item.qty ? item.qty : ''}
+                        </td>
+
+                        <td className="px-2 py-1 text-right font-extrabold">
+                          {item.rate
+                            ? (
+                                Number(item.rate) * 10
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2
+                              })
+                            : ''}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+            </div>
+          </section>
+
+          {/* SUMMARY */}
+          <section className="mt-2">
+
+            <div className="grid grid-cols-4 gap-2 text-[9.5px]">
+              <div className="rounded border border-slate-200 px-2 py-1">
+                <div className="text-slate-500 font-semibold uppercase">Unit</div>
+                <div className="font-bold">{po.purchase_unit_name || 'DRUMS'}</div>
+              </div>
+
+              <div className="rounded border border-slate-200 px-2 py-1">
+                <div className="text-slate-500 font-semibold uppercase">Units / Lorry</div>
+                <div className="font-bold">
+                  {po.units_per_lorry || '200'}
+                </div>
+              </div>
+
+              <div className="rounded border border-slate-200 px-2 py-1">
+                <div className="text-slate-500 font-semibold uppercase">
+                  Total Units
+                </div>
+                <div className="font-bold">
+                  {po.total_units || '200'}
+                </div>
+              </div>
+
+              <div className="rounded border border-slate-200 px-2 py-1 text-right">
+                <div className="text-slate-500 font-semibold uppercase">
+                  Wt / Lorry
+                </div>
+                <div className="font-bold">
+                  {Number(po.weight_per_lorry || '10.000').toFixed(3)} M.Ton
+                </div>
+              </div>
             </div>
 
-            <div className="border-t border-dashed border-neutral-950 w-full my-1.5"></div>
+            <div className="mt-1.5 grid grid-cols-[22%_1fr] gap-2 text-[9.5px]">
+              <div className="rounded border border-slate-200 px-2 py-1">
+                <span className="text-slate-500 font-semibold">AREA</span>{' '}
+                <span className="font-bold">{po.area || 'DAISSE'}</span>
+              </div>
 
-            {/* Delivery rules, penalties and signature block */}
-            <div className="flex justify-between items-center w-full leading-none py-0.5">
-              <div className="w-[50%] truncate">Delivery Schedule : {formatDateDotMatrix(po.delivery_from)} To {formatDateDotMatrix(po.delivery_to)}</div>
-              <div className="w-[25%]">Grace Days   :{po.grace_days || '0'}</div>
-              <div className="w-[25%] text-right pr-2">Delivery Penalty :{po.delivery_penalty || '5'}</div>
+              <div className="rounded border border-slate-200 px-2 py-1">
+                <span className="text-slate-500 font-semibold">
+                  TOTAL NO. OF LORRIES
+                </span>{' '}
+                <span className="font-bold">
+                  {po.total_no_of_lorries || '1'}
+                </span>{' '}
+                <span className="text-slate-500">
+                  ({numberToWords(Number(po.total_no_of_lorries) || 1)})
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between items-center w-full leading-none py-1 mt-0.5">
-              <div className="w-[50%] truncate">P.O Marka Type    : {po.marka_type || 'Normal'}</div>
-              <div className="w-[25%]">Marka Penalty :{po.marka_penalty || '0'}</div>
-              <div className="w-[25%] text-right pr-2 font-bold">Quantity Penalty :{po.qty_penalty || '0'}</div>
-            </div>
 
-            <div className="border-t border-dashed border-neutral-950 w-full my-1.5"></div>
+            {/* DELIVERY / PENALTY */}
+            <div className="mt-1.5 rounded-md border border-slate-200 overflow-hidden">
 
-            {/* Final Row: Signature alignment next to terms and condition summary */}
-            <div className="flex justify-between items-start min-h-[50px] pt-1">
-              
-              {/* Terms and conditions */}
-              <div className="w-[60%] pr-4 text-[10px] leading-tight uppercase font-semibold">
-                <div className="flex items-start">
-                  <span className="shrink-0 font-bold">Terms & Condition :&nbsp;</span>
-                  <span className="flex-1 whitespace-pre-line text-[10px] leading-relaxed">
-                    {po.terms_condition || 'PENALTY RS.5/-PER DAY,AREA,AGENCY,\nGRADE, GRADE DIFFERENTIAL CAN\nCHANGE AS PER MARKET.'}
+              <div className="grid grid-cols-[50%_25%_25%] text-[9.5px]">
+                <div className="px-2 py-1.5 bg-slate-50 border-r border-slate-200">
+                  <span className="text-slate-500 font-semibold">DELIVERY SCHEDULE</span><br />
+                  <span className="font-bold">
+                    {formatDateDotMatrix(po.delivery_from)} To{' '}
+                    {formatDateDotMatrix(po.delivery_to)}
                   </span>
                 </div>
+
+                <div className="px-2 py-1.5 border-r border-slate-200">
+                  <span className="text-slate-500 font-semibold">GRACE DAYS</span><br />
+                  <span className="font-bold">{po.grace_days || '0'}</span>
+                </div>
+
+                <div className="px-2 py-1.5 text-right">
+                  <span className="text-slate-500 font-semibold">DELIVERY PENALTY</span><br />
+                  <span className="font-bold">{po.delivery_penalty || '5'}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[50%_25%_25%] border-t border-slate-200 text-[9.5px]">
+                <div className="px-2 py-1.5 bg-slate-50 border-r border-slate-200">
+                  <span className="text-slate-500 font-semibold">P.O MARKA TYPE</span><br />
+                  <span className="font-bold">{po.marka_type || 'Normal'}</span>
+                </div>
+
+                <div className="px-2 py-1.5 border-r border-slate-200">
+                  <span className="text-slate-500 font-semibold">MARKA PENALTY</span><br />
+                  <span className="font-bold">{po.marka_penalty || '0'}</span>
+                </div>
+
+                <div className="px-2 py-1.5 text-right">
+                  <span className="text-slate-500 font-semibold">QUANTITY PENALTY</span><br />
+                  <span className="font-bold">{po.qty_penalty || '0'}</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* TERMS */}
+            <div className="mt-1.5 flex gap-3 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 min-h-[34px]">
+
+              <div className="shrink-0 text-[9px] font-black uppercase text-[#174C2C]">
+                Terms & Condition
+              </div>
+
+              <div className="flex-1 text-[9px] leading-relaxed uppercase font-semibold whitespace-pre-line">
+                {po.terms_condition ||
+                  'PENALTY RS.5/-PER DAY,AREA,AGENCY,\nGRADE, GRADE DIFFERENTIAL CAN\nCHANGE AS PER MARKET.'}
+
                 {po.remarks && (
-                  <div className="mt-1 text-[8.5px] leading-none text-neutral-500 truncate lowercase italic">
-                    remarks: {po.remarks}
+                  <div className="mt-0.5 text-[8px] text-slate-500 lowercase italic">
+                    Remarks: {po.remarks}
                   </div>
                 )}
               </div>
 
-              {/* Authorised Signatory Block */}
-              <div className="w-[38%] flex flex-col justify-between text-[11px] self-stretch">
-                <div className="font-bold text-left text-[11px] leading-none">
-                  For : BALLY JUTE COMPANY LIMITED
-                </div>
-                
-                <div className="flex flex-col items-center justify-end mt-12">
-                  <div className="w-full border-b border-neutral-950"></div>
-                  <div className="text-[10px] font-bold text-center mt-1">( Authorised Signatory )</div>
-                </div>
-              </div>
-
             </div>
-          </div>
 
-        </div>
-
-        {/* Right Hand Sprocket Margin Strip */}
-        <div className="sprocket-strip w-[13mm] min-w-[13mm] flex flex-col justify-around items-center bg-white border-l border-dotted border-neutral-300 py-3  relative z-10">
-          {sprocketHoles.map((_, idx) => (
-            <div 
-              key={`right-hole-${idx}`} 
-              className="w-3 h-3 rounded-full border border-neutral-300 bg-neutral-50 flex items-center justify-center text-[5px]"
-            >
-            </div>
-          ))}
+          </section>
         </div>
 
       </div>
     </div>
+    
   );
 }
