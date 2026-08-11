@@ -479,7 +479,8 @@ export default function AdminDesk({
           const { data: dbLogs, error } = await supabase
             .from("mill_inspection_print_logs")
             .select("*")
-            .order("timestamp", { ascending: false });
+            .order("timestamp", { ascending: false })
+            .then(res => res, () => ({ data: null, error: new Error('Table unavailable') }));
           if (dbLogs && dbLogs.length > 0) {
             const seenIds = new Set(localLogs.map((l: any) => l.id));
             const freshDbLogs = dbLogs.filter((l: any) => !seenIds.has(l.id));

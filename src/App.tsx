@@ -82,9 +82,12 @@ import { setCurrentUserContext, getCurrentUserContext } from "./lib/permissions"
 import { supabase } from "./lib/supabase";
 
 (async () => {
+  if (!supabase) return;
   try {
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;" });
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;" });
+    if (typeof window !== 'undefined' && sessionStorage.getItem('app_db_patched')) return;
+    if (typeof window !== 'undefined') sessionStorage.setItem('app_db_patched', '1');
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;" }).then(() => {}, () => {});
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;" }).then(() => {}, () => {});
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 
@@ -304,7 +307,7 @@ import { supabase } from "./lib/supabase";
         END $$;
         NOTIFY pgrst, 'reload schema';
       ` 
-    });
+    }).then(() => {}, () => {});
   } catch (err) {
     console.warn("Startup SQL migration caught error:", err);
   }

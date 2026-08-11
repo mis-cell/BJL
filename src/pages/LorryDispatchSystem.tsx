@@ -273,7 +273,7 @@ export default function LorryDispatchSystem({
         const { data, error } = await supabase
           .from("lorry_weighments")
           .select("*")
-          .order("created_at", { ascending: false });
+          .then(res => res, () => ({ data: null, error: new Error('Table unavailable') }));
 
         if (!error && data) {
           const loaded: LorryRecord[] = data.map((row: any) => {

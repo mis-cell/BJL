@@ -673,8 +673,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         const { data: poArchList } = await supabase
           .from('po_archive')
-          .select('po_no, po_date, broker, supplier, total_contract_mt, status, pending, pending_received')
-          .order('po_no', { ascending: false });
+          .select('po_no, po_date, broker, supplier, total_contract_mt, status, pending')
+          .order('po_no', { ascending: false })
+          .then(res => res, () => ({ data: [] }));
 
         const rawCombined = [...(poList || []), ...(poArchList || [])];
 

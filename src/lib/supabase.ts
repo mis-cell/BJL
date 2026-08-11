@@ -14,6 +14,8 @@ export const supabase = isConfigured
 if (supabase) {
   Promise.resolve().then(async () => {
     try {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('supabase_schema_aligned')) return;
+      if (typeof window !== 'undefined') sessionStorage.setItem('supabase_schema_aligned', '1');
       await supabase.rpc('exec_sql', {
         query: `
           DO $$

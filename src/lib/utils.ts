@@ -22,12 +22,14 @@ export function getApiUrl(apiPath: string): string {
       return `${SUPABASE_FUNCTIONS_BASE}/send-email`;
     }
 
-    // Any other API path on an external host / GitHub Pages still needs a live
-    // full-stack backend. Update this URL if you deploy server.ts somewhere
-    // permanent (Render, Railway, a permanent Cloud Run service, etc.).
+    // For static hosting (e.g. GitHub Pages) where backend server is not hosted on same origin,
+    // fallback to current origin or relative endpoint to avoid CORS issues with expired endpoints.
     if (!isLocalhost && !isCloudRun) {
-      const fallbackBackend = "https://ais-pre-4f3hdjf75hjoch6vttiz2o-892280559951.asia-southeast1.run.app/";
-      return `${fallbackBackend}${cleanPath}`;
+      const pathname = window.location.pathname;
+      if (pathname.includes('Jute-Purchase-Automation')) {
+        return `/Jute-Purchase-Automation/${cleanPath}`;
+      }
+      return `/${cleanPath}`;
     }
 
     const pathname = window.location.pathname;

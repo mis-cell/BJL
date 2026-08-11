@@ -1042,7 +1042,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <AreaChart data={purchaseTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="tonnageGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1082,7 +1082,7 @@ export default function ExecutiveBiDashboard({
             </div>
 
             <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={gradeCompositionData} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#556952' }} />
@@ -1128,7 +1128,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <PieChart>
                 <Pie
                   data={supplierShareData}
@@ -1166,7 +1166,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={brokerPerformanceData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#556952' }} />
@@ -1232,7 +1232,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={deptOutputData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                 <XAxis dataKey="dept" tick={{ fontSize: 9, fill: '#556952' }} />
@@ -1264,7 +1264,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <ScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                 <XAxis dataKey="moisture" name="Moisture %" unit="%" domain={[11, 17]} tick={{ fontSize: 10, fill: '#556952' }} />
@@ -1292,7 +1292,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
               <BarChart data={godownHeatmapData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                 <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#556952' }} />
