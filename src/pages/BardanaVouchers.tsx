@@ -672,8 +672,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                              value={selectedGodownCode}
                              onChange={(e) => setSelectedGodownCode(e.target.value)}
                            >
-                             {godowns.map((gdn, i) => (
-                               <option key={`${gdn.gdn_code}-${i}`} value={gdn.gdn_code}>
+                             {godowns.map(gdn => (
+                               <option key={gdn.gdn_code} value={gdn.gdn_code}>
                                  {gdn.gdn_name.toUpperCase()}
                                </option>
                              ))}
@@ -1387,8 +1387,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                       value={bulkSourceCode}
                       onChange={(e) => setBulkSourceCode(e.target.value)}
                     >
-                      {godowns.map((g, i) => (
-                        <option key={`${g.gdn_code}-${i}-${g.gdn_name}`} value={g.gdn_code}>{g.gdn_name.toUpperCase()}</option>
+                      {godowns.map(g => (
+                        <option key={g.gdn_code} value={g.gdn_code}>{g.gdn_name.toUpperCase()}</option>
                       ))}
                     </select>
                   </div>
@@ -1401,7 +1401,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                       onChange={(e) => setBulkDestCode(e.target.value)}
                     >
                       {godowns.map(g => (
-                        <option key={`${g.gdn_code}-${g.gdn_name}`} value={g.gdn_code}>{g.gdn_name.toUpperCase()}</option>
+                        <option key={g.gdn_code} value={g.gdn_code}>{g.gdn_name.toUpperCase()}</option>
                       ))}
                     </select>
                   </div>

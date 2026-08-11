@@ -409,6 +409,5 @@ export default function PoPrintSlip({ po }: Props) {
 
       </div>
     </div>
-    
   );
 }
