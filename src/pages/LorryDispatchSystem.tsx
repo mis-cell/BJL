@@ -188,7 +188,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   millLat: 22.6500, // Bally Jute Mill
   millLng: 88.3400,
   enforceGeofence: true,
-  allowScreenCapture: false,
+  allowScreenCapture: true,
 };
 
 const DEFAULT_MASTERS: MasterOptions = {
@@ -344,7 +344,15 @@ export default function LorryDispatchSystem({
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const saved = localStorage.getItem("bjl_settings");
-    return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_SETTINGS, ...parsed, allowScreenCapture: true };
+      } catch {
+        // fallback
+      }
+    }
+    return { ...DEFAULT_SETTINGS, allowScreenCapture: true };
   });
 
   const [masters, setMasters] = useState<MasterOptions>(() => {
@@ -611,24 +619,10 @@ export default function LorryDispatchSystem({
     };
   }, [settings.inactivityTimeoutMinutes, currentUserRole]);
 
-  // 3. SCREEN & SCREENSHOT CAPTURE PROTECTION
+  // 3. SCREEN & SCREENSHOT CAPTURE PROTECTION (DISABLED - SCREENSHOTS ALWAYS ALLOWED)
   useEffect(() => {
-    if (settings.allowScreenCapture) {
-      setIsScreenBlurred(false);
-      return;
-    }
-
-    const handleBlur = () => setIsScreenBlurred(true);
-    const handleFocus = () => setIsScreenBlurred(false);
-
-    window.addEventListener("blur", handleBlur);
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      window.removeEventListener("blur", handleBlur);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [settings.allowScreenCapture]);
+    setIsScreenBlurred(false);
+  }, []);
 
   // Unread Alerts Count
   const unreadAlertsCount = useMemo(() => {

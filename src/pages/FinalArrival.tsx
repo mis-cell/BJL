@@ -21,7 +21,17 @@ import {
   FileSpreadsheet,
   Layers,
   Printer,
-  Calculator
+  Calculator,
+  Bell,
+  ChevronDown,
+  PackageCheck,
+  Package,
+  Clock,
+  Leaf,
+  ShieldCheck,
+  ClipboardCheck,
+  RefreshCcw,
+  Filter
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { cn, sanitizeCsvData } from '../lib/utils';
@@ -32,6 +42,16 @@ import { dbModule } from '../services/dbModule';
 import FinalArrivalEntry from './FinalArrivalEntry';
 import PrintModal from '../components/PrintModal';
 import FinalArrivalReconciliation from '../components/FinalArrivalReconciliation';
+
+const FactorySketchIllustration = () => (
+  <svg className="w-32 h-20 opacity-80" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10 100 Q 50 70 100 95 Q 150 110 190 90 L 190 110 L 10 110 Z" fill="#E6DDC8" opacity="0.5" />
+    <rect x="150" y="30" width="14" height="70" fill="#476A35" opacity="0.8" />
+    <polygon points="148,30 166,30 164,25 150,25" fill="#1E4D2B" />
+    <path d="M157 20 Q 152 10 162 5 T 155 -5" stroke="#C6A15B" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
+    <rect x="30" y="55" width="115" height="45" fill="#1E4D2B" opacity="0.85" rx="1" />
+  </svg>
+);
 
 interface FinalArrivalRecord {
   final_arrival_id: string;
@@ -84,6 +104,7 @@ interface FinalArrivalProps {
   onClose?: () => void;
   isArchiveView?: boolean;
   initialData?: any;
+  onNavigate?: (id: string) => void;
 }
 
 export const calculateNetWeightVal = (
@@ -132,7 +153,7 @@ export const calculateNetWeightVal = (
   return netWeight.toFixed(3);
 };
 
-export default function FinalArrival({ onClose, isArchiveView = false, initialData }: FinalArrivalProps) {
+export default function FinalArrival({ onClose, isArchiveView = false, initialData, onNavigate }: FinalArrivalProps) {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<FinalArrivalRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -918,6 +939,23 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   const printTotalGrossWt = printData?.rows?.reduce((acc: number, r: any) => acc + (Number(r.gross_wt) || 0), 0) || 0;
   const printTotalNetWt = printData?.rows?.reduce((acc: number, r: any) => acc + (Number(r.net_wt) || 0), 0) || 0;
 
+  // Top Nav Items
+  const navTabs = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'maingate', label: 'Main Gate' },
+    { id: 'mill', label: 'Mill' },
+    { id: 'po', label: 'Purchase' },
+    { id: 'satta', label: 'Satta' },
+    { id: 'amad', label: 'T.M.R' },
+    { id: 'final_arrival', label: 'Final M.R', active: true },
+    { id: 'material_inspection', label: 'Quality' },
+    { id: 'stock', label: 'Inventory' },
+    { id: 'production', label: 'Production' },
+    { id: 'reports', label: 'Reports' },
+    { id: 'vyapari', label: 'Masters' },
+    { id: 'admindesk', label: 'Administration' },
+  ];
+
   if (viewState === 'reconciliation') {
     return (
       <LegacyLayout
@@ -956,86 +994,191 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   }
 
   return (
-    <LegacyLayout
-      title={isArchiveView ? "FINAL M.R ARCHIVE" : "Final M.R"}
-      subtitle={isArchiveView ? "Archived & Settled Material Received Register" : ""}
-      onClose={onClose}
-    >
-      <div className="space-y-4">
-
-        {/* Background Quality Inspection Auto-Sync Control & Status Bar */}
-        <div className="bg-[#f1f5f9] border-2 border-slate-400 p-2 text-justify md:p-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-md rounded-lg">
-          <div className="space-y-1.5 flex-1 ">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                {autoSyncEnabled ? (
-                  <>
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </>
-                ) : (
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
-                )}
-              </span>
-              <div className="text-[11px] text-slate-800 font-sans font-bold leading-relaxed flex flex-wrap items-center gap-2">
-                <span className="font-extrabold uppercase tracking-wide text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded border border-slate-300">
-                  ⛓️ QUALITY SYNC DAEMON:
-                </span> 
-                <span className={cn(
-                  "font-black text-[10.5px]",
-                  autoSyncEnabled ? "text-emerald-700" : "text-rose-700"
-                )}>
-                  {autoSyncEnabled ? (backgroundSyncing ? 'ACTIVE (CROSS-REFERENCING)' : 'ENABLED (INTERVAL IDLE)') : 'DISABLED'}
-                </span>
-                <span className="text-slate-300 text-xs px-1">|</span>
-                <span className="text-slate-500 text-[10.5px] font-mono flex items-center gap-1">
-                  ⏱️ Last Sync: <strong className="text-slate-800 bg-white border border-slate-200 px-1 py-0.2 rounded font-sans tracking-tight">{lastSyncTime || 'No sync completed yet'}</strong>
-                </span>
-              </div>
-            </div>
-            
-            <p className="text-[10px] text-slate-500 leading-tight">
-              Automatically maps and retroactively links pending unclubbed material arrivals having blank PO No / MR No against completed Quality audit certifications.
-            </p>
-
-            {syncStatusMessage && (
-              <div className="mt-1.5 bg-amber-50 px-2.5 py-1.5 border border-amber-200 text-amber-950 font-bold font-mono text-[10.5px] rounded animate-in fade-in duration-200 shadow-sm">
-                ⚡ {syncStatusMessage}
-              </div>
-            )}
+    <div className="min-h-screen bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white">
+      {/* 1. TOP HEADER BRANDING & ERP NAVIGATION */}
+      <header className="bg-[#F9F5EC] border-b border-[#E6DDC8] px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0">
+        {/* Left Branding */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#1E4D2B] text-[#C6A15B] flex flex-col items-center justify-center font-serif font-black shadow-md border border-[#C6A15B]/40 shrink-0">
+            <span className="text-sm leading-none">Bj</span>
           </div>
+          <div>
+            <h1 className="font-serif font-extrabold text-lg text-[#1E4D2B] leading-tight tracking-wide">
+              Bally Jute Limited
+            </h1>
+            <p className="text-[10px] font-semibold text-[#8C6D33] tracking-wider uppercase font-mono">
+              ESTD. 1979 — Raw Jute ERP
+            </p>
+          </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 self-end md:self-auto shrink-0">
-            {/* Toggle Switch */}
-            <label className="flex items-center gap-2 cursor-pointer bg-white px-2.5 py-1 border border-slate-250 hover:border-slate-350 rounded-md transition-all ">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">Interval Sync:</span>
-              <div 
-                onClick={toggleAutoSync}
+        {/* Center Navigation Bar */}
+        <nav className="flex items-center gap-1 bg-[#EAE3D2]/60 p-1 rounded-full border border-[#D9CEB4] overflow-x-auto max-w-full">
+          {navTabs.map((tab) => {
+            const isActive = tab.active;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id === 'final_arrival') {
+                    setViewState('list');
+                  } else if (onNavigate) {
+                    onNavigate(tab.id);
+                  } else if (onClose) {
+                    onClose();
+                  }
+                }}
                 className={cn(
-                  "relative w-9 h-5 rounded-full transition-colors",
-                  autoSyncEnabled ? "bg-emerald-500" : "bg-slate-300"
+                  "px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer",
+                  isActive
+                    ? "bg-[#1E4D2B] text-white shadow-xs"
+                    : "text-slate-700 hover:text-[#1E4D2B] hover:bg-[#EAE3D2]"
                 )}
               >
-                <div 
-                  className={cn(
-                    "absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform shadow-[0_1px_2px_rgba(0,0,0,0.2)]",
-                    autoSyncEnabled ? "translate-x-4" : "translate-x-0"
-                  )}
-                />
-              </div>
-              <span className="text-[10px] font-bold text-slate-700 w-7">{autoSyncEnabled ? 'ON' : 'OFF'}</span>
-            </label>
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
 
-            {/* Force Refresh Manual Trigger Button */}
+        {/* Right Admin Controls */}
+        <div className="flex items-center gap-2">
+          <button className="w-8 h-8 rounded-full bg-white border border-[#E6DDC8] flex items-center justify-center text-slate-600 hover:text-[#1E4D2B] transition-colors relative cursor-pointer">
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-600" />
+          </button>
+          <div className="flex items-center gap-2 bg-white border border-[#E6DDC8] rounded-full pl-1 pr-3 py-1">
+            <div className="w-6 h-6 rounded-full bg-[#1E4D2B] text-[#C6A15B] flex items-center justify-center text-[10px] font-bold">
+              BJ
+            </div>
+            <span className="text-xs font-bold text-slate-800">Admin</span>
+          </div>
+          {onClose && (
             <button
-              onClick={() => runBackgroundStatusSync(false)}
-              disabled={backgroundSyncing}
-              className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-md cursor-pointer flex items-center gap-1.5 transition-all  shadow-sm duration-150 relative active:translate-y-px"
-              title="Bypass background status sync interval and execute cross-referencing audit index manual task right now."
+              onClick={onClose}
+              className="p-1.5 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer ml-1"
+              title="Close Page"
             >
-              <RefreshCw className={cn("h-3 w-3", backgroundSyncing && "animate-spin")} />
-              {backgroundSyncing ? 'Cross-referencing...' : 'Force Refresh Now'}
+              <X className="w-5 h-5" />
             </button>
+          )}
+        </div>
+      </header>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 p-4 md:p-6 space-y-5 max-w-[1700px] w-full mx-auto">
+
+        {/* 2. HERO BANNER HEADER */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 md:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
+          <div className="flex items-center gap-3.5 z-10">
+            <div className="w-12 h-12 rounded-xl bg-[#1E4D2B]/10 text-[#1E4D2B] flex items-center justify-center border border-[#1E4D2B]/20 shrink-0">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-serif font-bold text-2xl text-[#1E4D2B] tracking-wide flex items-center gap-2">
+                {isArchiveView ? "Final M.R Archive" : "Final M.R Dashboard"}
+              </h2>
+              <p className="text-xs text-slate-600 font-medium flex items-center gap-1.5 mt-0.5">
+                Live Overview of Finalized Material Received Operations & Certified Quality Records <Leaf className="w-3.5 h-3.5 text-[#476A35]" />
+              </p>
+            </div>
+          </div>
+
+          {/* Right Hero Controls & Artwork */}
+          <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-between md:justify-end">
+            <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700">
+              <Calendar className="w-3.5 h-3.5 text-[#1E4D2B]" />
+              <span>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </div>
+            <button
+              onClick={fetchRecords}
+              disabled={loading}
+              className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+              Refresh
+            </button>
+            <div className="hidden lg:block ml-2">
+              <FactorySketchIllustration />
+            </div>
+          </div>
+        </div>
+
+        {/* 3. KPI CARDS GRID */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          {/* KPI 1 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Filtered Loads</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#1E4D2B] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Truck className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-slate-900">{filteredRecords.length} <span className="text-xs font-sans font-semibold text-slate-600">Lorries</span></p>
+            <p className="text-[10px] font-medium text-emerald-700 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active Final M.R
+            </p>
+          </div>
+
+          {/* KPI 2 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Packets</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#8C6D33] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Package className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-blue-900">{totalBales.toLocaleString()} <span className="text-xs font-sans font-semibold text-slate-600">Bales</span></p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1">Finalized Packets</p>
+          </div>
+
+          {/* KPI 3 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Weight</span>
+              <div className="w-8 h-8 rounded-lg bg-[#F9F5EC] text-[#1E4D2B] flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Scale className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-xs font-sans font-semibold text-slate-600">MT</span></p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1">Net Metric Tons</p>
+          </div>
+
+          {/* KPI 4 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Pending MR / Unlinked</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-amber-800">{pendingFilteredCount}</p>
+            <p className="text-[10px] font-medium text-amber-600 mt-1">Awaiting Quality Link</p>
+          </div>
+
+          {/* KPI 5 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Linked & Certified</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-xl font-bold font-mono text-emerald-800">{completedFilteredCount}</p>
+            <p className="text-[10px] font-medium text-emerald-600 mt-1">Fully Audited</p>
+          </div>
+
+          {/* KPI 6 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Sync Daemon</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <RefreshCcw className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <p className="text-base font-bold font-mono text-slate-800">{autoSyncEnabled ? 'ACTIVE' : 'IDLE'}</p>
+            <p className="text-[10px] font-medium text-slate-500 mt-1 truncate">{lastSyncTime || 'Auto Sync Ready'}</p>
           </div>
         </div>
 
@@ -1135,308 +1278,247 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-12 gap-3">
-          {/* Card 1: Cumulative Statistics */}
-          <div className="col-span-12 md:col-span-3 bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm">
-            <h3 className="text-xs font-bold text-gray-700 border-b border-gray-400 pb-1 mb-1.5 flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-blue-800" /> Operational Overview
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="bg-white border border-gray-400 p-1">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Filtered Loads</p>
-                <p className="text-sm font-black text-gray-900 font-mono">{filteredVehiclesCount} Lorries</p>
-              </div>
-              <div className="bg-white border border-gray-400 p-1">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Total Packets</p>
-                <p className="text-sm font-black text-blue-800 font-mono">{totalBales.toLocaleString()} Bales</p>
-              </div>
-              <div className="bg-white border border-gray-400 p-1 col-span-2">
-                <p className="text-[9px] font-bold text-gray-500 uppercase">Total Net Weight (M.T)</p>
-                <p className="text-sm font-black text-red-700 font-mono">{totalWeightMt.toFixed(3)} MT</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Approval & Inspection Status Card */}
-          <div className="col-span-12 md:col-span-3 bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col justify-between">
+        {/* 4. OPERATIONAL OVERVIEW SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left Table Panel: DATE WISE TOTAL ARRIVAL REPORT */}
+          <div className="lg:col-span-7 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-bold text-gray-700 border-b border-gray-400 pb-1 mb-1.5 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-800" /> Approval & Inspection
-              </h3>
-              <div className="grid grid-cols-3 gap-1 text-center">
-                <div className="bg-white border border-gray-450 p-1">
-                  <p className="text-[8.5px] font-bold text-gray-500 uppercase leading-none">Total</p>
-                  <p className="text-sm font-black text-slate-800 font-mono mt-1">{totalFilteredCount}</p>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-400 p-1">
-                  <p className="text-[8.5px] font-bold text-emerald-800 uppercase leading-none">Done</p>
-                  <p className="text-sm font-black text-emerald-700 font-mono mt-1">{completedFilteredCount}</p>
-                </div>
-                <div className="bg-[#fffbeb] border border-amber-400 p-1">
-                  <p className="text-[8.5px] font-bold text-amber-800 uppercase leading-none">Pending</p>
-                  <p className="text-sm font-black text-amber-700 font-mono mt-1 animate-pulse">{pendingFilteredCount}</p>
-                </div>
+              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
+                <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#C6A15B]" />
+                  DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY)
+                </h3>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#F9F5EC] text-[#8C6D33] px-2 py-0.5 rounded border border-[#E6DDC8]">
+                  Latest Days
+                </span>
+              </div>
+
+              <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="bg-[#F9F5EC] border-b border-[#E6DDC8] text-slate-700 font-bold text-[11px] sticky top-0">
+                      <th className="p-2 border-r border-[#E6DDC8]">Arrival Date</th>
+                      <th className="p-2 text-center border-r border-[#E6DDC8]">Lorry Count</th>
+                      <th className="p-2 text-right border-r border-[#E6DDC8]">Total Bales</th>
+                      <th className="p-2 text-right">Net Weight (MT)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E6DDC8]/60 text-xs">
+                    {dateWiseArrivalList.map((rep) => {
+                      const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
+                      return (
+                        <tr
+                          key={rep.date}
+                          className={cn(
+                            "hover:bg-[#F9F5EC] cursor-pointer transition-colors",
+                            isSelectedDate && "bg-[#1E4D2B]/10 font-bold"
+                          )}
+                          onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
+                        >
+                          <td className="p-2 font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className={cn("w-2 h-2 rounded-full bg-[#1E4D2B]", isSelectedDate && "bg-amber-600 animate-pulse")} />
+                            {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="p-2 text-center font-bold text-slate-700">{rep.count} Trucks</td>
+                          <td className="p-2 text-right font-bold text-blue-900">{rep.packets}</td>
+                          <td className="p-2 text-right font-bold text-rose-700">{rep.weight.toFixed(3)} MT</td>
+                        </tr>
+                      );
+                    })}
+                    {dateWiseArrivalList.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-slate-400 text-xs font-sans">
+                          No historical calendar data loaded.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div className="text-[8px] text-gray-600 leading-tight font-sans mt-2 pt-1 border-t border-gray-300">
-              * Subtle amber table highlight denotes pending inspection records requiring quality audit checks.
-            </div>
-            <button
-              onClick={() => setViewState('reconciliation')}
-              className="mt-1.5 w-full bg-slate-100 border border-slate-400 hover:bg-slate-200 text-slate-800 text-[9px] font-bold uppercase py-1 rounded shadow-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
-              title="Compare all arrivals with laboratory inspections to identify discrepancies"
-            >
-              <Layers className="h-3 w-3 text-indigo-700" /> Run Reconciliation Report
-            </button>
-          </div>
 
-          {/* Card 3: Date-Wise Total Arrival Hub Card */}
-          <div className="col-span-12 md:col-span-6 bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center border-b border-gray-400 pb-1 mb-1.5">
-              <h3 className="text-xs font-bold text-gray-700 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-red-700" /> Date Wise Total Arrival Report (Global Summary)
-              </h3>
-              <span className="text-[8px] uppercase tracking-wider font-extrabold text-gray-500 bg-white/50 px-1 border border-gray-300">Latest Days</span>
-            </div>
-            
-            {/* Scrollable list inside the report card */}
-            <div className="bg-white border border-gray-400 h-[83px] overflow-y-auto">
-              <table className="w-full text-left text-[9px] border-collapse font-mono">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-300 sticky top-0 font-bold text-gray-600 ">
-                    <th className="px-2 py-0.5 border-r border-gray-200">Arrival Date</th>
-                    <th className="px-2 py-0.5 text-center border-r border-gray-200">Lorry Count</th>
-                    <th className="px-2 py-0.5 text-right border-r border-gray-200">Total Bales (Rcpt)</th>
-                    <th className="px-2 py-0.5 text-right">Net Weight (M.T)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {dateWiseArrivalList.map((rep) => {
-                    const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                    return (
-                      <tr 
-                        key={rep.date} 
-                        className="hover:bg-blue-50 cursor-pointer"
-                        onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
-                      >
-                        <td className="px-2 py-0.5 font-bold text-gray-700 flex items-center gap-1">
-                          <span className={cn("w-1.5 h-1.5 rounded-full bg-blue-600 inline-block", isSelectedDate && "bg-red-600 animate-pulse")} />
-                          {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-2 py-0.5 text-center font-black text-slate-800">{rep.count} Trucks</td>
-                        <td className="px-2 py-0.5 text-right font-black text-blue-700">{rep.packets}</td>
-                        <td className="px-2 py-0.5 text-right font-black text-red-600">{rep.weight.toFixed(3)} MT</td>
-                      </tr>
-                    );
-                  })}
-                  {dateWiseArrivalList.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center py-4 text-gray-400 uppercase font-bold text-[9px]">No historical calendar data loaded.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between items-center mt-1 text-[8px] text-gray-500 font-bold ">
-              <span>* Click on any date row to immediately load that day's files in the ledger table.</span>
+            <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-[#E6DDC8] text-[11px] text-slate-500">
+              <span>* Click any date row to filter the table below.</span>
               {(startDateFilter || endDateFilter) && (
-                <button 
+                <button
                   onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                  className="text-red-700 font-extrabold border border-red-300 hover:bg-red-50 px-1 bg-white cursor-pointer"
+                  className="text-xs font-bold text-rose-700 hover:underline cursor-pointer"
                 >
-                  Clear Date Filter {startDateFilter === endDateFilter ? `(${new Date(startDateFilter).toLocaleDateString('en-GB')})` : `(${startDateFilter} to ${endDateFilter})`}
+                  Clear Date Filter
                 </button>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Action Controls & Searching Strip */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center flex-wrap">
-          {/* SEARCH FIELD */}
-          <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[200px]">
-            <input 
-              className="flex-1 text-xs px-2 outline-none py-1 font-sans" 
-              placeholder="Search by FA No, MR No, PO No, Supplier Name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="bg-[#d4d0c8] px-2 border-l border-gray-400 flex items-center justify-center">
-              <Search className="h-3.5 w-3.5 text-gray-600" />
+          {/* Right Panel: Quality Sync Daemon & Reconciliation Launcher */}
+          <div className="lg:col-span-5 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between pb-2.5 border-b border-[#E6DDC8]">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#1E4D2B]" />
+                  <h3 className="font-serif font-bold text-sm text-[#1E4D2B]">
+                    QUALITY SYNC DAEMON
+                  </h3>
+                </div>
+                <span className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                  autoSyncEnabled ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200"
+                )}>
+                  {autoSyncEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                Auto-cross-references unlinked material arrivals against certified Laboratory Quality Inspections to retroactively bind MR numbers and PO details.
+              </p>
+
+              {syncStatusMessage && (
+                <div className="mt-2 bg-amber-50 p-2 rounded border border-amber-200 text-amber-900 text-xs font-mono font-medium">
+                  ⚡ {syncStatusMessage}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-[#E6DDC8]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Interval Auto-Sync:</span>
+                <button
+                  onClick={toggleAutoSync}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+                    autoSyncEnabled ? "bg-emerald-700 text-white" : "bg-slate-200 text-slate-700"
+                  )}
+                >
+                  {autoSyncEnabled ? 'Active (ON)' : 'Disabled (OFF)'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  onClick={() => runBackgroundStatusSync(false)}
+                  disabled={backgroundSyncing}
+                  className="bg-[#1E4D2B] hover:bg-[#163E21] text-white py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", backgroundSyncing && "animate-spin")} />
+                  Force Sync
+                </button>
+                <button
+                  onClick={() => setViewState('reconciliation')}
+                  className="bg-[#F9F5EC] hover:bg-[#EAE3D2] border border-[#E6DDC8] text-[#1E4D2B] py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Reconciliation
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* DATE RANGE FILTER FIELDS */}
-          <div className="flex items-center gap-1.5 bg-white border border-gray-400 p-px">
-            <span className="text-[9px] font-black uppercase text-gray-500 pl-1">From:</span>
-            <input 
-              type="date"
-              className="text-xs px-1 py-0.5 outline-none font-bold"
-              value={startDateFilter}
-              onChange={(e) => setStartDateFilter(e.target.value)}
+        {/* 5. SEARCH, FILTER & ACTION CONTROLS */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by FA No, MR No, PO No, Supplier Name, Lorry..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#1E4D2B]"
             />
-            <span className="text-[9px] font-black uppercase text-gray-500">To:</span>
-            <input 
-              type="date"
-              className="text-xs px-1 py-0.5 outline-none font-bold"
-              value={endDateFilter}
-              onChange={(e) => setEndDateFilter(e.target.value)}
-            />
-            {(startDateFilter || endDateFilter) && (
-              <button 
-                onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                className="text-gray-400 hover:text-red-600 px-1.5 border-l border-gray-200 font-bold cursor-pointer"
-                title="Clear date range"
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
-                ×
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* ACT BUTTONS */}
-          <div className="flex gap-1">
-            <button 
-              onClick={handleExportCSV} 
-              className="bg-[#24a148] hover:bg-[#1e853c] text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors cursor-pointer"
-              title="Download filtered records as CSV"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-100" /> Export to CSV
-            </button>
-            <button 
-              onClick={() => { setSearchQuery(''); setStartDateFilter(''); setEndDateFilter(''); }} 
-              className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] hover:bg-[#c8c4bc] cursor-pointer"
-              title="Clear Search & Filters"
-            >
-              <X className="h-3 w-3" /> Clear
-            </button>
-            <button 
-              onClick={fetchRecords} 
-              className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
-              disabled={loading}
-              title="Refresh database records"
-            >
-              <RefreshCw className={`h-3 w-3 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
+          {/* Date Filters */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+              />
+              <span className="text-[10px] font-bold text-slate-500 uppercase ml-1">To:</span>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Primary Command Desk Launcher */}
-        <div className="flex flex-wrap gap-1.5 items-center my-2">
-          <button 
-            type="button"
-            onClick={() => {
-              setEditingRecord(null);
-              setViewState('entry');
-            }}
-            className="bg-white border-2 border-[#bccbfd] text-[#1c4587] shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:bg-slate-50 transition-all font-bold cursor-pointer flex flex-col items-center justify-center min-w-[120px] h-[52px] px-4"
-          >
-            <Plus className="h-4 w-4 mb-0.5 text-[#1c4587]" />
-            <span className="text-[10px] font-black uppercase tracking-tight">New Arrival Entry</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={handleExportCSV}
-            className="bg-[#f0f4f1] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:bg-[#e6ebe7] text-[#1c4587] transition-all font-bold cursor-pointer flex flex-col items-center justify-center min-w-[120px] h-[52px] px-4"
-          >
-            <FileSpreadsheet className="h-4 w-4 mb-0.5 text-slate-500" />
-            <span className="text-[10px] font-black uppercase tracking-tight">Export to CSV</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={fetchRecords}
-            className="bg-[#f0f4f1] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:bg-[#e6ebe7] text-[#1c4587] transition-all font-bold cursor-pointer flex flex-col items-center justify-center min-w-[120px] h-[52px] px-4"
-          >
-            <RefreshCw className="h-4 w-4 mb-0.5 text-slate-500" />
-            <span className="text-[10px] font-black uppercase tracking-tight">Refresh Database</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setViewState('reconciliation')}
-            className="bg-[#f0f4f1] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:bg-[#e6ebe7] text-[#1c4587] transition-all font-bold cursor-pointer flex flex-col items-center justify-center min-w-[120px] h-[52px] px-4"
-          >
-            <Layers className="h-4 w-4 mb-0.5 text-slate-500" />
-            <span className="text-[10px] font-black uppercase tracking-tight">Reconciliation Report</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => {
-              if (selectedRecordId) {
-                const target = records.find(r => r.final_arrival_id === selectedRecordId);
-                if (target) {
-                  setSelectedRecord(target);
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+            <button
+              onClick={() => {
+                setEditingRecord(null);
+                setViewState('entry');
+              }}
+              className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Final M.R
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="bg-[#F9F5EC] hover:bg-[#EAE3D2] border border-[#E6DDC8] text-[#1E4D2B] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
+            </button>
+            <button
+              onClick={() => {
+                if (selectedRecordId) {
+                  const target = records.find(r => r.final_arrival_id === selectedRecordId);
+                  if (target) handlePreparePrint(target);
+                  else alert("Selected record not found.");
                 } else {
-                  alert("Selected Arrival record not found.");
+                  alert("Please select a row first.");
                 }
-              } else {
-                alert("Please select a Final Arrival row in the table first.");
-              }
-            }}
-            className="bg-[#f0f4f1] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] hover:bg-[#e6ebe7] text-[#1c4587] transition-all font-bold cursor-pointer flex flex-col items-center justify-center min-w-[120px] h-[52px] px-4"
-          >
-            <FileText className="h-4 w-4 mb-0.5 text-slate-500" />
-            <span className="text-[10px] font-black uppercase tracking-tight">Open Selected Slip</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedRecordId) {
-                const target = records.find(r => r.final_arrival_id === selectedRecordId);
-                if (target) {
-                  handlePreparePrint(target);
-                } else {
-                  alert("Selected Arrival record not found.");
-                }
-              } else {
-                alert("Please select a Final Arrival row in the table first.");
-              }
-            }}
-            className="bg-[#dbd7d0] border border-[#8b857c] text-[#1c4587] hover:bg-[#cfcac1] font-bold px-4 h-[52px] text-xs flex items-center gap-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.1)] transition-all cursor-pointer self-center"
-          >
-            <Printer className="h-4 w-4 text-[#1c4587]" />
-            <span>Print Selected Slip</span>
-          </button>
-
-          <div className="flex-1" />
-          <div className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-3 py-1.5 shadow-[inset_1px_1px_0_white] h-[52px]">
-            <Truck className="w-4 h-4 text-gray-600" /> Total Filtered Metric Tons : 
-            <span className="text-blue-800 font-extrabold">{totalWeightMt.toFixed(3)} MT</span>
+              }}
+              className="bg-[#F9F5EC] hover:bg-[#EAE3D2] border border-[#E6DDC8] text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" /> Print Selected
+            </button>
           </div>
         </div>
 
         {/* Ledger Table Container */}
-        <div className="border border-gray-400 bg-white overflow-x-auto min-h-[350px] shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-hidden min-h-[350px]">
           {loading ? (
-            <div className="flex flex-col items-center justify-center p-12 py-24 ">
-              <RefreshCw className="h-8 w-8 text-indigo-950 animate-spin mb-3" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-700">Reindexing Final Arrival registries...</span>
+            <div className="flex flex-col items-center justify-center p-12 py-24">
+              <RefreshCw className="h-8 w-8 text-[#1E4D2B] animate-spin mb-3" />
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Reindexing Final Arrival registries...</span>
             </div>
           ) : filteredRecords.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 py-24 text-center  font-sans">
-              <FileText className="h-12 w-12 text-gray-450 mb-2.5" />
-              <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest">No Finalized Arrival Records Found</h3>
-              <p className="text-[10px] text-gray-500 max-w-sm mt-1">
+            <div className="flex flex-col items-center justify-center p-12 py-24 text-center font-sans">
+              <FileText className="h-12 w-12 text-slate-300 mb-2.5" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">No Finalized Arrival Records Found</h3>
+              <p className="text-[10px] text-slate-500 max-w-sm mt-1">
                 No active final arrivals found matching this search criteria. Create a new record or adjust your filter presets.
               </p>
             </div>
           ) : (
             <table className="w-full border-collapse text-xs font-sans">
-              <thead className="bg-[#c0c0c0] sticky top-0 z-10 ">
-                <tr className="border-b border-gray-400 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)] h-9 text-gray-800">
-                  <th className="px-2 border-r border-gray-300 font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center w-28 whitespace-nowrap">PO #</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left whitespace-nowrap">Supplier Name</th>
-                  <th className="px-3 border-r border-gray-300 font-bold text-left whitespace-nowrap">Broker Reference</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-center w-20 whitespace-nowrap">Unit</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right w-20 whitespace-nowrap">Qty</th>
-                  <th className="px-2 border-r border-gray-300 font-bold text-right w-24 bg-red-50/50 text-red-900 whitespace-nowrap">Weight</th>
-                  <th className="px-2 font-bold text-center w-24 whitespace-nowrap">Actions</th>
+              <thead className="bg-[#1E4D2B] text-white font-serif sticky top-0 z-10">
+                <tr className="border-b border-[#163E21] h-10 text-emerald-50">
+                  <th className="px-3 border-r border-[#163E21] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-center w-28 whitespace-nowrap">PO #</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-left whitespace-nowrap">Supplier Name</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-left whitespace-nowrap">Broker Reference</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-center w-20 whitespace-nowrap">Unit</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-right w-20 whitespace-nowrap">Qty</th>
+                  <th className="px-3 border-r border-[#163E21] font-bold text-right w-24 text-amber-200 whitespace-nowrap">Weight</th>
+                  <th className="px-3 font-bold text-center w-24 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 font-mono text-xs">
@@ -2314,6 +2396,6 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                 </div>
         )}
       </PrintModal>
-    </LegacyLayout>
+    </div>
   );
 }

@@ -3217,13 +3217,17 @@ function isPoMismatchResolved(poNo: string): boolean {
         </LegacyLayout>
       )}
 
-      {/* Form Mode Popup Modal */}
+      {/* In-Body Form Mode (Renders in Page Body, Same as Sauda Section) */}
       {viewMode === 'form' && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-fade-in">
-          <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden text-xs">
+        <LegacyLayout 
+          title={isArchiveView ? "FINAL P.O ARCHIVE ENTRY" : (isTempPo ? "SAUDA CHECK POINT ENTRY" : "PURCHASE ORDER ENTRY")} 
+          subtitle={formData.no ? `Editing Order #${formData.no}` : "Enter purchase order parameters, broker & supplier details, and item rates"} 
+          onClose={() => setViewMode('register')}
+        >
+          <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-sm w-full flex flex-col overflow-hidden text-xs">
             
-            {/* Modal Header Bar - Sauda Dark Green Theme */}
-            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] px-6 py-4 flex items-center justify-between border-b border-[#0d301b] shrink-0 text-white shadow-md">
+            {/* Header Bar - Sauda Dark Green Theme */}
+            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] px-6 py-4 flex items-center justify-between border-b border-[#0d301b] shrink-0 text-white shadow-md rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-[#103A20] border border-[#235E39] rounded-xl text-amber-300 shadow-xs">
                   <FileText className="h-5 w-5 text-amber-300" />
@@ -3251,16 +3255,16 @@ function isPoMismatchResolved(poNo: string): boolean {
                 <button
                   type="button"
                   onClick={() => setViewMode('register')}
-                  className="p-2 text-emerald-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                  title="Close P.O Form (Esc)"
+                  className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-100 hover:text-white hover:bg-[#1f6236] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Close P.O Form & Return to Register (Esc)"
                 >
-                  <X className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4 text-amber-300" /> Back to Register
                 </button>
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div ref={poFormRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+            {/* Form Body */}
+            <div ref={poFormRef} className="p-4 sm:p-6 space-y-5">
             
             {/* Optional Calculator Modal */}
             {isCalcOpen && (
@@ -3375,773 +3379,7 @@ function isPoMismatchResolved(poNo: string): boolean {
               </div>
             )}
 
-            <LegacyFieldset
-                legend={
-                  <div className="flex items-center gap-2 px-3 py-1.5 -my-1">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#174C2C] text-white shadow-sm">
-                      <span className="text-[14px] font-black">PO</span>
-                    </div>
-
-                    <div className="flex flex-col leading-none">
-                      <span className="text-[15px] font-extrabold text-[#174C2C] uppercase tracking-wide">
-                        Purchase Order
-                      </span>
-
-                      <span className="text-[10px] font-medium text-slate-400 mt-1">
-                        Information Header
-                      </span>
-                    </div>
-
-                    <div className="h-6 w-px bg-slate-300 mx-1"></div>
-
-                    {isSaudaActive && (
-                      <span className="px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-[10px] font-bold text-amber-800">
-                        ⚡ SAUDA LIVE
-                      </span>
-                    )}
-                  </div>
-                }
-              >
-              <div className="grid grid-cols-12 gap-3 p-2 bg-slate-50/70 rounded-lg">
-
-                {/* Sauda Connection Banner */}
-                {isSaudaActive && (
-                  <div className="col-span-12 flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-300 rounded-md shadow-sm">
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black">
-                      ⚡
-                    </span>
-                    <div className="text-[10px] text-amber-900">
-                      <span className="font-extrabold">Sauda Live Link Connected</span>
-                      <span className="ml-1 text-amber-700">
-                        — Sauda details automatically pull into form fields below.
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* ================= ROW 1 ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3">
-
-                  {/* Purchase Order */}
-                  <div className="col-span-12 lg:col-span-4 flex items-center gap-2">
-                    <label className="text-[12px] font-bold text-slate-600 whitespace-nowrap min-w-[100px]">
-                      Purchase Order
-                    </label>
-
-                    <div className="flex-1">
-                      <SingleComboBox
-                        value={formData.purchase_order}
-                        onChange={(val) => setFormData({...formData, purchase_order: val})}
-                        options={[{text: 'FINAL PO', value: 'FINAL PO'}]}
-                        textField="text"
-                        valueField="value"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Type */}
-                  <div className="col-span-12 lg:col-span-3 flex items-center gap-2">
-                    <label className="text-[11px] font-bold text-slate-600 min-w-[40px]">
-                      Type
-                    </label>
-
-                    <div className="flex-1">
-                      <SingleComboBox
-                        value={formData.po_type}
-                        onChange={(val) => setFormData({...formData, po_type: val})}
-                        options={[
-                          {text: 'Normal', value: 'Normal'},
-                          {text: 'Special', value: 'Special'}
-                        ]}
-                        textField="text"
-                        valueField="value"
-                      />
-                    </div>
-                  </div>
-
-                  {/* PTF */}
-                  <div className="col-span-12 lg:col-span-5 flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-[#7c2d12] whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 cursor-pointer accent-[#7c2d12]"
-                        checked={formData.is_ptf}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          const defaultItems = formData.items.length > 0 ? formData.items : [
-                            {
-                              srl: 1,
-                              crop: getCropYear(),
-                              grade_code: '',
-                              grade_name: '',
-                              agency_code: '',
-                              agency_name: '',
-                              marka_code: '',
-                              marka_name: '',
-                              qty: 200,
-                              weight: 10,
-                              rate: 0
-                            }
-                          ];
-
-                          setFormData({
-                            ...formData,
-                            is_ptf: isChecked,
-                            no: isChecked ? '' : formData.no,
-                            ptf_no: isChecked
-                              ? (formData.ptf_no || `PTF/${Math.floor(Math.random()*1000)}/26`)
-                              : '',
-                            items: defaultItems
-                          });
-                        }}
-                      />
-                      P.T.F Mode
-                    </label>
-
-                    <input
-                      type="text"
-                      className={`flex-1 px-2 py-1 rounded-md border outline-none text-[13px] font-bold transition-all ${
-                        !formData.is_ptf
-                          ? 'bg-slate-100 border-slate-200 text-slate-400'
-                          : 'bg-white border-orange-300 text-black focus:ring-2 focus:ring-orange-100'
-                      }`}
-                      value={formData.ptf_no}
-                      onChange={(e) => setFormData({...formData, ptf_no: e.target.value})}
-                      readOnly={!formData.is_ptf}
-                    />
-                  </div>
-                </div>
-
-
-                {/* ================= ROW 2 ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3">
-
-                  {/* Pending */}
-                  <div className="col-span-12 lg:col-span-3 flex items-center gap-3">
-                    <label className="text-[11px] font-bold text-slate-600">
-                      Pending
-                    </label>
-
-                    <label className="flex items-center gap-1 text-[11px] font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        value="Yes"
-                        checked={formData.pending === 'Yes'}
-                        onChange={(e) => setFormData({...formData, pending: e.target.value})}
-                        name="pending_radio"
-                        className="w-3.5 h-3.5 cursor-pointer accent-indigo-600"
-                      />
-                      Yes
-                    </label>
-
-                    <label className="flex items-center gap-1 text-[11px] font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        value="No"
-                        checked={formData.pending === 'No'}
-                        onChange={(e) => setFormData({...formData, pending: e.target.value})}
-                        name="pending_radio"
-                        className="w-3.5 h-3.5 cursor-pointer accent-indigo-600"
-                      />
-                      No
-                    </label>
-                  </div>
-
-
-                  {/* PO Contract */}
-                  <div className="col-span-12 lg:col-span-5 flex items-center gap-2">
-                    <label className={`text-[11px] font-bold whitespace-nowrap min-w-[90px] ${
-                      formData.is_ptf ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
-                      P.O Contract
-                    </label>
-
-                    <div className="flex-1">
-                      {formData.is_ptf ? (
-                        <input
-                          type="text"
-                          className="w-full px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-400 outline-none text-[13px]"
-                          disabled
-                          value=""
-                        />
-                      ) : (
-                        <SingleComboBox
-                          value={formData.no}
-                          onChange={handleSaudaSelect}
-                          options={displaySaudas}
-                          textField="po_display_no"
-                          valueField="po_display_no"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-
-                  {/* Date */}
-                  <div className="col-span-12 lg:col-span-4 flex items-center gap-2">
-                    <label className="text-[11px] font-bold text-slate-600 whitespace-nowrap">
-                      Date
-                    </label>
-
-                    <input
-                      type="date"
-                      className="flex-1 min-w-0 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-[13px] text-black focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                      value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    />
-                  </div>
-
-                </div>
-
-                {/* ================= ROW 2 ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3">
-
-                  {/* Broker */}
-                  <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Broker
-                    </label>
-
-                    <div className="flex-1">
-                      <DualComboBox
-                        hasSaudaHighlight={isSaudaActive}
-                        showCode={false}
-                        code={formData.broker_code}
-                        name={formData.broker}
-                        onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))}
-                        onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))}
-                        options={brokerList}
-                        codeField="brok_code"
-                        nameField="brok_name"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Supplier */}
-                  <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Supplier
-                    </label>
-
-                    <div className="flex-1">
-                      <DualComboBox
-                        hasSaudaHighlight={isSaudaActive}
-                        showCode={false}
-                        code={formData.supplier_code}
-                        name={formData.supplier}
-                        onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))}
-                        onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))}
-                        options={supplierList}
-                        codeField="supp_code"
-                        nameField="supp_name"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Challan Supplier */}
-                  <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Challan Supplier
-                    </label>
-
-                    <div className="flex-1">
-                      <DualComboBox
-                        hasSaudaHighlight={isSaudaActive}
-                        showCode={false}
-                        code={formData.challan_supplier_code}
-                        name={formData.challan_supplier}
-                        onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))}
-                        onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))}
-                        options={supplierList}
-                        codeField="supp_code"
-                        nameField="supp_name"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* ================= ROW 3 ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3">
-
-                  {/* Area */}
-                  <div className="col-span-12 lg:col-span-7 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Area
-                    </label>
-
-                    <div className="flex-1">
-                      <DualComboBox
-                        hasSaudaHighlight={isSaudaActive}
-                        code={formData.area_code}
-                        name={formData.area}
-                        onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))}
-                        onNameChange={(val) => {
-                          const updatedItems = recalculateAllRates(
-                            formData.items,
-                            formData.s_date,
-                            formData.b_rate,
-                            sattaBaseRates,
-                            sattaCalculatedRates,
-                            sattaDifferentials,
-                            val
-                          );
-
-                          setFormData(prev => ({
-                            ...prev,
-                            area: val,
-                            items: updatedItems
-                          }));
-                        }}
-                        options={areaList}
-                        codeField="area_code"
-                        nameField="area_name"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Transportation */}
-                  <div className="col-span-12 lg:col-span-5 flex items-center gap-3 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                      Transportation Charges paid by
-                    </label>
-
-                    <select
-                      className="px-3 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs font-semibold text-black focus:border-indigo-400"
-                      value={formData.trans_paid_by}
-                      onChange={(e) => setFormData({...formData, trans_paid_by: e.target.value})}
-                    >
-                      <option>PARTY</option>
-                      <option>COMPANY</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* ================= ROW 4 ================= */}
-                <div className="col-span-12 flex flex-wrap items-center gap-3 p-3 bg-white border border-slate-200 rounded-md shadow-sm">
-
-                  {/* Cancellation */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                      Against Cancellation
-                    </label>
-
-                    <select
-                      className="w-20 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs font-semibold text-black"
-                      value={formData.against_cancellation}
-                      onChange={(e) => setFormData({...formData, against_cancellation: e.target.value})}
-                    >
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </div>
-
-                  <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-
-                  {/* Purchase Unit */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                      Purchase Unit
-                    </label>
-
-                    <input
-                      className="w-12 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-center text-xs font-bold font-mono text-black"
-                      value={formData.purchase_unit_code || '1'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData(prev => ({ ...prev, purchase_unit_code: val }));
-                      }}
-                    />
-
-                    <select
-                      className="w-24 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs font-semibold text-black cursor-pointer"
-                      value={formData.purchase_unit_name}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        handlePurchaseUnitChange(name, formData.purchase_unit_code || '1');
-                      }}
-                    >
-                      {Array.from(new Set([...unitList, formData.purchase_unit_name].filter(Boolean))).map((u: string) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-
-                  {/* Weight */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                      Weight/Unit (Kgs.)
-                    </label>
-
-                    <input
-                      className="w-20 px-2 py-1 rounded-md bg-slate-100 border border-slate-200 outline-none text-right text-xs font-bold text-black"
-                      value={formData.weight_unit_kgs}
-                      readOnly
-                    />
-
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCalcData({
-                          total_lorries: formData.total_no_of_lorries || '0',
-                          units_per_lorry: formData.units_per_lorry || '0',
-                          weight_per_lorry: formData.weight_per_lorry || '0'
-                        });
-                        setIsCalcOpen(true);
-                      }}
-                      className="px-3 py-1 rounded-md bg-[#174C2C] hover:bg-[#0F351E] text-white text-[12px] font-bold shadow-sm transition-all"
-                    >
-                      Calculate Helper
-                    </button>
-                  </div>
-                </div>
-
-                {/* ================= ROW 5 - SUMMARY ================= */}
-                <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-2 bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-md shadow-sm">
-
-                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-white rounded border border-slate-200">
-                    <label className="text-[9px] font-extrabold text-indigo-900">
-                      Total No of Lorries
-                    </label>
-                    <input
-                      className="w-14 px-1 py-1 bg-indigo-50 border border-indigo-100 rounded text-right text-xs font-extrabold text-[#7c2d12]"
-                      value={formData.total_no_of_lorries}
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-white rounded border border-slate-200">
-                    <label className="text-[9px] font-extrabold text-indigo-900">
-                      Units / Lorry
-                    </label>
-                    <input
-                      className="w-16 px-1 py-1 bg-indigo-50 border border-indigo-100 rounded text-right text-xs font-extrabold text-[#7c2d12]"
-                      value={formData.units_per_lorry}
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-white rounded border border-slate-200">
-                    <label className="text-[9px] font-extrabold text-indigo-900">
-                      Total Units
-                    </label>
-                    <input
-                      className="w-16 px-1 py-1 bg-indigo-50 border border-indigo-100 rounded text-right text-xs font-extrabold text-[#7c2d12]"
-                      value={formData.total_units}
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-white rounded border border-slate-200">
-                    <label className="text-[9px] font-extrabold text-indigo-900">
-                      Weight/Lorry (M.Ton)
-                    </label>
-                    <input
-                      className="w-16 px-1 py-1 bg-indigo-50 border border-indigo-100 rounded text-right text-xs font-extrabold text-[#7c2d12]"
-                      value={formData.weight_per_lorry}
-                      readOnly
-                    />
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1 flex items-center justify-between gap-2 px-2 py-1.5 bg-white rounded border border-blue-200">
-                    <label className="text-[9px] font-extrabold text-indigo-900">
-                      Total Contract (M.Ton)
-                    </label>
-                    <input
-                      className="w-16 px-1 py-1 bg-blue-50 border border-blue-100 rounded text-right text-xs font-extrabold text-blue-900"
-                      value={formData.total_contract_mt}
-                      readOnly
-                    />
-                  </div>
-                </div>
-
-                {/* ================= ROW 6 ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3">
-
-                  <div className="col-span-12 sm:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 text-[10px] font-bold text-slate-600">
-                      Marka Type
-                    </label>
-
-                    <select className="flex-1 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs font-bold text-black">
-                      <option>{formData.marka_type}</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-12 sm:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600">
-                      Marka Penalty
-                    </label>
-
-                    <input
-                      className="flex-1 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-right text-xs text-black focus:border-indigo-400"
-                      value={formData.marka_penalty}
-                      onChange={(e) => setFormData({...formData, marka_penalty: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="col-span-12 sm:col-span-4 flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-md shadow-sm">
-                    <label className="w-24 sm:w-28 text-[10px] font-bold text-slate-600">
-                      Quantity Penalty
-                    </label>
-
-                    <input
-                      className="flex-1 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-right text-xs text-black focus:border-indigo-400"
-                      value={formData.qty_penalty}
-                      onChange={(e) => setFormData({...formData, qty_penalty: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="col-span-12 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-slate-200"></div>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    Contract Details
-                  </span>
-                  <div className="h-px flex-1 bg-slate-200"></div>
-                </div>
-
-                {/* ================= DETAILED SECTION ================= */}
-                <div className="col-span-12 grid grid-cols-12 gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
-
-                  {/* Delivery */}
-                  <div className="col-span-12 flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-md border border-slate-100">
-                    <label className="text-[10px] font-bold italic text-slate-600">
-                      Delivery → From
-                    </label>
-
-                    <input
-                      type="date"
-                      className={`w-32 px-2 py-1 rounded-md outline-none text-xs text-black border transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.delivery_from}
-                      onChange={(e) => setFormData({...formData, delivery_from: e.target.value})}
-                    />
-
-                    <label className="text-[10px] font-bold text-slate-500">
-                      To
-                    </label>
-
-                    <input
-                      type="date"
-                      className={`w-32 px-2 py-1 rounded-md outline-none text-xs text-black border transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.delivery_to}
-                      onChange={(e) => setFormData({...formData, delivery_to: e.target.value})}
-                    />
-
-                    <label className="text-[10px] font-bold text-slate-600">
-                      Grace Days
-                    </label>
-
-                    <input
-                      className={`w-16 px-2 py-1 rounded-md outline-none text-right text-xs border ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300 text-black"
-                      }`}
-                      value={formData.grace_days}
-                      onChange={(e) => setFormData({...formData, grace_days: e.target.value})}
-                    />
-
-                    <label className="text-[10px] font-bold text-slate-600">
-                      Delivery Penalty
-                    </label>
-
-                    <input
-                      className={`w-16 px-2 py-1 rounded-md outline-none text-right text-xs border ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300 text-black"
-                      }`}
-                      value={formData.delivery_penalty}
-                      onChange={(e) => setFormData({...formData, delivery_penalty: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Contract / PO */}
-                  <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
-                    <label className="w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Contract / P.O No
-                    </label>
-
-                    <div className="flex-1">
-                      <SingleComboBox
-                        value={formData.contract_po_no}
-                        onChange={handleSaudaSelect}
-                        options={displaySaudas}
-                        textField="po_display_no"
-                        valueField="po_display_no"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Contract Date + Rate */}
-                  <div className="col-span-12 lg:col-span-6 grid grid-cols-12 items-center gap-2">
-
-                    <label className="col-span-2 text-[10px] font-bold text-slate-600">
-                      Date
-                    </label>
-
-                    <input
-                      type="date"
-                      className={`col-span-4 px-2 py-1 rounded-md outline-none text-xs border text-black transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.contract_date}
-                      onChange={(e) => setFormData({...formData, contract_date: e.target.value})}
-                    />
-
-                    <label className="col-span-2 text-[10px] font-bold text-slate-600">
-                      Rate Detail
-                    </label>
-
-                    <input
-                      className="col-span-4 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs text-black focus:border-indigo-400"
-                      value={formData.rate_detail}
-                      onChange={(e) => setFormData({...formData, rate_detail: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Delivery Schedule */}
-                  <div className="col-span-12 flex items-center gap-2">
-                    <label className="w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Delivery Schedule
-                    </label>
-
-                    <input
-                      className="flex-1 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs text-black focus:border-indigo-400"
-                      value={formData.delivery_schedule}
-                      onChange={(e) => setFormData({...formData, delivery_schedule: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Terms */}
-                  <div className="col-span-12 flex items-start gap-2">
-                    <label className="w-28 text-[10px] font-bold text-slate-600 shrink-0 mt-2">
-                      Terms & Condition
-                    </label>
-
-                    <textarea
-                      className={`flex-1 px-2 py-1.5 rounded-md outline-none h-16 text-[10px] border text-black transition-colors duration-150 resize-none ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.terms_condition}
-                      onChange={(e) => setFormData({...formData, terms_condition: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Remarks */}
-                  <div className="col-span-12 flex items-center gap-2">
-                    <label className="w-28 text-[10px] font-bold text-slate-600 shrink-0">
-                      Remarks
-                    </label>
-
-                    <input
-                      className={`flex-1 px-2 py-1 rounded-md outline-none text-xs border text-black transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.remarks}
-                      onChange={(e) => setFormData({...formData, remarks: e.target.value})}
-                    />
-                  </div>
-
-                  {/* PO Identification */}
-                  <div className="col-span-12 flex flex-wrap items-center gap-3 pt-1">
-
-                    <label className="text-[10px] font-bold text-slate-600 whitespace-nowrap">
-                      PO Identification
-                    </label>
-
-                    <select className="w-52 px-2 py-1 rounded-md bg-white border border-slate-300 outline-none text-xs font-normal text-black">
-                      <option>{formData.po_identification}</option>
-                    </select>
-
-                    <label className="text-[10px] font-bold text-slate-600">
-                      S Date
-                    </label>
-
-                    <input
-                      type="date"
-                      className={`w-32 px-2 py-1 rounded-md outline-none text-xs border text-black transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.s_date}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const updatedItems = recalculateAllRates(
-                          formData.items,
-                          val,
-                          formData.b_rate
-                        );
-
-                        setFormData({
-                          ...formData,
-                          s_date: val,
-                          items: updatedItems
-                        });
-                      }}
-                    />
-
-                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-600 cursor-help">
-                      <span>B Rate</span>
-                      <span className="text-[7px] font-black bg-indigo-900 text-white rounded-full w-4 h-4 inline-flex items-center justify-center">
-                        i
-                      </span>
-
-                      <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
-                        DB Reference: <code className="text-yellow-400 font-mono">purchase_master.b_rate</code>
-                        <p className="mt-1">
-                          Format: Numeric decimal representing Brokerage rate per ton/unit.
-                        </p>
-                      </div>
-                    </label>
-
-                    <input
-                      className={`flex-1 min-w-[80px] px-2 py-1 rounded-md outline-none text-right text-xs border text-black transition-colors duration-150 ${
-                        isSaudaActive
-                          ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono"
-                          : "bg-white border-slate-300"
-                      }`}
-                      value={formData.b_rate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const updatedItems = recalculateAllRates(
-                          formData.items,
-                          formData.s_date,
-                          val
-                        );
-
-                        setFormData({
-                          ...formData,
-                          b_rate: val,
-                          items: updatedItems
-                        });
-                      }}
-                    />
-                  </div>
-
-                </div>
-              </div>
-            </LegacyFieldset>
-
-            {/* <LegacyFieldset legend="Purchase Order Information Header">
+            <LegacyFieldset legend="Purchase Order Information Header">
               <div className="grid grid-cols-12 gap-x-2 gap-y-1">
                 {isSaudaActive && (
                   <div className="col-span-12 mb-1 p-1 bg-amber-50 border border-amber-300 text-[10px] text-amber-850 flex items-center gap-1.5 font-normal rounded-sm">
@@ -4149,6 +3387,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                   </div>
                 )}
                 
+                {/* ROW 1 */}
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
                   <label className="whitespace-nowrap min-w-[70px]">Purchase Order</label>
                   <SingleComboBox value={formData.purchase_order} onChange={(val) => setFormData({...formData, purchase_order: val})} options={[{text: 'FINAL PO', value: 'FINAL PO'}]} textField="text" valueField="value" />
@@ -4217,6 +3456,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                   <input type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
                 </div>
 
+                {/* ROW 2 */}
                 <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
                   <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Broker</label>
                   <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.broker_code} name={formData.broker} onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))} options={brokerList} codeField="brok_code" nameField="brok_name" />
@@ -4226,11 +3466,13 @@ function isPoMismatchResolved(poNo: string): boolean {
                   <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.supplier_code} name={formData.supplier} onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
                 </div>
 
+                {/* ROW 3 */}
                 <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
                    <label className="w-24 sm:w-32 md:w-40 whitespace-nowrap text-right shrink-0">Challan Supplier</label>
                    <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.challan_supplier_code} name={formData.challan_supplier} onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
                 </div>
 
+                {/* ROW 4 */}
                 <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
                   <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Area</label>
                   <DualComboBox 
@@ -4259,6 +3501,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                   </select>
                 </div>
 
+                {/* ROW 5 */}
                 <div className="col-span-12 flex flex-wrap items-center gap-y-2 gap-x-4 mb-1 mt-1 font-normal">
                    <div className="flex items-center gap-2">
                       <label className="w-24 sm:w-32 md:w-40 text-right whitespace-nowrap font-bold shrink-0">Against Cancellation</label>
@@ -4297,6 +3540,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                    </div>
                 </div>
 
+                {/* ROW 6 */}
                 <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
                    <div className="flex items-center gap-1 justify-between">
                       <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
@@ -4320,6 +3564,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                    </div>
                 </div>
 
+                {/* ROW 7 */}
                 <div className="col-span-12 grid grid-cols-12 gap-2 mb-2 mt-1">
                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
                       <label className="w-24 text-right shrink-0">Marka Type</label>
@@ -4337,8 +3582,10 @@ function isPoMismatchResolved(poNo: string): boolean {
                    </div>
                 </div>
                 
+                {/* Divider */}
                 <div className="col-span-12 border-b border-slate-400 mb-2"></div>
                 
+                {/* Detailed sections below */}
                 <div className="col-span-12 grid grid-cols-12 gap-x-2 gap-y-1.5">
                   <div className="col-span-12 flex flex-wrap items-center gap-2 mt-1">
                     <label className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
@@ -4432,23 +3679,9 @@ function isPoMismatchResolved(poNo: string): boolean {
                   </div>
                 </div>
               </div>
-            </LegacyFieldset> */}
+            </LegacyFieldset>
 
-            {/* <LegacyFieldset legend="Purchase Order Details (Items Table Matrix)"> */}
-            <LegacyFieldset
-            legend={
-              <div className="flex items-center gap-2 px-3 py-1.5 -my-1">
-                <div className="flex flex-col leading-none">
-                  <span className="text-[15px] font-extrabold text-[#174C2C] uppercase tracking-wide">
-                    Purchase Order Details
-                  </span>
-                </div>
-
-                <div className="h-6 w-px bg-slate-300 mx-1"></div>
-
-              </div>
-            }
-          >
+            <LegacyFieldset legend="Purchase Order Details (Items Table Matrix)">
               <div className="flex items-center gap-2 p-1 bg-[#d4d0c8] border-b border-slate-400 justify-between ">
                  <div className="text-[10px] font-bold text-slate-800 italic pl-1 flex items-center gap-1">
                     <span>⚡ Grid Row Status:</span>
@@ -4691,12 +3924,12 @@ function isPoMismatchResolved(poNo: string): boolean {
             </LegacyFieldset>
 
             {/* Global Actions Block inside Form */}
-            <div className="bg-[#174C2C] border border-slate-200 rounded-[18px] p-4 shadow-xs flex flex-wrap justify-center items-center gap-3">
+            <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs flex flex-wrap justify-center items-center gap-3">
                
                <button 
                  onClick={handleSave} 
                  disabled={loading}
-                 className="bg-amber-400 text-[#103A20] hover:bg-[#103A20] text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                 className="bg-[#174C2C] hover:bg-[#103A20] text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                  title="Validate and save changes to DB" 
                >
                  <Save className="w-4 h-4 text-emerald-200" /> {loading ? "Saving..." : "Save P.O"}
@@ -4738,10 +3971,9 @@ function isPoMismatchResolved(poNo: string): boolean {
                  <X className="w-4 h-4 text-slate-500" /> Close Form
                </button>
             </div>
-
           </div>
         </div>
-      </div>
+      </LegacyLayout>
     )}
 
       {/* Actions dropdown — used in BOTH Temporary P.O and Final P.O rows. */}

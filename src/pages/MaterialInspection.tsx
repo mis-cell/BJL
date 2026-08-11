@@ -23,7 +23,13 @@ import {
   Clock,
   ChevronDown,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Scale,
+  ClipboardList,
+  Truck,
+  CheckSquare,
+  Calendar,
+  User
 } from "lucide-react";
 import LegacyLayout from "../components/LegacyLayout";
 import { supabase } from "../lib/supabase";
@@ -795,6 +801,54 @@ export default function MaterialInspection({
     [1, 2, 3, 4, 5].map(createEmptyRow),
   );
 
+  const initialQualityMatrix = () => ({
+    grade_down: {
+      '1st': { dept: '', claim: '', sett: '' },
+      '2nd': { dept: '', claim: '', sett: '' },
+      '3rd': { dept: '', claim: '', sett: '' },
+      '4th': { dept: '', claim: '', sett: '' },
+    },
+    moisture: {
+      '1st': { dept: '', claim: '', sett: '' },
+      '2nd': { dept: '', claim: '', sett: '' },
+      '3rd': { dept: '', claim: '', sett: '' },
+      '4th': { dept: '', claim: '', sett: '' },
+    },
+    dust: {
+      '1st': { dept: '', claim: '', sett: '' },
+      '2nd': { dept: '', claim: '', sett: '' },
+      '3rd': { dept: '', claim: '', sett: '' },
+      '4th': { dept: '', claim: '', sett: '' },
+    },
+    moc: {
+      '1st': { dept: '', claim: '', sett: '' },
+      '2nd': { dept: '', claim: '', sett: '' },
+      '3rd': { dept: '', claim: '', sett: '' },
+      '4th': { dept: '', claim: '', sett: '' },
+    },
+    po_rate: {
+      '1st': { dept: '', claim: '', sett: '' },
+      '2nd': { dept: '', claim: '', sett: '' },
+      '3rd': { dept: '', claim: '', sett: '' },
+      '4th': { dept: '', claim: '', sett: '' },
+    },
+  });
+
+  const [qualityMatrix, setQualityMatrix] = useState<any>(initialQualityMatrix());
+
+  const updateMatrixVal = (rowKey: string, colKey: string, subKey: string, val: string) => {
+    setQualityMatrix((prev: any) => ({
+      ...prev,
+      [rowKey]: {
+        ...prev[rowKey],
+        [colKey]: {
+          ...(prev[rowKey]?.[colKey] || {}),
+          [subKey]: val,
+        },
+      },
+    }));
+  };
+
   // Fetch Master Data references on load to feed datalists (autocompletion)
   const loadAllMasters = async () => {
     try {
@@ -1498,8 +1552,10 @@ export default function MaterialInspection({
   };
 
   // Master validation and save script
-  const handleSaveAction = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSaveAction = async (e?: React.FormEvent | boolean) => {
+    if (typeof e === 'object' && e && 'preventDefault' in e) {
+      e.preventDefault();
+    }
     if (!supabase) {
       setErrorMessage(
         "Local mock persistence failed. Direct database offline.",
@@ -2868,144 +2924,139 @@ export default function MaterialInspection({
             })}
         </datalist>
 
-        {/* MAIN VISUAL CARD CONTAINER */}
-        
-        <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-          <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
-            {/* Background Mill Illustration Artwork on the Right with light opacity */}
-            <div 
-              className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
-              style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
-            />
-  
-            <div className="relative z-10 flex flex-col gap-1">
-              <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
-                Mill Inspection Information
-              </h2>
+        {/* MAIN VISUAL CARD CONTAINER - BJL 2026 - 2027 INSPECTION CHECKLIST */}
+        <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 max-w-7xl mx-auto w-full pb-10">
+          
+          {/* HEADER BAR */}
+          <div className="bg-[#0b1e36] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-blue-900 gap-4">
+            {/* Left Badge */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-amber-300 shadow-inner">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="bg-blue-950 text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-blue-800 tracking-wider">
+                  BJL 2026 - 2027
+                </span>
+              </div>
             </div>
-  
-            {/* Action Controls & Session Badge */}
-            <div className="relative z-10 flex items-center gap-3">
+
+            {/* Center Title */}
+            <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow text-center">
+              INSPECTION CHECKLIST
+            </h1>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
-                title="Back to Sauda Desk (Esc)"
+                onClick={() => handlePreparePrintInspection(masterData)}
+                className="px-4 py-2 bg-blue-900/70 hover:bg-blue-800 border border-blue-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
               >
-                <ArrowLeft className="h-4 w-4 text-amber-300" />
-                <span>Back </span>
+                <Printer className="w-4 h-4 text-amber-300" />
+                <span>Print</span>
               </button>
-              <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-                <span className="text-emerald-200/80 font-medium">Session:</span>
-                <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
+              
+              <div className="relative">
+                <select
+                  value={masterData.mr_no}
+                  onChange={(e) => {
+                    const sel = savedInspections.find((i) => i.mr_no === e.target.value);
+                    if (sel) {
+                      loadInspectionIntoForm(sel);
+                      setIsEditMode(true);
+                      setViewMode("entry");
+                    }
+                  }}
+                  className="bg-blue-950 border border-amber-400/70 text-amber-300 text-xs font-black px-3.5 py-2 rounded-lg appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 shadow-inner"
+                >
+                  <option value={masterData.mr_no}>{masterData.mr_no || 'MRRC-2026-0001'}</option>
+                  {savedInspections.map((insp, idx) => (
+                    <option key={idx} value={insp.mr_no}>{insp.mr_no} - {insp.supplier_name || 'Inspection'}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-amber-300 absolute right-2.5 top-2.5 pointer-events-none" />
               </div>
             </div>
           </div>
-          
-          
-          <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
 
-            {/* Header */}
-            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
-              <h2 className="text-sm font-bold text-white tracking-wide">
-                Material Receipt Information
+          {/* CARD 1: BASIC INFORMATION */}
+          <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+            <div className="bg-slate-100 border-b border-slate-200 px-5 py-2.5 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-blue-700" />
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                BASIC INFORMATION
               </h2>
             </div>
-
-            {/* Body */}
             <div className="p-5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
-
-                {/* M.R. No */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    M. R. No.
-                  </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-xs">
+                {/* Broker * & Date * */}
+                <div className="flex items-center gap-2">
+                  <label className="w-28 font-semibold text-slate-700">Broker <span className="text-red-500">*</span></label>
                   <input
                     type="text"
-                    name="mr_no"
-                    value={masterData.mr_no}
+                    list="brokersList"
+                    name="broker_name"
+                    value={masterData.broker_name || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    placeholder="Broker Name"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-semibold uppercase focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100"
                   />
                 </div>
-
-                {/* M.R. Date */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    M. R. Date
-                  </label>
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     name="mr_date"
-                    value={masterData.mr_date}
+                    value={masterData.mr_date || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium focus:border-blue-500 disabled:bg-slate-100"
                   />
                 </div>
-
-                {/* Temporary Arrival No */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    Temporary Arrival No.
-                  </label>
-
-                  <SupabaseAutoCompleteInput
-                    label="Temporary Arrival No."
-                    name="arrival_no"
-                    fieldColumn="temporary_arrival_no"
-                    value={masterData.arrival_no}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    onSelectOption={(_val, record) => {
-                      if (record) handleAutoFillFromVoucher(record);
-                    }}
-                    placeholder="Temporary Arrival Number"
-                    savedInspections={savedInspections}
-                  />
-                </div>
-
-                {/* Arrival Date */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    Arrival Date
-                  </label>
-                  <input
-                    type="date"
-                    name="arrival_date"
-                    value={masterData.arrival_date}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
-                  />
-                </div>
-
-                {/* Lorry Number */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold text-amber-900">
-                    Lorry Number
-                  </label>
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Lorry No. <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="lorry_number"
-                    value={masterData.lorry_number || ""}
+                    value={masterData.lorry_number || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs"
+                    placeholder="Select Lorry No."
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-semibold uppercase focus:border-blue-500 disabled:bg-slate-100"
                   />
                 </div>
 
-                <div></div>
-
-                {/* P.O. No */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    P. O. No.
-                  </label>
-
+                {/* Supplier * & Date * */}
+                <div className="flex items-center gap-2">
+                  <label className="w-28 font-semibold text-slate-700">Supplier <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    list="suppliersList"
+                    name="supplier_name"
+                    value={masterData.supplier_name || ''}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    placeholder="Supplier Name"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-semibold uppercase focus:border-blue-500 disabled:bg-slate-100"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    name="po_date"
+                    value={masterData.po_date || ''}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium focus:border-blue-500 disabled:bg-slate-100"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">P.O. No.</label>
                   <SupabaseAutoCompleteInput
-                    label="P. O. No."
+                    label="P.O. No."
                     name="po_no"
                     fieldColumn="po_no"
                     value={masterData.po_no}
@@ -3014,1010 +3065,656 @@ export default function MaterialInspection({
                     onSelectOption={(_val, record) => {
                       if (record) handleAutoFillFromVoucher(record);
                     }}
-                    placeholder="P. O. Number"
+                    placeholder="P.O. Number"
                     savedInspections={savedInspections}
                   />
                 </div>
 
-                {/* P.O. Date */}
-                <div className="flex items-center gap-3">
-                  <label className="w-36 text-[11px] font-bold">
-                    P. O. Date
-                  </label>
+                {/* P.O. Remarks & Detention Days */}
+                <div className="flex items-center gap-2 lg:col-span-2">
+                  <label className="w-28 font-semibold text-slate-700">P.O. Remarks</label>
                   <input
-                    type="date"
-                    name="po_date"
-                    value={masterData.po_date}
+                    type="text"
+                    name="remarks"
+                    value={masterData.remarks || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    placeholder="Enter P.O. Remarks"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium focus:border-blue-500 disabled:bg-slate-100"
                   />
                 </div>
-
-              </div>
-            </div>
-          </div>
-          {/* ================= Broker & Supplier Information ================= */}
-          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
-
-            {/* Header */}
-            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
-              <h2 className="text-sm font-bold text-white tracking-wide">
-                Broker & Supplier Information
-              </h2>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-4">
-
-              {/* Broker Name */}
-              <div className="flex items-center gap-4">
-                <label className="w-44 text-[11px] font-bold text-slate-700">
-                  Broker Name
-                </label>
-
-                <input
-                  type="text"
-                  name="broker_name"
-                  list="brokersList"
-                  value={masterData.broker_name}
-                  disabled={!isEditMode}
-                  onChange={handleMasterChange}
-                  placeholder="Enter or Select Broker Name"
-                  className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-xs font-semibold uppercase bg-white focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
-                />
-              </div>
-
-              {/* Supplier Name */}
-              <div className="flex items-center gap-4">
-                <label className="w-44 text-[11px] font-bold text-slate-700">
-                  Supplier Name
-                </label>
-
-                <input
-                  type="text"
-                  name="supplier_name"
-                  list="suppliersList"
-                  value={masterData.supplier_name}
-                  disabled={!isEditMode}
-                  onChange={handleMasterChange}
-                  placeholder="Enter or Select Jute Merchant Supplier"
-                  className="flex-1 h-9 rounded-md border border-gray-300 px-3 text-xs font-semibold uppercase bg-white focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
-                />
-              </div>
-
-            </div>
-          </div>
-
-          {/* ================= Moisture & Technical Parameters ================= */}
-          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
-
-            {/* Header */}
-            <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
-              <h2 className="text-sm font-bold text-white tracking-wide">
-                Moisture & Technical Parameters
-              </h2>
-            </div>
-
-            {/* Body */}
-            <div className="p-5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3">
-
-                {/* LEFT SIDE */}
-
-                {/* Actual Moisture */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Actual Moisture %
-                  </label>
-
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="actual_moisture"
-                    value={masterData.actual_moisture || ""}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    placeholder="0.0"
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
-                  />
-                </div>
-
-                {/* Claim Moisture */}
-                {(() => {
-                  const currentVal = Number(masterData.claim_moisture ?? 0);
-
-                  const isOverridden =
-                    !adminApproved.claim_moisture &&
-                    (
-                      overriddenFields.claim_moisture ||
-                      Math.abs(currentVal - autoValues.claim_moisture) > 0.05
-                    );
-
-                  return (
-                    <div className="flex items-center gap-3 relative">
-
-                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
-                        <span>Claim Moisture %</span>
-
-                        {isOverridden && (
-                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
-                            Manual
-                          </span>
-                        )}
-                      </label>
-
-                      <div
-                        className="relative flex-1 flex items-center"
-                        onMouseEnter={() => setHoveredField("claim_moisture")}
-                        onMouseLeave={() => setHoveredField(null)}
-                      >
-
-                        <input
-                          type="number"
-                          step="0.1"
-                          name="claim_moisture"
-                          value={masterData.claim_moisture ?? ""}
-                          disabled={!isEditMode}
-                          onChange={handleMasterChange}
-                          placeholder="0.0"
-                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
-                            isOverridden
-                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
-                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
-                          }`}
-                        />
-
-                        {isOverridden && (
-                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
-                            📌
-                          </span>
-                        )}
-
-                        {isOverridden &&
-                          hoveredField === "claim_moisture" && (
-                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
-
-                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
-                                <span className="font-black text-red-700">
-                                  📌 Sticky Note: Manual Entry
-                                </span>
-
-                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
-                                  Modified
-                                </span>
-                              </div>
-
-                              <div className="space-y-2">
-
-                                <div className="flex justify-between">
-                                  <span>Past Automatic Value</span>
-
-                                  <span className="font-bold text-blue-900">
-                                    {autoValues.claim_moisture}%
-                                  </span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                  <span>Current Manual Entry</span>
-
-                                  <span className="font-bold text-red-700">
-                                    {masterData.claim_moisture}%
-                                  </span>
-                                </div>
-
-                              </div>
-
-                              <div className="mt-3 flex gap-2">
-
-                                <button
-                                  type="button"
-                                  onClick={() => revertToAuto("claim_moisture")}
-                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
-                                >
-                                  Reset Auto ({autoValues.claim_moisture}%)
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => markAsNormal("claim_moisture")}
-                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
-                                >
-                                  Accept Normal
-                                </button>
-
-                              </div>
-
-                            </div>
-                          )}
-
-                      </div>
-
-                    </div>
-                  );
-                })()}
-
-                {/* Actual Dust */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Actual Dust %
-                  </label>
-
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="actual_dust"
-                    value={masterData.actual_dust || ""}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    placeholder="0.0"
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
-                  />
-                </div>
-
-                {/* ================= Claim Dust ================= */}
-                {(() => {
-                  const currentVal = Number(masterData.claim_dust ?? 0);
-
-                  const isOverridden =
-                    !adminApproved.claim_dust &&
-                    (
-                      overriddenFields.claim_dust ||
-                      Math.abs(currentVal - autoValues.claim_dust) > 0.05
-                    );
-
-                  return (
-                    <div className="flex items-center gap-3 relative">
-
-                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
-                        <span>Claim Dust %</span>
-
-                        {isOverridden && (
-                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
-                            Manual
-                          </span>
-                        )}
-                      </label>
-
-                      <div
-                        className="relative flex-1 flex items-center"
-                        onMouseEnter={() => setHoveredField("claim_dust")}
-                        onMouseLeave={() => setHoveredField(null)}
-                      >
-
-                        <input
-                          type="number"
-                          step="0.1"
-                          name="claim_dust"
-                          value={masterData.claim_dust ?? ""}
-                          disabled={!isEditMode}
-                          onChange={handleMasterChange}
-                          placeholder="0.0"
-                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
-                            isOverridden
-                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
-                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
-                          }`}
-                        />
-
-                        {isOverridden && (
-                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
-                            📌
-                          </span>
-                        )}
-
-                        {isOverridden &&
-                          hoveredField === "claim_dust" && (
-                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
-
-                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
-                                <span className="font-black text-red-700">
-                                  📌 Sticky Note: Manual Entry
-                                </span>
-
-                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
-                                  Modified
-                                </span>
-                              </div>
-
-                              <div className="space-y-2">
-
-                                <div className="flex justify-between">
-                                  <span>Past Automatic Value</span>
-
-                                  <span className="font-bold text-blue-900">
-                                    {autoValues.claim_dust}%
-                                  </span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                  <span>Current Manual Entry</span>
-
-                                  <span className="font-bold text-red-700">
-                                    {masterData.claim_dust}%
-                                  </span>
-                                </div>
-
-                              </div>
-
-                              <div className="mt-3 flex gap-2">
-
-                                <button
-                                  type="button"
-                                  onClick={() => revertToAuto("claim_dust")}
-                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
-                                >
-                                  Reset Auto ({autoValues.claim_dust}%)
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => markAsNormal("claim_dust")}
-                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
-                                >
-                                  Accept Normal
-                                </button>
-
-                              </div>
-
-                            </div>
-                          )}
-
-                      </div>
-
-                    </div>
-                  );
-                })()}
-
-                {/* Actual NCV */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Actual NCV %
-                  </label>
-
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="actual_ncv"
-                    value={masterData.actual_ncv || ""}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    placeholder="0.0"
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
-                  />
-                </div>
-
-                {/* ================= Claim NCV ================= */}
-                {(() => {
-                  const currentVal = Number(masterData.claim_ncv ?? 0);
-
-                  const isOverridden =
-                    !adminApproved.claim_ncv &&
-                    (
-                      overriddenFields.claim_ncv ||
-                      Math.abs(currentVal - autoValues.claim_ncv) > 0.05
-                    );
-
-                  return (
-                    <div className="flex items-center gap-3 relative">
-
-                      <label className="w-40 text-[11px] font-bold shrink-0 flex items-center justify-between">
-                        <span>Claim NCV %</span>
-
-                        {isOverridden && (
-                          <span className="text-[9px] font-extrabold text-red-700 bg-red-100 border border-red-300 px-1 rounded animate-pulse">
-                            Manual
-                          </span>
-                        )}
-                      </label>
-
-                      <div
-                        className="relative flex-1 flex items-center"
-                        onMouseEnter={() => setHoveredField("claim_ncv")}
-                        onMouseLeave={() => setHoveredField(null)}
-                      >
-
-                        <input
-                          type="number"
-                          step="0.1"
-                          name="claim_ncv"
-                          value={masterData.claim_ncv ?? ""}
-                          disabled={!isEditMode}
-                          onChange={handleMasterChange}
-                          placeholder="0.0"
-                          className={`w-full h-8 rounded-md px-2 text-xs font-bold text-center transition-all focus:outline-none disabled:bg-slate-100 ${
-                            isOverridden
-                              ? "border-2 border-red-500 bg-red-50 text-red-900 ring-2 ring-red-200"
-                              : "border border-gray-300 bg-white focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20"
-                          }`}
-                        />
-
-                        {isOverridden && (
-                          <span className="absolute right-2 text-red-600 text-xs font-bold pointer-events-none">
-                            📌
-                          </span>
-                        )}
-
-                        {isOverridden &&
-                          hoveredField === "claim_ncv" && (
-                            <div className="absolute bottom-full left-0 mb-2 w-80 z-50 rounded-lg border-2 border-amber-400 bg-amber-100 p-3 text-[11px] shadow-2xl">
-
-                              <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-2">
-                                <span className="font-black text-red-700">
-                                  📌 Sticky Note: Manual Entry
-                                </span>
-
-                                <span className="rounded bg-amber-200 px-2 py-0.5 text-[9px] font-bold uppercase">
-                                  Modified
-                                </span>
-                              </div>
-
-                              <div className="space-y-2">
-
-                                <div className="flex justify-between">
-                                  <span>Past Automatic Value</span>
-
-                                  <span className="font-bold text-blue-900">
-                                    {autoValues.claim_ncv}%
-                                  </span>
-                                </div>
-
-                                <div className="flex justify-between">
-                                  <span>Current Manual Entry</span>
-
-                                  <span className="font-bold text-red-700">
-                                    {masterData.claim_ncv}%
-                                  </span>
-                                </div>
-
-                              </div>
-
-                              <div className="mt-3 flex gap-2">
-
-                                <button
-                                  type="button"
-                                  onClick={() => revertToAuto("claim_ncv")}
-                                  className="flex-1 rounded bg-blue-600 py-1 text-[10px] font-bold text-white hover:bg-blue-700 cursor-pointer"
-                                >
-                                  Reset Auto ({autoValues.claim_ncv}%)
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => markAsNormal("claim_ncv")}
-                                  className="rounded bg-emerald-600 px-3 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
-                                >
-                                  Accept Normal
-                                </button>
-
-                              </div>
-
-                            </div>
-                          )}
-
-                      </div>
-
-                    </div>
-                  );
-                })()}
-
-                {/* Detention Days */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Detention Days
-                  </label>
-
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Detention Days</label>
                   <input
                     type="number"
                     name="detention_days"
-                    value={masterData.detention_days || ""}
+                    value={masterData.detention_days || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs font-bold text-center"
+                    placeholder="0"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-bold text-center focus:border-blue-500 disabled:bg-slate-100"
                   />
                 </div>
 
-                {/* Unloading Date */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Unloading Date
-                  </label>
-
+                {/* Arrival No. & Date * */}
+                <div className="flex items-center gap-2">
+                  <label className="w-28 font-semibold text-slate-700">Arrival No.</label>
+                  <SupabaseAutoCompleteInput
+                    label="Arrival No."
+                    name="arrival_no"
+                    fieldColumn="temporary_arrival_no"
+                    value={masterData.arrival_no}
+                    disabled={!isEditMode}
+                    onChange={handleMasterChange}
+                    onSelectOption={(_val, record) => {
+                      if (record) handleAutoFillFromVoucher(record);
+                    }}
+                    placeholder="Arrival Number"
+                    savedInspections={savedInspections}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
                   <input
                     type="date"
-                    name="unloading_date"
-                    value={masterData.unloading_date || ""}
+                    name="arrival_date"
+                    value={masterData.arrival_date || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium focus:border-blue-500 disabled:bg-slate-100"
                   />
                 </div>
-
-                {/* Mill P.O. No. */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Mill P.O. No.
-                  </label>
-
+                <div className="flex items-center gap-2">
+                  <label className="w-24 font-semibold text-slate-700">Challan Receipt No.</label>
                   <input
                     type="text"
                     name="mill_po_no"
-                    value={masterData.mill_po_no || ""}
+                    value={masterData.mill_po_no || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    placeholder="Receipt No."
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
                   />
+                  <button
+                    type="button"
+                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded shrink-0 transition-colors cursor-pointer"
+                  >
+                    Show Wt.
+                  </button>
                 </div>
 
-                {/* Mill P.O. Date */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold">
-                    Mill P.O. Date
-                  </label>
-
+                {/* Date & Way Bill No. */}
+                <div className="flex items-center gap-2">
+                  <label className="w-28 font-semibold text-slate-700">Date</label>
                   <input
                     type="date"
                     name="mill_po_date"
-                    value={masterData.mill_po_date || ""}
+                    value={masterData.mill_po_date || masterData.arrival_date || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-2 text-xs"
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
                   />
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ================= Special Print & Remarks ================= */}
-          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md">
-            <div className="p-5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
-
-                {/* MR. Spcl Print */}
-                <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-slate-700">
-                    MR. Spcl Print
-                  </label>
-
+                <div className="flex items-center gap-2 lg:col-span-2">
+                  <label className="w-24 font-semibold text-slate-700">Way Bill No.</label>
                   <input
                     type="text"
                     name="mr_spcl_print"
-                    value={masterData.mr_spcl_print || ""}
+                    value={masterData.mr_spcl_print || ''}
                     disabled={!isEditMode}
                     onChange={handleMasterChange}
-                    placeholder="Enter Special Print"
-                    className="flex-1 h-8 rounded-md border border-gray-300 px-3 text-xs font-semibold focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
+                    placeholder="Enter Way Bill No."
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
                   />
                 </div>
-
-                {/* Empty column for alignment */}
-                <div></div>
-
-                {/* Remarks */}
-                <div className="lg:col-span-2 flex items-start gap-3">
-                  <label className="w-40 text-[11px] font-bold text-slate-700 pt-2">
-                    Remarks
-                  </label>
-
-                  <textarea
-                    name="remarks"
-                    rows={3}
-                    value={masterData.remarks}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    placeholder="Inspection remarks, dampness details, parameters observation, log details..."
-                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold resize-none focus:outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 disabled:bg-slate-100"
-                  />
-                </div>
-
               </div>
             </div>
           </div>
 
-          {/* ========================= INSPECTION DETAILS ========================= */}
-          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden">
-
-            {/* Section Header */}
-            <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-[#174C2C] to-[#1F6B3D] border-b border-[#0F351E]">
-              <div>
-                <h2 className="text-sm font-bold text-white tracking-wide uppercase">
-                  Inspection Details
-                </h2>
-                <p className="text-[10px] text-emerald-100 mt-0.5">
-                  Grade • Area • Agency • Marka • Quantity • Challan Details
-                </p>
-              </div>
+          {/* CARD 2: LORRY & SETTLEMENT DETAILS */}
+          <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+            <div className="bg-slate-100 border-b border-slate-200 px-5 py-2.5 flex items-center gap-2">
+              <Truck className="w-4 h-4 text-blue-700" />
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                LORRY & SETTLEMENT DETAILS
+              </h2>
             </div>
-
-            {/* Table Body */}
-            <div className="p-4 bg-slate-50 overflow-x-auto">
-              {/* GRID TABLE */}
-              <table className="w-full border-collapse border border-slate-300 min-w-[1000px]">
-                <thead className="bg-[#0c48a1] text-white text-[10px] uppercase font-bold text-center  divide-y divide-blue-800">
-                  <tr className="divide-x divide-blue-800">
-                    <th rowSpan={2} className="px-1.5 py-1.5 w-12 text-center">
-                      Srl No.
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[90px] text-left"
+            <div className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-xs">
+                {/* Left Column */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label className="w-36 font-semibold text-slate-700">Lorry Returned <span className="text-red-500">*</span></label>
+                    <select
+                      name="lorry_returned"
+                      value={(masterData as any).lorry_returned || 'No'}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
                     >
-                      Arrival Grade
-                    </th>
-                    <th
-                      colSpan={2}
-                      className="px-2 py-1 text-center border-b border-blue-900"
-                    >
-                      Stock Grade
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[120px] text-left"
-                    >
-                      Area
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[120px] text-left"
-                    >
-                      Agency
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[120px] text-left"
-                    >
-                      Marka
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[85px] text-center"
-                    >
-                      Crop Year
-                    </th>
-                    <th
-                      rowSpan={2}
-                      className="px-2 py-1.5 min-w-[70px] text-left"
-                    >
-                      Lot
-                    </th>
-                    <th rowSpan={2} className="px-2 py-1.5 w-24 text-right">
-                      Quantity
-                    </th>
-                    <th rowSpan={2} className="px-2 py-1.5 w-20 text-center">
-                      Unit
-                    </th>
-                    <th rowSpan={2} className="px-2 py-1.5 w-28 text-right">
-                      Challan Gross Wt
-                    </th>
-                  </tr>
-                  <tr className="divide-x divide-blue-800 text-center">
-                    <th className="px-2 py-1 min-w-[75px] text-left">Code</th>
-                    <th className="px-2 py-1 min-w-[140px] text-left">Name</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-300 text-[11px] font-semibold">
-                  {detailsList.map((row, index) => (
-                    <tr
-                      key={index}
-                      className="hover:bg-blue-50/50 bg-white transition-colors"
-                    >
-                      {/* Srl No (with double click detection to trigger single record clear) */}
-                      <td
-                        onDoubleClick={() => handleRowDoubleClick(index)}
-                        className="px-1.5 py-1 text-center font-bold text-red-900 bg-red-50/60 border-r border-slate-300 cursor-cell "
-                        title="Double-click to clear row"
-                      >
-                        {row.srl_no}
-                      </td>
-
-                      {/* Arrival Grade */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          list="gradesList"
-                          value={row.arrival_grade}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "arrival_grade",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none font-bold text-slate-805 disabled:text-slate-500 uppercase"
-                          placeholder="Grade"
-                        />
-                      </td>
-
-                      {/* Stock Grade Code */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          list="gradesList"
-                          value={row.stock_grade_code}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "stock_grade_code",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none font-bold text-indigo-900 disabled:text-slate-500 uppercase"
-                          placeholder="Code"
-                        />
-                      </td>
-
-                      {/* Stock Grade Name */}
-                      <td className="p-1 border-r border-slate-300 bg-slate-50/60">
-                        <input
-                          type="text"
-                          value={row.stock_grade_name}
-                          readOnly
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-500 font-medium cursor-not-allowed uppercase"
-                          placeholder="Auto loaded grade name"
-                        />
-                      </td>
-
-                      {/* Area */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          list="areasList"
-                          value={row.area}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "area", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
-                          placeholder="Area block"
-                        />
-                      </td>
-
-                      {/* Agency */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          list="agenciesList"
-                          value={row.agency}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "agency", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
-                          placeholder="Select Agency"
-                        />
-                      </td>
-
-                      {/* Marka */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          list="markasList"
-                          value={row.marka}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "marka", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-slate-755 disabled:text-slate-500 uppercase"
-                          placeholder="Marka code"
-                        />
-                      </td>
-
-                      {/* Crop Year */}
-                      <td className="p-0.5 border-r border-slate-300">
-                        <input
-                          type="text"
-                          value={row.crop_year || ""}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "crop_year", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-[10px] font-bold text-center uppercase disabled:text-slate-500"
-                          placeholder="2026-27"
-                        />
-                      </td>
-
-                      {/* Lot */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="text"
-                          value={row.lot}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "lot", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-center uppercase"
-                          placeholder="Lot No"
-                        />
-                      </td>
-
-                      {/* Quantity */}
-                      <td className="p-1 border-r border-slate-300">
-                        <input
-                          type="number"
-                          value={row.quantity}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "quantity", e.target.value)
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-right font-bold text-slate-800 disabled:text-slate-500"
-                          placeholder="0"
-                        />
-                      </td>
-
-                      {/* Unit */}
-                      <td className="p-0.5 border-r border-slate-300">
-                        <select
-                          value={row.unit || 'BALES'}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(index, "unit", e.target.value)
-                          }
-                          className="w-full bg-transparent py-0.5 text-center font-bold text-[10px] cursor-pointer"
-                        >
-                          {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
-                            <option key={u} value={u}>{u}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* Challan Gross Wt. */}
-                      <td className="p-1">
-                        <input
-                          type="number"
-                          value={row.challan_gross_wt}
-                          disabled={!isEditMode}
-                          onChange={(e) =>
-                            handleDetailChange(
-                              index,
-                              "challan_gross_wt",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full bg-transparent px-1 py-0.5 outline-none text-right font-bold text-slate-800 disabled:text-slate-500"
-                          placeholder="0.0"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Note banner double-click cleared notification */}
-              <div className="bg-sky-50 border border-sky-300 px-3 py-2 text-stone-900 border-dashed text-[10.5px] mt-2 text-center rounded flex items-center justify-center gap-1.5">
-                <Info className="h-4 w-4 text-sky-600 animate-bounce" />
-                <span>
-                  To Delete a Single Record Double Click on Srl No. ( Inspection
-                  Details )
-                </span>
-                {isEditMode && (
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleAddNewGridRow}
-                      className="bg-[#0d47a1] hover:bg-blue-900 text-white px-2 py-0.5 text-[9.5px] uppercase font-black tracking-tight rounded border border-blue-600 active:scale-95 shadow-sm flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3 text-emerald-300" /> [+] Spawn Row
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteLastGridRow}
-                      className="bg-rose-800 hover:bg-rose-900 text-white px-2 py-0.5 text-[9.5px] uppercase font-black tracking-tight rounded border border-rose-900 active:scale-95 shadow-sm flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3 text-rose-200" /> [-] Delete Row
-                    </button>
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
+                    </select>
                   </div>
-                )}
+                  <div className="flex items-center gap-3">
+                    <label className="w-36 font-semibold text-slate-700">Unloading Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="unloading_date"
+                      value={masterData.unloading_date || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="w-36 font-semibold text-slate-700">Advance Amount <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      name="advance_amount"
+                      value={(masterData as any).advance_amount || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      placeholder="0.00"
+                      className="w-28 h-8 rounded border border-slate-300 px-2.5 font-semibold text-right disabled:bg-slate-100"
+                    />
+                    <span className="font-semibold text-slate-600 shrink-0 text-[11px]">On-Account Advance</span>
+                    <input
+                      type="number"
+                      name="on_account_advance_amount"
+                      value={(masterData as any).on_account_advance_amount || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      placeholder="Enter Amount"
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-semibold text-right disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-36 font-semibold text-slate-700">Arrival Remarks</label>
+                    <input
+                      type="text"
+                      name="arrival_remarks"
+                      value={(masterData as any).arrival_remarks || masterData.remarks || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      placeholder="Enter Arrival Remarks"
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-36 font-semibold text-slate-700">Consignment No. <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      name="consignment_no"
+                      value={(masterData as any).consignment_no || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      placeholder="Consignment Number"
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium uppercase disabled:bg-slate-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">Lorry Returned from Other Mill <span className="text-red-500">*</span></label>
+                    <select
+                      name="lorry_returned_other_mill"
+                      value={(masterData as any).lorry_returned_other_mill || 'No'}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    >
+                      <option value="No">No</option>
+                      <option value="Yes">Yes</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">M.R. Print Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="mr_print_date"
+                      value={(masterData as any).mr_print_date || masterData.mr_date || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">Sent For Settlement Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="sent_settlement_date"
+                      value={(masterData as any).sent_settlement_date || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">Settlement Amount <span className="text-red-500">*</span></label>
+                    <div className="flex-1 relative flex items-center">
+                      <span className="absolute left-2.5 text-slate-500 font-bold">₹</span>
+                      <input
+                        type="number"
+                        name="settlement_amount"
+                        value={(masterData as any).settlement_amount || ''}
+                        disabled={!isEditMode}
+                        onChange={handleMasterChange}
+                        placeholder="0.00"
+                        className="w-full h-8 rounded border border-slate-300 pl-7 pr-2.5 font-bold text-right disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">Consignment Date <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      name="consignment_date"
+                      value={(masterData as any).consignment_date || masterData.arrival_date || ''}
+                      disabled={!isEditMode}
+                      onChange={handleMasterChange}
+                      className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium disabled:bg-slate-100"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ======================= ACTION BUTTONS ======================= */}
-          <div className="max-w-7xl mx-auto w-full mt-5 rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-lg">
+          {/* CARD 3: INSPECTION DETAILS */}
+          <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+            <div className="bg-slate-100 border-b border-slate-200 px-5 py-2.5 flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-blue-700" />
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                INSPECTION DETAILS
+              </h2>
+            </div>
+            <div className="p-5 space-y-6">
+              {/* Commodity Spec Blocks (Side-by-Side Cards) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Spec Block 1 */}
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-blue-900">
+                    <span>1st Item Specification</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Grade</label>
+                      <input
+                        type="text"
+                        list="gradesList"
+                        value={detailsList[0]?.arrival_grade || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'arrival_grade', e.target.value)}
+                        placeholder="Grade"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 font-bold uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Area</label>
+                      <input
+                        type="text"
+                        list="areasList"
+                        value={detailsList[0]?.area || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'area', e.target.value)}
+                        placeholder="Area"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Agency</label>
+                      <input
+                        type="text"
+                        list="agenciesList"
+                        value={detailsList[0]?.agency || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'agency', e.target.value)}
+                        placeholder="Agency"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Marks</label>
+                      <input
+                        type="text"
+                        list="markasList"
+                        value={detailsList[0]?.marka || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'marka', e.target.value)}
+                        placeholder="Marka"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
+                      <input
+                        type="text"
+                        value={detailsList[0]?.crop_year || '2026-2027'}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'crop_year', e.target.value)}
+                        placeholder="2026-2027"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 text-center font-semibold disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Quantity</label>
+                      <input
+                        type="number"
+                        value={detailsList[0]?.quantity || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'quantity', e.target.value)}
+                        placeholder="0"
+                        className="w-20 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                      />
+                      <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                        {detailsList[0]?.unit || 'BALES'}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
+                      <input
+                        type="number"
+                        value={detailsList[0]?.challan_gross_wt || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(0, 'challan_gross_wt', e.target.value)}
+                        placeholder="0.00"
+                        className="w-32 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <div className="p-4 flex flex-wrap justify-center items-center gap-3">
+                {/* Spec Block 2 */}
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 font-bold text-blue-900">
+                    <span>2nd Item Specification</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Grade</label>
+                      <input
+                        type="text"
+                        list="gradesList"
+                        value={detailsList[1]?.arrival_grade || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'arrival_grade', e.target.value)}
+                        placeholder="Grade"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 font-bold uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Area</label>
+                      <input
+                        type="text"
+                        list="areasList"
+                        value={detailsList[1]?.area || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'area', e.target.value)}
+                        placeholder="Area"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Agency</label>
+                      <input
+                        type="text"
+                        list="agenciesList"
+                        value={detailsList[1]?.agency || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'agency', e.target.value)}
+                        placeholder="Agency"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Marks</label>
+                      <input
+                        type="text"
+                        list="markasList"
+                        value={detailsList[1]?.marka || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'marka', e.target.value)}
+                        placeholder="Marka"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 uppercase disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
+                      <input
+                        type="text"
+                        value={detailsList[1]?.crop_year || '2026-2027'}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'crop_year', e.target.value)}
+                        placeholder="2026-2027"
+                        className="flex-1 h-7 rounded border border-slate-300 px-2 text-center font-semibold disabled:bg-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="w-16 font-semibold text-slate-600">Quantity</label>
+                      <input
+                        type="number"
+                        value={detailsList[1]?.quantity || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'quantity', e.target.value)}
+                        placeholder="0"
+                        className="w-20 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                      />
+                      <span className="bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase">
+                        {detailsList[1]?.unit || 'BALES'}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
+                      <input
+                        type="number"
+                        value={detailsList[1]?.challan_gross_wt || ''}
+                        disabled={!isEditMode}
+                        onChange={(e) => handleDetailChange(1, 'challan_gross_wt', e.target.value)}
+                        placeholder="0.00"
+                        className="w-32 h-7 rounded border border-slate-300 px-2 font-bold text-right disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              {/* Add Button */}
+              {/* Quality Breakdown Matrix Table */}
+              <div className="overflow-x-auto border border-blue-200 rounded-lg shadow-sm bg-white">
+                <table className="w-full border-collapse text-xs">
+                  <thead className="bg-[#0e2a4a] text-white font-bold text-center">
+                    <tr>
+                      <th rowSpan={2} className="px-3 py-2 border-r border-blue-900 min-w-[140px] text-left">
+                        Item
+                      </th>
+                      <th colSpan={3} className="px-2 py-1.5 border-r border-blue-900 border-b border-blue-900 bg-blue-950">
+                        1st (From Final Arrival)
+                      </th>
+                      <th colSpan={3} className="px-2 py-1.5 border-r border-blue-900 border-b border-blue-900 bg-blue-900">
+                        2nd (From Final Arrival)
+                      </th>
+                      <th colSpan={3} className="px-2 py-1.5 border-r border-blue-900 border-b border-blue-900 bg-blue-950">
+                        3rd (From Final Arrival)
+                      </th>
+                      <th colSpan={3} className="px-2 py-1.5 border-b border-blue-900 bg-blue-900">
+                        4th (From Final Arrival)
+                      </th>
+                    </tr>
+                    <tr className="bg-[#133863] text-[10.5px] uppercase">
+                      <th className="px-2 py-1 border-r border-blue-800">Dept %</th>
+                      <th className="px-2 py-1 border-r border-blue-800">Claim %</th>
+                      <th className="px-2 py-1 border-r border-blue-900">Sett %</th>
+
+                      <th className="px-2 py-1 border-r border-blue-800">Dept %</th>
+                      <th className="px-2 py-1 border-r border-blue-800">Claim %</th>
+                      <th className="px-2 py-1 border-r border-blue-900">Sett %</th>
+
+                      <th className="px-2 py-1 border-r border-blue-800">Dept %</th>
+                      <th className="px-2 py-1 border-r border-blue-800">Claim %</th>
+                      <th className="px-2 py-1 border-r border-blue-900">Sett %</th>
+
+                      <th className="px-2 py-1 border-r border-blue-800">Dept %</th>
+                      <th className="px-2 py-1 border-r border-blue-800">Claim %</th>
+                      <th className="px-2 py-1">Sett %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 font-semibold text-slate-800">
+                    {/* Row 1: Grade Down */}
+                    <tr className="hover:bg-blue-50/50">
+                      <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-blue-900">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span>Grade Down</span>
+                      </td>
+                      {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
+                        <React.Fragment key={idx}>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+
+                    {/* Row 2: Moisture */}
+                    <tr className="hover:bg-blue-50/50">
+                      <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-cyan-900">
+                        <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                        <span>Moisture</span>
+                      </td>
+                      {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
+                        <React.Fragment key={idx}>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.dept || (idx === 0 ? masterData.actual_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.claim || (idx === 0 ? masterData.claim_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moisture', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+
+                    {/* Row 3: Dust */}
+                    <tr className="hover:bg-blue-50/50">
+                      <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-purple-900">
+                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                        <span>Dust</span>
+                      </td>
+                      {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
+                        <React.Fragment key={idx}>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.dept || (idx === 0 ? masterData.actual_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.claim || (idx === 0 ? masterData.claim_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('dust', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+
+                    {/* Row 4: Moc */}
+                    <tr className="hover:bg-blue-50/50">
+                      <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-emerald-900">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Moc</span>
+                      </td>
+                      {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
+                        <React.Fragment key={idx}>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('moc', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('moc', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moc', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+
+                    {/* Row 5: P.O Rate (Qtl) */}
+                    <tr className="hover:bg-blue-50/50">
+                      <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-amber-900">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span>P.O Rate (Qtl)</span>
+                      </td>
+                      {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
+                        <React.Fragment key={idx}>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Insp. Remarks */}
+              <div className="flex items-center gap-3">
+                <label className="w-28 font-bold text-slate-700 text-xs">Insp. Remarks</label>
+                <input
+                  type="text"
+                  name="insp_remarks"
+                  value={(masterData as any).insp_remarks || masterData.remarks || ''}
+                  disabled={!isEditMode}
+                  onChange={(e) => setMasterData(m => ({ ...m, insp_remarks: e.target.value, remarks: e.target.value }))}
+                  placeholder="Enter Inspection Remarks..."
+                  className="flex-1 h-9 rounded-lg border border-slate-300 px-3 text-xs font-semibold focus:border-blue-600 focus:outline-none disabled:bg-slate-100"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* BOTTOM ACTION BAR */}
+          <div className="bg-slate-100 rounded-xl border border-slate-300 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={handleAddAction}
-                disabled={loading}
-                className="min-w-[130px] bg-white hover:bg-emerald-50 border border-white text-emerald-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </button>
-
-              {/* Edit & Delete */}
-              {canEditOrDelete() && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleEditAction}
-                    disabled={loading || isEditMode}
-                    className="min-w-[130px] bg-white hover:bg-blue-50 border border-white text-blue-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDeleteAction}
-                    disabled={loading || !masterData.mr_no}
-                    className="min-w-[130px] bg-white hover:bg-rose-50 border border-white text-rose-700 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </button>
-                </>
-              )}
-
-              {/* Print */}
-              <button
-                type="button"
-                onClick={() => handlePreparePrintInspection(masterData)}
-                disabled={loading || !masterData.mr_no}
-                className="min-w-[140px] bg-white hover:bg-emerald-50 border border-white text-emerald-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-              >
-                <Printer className="h-4 w-4" />
-                Print Form
-              </button>
-
-              {/* Save */}
-              <button
-                type="button"
-                onClick={() => handleSaveAction()}
+                onClick={() => handleSaveAction(false)}
                 disabled={loading || !isEditMode}
-                className="min-w-[140px] bg-emerald-600 hover:bg-emerald-700 border border-emerald-800 text-white font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 cursor-pointer transition-all disabled:opacity-40 active:scale-95"
               >
-                <Save className="h-4 w-4" />
-                {loading ? "Processing..." : "Save"}
+                <Save className="w-4 h-4" />
+                <span>{loading ? "Saving..." : "Save"}</span>
               </button>
 
-              {/* Cancel */}
+              <button
+                type="button"
+                onClick={() => handleSaveAction(true)}
+                disabled={loading || !isEditMode}
+                className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 cursor-pointer transition-all disabled:opacity-40 active:scale-95"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Save as Draft</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleCancelAction}
                 disabled={loading}
-                className="min-w-[130px] bg-white hover:bg-amber-50 border border-white text-amber-700 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                className="px-6 py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 cursor-pointer transition-all disabled:opacity-40 active:scale-95"
               >
-                <X className="h-4 w-4" />
-                Cancel
+                <X className="w-4 h-4" />
+                <span>Cancel</span>
               </button>
 
-              {/* Exit */}
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("dashboard");
-                  loadSavedInspectionsList();
-                }}
-                disabled={loading}
-                className="min-w-[130px] bg-white hover:bg-slate-100 border border-white text-slate-800 font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-              >
-                <XCircle className="h-4 w-4 text-rose-600" />
-                Exit
-              </button>
+              {!isEditMode && (
+                <button
+                  type="button"
+                  onClick={handleEditAction}
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Edit Form</span>
+                </button>
+              )}
+            </div>
 
-              {/* View Register */}
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode("dashboard");
-                  loadSavedInspectionsList();
-                }}
-                disabled={loading}
-                className="min-w-[150px] bg-amber-500 hover:bg-amber-400 border border-amber-600 text-[#174C2C] font-bold text-[11px] px-6 py-2.5 rounded-lg shadow transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-              >
-                <Search className="h-4 w-4" />
-                View Register
-              </button>
-
+            {/* Right Metadata */}
+            <div className="flex items-center gap-6 text-xs text-slate-600 font-semibold">
+              <div className="flex items-center gap-1.5">
+                <User className="w-4 h-4 text-blue-600" />
+                <span>Created By :</span>
+                <span className="font-bold text-slate-800">{currentUser || 'System'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span>Created At :</span>
+                <span className="font-bold text-slate-800">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+              </div>
             </div>
           </div>
-
 
         </div>
 

@@ -101,10 +101,8 @@ export default function SaudaEntry({
         .sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
 
       const existingCount = realQD.length;
-      if (existingCount < 7) {
-        const remaining = 7 - existingCount;
-        const extra = Array.from({ length: remaining }, () => ({ quality: '', qty: 0, agency: '', marka: '', rs: 0 }));
-        copy.quality_details = [...realQD, ...extra];
+      if (existingCount < 1) {
+        copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0 }];
       } else {
         copy.quality_details = realQD;
       }
@@ -140,7 +138,7 @@ export default function SaudaEntry({
       superior_normal_marks: 'New (F2)',
       signature_url: '',
       status: 'pending',
-      quality_details: Array.from({ length: 7 }, () => ({ quality: '', qty: 0, agency: '', marka: '', rs: 0 }))
+      quality_details: [{ quality: '', qty: 0, agency: '', marka: '', rs: 0 }]
     };
   };
 
