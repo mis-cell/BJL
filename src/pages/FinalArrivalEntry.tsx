@@ -941,7 +941,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 1 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Temporary M.R No</span>
-            <input 
+            <input  id="formdata_temporary_arriva_944" name="formdata_temporary_arriva" aria-label="formdata temporary arriva"
               type="text" 
               value={formData.temporary_arrival_no || ''} 
               onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
@@ -959,7 +959,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               Fetch
             </button>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_temporary_arriva_962" name="formdata_temporary_arriva" aria-label="formdata temporary arriva"
               type="date" 
               value={formData.temporary_arrival_date || ''} 
               onChange={(e) => handleInputChange('temporary_arrival_date', e.target.value)}
@@ -970,14 +970,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 2 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival No</span>
-            <input 
+            <input  id="formdata_arrival_no_973" name="formdata_arrival_no" aria-label="formdata arrival no"
               type="text" 
               value={formData.arrival_no || ''} 
               onChange={(e) => handleInputChange('arrival_no', e.target.value)}
               className="w-[180px] h-6 bg-white border border-[#ac0000] px-2 outline-none font-mono text-xs text-red-900 font-bold focus:bg-amber-50"
             />
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_date_980" name="formdata_date" aria-label="formdata date"
               type="date" 
               value={formData.date || ''} 
               onChange={(e) => handleInputChange('date', e.target.value)}
@@ -986,7 +986,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '100px' }}>Mill P.O No.</span>
             <div className="relative flex items-center">
               <div className="relative w-[180px]">
-                <input 
+                <input  id="select_po_989" name="select_po" aria-label="-- SELECT PO --"
                   type="text" 
                   value={formData.po_no || ''} 
                   onChange={(e) => handleInputChange('po_no', e.target.value)}
@@ -1026,14 +1026,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_po_date_1029" name="formdata_po_date" aria-label="formdata po date"
               type="date" 
               value={formData.po_date || ''} 
               onChange={(e) => handleInputChange('po_date', e.target.value)}
               className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
             />
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>J.C.I</span>
-            <select 
+            <select  id="formdata_jci_no_1036" name="formdata_jci_no" aria-label="formdata jci no"
               value={formData.jci || 'No'} 
               onChange={(e) => handleInputChange('jci', e.target.value)}
               className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none font-sans text-xs text-slate-800 focus:border-black focus:bg-amber-50"
@@ -1046,7 +1046,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 3 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan Supplier</span>
-            <input 
+            <input  id="formdata_challan_supplier_1049" name="formdata_challan_supplier" aria-label="formdata challan supplier"
               type="text" 
               list="suppliers_dl"
               value={formData.challan_supplier || ''} 
@@ -1058,7 +1058,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 4 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Supplier</span>
-            <input 
+            <input  id="formdata_supplier_1061" name="formdata_supplier" aria-label="formdata supplier"
               type="text" 
               list="suppliers_dl"
               value={formData.supplier || ''} 
@@ -1070,7 +1070,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 5 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Broker</span>
-            <input 
+            <input  id="formdata_broker_1073" name="formdata_broker" aria-label="formdata broker"
               type="text" 
               list="brokers_dl"
               value={formData.broker || ''} 
@@ -1082,7 +1082,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 6 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Transporter Name</span>
-            <input 
+            <input  id="formdata_transporter_name_1085" name="formdata_transporter_name" aria-label="formdata transporter name"
               type="text" 
               value={formData.transporter_name || ''} 
               onChange={(e) => handleInputChange('transporter_name', e.target.value)}
@@ -1094,7 +1094,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan / Railway Receipt No.</span>
-              <input 
+              <input  id="formdata_challan_rr_no_1097" name="formdata_challan_rr_no" aria-label="formdata challan rr no"
                 type="text" 
                 value={formData.challan_rr_no || ''} 
                 onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
@@ -1102,7 +1102,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               />
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_challan_rr_date_1105" name="formdata_challan_rr_date" aria-label="formdata challan rr date"
               type="date" 
               value={formData.challan_rr_date || ''} 
               onChange={(e) => handleInputChange('challan_rr_date', e.target.value)}
@@ -1113,7 +1113,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 8 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Lorry Number</span>
-            <input 
+            <input  id="e_g_wb_25k_9901_1116" name="e_g_wb_25k_9901" aria-label="e.g. WB-25K-9901"
               type="text" 
               value={formData.lorry_number || ''} 
               onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
@@ -1121,7 +1121,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               className="w-[200px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 font-bold focus:border-black focus:bg-amber-50"
             />
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '80px' }}>Pan No</span>
-            <input 
+            <input  id="formdata_pan_no_1124" name="formdata_pan_no" aria-label="formdata pan no"
               type="text" 
               value={formData.pan_no || ''} 
               onChange={(e) => handleInputChange('pan_no', e.target.value.toUpperCase())}
@@ -1133,7 +1133,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Consignment Note No.</span>
-              <input 
+              <input  id="formdata_consignment_note_1136" name="formdata_consignment_note" aria-label="formdata consignment note"
                 type="text" 
                 value={formData.consignment_note_no || ''} 
                 onChange={(e) => handleInputChange('consignment_note_no', e.target.value)}
@@ -1141,7 +1141,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               />
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_consignment_note_1144" name="formdata_consignment_note" aria-label="formdata consignment note"
               type="date" 
               value={formData.consignment_note_date || ''} 
               onChange={(e) => handleInputChange('consignment_note_date', e.target.value)}
@@ -1153,7 +1153,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>D.I. No.</span>
-              <input 
+              <input  id="formdata_di_no_1156" name="formdata_di_no" aria-label="formdata di no"
                 type="text" 
                 value={formData.di_no || ''} 
                 onChange={(e) => handleInputChange('di_no', e.target.value)}
@@ -1161,7 +1161,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               />
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_di_date_1164" name="formdata_di_date" aria-label="formdata di date"
               type="date" 
               value={formData.di_date || ''} 
               onChange={(e) => handleInputChange('di_date', e.target.value)}
@@ -1173,7 +1173,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Invoice No.</span>
-              <input 
+              <input  id="formdata_invoice_no_1176" name="formdata_invoice_no" aria-label="formdata invoice no"
                 type="text" 
                 value={formData.invoice_no || ''} 
                 onChange={(e) => handleInputChange('invoice_no', e.target.value)}
@@ -1181,7 +1181,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               />
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_invoice_date_1184" name="formdata_invoice_date" aria-label="formdata invoice date"
               type="date" 
               value={formData.invoice_date || ''} 
               onChange={(e) => handleInputChange('invoice_date', e.target.value)}
@@ -1192,7 +1192,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 12 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>P.T.F</span>
-            <select 
+            <select  id="select_1195" name="select" aria-label="select"
               onChange={(e) => {
                 handleInputChange('ptf', e.target.value);
               }}
@@ -1202,7 +1202,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <option value="Yes">Yes</option>
             </select>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '140px' }}>Lorry Returned</span>
-            <select 
+            <select  id="formdata_lorry_returned_n_1205" name="formdata_lorry_returned_n" aria-label="formdata lorry returned n"
               value={formData.lorry_returned || 'No'} 
               onChange={(e) => handleInputChange('lorry_returned', e.target.value)}
               className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
@@ -1211,7 +1211,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <option value="Yes">Yes</option>
             </select>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '240px' }}>Lorry Returned from Other Mill</span>
-            <select 
+            <select  id="formdata_lorry_returned_o_1214" name="formdata_lorry_returned_o" aria-label="formdata lorry returned o"
               value={formData.lorry_returned_other_mill || 'No'} 
               onChange={(e) => handleInputChange('lorry_returned_other_mill', e.target.value)}
               className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
@@ -1224,13 +1224,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 13 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival Area</span>
-            <input 
+            <input  id="formdata_arrival_area_cod_1227" name="formdata_arrival_area_cod" aria-label="formdata arrival area cod"
               type="text" 
               value={formData.arrival_area_code || ''} 
               onChange={(e) => handleAreaCodeChange(e.target.value)}
               className="bg-white border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center"
             />
-            <input 
+            <input  id="search_choose_transit_are_1233" name="search_choose_transit_are" aria-label="SEARCH / CHOOSE TRANSIT AREA"
               type="text" 
               list="areas_dl"
               value={formData.arrival_area_name || ''} 
@@ -1239,14 +1239,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none text-xs font-bold text-slate-800 uppercase focus:border-black focus:bg-amber-50"
             />
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Unit</span>
-            <input 
+            <input  id="formdata_unit_code_1242" name="formdata_unit_code" aria-label="formdata unit code"
               type="text" 
               value={formData.unit_code || ''} 
               onChange={(e) => handleUnitCodeChange(e.target.value)}
               className="border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center bg-slate-50"
               readOnly
             />
-            <select 
+            <select  id="formdata_unit_name_bales_1249" name="formdata_unit_name_bales" aria-label="formdata unit name bales"
               value={formData.unit_name || 'BALES'} 
               onChange={(e) => handleUnitNameChange(e.target.value)}
               className="border border-[#808080] px-1 h-6 outline-none text-xs w-[120px] bg-white font-bold cursor-pointer"
@@ -1261,7 +1261,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Way Bill No.</span>
-              <input 
+              <input  id="formdata_way_bill_no_1264" name="formdata_way_bill_no" aria-label="formdata way bill no"
                 type="text" 
                 value={formData.way_bill_no || ''} 
                 onChange={(e) => handleInputChange('way_bill_no', e.target.value)}
@@ -1269,7 +1269,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               />
             </div>
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input 
+            <input  id="formdata_way_bill_date_1272" name="formdata_way_bill_date" aria-label="formdata way bill date"
               type="date" 
               value={formData.way_bill_date || ''} 
               onChange={(e) => handleInputChange('way_bill_date', e.target.value)}
@@ -1280,7 +1280,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Row 15 */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>A.P.M.C Fees</span>
-            <input 
+            <input  id="formdata_apmc_fees_1283" name="formdata_apmc_fees" aria-label="formdata apmc fees"
               type="number" 
               step="any"
               value={formData.apmc_fees || ''} 
@@ -1289,7 +1289,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             />
             
             <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '80px' }}>Remarks</span>
-            <input 
+            <input  id="formdata_remarks_1292" name="formdata_remarks" aria-label="formdata remarks"
               type="text" 
               value={formData.remarks || ''} 
               onChange={(e) => handleInputChange('remarks', e.target.value)}
@@ -1355,7 +1355,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   {/* Receipt Grade Code */}
                   <td className="border-r border-slate-300">
                     <select
-                      value={row.receipt_grade_code}
+ id="row_receipt_grade_code_1357" name="row_receipt_grade_code" aria-label="row receipt grade code"                      value={row.receipt_grade_code}
                       onChange={(e) => handleRowChange(index, 'receipt_grade_code', e.target.value)}
                       className="w-full h-full bg-slate-50 border-0 outline-none px-1 text-center font-bold text-slate-800 text-[11px]"
                     >
@@ -1368,7 +1368,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Receipt Grade Name */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_receipt_grade_name_1371" name="row_receipt_grade_name" aria-label="row receipt grade name"
                       type="text"
                       list="grades_dl"
                       value={row.receipt_grade_name}
@@ -1392,7 +1392,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Crop Year */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_crop_year_1395" name="row_crop_year" aria-label="row crop year"
                       type="text"
                       value={row.crop_year}
                       onChange={(e) => handleRowChange(index, 'crop_year', e.target.value)}
@@ -1402,7 +1402,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Challan Grade Name */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_challan_grade_name_1405" name="row_challan_grade_name" aria-label="row challan grade name"
                       type="text"
                       value={row.challan_grade_name}
                       onChange={(e) => handleRowChange(index, 'challan_grade_name', e.target.value.toUpperCase())}
@@ -1412,7 +1412,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Agency Code */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_agency_code_1415" name="row_agency_code" aria-label="row agency code"
                       type="text"
                       value={row.agency_code || ''}
                       onChange={(e) => {
@@ -1434,7 +1434,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Agency Name */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_agency_name_1437" name="row_agency_name" aria-label="row agency name"
                       type="text"
                       list="agencies_dl"
                       value={row.agency_name || ''}
@@ -1457,7 +1457,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Challan Marka Code */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_challan_marka_code_1460" name="row_challan_marka_code" aria-label="row challan marka code"
                       type="text"
                       value={row.challan_marka_code || ''}
                       onChange={(e) => {
@@ -1479,7 +1479,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Challan Marka Name */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_challan_marka_name_1482" name="row_challan_marka_name" aria-label="row challan marka name"
                       type="text"
                       list="markas_dl"
                       value={row.challan_marka_name || ''}
@@ -1502,7 +1502,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Marks (Phota) */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_marks_phota_1505" name="row_marks_phota" aria-label="row marks phota"
                       type="text"
                       value={row.marks_phota || ''}
                       onChange={(e) => handleRowChange(index, 'marks_phota', e.target.value)}
@@ -1512,7 +1512,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Quantity Chln. */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_quantity_chln_undefin_1515" name="row_quantity_chln_undefin" aria-label="row quantity chln undefin"
                       type="number"
                       step="1"
                       value={row.quantity_chln !== undefined ? row.quantity_chln : 0}
@@ -1523,7 +1523,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Quantity Rcpt. */}
                   <td className="border-r border-slate-300">
-                    <input 
+                    <input  id="row_quantity_rcpt_undefin_1526" name="row_quantity_rcpt_undefin" aria-label="row quantity rcpt undefin"
                       type="number"
                       step="1"
                       value={row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0}
@@ -1535,7 +1535,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   {/* Unit */}
                   <td className="border-r border-slate-300">
                     <select
-                      value={row.unit || 'BALES'}
+ id="row_unit_bales_1537" name="row_unit_bales" aria-label="row unit bales"                      value={row.unit || 'BALES'}
                       onChange={(e) => handleRowChange(index, 'unit', e.target.value)}
                       className="w-full h-full bg-white border-0 outline-none px-1 text-[10px] uppercase font-bold text-slate-700 cursor-pointer"
                     >
@@ -1547,7 +1547,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
                   {/* Remarks */}
                   <td>
-                    <input 
+                    <input  id="row_remarks_1550" name="row_remarks" aria-label="row remarks"
                       type="text"
                       value={row.remarks}
                       onChange={(e) => handleRowChange(index, 'remarks', e.target.value)}
@@ -1583,7 +1583,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
                   Challan Material Weight (M.T): <span className="text-red-600 font-bold">*</span>
                 </span>
-                <input 
+                <input  id="formdata_challan_material_1586" name="formdata_challan_material" aria-label="formdata challan material"
                   type="number"
                   step="any"
                   value={formData.challan_material_weight || 0}
@@ -1596,7 +1596,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
                   Supplier Net Weight (M.Ton): <span className="text-red-600 font-bold">*</span>
                 </span>
-                <input 
+                <input  id="formdata_supplier_net_wei_1599" name="formdata_supplier_net_wei" aria-label="formdata supplier net wei"
                   type="number"
                   step="any"
                   value={formData.supplier_net_weight || 0}
@@ -1609,7 +1609,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
                   Electronic Weighbridge Net: <span className="text-red-600 font-bold">*</span>
                 </span>
-                <input 
+                <input  id="formdata_electronic_net_w_1612" name="formdata_electronic_net_w" aria-label="formdata electronic net w"
                   type="number"
                   step="any"
                   value={formData.electronic_net_weight || 0}
@@ -1627,7 +1627,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             <div className="flex flex-col gap-1.5 mt-1">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Actual Gross Weight (Lorry+RAW):</span>
-                <input 
+                <input  id="formdata_actual_gross_wei_1630" name="formdata_actual_gross_wei" aria-label="formdata actual gross wei"
                   type="number"
                   step="any"
                   value={formData.actual_gross_weight || ''}
@@ -1637,7 +1637,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Supplier Challan Gross (M.Ton):</span>
-                <input 
+                <input  id="formdata_supplier_challan_1640" name="formdata_supplier_challan" aria-label="formdata supplier challan"
                   type="number"
                   step="any"
                   value={formData.supplier_challan_gross || ''}
@@ -1647,7 +1647,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Electronic Gross Weight Scale:</span>
-                <input 
+                <input  id="formdata_electronic_gross_1650" name="formdata_electronic_gross" aria-label="formdata electronic gross"
                   type="number"
                   step="any"
                   value={formData.electronic_gross_weight || ''}
@@ -1657,7 +1657,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-[#ac0000] w-52">Weight Reduced (Moisture Red M.T):</span>
-                <input 
+                <input  id="formdata_weight_reduced_1660" name="formdata_weight_reduced" aria-label="formdata weight reduced"
                   type="number"
                   step="any"
                   value={formData.weight_reduced || ''}
@@ -1674,7 +1674,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             <div className="flex flex-col gap-1.5 mt-1">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Actual Tare Weight (Empty Lorry):</span>
-                <input 
+                <input  id="formdata_actual_tare_weig_1677" name="formdata_actual_tare_weig" aria-label="formdata actual tare weig"
                   type="number"
                   step="any"
                   value={formData.actual_tare_weight || ''}
@@ -1684,7 +1684,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Supplier Tare Weight (M.Ton):</span>
-                <input 
+                <input  id="formdata_supplier_tare_we_1687" name="formdata_supplier_tare_we" aria-label="formdata supplier tare we"
                   type="number"
                   step="any"
                   value={formData.supplier_tare_weight || ''}
@@ -1694,7 +1694,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-gray-800 w-52">Electronic Tare Weight Scale:</span>
-                <input 
+                <input  id="formdata_electronic_tare__1697" name="formdata_electronic_tare_" aria-label="formdata electronic tare "
                   type="number"
                   step="any"
                   value={formData.electronic_tare_weight || ''}

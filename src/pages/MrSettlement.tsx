@@ -2029,7 +2029,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             {/* Dashboard Controls */}
             <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2 items-center flex-wrap shadow-sm">
               <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[280px]">
-                <input 
+                <input  id="query_by_m_r_no_supplier__2032" name="query_by_m_r_no_supplier_" aria-label="Query by M.R. No., Supplier Name, Broker, P.O. No..."
                   className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold" 
                   placeholder="Query by M.R. No., Supplier Name, Broker, P.O. No..."
                   value={searchFilter}
@@ -2235,7 +2235,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 {/* PO Number Select */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
                   <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight">Final P.O:</span>
-                  <select 
+                  <select  id="selectedpono_2238" name="selectedpono" aria-label="selectedpono"
                     className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-blue-800 border-l border-gray-300 w-[240px]"
                     value={selectedPoNo}
                     onChange={(e) => handlePoNoSelection(e.target.value)}
@@ -2255,7 +2255,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 {/* MR No dropdown */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
                   <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight">Final M.R:</span>
-                  <select 
+                  <select  id="masterdata_mr_no_2258" name="masterdata_mr_no" aria-label="masterdata mr no"
                     className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[190px]"
                     value={masterData.mr_no}
                     onChange={(e) => {
@@ -2432,7 +2432,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1">Format: Numeric dec. Jute price per 1000 kg (Metric Ton) used to compute the value of the material received.</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="masterdata_summary_rate_q_2435" name="masterdata_summary_rate_q" aria-label="masterdata summary rate q"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-900"
@@ -2442,8 +2442,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Rate aff. Cd. Cl</label>
-                      <input 
+                      <label htmlFor="rate_aff_cd_cl_2446" className="text-gray-500 uppercase font-semibold text-[8.5px]">Rate aff. Cd. Cl</label>
+                      <input  id="rate_aff_cd_cl_2446" name="rate_aff_cd_cl" aria-label="Rate aff. Cd. Cl"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
                         value={masterData.summary_rate_aff_cd_cl || ''} 
@@ -2486,7 +2486,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           </div>
                         )}
                       </div>
-                      <input 
+                      <input  id="masterdata_summary_delive_2489" name="masterdata_summary_delive" aria-label="masterdata summary delive"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-rose-800"
@@ -2496,8 +2496,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Claim (KG)</label>
-                      <input 
+                      <label htmlFor="moisture_claim_kg_2500" className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Claim (KG)</label>
+                      <input  id="moisture_claim_kg_2500" name="moisture_claim_kg" aria-label="Moisture Claim (KG)"
                         type="number" 
                         step="0.001"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold"
@@ -2507,8 +2507,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Amount</label>
-                      <input 
+                      <label htmlFor="moisture_amount_2511" className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Amount</label>
+                      <input  id="moisture_amount_2511" name="moisture_amount" aria-label="Moisture Amount"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
@@ -2518,8 +2518,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-bold text-[8.5px] text-indigo-900">Material Value</label>
-                      <input 
+                      <label htmlFor="material_value_2522" className="text-gray-500 uppercase font-bold text-[8.5px] text-indigo-900">Material Value</label>
+                      <input  id="material_value_2522" name="material_value" aria-label="Material Value"
                         type="number" 
                         disabled
                         className="bg-slate-150 border border-gray-400 p-1 text-right font-mono font-black text-indigo-950"
@@ -2538,7 +2538,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">Total Premium Amt: ₹{((masterData.summary_premium_amount || 0) * (masterData.summary_less_amount || 0)).toFixed(2)}</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="masterdata_summary_premiu_2541" name="masterdata_summary_premiu" aria-label="masterdata summary premiu"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-emerald-700"
@@ -2548,8 +2548,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-bold text-[8.5px] text-red-800">Addtl Quality claims in Quntl</label>
-                      <input 
+                      <label htmlFor="addtl_quality_claims_in_q_2552" className="text-gray-500 uppercase font-bold text-[8.5px] text-red-800">Addtl Quality claims in Quntl</label>
+                      <input  id="addtl_quality_claims_in_q_2552" name="addtl_quality_claims_in_q" aria-label="Addtl Quality claims in Quntl"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-800"
                         value={masterData.summary_less_amount || ''} 
@@ -2558,8 +2558,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-red-800 uppercase font-bold text-[8.5px]">Deduction Type</label>
-                      <select 
+                      <label htmlFor="deduction_type_2562" className="text-red-800 uppercase font-bold text-[8.5px]">Deduction Type</label>
+                      <select  id="deduction_type_2562" name="deduction_type" aria-label="Deduction Type"
                         className="bg-white border border-gray-400 p-1 font-sans text-[10px] font-bold text-slate-800"
                         value={masterData.summary_deduction_type || ''}
                         onChange={(e) => {
@@ -2587,8 +2587,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Rate (₹)</label>
-                      <input 
+                      <label htmlFor="deduction_rate_2591" className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Rate (₹)</label>
+                      <input  id="deduction_rate_2591" name="deduction_rate" aria-label="Deduction Rate (₹)"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-800"
@@ -2607,8 +2607,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Qty/Units</label>
-                      <input 
+                      <label htmlFor="deduction_qty_units_2611" className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Qty/Units</label>
+                      <input  id="deduction_qty_units_2611" name="deduction_qty_units" aria-label="Deduction Qty/Units"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-800"
@@ -2627,8 +2627,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-red-700 uppercase font-bold text-[8.5px]">Deduction Amount (-)</label>
-                      <input 
+                      <label htmlFor="deduction_amount_2631" className="text-red-700 uppercase font-bold text-[8.5px]">Deduction Amount (-)</label>
+                      <input  id="deduction_amount_2631" name="deduction_amount" aria-label="Deduction Amount (-)"
                         type="number" 
                         step="0.01"
                         className="bg-red-50 border border-gray-400 p-1 text-right font-mono font-black text-red-700"
@@ -2645,8 +2645,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 p-1 text-[10px] font-bold">
                     
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8.5px]">Material Value</label>
-                      <input 
+                      <label htmlFor="material_value_2649" className="text-gray-500 text-[8.5px]">Material Value</label>
+                      <input  id="material_value_2649" name="material_value" aria-label="Material Value"
                         type="number" 
                         disabled
                         className="bg-slate-150 border border-gray-400 p-1 text-right font-mono text-indigo-900"
@@ -2655,8 +2655,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-green-700 text-[8.5px]">Add Amt(+)</label>
-                      <input 
+                      <label htmlFor="add_amt_2659" className="text-green-700 text-[8.5px]">Add Amt(+)</label>
+                      <input  id="add_amt_2659" name="add_amt" aria-label="Add Amt(+)"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono text-green-700"
                         value={masterData.val_add_amt || ''} 
@@ -2665,8 +2665,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">Val Less Amt(-)</label>
-                      <input 
+                      <label htmlFor="val_less_amt_2669" className="text-slate-500 text-[8.5px]">Val Less Amt(-)</label>
+                      <input  id="val_less_amt_2669" name="val_less_amt" aria-label="Val Less Amt(-)"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.val_less_amt || ''} 
@@ -2685,7 +2685,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">= ₹{(masterData.val_premium_amt || 0).toFixed(2)}</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="masterdata_val_premium_am_2688" name="masterdata_val_premium_am" aria-label="masterdata val premium am"
                         type="number" 
                         step="0.01"
                         className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-emerald-700"
@@ -2695,8 +2695,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-red-700 text-[8.5px]">Ded Claim Total (-)</label>
-                      <input 
+                      <label htmlFor="ded_claim_total_2699" className="text-red-700 text-[8.5px]">Ded Claim Total (-)</label>
+                      <input  id="ded_claim_total_2699" name="ded_claim_total" aria-label="Ded Claim Total (-)"
                         type="number" 
                         disabled 
                         className="bg-red-50 border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
@@ -2705,8 +2705,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">Qty Claim</label>
-                      <input 
+                      <label htmlFor="qty_claim_2709" className="text-slate-500 text-[8.5px]">Qty Claim</label>
+                      <input  id="qty_claim_2709" name="qty_claim" aria-label="Qty Claim"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.val_qty_claim || ''} 
@@ -2715,8 +2715,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-slate-500 text-[8.5px]">Ex/Short (-)</label>
-                      <input 
+                      <label htmlFor="ex_short_2719" className="text-slate-500 text-[8.5px]">Ex/Short (-)</label>
+                      <input  id="ex_short_2719" name="ex_short" aria-label="Ex/Short (-)"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.val_ex_short || ''} 
@@ -2732,8 +2732,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 p-1 text-[10px] font-bold">
                     
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">Less Adv (-)</label>
-                      <input 
+                      <label htmlFor="less_adv_2736" className="text-slate-500 text-[8.5px]">Less Adv (-)</label>
+                      <input  id="less_adv_2736" name="less_adv" aria-label="Less Adv (-)"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono text-red-800"
                         value={masterData.final_less_adv || ''} 
@@ -2742,8 +2742,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">On/Ac Adv</label>
-                      <input 
+                      <label htmlFor="on_ac_adv_2746" className="text-slate-500 text-[8.5px]">On/Ac Adv</label>
+                      <input  id="on_ac_adv_2746" name="on_ac_adv" aria-label="On/Ac Adv"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.final_on_ac_adv || ''} 
@@ -2752,8 +2752,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">APMC Fees</label>
-                      <input 
+                      <label htmlFor="apmc_fees_2756" className="text-slate-500 text-[8.5px]">APMC Fees</label>
+                      <input  id="apmc_fees_2756" name="apmc_fees" aria-label="APMC Fees"
                         type="number" 
                         disabled
                         className="bg-slate-100 border border-gray-400 p-1 text-right font-mono font-bold text-slate-900"
@@ -2762,8 +2762,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8.5px]">C.S.T. (Tax) %</label>
-                      <input 
+                      <label htmlFor="c_s_t_tax_2766" className="text-slate-500 text-[8.5px]">C.S.T. (Tax) %</label>
+                      <input  id="c_s_t_tax_2766" name="c_s_t_tax" aria-label="C.S.T. (Tax) %"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono text-blue-900"
                         placeholder="e.g. 5 for 5%"
@@ -2794,8 +2794,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col">
-                        <label className="text-[8.5px]">Bill No.</label>
-                        <input 
+                        <label htmlFor="bill_no_2798" className="text-[8.5px]">Bill No.</label>
+                        <input  id="bill_no_2798" name="bill_no" aria-label="Bill No."
                           type="text" 
                           className="bg-white border border-gray-400 p-1 font-mono uppercase font-black"
                           value={masterData.payable_bill_no || ''} 
@@ -2803,8 +2803,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         />
                       </div>
                       <div className="flex flex-col">
-                        <label className="text-[8.5px]">Bill Date</label>
-                        <input 
+                        <label htmlFor="bill_date_2807" className="text-[8.5px]">Bill Date</label>
+                        <input  id="bill_date_2807" name="bill_date" aria-label="Bill Date"
                           type="date" 
                           className="bg-white border border-gray-400 p-1 font-mono text-center text-[10px]"
                           value={masterData.payable_bill_date || ''} 
@@ -2851,8 +2851,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     )}
                     
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase font-black text-rose-900">M.R. No (From Final M.R)</label>
-                      <select 
+                      <label htmlFor="m_r_no_from_final_m_r_2855" className="text-gray-500 text-[8px] uppercase font-black text-rose-900">M.R. No (From Final M.R)</label>
+                      <select  id="m_r_no_from_final_m_r_2855" name="m_r_no_from_final_m_r" aria-label="M.R. No (From Final M.R)"
                         className="bg-white border border-gray-400 p-1 font-mono font-bold text-rose-800 outline-none text-[11px] cursor-pointer"
                         value={masterData.mr_no} 
                         onChange={(e) => handleProceedWithMrNo(e.target.value)}
@@ -2878,8 +2878,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">Date</label>
-                      <input 
+                      <label htmlFor="date_2882" className="text-gray-500 text-[8px] uppercase">Date</label>
+                      <input  id="date_2882" name="date" aria-label="Date"
                         type="date" 
                         className="bg-white border border-gray-400 p-1 font-mono text-center"
                         value={masterData.sett_date} 
@@ -2888,8 +2888,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-gray-500 text-[8px] uppercase">P.O. Type</label>
-                      <input 
+                      <label htmlFor="p_o_type_2892" className="text-gray-500 text-[8px] uppercase">P.O. Type</label>
+                      <input  id="p_o_type_2892" name="p_o_type" aria-label="P.O. Type"
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-sans "
                         placeholder="e.g. MILL_PO"
@@ -2899,8 +2899,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-gray-500 text-[8px] uppercase">Broker Name</label>
-                      <input 
+                      <label htmlFor="broker_name_2903" className="text-gray-500 text-[8px] uppercase">Broker Name</label>
+                      <input  id="broker_name_2903" name="broker_name" aria-label="Broker Name"
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-sans text-slate-800"
                         value={masterData.broker} 
@@ -2909,8 +2909,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-gray-500 text-[8px] uppercase">Suppler Name</label>
-                      <input 
+                      <label htmlFor="suppler_name_2913" className="text-gray-500 text-[8px] uppercase">Suppler Name</label>
+                      <input  id="suppler_name_2913" name="suppler_name" aria-label="Suppler Name"
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-sans text-slate-800"
                         value={masterData.supplier} 
@@ -2919,8 +2919,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-gray-500 text-[8px] uppercase">Chn..Supplier</label>
-                      <input 
+                      <label htmlFor="chn_supplier_2923" className="text-gray-500 text-[8px] uppercase">Chn..Supplier</label>
+                      <input  id="chn_supplier_2923" name="chn_supplier" aria-label="Chn..Supplier"
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-sans"
                         value={masterData.chn_supplier} 
@@ -2929,8 +2929,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase font-black text-indigo-900">P.O. No. (From Final P.O)</label>
-                      <select 
+                      <label htmlFor="p_o_no_from_final_p_o_2933" className="text-gray-500 text-[8px] uppercase font-black text-indigo-900">P.O. No. (From Final P.O)</label>
+                      <select  id="p_o_no_from_final_p_o_2933" name="p_o_no_from_final_p_o" aria-label="P.O. No. (From Final P.O)"
                         className="bg-white border border-gray-400 p-1 font-mono font-bold text-indigo-900 outline-none text-[11px] cursor-pointer"
                         value={masterData.po_no} 
                         onChange={(e) => handlePoNoSelection(e.target.value)}
@@ -2948,8 +2948,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">P.O. Date</label>
-                      <input 
+                      <label htmlFor="p_o_date_2952" className="text-gray-500 text-[8px] uppercase">P.O. Date</label>
+                      <input  id="p_o_date_2952" name="p_o_date" aria-label="P.O. Date"
                         type="date" 
                         disabled
                         className="bg-slate-150 border border-gray-400 p-1 font-mono text-center"
@@ -2958,8 +2958,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">Lorry Number</label>
-                      <input 
+                      <label htmlFor="lorry_number_2962" className="text-gray-500 text-[8px] uppercase">Lorry Number</label>
+                      <input  id="lorry_number_2962" name="lorry_number" aria-label="Lorry Number"
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-mono uppercase"
                         value={masterData.lorry_number} 
@@ -2968,8 +2968,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">Detention Days</label>
-                      <input 
+                      <label htmlFor="detention_days_2972" className="text-gray-500 text-[8px] uppercase">Detention Days</label>
+                      <input  id="detention_days_2972" name="detention_days" aria-label="Detention Days"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 font-mono text-center"
                         value={masterData.detention_days} 
@@ -2978,8 +2978,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">Arrival No.</label>
-                      <input 
+                      <label htmlFor="arrival_no_2982" className="text-gray-500 text-[8px] uppercase">Arrival No.</label>
+                      <input  id="arrival_no_2982" name="arrival_no" aria-label="Arrival No."
                         type="text" 
                         className="bg-white border border-gray-400 p-1 font-mono"
                         value={masterData.arrival_no} 
@@ -2988,8 +2988,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label className="text-gray-500 text-[8px] uppercase">Arrival Date</label>
-                      <input 
+                      <label htmlFor="arrival_date_2992" className="text-gray-500 text-[8px] uppercase">Arrival Date</label>
+                      <input  id="arrival_date_2992" name="arrival_date" aria-label="Arrival Date"
                         type="date" 
                         className="bg-white border border-gray-400 p-1 font-mono text-center"
                         value={masterData.arrival_date} 
@@ -2997,8 +2997,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       />
                     </div>
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8px] uppercase">Actual APMC Fees</label>
-                      <input 
+                      <label htmlFor="actual_apmc_fees_3001" className="text-slate-500 text-[8px] uppercase">Actual APMC Fees</label>
+                      <input  id="actual_apmc_fees_3001" name="actual_apmc_fees" aria-label="Actual APMC Fees"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.actual_apmc_fees || ''} 
@@ -3006,8 +3006,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       />
                     </div>
                     <div className="flex flex-col">
-                      <label className="text-slate-500 text-[8px] uppercase">Arival APMC Fees</label>
-                      <input 
+                      <label htmlFor="arival_apmc_fees_3010" className="text-slate-500 text-[8px] uppercase">Arival APMC Fees</label>
+                      <input  id="arival_apmc_fees_3010" name="arival_apmc_fees" aria-label="Arival APMC Fees"
                         type="number" 
                         className="bg-white border border-gray-400 p-1 text-right font-mono"
                         value={masterData.arival_apmc_fees || ''} 
@@ -3016,8 +3016,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col col-span-2">
-                      <label className="text-slate-500 text-[8px] uppercase">Remarks / Narration</label>
-                      <textarea 
+                      <label htmlFor="remarks_narration_3020" className="text-slate-500 text-[8px] uppercase">Remarks / Narration</label>
+                      <textarea  id="remarks_narration_3020" name="remarks_narration" aria-label="Remarks / Narration"
                         className="bg-white border border-gray-400 p-1 text-xs font-sans h-[35px]"
                         value={masterData.remarks}
                         onChange={(e) => handleMasterChange('remarks', e.target.value)}
@@ -3026,7 +3026,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     {/* Auto-H.O Settlement layout check checkbox */}
                     <div className="flex items-center gap-2 border border-dashed border-gray-400 bg-[#e1dfda] px-2 py-1  col-span-2">
-                      <input 
+                      <input  name="checkbox" aria-label="checkbox"
                         type="checkbox"
                         id="auto_ho_id"
                         checked={masterData.auto_ho_settlement}
@@ -3048,7 +3048,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1">Format: Metric Tons (MT). Weights from supplier invoice / challan form. Must be numeric.</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="0_000_3051" name="0_000" aria-label="0.000"
                         type="number" 
                         step="0.001"
                         placeholder="0.000"
@@ -3067,7 +3067,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1">Format: Metric Tons (MT). Net transit weights declared by the dispatching supplier.</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="0_000_3070" name="0_000" aria-label="0.000"
                         type="number" 
                         step="0.001"
                         placeholder="0.000"
@@ -3086,7 +3086,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1">Format: Metric Tons (MT). Official weighbridge weight recorded at the jute mill gate.</p>
                         </div>
                       </div>
-                      <input 
+                      <input  id="0_000_3089" name="0_000" aria-label="0.000"
                         type="number" 
                         step="0.001"
                         placeholder="0.000"
@@ -3105,7 +3105,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1">Format: ENUM values ("Pending", "Partially Paid", "Approved", "Cleared") matching treasury statuses.</p>
                         </div>
                       </div>
-                      <select 
+                      <select  id="masterdata_payment_status_3108" name="masterdata_payment_status" aria-label="masterdata payment status"
                         className="bg-rose-50 border border-rose-300 p-1 text-xs font-bold text-rose-900"
                         value={masterData.payment_status || 'Pending'} 
                         onChange={(e) => handleMasterChange('payment_status', e.target.value)}
@@ -3127,21 +3127,21 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     <span>Wt. / Ded.Wt. (M.Ton.):</span>
                   </div>
                   <div className="flex gap-2">
-                    <input 
+                    <input  id="0_000_3130" name="0_000" aria-label="0.000"
                       type="number" 
                       placeholder="0.000"
                       className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
                       value={masterData.wt_ded_wt_1 || ''}
                       onChange={(e) => handleMasterChange('wt_ded_wt_1', parseFloat(e.target.value) || 0)}
                     />
-                    <input 
+                    <input  id="0_000_3137" name="0_000" aria-label="0.000"
                       type="number" 
                       placeholder="0.000"
                       className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
                       value={masterData.wt_ded_wt_2 || ''}
                       onChange={(e) => handleMasterChange('wt_ded_wt_2', parseFloat(e.target.value) || 0)}
                     />
-                    <input 
+                    <input  id="0_000_3144" name="0_000" aria-label="0.000"
                       type="number" 
                       placeholder="0.000"
                       className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
@@ -3154,7 +3154,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                   <div className="flex items-center gap-2">
                     <span className="text-gray-700">Rate/m.T</span>
-                    <input 
+                    <input  id="masterdata_rate_qntl_calc_3157" name="masterdata_rate_qntl_calc" aria-label="masterdata rate qntl calc"
                       type="number" 
                       step="0.01"
                       className="w-20 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px] font-bold text-slate-900"
@@ -3183,7 +3183,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Grade</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="grade_name_3186" name="grade_name" aria-label="Grade Name"
                               type="text" 
                               className="w-full bg-transparent p-1 outline-none text-center font-black text-slate-800"
                               placeholder="Grade Name"
@@ -3198,7 +3198,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Area</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="area_3201" name="area" aria-label="Area"
                               type="text" 
                               className="w-full bg-transparent p-1 outline-none text-center"
                               placeholder="Area"
@@ -3213,7 +3213,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Agency</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="agency_3216" name="agency" aria-label="Agency"
                               type="text" 
                               className="w-full bg-transparent p-1 outline-none text-center"
                               placeholder="Agency"
@@ -3228,7 +3228,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Marka/Crop</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="marka_crop_3231" name="marka_crop" aria-label="Marka/Crop"
                               type="text" 
                               className="w-full bg-transparent p-1 outline-none text-center text-[9px] font-mono"
                               placeholder="Marka/Crop"
@@ -3243,7 +3243,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 text-rose-800 uppercase">Quantity (B)</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="0_3246" name="0" aria-label="0"
                               type="number" 
                               className="w-full bg-transparent p-1 outline-none text-center font-mono font-bold text-rose-800 bg-rose-50/40"
                               placeholder="0"
@@ -3258,7 +3258,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Arr. Qty/Wt</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="0_000_3261" name="0_000" aria-label="0.000"
                               type="number" 
                               className="w-full bg-transparent p-1 outline-none text-center font-mono"
                               placeholder="0.000"
@@ -3273,7 +3273,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Min.Qty/Wt</td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="0_000_3276" name="0_000" aria-label="0.000"
                               type="number" 
                               className="w-full bg-transparent p-1 outline-none text-center font-mono"
                               placeholder="0.000"
@@ -3300,7 +3300,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         </td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input 
+                            <input  id="rate_3303" name="rate" aria-label="₹ Rate"
                               type="number" 
                               className="w-full bg-white text-center p-0.5 font-mono text-indigo-950 font-bold border border-indigo-200 text-[10px]"
                               placeholder="₹ Rate"
@@ -3467,8 +3467,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Grade Down (%)</td>
                           {[1, 2, 3, 4].map(idx => (
                             <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_claim || ''} onChange={(e) => handleColChange(idx, 'gd_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_sett ?? 0} onChange={(e) => handleColChange(idx, 'gd_sett', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_gd_claim_3470" name="detailcols_idx_1_gd_claim" aria-label="detailcols idx 1 gd claim"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_claim || ''} onChange={(e) => handleColChange(idx, 'gd_claim', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_gd_sett__3471" name="detailcols_idx_1_gd_sett_" aria-label="detailcols idx 1 gd sett "type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_sett ?? 0} onChange={(e) => handleColChange(idx, 'gd_sett', parseFloat(e.target.value) || 0)} /></td>
                               <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.gd_claim || 0) - Number(detailCols[idx-1]?.gd_sett || 0)).toFixed(1)}%</td>
                             </React.Fragment>
                           ))}
@@ -3479,8 +3479,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Moisture (%)</td>
                           {[1, 2, 3, 4].map(idx => (
                             <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_claim || ''} onChange={(e) => handleColChange(idx, 'moist_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_sett ?? 0} onChange={(e) => handleColChange(idx, 'moist_sett', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_moist_cl_3482" name="detailcols_idx_1_moist_cl" aria-label="detailcols idx 1 moist cl"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_claim || ''} onChange={(e) => handleColChange(idx, 'moist_claim', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_moist_se_3483" name="detailcols_idx_1_moist_se" aria-label="detailcols idx 1 moist se"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_sett ?? 0} onChange={(e) => handleColChange(idx, 'moist_sett', parseFloat(e.target.value) || 0)} /></td>
                               <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.moist_claim || 0) - Number(detailCols[idx-1]?.moist_sett || 0)).toFixed(1)}%</td>
                             </React.Fragment>
                           ))}
@@ -3491,8 +3491,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Dust (%)</td>
                           {[1, 2, 3, 4].map(idx => (
                             <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_claim || ''} onChange={(e) => handleColChange(idx, 'dust_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_sett ?? 0} onChange={(e) => handleColChange(idx, 'dust_sett', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_dust_cla_3494" name="detailcols_idx_1_dust_cla" aria-label="detailcols idx 1 dust cla"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_claim || ''} onChange={(e) => handleColChange(idx, 'dust_claim', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_dust_set_3495" name="detailcols_idx_1_dust_set" aria-label="detailcols idx 1 dust set"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_sett ?? 0} onChange={(e) => handleColChange(idx, 'dust_sett', parseFloat(e.target.value) || 0)} /></td>
                               <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.dust_claim || 0) - Number(detailCols[idx-1]?.dust_sett || 0)).toFixed(1)}%</td>
                             </React.Fragment>
                           ))}
@@ -3503,8 +3503,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">NCV (%)</td>
                           {[1, 2, 3, 4].map(idx => (
                             <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_claim || ''} onChange={(e) => handleColChange(idx, 'ncv_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_sett ?? 0} onChange={(e) => handleColChange(idx, 'ncv_sett', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_ncv_clai_3506" name="detailcols_idx_1_ncv_clai" aria-label="detailcols idx 1 ncv clai"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_claim || ''} onChange={(e) => handleColChange(idx, 'ncv_claim', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_ncv_sett_3507" name="detailcols_idx_1_ncv_sett" aria-label="detailcols idx 1 ncv sett"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_sett ?? 0} onChange={(e) => handleColChange(idx, 'ncv_sett', parseFloat(e.target.value) || 0)} /></td>
                               <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.ncv_claim || 0) - Number(detailCols[idx-1]?.ncv_sett || 0)).toFixed(1)}%</td>
                             </React.Fragment>
                           ))}
@@ -3515,8 +3515,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold leading-none">PO/Grade/A/L.Dely (Amt)</td>
                           {[1, 2, 3, 4].map(idx => (
                             <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_claim || ''} onChange={(e) => handleColChange(idx, 'po_grade_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_sett ?? 0} onChange={(e) => handleColChange(idx, 'po_grade_sett', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_po_grade_3518" name="detailcols_idx_1_po_grade" aria-label="detailcols idx 1 po grade"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_claim || ''} onChange={(e) => handleColChange(idx, 'po_grade_claim', parseFloat(e.target.value) || 0)} /></td>
+                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_po_grade_3519" name="detailcols_idx_1_po_grade" aria-label="detailcols idx 1 po grade"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_sett ?? 0} onChange={(e) => handleColChange(idx, 'po_grade_sett', parseFloat(e.target.value) || 0)} /></td>
                               <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.po_grade_claim || 0) - Number(detailCols[idx-1]?.po_grade_sett || 0)).toFixed(1)}</td>
                             </React.Fragment>
                           ))}
@@ -3527,7 +3527,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Remarks</td>
                           {[1, 2, 3, 4].map(idx => (
                             <td key={idx} colSpan={3} className="p-1 border-r border-gray-300">
-                              <input 
+                              <input  id="audit_remarks_3530" name="audit_remarks" aria-label="Audit remarks..."
                                 type="text" 
                                 className="w-full bg-transparent p-0.5 outline-none font-sans font-medium text-left px-2 text-[9.5px]"
                                 placeholder="Audit remarks..."

@@ -691,9 +691,9 @@ export default function ExecutiveBiDashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-2.5 w-full min-w-0">
           {/* Date Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Date Range</label>
+            <label htmlFor="date_range_695" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Date Range</label>
             <select
-              value={dateRange}
+ id="date_range_695" name="date_range" aria-label="Date Range"              value={dateRange}
               onChange={(e: any) => setDateRange(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -709,9 +709,9 @@ export default function ExecutiveBiDashboard({
 
           {/* Supplier Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Supplier</label>
+            <label htmlFor="supplier_713" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Supplier</label>
             <select
-              value={supplierFilter}
+ id="supplier_713" name="supplier" aria-label="Supplier"              value={supplierFilter}
               onChange={(e) => setSupplierFilter(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -724,9 +724,9 @@ export default function ExecutiveBiDashboard({
 
           {/* Broker Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Broker</label>
+            <label htmlFor="broker_728" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Broker</label>
             <select
-              value={brokerFilter}
+ id="broker_728" name="broker" aria-label="Broker"              value={brokerFilter}
               onChange={(e) => setBrokerFilter(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -739,9 +739,9 @@ export default function ExecutiveBiDashboard({
 
           {/* Department Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Department</label>
+            <label htmlFor="department_743" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Department</label>
             <select
-              value={deptFilter}
+ id="department_743" name="department" aria-label="Department"              value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -758,9 +758,9 @@ export default function ExecutiveBiDashboard({
 
           {/* Godown Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Godown</label>
+            <label htmlFor="godown_762" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Godown</label>
             <select
-              value={godownFilter}
+ id="godown_762" name="godown" aria-label="Godown"              value={godownFilter}
               onChange={(e) => setGodownFilter(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -773,9 +773,9 @@ export default function ExecutiveBiDashboard({
 
           {/* Grade Filter */}
           <div>
-            <label className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Quality Grade</label>
+            <label htmlFor="quality_grade_777" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Quality Grade</label>
             <select
-              value={gradeFilter}
+ id="quality_grade_777" name="quality_grade" aria-label="Quality Grade"              value={gradeFilter}
               onChange={(e) => setGradeFilter(e.target.value)}
               className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
             >
@@ -1324,7 +1324,7 @@ export default function ExecutiveBiDashboard({
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#556952]" />
               <input
-                type="text"
+ id="search_supplier_chalan_ve_1326" name="search_supplier_chalan_ve" aria-label="Search supplier, chalan, vehicle..."                type="text"
                 placeholder="Search supplier, chalan, vehicle..."
                 value={matrixSearch}
                 onChange={(e) => { setMatrixSearch(e.target.value); setMatrixPage(1); }}

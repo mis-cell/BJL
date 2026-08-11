@@ -156,7 +156,7 @@ export default function DepartmentDashboardSection({
           <div className="relative w-64">
             <Search className="w-3.5 h-3.5 text-[#5A6E54] absolute left-3 top-2.5" />
             <input
-              type="text"
+ id="search_lorry_or_pass_158" name="search_lorry_or_pass" aria-label="Search lorry or pass..."              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search lorry or pass..."
@@ -234,7 +234,7 @@ export default function DepartmentDashboardSection({
             Select Active {activeDeptTab} Vehicle
           </label>
           <select
-            value={selectedLorryId}
+ id="selectedlorryid_236" name="selectedlorryid" aria-label="selectedlorryid"            value={selectedLorryId}
             onChange={(e) => {
               const l = lorries.find((x) => x.id === e.target.value);
               if (l) handleSelectLorryForProcessing(l);
@@ -297,11 +297,11 @@ export default function DepartmentDashboardSection({
 
             {/* Remarks Field */}
             <div>
-              <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+              <label htmlFor="department_clearance_rema_303" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                 Department Clearance Remarks
               </label>
               <textarea
-                rows={2}
+ id="department_clearance_rema_303" name="department_clearance_rema" aria-label="Department Clearance Remarks"                rows={2}
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="Enter verification notes..."
@@ -320,7 +320,7 @@ export default function DepartmentDashboardSection({
               )}
             >
               <input
-                type="checkbox"
+ id="checkbox_322" name="checkbox" aria-label="checkbox"                type="checkbox"
                 checked={isClearForGateExit}
                 onChange={(e) => setIsClearForGateExit(e.target.checked)}
                 className="w-4 h-4 accent-[#1E331B]"

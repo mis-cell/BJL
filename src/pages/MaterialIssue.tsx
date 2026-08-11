@@ -130,7 +130,7 @@ function ManualEntryComboBox({
     <div ref={wrapperRef} className="relative flex-1">
       <div className="relative flex items-center">
         <input
-          type="text"
+ id="value_132" name="value" aria-label="value"          type="text"
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -293,7 +293,7 @@ function CustomEditableSelect({
     <div ref={wrapperRef} className="relative flex-1" id={id}>
       <div className="relative flex items-center">
         <input
-          type="text"
+ id="searchterm_295" name="searchterm" aria-label="searchterm"          type="text"
           value={searchTerm}
           onChange={(e) => {
             const val = e.target.value;
@@ -1949,7 +1949,7 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
           {/* SEARCH & FILTER STRIP */}
           <div className="flex bg-[#d4d0c8] p-1 border-2 border-white border-b-slate-650 border-r-slate-650 gap-2 items-center flex-wrap rounded-sm">
             <div className="flex bg-white border border-slate-400 p-px flex-1 min-w-[200px]">
-              <input 
+              <input  id="search_by_issue_no_depart_1952" name="search_by_issue_no_depart" aria-label="Search by Issue No, Department, Godown, Stock Group..."
                 className="flex-1 text-xs px-2 outline-none py-1 font-sans font-semibold uppercase" 
                 placeholder="Search by Issue No, Department, Godown, Stock Group..."
                 value={searchQuery}
@@ -1962,14 +1962,14 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
 
             <div className="flex items-center gap-1.5 bg-white border border-slate-400 p-px">
               <span className="text-[9px] font-black uppercase text-slate-500 pl-1">From:</span>
-              <input 
+              <input  id="startdatefilter_1965" name="startdatefilter" aria-label="startdatefilter"
                 type="date"
                 className="text-xs px-1 py-0.5 outline-none font-bold"
                 value={startDateFilter}
                 onChange={(e) => setStartDateFilter(e.target.value)}
               />
               <span className="text-[9px] font-black uppercase text-slate-500">To:</span>
-              <input 
+              <input  id="enddatefilter_1972" name="enddatefilter" aria-label="enddatefilter"
                 type="date"
                 className="text-xs px-1 py-0.5 outline-none font-bold"
                 value={endDateFilter}

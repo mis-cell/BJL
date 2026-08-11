@@ -768,26 +768,26 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
               <LegacyFieldset legend="Basic Satta Details">
                  <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
                     <div className="col-span-6 flex items-center gap-2">
-                        <label className="text-[11px] font-bold w-24 shrink-0">Session</label>
-                        <input className="flex-1 bg-[#ffffd0] border border-gray-400 p-0.5 text-xs font-black" name="session" value={formData.session} onChange={handleChange} />
+                        <label htmlFor="session_772" className="text-[11px] font-bold w-24 shrink-0">Session</label>
+                        <input  id="session_772" aria-label="Session"className="flex-1 bg-[#ffffd0] border border-gray-400 p-0.5 text-xs font-black" name="session" value={formData.session} onChange={handleChange} />
                      </div>
                      
                      <div className="col-span-6 flex items-center gap-2">
-                        <label className="text-[11px] font-bold w-24 shrink-0 text-red-950 font-extrabold uppercase bg-red-100/60 px-1 border border-red-200">Satta Booking No</label>
-                        <input className="flex-1 bg-[#e0ffe0] border-2 border-green-600 p-0.5 text-xs font-extrabold text-blue-950 font-mono focus:bg-white" name="satta_no" value={formData.satta_no} onChange={handleChange} placeholder="Satta Number" required />
+                        <label htmlFor="satta_no_777" className="text-[11px] font-bold w-24 shrink-0 text-red-950 font-extrabold uppercase bg-red-100/60 px-1 border border-red-200">Satta Booking No</label>
+                        <input  id="satta_no_777" aria-label="Satta Booking No"className="flex-1 bg-[#e0ffe0] border-2 border-green-600 p-0.5 text-xs font-extrabold text-blue-950 font-mono focus:bg-white" name="satta_no" value={formData.satta_no} onChange={handleChange} placeholder="Satta Number" required />
                      </div>
                     
                      <div className="col-span-6 flex items-center gap-2">
-                        <label className="text-[11px] font-bold w-24 shrink-0 text-blue-900 italic uppercase">Deal Type</label>
-                        <select name="po_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.po_type} onChange={handleChange}>
+                        <label htmlFor="po_type_782" className="text-[11px] font-bold w-24 shrink-0 text-blue-900 italic uppercase">Deal Type</label>
+                        <select  id="po_type_782" aria-label="Deal Type"name="po_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.po_type} onChange={handleChange}>
                            <option>Normal</option>
                            <option>PTF</option>
                         </select>
                      </div>
                      
                      <div className="col-span-6 flex items-center gap-2">
-                        <label className="text-[11px] font-bold w-12 shrink-0">Date</label>
-                        <input type="date" name="date" value={formData.date} onChange={handleChange} className="flex-1 bg-white border border-gray-400 p-0.5 text-xs outline-none" />
+                        <label htmlFor="date_790" className="text-[11px] font-bold w-12 shrink-0">Date</label>
+                        <input  id="date_790" aria-label="Date"type="date" name="date" value={formData.date} onChange={handleChange} className="flex-1 bg-white border border-gray-400 p-0.5 text-xs outline-none" />
                      </div>
 
                      <ComboField label="Broker" name="broker" value={formData.broker} onChange={handleChange} options={brokers.map(b => b.brok_name)} />
@@ -803,32 +803,32 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
                     <LegacyFieldset legend="Unit & Transportation Details">
                        <div className="grid grid-cols-3 gap-x-4 gap-y-3 mt-1 items-center px-1 pb-1">
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">No. of Lorries</label>
-                             <input type="number" name="no_of_lorries" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right animate-pulse hover:animate-none" value={formData.no_of_lorries} onChange={handleChange} />
+                             <label htmlFor="no_of_lorries_807" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">No. of Lorries</label>
+                             <input  id="no_of_lorries_807" aria-label="No. of Lorries"type="number" name="no_of_lorries" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right animate-pulse hover:animate-none" value={formData.no_of_lorries} onChange={handleChange} />
                           </div>
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Units/Lorry</label>
-                             <select name="units_per_lorry_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.units_per_lorry_type} onChange={handleChange}>
+                             <label htmlFor="units_per_lorry_type_811" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Units/Lorry</label>
+                             <select  id="units_per_lorry_type_811" aria-label="Units/Lorry"name="units_per_lorry_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.units_per_lorry_type} onChange={handleChange}>
                                 {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
                              </select>
                           </div>
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Unit</label>
-                             <input type="number" name="total_unit" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.total_unit} onChange={handleChange} />
+                             <label htmlFor="total_unit_817" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Unit</label>
+                             <input  id="total_unit_817" aria-label="Total Unit"type="number" name="total_unit" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.total_unit} onChange={handleChange} />
                           </div>
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Wt/Lorry</label>
-                             <input type="number" name="wt_per_lorry" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.wt_per_lorry} onChange={handleChange} />
+                             <label htmlFor="wt_per_lorry_821" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Wt/Lorry</label>
+                             <input  id="wt_per_lorry_821" aria-label="Wt/Lorry"type="number" name="wt_per_lorry" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.wt_per_lorry} onChange={handleChange} />
                           </div>
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Unit Type</label>
-                             <select name="unit_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.unit_type} onChange={handleChange}>
+                             <label htmlFor="unit_type_825" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Unit Type</label>
+                             <select  id="unit_type_825" aria-label="Unit Type"name="unit_type" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.unit_type} onChange={handleChange}>
                                 {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
                              </select>
                           </div>
                           <div className="flex items-center gap-2">
-                             <label className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Wt. in Ton</label>
-                             <input type="number" name="total_wt_in_ton" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right text-purple-900 font-bold" value={formData.total_wt_in_ton} onChange={handleChange} />
+                             <label htmlFor="total_wt_in_ton_831" className="text-[11px] font-bold w-24 shrink-0 text-gray-700">Total Wt. in Ton</label>
+                             <input  id="total_wt_in_ton_831" aria-label="Total Wt. in Ton"type="number" name="total_wt_in_ton" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right text-purple-900 font-bold" value={formData.total_wt_in_ton} onChange={handleChange} />
                           </div>
                        </div>
                     </LegacyFieldset>
@@ -846,7 +846,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
                  {formData.quality_details?.map((qd, i) => (
                     <div key={i} className="grid grid-cols-12 gap-2 mt-1 items-center">
                        <div className="col-span-3">
-                          <select 
+                          <select  id="quality_849" aria-label="quality"
                             name="quality" 
                             className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold" 
                             value={grades.find(g => {
@@ -866,10 +866,10 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
                           </select>
                        </div>
                        <div className="col-span-2">
-                          <input type="number" name="qty" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.qty || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Qty" />
+                          <input  id="qty_869" aria-label="Qty"type="number" name="qty" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.qty || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Qty" />
                        </div>
                        <div className="col-span-3">
-                          <input 
+                          <input  id="agency_872" aria-label="Agency"
                              type="text" 
                              name="agency" 
                              className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold uppercase" 
@@ -880,7 +880,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
                           />
                        </div>
                        <div className="col-span-2">
-                          <input 
+                          <input  id="marka_883" aria-label="Marka"
                              type="text" 
                              name="marka" 
                              className="w-full bg-white border border-gray-400 p-0.5 text-xs font-bold uppercase" 
@@ -891,7 +891,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
                           />
                        </div>
                        <div className="col-span-2">
-                          <input type="number" name="rs" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.rs || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Rate" />
+                          <input  id="rs_894" aria-label="Rate"type="number" name="rs" className="w-full bg-white border border-gray-400 p-0.5 text-xs text-right" value={qd.rs || ''} onChange={(e) => handleQualityChange(i, e)} placeholder="Rate" />
                        </div>
                     </div>
                  ))}
@@ -910,25 +910,25 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
               <LegacyFieldset legend="Shipment & Claims">
                  <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
                     <div className="col-span-4 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">Shipment</label>
-                       <input type="date" name="shipment_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.shipment_date} onChange={handleChange} />
+                       <label htmlFor="shipment_date_914" className="text-[11px] font-bold w-24 shrink-0">Shipment</label>
+                       <input  id="shipment_date_914" aria-label="Shipment"type="date" name="shipment_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.shipment_date} onChange={handleChange} />
                     </div>
                     <div className="col-span-4 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-12 shrink-0">Days</label>
-                       <input type="number" name="shipment_days" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_days} onChange={handleChange} />
+                       <label htmlFor="shipment_days_918" className="text-[11px] font-bold w-12 shrink-0">Days</label>
+                       <input  id="shipment_days_918" aria-label="Days"type="number" name="shipment_days" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_days} onChange={handleChange} />
                     </div>
                     <div className="col-span-4 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-16 shrink-0">Penalty/Day</label>
-                       <input type="number" name="shipment_penalty" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_penalty} onChange={handleChange} />
+                       <label htmlFor="shipment_penalty_922" className="text-[11px] font-bold w-16 shrink-0">Penalty/Day</label>
+                       <input  id="shipment_penalty_922" aria-label="Penalty/Day"type="number" name="shipment_penalty" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.shipment_penalty} onChange={handleChange} />
                     </div>
 
                     <div className="col-span-6 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">Marks Claim</label>
-                       <input type="number" name="marks_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.marks_claim} onChange={handleChange} />
+                       <label htmlFor="marks_claim_927" className="text-[11px] font-bold w-24 shrink-0">Marks Claim</label>
+                       <input  id="marks_claim_927" aria-label="Marks Claim"type="number" name="marks_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.marks_claim} onChange={handleChange} />
                     </div>
                     <div className="col-span-6 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">Quantity Claim</label>
-                       <input type="number" name="quantity_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.quantity_claim} onChange={handleChange} />
+                       <label htmlFor="quantity_claim_931" className="text-[11px] font-bold w-24 shrink-0">Quantity Claim</label>
+                       <input  id="quantity_claim_931" aria-label="Quantity Claim"type="number" name="quantity_claim" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right" value={formData.quantity_claim} onChange={handleChange} />
                     </div>
                  </div>
               </LegacyFieldset>
@@ -936,22 +936,22 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
               <LegacyFieldset legend="Remarks & Finalisation">
                  <div className="grid grid-cols-12 gap-x-4 gap-y-3 mt-1 items-center">
                     <div className="col-span-12 flex flex-col gap-2">
-                       <label className="text-[11px] font-bold text-gray-700">Remarks</label>
-                       <textarea name="remarks" className="w-full bg-white border border-gray-400 p-1 text-xs outline-none" rows={2} value={formData.remarks} onChange={handleChange} />
+                       <label htmlFor="remarks_940" className="text-[11px] font-bold text-gray-700">Remarks</label>
+                       <textarea  id="remarks_940" aria-label="Remarks"name="remarks" className="w-full bg-white border border-gray-400 p-1 text-xs outline-none" rows={2} value={formData.remarks} onChange={handleChange} />
                     </div>
                     
                     <div className="col-span-6 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">B. Rate (Rs.)</label>
-                       <input type="number" name="b_rate" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right text-red-700 font-bold" value={formData.b_rate} onChange={handleChange} />
+                       <label htmlFor="b_rate_945" className="text-[11px] font-bold w-24 shrink-0">B. Rate (Rs.)</label>
+                       <input  id="b_rate_945" aria-label="B. Rate (Rs.)"type="number" name="b_rate" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs text-right text-red-700 font-bold" value={formData.b_rate} onChange={handleChange} />
                     </div>
                     <div className="col-span-6 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">B. Date</label>
-                       <input type="date" name="b_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.b_date} onChange={handleChange} />
+                       <label htmlFor="b_date_949" className="text-[11px] font-bold w-24 shrink-0">B. Date</label>
+                       <input  id="b_date_949" aria-label="B. Date"type="date" name="b_date" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.b_date} onChange={handleChange} />
                     </div>
 
                     <div className="col-span-6 flex items-center gap-2">
-                       <label className="text-[11px] font-bold w-24 shrink-0">Superior/Normal</label>
-                       <input type="text" name="superior_normal_marks" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.superior_normal_marks} onChange={handleChange} />
+                       <label htmlFor="superior_normal_marks_954" className="text-[11px] font-bold w-24 shrink-0">Superior/Normal</label>
+                       <input  id="superior_normal_marks_954" aria-label="Superior/Normal"type="text" name="superior_normal_marks" className="flex-1 bg-white border border-gray-400 p-0.5 text-xs" value={formData.superior_normal_marks} onChange={handleChange} />
                     </div>
                  </div>
               </LegacyFieldset>
@@ -990,7 +990,7 @@ function ComboField({ label, name, value, onChange, options }: any) {
     <div className="col-span-12 flex items-center gap-2 relative">
        <label className="text-[11px] font-bold w-24 shrink-0">{label}</label>
        <div className="flex-1 flex gap-px border border-gray-400 bg-white">
-          <input 
+          <input  id="value_993" aria-label="value"
              ref={inputRef}
              name={name}
              value={value}

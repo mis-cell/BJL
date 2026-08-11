@@ -456,7 +456,7 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
                 </label>
                 <div className="flex gap-1">
                   <input
-                    type="password"
+ id="enter_free_gemini_key_aiz_458" name="enter_free_gemini_key_aiz" aria-label="Enter free Gemini Key (AIzaSy...)"                    type="password"
                     placeholder="Enter free Gemini Key (AIzaSy...)"
                     value={localKey}
                     onChange={(e) => setLocalKey(e.target.value)}
@@ -544,7 +544,7 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
               <div className="p-4 bg-slate-100 border-t border-black/10">
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
-                    <input 
+                    <input  id="ask_jarves_anything_about_547" name="ask_jarves_anything_about" aria-label="Ask Jarves anything about standard system procedures..."
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -600,7 +600,7 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
                   </label>
                   
                   <div className="flex gap-2">
-                    <input 
+                    <input  id="e_g_determine_the_pending_603" name="e_g_determine_the_pending" aria-label="e.g. Determine the pending weight on BJCL/2026-2027/0155"
                       type="text"
                       className="flex-1 bg-slate-50 border border-slate-400 p-2.5 outline-none font-mono font-bold text-xs focus:border-indigo-900 text-indigo-950 uppercase placeholder:normal-case placeholder:font-sans"
                       placeholder="e.g. Determine the pending weight on BJCL/2026-2027/0155"

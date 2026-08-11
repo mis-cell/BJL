@@ -72,8 +72,8 @@ export default function SMTPDiagnosticTab() {
           <LegacyFieldset legend="Target Server">
             <div className="space-y-3 p-1">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">SMTP Host</label>
-                <input 
+                <label htmlFor="smtp_host_76" className="text-[10px] font-bold uppercase tracking-wider text-slate-700">SMTP Host</label>
+                <input  id="smtp_host_76" name="smtp_host" aria-label="SMTP Host"
                   type="text"
                   className="w-full text-xs border border-black/20 rounded bg-white px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black disabled:bg-slate-100 disabled:text-slate-500"
                   value={host} 
@@ -84,8 +84,8 @@ export default function SMTPDiagnosticTab() {
               
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Port</label>
-                  <input 
+                  <label htmlFor="port_88" className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Port</label>
+                  <input  id="port_88" name="port" aria-label="Port"
                     type="number"
                     className="w-full text-xs border border-black/20 rounded bg-white px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black disabled:bg-slate-100 disabled:text-slate-500"
                     value={port} 
@@ -94,8 +94,8 @@ export default function SMTPDiagnosticTab() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">SSL/TLS</label>
-                  <select 
+                  <label htmlFor="ssl_tls_98" className="text-[10px] font-bold uppercase tracking-wider text-slate-700">SSL/TLS</label>
+                  <select  id="ssl_tls_98" name="ssl_tls" aria-label="SSL/TLS"
                     className="w-full text-xs border border-black/20 rounded bg-white px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black disabled:bg-slate-100 disabled:text-slate-500"
                     value={secure ? "true" : "false"}
                     onChange={(e) => setSecure(e.target.value === "true")}
@@ -112,8 +112,8 @@ export default function SMTPDiagnosticTab() {
           <LegacyFieldset legend="Authentication">
             <div className="space-y-3 p-1">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Username / Email</label>
-                <input 
+                <label htmlFor="username_email_116" className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Username / Email</label>
+                <input  id="username_email_116" name="username_email" aria-label="Username / Email"
                   type="text"
                   className="w-full text-xs border border-black/20 rounded bg-white px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black disabled:bg-slate-100 disabled:text-slate-500"
                   value={user} 
@@ -122,8 +122,8 @@ export default function SMTPDiagnosticTab() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">App Password</label>
-                <input 
+                <label htmlFor="app_password_126" className="text-[10px] font-bold uppercase tracking-wider text-slate-700">App Password</label>
+                <input  id="app_password_126" name="app_password" aria-label="App Password"
                   type="password"
                   className="w-full text-xs border border-black/20 rounded bg-white px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black disabled:bg-slate-100 disabled:text-slate-500"
                   value={pass} 

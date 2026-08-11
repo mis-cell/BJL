@@ -1058,7 +1058,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
               🛡️ Safety Limit:
             </span>
             <select
-              value={varianceThreshold}
+ id="variancethreshold_1060" name="variancethreshold" aria-label="variancethreshold"              value={varianceThreshold}
               onChange={(e) => handleThresholdChange(Number(e.target.value))}
               className="bg-white border border-slate-350 rounded text-[9.5px] font-extrabold uppercase py-0.5 px-1.5 outline-none focus:border-indigo-500 cursor-pointer text-slate-800 font-mono"
               title="Variance tolerance safety threshold before auto-generating audit mismatch cases"
@@ -1313,7 +1313,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
             <div className="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5">
               <span className="text-[8px] font-black uppercase text-slate-500 font-mono">Filter Vendor:</span>
               <select
-                value={selectedTrendSupplier}
+ id="selectedtrendsupplier_1315" name="selectedtrendsupplier" aria-label="selectedtrendsupplier"                value={selectedTrendSupplier}
                 onChange={(e) => setSelectedTrendSupplier(e.target.value)}
                 className="bg-white border border-slate-200 rounded text-[9.5px] font-extrabold py-0.5 px-1 outline-none cursor-pointer text-slate-800"
               >
@@ -1840,7 +1840,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
 
         {/* Search */}
         <div className="flex bg-white border border-slate-350 rounded overflow-hidden shadow-xs w-full md:w-80">
-          <input 
+          <input  id="search_fa_mr_no_supplier__1843" name="search_fa_mr_no_supplier_" aria-label="Search FA, MR No, supplier, contract..."
             className="flex-1 text-xs px-2.5 py-1.5 outline-none font-medium placeholder:text-slate-400" 
             placeholder="Search FA, MR No, supplier, contract..."
             value={searchQuery}

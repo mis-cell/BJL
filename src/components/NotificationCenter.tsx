@@ -323,7 +323,7 @@ export default function NotificationCenter({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
-                type="text"
+ id="search_by_mr_no_lorry_no__325" name="search_by_mr_no_lorry_no_" aria-label="Search by MR No, Lorry No, or Field Name..."                type="text"
                 placeholder="Search by MR No, Lorry No, or Field Name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

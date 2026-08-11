@@ -158,7 +158,7 @@ export default function DatabaseTab({
           
           <div className="space-y-1.5 bg-white p-2 border border-slate-200 rounded-lg">
             <input
-              className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-[10px] uppercase font-bold outline-none"
+ id="new_table_160" name="new_table" aria-label="NEW TABLE..."              className="w-full bg-slate-50 border border-slate-200 rounded p-1.5 text-[10px] uppercase font-bold outline-none"
               placeholder="NEW TABLE..."
               value={newTableName}
               onChange={(e) => setNewTableName(e.target.value.toLowerCase())}
@@ -216,7 +216,7 @@ export default function DatabaseTab({
                 <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-1.5 max-w-sm w-full bg-slate-50/50">
                   <Search className="h-4 w-4 text-slate-400" />
                   <input
-                    className="flex-1 text-xs font-semibold outline-none bg-transparent"
+ id="search_visible_grid_cells_218" name="search_visible_grid_cells" aria-label="Search visible grid cells..."                    className="flex-1 text-xs font-semibold outline-none bg-transparent"
                     placeholder="Search visible grid cells..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -229,7 +229,7 @@ export default function DatabaseTab({
                     <Upload className="h-3.5 w-3.5" />
                     <span>Import CSV</span>
                     <input
-                      type="file"
+ id="file_231" name="file" aria-label="file"                      type="file"
                       accept=".csv"
                       onChange={handleCsvImport}
                       className="hidden"
@@ -362,9 +362,9 @@ export default function DatabaseTab({
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Append New Field Column</h4>
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/60 space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Column/Field Name</label>
+                    <label htmlFor="column_field_name_366" className="text-[10px] font-black uppercase text-slate-400">Column/Field Name</label>
                     <input
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-bold uppercase outline-none"
+ id="column_field_name_366" name="column_field_name" aria-label="Column/Field Name"                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-bold uppercase outline-none"
                       placeholder="e.g. delivery_notes"
                       value={newFieldName}
                       onChange={(e) => setNewFieldName(e.target.value.toLowerCase().replace(/\s/g, "_"))}
@@ -372,9 +372,9 @@ export default function DatabaseTab({
                   </div>
                   
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Data Standard Type</label>
+                    <label htmlFor="data_standard_type_376" className="text-[10px] font-black uppercase text-slate-400">Data Standard Type</label>
                     <select
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-bold outline-none"
+ id="data_standard_type_376" name="data_standard_type" aria-label="Data Standard Type"                      className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-bold outline-none"
                       value={newFieldType}
                       onChange={(e) => setNewFieldType(e.target.value)}
                     >
@@ -410,7 +410,7 @@ export default function DatabaseTab({
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col space-y-2 h-96">
                 <div className="flex-1 font-mono text-xs text-emerald-400">
                   <textarea
-                    className="w-full h-full bg-transparent border-none resize-none outline-none font-mono text-xs text-white p-2"
+ id="write_query_here_e_g_nsel_412" name="write_query_here_e_g_nsel" aria-label="-- Write query here, e.g.\nSELECT * FROM user_master LIMIT 5;"                    className="w-full h-full bg-transparent border-none resize-none outline-none font-mono text-xs text-white p-2"
                     placeholder="-- Write query here, e.g.\nSELECT * FROM user_master LIMIT 5;"
                     value={sqlQuery}
                     onChange={(e) => setSqlQuery(e.target.value)}

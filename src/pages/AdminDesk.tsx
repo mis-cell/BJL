@@ -1270,7 +1270,7 @@ export default function AdminDesk({
 
       return (
         <input
-          type="text"
+ id="system_generated_serial_1272" name="system_generated_serial" aria-label="System Generated Serial"          type="text"
           value={currentVal}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none focus:border-indigo-500"
@@ -1296,7 +1296,7 @@ export default function AdminDesk({
 
       return (
         <input
-          type="text"
+ id="creation_timestamp_1298" name="creation_timestamp" aria-label="Creation Timestamp"          type="text"
           value={currentVal}
           disabled
           className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80"
@@ -1310,7 +1310,7 @@ export default function AdminDesk({
       if (col === "log_id") {
         return (
           <input
-            type="text"
+ id="system_sequential_unique__1312" name="system_sequential_unique_" aria-label="System Sequential Unique Key"            type="text"
             value={val || "AUTO_GENERATED"}
             disabled
             className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80"
@@ -1333,7 +1333,7 @@ export default function AdminDesk({
         }
         return (
           <input
-            type="text"
+ id="event_timestamp_1335" name="event_timestamp" aria-label="Event Timestamp"            type="text"
             value={currentVal}
             disabled
             className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80"
@@ -1375,7 +1375,7 @@ export default function AdminDesk({
       const activeRole = val || "OPERATOR";
       return (
         <select
-          value={activeRole}
+ id="activerole_1377" name="activerole" aria-label="activerole"          value={activeRole}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-bold rounded outline-none cursor-pointer"
         >
@@ -1391,7 +1391,7 @@ export default function AdminDesk({
       const activeLevel = val || "L1";
       return (
         <select
-          value={activeLevel}
+ id="activelevel_1393" name="activelevel" aria-label="activelevel"          value={activeLevel}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-bold rounded outline-none cursor-pointer"
         >
@@ -1407,7 +1407,7 @@ export default function AdminDesk({
     if (col === "status") {
       return (
         <select
-          value={val || "Active"}
+ id="val_active_1409" name="val_active" aria-label="val active"          value={val || "Active"}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-bold rounded outline-none cursor-pointer"
         >
@@ -1421,7 +1421,7 @@ export default function AdminDesk({
       const activeVal = String(val).toLowerCase() === "true" || val === "1" || val === 1 || val === "Active" || val === true;
       return (
         <select
-          value={activeVal ? "true" : "false"}
+ id="activeval_true_false_1423" name="activeval_true_false" aria-label="activeval true false"          value={activeVal ? "true" : "false"}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value === "true" }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-bold rounded outline-none cursor-pointer"
         >
@@ -1485,7 +1485,7 @@ export default function AdminDesk({
         <div className="border border-slate-300 p-2.5 rounded bg-slate-50 space-y-2 max-h-[140px] overflow-y-auto w-full text-left font-sans shadow-inner col-span-2">
           <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200">
             <input
-              type="checkbox"
+ name="checkbox" aria-label="checkbox"              type="checkbox"
               id="module-all"
               checked={isAll}
               onChange={handleToggleAll}
@@ -1501,7 +1501,7 @@ export default function AdminDesk({
               return (
                 <div key={item.id} className="flex items-center gap-1.5">
                   <input
-                    type="checkbox"
+ name="checkbox" aria-label="checkbox"                    type="checkbox"
                     id={`module-${item.id}`}
                     checked={isChecked}
                     disabled={isAll}
@@ -1530,7 +1530,7 @@ export default function AdminDesk({
         // Disabled for editing existing rows (cannot change PK)
         return (
           <input
-            type="text"
+ id="val_1532" name="val" aria-label="val"            type="text"
             value={val}
             disabled
             className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80 text-slate-600"
@@ -1544,7 +1544,7 @@ export default function AdminDesk({
         if (isUuid || isAutoNum) {
           return (
             <input
-              type="text"
+ id="system_generated_id_1546" name="system_generated_id" aria-label="System Generated ID"              type="text"
               value="AUTO_GENERATED"
               disabled
               className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80 text-slate-500 font-semibold"
@@ -1557,7 +1557,7 @@ export default function AdminDesk({
 
     return (
       <input
-        type={colType.includes("int") || colType.includes("numeric") ? "number" : "text"}
+ id="val_1559" name="val" aria-label="val"        type={colType.includes("int") || colType.includes("numeric") ? "number" : "text"}
         value={val}
         onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
         className="w-full bg-white border border-slate-300 p-2 text-xs font-bold font-mono rounded outline-none"
@@ -1584,13 +1584,13 @@ export default function AdminDesk({
              {error && <div className="p-2 border border-rose-300 bg-rose-50 text-rose-800 text-[10px] uppercase font-bold text-center">{error}</div>}
              <div className="space-y-4">
                 <input
-                  value={loginUser}
+ id="operator_id_1586" name="operator_id" aria-label="Operator ID"                  value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
                   className="w-full bg-white border border-slate-300 p-2 text-sm uppercase outline-none placeholder:text-slate-300 font-bold"
                   placeholder="Operator ID"
                 />
                 <input
-                  type="password"
+ id="password_1592" name="password" aria-label="Password"                  type="password"
                   value={loginPass}
                   onChange={(e) => setLoginPass(e.target.value)}
                   className="w-full bg-white border border-slate-300 p-2 text-sm outline-none placeholder:text-slate-300 font-bold"
@@ -1812,7 +1812,7 @@ export default function AdminDesk({
               <div className="relative flex items-center bg-slate-50 border border-slate-200 px-2.5 py-1.5 w-full sm:w-48 text-xs rounded-lg">
                 <Search className="h-3.5 w-3.5 text-slate-400 mr-1.5 shrink-0" />
                 <input
-                  type="text"
+ id="search_logs_1814" name="search_logs" aria-label="Search logs..."                  type="text"
                   value={logFilter}
                   onChange={(e) => setLogFilter(e.target.value)}
                   placeholder="Search logs..."
@@ -1825,7 +1825,7 @@ export default function AdminDesk({
             {logSubTab === "queue" && (
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto font-sans">
                 <select
-                  value={queueModule}
+ id="queuemodule_1827" name="queuemodule" aria-label="queuemodule"                  value={queueModule}
                   onChange={(e) => setQueueModule(e.target.value as any)}
                   className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-650 outline-none w-full sm:w-auto cursor-pointer"
                 >
@@ -1838,7 +1838,7 @@ export default function AdminDesk({
 
                 <div className="relative flex items-center bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs rounded-lg w-full sm:w-44">
                   <input
-                    type="text"
+ id="enter_no_ref_1840" name="enter_no_ref" aria-label="Enter No/Ref..."                    type="text"
                     value={queueDocRef}
                     onChange={(e) => setQueueDocRef(e.target.value)}
                     placeholder="Enter No/Ref..."
@@ -1862,7 +1862,7 @@ export default function AdminDesk({
             {/* Filter Category Select - only show if on System logs */}
             {logSubTab === "system" && (
               <select
-                value={logType}
+ id="logtype_1864" name="logtype" aria-label="logtype"                value={logType}
                 onChange={(e) => setLogType(e.target.value)}
                 className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 font-bold text-slate-600 outline-none cursor-pointer"
               >
@@ -2386,7 +2386,7 @@ export default function AdminDesk({
             <div className="hidden sm:flex items-center gap-2 bg-white/10 border border-white/5 rounded-full px-3 py-1 text-xs">
               <Search className="h-4 w-4 text-white/70" />
               <input
-                className="bg-transparent border-none outline-none text-white text-xs placeholder:text-white/40 max-w-[120px]"
+ id="search_console_2388" name="search_console" aria-label="Search console..."                className="bg-transparent border-none outline-none text-white text-xs placeholder:text-white/40 max-w-[120px]"
                 placeholder="Search console..."
               />
             </div>
@@ -3039,7 +3039,7 @@ export default function AdminDesk({
                   <div className="p-4 bg-slate-100 border border-slate-200 space-y-4">
                     <span className="text-[10px] font-black uppercase block">Add Column Field</span>
                     <input
-                      className="w-full bg-white border border-slate-350 p-2 text-xs font-bold font-mono outline-none uppercase"
+ id="e_g_tracking_id_3041" name="e_g_tracking_id" aria-label="e.g. tracking_id"                      className="w-full bg-white border border-slate-350 p-2 text-xs font-bold font-mono outline-none uppercase"
                       placeholder="e.g. tracking_id"
                       value={newFieldName}
                       onChange={(e) => setNewFieldName(e.target.value)}
@@ -3058,7 +3058,7 @@ export default function AdminDesk({
             {activeSchemaTab === "sql" && (
               <div className="space-y-4">
                 <textarea
-                  className="w-full h-40 bg-slate-900 text-emerald-400 font-mono text-xs p-3 rounded"
+ id="enter_sql_command_here_3060" name="enter_sql_command_here" aria-label="-- ENTER SQL COMMAND HERE..."                  className="w-full h-40 bg-slate-900 text-emerald-400 font-mono text-xs p-3 rounded"
                   value={sqlQuery}
                   onChange={(e) => setSqlQuery(e.target.value)}
                   placeholder="-- ENTER SQL COMMAND HERE..."

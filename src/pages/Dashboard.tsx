@@ -2272,7 +2272,7 @@ export default function Dashboard({
                   <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center  shrink-0 shadow-xs">
                     <div className="relative flex-1 max-w-sm">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <input 
+                      <input  id="quick_filter_sms_logs_by__2275" name="quick_filter_sms_logs_by_" aria-label="Quick filter SMS logs by sender name or body..."
                         type="text"
                         placeholder="Quick filter SMS logs by sender name or body..."
                         value={smsSearchTerm}
@@ -2484,8 +2484,8 @@ export default function Dashboard({
                       className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"
                     >
                       <div>
-                        <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Trader / Vyapari</label>
-                        <input 
+                        <label htmlFor="trader_vyapari_2488" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Trader / Vyapari</label>
+                        <input  id="trader_vyapari_2488" name="trader_vyapari" aria-label="Trader / Vyapari"
                           type="text"
                           placeholder="e.g. Shiva Fibres"
                           value={manualTrader}
@@ -2499,8 +2499,8 @@ export default function Dashboard({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Supplier Name</label>
-                        <input 
+                        <label htmlFor="supplier_name_2503" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Supplier Name</label>
+                        <input  id="supplier_name_2503" name="supplier_name" aria-label="Supplier Name"
                           type="text"
                           placeholder="e.g. SELF"
                           value={manualSupplier}
@@ -2511,8 +2511,8 @@ export default function Dashboard({
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Grade</label>
-                          <select 
+                          <label htmlFor="grade_2515" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Grade</label>
+                          <select  id="grade_2515" name="grade" aria-label="Grade"
                             value={manualGrade}
                             onChange={(e) => setManualGrade(e.target.value)}
                             className="w-full bg-white px-2.5 py-2 text-[11px] border border-slate-250 rounded-lg shadow-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
@@ -2526,8 +2526,8 @@ export default function Dashboard({
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Unit/Lorry</label>
-                          <select 
+                          <label htmlFor="unit_lorry_2530" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Unit/Lorry</label>
+                          <select  id="unit_lorry_2530" name="unit_lorry" aria-label="Unit/Lorry"
                             value={manualUnitType}
                             onChange={(e) => setManualUnitType(e.target.value)}
                             className="w-full bg-white px-2.5 py-2 text-[11px] border border-slate-250 rounded-lg shadow-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer"
@@ -2541,8 +2541,8 @@ export default function Dashboard({
 
                       <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Qty (Bales)</label>
-                          <input 
+                          <label htmlFor="qty_bales_2545" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Qty (Bales)</label>
+                          <input  id="qty_bales_2545" name="qty_bales" aria-label="Qty (Bales)"
                             type="number"
                             placeholder="150"
                             value={manualBales}
@@ -2553,8 +2553,8 @@ export default function Dashboard({
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Rate (₹/Qtl)</label>
-                          <input 
+                          <label htmlFor="rate_qtl_2557" className="text-[10px] font-black text-slate-500 uppercase block mb-1.5 tracking-wider">Rate (₹/Qtl)</label>
+                          <input  id="rate_qtl_2557" name="rate_qtl" aria-label="Rate (₹/Qtl)"
                             type="number"
                             placeholder="3450"
                             value={manualRate}
@@ -2579,7 +2579,7 @@ export default function Dashboard({
                   <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-3 items-center justify-between  shadow-xs">
                     <div className="relative flex-1 max-w-xs">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <input 
+                      <input  id="search_booked_contracts_2582" name="search_booked_contracts" aria-label="Search booked contracts..."
                         type="text"
                         placeholder="Search booked contracts..."
                         value={saudaSearchTerm}
@@ -2849,9 +2849,9 @@ export default function Dashboard({
                 <LegacyFieldset legend="Security & Password">
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-indigo-900 mb-1 block">New Password</label>
+                      <label htmlFor="new_password_2853" className="text-[10px] font-black uppercase text-indigo-900 mb-1 block">New Password</label>
                       <input
-                        type="password"
+ id="new_password_2853" name="new_password" aria-label="New Password"                        type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="w-full h-8 px-2 border border-slate-300 font-mono text-sm bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"

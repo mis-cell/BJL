@@ -15,9 +15,9 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Shipment Date */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Shipment Date</label>
+          <label htmlFor="shipment_date_19" className="text-xs font-semibold text-slate-700">Shipment Date</label>
           <input
-            type="date"
+ id="shipment_date_19" aria-label="Shipment Date"            type="date"
             name="shipment_date"
             value={formData.shipment_date || ''}
             onChange={onChange}
@@ -27,9 +27,9 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
 
         {/* Shipment Days */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Days</label>
+          <label htmlFor="shipment_days_31" className="text-xs font-semibold text-slate-700">Days</label>
           <input
-            type="number"
+ id="shipment_days_31" aria-label="Days"            type="number"
             name="shipment_days"
             value={formData.shipment_days ?? 0}
             onChange={onChange}
@@ -39,9 +39,9 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
 
         {/* Penalty Per Day */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Penalty/Day</label>
+          <label htmlFor="shipment_penalty_43" className="text-xs font-semibold text-slate-700">Penalty/Day</label>
           <input
-            type="number"
+ id="shipment_penalty_43" aria-label="Penalty/Day"            type="number"
             step="0.01"
             name="shipment_penalty"
             value={formData.shipment_penalty ?? 5}
@@ -52,9 +52,9 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
 
         {/* Marks Claim */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Marks Claim</label>
+          <label htmlFor="marks_claim_56" className="text-xs font-semibold text-slate-700">Marks Claim</label>
           <input
-            type="number"
+ id="marks_claim_56" aria-label="Marks Claim"            type="number"
             step="0.01"
             name="marks_claim"
             value={formData.marks_claim ?? 0}
@@ -65,9 +65,9 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
 
         {/* Quantity Claim */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Quantity Claim</label>
+          <label htmlFor="quantity_claim_69" className="text-xs font-semibold text-slate-700">Quantity Claim</label>
           <input
-            type="number"
+ id="quantity_claim_69" aria-label="Quantity Claim"            type="number"
             step="0.01"
             name="quantity_claim"
             value={formData.quantity_claim ?? 0}

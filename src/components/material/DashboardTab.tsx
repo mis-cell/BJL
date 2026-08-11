@@ -360,7 +360,7 @@ export default function DashboardTab({
             </div>
           </div>
           
-          <select className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 px-3 rounded-lg outline-none">
+          <select  id="select_363" name="select" aria-label="select"className="bg-slate-50 border border-slate-200 text-xs font-bold p-1.5 px-3 rounded-lg outline-none">
             <option>Monthly</option>
             <option>Weekly</option>
             <option>Daily</option>

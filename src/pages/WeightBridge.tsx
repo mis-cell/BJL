@@ -793,7 +793,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                       Ticket Number <span className="text-slate-400 font-normal">(Auto)</span>
                     </label>
                     <input
-                      type="text"
+ id="s1ticketno_795" name="s1ticketno" aria-label="s1ticketno"                      type="text"
                       readOnly
                       value={s1TicketNo}
                       className="w-full bg-slate-100 border border-slate-300 px-3 py-2 rounded font-bold text-sky-900 outline-none"
@@ -806,7 +806,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                       Weighment Date <span className="text-rose-600">*</span>
                     </label>
                     <input
-                      type="date"
+ id="s1date_808" name="s1date" aria-label="s1date"                      type="date"
                       required
                       value={s1Date}
                       onChange={(e) => setS1Date(e.target.value)}
@@ -820,7 +820,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                       Lorry Number <span className="text-rose-600">*</span>
                     </label>
                     <input
-                      type="text"
+ id="e_g_wb25b1234_822" name="e_g_wb25b1234" aria-label="e.g. WB25B1234"                      type="text"
                       required
                       placeholder="e.g. WB25B1234"
                       value={s1LorryNo}
@@ -831,11 +831,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
 
                   {/* Party Name */}
                   <div>
-                    <label className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
+                    <label htmlFor="party_name_supplier_837" className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
                       Party Name / Supplier
                     </label>
                     <input
-                      type="text"
+ id="party_name_supplier_837" name="party_name_supplier" aria-label="Party Name / Supplier"                      type="text"
                       list="broker-options"
                       placeholder="Select or type party..."
                       value={s1PartyName}
@@ -859,7 +859,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                       Gross Weight (KG) <span className="text-rose-400">*</span>
                     </label>
                     <input
-                      type="number"
+ id="0_00_861" name="0_00" aria-label="0.00"                      type="number"
                       step="0.01"
                       required
                       placeholder="0.00"
@@ -874,7 +874,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                       Tare Weight (KG) <span className="text-rose-400">*</span>
                     </label>
                     <input
-                      type="number"
+ id="0_00_876" name="0_00" aria-label="0.00"                      type="number"
                       step="0.01"
                       required
                       placeholder="0.00"
@@ -901,11 +901,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                   
                   {/* Unit */}
                   <div>
-                    <label className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
+                    <label htmlFor="unit_mill_unit_907" className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
                       Unit / Mill Unit
                     </label>
                     <input
-                      type="text"
+ id="unit_mill_unit_907" name="unit_mill_unit" aria-label="Unit / Mill Unit"                      type="text"
                       list="unit-options"
                       placeholder="Select or type unit..."
                       value={s1Unit}
@@ -921,11 +921,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
 
                   {/* Mokam / Agency */}
                   <div>
-                    <label className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
+                    <label htmlFor="mokam_station_agency_927" className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
                       Mokam / Station / Agency
                     </label>
                     <input
-                      type="text"
+ id="mokam_station_agency_927" name="mokam_station_agency" aria-label="Mokam / Station / Agency"                      type="text"
                       list="agency-options"
                       placeholder="Select or type mokam..."
                       value={s1Mokam}
@@ -941,11 +941,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
 
                   {/* Marka */}
                   <div>
-                    <label className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
+                    <label htmlFor="marka_947" className="block text-slate-700 font-extrabold uppercase mb-1 text-[11px]">
                       Marka
                     </label>
                     <input
-                      type="text"
+ id="marka_947" name="marka" aria-label="Marka"                      type="text"
                       list="marka-options"
                       placeholder="Select or type marka..."
                       value={s1Marka}
@@ -973,7 +973,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
 
                   <div className="flex flex-wrap items-center gap-2">
                     <input
-                      type="text"
+ id="select_grade_975" name="select_grade" aria-label="Select Grade..."                      type="text"
                       list="grade-options"
                       placeholder="Select Grade..."
                       value={selectedGradeInput}
@@ -987,7 +987,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                     </datalist>
 
                     <input
-                      type="number"
+ id="qty_kg_989" name="qty_kg" aria-label="Qty (KG)..."                      type="number"
                       step="0.01"
                       placeholder="Qty (KG)..."
                       value={selectedGradeQty}
@@ -1072,7 +1072,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                     <span>Select Pending Lorry for Stage 2 Weighment <span className="text-rose-600">*</span></span>
                   </label>
                   <select
-                    required
+ id="s2selectedid_1074" name="s2selectedid" aria-label="s2selectedid"                    required
                     value={s2SelectedId}
                     onChange={(e) => {
                       setS2SelectedId(e.target.value);
@@ -1147,7 +1147,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                           Mill Scale Gross Weight (KG) <span className="text-rose-400">*</span>
                         </label>
                         <input
-                          type="number"
+ id="0_00_1149" name="0_00" aria-label="0.00"                          type="number"
                           step="0.01"
                           required
                           placeholder="0.00"
@@ -1162,7 +1162,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                           Mill Scale Tare Weight (KG) <span className="text-rose-400">*</span>
                         </label>
                         <input
-                          type="number"
+ id="0_00_1164" name="0_00" aria-label="0.00"                          type="number"
                           step="0.01"
                           required
                           placeholder="0.00"
@@ -1227,7 +1227,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                     <span>Select Pending Lorry for Stage 3 Weighment <span className="text-rose-600">*</span></span>
                   </label>
                   <select
-                    required
+ id="s3selectedid_1229" name="s3selectedid" aria-label="s3selectedid"                    required
                     value={s3SelectedId}
                     onChange={(e) => {
                       setS3SelectedId(e.target.value);
@@ -1302,7 +1302,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                           Electronic Gross Weight (KG) <span className="text-rose-400">*</span>
                         </label>
                         <input
-                          type="number"
+ id="0_00_1304" name="0_00" aria-label="0.00"                          type="number"
                           step="0.01"
                           required
                           placeholder="0.00"
@@ -1317,7 +1317,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                           Electronic Tare Weight (KG) <span className="text-rose-400">*</span>
                         </label>
                         <input
-                          type="number"
+ id="0_00_1319" name="0_00" aria-label="0.00"                          type="number"
                           step="0.01"
                           required
                           placeholder="0.00"
@@ -1446,11 +1446,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
             {/* Filters Bar */}
             <div className="bg-slate-100 p-3 rounded-xl border border-slate-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Search Lorry / Ticket</label>
+                <label htmlFor="search_lorry_ticket_1452" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Search Lorry / Ticket</label>
                 <div className="relative">
                   <Search className="h-3.5 w-3.5 absolute left-2.5 top-2 text-slate-400" />
                   <input
-                    type="text"
+ id="search_lorry_ticket_1452" name="search_lorry_ticket" aria-label="Search Lorry / Ticket"                    type="text"
                     placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -1460,9 +1460,9 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Filter Party</label>
+                <label htmlFor="filter_party_1464" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Filter Party</label>
                 <select
-                  value={filterParty}
+ id="filter_party_1464" name="filter_party" aria-label="Filter Party"                  value={filterParty}
                   onChange={(e) => setFilterParty(e.target.value)}
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"
                 >
@@ -1474,9 +1474,9 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Filter Mokam</label>
+                <label htmlFor="filter_mokam_1478" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Filter Mokam</label>
                 <select
-                  value={filterMokam}
+ id="filter_mokam_1478" name="filter_mokam" aria-label="Filter Mokam"                  value={filterMokam}
                   onChange={(e) => setFilterMokam(e.target.value)}
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"
                 >
@@ -1488,9 +1488,9 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Date From</label>
+                <label htmlFor="date_from_1492" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Date From</label>
                 <input
-                  type="date"
+ id="date_from_1492" name="date_from" aria-label="Date From"                  type="date"
                   value={filterDateFrom}
                   onChange={(e) => setFilterDateFrom(e.target.value)}
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"
@@ -1498,9 +1498,9 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Date To</label>
+                <label htmlFor="date_to_1502" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Date To</label>
                 <input
-                  type="date"
+ id="date_to_1502" name="date_to" aria-label="Date To"                  type="date"
                   value={filterDateTo}
                   onChange={(e) => setFilterDateTo(e.target.value)}
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"

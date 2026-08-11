@@ -827,7 +827,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           {/* Large Search Box */}
           <div className="relative flex-1 min-w-[280px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
+            <input  id="search_broker_or_supplier_830" name="search_broker_or_supplier" aria-label="Search Broker or Supplier..."
               type="text"
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
               placeholder="Search Broker or Supplier..."
@@ -840,7 +840,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
               <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">From</span>
-              <input 
+              <input  id="startdate_843" name="startdate" aria-label="startdate"
                 type="date" 
                 className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
                 value={startDate} 
@@ -850,7 +850,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
               <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">To</span>
-              <input 
+              <input  id="enddate_853" name="enddate" aria-label="enddate"
                 type="date" 
                 className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
                 value={endDate} 

@@ -1315,13 +1315,13 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="current_base_rate_1323" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
                     Current Base Rate (₹)
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-500">₹</span>
                     <input
-                      type="number"
+ id="current_base_rate_1323" name="current_base_rate" aria-label="Current Base Rate (₹)"                      type="number"
                       value={baseRate}
                       onChange={(e) => setBaseRate(Number(e.target.value) || 0)}
                       className="w-full bg-[#FAF8F5] border-2 border-[#1E331B] font-mono font-black text-base text-[#1E331B] pl-7 pr-3 py-2 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#D4AF37]"
@@ -1331,13 +1331,13 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="effective_date_1339" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
                     Effective Date
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <input
-                      type="date"
+ id="effective_date_1339" name="effective_date" aria-label="Effective Date"                      type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full bg-[#FAF8F5] border border-slate-300 font-mono font-bold text-xs pl-9 pr-3 py-2 rounded-xl outline-none focus:bg-white"
@@ -1347,11 +1347,11 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="audit_remarks_1353" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
                     Audit Remarks
                   </label>
                   <textarea
-                    value={remarks}
+ id="audit_remarks_1353" name="audit_remarks" aria-label="Audit Remarks"                    value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                     rows={2}
                     placeholder="Log comments or reason for rate change..."
@@ -1410,7 +1410,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                     Headers: Area, Grade, Differential
                   </span>
                   <input
-                    id="satta-csv-file-input"
+ name="file" aria-label="file"                    id="satta-csv-file-input"
                     type="file"
                     accept=".csv"
                     className="hidden"
@@ -1497,7 +1497,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                   <input
-                    type="text"
+ id="search_area_name_1499" name="search_area_name" aria-label="Search Area Name..."                    type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search Area Name..."
@@ -1588,7 +1588,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 </div>
                 <div className="flex items-center gap-2">
                   <input
-                    type="number"
+ id="0_1590" name="0" aria-label="0"                    type="number"
                     value={editingCell.val}
                     onChange={(e) => setEditingCell({...editingCell, val: e.target.value})}
                     placeholder="0"

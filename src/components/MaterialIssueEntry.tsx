@@ -94,7 +94,7 @@ export function EditableComboBox({
     <div ref={containerRef} className="relative flex-1">
       <div className="flex border border-slate-300 rounded overflow-hidden bg-white shadow-xs">
         <input
-          ref={inputRef}
+ id="value_96" name="value" aria-label="value"          ref={inputRef}
           type="text"
           value={value}
           placeholder={placeholder}
@@ -682,8 +682,8 @@ export default function MaterialIssueEntry({
             <div className="p-4 space-y-4">
               <div className="flex gap-3 items-end flex-wrap">
                 <div className="flex flex-col gap-1 min-w-[240px] flex-1">
-                  <label className="font-bold text-slate-500 text-[10px] uppercase">Select Final Arrival (FA #)</label>
-                  <select 
+                  <label htmlFor="select_final_arrival_fa_686" className="font-bold text-slate-500 text-[10px] uppercase">Select Final Arrival (FA #)</label>
+                  <select  id="select_final_arrival_fa_686" name="select_final_arrival_fa" aria-label="Select Final Arrival (FA #)"
                     value={selectedArrivalId}
                     onChange={(e) => setSelectedArrivalId(e.target.value)}
                     className="w-full bg-white border border-[#dbe1ea] rounded px-3 py-1.5 font-bold outline-none text-slate-800 focus:border-[#1c4587]"
@@ -708,32 +708,32 @@ export default function MaterialIssueEntry({
               {/* Readonly FA fields */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-3 rounded border border-dashed border-[#dbe1ea]">
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">Voucher Date</label>
-                  <input readOnly value={arrivalMeta ? new Date(arrivalMeta.date).toLocaleDateString('en-GB') : '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="voucher_date_712" className="font-bold text-[10px] text-slate-400 uppercase">Voucher Date</label>
+                  <input  id="voucher_date_712" name="voucher_date" aria-label="Voucher Date"readOnly value={arrivalMeta ? new Date(arrivalMeta.date).toLocaleDateString('en-GB') : '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">P.O. / Mill P.O. No.</label>
-                  <input readOnly value={arrivalMeta?.po_no || arrivalMeta?.purchase_order_no || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="p_o_mill_p_o_no_716" className="font-bold text-[10px] text-slate-400 uppercase">P.O. / Mill P.O. No.</label>
+                  <input  id="p_o_mill_p_o_no_716" name="p_o_mill_p_o_no" aria-label="P.O. / Mill P.O. No."readOnly value={arrivalMeta?.po_no || arrivalMeta?.purchase_order_no || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">J.C.I Govt</label>
-                  <input readOnly value={arrivalMeta?.jci || 'No'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="j_c_i_govt_720" className="font-bold text-[10px] text-slate-400 uppercase">J.C.I Govt</label>
+                  <input  id="j_c_i_govt_720" name="j_c_i_govt" aria-label="J.C.I Govt"readOnly value={arrivalMeta?.jci || 'No'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">Supplier Name</label>
-                  <input readOnly value={arrivalMeta?.supplier || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="supplier_name_724" className="font-bold text-[10px] text-slate-400 uppercase">Supplier Name</label>
+                  <input  id="supplier_name_724" name="supplier_name" aria-label="Supplier Name"readOnly value={arrivalMeta?.supplier || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">Broker Reference</label>
-                  <input readOnly value={arrivalMeta?.broker || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="broker_reference_728" className="font-bold text-[10px] text-slate-400 uppercase">Broker Reference</label>
+                  <input  id="broker_reference_728" name="broker_reference" aria-label="Broker Reference"readOnly value={arrivalMeta?.broker || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">Lorry Number</label>
-                  <input readOnly value={arrivalMeta?.lorry_number || arrivalMeta?.lorry_no || arrivalMeta?.vehicle_no || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
+                  <label htmlFor="lorry_number_732" className="font-bold text-[10px] text-slate-400 uppercase">Lorry Number</label>
+                  <input  id="lorry_number_732" name="lorry_number" aria-label="Lorry Number"readOnly value={arrivalMeta?.lorry_number || arrivalMeta?.lorry_no || arrivalMeta?.vehicle_no || '--'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 outline-none" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-[10px] text-slate-400 uppercase">Arrival Net Wt (M.T)</label>
-                  <input readOnly value={arrivalMeta ? (arrivalMeta.challan_material_weight !== undefined && arrivalMeta.challan_material_weight !== null ? Number(arrivalMeta.challan_material_weight).toFixed(3) : (Number(arrivalMeta.total_actual_weight || arrivalMeta.total_weight_kgs || 0) / 1000).toFixed(3)) : '0.000'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 text-right outline-none" />
+                  <label htmlFor="arrival_net_wt_m_t_736" className="font-bold text-[10px] text-slate-400 uppercase">Arrival Net Wt (M.T)</label>
+                  <input  id="arrival_net_wt_m_t_736" name="arrival_net_wt_m_t" aria-label="Arrival Net Wt (M.T)"readOnly value={arrivalMeta ? (arrivalMeta.challan_material_weight !== undefined && arrivalMeta.challan_material_weight !== null ? Number(arrivalMeta.challan_material_weight).toFixed(3) : (Number(arrivalMeta.total_actual_weight || arrivalMeta.total_weight_kgs || 0) / 1000).toFixed(3)) : '0.000'} className="bg-slate-100 border border-[#e7ecf3] px-2 py-1 rounded font-bold text-slate-700 text-right outline-none" />
                 </div>
               </div>
             </div>
@@ -752,16 +752,16 @@ export default function MaterialIssueEntry({
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Godown Receipt No.</label>
-                  <input 
+                  <label htmlFor="godown_receipt_no_756" className="font-semibold text-slate-500 text-[10px] uppercase">Godown Receipt No.</label>
+                  <input  id="godown_receipt_no_756" name="godown_receipt_no" aria-label="Godown Receipt No."
                     value={formData.issue_no}
                     onChange={(e) => setFormData((p: any) => ({ ...p, issue_no: e.target.value }))}
                     className="border border-[#dbe1ea] px-3 py-1.5 rounded font-bold text-[#1c4587] outline-none focus:border-[#1c4587]" 
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Storing Date</label>
-                  <input 
+                  <label htmlFor="storing_date_764" className="font-semibold text-slate-500 text-[10px] uppercase">Storing Date</label>
+                  <input  id="storing_date_764" name="storing_date" aria-label="Storing Date"
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData((p: any) => ({ ...p, date: e.target.value }))}
@@ -769,8 +769,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Godown No.</label>
-                  <select 
+                  <label htmlFor="godown_no_773" className="font-semibold text-slate-500 text-[10px] uppercase">Godown No.</label>
+                  <select  id="godown_no_773" name="godown_no" aria-label="Godown No."
                     value={formData.godown === 'N/A' ? '' : formData.godown}
                     onChange={(e) => setFormData((p: any) => ({ ...p, godown: e.target.value }))}
                     className="border border-[#dbe1ea] px-3 py-1.5 rounded font-bold text-slate-800 outline-none focus:border-[#1c4587] bg-white cursor-pointer"
@@ -784,8 +784,8 @@ export default function MaterialIssueEntry({
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Stack / Lot No.</label>
-                  <input 
+                  <label htmlFor="stack_lot_no_788" className="font-semibold text-slate-500 text-[10px] uppercase">Stack / Lot No.</label>
+                  <input  id="stack_lot_no_788" name="stack_lot_no" aria-label="Stack / Lot No."
                     placeholder="Stack identifier"
                     value={formData.stack_no}
                     onChange={(e) => setFormData((p: any) => ({ ...p, stack_no: e.target.value }))}
@@ -793,8 +793,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Stored By (Keeper)</label>
-                  <input 
+                  <label htmlFor="stored_by_keeper_797" className="font-semibold text-slate-500 text-[10px] uppercase">Stored By (Keeper)</label>
+                  <input  id="stored_by_keeper_797" name="stored_by_keeper" aria-label="Stored By (Keeper)"
                     placeholder="Godown keeper name"
                     value={formData.issued_by}
                     onChange={(e) => setFormData((p: any) => ({ ...p, issued_by: e.target.value }))}
@@ -802,8 +802,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Checked By</label>
-                  <input 
+                  <label htmlFor="checked_by_806" className="font-semibold text-slate-500 text-[10px] uppercase">Checked By</label>
+                  <input  id="checked_by_806" name="checked_by" aria-label="Checked By"
                     placeholder="Supervisor name"
                     value={formData.received_by}
                     onChange={(e) => setFormData((p: any) => ({ ...p, received_by: e.target.value }))}
@@ -820,8 +820,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Remarks</label>
-                  <input 
+                  <label htmlFor="remarks_824" className="font-semibold text-slate-500 text-[10px] uppercase">Remarks</label>
+                  <input  id="remarks_824" name="remarks" aria-label="Remarks"
                     placeholder="Condition / short / excess notes"
                     value={formData.remarks}
                     onChange={(e) => setFormData((p: any) => ({ ...p, remarks: e.target.value }))}
@@ -843,16 +843,16 @@ export default function MaterialIssueEntry({
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Sell / Invoice No.</label>
-                  <input 
+                  <label htmlFor="sell_invoice_no_847" className="font-semibold text-slate-500 text-[10px] uppercase">Sell / Invoice No.</label>
+                  <input  id="sell_invoice_no_847" name="sell_invoice_no" aria-label="Sell / Invoice No."
                     value={formData.issue_no}
                     onChange={(e) => setFormData((p: any) => ({ ...p, issue_no: e.target.value }))}
                     className="border border-[#dbe1ea] px-3 py-1.5 rounded font-bold text-[#0b6e54] outline-none focus:border-[#0b6e54]" 
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Sale Date</label>
-                  <input 
+                  <label htmlFor="sale_date_855" className="font-semibold text-slate-500 text-[10px] uppercase">Sale Date</label>
+                  <input  id="sale_date_855" name="sale_date" aria-label="Sale Date"
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData((p: any) => ({ ...p, date: e.target.value }))}
@@ -860,8 +860,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">P.O. / Agreement No.</label>
-                  <input 
+                  <label htmlFor="p_o_agreement_no_864" className="font-semibold text-slate-500 text-[10px] uppercase">P.O. / Agreement No.</label>
+                  <input  id="p_o_agreement_no_864" name="p_o_agreement_no" aria-label="P.O. / Agreement No."
                     placeholder="Enter Purchase Order or Agreement number"
                     value={formData.requisition_no}
                     onChange={(e) => setFormData((p: any) => ({ ...p, requisition_no: e.target.value }))}
@@ -869,8 +869,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">J.C.I Govt</label>
-                  <select 
+                  <label htmlFor="j_c_i_govt_873" className="font-semibold text-slate-500 text-[10px] uppercase">J.C.I Govt</label>
+                  <select  id="j_c_i_govt_873" name="j_c_i_govt" aria-label="J.C.I Govt"
                     value={formData.jci}
                     onChange={(e) => setFormData((p: any) => ({ ...p, jci: e.target.value }))}
                     className="border border-[#dbe1ea] px-3 py-1.5 rounded font-bold text-slate-800 outline-none focus:border-[#0b6e54]"
@@ -880,8 +880,8 @@ export default function MaterialIssueEntry({
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Challan / Delivery Order No.</label>
-                  <input 
+                  <label htmlFor="challan_delivery_order_no_884" className="font-semibold text-slate-500 text-[10px] uppercase">Challan / Delivery Order No.</label>
+                  <input  id="challan_delivery_order_no_884" name="challan_delivery_order_no" aria-label="Challan / Delivery Order No."
                     placeholder="Delivery order reference"
                     value={formData.batch_order}
                     onChange={(e) => setFormData((p: any) => ({ ...p, batch_order: e.target.value }))}
@@ -889,8 +889,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-emerald-800 text-[10px] uppercase font-black">Buyer Factory Name</label>
-                  <input 
+                  <label htmlFor="buyer_factory_name_893" className="font-semibold text-emerald-800 text-[10px] uppercase font-black">Buyer Factory Name</label>
+                  <input  id="buyer_factory_name_893" name="buyer_factory_name" aria-label="Buyer Factory Name"
                     placeholder="Buyer mill or factory name"
                     value={formData.department}
                     onChange={(e) => setFormData((p: any) => ({ ...p, department: e.target.value }))}
@@ -898,8 +898,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2 md:col-span-3">
-                  <label className="font-semibold text-emerald-800 text-[10px] uppercase font-black">Buyer Delivery Address / Destination</label>
-                  <input 
+                  <label htmlFor="buyer_delivery_address_de_902" className="font-semibold text-emerald-800 text-[10px] uppercase font-black">Buyer Delivery Address / Destination</label>
+                  <input  id="buyer_delivery_address_de_902" name="buyer_delivery_address_de" aria-label="Buyer Delivery Address / Destination"
                     placeholder="Enter full destination address of Buyer"
                     value={formData.destination_godown || ''}
                     onChange={(e) => setFormData((p: any) => ({ ...p, destination_godown: e.target.value }))}
@@ -907,8 +907,8 @@ export default function MaterialIssueEntry({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Issued By</label>
-                  <input 
+                  <label htmlFor="issued_by_911" className="font-semibold text-slate-500 text-[10px] uppercase">Issued By</label>
+                  <input  id="issued_by_911" name="issued_by" aria-label="Issued By"
                     placeholder="Store in-charge"
                     value={formData.issued_by}
                     onChange={(e) => setFormData((p: any) => ({ ...p, issued_by: e.target.value }))}
@@ -956,16 +956,16 @@ export default function MaterialIssueEntry({
                 </div>
 
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Sender Company</label>
-                  <input 
+                  <label htmlFor="sender_company_960" className="font-semibold text-slate-500 text-[10px] uppercase">Sender Company</label>
+                  <input  id="sender_company_960" name="sender_company" aria-label="Sender Company"
                     readOnly
                     value="BALLY JUTE COMPANY LIMITED"
                     className="border border-[#dbe1ea] bg-slate-100 px-3 py-1.5 rounded font-black text-slate-700 outline-none  cursor-not-allowed uppercase" 
                   />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="font-semibold text-slate-500 text-[10px] uppercase">Remarks / GSTIN / Comments</label>
-                  <input 
+                  <label htmlFor="remarks_gstin_comments_968" className="font-semibold text-slate-500 text-[10px] uppercase">Remarks / GSTIN / Comments</label>
+                  <input  id="remarks_gstin_comments_968" name="remarks_gstin_comments" aria-label="Remarks / GSTIN / Comments"
                     placeholder="Feed / blend instructions or Buyer GSTIN"
                     value={formData.remarks}
                     onChange={(e) => setFormData((p: any) => ({ ...p, remarks: e.target.value }))}
@@ -992,16 +992,16 @@ export default function MaterialIssueEntry({
             {/* Retro form grid layout */}
             <div className="p-6 bg-white grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issue No.</label>
-                <input 
+                <label htmlFor="issue_no_996" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issue No.</label>
+                <input  id="issue_no_996" name="issue_no" aria-label="Issue No."
                   value={formData.issue_no}
                   onChange={(e) => setFormData((p: any) => ({ ...p, issue_no: e.target.value }))}
                   className="flex-1 border border-slate-300 px-2 py-1 rounded font-bold text-[#1c4587] outline-none" 
                 />
               </div>
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issue Date</label>
-                <input 
+                <label htmlFor="issue_date_1004" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issue Date</label>
+                <input  id="issue_date_1004" name="issue_date" aria-label="Issue Date"
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData((p: any) => ({ ...p, date: e.target.value }))}
@@ -1010,8 +1010,8 @@ export default function MaterialIssueEntry({
               </div>
 
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Requisition No.</label>
-                <input 
+                <label htmlFor="requisition_no_1014" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Requisition No.</label>
+                <input  id="requisition_no_1014" name="requisition_no" aria-label="Requisition No."
                   placeholder="Batching requisition"
                   value={formData.requisition_no}
                   onChange={(e) => setFormData((p: any) => ({ ...p, requisition_no: e.target.value }))}
@@ -1019,8 +1019,8 @@ export default function MaterialIssueEntry({
                 />
               </div>
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Requisition Date</label>
-                <input 
+                <label htmlFor="requisition_date_1023" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Requisition Date</label>
+                <input  id="requisition_date_1023" name="requisition_date" aria-label="Requisition Date"
                   type="date"
                   value={formData.requisition_date}
                   onChange={(e) => setFormData((p: any) => ({ ...p, requisition_date: e.target.value }))}
@@ -1029,8 +1029,8 @@ export default function MaterialIssueEntry({
               </div>
 
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Godown No. (Source)</label>
-                <select 
+                <label htmlFor="godown_no_source_1033" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Godown No. (Source)</label>
+                <select  id="godown_no_source_1033" name="godown_no_source" aria-label="Godown No. (Source)"
                   value={formData.godown === 'N/A' ? '' : formData.godown}
                   onChange={(e) => setFormData((p: any) => ({ ...p, godown: e.target.value }))}
                   className="flex-1 border border-slate-300 px-2 py-1 rounded font-bold text-slate-800 outline-none cursor-pointer bg-white"
@@ -1063,8 +1063,8 @@ export default function MaterialIssueEntry({
                 />
               </div>
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Lorry Number</label>
-                <input 
+                <label htmlFor="lorry_number_1067" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Lorry Number</label>
+                <input  id="lorry_number_1067" name="lorry_number" aria-label="Lorry Number"
                   placeholder="Lorry Number"
                   value={formData.lorry_number}
                   onChange={(e) => setFormData((p: any) => ({ ...p, lorry_number: e.target.value }))}
@@ -1073,8 +1073,8 @@ export default function MaterialIssueEntry({
               </div>
 
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issued By</label>
-                <input 
+                <label htmlFor="issued_by_1077" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Issued By</label>
+                <input  id="issued_by_1077" name="issued_by" aria-label="Issued By"
                   placeholder="Godown keeper name"
                   value={formData.issued_by}
                   onChange={(e) => setFormData((p: any) => ({ ...p, issued_by: e.target.value }))}
@@ -1082,8 +1082,8 @@ export default function MaterialIssueEntry({
                 />
               </div>
               <div className="flex items-center gap-3 py-1">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Received By</label>
-                <input 
+                <label htmlFor="received_by_1086" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0">Received By</label>
+                <input  id="received_by_1086" name="received_by" aria-label="Received By"
                   placeholder="Mill / batching in-charge"
                   value={formData.received_by}
                   onChange={(e) => setFormData((p: any) => ({ ...p, received_by: e.target.value }))}
@@ -1104,8 +1104,8 @@ export default function MaterialIssueEntry({
               </div>
 
               <div className="flex gap-3 py-1 md:col-span-2 items-start">
-                <label className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0 mt-1">Remarks</label>
-                <textarea 
+                <label htmlFor="remarks_1108" className="w-[130px] font-bold text-[#1c4587] text-[12px] uppercase shrink-0 mt-1">Remarks</label>
+                <textarea  id="remarks_1108" name="remarks" aria-label="Remarks"
                   placeholder="Issue notes, dampness, short / excess details, observations"
                   value={formData.remarks}
                   onChange={(e) => setFormData((p: any) => ({ ...p, remarks: e.target.value }))}
@@ -1216,7 +1216,7 @@ export default function MaterialIssueEntry({
                         <>
                           {/* Factory Cell: I.TG No */}
                           <td>
-                            <input 
+                            <input  id="row_itg_no_1219" name="row_itg_no" aria-label="row itg no"
                               type="text" 
                               value={row.itg_no || ''} 
                               onChange={(e) => updateRow(idx, 'itg_no', e.target.value)} 
@@ -1225,7 +1225,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Factory Cell: Grade */}
                           <td>
-                            <select 
+                            <select  id="row_grade_name_1228" name="row_grade_name" aria-label="row grade name"
                               value={row.grade_name} 
                               onChange={(e) => updateRow(idx, 'grade_name', e.target.value)}
                               className="w-full text-center py-1 border border-transparent rounded bg-transparent focus:bg-white focus:border-slate-300 outline-none font-bold"
@@ -1235,7 +1235,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Factory Cell: Area */}
                           <td>
-                            <input 
+                            <input  id="row_area_1238" name="row_area" aria-label="row area"
                               type="text" 
                               value={row.area || ''} 
                               onChange={(e) => updateRow(idx, 'area', e.target.value)} 
@@ -1247,7 +1247,7 @@ export default function MaterialIssueEntry({
                         <>
                           {/* Godown/Mill Cell: Grade */}
                           <td>
-                            <select 
+                            <select  id="row_grade_name_1250" name="row_grade_name" aria-label="row grade name"
                               value={row.grade_name} 
                               onChange={(e) => updateRow(idx, 'grade_name', e.target.value)}
                               className="w-full text-center py-1 border border-transparent rounded bg-transparent focus:bg-white focus:border-slate-300 outline-none font-bold"
@@ -1257,7 +1257,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Godown/Mill Cell: Marka */}
                           <td>
-                            <input 
+                            <input  id="row_marka_1260" name="row_marka" aria-label="row marka"
                               type="text" 
                               value={row.marka || ''} 
                               onChange={(e) => updateRow(idx, 'marka', e.target.value)} 
@@ -1266,7 +1266,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Godown/Mill Cell: Area */}
                           <td>
-                            <input 
+                            <input  id="row_area_1269" name="row_area" aria-label="row area"
                               type="text" 
                               value={row.area || ''} 
                               onChange={(e) => updateRow(idx, 'area', e.target.value)} 
@@ -1275,7 +1275,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Godown/Mill Cell: Agency */}
                           <td>
-                            <input 
+                            <input  id="row_agency_1278" name="row_agency" aria-label="row agency"
                               type="text" 
                               value={row.agency || ''} 
                               onChange={(e) => updateRow(idx, 'agency', e.target.value)} 
@@ -1284,7 +1284,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Godown/Mill Cell: Crop Year */}
                           <td>
-                            <select 
+                            <select  id="row_crop_1287" name="row_crop" aria-label="row crop"
                               value={row.crop} 
                               onChange={(e) => updateRow(idx, 'crop', e.target.value)}
                               className="w-full text-center py-1 border border-transparent rounded bg-transparent focus:bg-white focus:border-slate-300 outline-none"
@@ -1294,7 +1294,7 @@ export default function MaterialIssueEntry({
                           </td>
                           {/* Godown/Mill Cell: Code */}
                           <td>
-                            <select 
+                            <select  id="row_code_1297" name="row_code" aria-label="row code"
                               value={row.code} 
                               onChange={(e) => updateRow(idx, 'code', e.target.value)}
                               className="w-full text-center py-1 border border-transparent rounded bg-transparent focus:bg-white focus:border-slate-300 outline-none font-bold text-blue-900"
@@ -1311,7 +1311,7 @@ export default function MaterialIssueEntry({
                       
                       {/* Quantity */}
                       <td>
-                        <input 
+                        <input  id="0_1314" name="0" aria-label="0"
                           type="number" 
                           min="0"
                           placeholder="0"
@@ -1323,7 +1323,7 @@ export default function MaterialIssueEntry({
 
                       {/* Unit */}
                       <td>
-                        <select 
+                        <select  id="row_unit_1326" name="row_unit" aria-label="row unit"
                           value={row.unit} 
                           onChange={(e) => updateRow(idx, 'unit', e.target.value)}
                           className="w-full text-center py-1 border border-transparent rounded bg-transparent focus:bg-white focus:border-slate-300 outline-none font-bold"
@@ -1334,7 +1334,7 @@ export default function MaterialIssueEntry({
 
                       {/* Weight (Kgs is stored, but input is mapped to M.T.) */}
                       <td>
-                        <input 
+                        <input  id="0_000_1337" name="0_000" aria-label="0.000"
                           type="number" 
                           step="0.001"
                           min="0"
@@ -1349,7 +1349,7 @@ export default function MaterialIssueEntry({
                       {issueRoute === 'mill' && (
                         <>
                           <td>
-                            <input 
+                            <input  id="0_00_1352" name="0_00" aria-label="0.00"
                               type="number" 
                               min="0"
                               placeholder="0.00"
@@ -1367,7 +1367,7 @@ export default function MaterialIssueEntry({
                       {/* Place/Dest (Godown and Mill routes only) */}
                       {issueRoute !== 'factory' && (
                         <td>
-                          <input 
+                          <input  id="stack_section_ref_1370" name="stack_section_ref" aria-label="Stack / section ref"
                             type="text" 
                             placeholder="Stack / section ref"
                             value={row.place || row.location_dest || ''} 

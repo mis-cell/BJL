@@ -49,7 +49,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ label = "Digital Sig
         <label className="flex items-center justify-center gap-2 bg-white hover:bg-[#F9F8F5] border border-dashed border-[#C5A059] rounded-xl px-3 py-2 text-xs font-bold text-[#174C2C] cursor-pointer transition-colors shadow-2xs">
           <Upload className="h-4 w-4 text-[#D4AF37]" />
           <span>Upload PNG / JPG / PDF</span>
-          <input type="file" accept="image/png,image/jpeg,application/pdf" onChange={handleFileChange} className="hidden" />
+          <input  id="file_52" name="file" aria-label="file"type="file" accept="image/png,image/jpeg,application/pdf" onChange={handleFileChange} className="hidden" />
         </label>
       )}
     </div>

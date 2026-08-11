@@ -344,7 +344,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
             {/* Search Input */}
             <div className="flex items-center gap-2 bg-white border border-slate-300 rounded px-2 py-1.5 w-[260px] shadow-sm">
               <Search className="h-4 w-4 text-slate-400 shrink-0" />
-              <input 
+              <input  id="search_req_no_batch_remar_347" name="search_req_no_batch_remar" aria-label="Search Req No, Batch, Remarks..."
                 type="text" 
                 placeholder="Search Req No, Batch, Remarks..."
                 value={searchTerm}
@@ -356,7 +356,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
             {/* Department Filter */}
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase">Dept:</span>
-              <select 
+              <select  id="deptfilter_359" name="deptfilter" aria-label="deptfilter"
                 value={deptFilter}
                 onChange={(e) => setDeptFilter(e.target.value)}
                 className="bg-white border border-slate-300 rounded text-xs font-bold px-2 py-1.5 outline-none cursor-pointer text-slate-700"
@@ -511,7 +511,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                       Generate New
                     </button>
                   </div>
-                  <input 
+                  <input  id="formdata_requisition_no_514" name="formdata_requisition_no" aria-label="formdata requisition no"
                     type="text" 
                     value={formData.requisition_no || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, requisition_no: e.target.value.toUpperCase() }))}
@@ -524,8 +524,8 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
 
                 {/* Date */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">Requisition Date</label>
-                  <input 
+                  <label htmlFor="requisition_date_528" className="text-[10px] font-black text-slate-500 uppercase">Requisition Date</label>
+                  <input  id="requisition_date_528" name="requisition_date" aria-label="Requisition Date"
                     type="date" 
                     value={formData.requisition_date || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, requisition_date: e.target.value }))}
@@ -535,8 +535,8 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
 
                 {/* Department */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">Department Name</label>
-                  <select 
+                  <label htmlFor="department_name_539" className="text-[10px] font-black text-slate-500 uppercase">Department Name</label>
+                  <select  id="department_name_539" name="department_name" aria-label="Department Name"
                     value={formData.department || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
                     className="border border-slate-300 px-2.5 py-1.5 rounded font-bold text-slate-700 outline-none text-[13px] cursor-pointer bg-white"
@@ -571,8 +571,8 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
 
                 {/* Stock Group */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">Stock Group</label>
-                  <select 
+                  <label htmlFor="stock_group_575" className="text-[10px] font-black text-slate-500 uppercase">Stock Group</label>
+                  <select  id="stock_group_575" name="stock_group" aria-label="Stock Group"
                     value={formData.stock_group || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock_group: e.target.value }))}
                     className="border border-slate-300 px-2.5 py-1.5 rounded font-bold text-slate-700 outline-none text-[13px] cursor-pointer bg-white"
@@ -639,8 +639,8 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
 
                 {/* Qty Bales */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">Quantity in Bales</label>
-                  <input 
+                  <label htmlFor="quantity_in_bales_643" className="text-[10px] font-black text-slate-500 uppercase">Quantity in Bales</label>
+                  <input  id="quantity_in_bales_643" name="quantity_in_bales" aria-label="Quantity in Bales"
                     type="number" 
                     value={formData.qty_bales || 0}
                     onChange={(e) => setFormData(prev => ({ ...prev, qty_bales: Number(e.target.value) }))}
@@ -667,7 +667,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                       </button>
                     ))}
                   </div>
-                  <input 
+                  <input  id="formdata_weight_kgs_0_670" name="formdata_weight_kgs_0" aria-label="formdata weight kgs 0"
                     type="number" 
                     value={formData.weight_kgs || 0}
                     onChange={(e) => setFormData(prev => ({ ...prev, weight_kgs: Number(e.target.value) }))}
@@ -680,8 +680,8 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
 
                 {/* Remarks */}
                 <div className="flex flex-col gap-1 col-span-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">Remarks / Specific Blend Instructions</label>
-                  <textarea 
+                  <label htmlFor="remarks_specific_blend_in_684" className="text-[10px] font-black text-slate-500 uppercase">Remarks / Specific Blend Instructions</label>
+                  <textarea  id="remarks_specific_blend_in_684" name="remarks_specific_blend_in" aria-label="Remarks / Specific Blend Instructions"
                     value={formData.remarks || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
                     placeholder="Provide any blending percentage or priority storage feed notes"

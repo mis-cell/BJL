@@ -81,7 +81,7 @@ export default function DirectoryView({ title, type, onClose }: DirectoryViewPro
         {/* Header Ribbon / Action Bar */}
         <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center">
            <div className="flex bg-white border border-gray-400 p-px flex-1 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)]">
-              <input 
+              <input  id="searchterm_84" name="searchterm" aria-label="searchterm"
                  className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
                  placeholder={`Search ${type === 'kisan' ? 'Farmers' : 'Traders'} by name, village...`}
                  value={searchTerm}

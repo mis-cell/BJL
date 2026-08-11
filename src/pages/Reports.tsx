@@ -1711,9 +1711,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
              {/* Filter block */}
              <div className="flex flex-wrap gap-3 items-end bg-[#c0c0c0] p-3 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm">
                 <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Period Start</label>
+                   <label htmlFor="period_start_1716" className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Period Start</label>
                    <div className="flex bg-white border border-gray-400 p-px">
-                      <input 
+                      <input  id="period_start_1716" name="period_start" aria-label="Period Start"
                         type="date" 
                         value={amadStart}
                         onChange={(e) => setAmadStart(e.target.value)}
@@ -1722,9 +1722,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                    </div>
                 </div>
                 <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Period End</label>
+                   <label htmlFor="period_end_1727" className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Period End</label>
                    <div className="flex bg-white border border-gray-400 p-px">
-                      <input 
+                      <input  id="period_end_1727" name="period_end" aria-label="Period End"
                         type="date" 
                         value={amadEnd}
                         onChange={(e) => setAmadEnd(e.target.value)}
@@ -1734,9 +1734,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                 </div>
                 
                 <div className="flex-1 space-y-1 min-w-[180px]">
-                   <label className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Live Search Scanner</label>
+                   <label htmlFor="live_search_scanner_1739" className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Live Search Scanner</label>
                    <div className="flex bg-white border border-gray-400 p-px mb-0.5">
-                      <input 
+                      <input  id="live_search_scanner_1739" name="live_search_scanner" aria-label="Live Search Scanner"
                         className="flex-1 p-1 text-[11px] font-black outline-none placeholder:text-slate-400" 
                         placeholder="Scan Arrival No, Supplier, Lorry, Location..." 
                         value={amadSearch}
@@ -2012,9 +2012,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
                            {/* Keyword search filter */}
                            <div className="space-y-1">
-                              <label className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Keyword Search Filter</label>
+                              <label htmlFor="keyword_search_filter_2017" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Keyword Search Filter</label>
                               <div className="relative">
-                                 <input 
+                                 <input  id="keyword_search_filter_2017" name="keyword_search_filter" aria-label="Keyword Search Filter"
                                    type="text" 
                                    value={saudaReportSearch}
                                    onChange={(e) => setSaudaReportSearch(e.target.value)}
@@ -2028,9 +2028,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                            {/* Months & Years select dropdown */}
                            <div className="grid grid-cols-2 gap-2">
                               <div className="space-y-1">
-                                 <label className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Target Month</label>
+                                 <label htmlFor="target_month_2032" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Target Month</label>
                                  <select
-                                   value={saudaReportMonth}
+ id="target_month_2032" name="target_month" aria-label="Target Month"                                   value={saudaReportMonth}
                                    onChange={(e) => setSaudaReportMonth(e.target.value)}
                                    className="w-full text-[10px] py-1.5 px-1 bg-slate-50 border border-gray-400 focus:bg-white text-slate-900 font-bold focus:outline-none"
                                  >
@@ -2040,9 +2040,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                                  </select>
                               </div>
                               <div className="space-y-1">
-                                 <label className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Financial Year</label>
+                                 <label htmlFor="financial_year_2044" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Financial Year</label>
                                  <select
-                                   value={saudaReportYear}
+ id="financial_year_2044" name="financial_year" aria-label="Financial Year"                                   value={saudaReportYear}
                                    onChange={(e) => setSaudaReportYear(e.target.value)}
                                    className="w-full text-[10px] py-1.5 px-1 bg-slate-50 border border-gray-400 focus:bg-white text-slate-900 font-bold focus:outline-none"
                                  >
@@ -2666,8 +2666,8 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
                  <div className="flex items-center gap-3">
                     {/* Search Box */}
                     <div className="flex flex-col">
-                       <label className="text-[8px] font-bold text-gray-700 uppercase italic block ml-1 mb-0.5">Filter Records</label>
-                       <input 
+                       <label htmlFor="agg-report-search" className="text-[8px] font-bold text-gray-700 uppercase italic block ml-1 mb-0.5">Filter Records</label>
+                       <input  name="filter_records" aria-label="Filter Records"
                          id="agg-report-search"
                          type="text" 
                          placeholder="Search result rows..." 

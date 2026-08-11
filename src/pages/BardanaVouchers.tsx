@@ -647,8 +647,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                      <div className="grid grid-cols-12 gap-x-4 gap-y-3 items-center mt-2">
                         
                         <div className="col-span-4 flex items-center gap-2">
-                           <label className="text-[10px] font-black w-24 shrink-0 font-sans text-blue-800 italic uppercase">Voucher No.</label>
-                           <input 
+                           <label htmlFor="voucher_no_651" className="text-[10px] font-black w-24 shrink-0 font-sans text-blue-800 italic uppercase">Voucher No.</label>
+                           <input  id="voucher_no_651" name="voucher_no" aria-label="Voucher No."
                              className="flex-1 bg-[#ffffd0] border border-gray-400 p-1 text-xs font-black text-center" 
                              value={voucherNo} 
                              onChange={(e) => setVoucherNo(e.target.value)}
@@ -656,8 +656,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         </div>
                         
                         <div className="col-span-4 flex items-center gap-2">
-                           <label className="text-[10px] font-bold w-12 shrink-0 uppercase tracking-tight">Date</label>
-                           <input 
+                           <label htmlFor="date_660" className="text-[10px] font-bold w-12 shrink-0 uppercase tracking-tight">Date</label>
+                           <input  id="date_660" name="date" aria-label="Date"
                              type="date" 
                              className="flex-1 bg-[#ffffd0] border border-gray-400 p-0.5 text-xs outline-none" 
                              value={date}
@@ -666,8 +666,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         </div>
                         
                         <div className="col-span-4 flex items-center gap-2">
-                           <label className="text-[10px] font-bold w-16 shrink-0 uppercase tracking-tight">Godown</label>
-                           <select 
+                           <label htmlFor="godown_670" className="text-[10px] font-bold w-16 shrink-0 uppercase tracking-tight">Godown</label>
+                           <select  id="godown_670" name="godown" aria-label="Godown"
                              className="flex-1 bg-white border border-gray-400 p-0.5 text-xs font-bold outline-none uppercase"
                              value={selectedGodownCode}
                              onChange={(e) => setSelectedGodownCode(e.target.value)}
@@ -682,9 +682,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         </div>
     
                         <div className="col-span-8 flex items-center gap-2 relative">
-                           <label className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Account Name</label>
+                           <label htmlFor="account_name_687" className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Account Name</label>
                            <div className="flex-1 flex gap-px border border-gray-400 bg-white relative">
-                              <input 
+                              <input  id="account_name_687" name="account_name" aria-label="Account Name"
                                 className="flex-1 text-xs px-2 py-1 outline-none font-bold uppercase" 
                                 placeholder="SEARCH/ENTER SUPPLIER DETAIL OR LEDGER..." 
                                 value={accountName}
@@ -724,8 +724,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         </div>
 
                         <div className="col-span-4 flex items-center gap-2">
-                           <label className="text-[10px] font-extrabold w-16 shrink-0 uppercase tracking-tight text-indigo-950">Operator</label>
-                           <input 
+                           <label htmlFor="operator_728" className="text-[10px] font-extrabold w-16 shrink-0 uppercase tracking-tight text-indigo-950">Operator</label>
+                           <input  id="operator_728" name="operator" aria-label="Operator"
                              type="text"
                              className="flex-1 bg-[#ffffd0] border border-gray-400 p-1 text-xs outline-none uppercase font-mono font-bold" 
                              value={operatorId}
@@ -737,9 +737,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         <div className="col-span-12 grid grid-cols-2 gap-4">
                           <div className="flex flex-col gap-3">
                              <div className="flex items-center gap-2">
-                                <label className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Material Item</label>
+                                <label htmlFor="material_item_741" className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Material Item</label>
                                 <select
-                                  className="flex-1 bg-white border border-gray-400 p-1 text-xs font-bold outline-none"
+ id="material_item_741" name="material_item" aria-label="Material Item"                                  className="flex-1 bg-white border border-gray-400 p-1 text-xs font-bold outline-none"
                                   value={selectedItemType}
                                   onChange={(e) => setSelectedItemType(e.target.value)}
                                 >
@@ -749,8 +749,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                                 </select>
                              </div>
                              <div className="flex items-center gap-2">
-                                <label className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Quantity (Bags)</label>
-                                <input 
+                                <label htmlFor="quantity_bags_753" className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Quantity (Bags)</label>
+                                <input  id="quantity_bags_753" name="quantity_bags" aria-label="Quantity (Bags)"
                                   type="number" 
                                   className="flex-1 bg-white border border-gray-400 p-1 text-lg font-black text-right outline-none" 
                                   value={quantity}
@@ -759,8 +759,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                                 />
                              </div>
                              <div className="flex items-center gap-2">
-                                <label className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Rate / Pcs</label>
-                                <input 
+                                <label htmlFor="rate_pcs_763" className="text-[10px] font-bold w-24 shrink-0 uppercase tracking-tight">Rate / Pcs</label>
+                                <input  id="rate_pcs_763" name="rate_pcs" aria-label="Rate / Pcs"
                                   type="number" 
                                   step="0.01"
                                   className="flex-1 bg-white border border-gray-400 p-1 text-lg font-black text-right outline-none" 
@@ -782,8 +782,8 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                         </div>
     
                         <div className="col-span-12 flex items-start gap-2">
-                           <label className="text-[10px] font-bold w-24 shrink-0 mt-1 uppercase tracking-tight">Narration</label>
-                           <textarea 
+                           <label htmlFor="narration_786" className="text-[10px] font-bold w-24 shrink-0 mt-1 uppercase tracking-tight">Narration</label>
+                           <textarea  id="narration_786" name="narration" aria-label="Narration"
                              rows={2} 
                              className="flex-1 bg-white border border-gray-400 p-1 text-xs outline-none uppercase font-semibold" 
                              value={narration}
@@ -1009,7 +1009,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                   <Search className="h-3.5 w-3.5 text-slate-400" />
                 </span>
                 <input
-                  type="text"
+ id="filter_audits_by_operator_1011" name="filter_audits_by_operator" aria-label="Filter audits by operator or voucher..."                  type="text"
                   className="w-full bg-[#f8fafc] border border-gray-400 py-1 pl-8 pr-3 text-xs font-bold outline-none uppercase placeholder-gray-400"
                   placeholder="Filter audits by operator or voucher..."
                   value={auditSearchQuery}
@@ -1108,7 +1108,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                     <Search className="h-4 w-4 text-slate-400" />
                   </span>
                   <input
-                    type="text"
+ id="search_ledger_entries_by__1110" name="search_ledger_entries_by_" aria-label="Search ledger entries by voucher, customer name, material type..."                    type="text"
                     className="w-full bg-white border border-gray-400 py-1.5 pl-9 pr-4 text-xs font-bold outline-none uppercase placeholder-gray-400"
                     placeholder="Search ledger entries by voucher, customer name, material type..."
                     value={searchQuery}
@@ -1381,9 +1381,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
               <div className="space-y-3 font-sans">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Source Godown</label>
+                    <label htmlFor="source_godown_1385" className="text-[9.5px] font-bold text-gray-600 uppercase">Source Godown</label>
                     <select
-                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none uppercase"
+ id="source_godown_1385" name="source_godown" aria-label="Source Godown"                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none uppercase"
                       value={bulkSourceCode}
                       onChange={(e) => setBulkSourceCode(e.target.value)}
                     >
@@ -1394,9 +1394,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Destination Godown</label>
+                    <label htmlFor="destination_godown_1398" className="text-[9.5px] font-bold text-gray-600 uppercase">Destination Godown</label>
                     <select
-                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none uppercase"
+ id="destination_godown_1398" name="destination_godown" aria-label="Destination Godown"                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none uppercase"
                       value={bulkDestCode}
                       onChange={(e) => setBulkDestCode(e.target.value)}
                     >
@@ -1409,9 +1409,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Material Item Type</label>
+                    <label htmlFor="material_item_type_1413" className="text-[9.5px] font-bold text-gray-600 uppercase">Material Item Type</label>
                     <select
-                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none"
+ id="material_item_type_1413" name="material_item_type" aria-label="Material Item Type"                      className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none"
                       value={bulkItemType}
                       onChange={(e) => setBulkItemType(e.target.value)}
                     >
@@ -1422,9 +1422,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Quantity (Bags)</label>
+                    <label htmlFor="quantity_bags_1426" className="text-[9.5px] font-bold text-gray-600 uppercase">Quantity (Bags)</label>
                     <input
-                      type="number"
+ id="quantity_bags_1426" name="quantity_bags" aria-label="Quantity (Bags)"                      type="number"
                       min="1"
                       className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none text-right"
                       value={bulkQty}
@@ -1435,9 +1435,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Est. Rate per Pc</label>
+                    <label htmlFor="est_rate_per_pc_1439" className="text-[9.5px] font-bold text-gray-600 uppercase">Est. Rate per Pc</label>
                     <input
-                      type="number"
+ id="est_rate_per_pc_1439" name="est_rate_per_pc" aria-label="Est. Rate per Pc"                      type="number"
                       step="0.01"
                       className="w-full bg-white border border-gray-400 p-1 text-xs font-bold outline-none text-right"
                       value={bulkRate}
@@ -1446,9 +1446,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[9.5px] font-bold text-gray-600 uppercase">Responsible Operator ID</label>
+                    <label htmlFor="responsible_operator_id_1450" className="text-[9.5px] font-bold text-gray-600 uppercase">Responsible Operator ID</label>
                     <input
-                      type="text"
+ id="responsible_operator_id_1450" name="responsible_operator_id" aria-label="Responsible Operator ID"                      type="text"
                       className="w-full bg-[#ffffd0] border border-gray-400 p-1 text-xs font-bold outline-none"
                       value={bulkOperator}
                       onChange={(e) => setBulkOperator(e.target.value)}
@@ -1457,9 +1457,9 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-[9.5px] font-bold text-gray-600 uppercase">Narration / Internal Remarks</label>
+                  <label htmlFor="narration_internal_remark_1461" className="text-[9.5px] font-bold text-gray-600 uppercase">Narration / Internal Remarks</label>
                   <textarea
-                    rows={2}
+ id="narration_internal_remark_1461" name="narration_internal_remark" aria-label="Narration / Internal Remarks"                    rows={2}
                     className="w-full bg-white border border-gray-400 p-1 text-xs outline-none uppercase font-semibold text-[#000]"
                     value={bulkNarration}
                     onChange={(e) => setBulkNarration(e.target.value)}

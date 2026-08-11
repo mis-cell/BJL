@@ -1286,11 +1286,11 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
             
             {/* Financial Year Filter */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-gray-700 uppercase italic leading-none block ml-1">
+              <label htmlFor="financial_year_1293" className="text-[10px] font-bold text-gray-700 uppercase italic leading-none block ml-1">
                 Financial Year
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <select 
+                <select  id="financial_year_1293" name="financial_year" aria-label="Financial Year"
                   value={financialYearFilter}
                   onChange={(e) => {
                     setFinancialYearFilter(e.target.value);
@@ -1315,7 +1315,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span className="bg-gray-105 px-2 flex items-center border-r border-gray-300 text-gray-500">
                   <Search className="h-3 w-3" />
                 </span>
-                <input 
+                <input  id="search_supplier_broker_na_1318" name="search_supplier_broker_na" aria-label="Search supplier, broker name, PO numbers..."
                   className="flex-1 p-1 text-[11px] font-black outline-none tracking-tight" 
                   placeholder="Search supplier, broker name, PO numbers..." 
                   value={searchQuery}
@@ -1673,7 +1673,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>Procurement Month</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <select 
+                <select  id="poreportmonth_1676" name="poreportmonth" aria-label="poreportmonth"
                   value={poReportMonth}
                   onChange={(e) => setPoReportMonth(e.target.value)}
                   className="p-1 px-1.5 text-[11px] font-black outline-none w-36 bg-white"
@@ -1692,7 +1692,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>Financial/Calendar Year</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <select 
+                <select  id="poreportyear_1695" name="poreportyear" aria-label="poreportyear"
                   value={poReportYear}
                   onChange={(e) => setPoReportYear(e.target.value)}
                   className="p-1 px-1.5 text-[11px] font-black outline-none w-36 bg-white"
@@ -1712,7 +1712,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>Merchant / Supplier</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <select 
+                <select  id="poreportsupplier_1715" name="poreportsupplier" aria-label="poreportsupplier"
                   value={poReportSupplier}
                   onChange={(e) => setPoReportSupplier(e.target.value)}
                   className="p-1 px-1.5 text-[11px] font-black outline-none w-44 bg-white"
@@ -1732,7 +1732,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>Start Date</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <input 
+                <input  id="poreportstartdate_1735" name="poreportstartdate" aria-label="poreportstartdate"
                   type="date"
                   value={poReportStartDate}
                   onChange={(e) => setPoReportStartDate(e.target.value)}
@@ -1748,7 +1748,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>End Date</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <input 
+                <input  id="poreportenddate_1751" name="poreportenddate" aria-label="poreportenddate"
                   type="date"
                   value={poReportEndDate}
                   onChange={(e) => setPoReportEndDate(e.target.value)}
@@ -1764,7 +1764,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                 <span>In-Report Search Filters</span>
               </label>
               <div className="flex bg-white border border-gray-400 p-px">
-                <input 
+                <input  id="query_inside_selection_1767" name="query_inside_selection" aria-label="Query inside selection..."
                   className="flex-1 p-1 text-[11px] font-black outline-none tracking-tight placeholder:text-gray-400" 
                   placeholder="Query inside selection..." 
                   value={poReportSearch}
@@ -2115,7 +2115,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                       <tr className="h-8">
                         {activePoReportKey === 'r1' && (
                           <th className="px-2 border-r border-gray-300 w-12 text-center text-[9.5px] uppercase">
-                            <input 
+                            <input  id="checkbox_2118" name="checkbox" aria-label="checkbox"
                               type="checkbox"
                               checked={reportOutput.rows.length > 0 && selectedMonthsForPrint.length === reportOutput.rows.length}
                               onChange={(e) => {
@@ -2143,7 +2143,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                         >
                           {activePoReportKey === 'r1' && (
                             <td className="px-2 border-r border-gray-100 text-center w-12">
-                              <input 
+                              <input  id="checkbox_2146" name="checkbox" aria-label="checkbox"
                                 type="checkbox"
                                 checked={selectedMonthsForPrint.includes(row[0])}
                                 onChange={(e) => {

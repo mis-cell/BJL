@@ -1071,11 +1071,11 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Temporary M.R No. */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="arrival_no_1077" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Temporary M.R No.
                   </label>
                   <input
-                    type="text"
+ id="arrival_no_1077" aria-label="Temporary M.R No."                    type="text"
                     name="arrival_no"
                     value={formData.arrival_no}
                     onChange={handleChange}
@@ -1085,14 +1085,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* P.O Number */}
                 <div className="flex items-start gap-3 relative">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0 pt-2">
+                  <label htmlFor="po_no_1094" className="w-40 text-[11px] font-bold text-gray-800 shrink-0 pt-2">
                     P.O. Number
                   </label>
 
                   <div className="flex-1 flex gap-1 relative overflow-visible">
                     <div className="flex-1 flex relative">
                       <input
-                        type="text"
+ id="po_no_1094" aria-label="P.O. Number"                        type="text"
                         name="po_no"
                         value={formData.po_no}
                         onChange={(e) => {
@@ -1132,13 +1132,13 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Receipt Date */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="date_1140" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Receipt Date
                   </label>
 
                   <div className="flex-1 flex gap-3">
                     <input
-                      type="date"
+ id="date_1140" aria-label="Receipt Date"                      type="date"
                       name="date"
                       value={formData.date}
                       onChange={handleChange}
@@ -1149,7 +1149,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                       <span className="font-bold text-red-700 text-xs">J.C.I</span>
 
                       <select
-                        name="jci"
+ id="jci_1151" aria-label="jci"                        name="jci"
                         value={formData.jci}
                         onChange={handleChange}
                         className="border border-gray-400 rounded-md bg-white px-2 h-9 font-bold"
@@ -1163,13 +1163,13 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Challan Supplier */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="challan_supplier_1171" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Challan Supplier
                   </label>
 
                   <div className="flex-1">
                     <input
-                      type="text"
+ id="challan_supplier_1171" aria-label="Challan Supplier"                      type="text"
                       name="challan_supplier"
                       value={formData.challan_supplier}
                       onChange={handleChange}
@@ -1190,13 +1190,13 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Supplier */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="supplier_1198" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Supplier
                   </label>
 
                   <div className="flex-1">
                     <input
-                      type="text"
+ id="supplier_1198" aria-label="Supplier"                      type="text"
                       name="supplier"
                       value={formData.supplier}
                       onChange={handleChange}
@@ -1222,13 +1222,13 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Broker */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="broker_1230" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Broker
                   </label>
 
                   <div className="flex-1">
                     <input
-                      type="text"
+ id="broker_1230" aria-label="Broker"                      type="text"
                       name="broker"
                       value={formData.broker}
                       onChange={handleChange}
@@ -1250,12 +1250,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Transporter */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="transporter_name_1257" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Transporter Name
                   </label>
 
                   <input
-                    type="text"
+ id="transporter_name_1257" aria-label="Transporter Name"                    type="text"
                     name="transporter_name"
                     value={formData.transporter_name}
                     onChange={handleChange}
@@ -1265,12 +1265,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Challan */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="challan_rr_no_1272" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Challan / R.R. No.
                   </label>
 
                   <input
-                    type="text"
+ id="challan_rr_no_1272" aria-label="Challan / R.R. No."                    type="text"
                     name="challan_rr_no"
                     value={formData.challan_rr_no}
                     onChange={handleChange}
@@ -1280,13 +1280,13 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Lorry */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="lorry_prefix_1288" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Lorry Number
                   </label>
 
                   <div className="flex-1 flex gap-2">
                     <input
-                      type="text"
+ id="lorry_prefix_1288" aria-label="Lorry Number"                      type="text"
                       name="lorry_prefix"
                       value={formData.lorry_prefix}
                       onChange={handleChange}
@@ -1295,7 +1295,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <input
-                      type="text"
+ id="lorry_suffix_1297" aria-label="SUFFIX"                      type="text"
                       name="lorry_suffix"
                       value={formData.lorry_suffix}
                       onChange={handleChange}
@@ -1307,12 +1307,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Pan */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="pan_no_1314" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Pan No.
                   </label>
 
                   <input
-                    type="text"
+ id="pan_no_1314" aria-label="Pan No."                    type="text"
                     name="pan_no"
                     value={formData.pan_no}
                     onChange={handleChange}
@@ -1322,12 +1322,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Dispatch Date */}
                 <div className="flex items-center gap-3">
-                  <label className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                  <label htmlFor="lorry_date_1329" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
                     Lorry Dispatch Date
                   </label>
 
                   <input
-                    type="date"
+ id="lorry_date_1329" aria-label="Lorry Dispatch Date"                    type="date"
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
@@ -1361,12 +1361,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Consignment */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="consignment_note_no_1368" className="block text-xs font-semibold text-gray-700 mb-1">
                     Consignment Note No.
                   </label>
 
                   <input
-                    type="text"
+ id="consignment_note_no_1368" aria-label="Consignment Note No."                    type="text"
                     name="consignment_note_no"
                     value={formData.consignment_note_no}
                     onChange={handleChange}
@@ -1376,14 +1376,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* DI */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="di_no_1385" className="block text-xs font-semibold text-gray-700 mb-1">
                     D.I. Details
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
 
                     <input
-                      type="text"
+ id="di_no_1385" aria-label="D.I. Details"                      type="text"
                       name="di_no"
                       placeholder="DI Number"
                       value={formData.di_no}
@@ -1392,7 +1392,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <input
-                      type="date"
+ id="di_date_1394" aria-label="di date"                      type="date"
                       name="di_date"
                       value={formData.di_date}
                       onChange={handleChange}
@@ -1404,14 +1404,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Invoice */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="invoice_no_1413" className="block text-xs font-semibold text-gray-700 mb-1">
                     Invoice Details
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
 
                     <input
-                      type="text"
+ id="invoice_no_1413" aria-label="Invoice Details"                      type="text"
                       name="invoice_no"
                       placeholder="Invoice Number"
                       value={formData.invoice_no}
@@ -1420,7 +1420,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <input
-                      type="date"
+ id="invoice_date_1422" aria-label="invoice date"                      type="date"
                       name="invoice_date"
                       value={formData.invoice_date}
                       onChange={handleChange}
@@ -1432,12 +1432,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* PTF */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="ptf_1439" className="block text-xs font-semibold text-gray-700 mb-1">
                     P.T.F
                   </label>
 
                   <select
-                    name="ptf"
+ id="ptf_1439" aria-label="P.T.F"                    name="ptf"
                     value={formData.ptf}
                     onChange={handleChange}
                     className="w-full h-10 rounded-lg border border-gray-300 px-3 font-semibold"
@@ -1449,14 +1449,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Lorry */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="lorry_returned_1458" className="block text-xs font-semibold text-gray-700 mb-1">
                     Lorry Returned
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
 
                     <select
-                      name="lorry_returned"
+ id="lorry_returned_1458" aria-label="Lorry Returned"                      name="lorry_returned"
                       value={formData.lorry_returned}
                       onChange={handleChange}
                       className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
@@ -1466,7 +1466,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     </select>
 
                     <select
-                      name="lorry_returned_other_mill"
+ id="lorry_returned_other_mill_1468" aria-label="lorry returned other mill"                      name="lorry_returned_other_mill"
                       value={formData.lorry_returned_other_mill}
                       onChange={handleChange}
                       className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
@@ -1480,14 +1480,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Arrival Area */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="arrival_area_code_1489" className="block text-xs font-semibold text-gray-700 mb-1">
                     Arrival Area
                   </label>
 
                   <div className="flex gap-2">
 
                     <input
-                      type="text"
+ id="arrival_area_code_1489" aria-label="Arrival Area"                      type="text"
                       name="arrival_area_code"
                       value={formData.arrival_area_code}
                       readOnly
@@ -1495,7 +1495,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <select
-                      name="arrival_area_name"
+ id="arrival_area_name_1497" aria-label="arrival area name"                      name="arrival_area_name"
                       value={formData.arrival_area_name}
                       onChange={(e) => {
                         const matchedArea = areas.find(
@@ -1532,14 +1532,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Unit */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="unit_code_1541" className="block text-xs font-semibold text-gray-700 mb-1">
                     Unit
                   </label>
 
                   <div className="flex gap-2">
 
                     <input
-                      type="text"
+ id="unit_code_1541" aria-label="Unit"                      type="text"
                       name="unit_code"
                       value={formData.unit_code}
                       readOnly
@@ -1547,7 +1547,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <select
-                      name="unit_name"
+ id="unit_name_1549" aria-label="unit name"                      name="unit_name"
                       value={formData.unit_name || "BALES"}
                       onChange={(e) => {
                         const uVal = e.target.value;
@@ -1587,14 +1587,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Way Bill */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="way_bill_no_1596" className="block text-xs font-semibold text-gray-700 mb-1">
                     Way Bill
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
 
                     <input
-                      type="text"
+ id="way_bill_no_1596" aria-label="Way Bill"                      type="text"
                       name="way_bill_no"
                       value={formData.way_bill_no}
                       onChange={handleChange}
@@ -1603,7 +1603,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                     />
 
                     <input
-                      type="date"
+ id="way_bill_date_1605" aria-label="way bill date"                      type="date"
                       name="way_bill_date"
                       value={formData.way_bill_date}
                       onChange={handleChange}
@@ -1615,12 +1615,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* APMC */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="apmc_fees_1622" className="block text-xs font-semibold text-gray-700 mb-1">
                     A.P.M.C Fees (Rs.)
                   </label>
 
                   <input
-                    type="number"
+ id="apmc_fees_1622" aria-label="A.P.M.C Fees (Rs.)"                    type="number"
                     name="apmc_fees"
                     placeholder="0.00"
                     value={formData.apmc_fees || ""}
@@ -1631,12 +1631,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Remarks */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="remarks_1638" className="block text-xs font-semibold text-gray-700 mb-1">
                     Remarks
                   </label>
 
                   <textarea
-                    name="remarks"
+ id="remarks_1638" aria-label="Remarks"                    name="remarks"
                     rows={6}
                     value={formData.remarks}
                     onChange={handleChange}
@@ -1719,7 +1719,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Receipt Grade Code */}
                   <td className="p-0.5 border border-gray-300 w-16 bg-slate-50 text-center">
                     <input
-                      type="text"
+ id="field_1721" name="field" aria-label="--"                      type="text"
                       value={detail.receipt_grade_code}
                       readOnly
                       placeholder="--"
@@ -1730,7 +1730,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Receipt Grade Name */}
                   <td className="p-0.5 border border-gray-300 w-36">
                     <select
-                      value={detail.receipt_grade_name}
+ id="detail_receipt_grade_name_1732" name="detail_receipt_grade_name" aria-label="detail receipt grade name"                      value={detail.receipt_grade_name}
                       onChange={(e) => handleDetailChange(idx, 'receipt_grade_name', e.target.value)}
                       className="w-full bg-white border border-gray-300 p-0 text-left font-bold text-gray-900 outline-none h-6"
                     >
@@ -1746,7 +1746,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Crop Year */}
                   <td className="p-0.5 border border-gray-300 w-24">
-                    <select 
+                    <select  id="detail_crop_year_1749" name="detail_crop_year" aria-label="detail crop year"
                       value={detail.crop_year} 
                       onChange={(e) => handleDetailChange(idx, 'crop_year', e.target.value)}
                       className="w-full bg-white border border-gray-300 p-0 text-center font-bold text-gray-900 outline-none h-6 text-xs" 
@@ -1765,7 +1765,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Challan Grade Name */}
                   <td className="p-0.5 border border-gray-300 w-28">
-                    <input 
+                    <input  id="detail_challan_grade_name_1768" name="detail_challan_grade_name" aria-label="detail challan grade name"
                       type="text" 
                       value={detail.challan_grade_name} 
                       onChange={(e) => handleDetailChange(idx, 'challan_grade_name', e.target.value)}
@@ -1776,7 +1776,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Agency Code */}
                   <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
                     <input
-                      type="text"
+ id="field_1778" name="field" aria-label="--"                      type="text"
                       value={detail.agency_code || ''}
                       onChange={(e) => handleDetailChange(idx, 'agency_code', e.target.value)}
                       placeholder="--"
@@ -1787,7 +1787,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Agency Name */}
                   <td className="p-0.5 border border-gray-300 w-34">
                     <input
-                      type="text"
+ id="type_select_agency_1789" name="type_select_agency" aria-label="Type/Select Agency..."                      type="text"
                       list="agencies_list"
                       placeholder="Type/Select Agency..."
                       value={detail.agency_name || ''}
@@ -1799,7 +1799,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Challan Marka Code */}
                   <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
                     <input
-                      type="text"
+ id="field_1801" name="field" aria-label="--"                      type="text"
                       value={detail.challan_marka_code}
                       readOnly
                       placeholder="--"
@@ -1810,7 +1810,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   {/* Challan Marka Name */}
                   <td className="p-0.5 border border-gray-300 w-34">
                     <input
-                      type="text"
+ id="type_select_marka_1812" name="type_select_marka" aria-label="Type/Select Marka..."                      type="text"
                       list="markas_list"
                       placeholder="Type/Select Marka..."
                       value={detail.challan_marka_name || ''}
@@ -1821,7 +1821,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Netto Pnto */}
                   <td className="p-0.5 border border-gray-300 w-24">
-                    <input 
+                    <input  id="0_000_1824" name="0_000" aria-label="0.000"
                       type="number" 
                       step="0.001"
                       placeholder="0.000"
@@ -1836,7 +1836,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Quantity Chln */}
                   <td className="p-0.5 border border-gray-300 w-16">
-                    <input 
+                    <input  id="0_1839" name="0" aria-label="0"
                       type="number" 
                       step="1"
                       placeholder="0"
@@ -1851,7 +1851,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Quantity Rcpt */}
                   <td className="p-0.5 border border-gray-300 w-16">
-                    <input 
+                    <input  id="0_1854" name="0" aria-label="0"
                       type="number" 
                       step="1"
                       placeholder="0"
@@ -1866,7 +1866,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                   {/* Remarks */}
                   <td className="p-0.5 border border-gray-300 w-36">
-                    <input 
+                    <input  id="detail_remarks_1869" name="detail_remarks" aria-label="detail remarks"
                       type="text" 
                       value={detail.remarks} 
                       onChange={(e) => handleDetailChange(idx, 'remarks', e.target.value)}
@@ -1903,7 +1903,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">CHALLAN WT</span>
                 <input
-                  type="number"
+ id="challan_material_weight_1905" aria-label="challan material weight"                  type="number"
                   step="0.001"
                   name="challan_material_weight"
                   value={formData.challan_material_weight || 0}
@@ -1915,7 +1915,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">SUPPLIER NET</span>
                 <input
-                  type="number"
+ id="supplier_net_weight_1917" aria-label="supplier net weight"                  type="number"
                   step="0.001"
                   name="supplier_net_weight"
                   value={formData.supplier_net_weight || 0}
@@ -1927,7 +1927,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ELECTRONIC NET</span>
                 <input
-                  type="number"
+ id="electronic_net_weight_1929" aria-label="electronic net weight"                  type="number"
                   step="0.001"
                   name="electronic_net_weight"
                   value={formData.electronic_net_weight || 0}
@@ -1946,7 +1946,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ACTUAL GROSS</span>
                 <input
-                  type="number"
+ id="actual_gross_weight_1948" aria-label="actual gross weight"                  type="number"
                   step="0.001"
                   name="actual_gross_weight"
                   value={formData.actual_gross_weight || ""}
@@ -1958,7 +1958,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">SUPPLIER GROSS</span>
                 <input
-                  type="number"
+ id="supplier_challan_gross_1960" aria-label="supplier challan gross"                  type="number"
                   step="0.001"
                   name="supplier_challan_gross"
                   value={formData.supplier_challan_gross || ""}
@@ -1970,7 +1970,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ELECTRONIC GROSS</span>
                 <input
-                  type="number"
+ id="electronic_gross_weight_1972" aria-label="electronic gross weight"                  type="number"
                   step="0.001"
                   name="electronic_gross_weight"
                   value={formData.electronic_gross_weight || ""}
@@ -1989,7 +1989,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ACTUAL TARE</span>
                 <input
-                  type="number"
+ id="actual_tare_weight_1991" aria-label="actual tare weight"                  type="number"
                   step="0.001"
                   name="actual_tare_weight"
                   value={formData.actual_tare_weight || ""}
@@ -2001,7 +2001,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">SUPPLIER TARE</span>
                 <input
-                  type="number"
+ id="supplier_tare_weight_2003" aria-label="supplier tare weight"                  type="number"
                   step="0.001"
                   name="supplier_tare_weight"
                   value={formData.supplier_tare_weight || ""}
@@ -2013,7 +2013,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ELECTRONIC TARE</span>
                 <input
-                  type="number"
+ id="electronic_tare_weight_2015" aria-label="electronic tare weight"                  type="number"
                   step="0.001"
                   name="electronic_tare_weight"
                   value={formData.electronic_tare_weight || ""}
@@ -2032,7 +2032,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
             </span>
 
             <input
-              type="number"
+ id="weight_reduced_2034" aria-label="weight reduced"              type="number"
               step="0.001"
               name="weight_reduced"
               value={formData.weight_reduced || ""}

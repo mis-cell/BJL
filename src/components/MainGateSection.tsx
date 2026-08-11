@@ -256,7 +256,7 @@ export default function MainGateSection({
         <div className="relative w-full">
           <Search className="w-4 h-4 text-[#5A6E54] absolute left-3.5 top-3" />
           <input
-            type="text"
+ id="search_by_lorry_no_broker_258" name="search_by_lorry_no_broker" aria-label="Search by Lorry No, Broker, Gate Pass, or run AI commands (e.g., 'Show Jute')..."            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Lorry No, Broker, Gate Pass, or run AI commands (e.g., 'Show Jute')..."
@@ -671,17 +671,17 @@ export default function MainGateSection({
               className="space-y-3"
             >
               <div>
-                <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Lorry No *</label>
-                <input required name="lorryNo" placeholder="WB-26-AY-4444" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-mono" />
+                <label htmlFor="lorryno_675" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Lorry No *</label>
+                <input  id="lorryno_675" aria-label="Lorry No *"required name="lorryNo" placeholder="WB-26-AY-4444" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-mono" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Driver Phone *</label>
-                  <input required name="driverPhone" placeholder="+91 98300 00000" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-mono" />
+                  <label htmlFor="driverphone_680" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Driver Phone *</label>
+                  <input  id="driverphone_680" aria-label="Driver Phone *"required name="driverPhone" placeholder="+91 98300 00000" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-mono" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Department *</label>
-                  <select name="department" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-bold">
+                  <label htmlFor="department_684" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Department *</label>
+                  <select  id="department_684" aria-label="Department *"name="department" className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs font-bold">
                     <option value="Jute">Jute</option>
                     <option value="Store">Store</option>
                     <option value="Finish Good">Finish Good</option>
@@ -691,9 +691,9 @@ export default function MainGateSection({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Broker / Supplier</label>
+                  <label htmlFor="broker_695" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Broker / Supplier</label>
                   <input
-                    name="broker"
+ id="broker_695" aria-label="Broker / Supplier"                    name="broker"
                     list="broker-options"
                     autoComplete="off"
                     placeholder="Type or select Broker..."
@@ -707,9 +707,9 @@ export default function MainGateSection({
                   </datalist>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Quality / Grade</label>
+                  <label htmlFor="quality_711" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Quality / Grade</label>
                   <input
-                    name="quality"
+ id="quality_711" aria-label="Quality / Grade"                    name="quality"
                     list="quality-options"
                     autoComplete="off"
                     placeholder="Type or select Quality..."
@@ -725,9 +725,9 @@ export default function MainGateSection({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Mokam / Origin</label>
+                  <label htmlFor="mokam_729" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Mokam / Origin</label>
                   <input
-                    name="mokam"
+ id="mokam_729" aria-label="Mokam / Origin"                    name="mokam"
                     list="mokam-options"
                     autoComplete="off"
                     placeholder="Type or select Mokam..."
@@ -741,9 +741,9 @@ export default function MainGateSection({
                   </datalist>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Marka</label>
+                  <label htmlFor="marka_745" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Marka</label>
                   <input
-                    name="marka"
+ id="marka_745" aria-label="Marka"                    name="marka"
                     list="marka-options"
                     autoComplete="off"
                     placeholder="Type or select Marka..."
@@ -774,7 +774,7 @@ export default function MainGateSection({
             <h3 className="text-sm font-black uppercase font-mono">Simulate Gate Pass QR Scanner</h3>
             <p className="text-xs text-[#5A6E54]">Input or scan a Gate Pass ticket number to auto-select lorry:</p>
             <input
-              type="text"
+ id="e_g_jute_20260810_8541_776" name="e_g_jute_20260810_8541" aria-label="e.g. JUTE-20260810-8541"              type="text"
               value={qrCodeInput}
               onChange={(e) => setQrCodeInput(e.target.value)}
               placeholder="e.g. JUTE-20260810-8541"
@@ -808,7 +808,7 @@ export default function MainGateSection({
             <h3 className="text-sm font-black uppercase font-mono border-b border-[#C5BA9E] pb-2">Shift Handover Logbook Notes</h3>
             <p className="text-xs text-[#5A6E54]">Write operational handover notes for the incoming Main Gate operator:</p>
             <textarea
-              rows={4}
+ id="e_g_wb_126_2312_pending_t_810" name="e_g_wb_126_2312_pending_t" aria-label="e.g., WB-126/2312 pending tare clearance at Electric scale. 2 Jute lorries parked in Bay 3."              rows={4}
               value={handoverNotes}
               onChange={(e) => setHandoverNotes(e.target.value)}
               placeholder="e.g., WB-126/2312 pending tare clearance at Electric scale. 2 Jute lorries parked in Bay 3."
@@ -842,9 +842,9 @@ export default function MainGateSection({
             
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-[#5A6E54] block mb-1">Category</label>
+                <label htmlFor="category_846" className="font-bold text-[#5A6E54] block mb-1">Category</label>
                 <select
-                  value={incidentData.category}
+ id="category_846" name="category" aria-label="Category"                  value={incidentData.category}
                   onChange={(e) => setIncidentData({ ...incidentData, category: e.target.value })}
                   className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 font-bold"
                 >
@@ -856,9 +856,9 @@ export default function MainGateSection({
               </div>
 
               <div>
-                <label className="font-bold text-[#5A6E54] block mb-1">Severity</label>
+                <label htmlFor="severity_860" className="font-bold text-[#5A6E54] block mb-1">Severity</label>
                 <select
-                  value={incidentData.severity}
+ id="severity_860" name="severity" aria-label="Severity"                  value={incidentData.severity}
                   onChange={(e) => setIncidentData({ ...incidentData, severity: e.target.value })}
                   className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 font-bold"
                 >
@@ -869,9 +869,9 @@ export default function MainGateSection({
               </div>
 
               <div>
-                <label className="font-bold text-[#5A6E54] block mb-1">Details Description</label>
+                <label htmlFor="details_description_873" className="font-bold text-[#5A6E54] block mb-1">Details Description</label>
                 <textarea
-                  rows={3}
+ id="details_description_873" name="details_description" aria-label="Details Description"                  rows={3}
                   value={incidentData.details}
                   onChange={(e) => setIncidentData({ ...incidentData, details: e.target.value })}
                   placeholder="Describe incident details..."

@@ -4,6 +4,7 @@ import { ChevronDown, Check } from 'lucide-react';
 interface SearchableSelectProps {
   label?: string;
   name?: string;
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
@@ -14,6 +15,8 @@ interface SearchableSelectProps {
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   label,
+  name,
+  id,
   value,
   onChange,
   options,
@@ -24,6 +27,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
   const containerRef = useRef<HTMLDivElement>(null);
+  const generatedId = useRef(`searchable_${label ? label.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'select'}_${Math.random().toString(36).substring(2, 7)}`).current;
+  const inputId = id || generatedId;
+  const inputName = name || (label ? label.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'searchable_select');
 
   useEffect(() => {
     setSearchTerm(value || '');
@@ -59,12 +65,15 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label className="text-xs font-semibold text-slate-700 tracking-wide">
+        <label htmlFor={inputId} className="text-xs font-semibold text-slate-700 tracking-wide">
           {label}
         </label>
       )}
       <div className="relative">
         <input
+          id={inputId}
+          name={inputName}
+          aria-label={label || placeholder || "Select option"}
           type="text"
           value={searchTerm}
           onChange={handleInputChange}

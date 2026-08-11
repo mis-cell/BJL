@@ -442,7 +442,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
               </div>
 
               {/* Remarks Box */}
-              <input 
+              <input  id="clubbing_comments_445" name="clubbing_comments" aria-label="Clubbing comments..."
                 type="text"
                 placeholder="Clubbing comments..."
                 value={remarks}

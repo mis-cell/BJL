@@ -116,18 +116,18 @@ export default function FormsChartsTab() {
               <div className="space-y-4">
                 {/* Standard floating border input */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Shipment Code Reference</label>
+                  <label htmlFor="shipment_code_reference_120" className="text-[10px] font-black uppercase text-slate-400">Shipment Code Reference</label>
                   <input
-                    className="w-full bg-slate-50/50 border border-slate-200 focus:border-pink-500 text-slate-800 font-bold rounded-xl p-2.5 text-xs outline-none transition-all placeholder:text-slate-300"
+ id="shipment_code_reference_120" name="shipment_code_reference" aria-label="Shipment Code Reference"                    className="w-full bg-slate-50/50 border border-slate-200 focus:border-pink-500 text-slate-800 font-bold rounded-xl p-2.5 text-xs outline-none transition-all placeholder:text-slate-300"
                     placeholder="e.g. MILL-KOL-02"
                   />
                 </div>
 
                 {/* Styled Select option */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Purchase Order Standard Mode</label>
+                  <label htmlFor="purchase_order_standard_m_129" className="text-[10px] font-black uppercase text-slate-400">Purchase Order Standard Mode</label>
                   <select
-                    className="w-full bg-white border border-slate-200 focus:border-pink-500 rounded-xl p-2.5 text-xs font-bold outline-none cursor-pointer"
+ id="purchase_order_standard_m_129" name="purchase_order_standard_m" aria-label="Purchase Order Standard Mode"                    className="w-full bg-white border border-slate-200 focus:border-pink-500 rounded-xl p-2.5 text-xs font-bold outline-none cursor-pointer"
                     value={poType}
                     onChange={(e) => setPoType(e.target.value)}
                   >
@@ -140,13 +140,13 @@ export default function FormsChartsTab() {
                 {/* Range Slider for weight */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Tactile Weight Margin (Kgs)</label>
+                    <label htmlFor="tactile_weight_margin_kgs_148" className="text-[10px] font-black uppercase text-slate-400">Tactile Weight Margin (Kgs)</label>
                     <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-[10px] text-pink-600 font-black">
                       {sliderVal} KGS
                     </span>
                   </div>
                   <input
-                    type="range"
+ id="tactile_weight_margin_kgs_148" name="tactile_weight_margin_kgs" aria-label="Tactile Weight Margin (Kgs)"                    type="range"
                     min="100"
                     max="500"
                     value={sliderVal}
@@ -187,9 +187,9 @@ export default function FormsChartsTab() {
               
               <form onSubmit={handleValidateForm} className="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">PO Number (Adheres to PO-xxx)</label>
+                  <label htmlFor="po_number_adheres_to_po_x_191" className="text-[10px] font-black uppercase text-slate-400">PO Number (Adheres to PO-xxx)</label>
                   <input
-                    value={poNumber}
+ id="po_number_adheres_to_po_x_191" name="po_number_adheres_to_po_x" aria-label="PO Number (Adheres to PO-xxx)"                    value={poNumber}
                     onChange={(e) => setPoNumber(e.target.value)}
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold font-mono outline-none uppercase"
                     placeholder="e.g. PO-88/26"
@@ -197,9 +197,9 @@ export default function FormsChartsTab() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Bale Target weight</label>
+                  <label htmlFor="bale_target_weight_201" className="text-[10px] font-black uppercase text-slate-400">Bale Target weight</label>
                   <input
-                    type="number"
+ id="bale_target_weight_201" name="bale_target_weight" aria-label="Bale Target weight"                    type="number"
                     value={poWeight}
                     onChange={(e) => setPoWeight(Number(e.target.value))}
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none"
@@ -207,9 +207,9 @@ export default function FormsChartsTab() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Market Rate Price (per m.T)</label>
+                  <label htmlFor="market_rate_price_per_m_t_211" className="text-[10px] font-black uppercase text-slate-400">Market Rate Price (per m.T)</label>
                   <input
-                    type="number"
+ id="market_rate_price_per_m_t_211" name="market_rate_price_per_m_t" aria-label="Market Rate Price (per m.T)"                    type="number"
                     value={poRate}
                     onChange={(e) => setPoRate(Number(e.target.value))}
                     className="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none"

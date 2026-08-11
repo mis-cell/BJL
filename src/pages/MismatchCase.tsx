@@ -679,11 +679,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
                 {/* Status Dropdown */}
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
+                  <label htmlFor="filter_by_status_685" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                     Filter by Status
                   </label>
                   <select
-                    value={filterStatus}
+ id="filter_by_status_685" name="filter_by_status" aria-label="Filter by Status"                    value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value as any)}
                     className="w-full text-xs py-1.5 px-2 border border-slate-300 rounded bg-white text-slate-800 font-bold focus:outline-none focus:border-indigo-600"
                   >
@@ -695,11 +695,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
                 {/* Supplier Dropdown */}
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
+                  <label htmlFor="filter_by_supplier_701" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                     Filter by Supplier
                   </label>
                   <select
-                    value={selectedSupplier}
+ id="filter_by_supplier_701" name="filter_by_supplier" aria-label="Filter by Supplier"                    value={selectedSupplier}
                     onChange={(e) => setSelectedSupplier(e.target.value)}
                     className="w-full text-xs py-1.5 px-2 border border-slate-300 rounded bg-white text-slate-800 font-medium focus:outline-none focus:border-indigo-600"
                   >
@@ -712,11 +712,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
                 {/* Broker Dropdown */}
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
+                  <label htmlFor="filter_by_broker_718" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                     Filter by Broker
                   </label>
                   <select
-                    value={selectedBroker}
+ id="filter_by_broker_718" name="filter_by_broker" aria-label="Filter by Broker"                    value={selectedBroker}
                     onChange={(e) => setSelectedBroker(e.target.value)}
                     className="w-full text-xs py-1.5 px-2 border border-slate-300 rounded bg-white text-slate-800 font-medium focus:outline-none focus:border-indigo-600"
                   >
@@ -729,13 +729,13 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
                 {/* Search Input Bar */}
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
+                  <label htmlFor="search_keyword_737" className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                     Search Keyword
                   </label>
                   <div className="relative">
                     <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400 font-bold" />
                     <input
-                      type="text"
+ id="search_keyword_737" name="search_keyword" aria-label="Search Keyword"                      type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="PO, Area, Grade, Discrepancy..."
@@ -880,7 +880,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                               canApproveMismatch() ? (
                                 <div className="space-y-2">
                                   <textarea
-                                    rows={2}
+ id="enter_approval_remarks_882" name="enter_approval_remarks" aria-label="Enter approval remarks..."                                    rows={2}
                                     placeholder="Enter approval remarks..."
                                     value={remarksMap[item.id] || ''}
                                     onChange={(e) => setRemarksMap({ ...remarksMap, [item.id]: e.target.value })}

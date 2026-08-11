@@ -145,7 +145,7 @@ export default function ElectricWeighbridgeSection({
             Select Vehicle ({pendingElectricLorries.length} Pending)
           </label>
           <select
-            value={selectedLorryId}
+ id="selectedlorryid_147" name="selectedlorryid" aria-label="selectedlorryid"            value={selectedLorryId}
             onChange={(e) => {
               const l = lorries.find((x) => x.id === e.target.value);
               if (l) handleSelectLorry(l);
@@ -203,13 +203,13 @@ export default function ElectricWeighbridgeSection({
                 
                 {/* Electric Gross Weight Input */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="electric_gross_weight_kg_211" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Electric Gross Weight (kg)
                   </label>
                   <div className="relative">
                     <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
                     <input
-                      type="number"
+ id="electric_gross_weight_kg_211" name="electric_gross_weight_kg" aria-label="Electric Gross Weight (kg)"                      type="number"
                       disabled={!!activeLorry.electricGrossWeight && currentUserRole !== "SUPER_ADMIN"}
                       value={electricGrossInput}
                       onChange={(e) => setElectricGrossInput(e.target.value ? Number(e.target.value) : "")}
@@ -231,13 +231,13 @@ export default function ElectricWeighbridgeSection({
 
                 {/* Electric Tare Weight Input */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="electric_tare_weight_kg_239" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Electric Tare Weight (kg)
                   </label>
                   <div className="relative">
                     <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
                     <input
-                      type="number"
+ id="electric_tare_weight_kg_239" name="electric_tare_weight_kg" aria-label="Electric Tare Weight (kg)"                      type="number"
                       disabled={!activeLorry.electricGrossWeight || (!!activeLorry.electricTareWeight && currentUserRole !== "SUPER_ADMIN")}
                       value={electricTareInput}
                       onChange={(e) => setElectricTareInput(e.target.value ? Number(e.target.value) : "")}
@@ -328,7 +328,7 @@ export default function ElectricWeighbridgeSection({
         <div className="relative">
           <Search className="w-4 h-4 text-[#5A6E54] absolute left-3.5 top-3" />
           <input
-            type="text"
+ id="search_pending_queue_by_v_330" name="search_pending_queue_by_v" aria-label="Search pending queue by vehicle number or gate pass..."            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search pending queue by vehicle number or gate pass..."

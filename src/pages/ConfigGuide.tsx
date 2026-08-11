@@ -385,11 +385,11 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    <label htmlFor="api_base_url_override_392" className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                       API Base URL Override:
                     </label>
                     <div className="flex gap-2">
-                      <input 
+                      <input  id="api_base_url_override_392" name="api_base_url_override" aria-label="API Base URL Override:"
                         type="text" 
                         placeholder="https://your-backend-server.com/" 
                         value={apiBaseUrl}
@@ -449,7 +449,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                   <Sliders className="h-3.5 w-3.5 text-[#000080]" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">Tolerance Sensitivity:</span>
                   <input
-                    type="range"
+ id="threshold_451" name="threshold" aria-label="threshold"                    type="range"
                     min="0.05"
                     max="1.00"
                     step="0.05"

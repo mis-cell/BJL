@@ -69,7 +69,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Quality */}
                 <td className="p-2">
                   <select
-                    value={qd.quality || ''}
+ id="qd_quality_71" name="qd_quality" aria-label="qd quality"                    value={qd.quality || ''}
                     onChange={(e) => onQualityChange(i, 'quality', e.target.value)}
                     className="w-full bg-white border border-[#D5D0C5] focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C] rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none transition-all cursor-pointer"
                   >
@@ -88,7 +88,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Qty */}
                 <td className="p-2">
                   <input
-                    type="number"
+ id="qty_90" name="qty" aria-label="Qty"                    type="number"
                     value={qd.qty ?? ''}
                     onChange={(e) => onQualityChange(i, 'qty', e.target.value)}
                     placeholder="Qty"
@@ -99,7 +99,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Agency */}
                 <td className="p-2">
                   <input
-                    type="text"
+ id="agency_101" name="agency" aria-label="Agency"                    type="text"
                     value={qd.agency || ''}
                     onChange={(e) => onQualityChange(i, 'agency', e.target.value.toUpperCase())}
                     list={`agency_options_${i}`}
@@ -116,7 +116,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Marka */}
                 <td className="p-2">
                   <input
-                    type="text"
+ id="marka_118" name="marka" aria-label="Marka"                    type="text"
                     value={qd.marka || ''}
                     onChange={(e) => onQualityChange(i, 'marka', e.target.value.toUpperCase())}
                     list={`marka_options_${i}`}
@@ -133,7 +133,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Rs. */}
                 <td className="p-2">
                   <input
-                    type="number"
+ id="rs_135" name="rs" aria-label="Rs."                    type="number"
                     step="0.01"
                     value={qd.rs ?? ''}
                     onChange={(e) => onQualityChange(i, 'rs', e.target.value)}

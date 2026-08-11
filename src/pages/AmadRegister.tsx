@@ -839,7 +839,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 flex-1 min-w-[280px]">
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input
-              type="text"
+ id="search_by_voucher_no_supp_841" name="search_by_voucher_no_supp" aria-label="Search by Voucher No, Supplier, Broker Name or Lorry plate..."              type="text"
               placeholder="Search by Voucher No, Supplier, Broker Name or Lorry plate..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -852,7 +852,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
               <input
-                type="date"
+ id="startdatefilter_854" name="startdatefilter" aria-label="startdatefilter"                type="date"
                 value={startDateFilter}
                 onChange={(e) => setStartDateFilter(e.target.value)}
                 className="bg-transparent outline-none text-xs font-mono text-slate-800"
@@ -861,7 +861,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
               <input
-                type="date"
+ id="enddatefilter_863" name="enddatefilter" aria-label="enddatefilter"                type="date"
                 value={endDateFilter}
                 onChange={(e) => setEndDateFilter(e.target.value)}
                 className="bg-transparent outline-none text-xs font-mono text-slate-800"
@@ -1198,7 +1198,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
               {Object.keys(printColumns).map((col) => (
                 <label key={col} className="flex items-center gap-1 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-300">
                   <input
-                    type="checkbox"
+ id="checkbox_1200" name="checkbox" aria-label="checkbox"                    type="checkbox"
                     checked={(printColumns as any)[col]}
                     onChange={(e) => setPrintColumns(prev => ({ ...prev, [col]: e.target.checked }))}
                     className="rounded text-[#1E4D2B]"

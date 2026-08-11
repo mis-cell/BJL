@@ -246,10 +246,10 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-600 uppercase mb-1">
+                  <label htmlFor="sender_account_registered_252" className="block text-[10px] font-black text-gray-600 uppercase mb-1">
                     Sender Account (Registered):
                   </label>
-                  <input 
+                  <input  id="sender_account_registered_252" name="sender_account_registered" aria-label="Sender Account (Registered):"
                     type="text" 
                     readOnly 
                     value="rawjute@ballyjute.com" 
@@ -257,10 +257,10 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-600 uppercase mb-1">
+                  <label htmlFor="recipient_address_es_comm_263" className="block text-[10px] font-black text-gray-600 uppercase mb-1">
                     Recipient Address(es) (Comma separated):
                   </label>
-                  <input 
+                  <input  id="recipient_address_es_comm_263" name="recipient_address_es_comm" aria-label="Recipient Address(es) (Comma separated):"
                     type="text" 
                     value={emailRecipient} 
                     onChange={(e) => setEmailRecipient(e.target.value)}
@@ -271,10 +271,10 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
               </div>
 
               <div className="mb-3">
-                <label className="block text-[10px] font-black text-gray-600 uppercase mb-1">
+                <label htmlFor="email_subject_line_277" className="block text-[10px] font-black text-gray-600 uppercase mb-1">
                   Email Subject Line:
                 </label>
-                <input 
+                <input  id="email_subject_line_277" name="email_subject_line" aria-label="Email Subject Line:"
                   type="text" 
                   value={emailSubject} 
                   onChange={(e) => setEmailSubject(e.target.value)}

@@ -189,7 +189,7 @@ const SingleComboBox = ({
 
   return (
     <div ref={containerRef} className="flex-1 flex border border-slate-400 bg-white relative text-black">
-      <input 
+      <input  id="filter_192" name="filter" aria-label="filter"
         className="flex-1 p-0.5 outline-none font-bold text-black bg-white" 
         value={filter} 
         onChange={e => {
@@ -271,7 +271,7 @@ const TableComboBox = ({
   return (
     <div ref={containerRef} className="relative w-full h-full flex items-center text-black">
       <input
-        type="text"
+ id="filter_273" name="filter" aria-label="filter"        type="text"
         className="w-full bg-transparent border-none p-1 outline-none font-bold text-slate-800 uppercase pr-5"
         value={filter}
         placeholder={placeholder}
@@ -372,7 +372,7 @@ const DualComboBox = ({
   return (
     <div ref={containerRef} className="flex-1 flex gap-1 relative text-black">
       {showCode && (
-        <input 
+        <input  id="code_375" name="code" aria-label="code"
           className={`w-16 p-0.5 outline-none border transition-colors duration-150 ${
             hasSaudaHighlight 
               ? "bg-[#fffbeb] border-amber-400 text-amber-950 font-medium font-mono" 
@@ -390,7 +390,7 @@ const DualComboBox = ({
           ? "border-amber-400 bg-[#fffdf5]" 
           : "border-slate-400 bg-white"
       }`}>
-        <input 
+        <input  id="filter_393" name="filter" aria-label="filter"
           className="flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold" 
           value={filter} 
           onChange={(e) => {
@@ -2908,7 +2908,7 @@ function isPoMismatchResolved(poNo: string): boolean {
             <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
               <div className="relative flex-1 min-w-[280px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input 
+                <input  id="search_by_po_no_broker_na_2911" name="search_by_po_no_broker_na" aria-label="Search by PO No, Broker Name, Supplier Name, Station/Area..."
                   className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
                   placeholder="Search by PO No, Broker Name, Supplier Name, Station/Area..."
                   value={searchTerm}
@@ -2918,9 +2918,9 @@ function isPoMismatchResolved(poNo: string): boolean {
 
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs">
                 <span className="text-[10px] font-bold text-slate-500 uppercase px-2">From</span>
-                <input type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                <input  id="startdate_2921" name="startdate" aria-label="startdate"type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
                 <span className="text-[10px] font-bold text-slate-500 uppercase px-2">To</span>
-                <input type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                <input  id="enddate_2923" name="enddate" aria-label="enddate"type="date" className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -3273,7 +3273,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                   <div className="flex flex-col gap-2 pt-2 pb-2 pl-2">
                      {['DRUMS', 'BALES', 'LOOSE', 'P.BALES', 'H.BALES'].map((unit) => (
                         <label key={unit} className="flex items-center gap-2 cursor-pointer">
-                           <input 
+                           <input  id="calc_cond_3276" aria-label="calc cond"
                              type="radio" 
                              name="calc_cond" 
                              className="w-3 h-3" 
@@ -3292,7 +3292,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                      <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-end">
                           <span className="text-right pr-2">Total No of Lorries</span>
-                          <input 
+                          <input  id="calcdata_total_lorries_3295" name="calcdata_total_lorries" aria-label="calcdata total lorries"
                             type="number"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.total_lorries}
@@ -3314,7 +3314,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                         
                         <div className="flex items-center justify-end">
                           <span className="text-right pr-2">Units / Lorry</span>
-                          <input 
+                          <input  id="calcdata_units_per_lorry_3317" name="calcdata_units_per_lorry" aria-label="calcdata units per lorry"
                             type="number"
                             className="w-32 bg-[#404040] text-gray-100 border-none p-0.5 shadow-inner"
                             value={calcData.units_per_lorry}
@@ -3335,7 +3335,7 @@ function isPoMismatchResolved(poNo: string): boolean {
 
                         <div className="flex items-center justify-end">
                           <span className="text-right pr-2">Total Units</span>
-                          <input 
+                          <input  id="parsefloat_calcdata_total_3338" name="parsefloat_calcdata_total" aria-label="parsefloat calcdata total"
                             type="number"
                             readOnly
                             className="w-32 bg-[#404040] text-gray-100 border-none p-0.5 shadow-inner font-mono"
@@ -3345,7 +3345,7 @@ function isPoMismatchResolved(poNo: string): boolean {
 
                         <div className="flex items-center justify-end">
                           <span className="text-right pr-2">Weight/Lorry (M.Ton)</span>
-                          <input 
+                          <input  id="calcdata_weight_per_lorry_3348" name="calcdata_weight_per_lorry" aria-label="calcdata weight per lorry"
                             type="number"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.weight_per_lorry}
@@ -3398,7 +3398,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
                   <label className="whitespace-nowrap flex items-center cursor-pointer gap-1 text-[11px] font-extrabold text-[#7c2d12]">
-                    <input 
+                    <input  id="checkbox_3401" name="checkbox" aria-label="checkbox"
                       type="checkbox" 
                       className="w-3.5 h-3.5 cursor-pointer accent-[#7c2d12]" 
                       checked={formData.is_ptf} 
@@ -3430,7 +3430,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                     />
                     P.T.F Mode
                   </label>
-                  <input 
+                  <input  id="formdata_ptf_no_3433" name="formdata_ptf_no" aria-label="formdata ptf no"
                     type="text" 
                     className={`flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black ${!formData.is_ptf ? 'bg-slate-100 text-slate-400' : ''}`}
                     value={formData.ptf_no} 
@@ -3439,21 +3439,21 @@ function isPoMismatchResolved(poNo: string): boolean {
                   />
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 justify-center sm:justify-start whitespace-nowrap">
-                  <label className="mr-1 min-w-[50px] text-center sm:text-left">Pending</label>
-                  <input type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
-                  <input type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
+                  <label htmlFor="pending_radio_3443" className="mr-1 min-w-[50px] text-center sm:text-left">Pending</label>
+                  <input  id="pending_radio_3443" aria-label="Pending"type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
+                  <input  id="pending_radio_3444" aria-label="Pending"type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                  <label className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
+                  <label htmlFor="p_o_contract_3449" className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
                   {formData.is_ptf ? (
-                    <input type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
+                    <input  id="p_o_contract_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
                   ) : (
                     <SingleComboBox value={formData.no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
                   )}
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                  <label className="ml-0 sm:ml-2 min-w-[30px]">Date</label>
-                  <input type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+                  <label htmlFor="date_3456" className="ml-0 sm:ml-2 min-w-[30px]">Date</label>
+                  <input  id="date_3456" name="date" aria-label="Date"type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
                 </div>
 
                 {/* ROW 2 */}
@@ -3494,8 +3494,8 @@ function isPoMismatchResolved(poNo: string): boolean {
                   />
                 </div>
                 <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
-                  <label className="whitespace-nowrap w-24 sm:w-32 md:w-48 text-right shrink-0">Transportation Charges paid by</label>
-                  <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.trans_paid_by} onChange={(e) => setFormData({...formData, trans_paid_by: e.target.value})}>
+                  <label htmlFor="transportation_charges_pa_3498" className="whitespace-nowrap w-24 sm:w-32 md:w-48 text-right shrink-0">Transportation Charges paid by</label>
+                  <select  id="transportation_charges_pa_3498" name="transportation_charges_pa" aria-label="Transportation Charges paid by"className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.trans_paid_by} onChange={(e) => setFormData({...formData, trans_paid_by: e.target.value})}>
                      <option>PARTY</option>
                      <option>COMPANY</option>
                   </select>
@@ -3504,19 +3504,19 @@ function isPoMismatchResolved(poNo: string): boolean {
                 {/* ROW 5 */}
                 <div className="col-span-12 flex flex-wrap items-center gap-y-2 gap-x-4 mb-1 mt-1 font-normal">
                    <div className="flex items-center gap-2">
-                      <label className="w-24 sm:w-32 md:w-40 text-right whitespace-nowrap font-bold shrink-0">Against Cancellation</label>
-                      <select className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold" value={formData.against_cancellation} onChange={(e) => setFormData({...formData, against_cancellation: e.target.value})}>
+                      <label htmlFor="against_cancellation_3508" className="w-24 sm:w-32 md:w-40 text-right whitespace-nowrap font-bold shrink-0">Against Cancellation</label>
+                      <select  id="against_cancellation_3508" name="against_cancellation" aria-label="Against Cancellation"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold" value={formData.against_cancellation} onChange={(e) => setFormData({...formData, against_cancellation: e.target.value})}>
                          <option>No</option>
                          <option>Yes</option>
                       </select>
                    </div>
                    <div className="flex items-center gap-2">
-                      <label className="whitespace-nowrap font-bold">Purchase Unit</label>
-                      <input className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-center text-black font-bold font-mono" value={formData.purchase_unit_code || '1'} onChange={(e) => {
+                      <label htmlFor="purchase_unit_3515" className="whitespace-nowrap font-bold">Purchase Unit</label>
+                      <input  id="purchase_unit_3515" name="purchase_unit" aria-label="Purchase Unit"className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-center text-black font-bold font-mono" value={formData.purchase_unit_code || '1'} onChange={(e) => {
                          const val = e.target.value;
                          setFormData(prev => ({ ...prev, purchase_unit_code: val }));
                       }} />
-                      <select className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold cursor-pointer" value={formData.purchase_unit_name} onChange={(e) => {
+                      <select  id="formdata_purchase_unit_na_3519" name="formdata_purchase_unit_na" aria-label="formdata purchase unit na"className="w-24 bg-white border border-slate-400 p-0.5 outline-none text-black font-semibold cursor-pointer" value={formData.purchase_unit_name} onChange={(e) => {
                          const name = e.target.value;
                          handlePurchaseUnitChange(name, formData.purchase_unit_code || '1');
                       }}>
@@ -3526,8 +3526,8 @@ function isPoMismatchResolved(poNo: string): boolean {
                       </select>
                    </div>
                    <div className="flex items-center gap-2">
-                      <label className="whitespace-nowrap font-bold">Weight/Unit (Kgs.)</label>
-                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-bold text-black" value={formData.weight_unit_kgs} readOnly />
+                      <label htmlFor="weight_unit_kgs_3530" className="whitespace-nowrap font-bold">Weight/Unit (Kgs.)</label>
+                      <input  id="weight_unit_kgs_3530" name="weight_unit_kgs" aria-label="Weight/Unit (Kgs.)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-bold text-black" value={formData.weight_unit_kgs} readOnly />
                       <button onClick={(e) => { 
                           e.preventDefault(); 
                           setCalcData({
@@ -3543,42 +3543,42 @@ function isPoMismatchResolved(poNo: string): boolean {
                 {/* ROW 6 */}
                 <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
                    <div className="flex items-center gap-1 justify-between">
-                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
-                      <input className="w-12 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} readOnly />
+                      <label htmlFor="total_no_of_lorries_3547" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
+                      <input  id="total_no_of_lorries_3547" name="total_no_of_lorries" aria-label="Total No of Lorries"className="w-12 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} readOnly />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
-                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
-                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} readOnly />
+                      <label htmlFor="units_lorry_3551" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
+                      <input  id="units_lorry_3551" name="units_lorry" aria-label="Units / Lorry"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} readOnly />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
-                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
-                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} readOnly />
+                      <label htmlFor="total_units_3555" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
+                      <input  id="total_units_3555" name="total_units" aria-label="Total Units"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} readOnly />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
-                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
-                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} readOnly />
+                      <label htmlFor="weight_lorry_m_ton_3559" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
+                      <input  id="weight_lorry_m_ton_3559" name="weight_lorry_m_ton" aria-label="Weight/Lorry (M.Ton)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} readOnly />
                    </div>
                    <div className="flex items-center gap-1 justify-between col-span-2 sm:col-span-1">
-                      <label className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
-                      <input className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} readOnly />
+                      <label htmlFor="total_contract_m_ton_3563" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
+                      <input  id="total_contract_m_ton_3563" name="total_contract_m_ton" aria-label="Total Contract (M.Ton)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} readOnly />
                    </div>
                 </div>
 
                 {/* ROW 7 */}
                 <div className="col-span-12 grid grid-cols-12 gap-2 mb-2 mt-1">
                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                      <label className="w-24 text-right shrink-0">Marka Type</label>
-                      <select className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black">
+                      <label htmlFor="marka_type_3571" className="w-24 text-right shrink-0">Marka Type</label>
+                      <select  id="marka_type_3571" name="marka_type" aria-label="Marka Type"className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-bold text-black">
                          <option>{formData.marka_type}</option>
                       </select>
                    </div>
                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                      <label className="w-24 sm:w-32 text-right shrink-0">Marka Penalty</label>
-                      <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.marka_penalty} onChange={(e) => setFormData({...formData, marka_penalty: e.target.value})} />
+                      <label htmlFor="marka_penalty_3577" className="w-24 sm:w-32 text-right shrink-0">Marka Penalty</label>
+                      <input  id="marka_penalty_3577" name="marka_penalty" aria-label="Marka Penalty"className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.marka_penalty} onChange={(e) => setFormData({...formData, marka_penalty: e.target.value})} />
                    </div>
                    <div className="col-span-12 sm:col-span-4 flex items-center gap-2">
-                      <label className="w-24 sm:w-32 text-right shrink-0">Quantity Penalty</label>
-                      <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.qty_penalty} onChange={(e) => setFormData({...formData, qty_penalty: e.target.value})} />
+                      <label htmlFor="quantity_penalty_3581" className="w-24 sm:w-32 text-right shrink-0">Quantity Penalty</label>
+                      <input  id="quantity_penalty_3581" name="quantity_penalty" aria-label="Quantity Penalty"className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-right font-normal text-black" value={formData.qty_penalty} onChange={(e) => setFormData({...formData, qty_penalty: e.target.value})} />
                    </div>
                 </div>
                 
@@ -3588,20 +3588,20 @@ function isPoMismatchResolved(poNo: string): boolean {
                 {/* Detailed sections below */}
                 <div className="col-span-12 grid grid-cols-12 gap-x-2 gap-y-1.5">
                   <div className="col-span-12 flex flex-wrap items-center gap-2 mt-1">
-                    <label className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
-                    <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
+                    <label htmlFor="delivery_gt_from_3592" className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
+                    <input  id="delivery_gt_from_3592" name="delivery_gt_from" aria-label="Delivery --&gt;From"type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                     }`} value={formData.delivery_from} onChange={(e) => setFormData({...formData, delivery_from: e.target.value})} />
-                    <label className="mx-2 shrink-0">To</label>
-                    <input type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
+                    <label htmlFor="to_3596" className="mx-2 shrink-0">To</label>
+                    <input  id="to_3596" name="to" aria-label="To"type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                     }`} value={formData.delivery_to} onChange={(e) => setFormData({...formData, delivery_to: e.target.value})} />
-                    <label className="ml-2 shrink-0">Grace Days</label>
-                    <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                    <label htmlFor="grace_days_3600" className="ml-2 shrink-0">Grace Days</label>
+                    <input  id="grace_days_3600" name="grace_days" aria-label="Grace Days"className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
                     }`} value={formData.grace_days} onChange={(e) => setFormData({...formData, grace_days: e.target.value})} />
-                    <label className="ml-2 shrink-0">Delivery Penalty</label>
-                    <input className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                    <label htmlFor="delivery_penalty_3604" className="ml-2 shrink-0">Delivery Penalty</label>
+                    <input  id="delivery_penalty_3604" name="delivery_penalty" aria-label="Delivery Penalty"className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
                     }`} value={formData.delivery_penalty} onChange={(e) => setFormData({...formData, delivery_penalty: e.target.value})} />
                   </div>
@@ -3613,40 +3613,40 @@ function isPoMismatchResolved(poNo: string): boolean {
                     </div>
                   </div>
                   <div className="col-span-12 lg:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-2">
-                     <label className="w-24 text-right shrink-0">Date</label>
-                     <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                     <label htmlFor="date_3617" className="w-24 text-right shrink-0">Date</label>
+                     <input  id="date_3617" name="date" aria-label="Date"type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.contract_date} onChange={(e) => setFormData({...formData, contract_date: e.target.value})} />
-                     <label className="w-24 text-right shrink-0">Rate Detail</label>
-                     <input className="flex-1 min-w-[120px] bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.rate_detail} onChange={(e) => setFormData({...formData, rate_detail: e.target.value})} />
+                     <label htmlFor="rate_detail_3621" className="w-24 text-right shrink-0">Rate Detail</label>
+                     <input  id="rate_detail_3621" name="rate_detail" aria-label="Rate Detail"className="flex-1 min-w-[120px] bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.rate_detail} onChange={(e) => setFormData({...formData, rate_detail: e.target.value})} />
                    </div>
 
                   <div className="col-span-12 flex items-center gap-2">
-                     <label className="w-24 sm:w-32 text-right shrink-0">Delivery Schedule</label>
-                     <input className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.delivery_schedule} onChange={(e) => setFormData({...formData, delivery_schedule: e.target.value})} />
+                     <label htmlFor="delivery_schedule_3626" className="w-24 sm:w-32 text-right shrink-0">Delivery Schedule</label>
+                     <input  id="delivery_schedule_3626" name="delivery_schedule" aria-label="Delivery Schedule"className="flex-1 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.delivery_schedule} onChange={(e) => setFormData({...formData, delivery_schedule: e.target.value})} />
                   </div>
 
                   <div className="col-span-12 flex items-start gap-2">
-                     <label className="w-24 sm:w-32 text-right leading-none mt-1 shrink-0">Terms & Condition</label>
-                     <textarea className={`flex-1 p-0.5 outline-none h-12 text-[10px] font-normal border text-black transition-colors duration-150 ${
+                     <label htmlFor="terms_condition_3631" className="w-24 sm:w-32 text-right leading-none mt-1 shrink-0">Terms & Condition</label>
+                     <textarea  id="terms_condition_3631" name="terms_condition" aria-label="Terms & Condition"className={`flex-1 p-0.5 outline-none h-12 text-[10px] font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.terms_condition} onChange={(e) => setFormData({...formData, terms_condition: e.target.value})} />
                   </div>
 
                   <div className="col-span-12 flex items-center gap-2 mt-1">
-                     <label className="w-24 sm:w-32 text-right shrink-0">Remarks</label>
-                     <input className={`flex-1 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                     <label htmlFor="remarks_3638" className="w-24 sm:w-32 text-right shrink-0">Remarks</label>
+                     <input  id="remarks_3638" name="remarks" aria-label="Remarks"className={`flex-1 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.remarks} onChange={(e) => setFormData({...formData, remarks: e.target.value})} />
                   </div>
 
                   <div className="col-span-12 flex flex-wrap items-center gap-2 pb-1">
-                     <label className="w-24 sm:w-32 text-right shrink-0">PO Identification</label>
-                     <select className="w-48 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black">
+                     <label htmlFor="po_identification_3645" className="w-24 sm:w-32 text-right shrink-0">PO Identification</label>
+                     <select  id="po_identification_3645" name="po_identification" aria-label="PO Identification"className="w-48 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black">
                         <option>{formData.po_identification}</option>
                      </select>
                      <label className="ml-0 sm:ml-4 shrink-0">S Date</label>
-                     <input type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
+                     <input  id="po_identification_3649" name="po_identification" aria-label="PO Identification"type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.s_date} onChange={(e) => {
                         const val = e.target.value;
@@ -3665,7 +3665,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                            <p className="mt-1">Format: Numeric decimal representing Brokerage rate per ton/unit.</p>
                         </div>
                      </label>
-                     <input className={`flex-1 min-w-[60px] p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
+                     <input  id="formdata_b_rate_3668" name="formdata_b_rate" aria-label="formdata b rate"className={`flex-1 min-w-[60px] p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
                      }`} value={formData.b_rate} onChange={(e) => {
                         const val = e.target.value;
@@ -3751,7 +3751,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                           >
                              <td className="px-1 py-1 text-center bg-slate-50  font-bold text-slate-700">{row.srl}</td>
                              <td className="px-0 py-0 text-center font-bold">
-                                <select 
+                                <select  id="row_crop_getcropyear_3754" name="row_crop_getcropyear" aria-label="row crop getcropyear"
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-905 text-slate-900 cursor-pointer" 
                                   value={row.crop || getCropYear()} 
                                   onChange={(e) => {
@@ -3769,7 +3769,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                                 </select>
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input 
+                                <input  id="field_3772" name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.grade_code || ''} 
@@ -3811,7 +3811,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                                 />
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input 
+                                <input  id="field_3814" name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.agency_code || ''} 
@@ -3853,7 +3853,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                                 />
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input 
+                                <input  id="field_3856" name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.marka_code || ''} 
@@ -3888,7 +3888,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                              </td>
 
                              <td className="px-0 py-0 text-right font-normal">
-                                <input 
+                                <input  id="row_rate_3891" name="row_rate" aria-label="row rate"
                                   type="number" 
                                   className="w-full text-right bg-transparent border-none p-1 outline-none font-extrabold tabular-nums focus:bg-amber-50 text-blue-900"
                                   value={row.rate || ''}

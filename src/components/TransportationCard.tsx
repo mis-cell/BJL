@@ -22,9 +22,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* No. of Lorries */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">No. of Lorries</label>
+          <label htmlFor="no_of_lorries_26" className="text-xs font-semibold text-slate-700">No. of Lorries</label>
           <input
-            type="number"
+ id="no_of_lorries_26" aria-label="No. of Lorries"            type="number"
             min="1"
             name="no_of_lorries"
             value={formData.no_of_lorries ?? 1}
@@ -35,9 +35,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Units/Lorry */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Units/Lorry</label>
+          <label htmlFor="units_per_lorry_type_39" className="text-xs font-semibold text-slate-700">Units/Lorry</label>
           <select
-            name="units_per_lorry_type"
+ id="units_per_lorry_type_39" aria-label="Units/Lorry"            name="units_per_lorry_type"
             value={formData.units_per_lorry_type || 'BALES'}
             onChange={onChange}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs cursor-pointer"
@@ -52,9 +52,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Total Unit */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Total Unit</label>
+          <label htmlFor="total_unit_56" className="text-xs font-semibold text-slate-700">Total Unit</label>
           <input
-            type="number"
+ id="total_unit_56" aria-label="Total Unit"            type="number"
             name="total_unit"
             value={formData.total_unit ?? 0}
             onChange={onChange}
@@ -64,9 +64,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Weight/Lorry */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Wt/Lorry</label>
+          <label htmlFor="wt_per_lorry_68" className="text-xs font-semibold text-slate-700">Wt/Lorry</label>
           <input
-            type="number"
+ id="wt_per_lorry_68" aria-label="Wt/Lorry"            type="number"
             step="0.01"
             name="wt_per_lorry"
             value={formData.wt_per_lorry ?? 0}
@@ -77,9 +77,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Unit Type */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Unit Type</label>
+          <label htmlFor="unit_type_81" className="text-xs font-semibold text-slate-700">Unit Type</label>
           <select
-            name="unit_type"
+ id="unit_type_81" aria-label="Unit Type"            name="unit_type"
             value={formData.unit_type || 'BALES'}
             onChange={onChange}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs cursor-pointer"
@@ -94,9 +94,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Total Weight in Ton */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Total Wt. in Ton</label>
+          <label htmlFor="total_wt_in_ton_98" className="text-xs font-semibold text-slate-700">Total Wt. in Ton</label>
           <input
-            type="number"
+ id="total_wt_in_ton_98" aria-label="Total Wt. in Ton"            type="number"
             step="0.001"
             name="total_wt_in_ton"
             value={formData.total_wt_in_ton ?? 0}

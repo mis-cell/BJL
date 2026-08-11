@@ -368,11 +368,11 @@ function AuthScreen({
             >
               {/* Financial Session Select */}
               <div>
-                <label className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                <label htmlFor="financial_session_374" className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
                   Financial Session
                 </label>
                 <select
-                  className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
+ id="financial_session_374" name="financial_session" aria-label="Financial Session"                  className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#ccc] bg-white/90 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20 transition-all appearance-none cursor-pointer"
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                 >
@@ -383,11 +383,11 @@ function AuthScreen({
 
               {/* Username Input */}
               <div>
-                <label className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
+                <label htmlFor="username_389" className="text-[9px] sm:text-[10px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1">
                   Username
                 </label>
                 <input
-                  type="text"
+ id="username_389" name="username" aria-label="Username"                  type="text"
                   placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -411,7 +411,7 @@ function AuthScreen({
                   </button>
                 </div>
                 <input
-                  type={showPassword ? "text" : "password"}
+ id="password_413" name="password" aria-label="Password"                  type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -1537,7 +1537,7 @@ export default function App() {
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
-                  type="text"
+ id="search_by_module_name_e_g_1539" name="search_by_module_name_e_g" aria-label="Search by module name (e.g. Settlement, Purchase PO, Quality)..."                  type="text"
                   autoFocus
                   value={commandSearchQuery}
                   onChange={(e) => {

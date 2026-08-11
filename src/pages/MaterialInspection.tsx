@@ -273,7 +273,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     <div ref={containerRef} className="relative flex-1">
       <div className="relative flex items-center">
         <input
-          type="text"
+ id="value_275" aria-label="value"          type="text"
           name={name}
           value={value}
           disabled={disabled}
@@ -2186,7 +2186,7 @@ export default function MaterialInspection({
           <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2.5 items-center flex-wrap shadow-sm">
             <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[280px]">
               <input
-                className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold"
+ id="search_m_r_no_supplier_na_2188" name="search_m_r_no_supplier_na" aria-label="Search M.R. No, Supplier name, Broker name, P.O. No..."                className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold"
                 placeholder="Search M.R. No, Supplier name, Broker name, P.O. No..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
@@ -2200,14 +2200,14 @@ export default function MaterialInspection({
             <div className="flex items-center gap-1.5 bg-[#d4d0c8] px-2.5 py-1 border border-black/15 shadow-inner">
               <span className="text-[9px] font-black uppercase text-slate-800 ">Arrival From:</span>
               <input
-                type="date"
+ id="arrivalstartdate_2202" name="arrivalstartdate" aria-label="arrivalstartdate"                type="date"
                 value={arrivalStartDate}
                 onChange={(e) => setArrivalStartDate(e.target.value)}
                 className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
               />
               <span className="text-[9px] font-black uppercase text-slate-800 ">To:</span>
               <input
-                type="date"
+ id="arrivalenddate_2209" name="arrivalenddate" aria-label="arrivalenddate"                type="date"
                 value={arrivalEndDate}
                 onChange={(e) => setArrivalEndDate(e.target.value)}
                 className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
@@ -2288,7 +2288,7 @@ export default function MaterialInspection({
                       return (
                         <label key={colKey} className="flex items-center gap-2 hover:bg-slate-100 p-1 rounded cursor-pointer ">
                           <input
-                            type="checkbox"
+ id="checkbox_2290" name="checkbox" aria-label="checkbox"                            type="checkbox"
                             checked={visibleColumns[colKey]}
                             onChange={(e) => {
                               setVisibleColumns(prev => ({
@@ -2371,7 +2371,7 @@ export default function MaterialInspection({
                     {visibleColumns.select && (
                       <th className="px-2 text-center border-r border-gray-300 w-10">
                         <input
-                          type="checkbox"
+ id="checkbox_2373" name="checkbox" aria-label="checkbox"                          type="checkbox"
                           checked={
                             filteredSavedInspections.length > 0 &&
                             filteredSavedInspections.every((item) =>
@@ -2510,7 +2510,7 @@ export default function MaterialInspection({
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
-                              type="checkbox"
+ id="checkbox_2512" name="checkbox" aria-label="checkbox"                              type="checkbox"
                               checked={selectedMrNos.includes(row.mr_no)}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -3133,7 +3133,7 @@ export default function MaterialInspection({
               
               <div className="relative">
                 <select
-                  value={masterData.mr_no}
+ id="masterdata_mr_no_3135" name="masterdata_mr_no" aria-label="masterdata mr no"                  value={masterData.mr_no}
                   onChange={(e) => {
                     const sel = savedInspections.find((i) => i.mr_no === e.target.value);
                     if (sel) {
@@ -3168,7 +3168,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-28 font-semibold text-slate-700">Broker <span className="text-red-500">*</span></label>
                   <input
-                    type="text"
+ id="broker_name_3170" aria-label="Broker Name"                    type="text"
                     list="brokersList"
                     name="broker_name"
                     value={masterData.broker_name || ''}
@@ -3181,7 +3181,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
                   <input
-                    type="date"
+ id="mr_date_3183" aria-label="mr date"                    type="date"
                     name="mr_date"
                     value={masterData.mr_date || ''}
                     disabled={!isEditMode}
@@ -3192,7 +3192,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-24 font-semibold text-slate-700">Lorry No. <span className="text-red-500">*</span></label>
                   <input
-                    type="text"
+ id="lorry_number_3194" aria-label="Select Lorry No."                    type="text"
                     name="lorry_number"
                     value={masterData.lorry_number || ''}
                     disabled={!isEditMode}
@@ -3206,7 +3206,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-28 font-semibold text-slate-700">Supplier <span className="text-red-500">*</span></label>
                   <input
-                    type="text"
+ id="supplier_name_3208" aria-label="Supplier Name"                    type="text"
                     list="suppliersList"
                     name="supplier_name"
                     value={masterData.supplier_name || ''}
@@ -3219,7 +3219,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
                   <input
-                    type="date"
+ id="po_date_3221" aria-label="po date"                    type="date"
                     name="po_date"
                     value={masterData.po_date || ''}
                     disabled={!isEditMode}
@@ -3246,9 +3246,9 @@ export default function MaterialInspection({
 
                 {/* P.O. Remarks & Detention Days */}
                 <div className="flex items-center gap-2 lg:col-span-2">
-                  <label className="w-28 font-semibold text-slate-700">P.O. Remarks</label>
+                  <label htmlFor="remarks_3250" className="w-28 font-semibold text-slate-700">P.O. Remarks</label>
                   <input
-                    type="text"
+ id="remarks_3250" aria-label="P.O. Remarks"                    type="text"
                     name="remarks"
                     value={masterData.remarks || ''}
                     disabled={!isEditMode}
@@ -3258,9 +3258,9 @@ export default function MaterialInspection({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="w-24 font-semibold text-slate-700">Detention Days</label>
+                  <label htmlFor="detention_days_3262" className="w-24 font-semibold text-slate-700">Detention Days</label>
                   <input
-                    type="number"
+ id="detention_days_3262" aria-label="Detention Days"                    type="number"
                     name="detention_days"
                     value={masterData.detention_days || ''}
                     disabled={!isEditMode}
@@ -3290,7 +3290,7 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
                   <input
-                    type="date"
+ id="arrival_date_3292" aria-label="arrival date"                    type="date"
                     name="arrival_date"
                     value={masterData.arrival_date || ''}
                     disabled={!isEditMode}
@@ -3299,9 +3299,9 @@ export default function MaterialInspection({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="w-24 font-semibold text-slate-700">Challan Receipt No.</label>
+                  <label htmlFor="mill_po_no_3303" className="w-24 font-semibold text-slate-700">Challan Receipt No.</label>
                   <input
-                    type="text"
+ id="mill_po_no_3303" aria-label="Challan Receipt No."                    type="text"
                     name="mill_po_no"
                     value={masterData.mill_po_no || ''}
                     disabled={!isEditMode}
@@ -3319,9 +3319,9 @@ export default function MaterialInspection({
 
                 {/* Date & Way Bill No. */}
                 <div className="flex items-center gap-2">
-                  <label className="w-28 font-semibold text-slate-700">Date</label>
+                  <label htmlFor="mill_po_date_3323" className="w-28 font-semibold text-slate-700">Date</label>
                   <input
-                    type="date"
+ id="mill_po_date_3323" aria-label="Date"                    type="date"
                     name="mill_po_date"
                     value={masterData.mill_po_date || masterData.arrival_date || ''}
                     disabled={!isEditMode}
@@ -3330,9 +3330,9 @@ export default function MaterialInspection({
                   />
                 </div>
                 <div className="flex items-center gap-2 lg:col-span-2">
-                  <label className="w-24 font-semibold text-slate-700">Way Bill No.</label>
+                  <label htmlFor="mr_spcl_print_3334" className="w-24 font-semibold text-slate-700">Way Bill No.</label>
                   <input
-                    type="text"
+ id="mr_spcl_print_3334" aria-label="Way Bill No."                    type="text"
                     name="mr_spcl_print"
                     value={masterData.mr_spcl_print || ''}
                     disabled={!isEditMode}
@@ -3360,7 +3360,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-36 font-semibold text-slate-700">Lorry Returned <span className="text-red-500">*</span></label>
                     <select
-                      name="lorry_returned"
+ id="lorry_returned_3362" aria-label="lorry returned"                      name="lorry_returned"
                       value={(masterData as any).lorry_returned || 'No'}
                       disabled={!isEditMode}
                       onChange={handleMasterChange}
@@ -3373,7 +3373,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-36 font-semibold text-slate-700">Unloading Date <span className="text-red-500">*</span></label>
                     <input
-                      type="date"
+ id="unloading_date_3375" aria-label="unloading date"                      type="date"
                       name="unloading_date"
                       value={masterData.unloading_date || ''}
                       disabled={!isEditMode}
@@ -3384,7 +3384,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-2">
                     <label className="w-36 font-semibold text-slate-700">Advance Amount <span className="text-red-500">*</span></label>
                     <input
-                      type="number"
+ id="advance_amount_3386" aria-label="0.00"                      type="number"
                       name="advance_amount"
                       value={(masterData as any).advance_amount || ''}
                       disabled={!isEditMode}
@@ -3394,7 +3394,7 @@ export default function MaterialInspection({
                     />
                     <span className="font-semibold text-slate-600 shrink-0 text-[11px]">On-Account Advance</span>
                     <input
-                      type="number"
+ id="on_account_advance_amount_3396" aria-label="Enter Amount"                      type="number"
                       name="on_account_advance_amount"
                       value={(masterData as any).on_account_advance_amount || ''}
                       disabled={!isEditMode}
@@ -3404,9 +3404,9 @@ export default function MaterialInspection({
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <label className="w-36 font-semibold text-slate-700">Arrival Remarks</label>
+                    <label htmlFor="arrival_remarks_3408" className="w-36 font-semibold text-slate-700">Arrival Remarks</label>
                     <input
-                      type="text"
+ id="arrival_remarks_3408" aria-label="Arrival Remarks"                      type="text"
                       name="arrival_remarks"
                       value={(masterData as any).arrival_remarks || masterData.remarks || ''}
                       disabled={!isEditMode}
@@ -3418,7 +3418,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-36 font-semibold text-slate-700">Consignment No. <span className="text-red-500">*</span></label>
                     <input
-                      type="text"
+ id="consignment_no_3420" aria-label="Consignment Number"                      type="text"
                       name="consignment_no"
                       value={(masterData as any).consignment_no || ''}
                       disabled={!isEditMode}
@@ -3434,7 +3434,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-48 font-semibold text-slate-700">Lorry Returned from Other Mill <span className="text-red-500">*</span></label>
                     <select
-                      name="lorry_returned_other_mill"
+ id="lorry_returned_other_mill_3436" aria-label="lorry returned other mill"                      name="lorry_returned_other_mill"
                       value={(masterData as any).lorry_returned_other_mill || 'No'}
                       disabled={!isEditMode}
                       onChange={handleMasterChange}
@@ -3447,7 +3447,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-48 font-semibold text-slate-700">M.R. Print Date <span className="text-red-500">*</span></label>
                     <input
-                      type="date"
+ id="mr_print_date_3449" aria-label="mr print date"                      type="date"
                       name="mr_print_date"
                       value={(masterData as any).mr_print_date || masterData.mr_date || ''}
                       disabled={!isEditMode}
@@ -3458,7 +3458,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-48 font-semibold text-slate-700">Sent For Settlement Date <span className="text-red-500">*</span></label>
                     <input
-                      type="date"
+ id="sent_settlement_date_3460" aria-label="sent settlement date"                      type="date"
                       name="sent_settlement_date"
                       value={(masterData as any).sent_settlement_date || ''}
                       disabled={!isEditMode}
@@ -3471,7 +3471,7 @@ export default function MaterialInspection({
                     <div className="flex-1 relative flex items-center">
                       <span className="absolute left-2.5 text-slate-500 font-bold">₹</span>
                       <input
-                        type="number"
+ id="settlement_amount_3473" aria-label="0.00"                        type="number"
                         name="settlement_amount"
                         value={(masterData as any).settlement_amount || ''}
                         disabled={!isEditMode}
@@ -3484,7 +3484,7 @@ export default function MaterialInspection({
                   <div className="flex items-center gap-3">
                     <label className="w-48 font-semibold text-slate-700">Consignment Date <span className="text-red-500">*</span></label>
                     <input
-                      type="date"
+ id="consignment_date_3486" aria-label="consignment date"                      type="date"
                       name="consignment_date"
                       value={(masterData as any).consignment_date || masterData.arrival_date || ''}
                       disabled={!isEditMode}
@@ -3564,7 +3564,7 @@ export default function MaterialInspection({
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-amber-900 text-sm">₹</span>
                       <input
-                        type="number"
+ id="delivery_claim_3566" aria-label="0.00"                        type="number"
                         step="0.01"
                         name="delivery_claim"
                         value={(masterData as any).delivery_claim || ''}
@@ -3657,7 +3657,7 @@ export default function MaterialInspection({
                                     className="flex items-center gap-2 px-2 py-1 hover:bg-red-50 rounded cursor-pointer text-xs font-medium text-slate-800 select-none"
                                   >
                                     <input
-                                      type="checkbox"
+ id="checkbox_3659" name="checkbox" aria-label="checkbox"                                      type="checkbox"
                                       checked={isChecked}
                                       onChange={() => handleToggleDeduction(name)}
                                       className="rounded border-slate-300 text-red-600 focus:ring-red-500 h-3.5 w-3.5"
@@ -3680,9 +3680,9 @@ export default function MaterialInspection({
                     {/* Rate, Qty, and Amount Inputs */}
                     <div className="grid grid-cols-3 gap-2 pt-1 border-t border-red-200">
                       <div>
-                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Deduction Rate (₹)</label>
+                        <label htmlFor="deduction_rate_3684" className="text-[10px] font-semibold text-slate-600 block mb-0.5">Deduction Rate (₹)</label>
                         <input
-                          type="number"
+ id="deduction_rate_3684" name="deduction_rate" aria-label="Deduction Rate (₹)"                          type="number"
                           step="0.01"
                           disabled={!isEditMode}
                           value={(masterData as any).deduction_rate || ''}
@@ -3702,9 +3702,9 @@ export default function MaterialInspection({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-semibold text-slate-600 block mb-0.5">Qty / Units</label>
+                        <label htmlFor="qty_units_3706" className="text-[10px] font-semibold text-slate-600 block mb-0.5">Qty / Units</label>
                         <input
-                          type="number"
+ id="qty_units_3706" name="qty_units" aria-label="Qty / Units"                          type="number"
                           step="0.01"
                           disabled={!isEditMode}
                           value={(masterData as any).deduction_qty || ''}
@@ -3724,9 +3724,9 @@ export default function MaterialInspection({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-red-800 block mb-0.5">Total Ded Amt (-)</label>
+                        <label htmlFor="total_ded_amt_3728" className="text-[10px] font-bold text-red-800 block mb-0.5">Total Ded Amt (-)</label>
                         <input
-                          type="number"
+ id="total_ded_amt_3728" name="total_ded_amt" aria-label="Total Ded Amt (-)"                          type="number"
                           step="0.01"
                           disabled={!isEditMode}
                           value={(masterData as any).deduction_amount || ''}
@@ -3781,9 +3781,9 @@ export default function MaterialInspection({
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Grade</label>
+                          <label htmlFor="grade_3785" className="w-16 font-semibold text-slate-600">Grade</label>
                           <input
-                            type="text"
+ id="grade_3785" name="grade" aria-label="Grade"                            type="text"
                             list="gradesList"
                             value={detailsList[idx]?.arrival_grade || ''}
                             disabled={!isEditMode}
@@ -3793,9 +3793,9 @@ export default function MaterialInspection({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Area</label>
+                          <label htmlFor="area_3797" className="w-16 font-semibold text-slate-600">Area</label>
                           <input
-                            type="text"
+ id="area_3797" name="area" aria-label="Area"                            type="text"
                             list="areasList"
                             value={detailsList[idx]?.area || ''}
                             disabled={!isEditMode}
@@ -3805,9 +3805,9 @@ export default function MaterialInspection({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Agency</label>
+                          <label htmlFor="agency_3809" className="w-16 font-semibold text-slate-600">Agency</label>
                           <input
-                            type="text"
+ id="agency_3809" name="agency" aria-label="Agency"                            type="text"
                             list="agenciesList"
                             value={detailsList[idx]?.agency || ''}
                             disabled={!isEditMode}
@@ -3817,9 +3817,9 @@ export default function MaterialInspection({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Marks</label>
+                          <label htmlFor="marks_3821" className="w-16 font-semibold text-slate-600">Marks</label>
                           <input
-                            type="text"
+ id="marks_3821" name="marks" aria-label="Marks"                            type="text"
                             list="markasList"
                             value={detailsList[idx]?.marka || ''}
                             disabled={!isEditMode}
@@ -3829,9 +3829,9 @@ export default function MaterialInspection({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Crop Yr.</label>
+                          <label htmlFor="crop_yr_3833" className="w-16 font-semibold text-slate-600">Crop Yr.</label>
                           <input
-                            type="text"
+ id="crop_yr_3833" name="crop_yr" aria-label="Crop Yr."                            type="text"
                             value={detailsList[idx]?.crop_year || '2026-2027'}
                             disabled={!isEditMode}
                             onChange={(e) => handleDetailChange(idx, 'crop_year', e.target.value)}
@@ -3840,9 +3840,9 @@ export default function MaterialInspection({
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="w-16 font-semibold text-slate-600">Quantity</label>
+                          <label htmlFor="quantity_3844" className="w-16 font-semibold text-slate-600">Quantity</label>
                           <input
-                            type="number"
+ id="quantity_3844" name="quantity" aria-label="Quantity"                            type="number"
                             value={detailsList[idx]?.quantity || ''}
                             disabled={!isEditMode}
                             onChange={(e) => handleDetailChange(idx, 'quantity', e.target.value)}
@@ -3854,9 +3854,9 @@ export default function MaterialInspection({
                           </span>
                         </div>
                         <div className="col-span-2 flex items-center gap-2">
-                          <label className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
+                          <label htmlFor="final_wt_m_ton_3858" className="w-28 font-semibold text-slate-600">Final Wt. (M.Ton)</label>
                           <input
-                            type="number"
+ id="final_wt_m_ton_3858" name="final_wt_m_ton" aria-label="Final Wt. (M.Ton)"                            type="number"
                             value={detailsList[idx]?.challan_gross_wt || ''}
                             disabled={!isEditMode}
                             onChange={(e) => handleDetailChange(idx, 'challan_gross_wt', e.target.value)}
@@ -3918,9 +3918,9 @@ export default function MaterialInspection({
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
-                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_grade_down__3921" name="qualitymatrix_grade_down_" aria-label="qualitymatrix grade down "type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_grade_down__3922" name="qualitymatrix_grade_down_" aria-label="qualitymatrix grade down "type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input  id="qualitymatrix_grade_down__3923" name="qualitymatrix_grade_down_" aria-label="qualitymatrix grade down "type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.grade_down?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('grade_down', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -3933,9 +3933,9 @@ export default function MaterialInspection({
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.dept || (idx === 0 ? masterData.actual_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.claim || (idx === 0 ? masterData.claim_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
-                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moisture', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_moisture_co_3936" name="qualitymatrix_moisture_co" aria-label="qualitymatrix moisture co"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.dept || (idx === 0 ? masterData.actual_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_moisture_co_3937" name="qualitymatrix_moisture_co" aria-label="qualitymatrix moisture co"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.claim || (idx === 0 ? masterData.claim_moisture : '')} onChange={(e) => { updateMatrixVal('moisture', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_moisture: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input  id="qualitymatrix_moisture_co_3938" name="qualitymatrix_moisture_co" aria-label="qualitymatrix moisture co"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moisture?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moisture', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -3948,9 +3948,9 @@ export default function MaterialInspection({
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.dept || (idx === 0 ? masterData.actual_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.claim || (idx === 0 ? masterData.claim_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
-                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('dust', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_dust_col_de_3951" name="qualitymatrix_dust_col_de" aria-label="qualitymatrix dust col de"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.dept || (idx === 0 ? masterData.actual_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'dept', e.target.value); if(idx===0) setMasterData(m => ({...m, actual_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_dust_col_cl_3952" name="qualitymatrix_dust_col_cl" aria-label="qualitymatrix dust col cl"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.claim || (idx === 0 ? masterData.claim_dust : '')} onChange={(e) => { updateMatrixVal('dust', col, 'claim', e.target.value); if(idx===0) setMasterData(m => ({...m, claim_dust: Number(e.target.value)})); }} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input  id="qualitymatrix_dust_col_se_3953" name="qualitymatrix_dust_col_se" aria-label="qualitymatrix dust col se"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.dust?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('dust', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -3963,9 +3963,9 @@ export default function MaterialInspection({
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('moc', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('moc', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
-                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moc', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_moc_col_dep_3966" name="qualitymatrix_moc_col_dep" aria-label="qualitymatrix moc col dep"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('moc', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_moc_col_cla_3967" name="qualitymatrix_moc_col_cla" aria-label="qualitymatrix moc col cla"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('moc', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input  id="qualitymatrix_moc_col_set_3968" name="qualitymatrix_moc_col_set" aria-label="qualitymatrix moc col set"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.moc?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('moc', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -3978,9 +3978,9 @@ export default function MaterialInspection({
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
-                          <td className="p-1 border-r border-slate-200"><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
-                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_po_rate_col_3981" name="qualitymatrix_po_rate_col" aria-label="qualitymatrix po rate col"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.dept || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'dept', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold disabled:bg-slate-100" /></td>
+                          <td className="p-1 border-r border-slate-200"><input  id="qualitymatrix_po_rate_col_3982" name="qualitymatrix_po_rate_col" aria-label="qualitymatrix po rate col"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.claim || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'claim', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-amber-700 bg-amber-50/40 disabled:bg-slate-100" /></td>
+                          <td className={`p-1 ${idx < 3 ? 'border-r border-slate-300' : ''}`}><input  id="qualitymatrix_po_rate_col_3983" name="qualitymatrix_po_rate_col" aria-label="qualitymatrix po rate col"type="number" step="0.1" disabled={!isEditMode} value={qualityMatrix.po_rate?.[col]?.sett || ''} onChange={(e) => updateMatrixVal('po_rate', col, 'sett', e.target.value)} className="w-full h-7 rounded border border-slate-200 text-center font-bold text-emerald-800 disabled:bg-slate-100" /></td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -3990,9 +3990,9 @@ export default function MaterialInspection({
 
               {/* Insp. Remarks */}
               <div className="flex items-center gap-3">
-                <label className="w-28 font-bold text-slate-700 text-xs">Insp. Remarks</label>
+                <label htmlFor="insp_remarks_3994" className="w-28 font-bold text-slate-700 text-xs">Insp. Remarks</label>
                 <input
-                  type="text"
+ id="insp_remarks_3994" aria-label="Insp. Remarks"                  type="text"
                   name="insp_remarks"
                   value={(masterData as any).insp_remarks || masterData.remarks || ''}
                   disabled={!isEditMode}
@@ -5029,7 +5029,7 @@ export default function MaterialInspection({
                     Search Records:
                   </span>
                   <input
-                    type="text"
+ id="search_by_m_r_number_orde_5031" name="search_by_m_r_number_orde" aria-label="Search by M.R. Number, order reference, merchant, broker name..."                    type="text"
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
                     placeholder="Search by M.R. Number, order reference, merchant, broker name..."

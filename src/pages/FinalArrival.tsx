@@ -1420,7 +1420,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              type="text"
+ id="search_by_fa_no_mr_no_po__1422" name="search_by_fa_no_mr_no_po_" aria-label="Search by FA No, MR No, PO No, Supplier Name, Lorry..."              type="text"
               placeholder="Search by FA No, MR No, PO No, Supplier Name, Lorry..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1441,14 +1441,14 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
               <input
-                type="date"
+ id="startdatefilter_1443" name="startdatefilter" aria-label="startdatefilter"                type="date"
                 value={startDateFilter}
                 onChange={(e) => setStartDateFilter(e.target.value)}
                 className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
               />
               <span className="text-[10px] font-bold text-slate-500 uppercase ml-1">To:</span>
               <input
-                type="date"
+ id="enddatefilter_1450" name="enddatefilter" aria-label="enddatefilter"                type="date"
                 value={endDateFilter}
                 onChange={(e) => setEndDateFilter(e.target.value)}
                 className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
@@ -2017,7 +2017,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                           <div className="grid grid-cols-12 border-b border-red-600">
                             <div className="col-span-8 flex items-center px-2 py-1.5 border-r border-red-600">
                               <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">FROM :</span>
-                              <input 
+                              <input  id="printdata_supplier_2020" name="printdata_supplier" aria-label="printdata supplier"
                                 value={printData.supplier || ''} 
                                 onChange={(e) => setPrintData({...printData, supplier: e.target.value})}
                                 className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-black text-[11.5px]"
@@ -2025,7 +2025,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                             </div>
                             <div className="col-span-4 flex items-center px-2 py-1.5">
                               <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">M.R. NO. :</span>
-                              <input 
+                              <input  id="printdata_mr_no_2028" name="printdata_mr_no" aria-label="printdata mr no"
                                 value={printData.mr_no || ''} 
                                 onChange={(e) => setPrintData({...printData, mr_no: e.target.value})}
                                 className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-mono font-black text-[11.5px]"
@@ -2036,7 +2036,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                           <div className="grid grid-cols-12">
                             <div className="col-span-4 flex items-center px-2 py-1.5 border-r border-red-600">
                               <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">DATE :</span>
-                              <input 
+                              <input  id="printdata_mr_date_2039" name="printdata_mr_date" aria-label="printdata mr date"
                                 type="date"
                                 value={printData.mr_date || ''} 
                                 onChange={(e) => setPrintData({...printData, mr_date: e.target.value})}
@@ -2045,7 +2045,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                             </div>
                             <div className="col-span-4 flex items-center px-2 py-1.5 border-r border-red-600">
                               <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">ORDER NO. :</span>
-                              <input 
+                              <input  id="printdata_po_no_2048" name="printdata_po_no" aria-label="printdata po no"
                                 value={printData.po_no || ''} 
                                 onChange={(e) => setPrintData({...printData, po_no: e.target.value})}
                                 className="flex-1 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none uppercase text-black font-mono font-black text-[11.5px]"
@@ -2053,7 +2053,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                             </div>
                             <div className="col-span-4 flex items-center px-2 py-1.5">
                               <span className="shrink-0 font-black uppercase text-[10px] tracking-wider text-red-800 mr-2">DATE :</span>
-                              <input 
+                              <input  id="printdata_po_date_2056" name="printdata_po_date" aria-label="printdata po date"
                                 type="date"
                                 value={printData.po_date || ''} 
                                 onChange={(e) => setPrintData({...printData, po_date: e.target.value})}
@@ -2101,7 +2101,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Crop Year */}
                                     {printColumns.crop_year && (
                                       <td className="border-r border-red-200 text-center p-0">
-                                        <input 
+                                        <input  id="field_2104" name="field" aria-label="--"
                                           value={row.crop_year || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'crop_year', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
@@ -2112,7 +2112,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Marka */}
                                     {printColumns.marka && (
                                       <td className="border-r border-red-200 text-center p-0">
-                                        <input 
+                                        <input  id="field_2115" name="field" aria-label="--"
                                           value={row.marka || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'marka', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold uppercase text-black"
@@ -2123,7 +2123,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Quality */}
                                     {printColumns.quality && (
                                       <td className="border-r border-red-200 px-1 p-0">
-                                        <input 
+                                        <input  id="field_2126" name="field" aria-label="--"
                                           value={row.quality || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'quality', e.target.value)}
                                           className="w-full bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-[10px] uppercase font-bold text-black pl-1.5"
@@ -2134,7 +2134,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Quantity / Packet Bales */}
                                     {printColumns.quantity_rcpt && (
                                       <td className="border-r border-red-200 text-right p-0">
-                                        <input 
+                                        <input  id="field_2137" name="field" aria-label="--"
                                           type={isRowEmpty ? "text" : "number"}
                                           value={row.quantity_rcpt || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'quantity_rcpt', e.target.value)}
@@ -2146,7 +2146,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Unit */}
                                     {printColumns.unit && (
                                       <td className="border-r border-red-200 text-center p-0">
-                                        <select 
+                                        <select  id="row_unit_bales_2149" name="row_unit_bales" aria-label="row unit bales"
                                           value={row.unit || 'BALES'} 
                                           onChange={(e) => updatePrintRow(rIdx, 'unit', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] uppercase font-bold text-black cursor-pointer"
@@ -2160,7 +2160,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Claim */}
                                     {printColumns.claim && (
                                       <td className="border-r border-red-200 text-center p-0">
-                                        <input 
+                                        <input  id="field_2163" name="field" aria-label="--"
                                           value={row.claim_val || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'claim_val', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px] text-black"
@@ -2171,7 +2171,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Gross Wt */}
                                     {printColumns.gross_wt && (
                                       <td className="border-r border-red-200 text-right p-0">
-                                        <input 
+                                        <input  id="field_2174" name="field" aria-label="--"
                                           value={row.gross_wt || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'gross_wt', e.target.value)}
                                           className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black pr-1.5"
@@ -2182,7 +2182,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Moisture % */}
                                     {printColumns.moisture_pct && (
                                       <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
+                                        <input  id="field_2185" name="field" aria-label="--"
                                           value={row.moisture_pct || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'moisture_pct', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
@@ -2193,7 +2193,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Dust % */}
                                     {printColumns.dust_pct && (
                                       <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
+                                        <input  id="field_2196" name="field" aria-label="--"
                                           value={row.dust_pct || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'dust_pct', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
@@ -2204,7 +2204,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* NCV % */}
                                     {printColumns.ncv_pct && (
                                       <td className="border-r border-red-200 text-center p-0 no-print">
-                                        <input 
+                                        <input  id="field_2207" name="field" aria-label="--"
                                           value={row.ncv_pct || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'ncv_pct', e.target.value)}
                                           className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black"
@@ -2215,7 +2215,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Net Wt */}
                                     {printColumns.net_wt && (
                                       <td className="border-r border-red-200 text-right p-0">
-                                        <input 
+                                        <input  id="field_2218" name="field" aria-label="--"
                                           value={row.net_wt || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'net_wt', e.target.value)}
                                           className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-black font-mono text-red-700 pr-1.5"
@@ -2227,7 +2227,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {printColumns.settlement && (
                                       <>
                                         <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
+                                          <input  id="field_2230" name="field" aria-label="--"
                                             value={row.settlement_grade || ''} 
                                             onChange={(e) => updatePrintRow(rIdx, 'settlement_grade', e.target.value)}
                                             className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px] uppercase"
@@ -2235,7 +2235,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                           />
                                         </td>
                                         <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
+                                          <input  id="field_2238" name="field" aria-label="--"
                                             value={row.settlement_moisture || ''} 
                                             onChange={(e) => updatePrintRow(rIdx, 'settlement_moisture', e.target.value)}
                                             className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
@@ -2243,7 +2243,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                           />
                                         </td>
                                         <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
+                                          <input  id="field_2246" name="field" aria-label="--"
                                             value={row.settlement_dust || ''} 
                                             onChange={(e) => updatePrintRow(rIdx, 'settlement_dust', e.target.value)}
                                             className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
@@ -2251,7 +2251,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                           />
                                         </td>
                                         <td className="border-r border-red-200 p-0 text-center">
-                                          <input 
+                                          <input  id="field_2254" name="field" aria-label="--"
                                             value={row.settlement_prem_less || ''} 
                                             onChange={(e) => updatePrintRow(rIdx, 'settlement_prem_less', e.target.value)}
                                             className="w-full bg-transparent text-center border-none p-0 focus:ring-0 focus:outline-none text-[9.5px]"
@@ -2263,7 +2263,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                                     {/* Rate */}
                                     {printColumns.rate && (
                                       <td className="text-right p-0">
-                                        <input 
+                                        <input  id="field_2266" name="field" aria-label="--"
                                           value={row.rate || ''} 
                                           onChange={(e) => updatePrintRow(rIdx, 'rate', e.target.value)}
                                           className="w-full bg-transparent text-right border-none p-0 focus:ring-0 focus:outline-none text-[10px] font-bold font-mono text-black pr-1.5"
@@ -2320,7 +2320,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                         <div className="mt-3 text-[11px] font-bold text-red-700">
                           <div className="flex items-start gap-1.5">
                             <span className="shrink-0 mt-0.5 uppercase tracking-wide">Remarks:</span>
-                            <textarea 
+                            <textarea  id="no_remarks_registered_cli_2323" name="no_remarks_registered_cli" aria-label="No remarks registered. Click to write any custom remarks or specifications on-form..."
                               rows={2}
                               value={printData.remarks || ''} 
                               onChange={(e) => setPrintData({...printData, remarks: e.target.value})}
@@ -2335,7 +2335,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                           <div className="col-span-5 p-2 flex flex-col justify-center">
                             <div className="flex items-center gap-1.5">
                               <span className="shrink-0 uppercase">Challan No & Date :</span>
-                              <input 
+                              <input  id="printdata_challan_rr_no_2338" name="printdata_challan_rr_no" aria-label="printdata challan rr no"
                                 value={printData.challan_rr_no || ''} 
                                 onChange={(e) => setPrintData({...printData, challan_rr_no: e.target.value})}
                                 className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold uppercase text-[10.5px]"
@@ -2345,7 +2345,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                           <div className="col-span-4 p-2 flex flex-col justify-center">
                             <div className="flex items-center gap-1.5">
                               <span className="shrink-0 uppercase">Lorry Number :</span>
-                              <input 
+                              <input  id="printdata_lorry_number_2348" name="printdata_lorry_number" aria-label="printdata lorry number"
                                 value={printData.lorry_number || ''} 
                                 onChange={(e) => setPrintData({...printData, lorry_number: e.target.value})}
                                 className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold font-mono uppercase text-[10.5px]"
@@ -2355,7 +2355,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                           <div className="col-span-3 p-2 flex flex-col justify-center">
                             <div className="flex items-center gap-1.5">
                               <span className="shrink-0 uppercase">Stations :</span>
-                              <input 
+                              <input  id="printdata_arrival_area_na_2358" name="printdata_arrival_area_na" aria-label="printdata arrival area na"
                                 value={printData.arrival_area_name || ''} 
                                 onChange={(e) => setPrintData({...printData, arrival_area_name: e.target.value})}
                                 className="flex-1 bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-black font-extrabold uppercase text-[10.5px]"

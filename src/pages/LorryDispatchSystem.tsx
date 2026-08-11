@@ -1255,7 +1255,7 @@ export default function LorryDispatchSystem({
           {/* Role selector dropdown for small screens */}
           <div className="lg:hidden">
             <select
-              value={currentUserRole}
+ id="currentuserrole_1257" name="currentuserrole" aria-label="currentuserrole"              value={currentUserRole}
               onChange={(e) => setCurrentUserRole(e.target.value as UserRole)}
               className="bg-[#FAF7F0] border border-[#C5BA9E] text-[#1E331B] text-xs rounded-xl px-2 py-1.5 font-bold outline-none"
             >
@@ -1494,7 +1494,7 @@ export default function LorryDispatchSystem({
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-[#5A6E54] absolute left-2.5 top-2.5" />
                     <input
-                      type="text"
+ id="search_lorry_gate_pass_br_1496" name="search_lorry_gate_pass_br" aria-label="Search lorry, gate pass, broker..."                      type="text"
                       placeholder="Search lorry, gate pass, broker..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -1503,7 +1503,7 @@ export default function LorryDispatchSystem({
                   </div>
 
                   <select
-                    value={statusFilter}
+ id="statusfilter_1505" name="statusfilter" aria-label="statusfilter"                    value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] px-2.5 py-1.5 rounded-xl outline-none font-medium"
                   >
@@ -1517,7 +1517,7 @@ export default function LorryDispatchSystem({
                   </select>
 
                   <select
-                    value={deptFilter}
+ id="deptfilter_1519" name="deptfilter" aria-label="deptfilter"                    value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
                     className="bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] px-2.5 py-1.5 rounded-xl outline-none font-medium"
                   >
@@ -1631,7 +1631,7 @@ export default function LorryDispatchSystem({
                     Mill Zero Offset Adjustment (KG): {settings.millZeroOffsetKg} kg
                   </label>
                   <input
-                    type="range"
+ id="settings_millzerooffsetkg_1633" name="settings_millzerooffsetkg" aria-label="settings millzerooffsetkg"                    type="range"
                     min="-50"
                     max="50"
                     value={settings.millZeroOffsetKg}
@@ -1647,7 +1647,7 @@ export default function LorryDispatchSystem({
                     Electric Zero Offset Adjustment (KG): {settings.electricZeroOffsetKg} kg
                   </label>
                   <input
-                    type="range"
+ id="settings_electriczerooffs_1649" name="settings_electriczerooffs" aria-label="settings electriczerooffs"                    type="range"
                     min="-50"
                     max="50"
                     value={settings.electricZeroOffsetKg}
@@ -1667,7 +1667,7 @@ export default function LorryDispatchSystem({
                     <p className="text-[11px] text-[#5A6E54]">Restrict weighment submission to Bally Jute Mill campus</p>
                   </div>
                   <input
-                    type="checkbox"
+ id="checkbox_1669" name="checkbox" aria-label="checkbox"                    type="checkbox"
                     checked={settings.enforceGeofence}
                     onChange={(e) =>
                       setSettings({ ...settings, enforceGeofence: e.target.checked })
@@ -1681,7 +1681,7 @@ export default function LorryDispatchSystem({
                     Allowed Geofence Radius (Meters): {settings.geofenceRadiusMeters} meters
                   </label>
                   <input
-                    type="range"
+ id="settings_geofenceradiusme_1683" name="settings_geofenceradiusme" aria-label="settings geofenceradiusme"                    type="range"
                     min="100"
                     max="2000"
                     step="50"
@@ -1697,11 +1697,11 @@ export default function LorryDispatchSystem({
               {/* Inactivity & Security Controls */}
               <div className="bg-[#FAF7F0] p-4 rounded-xl border border-[#C5BA9E] space-y-3">
                 <div>
-                  <label className="font-bold text-[#1E331B] uppercase block mb-1">
+                  <label htmlFor="inactivity_auto_logout_ti_1703" className="font-bold text-[#1E331B] uppercase block mb-1">
                     Inactivity Auto-Logout Timeout (Minutes)
                   </label>
                   <input
-                    type="number"
+ id="inactivity_auto_logout_ti_1703" name="inactivity_auto_logout_ti" aria-label="Inactivity Auto-Logout Timeout (Minutes)"                    type="number"
                     min="1"
                     max="60"
                     value={settings.inactivityTimeoutMinutes}
@@ -1718,7 +1718,7 @@ export default function LorryDispatchSystem({
                     <p className="text-[11px] text-[#5A6E54]">When OFF, blurs screen upon focus loss to protect sensitive data</p>
                   </div>
                   <input
-                    type="checkbox"
+ id="checkbox_1720" name="checkbox" aria-label="checkbox"                    type="checkbox"
                     checked={settings.allowScreenCapture}
                     onChange={(e) =>
                       setSettings({ ...settings, allowScreenCapture: e.target.checked })
@@ -2153,7 +2153,7 @@ function MasterListEditor({
 
       <div className="flex items-center gap-2">
         <input
-          type="text"
+ id="inputval_2155" name="inputval" aria-label="inputval"          type="text"
           placeholder={`Add new ${title.toLowerCase()}...`}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}

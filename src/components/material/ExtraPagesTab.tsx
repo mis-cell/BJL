@@ -204,7 +204,7 @@ export default function ExtraPagesTab({ purchaseOrders = [] }: ExtraPagesTabProp
 
               <div className="flex gap-2.5">
                 <select
-                  value={selectedPoNo}
+ id="selectedpono_206" name="selectedpono" aria-label="selectedpono"                  value={selectedPoNo}
                   onChange={(e) => setSelectedPoNo(e.target.value)}
                   className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 text-xs font-bold font-mono outline-none"
                 >

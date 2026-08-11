@@ -1512,7 +1512,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
             <div className="bg-[#dcdbd7] border border-slate-350 p-2 mt-3 flex flex-wrap gap-2 items-center justify-between shadow-xs shrink-0 rounded-md">
               <div className="flex items-center gap-2 flex-1 max-w-md">
                 <div className="relative flex-1">
-                  <input 
+                  <input  id="search_broker_supplier_ar_1515" name="search_broker_supplier_ar" aria-label="Search Broker, Supplier, Area or Slip..."
                     type="text"
                     placeholder="Search Broker, Supplier, Area or Slip..."
                     value={saudaSearchTerm}
@@ -2111,7 +2111,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
             <div className="px-3 py-2 bg-slate-200/50 border border-slate-300 mt-2.5 flex items-center justify-between  rounded-lg gap-3">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <input 
+                <input  id="quick_search_sheet_logs_b_2114" name="quick_search_sheet_logs_b" aria-label="Quick search sheet logs by broker, contact, or raw body..."
                   type="text"
                   placeholder="Quick search sheet logs by broker, contact, or raw body..."
                   value={smsSearchTerm}
@@ -2351,9 +2351,9 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                     </p>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black uppercase text-slate-500 block">Raw Email Content</label>
+                      <label htmlFor="raw_email_content_2355" className="text-[10px] font-black uppercase text-slate-500 block">Raw Email Content</label>
                       <textarea
-                        rows={8}
+ id="raw_email_content_2355" name="raw_email_content" aria-label="Raw Email Content"                        rows={8}
                         value={pastedGmailText}
                         onChange={(e) => setPastedGmailText(e.target.value)}
                         placeholder="PASTE RAW EMAIL TEXT HERE...
@@ -2395,7 +2395,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     <div className="p-2 border-b border-slate-200 relative">
                       <Search className="absolute left-4 top-4.5 h-3.5 w-3.5 text-slate-400" />
                       <input
-                        type="text"
+ id="gmailsearchterm_2397" name="gmailsearchterm" aria-label="gmailsearchterm"                        type="text"
                         value={gmailSearchTerm}
                         onChange={(e) => setGmailSearchTerm(e.target.value)}
                         placeholder={`Search ${gmailFolder}...`}
@@ -2761,7 +2761,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     <div className="flex items-center border-b border-slate-200 py-1.5 gap-2">
                       <span className="text-xs font-bold text-slate-500 w-12 shrink-0">To:</span>
                       <input
-                        type="text"
+ id="recipient_example_com_bro_2763" name="recipient_example_com_bro" aria-label="recipient@example.com, broker@jute.com"                        type="text"
                         required
                         value={composedTo}
                         onChange={(e) => setComposedTo(e.target.value)}
@@ -2773,7 +2773,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     <div className="flex items-center border-b border-slate-200 py-1.5 gap-2">
                       <span className="text-xs font-bold text-slate-500 w-12 shrink-0">Subject:</span>
                       <input
-                        type="text"
+ id="bally_jute_erp_jute_sauda_2775" name="bally_jute_erp_jute_sauda" aria-label="[Bally Jute ERP] Jute Sauda Contract"                        type="text"
                         required
                         value={composedSubject}
                         onChange={(e) => setComposedSubject(e.target.value)}
@@ -2783,9 +2783,9 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400">Message Body</label>
+                      <label htmlFor="message_body_2787" className="text-[10px] font-black uppercase text-slate-400">Message Body</label>
                       <textarea
-                        rows={10}
+ id="message_body_2787" name="message_body" aria-label="Message Body"                        rows={10}
                         required
                         value={composedBody}
                         onChange={(e) => setComposedBody(e.target.value)}
@@ -2799,7 +2799,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
                         <input
-                          type="file"
+ name="file" aria-label="file"                          type="file"
                           ref={fileInputRef}
                           onChange={handleFileChange}
                           className="hidden"
@@ -2905,8 +2905,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                 {/* SLIP NO & P.O. TYPE & SESSION ROW */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-3 border border-slate-300 rounded">
                   <div>
-                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Slip No.</label>
-                    <input 
+                    <label htmlFor="slip_no_2909" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Slip No.</label>
+                    <input  id="slip_no_2909" name="slip_no" aria-label="Slip No."
                       type="text"
                       value={formSaudaNo}
                       onChange={(e) => setFormSaudaNo(e.target.value)}
@@ -2916,9 +2916,9 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">P.O. Type</label>
+                    <label htmlFor="p_o_type_2920" className="text-[9px] font-black text-slate-500 uppercase block mb-1">P.O. Type</label>
                     <select
-                      value={formPoType}
+ id="p_o_type_2920" name="p_o_type" aria-label="P.O. Type"                      value={formPoType}
                       onChange={(e) => setFormPoType(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-slate-900 cursor-pointer"
                     >
@@ -2929,8 +2929,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     </select>
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Booking Date</label>
-                    <input 
+                    <label htmlFor="booking_date_2933" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Booking Date</label>
+                    <input  id="booking_date_2933" name="booking_date" aria-label="Booking Date"
                       type="date"
                       value={formDate}
                       onChange={(e) => setFormDate(e.target.value)}
@@ -2939,8 +2939,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Session</label>
-                    <input 
+                    <label htmlFor="session_2943" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Session</label>
+                    <input  id="session_2943" name="session" aria-label="Session"
                       type="text"
                       value={formSession}
                       onChange={(e) => setFormSession(e.target.value)}
@@ -2955,8 +2955,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                 <div className="bg-white p-3 border border-slate-300 rounded space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Broker / Vyapari</label>
-                      <input 
+                      <label htmlFor="broker_vyapari_2959" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Broker / Vyapari</label>
+                      <input  id="broker_vyapari_2959" name="broker_vyapari" aria-label="Broker / Vyapari"
                         type="text"
                         value={formBroker}
                         onChange={(e) => setFormBroker(e.target.value.toUpperCase())}
@@ -2966,8 +2966,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Supplier Name</label>
-                      <input 
+                      <label htmlFor="supplier_name_2970" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Supplier Name</label>
+                      <input  id="supplier_name_2970" name="supplier_name" aria-label="Supplier Name"
                         type="text"
                         value={formSupplier}
                         onChange={(e) => setFormSupplier(e.target.value.toUpperCase())}
@@ -2979,8 +2979,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Challan Supplier</label>
-                      <input 
+                      <label htmlFor="challan_supplier_2983" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Challan Supplier</label>
+                      <input  id="challan_supplier_2983" name="challan_supplier" aria-label="Challan Supplier"
                         type="text"
                         value={formChallanSupplier}
                         onChange={(e) => setFormChallanSupplier(e.target.value.toUpperCase())}
@@ -2989,8 +2989,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Area / Dispatch Center</label>
-                      <input 
+                      <label htmlFor="area_dispatch_center_2993" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Area / Dispatch Center</label>
+                      <input  id="area_dispatch_center_2993" name="area_dispatch_center" aria-label="Area / Dispatch Center"
                         type="text"
                         value={formArea}
                         onChange={(e) => setFormArea(e.target.value.toUpperCase())}
@@ -3006,8 +3006,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                   <div className="text-[10px] font-bold text-slate-700 uppercase border-b border-slate-200 pb-1 mb-2">Lorry & Unit Metrics</div>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">No. of Lorries</label>
-                      <input 
+                      <label htmlFor="no_of_lorries_3010" className="text-[9px] font-black text-slate-500 uppercase block mb-1">No. of Lorries</label>
+                      <input  id="no_of_lorries_3010" name="no_of_lorries" aria-label="No. of Lorries"
                         type="number"
                         value={formNoOfLorries}
                         onChange={(e) => setFormNoOfLorries(Math.max(1, Number(e.target.value) || 1))}
@@ -3015,8 +3015,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Units/Lorry</label>
-                      <input 
+                      <label htmlFor="units_lorry_3019" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Units/Lorry</label>
+                      <input  id="units_lorry_3019" name="units_lorry" aria-label="Units/Lorry"
                         type="text"
                         value={formUnitsPerLorry}
                         onChange={(e) => setFormUnitsPerLorry(e.target.value)}
@@ -3024,8 +3024,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Total Unit</label>
-                      <input 
+                      <label htmlFor="total_unit_3028" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Total Unit</label>
+                      <input  id="total_unit_3028" name="total_unit" aria-label="Total Unit"
                         type="number"
                         value={formTotalUnit}
                         disabled
@@ -3034,8 +3034,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Wt/Lorry (MT)</label>
-                      <input 
+                      <label htmlFor="wt_lorry_mt_3038" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Wt/Lorry (MT)</label>
+                      <input  id="wt_lorry_mt_3038" name="wt_lorry_mt" aria-label="Wt/Lorry (MT)"
                         type="number"
                         step="0.01"
                         value={formWtPerLorry}
@@ -3044,8 +3044,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Unit Type</label>
-                      <select 
+                      <label htmlFor="unit_type_3048" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Unit Type</label>
+                      <select  id="unit_type_3048" name="unit_type" aria-label="Unit Type"
                         value={formUnitType}
                         onChange={(e) => setFormUnitType(e.target.value)}
                         className="w-full bg-slate-50 border border-slate-400 px-1 py-1 text-xs font-black rounded text-slate-900 cursor-pointer"
@@ -3056,8 +3056,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       </select>
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Total Wt. (MT)</label>
-                      <input 
+                      <label htmlFor="total_wt_mt_3060" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Total Wt. (MT)</label>
+                      <input  id="total_wt_mt_3060" name="total_wt_mt" aria-label="Total Wt. (MT)"
                         type="number"
                         step="0.01"
                         value={formTotalWtTons}
@@ -3102,7 +3102,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                           <tr key={idx} className="h-8">
                             <td className="p-1">
                               <select
-                                value={q.quality}
+ id="q_quality_3104" name="q_quality" aria-label="q quality"                                value={q.quality}
                                 onChange={(e) => handleUpdateQualityRow(idx, 'quality', e.target.value)}
                                 className="w-full bg-slate-50 border border-slate-300 text-[11px] font-black p-1 rounded"
                               >
@@ -3115,7 +3115,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                               </select>
                             </td>
                             <td className="p-1">
-                              <input 
+                              <input  id="q_qty_3118" name="q_qty" aria-label="q qty"
                                 type="number"
                                 value={q.qty}
                                 onChange={(e) => handleUpdateQualityRow(idx, 'qty', Math.max(0, Number(e.target.value) || 0))}
@@ -3124,7 +3124,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                               />
                             </td>
                             <td className="p-1">
-                              <input 
+                              <input  id="agency_3127" name="agency" aria-label="AGENCY"
                                 type="text"
                                 value={q.agency}
                                 onChange={(e) => handleUpdateQualityRow(idx, 'agency', e.target.value.toUpperCase())}
@@ -3133,7 +3133,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                               />
                             </td>
                             <td className="p-1">
-                              <input 
+                              <input  id="marka_3136" name="marka" aria-label="MARKA"
                                 type="text"
                                 value={q.marka}
                                 onChange={(e) => handleUpdateQualityRow(idx, 'marka', e.target.value.toUpperCase())}
@@ -3142,7 +3142,7 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                               />
                             </td>
                             <td className="p-1">
-                              <input 
+                              <input  id="q_rs_3145" name="q_rs" aria-label="q rs"
                                 type="number"
                                 value={q.rs}
                                 onChange={(e) => handleUpdateQualityRow(idx, 'rs', Math.max(0, Number(e.target.value) || 0))}
@@ -3173,8 +3173,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Shipment Date</label>
-                      <input 
+                      <label htmlFor="shipment_date_3177" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Shipment Date</label>
+                      <input  id="shipment_date_3177" name="shipment_date" aria-label="Shipment Date"
                         type="date"
                         value={formShipmentDate}
                         onChange={(e) => setFormShipmentDate(e.target.value)}
@@ -3182,8 +3182,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Shipment Days</label>
-                      <input 
+                      <label htmlFor="shipment_days_3186" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Shipment Days</label>
+                      <input  id="shipment_days_3186" name="shipment_days" aria-label="Shipment Days"
                         type="number"
                         value={formShipmentDays}
                         onChange={(e) => setFormShipmentDays(Number(e.target.value) || 0)}
@@ -3191,8 +3191,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Penalty (₹/Qtl/Day)</label>
-                      <input 
+                      <label htmlFor="penalty_qtl_day_3195" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Penalty (₹/Qtl/Day)</label>
+                      <input  id="penalty_qtl_day_3195" name="penalty_qtl_day" aria-label="Penalty (₹/Qtl/Day)"
                         type="number"
                         value={formShipmentPenalty}
                         onChange={(e) => setFormShipmentPenalty(Number(e.target.value) || 0)}
@@ -3203,8 +3203,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Marks Claim (₹/Qtl)</label>
-                      <input 
+                      <label htmlFor="marks_claim_qtl_3207" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Marks Claim (₹/Qtl)</label>
+                      <input  id="marks_claim_qtl_3207" name="marks_claim_qtl" aria-label="Marks Claim (₹/Qtl)"
                         type="number"
                         value={formMarksClaim}
                         onChange={(e) => setFormMarksClaim(Number(e.target.value) || 0)}
@@ -3212,8 +3212,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Quantity Claim (Kg/Bale)</label>
-                      <input 
+                      <label htmlFor="quantity_claim_kg_bale_3216" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Quantity Claim (Kg/Bale)</label>
+                      <input  id="quantity_claim_kg_bale_3216" name="quantity_claim_kg_bale" aria-label="Quantity Claim (Kg/Bale)"
                         type="number"
                         value={formQuantityClaim}
                         onChange={(e) => setFormQuantityClaim(Number(e.target.value) || 0)}
@@ -3221,8 +3221,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Superior / Normal Marks</label>
-                      <input 
+                      <label htmlFor="superior_normal_marks_3225" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Superior / Normal Marks</label>
+                      <input  id="superior_normal_marks_3225" name="superior_normal_marks" aria-label="Superior / Normal Marks"
                         type="text"
                         value={formSuperiorNormalMarks}
                         onChange={(e) => setFormSuperiorNormalMarks(e.target.value)}
@@ -3233,8 +3233,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-slate-100 pt-2.5">
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">First-row Book Rate (₹/Qtl)</label>
-                      <input 
+                      <label htmlFor="first_row_book_rate_qtl_3237" className="text-[9px] font-black text-slate-500 uppercase block mb-1">First-row Book Rate (₹/Qtl)</label>
+                      <input  id="first_row_book_rate_qtl_3237" name="first_row_book_rate_qtl" aria-label="First-row Book Rate (₹/Qtl)"
                         type="number"
                         value={formBRate}
                         onChange={(e) => {
@@ -3248,8 +3248,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">S. Date</label>
-                      <input 
+                      <label htmlFor="s_date_3252" className="text-[9px] font-black text-slate-500 uppercase block mb-1">S. Date</label>
+                      <input  id="s_date_3252" name="s_date" aria-label="S. Date"
                         type="date"
                         value={formBDate}
                         onChange={(e) => setFormBDate(e.target.value)}
@@ -3261,8 +3261,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
 
                 {/* REMARKS AND INSTRUCTIONS */}
                 <div>
-                  <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Remarks & Special Terms</label>
-                  <textarea 
+                  <label htmlFor="remarks_special_terms_3265" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Remarks & Special Terms</label>
+                  <textarea  id="remarks_special_terms_3265" name="remarks_special_terms" aria-label="Remarks & Special Terms"
                     rows={2}
                     value={formRemarks}
                     onChange={(e) => setFormRemarks(e.target.value)}

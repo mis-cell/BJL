@@ -1515,7 +1515,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     <div className="bg-gray-100 flex items-center px-1.5 border-r border-gray-300">
                       <Search className="h-3.5 w-3.5 text-gray-500" />
                     </div>
-                    <input 
+                    <input  id="searchquery_1518" name="searchquery" aria-label="searchquery"
                       className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
                       placeholder={stockSubTab === 'opening' 
                         ? "Search opening ledger latest stock (e.g. Forbesganj, TD-5, Godown)..." 
@@ -2194,7 +2194,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                   <div className="bg-gray-100 flex items-center px-1.5 border-r border-gray-300">
                     <Search className="h-3.5 w-3.5 text-gray-500" />
                   </div>
-                  <input 
+                  <input  id="filter_standard_valuation_2197" name="filter_standard_valuation" aria-label="Filter standard valuation lists by Commodity, Quality, or Grade..."
                     className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
                     placeholder="Filter standard valuation lists by Commodity, Quality, or Grade..." 
                     value={searchQuery}
@@ -2323,7 +2323,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         <div className="px-1.5 bg-gray-100 flex items-center border-r border-gray-400">
                           <Calendar className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        <input 
+                        <input  id="formstate_opening_date_2326" name="formstate_opening_date" aria-label="formstate opening date"
                           type="date"
                           required
                           value={formState.opening_date}
@@ -2335,10 +2335,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Godown */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="godown_2341" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Godown *
                       </label>
-                      <input 
+                      <input  id="godown_2341" name="godown" aria-label="Godown *"
                         type="text"
                         required
                         list="godown_op_datalist"
@@ -2356,10 +2356,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Area Station */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="area_station_2362" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Area Station *
                       </label>
-                      <input 
+                      <input  id="area_station_2362" name="area_station" aria-label="Area Station *"
                         type="text"
                         required
                         list="area_op_datalist"
@@ -2378,10 +2378,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Component Grade */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="component_grade_2384" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Component Grade *
                       </label>
-                      <input 
+                      <input  id="component_grade_2384" name="component_grade" aria-label="Component Grade *"
                         type="text"
                         required
                         list="grade_op_datalist"
@@ -2400,11 +2400,11 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* JCI status */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="is_j_c_i_govt_supplied_2406" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Is J.C.I Govt Supplied? *
                       </label>
                       <select
-                        required
+ id="is_j_c_i_govt_supplied_2406" name="is_j_c_i_govt_supplied" aria-label="Is J.C.I Govt Supplied? *"                        required
                         value={formState.jci}
                         onChange={(e) => setFormState(p => ({ ...p, jci: e.target.value }))}
                         className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none"
@@ -2417,10 +2417,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     {/* Unit & quantity */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="unit_master_2423" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Unit Master *
                         </label>
-                        <select 
+                        <select  id="unit_master_2423" name="unit_master" aria-label="Unit Master *"
                           required
                           value={formState.unit}
                           onChange={(e) => setFormState(p => ({ ...p, unit: e.target.value }))}
@@ -2434,10 +2434,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       </div>
 
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="quantity_2440" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Quantity *
                         </label>
-                        <input 
+                        <input  id="quantity_2440" name="quantity" aria-label="Quantity *"
                           type="number"
                           required
                           min="0"
@@ -2461,10 +2461,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     {/* Weight and Avg Weight Split Grid */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="net_weight_quintals_2467" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Net Weight (Quintals) *
                         </label>
-                        <input 
+                        <input  id="net_weight_quintals_2467" name="net_weight_quintals" aria-label="Net Weight (Quintals) *"
                           type="number"
                           required
                           min="0"
@@ -2485,10 +2485,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       </div>
 
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="avg_wt_wt_qty_2491" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Avg Wt (Wt / Qty)
                         </label>
-                        <input 
+                        <input  id="avg_wt_wt_qty_2491" name="avg_wt_wt_qty" aria-label="Avg Wt (Wt / Qty)"
                           type="text"
                           readOnly
                           placeholder="0.000"
@@ -2532,7 +2532,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         <div className="px-1.5 bg-gray-100 flex items-center border-r border-gray-400">
                           <Calendar className="h-3.5 w-3.5 text-slate-500" />
                         </div>
-                        <input 
+                        <input  id="closingformstate_stock_da_2535" name="closingformstate_stock_da" aria-label="closingformstate stock da"
                           type="date"
                           required
                           value={closingFormState.stock_date}
@@ -2544,11 +2544,11 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Godown Location */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="godown_location_2550" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Godown Location *
                       </label>
                       <select
-                        required
+ id="godown_location_2550" name="godown_location" aria-label="Godown Location *"                        required
                         value={closingFormState.godown}
                         onChange={(e) => setClosingFormState(p => ({ ...p, godown: e.target.value }))}
                         className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none"
@@ -2565,10 +2565,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     {/* Commodity & Variety */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="commodity_2571" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Commodity *
                         </label>
-                        <input 
+                        <input  id="commodity_2571" name="commodity" aria-label="Commodity *"
                           type="text"
                           required
                           value={closingFormState.commodity}
@@ -2577,10 +2577,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         />
                       </div>
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="variety_2583" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Variety
                         </label>
-                        <input 
+                        <input  id="variety_2583" name="variety" aria-label="Variety"
                           type="text"
                           value={closingFormState.variety}
                           onChange={(e) => setClosingFormState(p => ({ ...p, variety: e.target.value }))}
@@ -2592,11 +2592,11 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Quality Grade */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="quality_grade_rating_2598" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Quality Grade Rating *
                       </label>
                       <select
-                        required
+ id="quality_grade_rating_2598" name="quality_grade_rating" aria-label="Quality Grade Rating *"                        required
                         value={closingFormState.grade}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -2621,7 +2621,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       </select>
 
                       {showCustomGradeClosing && (
-                        <input 
+                        <input  id="type_custom_jute_grade_na_2624" name="type_custom_jute_grade_na" aria-label="Type custom Jute Grade name..."
                           type="text"
                           required
                           placeholder="Type custom Jute Grade name..."
@@ -2635,10 +2635,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     {/* Physical Bales & Weight Estimation */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px]  font-mono">
+                        <label htmlFor="no_of_bales_2641" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px]  font-mono">
                           No. of Bales *
                         </label>
-                        <input 
+                        <input  id="no_of_bales_2641" name="no_of_bales" aria-label="No. of Bales *"
                           type="number"
                           required
                           min="0"
@@ -2649,10 +2649,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         />
                       </div>
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="net_weight_qtl_2655" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Net Weight (Qtl) *
                         </label>
-                        <input 
+                        <input  id="net_weight_qtl_2655" name="net_weight_qtl" aria-label="Net Weight (Qtl) *"
                           type="number"
                           required
                           min="0"
@@ -2668,10 +2668,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     {/* Rate & Asset Value calculation */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="rate_per_qtl_2674" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Rate per Qtl *
                         </label>
-                        <input 
+                        <input  id="rate_per_qtl_2674" name="rate_per_qtl" aria-label="Rate per Qtl *"
                           type="number"
                           required
                           min="0"
@@ -2683,10 +2683,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         />
                       </div>
                       <div>
-                        <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label htmlFor="asset_book_value_rs_2689" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                           Asset Book Value (Rs.)
                         </label>
-                        <input 
+                        <input  id="asset_book_value_rs_2689" name="asset_book_value_rs" aria-label="Asset Book Value (Rs.)"
                           type="text"
                           disabled
                           value={Number(closingFormState.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}
@@ -2697,10 +2697,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Remarks & auditing operator ID */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label htmlFor="remarks_storage_quality_n_2703" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
                         Remarks / Storage quality notes
                       </label>
-                      <input 
+                      <input  id="remarks_storage_quality_n_2703" name="remarks_storage_quality_n" aria-label="Remarks / Storage quality notes"
                         type="text"
                         value={closingFormState.remarks}
                         onChange={(e) => setClosingFormState(p => ({ ...p, remarks: e.target.value }))}
@@ -3121,7 +3121,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                 <div className="flex items-center gap-2 bg-[#d4d0c8] p-1.5 border border-black/20 shadow-xs">
                   <span className="text-[10px] font-black text-slate-700 uppercase shrink-0">Search Godowns:</span>
                   <div className="relative flex-1">
-                    <input 
+                    <input  id="type_godown_name_code_or__3124" name="type_godown_name_code_or_" aria-label="Type Godown Name, Code, or Material Grade (e.g. M.BOT)..."
                       type="text" 
                       placeholder="Type Godown Name, Code, or Material Grade (e.g. M.BOT)..." 
                       value={popupSearchQuery}

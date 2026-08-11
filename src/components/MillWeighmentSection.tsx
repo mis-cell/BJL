@@ -210,7 +210,7 @@ export default function MillWeighmentSection({
           <div className="relative">
             <Search className="w-4 h-4 text-[#5A6E54] absolute left-3.5 top-3" />
             <input
-              type="text"
+ id="search_by_vehicle_number__212" name="search_by_vehicle_number_" aria-label="Search by Vehicle Number, Gate Pass, or Party Name..."              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by Vehicle Number, Gate Pass, or Party Name..."
@@ -303,11 +303,11 @@ export default function MillWeighmentSection({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="select_lorry_gate_pass_309" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Select Lorry / Gate Pass *
                   </label>
                   <select
-                    value={selectedLorryId}
+ id="select_lorry_gate_pass_309" name="select_lorry_gate_pass" aria-label="Select Lorry / Gate Pass *"                    value={selectedLorryId}
                     onChange={(e) => {
                       const l = lorries.find((x) => x.id === e.target.value);
                       if (l) handleSelectLorryForForm(l);
@@ -324,11 +324,11 @@ export default function MillWeighmentSection({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="item_description_330" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Item Description
                   </label>
                   <input
-                    type="text"
+ id="item_description_330" name="item_description" aria-label="Item Description"                    type="text"
                     value={itemDescription}
                     onChange={(e) => setItemDescription(e.target.value)}
                     placeholder="e.g. Raw Jute Bales"
@@ -339,11 +339,11 @@ export default function MillWeighmentSection({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="party_name_supplier_345" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Party Name (Supplier) *
                   </label>
                   <input
-                    type="text"
+ id="party_name_supplier_345" name="party_name_supplier" aria-label="Party Name (Supplier) *"                    type="text"
                     value={partyName}
                     onChange={(e) => setPartyName(e.target.value)}
                     list="mill-party-options"
@@ -358,11 +358,11 @@ export default function MillWeighmentSection({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="challan_no_364" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Challan No.
                   </label>
                   <input
-                    type="text"
+ id="challan_no_364" name="challan_no" aria-label="Challan No."                    type="text"
                     value={challanNo}
                     onChange={(e) => setChallanNo(e.target.value)}
                     placeholder="e.g. CH-9982"
@@ -371,11 +371,11 @@ export default function MillWeighmentSection({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="challan_gross_wt_kg_377" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Challan Gross Wt (kg)
                   </label>
                   <input
-                    type="number"
+ id="challan_gross_wt_kg_377" name="challan_gross_wt_kg" aria-label="Challan Gross Wt (kg)"                    type="number"
                     value={challanGrossWt}
                     onChange={(e) => setChallanGrossWt(e.target.value ? Number(e.target.value) : "")}
                     placeholder="e.g. 9800"
@@ -384,11 +384,11 @@ export default function MillWeighmentSection({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="mokam_390" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Mokam
                   </label>
                   <input
-                    type="text"
+ id="mokam_390" name="mokam" aria-label="Mokam"                    type="text"
                     value={mokam}
                     onChange={(e) => setMokam(e.target.value)}
                     list="mill-mokam-options"
@@ -428,7 +428,7 @@ export default function MillWeighmentSection({
                     <div className="flex-1 grid grid-cols-3 gap-2">
                       <div className="relative">
                         <input
-                          type="text"
+ id="select_grade_430" name="select_grade" aria-label="Select Grade..."                          type="text"
                           value={g.quality}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -446,7 +446,7 @@ export default function MillWeighmentSection({
                       </div>
 
                       <input
-                        type="number"
+ id="qty_448" name="qty" aria-label="Qty"                        type="number"
                         value={g.quantity}
                         onChange={(e) => {
                           const val = Number(e.target.value);
@@ -457,7 +457,7 @@ export default function MillWeighmentSection({
                       />
 
                       <select
-                        value={g.unit}
+ id="g_unit_459" name="g_unit" aria-label="g unit"                        value={g.unit}
                         onChange={(e) => {
                           const val = e.target.value as any;
                           setGrades((prev) => prev.map((x) => (x.id === g.id ? { ...x, unit: val } : x)));
@@ -505,13 +505,13 @@ export default function MillWeighmentSection({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Mill Gross Input */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="mill_gross_weight_kg_513" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Mill Gross Weight (kg)
                   </label>
                   <div className="relative">
                     <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
                     <input
-                      type="number"
+ id="mill_gross_weight_kg_513" name="mill_gross_weight_kg" aria-label="Mill Gross Weight (kg)"                      type="number"
                       disabled={!!activeLorry?.millGrossWeight && currentUserRole !== "SUPER_ADMIN"}
                       value={millGrossInput}
                       onChange={(e) => setMillGrossInput(e.target.value ? Number(e.target.value) : "")}
@@ -533,13 +533,13 @@ export default function MillWeighmentSection({
 
                 {/* Mill Tare Input (Visible during Stage 4) */}
                 <div>
-                  <label className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="mill_tare_weight_kg_541" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
                     Mill Tare Weight (kg)
                   </label>
                   <div className="relative">
                     <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
                     <input
-                      type="number"
+ id="mill_tare_weight_kg_541" name="mill_tare_weight_kg" aria-label="Mill Tare Weight (kg)"                      type="number"
                       disabled={!activeLorry?.millGrossWeight || (!!activeLorry?.millTareWeight && currentUserRole !== "SUPER_ADMIN")}
                       value={millTareInput}
                       onChange={(e) => setMillTareInput(e.target.value ? Number(e.target.value) : "")}

@@ -1465,7 +1465,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <div className="relative flex-1 min-w-[240px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="text"
+ id="search_by_voucher_no_part_1467" name="search_by_voucher_no_part" aria-label="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."                type="text"
                 placeholder="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."
                 value={searchFilter}
                 onChange={e => setSearchFilter(e.target.value)}
@@ -1655,11 +1655,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 <BookOpen className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                <label htmlFor="select_party_supplier_led_1661" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
                   Select Party / Supplier Ledger Account
                 </label>
                 <select
-                  value={selectedLedgerParty}
+ id="select_party_supplier_led_1661" name="select_party_supplier_led" aria-label="Select Party / Supplier Ledger Account"                  value={selectedLedgerParty}
                   onChange={e => setSelectedLedgerParty(e.target.value)}
                   className="w-full text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-600 bg-slate-50 text-slate-800"
                 >
@@ -1896,7 +1896,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {selectedPoNo && <span className="text-purple-700 font-mono font-bold">P.O: {selectedPoNo}</span>}
                   </label>
                   <select
-                    value={selectedPoNo}
+ id="selectedpono_1898" name="selectedpono" aria-label="selectedpono"                    value={selectedPoNo}
                     onChange={e => handlePoSelection(e.target.value)}
                     className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
                   >
@@ -1916,7 +1916,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
                   </label>
                   <select
-                    value={selectedMrNo}
+ id="selectedmrno_1918" name="selectedmrno" aria-label="selectedmrno"                    value={selectedMrNo}
                     onChange={e => handleMrSelection(e.target.value)}
                     className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   >
@@ -1959,9 +1959,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Header Form Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Voucher No *</label>
+                <label htmlFor="voucher_no_1963" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Voucher No *</label>
                 <input
-                  type="text"
+ id="voucher_no_1963" name="voucher_no" aria-label="Voucher No *"                  type="text"
                   value={masterData.voucher_no}
                   onChange={e => setMasterData({ ...masterData, voucher_no: e.target.value })}
                   className="w-full p-2 font-mono font-bold border border-slate-300 rounded bg-slate-50 focus:bg-white"
@@ -1969,9 +1969,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Date *</label>
+                <label htmlFor="payment_date_1973" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Date *</label>
                 <input
-                  type="date"
+ id="payment_date_1973" name="payment_date" aria-label="Payment Date *"                  type="date"
                   value={masterData.payment_date}
                   onChange={e => setMasterData({ ...masterData, payment_date: e.target.value })}
                   className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-purple-500"
@@ -1979,9 +1979,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Selected M.R No</label>
+                <label htmlFor="selected_m_r_no_1983" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Selected M.R No</label>
                 <input
-                  type="text"
+ id="selected_m_r_no_1983" name="selected_m_r_no" aria-label="Selected M.R No"                  type="text"
                   value={masterData.mr_no || selectedMrNo}
                   onChange={e => {
                     setMasterData({ ...masterData, mr_no: e.target.value });
@@ -1993,9 +1993,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Selected P.O No</label>
+                <label htmlFor="selected_p_o_no_1997" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Selected P.O No</label>
                 <input
-                  type="text"
+ id="selected_p_o_no_1997" name="selected_p_o_no" aria-label="Selected P.O No"                  type="text"
                   value={masterData.po_no || selectedPoNo}
                   onChange={e => {
                     setMasterData({ ...masterData, po_no: e.target.value });
@@ -2007,9 +2007,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Party / Supplier Name *</label>
+                <label htmlFor="party_supplier_name_2011" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Party / Supplier Name *</label>
                 <input
-                  type="text"
+ id="party_supplier_name_2011" name="party_supplier_name" aria-label="Party / Supplier Name *"                  type="text"
                   value={masterData.party_name || masterData.supplier}
                   onChange={e => setMasterData({ ...masterData, party_name: e.target.value, supplier: e.target.value })}
                   placeholder="Supplier / Party Name"
@@ -2018,9 +2018,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Broker Name</label>
+                <label htmlFor="broker_name_2022" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Broker Name</label>
                 <input
-                  type="text"
+ id="broker_name_2022" name="broker_name" aria-label="Broker Name"                  type="text"
                   value={masterData.broker}
                   onChange={e => setMasterData({ ...masterData, broker: e.target.value })}
                   placeholder="Broker Name"
@@ -2029,9 +2029,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Mode</label>
+                <label htmlFor="payment_mode_2033" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Mode</label>
                 <select
-                  value={masterData.payment_mode}
+ id="payment_mode_2033" name="payment_mode" aria-label="Payment Mode"                  value={masterData.payment_mode}
                   onChange={e => setMasterData({ ...masterData, payment_mode: e.target.value })}
                   className="w-full p-2 border border-slate-300 rounded"
                 >
@@ -2044,9 +2044,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Ref / UTR / Cheque No</label>
+                <label htmlFor="ref_utr_cheque_no_2048" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Ref / UTR / Cheque No</label>
                 <input
-                  type="text"
+ id="ref_utr_cheque_no_2048" name="ref_utr_cheque_no" aria-label="Ref / UTR / Cheque No"                  type="text"
                   value={masterData.reference_no}
                   onChange={e => setMasterData({ ...masterData, reference_no: e.target.value })}
                   placeholder="Transaction Reference No"
@@ -2067,7 +2067,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   </span>
                 </label>
                 <select
-                  value={masterData.advance_payment_done || 'No'}
+ id="masterdata_advance_paymen_2069" name="masterdata_advance_paymen" aria-label="masterdata advance paymen"                  value={masterData.advance_payment_done || 'No'}
                   onChange={e => setMasterData({ ...masterData, advance_payment_done: e.target.value })}
                   className={cn(
                     "w-full p-2 border rounded font-black text-xs transition-colors",
@@ -2113,11 +2113,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1">
                     {/* Gross Bill Amount */}
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase text-slate-700 mb-1">
+                      <label htmlFor="gross_material_invoice_va_2119" className="block text-[10px] font-extrabold uppercase text-slate-700 mb-1">
                         Gross Material Invoice Value (₹)
                       </label>
                       <input
-                        type="number"
+ id="gross_material_invoice_va_2119" name="gross_material_invoice_va" aria-label="Gross Material Invoice Value (₹)"                        type="number"
                         step="0.01"
                         value={masterData.total_amount || masterData.payable_amt || 0}
                         onChange={e => {
@@ -2164,7 +2164,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         )}
                       </div>
                       <input
-                        type="number"
+ id="masterdata_final_less_adv_2166" name="masterdata_final_less_adv" aria-label="masterdata final less adv"                        type="number"
                         step="0.01"
                         value={masterData.final_less_adv || 0}
                         onChange={e => {
@@ -2216,11 +2216,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <div className="p-3 bg-gradient-to-r from-slate-50 via-purple-50/20 to-amber-50/20 border border-slate-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
               {/* Payable Net Amount */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+                <label htmlFor="payable_net_amount_2222" className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
                   Payable Net Amount (₹)
                 </label>
                 <input
-                  type="number"
+ id="payable_net_amount_2222" name="payable_net_amount" aria-label="Payable Net Amount (₹)"                  type="number"
                   step="0.01"
                   value={masterData.payable_amt}
                   onChange={e => {
@@ -2259,7 +2259,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   </div>
                 </div>
                 <input
-                  type="number"
+ id="masterdata_paid_amount_2261" name="masterdata_paid_amount" aria-label="masterdata paid amount"                  type="number"
                   step="0.01"
                   value={masterData.paid_amount}
                   onChange={e => setMasterData({ ...masterData, paid_amount: parseFloat(e.target.value) || 0 })}
@@ -2295,9 +2295,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               {/* Bill / Invoice No */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Bill / Invoice No</label>
+                <label htmlFor="bill_invoice_no_2299" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Bill / Invoice No</label>
                 <input
-                  type="text"
+ id="bill_invoice_no_2299" name="bill_invoice_no" aria-label="Bill / Invoice No"                  type="text"
                   value={masterData.payable_bill_no}
                   onChange={e => setMasterData({ ...masterData, payable_bill_no: e.target.value })}
                   placeholder="Supplier Bill No"
@@ -2308,9 +2308,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               {/* Remarks */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Remarks</label>
+                <label htmlFor="remarks_2312" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Remarks</label>
                 <input
-                  type="text"
+ id="remarks_2312" name="remarks" aria-label="Remarks"                  type="text"
                   value={masterData.remarks}
                   onChange={e => setMasterData({ ...masterData, remarks: e.target.value })}
                   placeholder="Payment Remarks"
@@ -2362,7 +2362,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         <td className="p-2 font-bold text-slate-500">{col.col_index}</td>
                         <td className="p-2">
                           <input
-                            type="text"
+ id="grade_e_g_td5_2364" name="grade_e_g_td5" aria-label="Grade (e.g. TD5)"                            type="text"
                             list="grade-options-list"
                             value={col.grade}
                             onChange={e => {
@@ -2376,7 +2376,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
-                            type="text"
+ id="area_e_g_daisee_2378" name="area_e_g_daisee" aria-label="Area (e.g. DAISEE)"                            type="text"
                             list="area-options-list"
                             value={col.area}
                             onChange={e => {
@@ -2390,7 +2390,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
-                            type="text"
+ id="agency_e_g_ambagan_2392" name="agency_e_g_ambagan" aria-label="Agency (e.g. AMBAGAN)"                            type="text"
                             list="agency-options-list"
                             value={col.agency}
                             onChange={e => {
@@ -2404,7 +2404,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
-                            type="number"
+ id="col_quantity_2406" name="col_quantity" aria-label="col quantity"                            type="number"
                             value={col.quantity || ''}
                             onChange={e => {
                               const updated = [...detailCols];
@@ -2416,7 +2416,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
-                            type="number"
+ id="col_arr_qty_wt_2418" name="col_arr_qty_wt" aria-label="col arr qty wt"                            type="number"
                             step="0.001"
                             value={col.arr_qty_wt || ''}
                             onChange={e => {
@@ -2429,7 +2429,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
-                            type="number"
+ id="col_rate_value_2431" name="col_rate_value" aria-label="col rate value"                            type="number"
                             step="0.01"
                             value={col.rate_value || ''}
                             onChange={e => {

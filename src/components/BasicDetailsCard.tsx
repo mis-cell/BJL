@@ -27,9 +27,9 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Session */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Session</label>
+          <label htmlFor="session_31" className="text-xs font-semibold text-slate-700">Session</label>
           <input
-            type="text"
+ id="session_31" aria-label="Session"            type="text"
             name="session"
             value={formData.session || 'BJCL/2026-2027/'}
             onChange={onChange}
@@ -39,9 +39,9 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
 
         {/* Order No. */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Order No.</label>
+          <label htmlFor="sauda_no_43" className="text-xs font-semibold text-slate-700">Order No.</label>
           <input
-            type="text"
+ id="sauda_no_43" aria-label="Order No."            type="text"
             name="sauda_no"
             value={formData.sauda_no || ''}
             onChange={onChange}
@@ -53,9 +53,9 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
 
         {/* P.O. Type */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">P.O. Type</label>
+          <label htmlFor="po_type_57" className="text-xs font-semibold text-slate-700">P.O. Type</label>
           <select
-            name="po_type"
+ id="po_type_57" aria-label="P.O. Type"            name="po_type"
             value={formData.po_type || 'Normal'}
             onChange={onChange}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs cursor-pointer"
@@ -68,10 +68,10 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
 
         {/* Contract Date */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Date</label>
+          <label htmlFor="date_73" className="text-xs font-semibold text-slate-700">Date</label>
           <div className="relative">
             <input
-              type="date"
+ id="date_73" aria-label="Date"              type="date"
               name="date"
               value={formData.date || ''}
               onChange={onChange}

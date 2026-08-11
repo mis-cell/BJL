@@ -30,9 +30,9 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-2">
         {/* Remarks Textarea */}
         <div className="lg:col-span-7 flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Remarks</label>
+          <label htmlFor="remarks_34" className="text-xs font-semibold text-slate-700">Remarks</label>
           <textarea
-            name="remarks"
+ id="remarks_34" aria-label="Remarks"            name="remarks"
             rows={4}
             value={formData.remarks ?? 'Area, Agency Grade, Grade differential can change as per market.'}
             onChange={onChange}
@@ -44,9 +44,9 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
         <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* B. Rate (Rs.) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">B. Rate (Rs.)</label>
+            <label htmlFor="b_rate_48" className="text-xs font-semibold text-slate-700">B. Rate (Rs.)</label>
             <input
-              type="number"
+ id="b_rate_48" aria-label="B. Rate (Rs.)"              type="number"
               step="0.01"
               name="b_rate"
               value={formData.b_rate ?? 0}
@@ -57,9 +57,9 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
 
           {/* B. Date */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">B. Date</label>
+            <label htmlFor="b_date_61" className="text-xs font-semibold text-slate-700">B. Date</label>
             <input
-              type="date"
+ id="b_date_61" aria-label="B. Date"              type="date"
               name="b_date"
               value={formData.b_date || ''}
               onChange={onChange}
@@ -69,9 +69,9 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
 
           {/* Superior / Normal Marks */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-700">Superior/Normal</label>
+            <label htmlFor="superior_normal_marks_73" className="text-xs font-semibold text-slate-700">Superior/Normal</label>
             <select
-              name="superior_normal_marks"
+ id="superior_normal_marks_73" aria-label="Superior/Normal"              name="superior_normal_marks"
               value={formData.superior_normal_marks || 'New (F2)'}
               onChange={onChange}
               className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] transition-all shadow-2xs cursor-pointer"
