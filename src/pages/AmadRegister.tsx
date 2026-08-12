@@ -113,8 +113,8 @@ const FactorySketchIllustration = () => (
   </svg>
 );
 
-const JuteBagStackIllustration = () => (
-  <svg className="w-24 h-20" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+const JuteBagStackIllustration = ({ className = "w-14 h-11 shrink-0" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Bottom Sack 1 */}
     <rect x="10" y="50" width="55" height="35" rx="6" fill="#C6A15B" stroke="#8C6D33" strokeWidth="2" />
     <path d="M10 58 Q 37 62 65 58" stroke="#A88342" strokeWidth="1.5" />
@@ -900,42 +900,42 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-        {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN COMPACT THEME */}
-        <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3 md:p-3.5 text-white shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 relative overflow-hidden">
+        {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN COMPACT THEME (HALF SIZE) */}
+        <div className="max-w-3xl mx-auto w-full bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-2.5 px-4 text-white shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 relative overflow-hidden">
           {/* Bottom Left Jute Bags Illustration */}
-          <div className="flex items-center gap-3">
-            <JuteBagStackIllustration />
+          <div className="flex items-center gap-2.5">
+            <JuteBagStackIllustration className="w-12 h-10 shrink-0" />
             <div>
-              <p className="font-serif font-bold text-xs text-amber-300 uppercase tracking-wider">Bally Jute Quality Assurance</p>
-              <p className="text-[11px] text-emerald-100/90 max-w-xs leading-snug">
-                Verified weight bridge counts and raw material inspection logs synced in real time.
+              <p className="font-serif font-bold text-[11px] text-amber-300 uppercase tracking-wider leading-tight">Bally Jute Quality Assurance</p>
+              <p className="text-[10px] text-emerald-100/90 leading-tight">
+                Verified weight bridge counts & inspection logs synced in real time.
               </p>
             </div>
           </div>
 
           {/* Center Cumulative Cards */}
-          <div className="flex items-center gap-3 text-center">
-            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
-              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Loads</p>
-              <p className="text-base font-bold font-mono text-amber-300">{filteredAmads.length} <span className="text-[10px] text-emerald-200 font-sans">Lorries</span></p>
+          <div className="flex items-center gap-2 text-center">
+            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
+              <p className="text-[8px] font-bold text-emerald-200 uppercase">Loads</p>
+              <p className="text-xs font-bold font-mono text-amber-300">{filteredAmads.length} <span className="text-[9px] text-emerald-200 font-sans">Lorries</span></p>
             </div>
-            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
-              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Packets</p>
-              <p className="text-base font-bold font-mono text-amber-300">{totalBales} <span className="text-[10px] text-emerald-200 font-sans">Bales</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
+              <p className="text-[8px] font-bold text-emerald-200 uppercase">Packets</p>
+              <p className="text-xs font-bold font-mono text-amber-300">{totalBales} <span className="text-[9px] text-emerald-200 font-sans">Bales</span></p>
             </div>
-            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
-              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Net Weight</p>
-              <p className="text-base font-bold font-mono text-amber-300">{totalWeightMt.toFixed(3)} <span className="text-[10px] text-emerald-200 font-sans">MT</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
+              <p className="text-[8px] font-bold text-emerald-200 uppercase">Net Weight</p>
+              <p className="text-xs font-bold font-mono text-amber-300">{totalWeightMt.toFixed(3)} <span className="text-[9px] text-emerald-200 font-sans">MT</span></p>
             </div>
           </div>
 
           {/* Bottom Right Operational Status Badge */}
-          <div className="flex items-center gap-2">
-            <div className="bg-[#103A20] text-white p-2 rounded-lg flex items-center gap-2 border border-[#235E39] shadow-xs">
-              <ShieldCheck className="w-4 h-4 text-amber-300" />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-[#103A20] text-white p-1.5 px-2.5 rounded-md flex items-center gap-1.5 border border-[#235E39] shadow-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
               <div>
-                <p className="text-[9px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
-                <p className="text-[11px] font-bold leading-tight text-white">OPERATIONAL HUB ONLINE</p>
+                <p className="text-[8px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
+                <p className="text-[10px] font-bold leading-tight text-white">HUB ONLINE</p>
               </div>
             </div>
           </div>
