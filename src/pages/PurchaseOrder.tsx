@@ -3240,6 +3240,11 @@ function isPoMismatchResolved(poNo: string): boolean {
                   <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow mt-0.5">
                     {formData.no ? `EDIT P.O #${formData.no}` : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
                   </h1>
+                  <p className="text-xs font-bold text-amber-300 tracking-wide mt-1 flex items-center gap-2">
+                    <span>Session: BJCL/2026-2027/</span>
+                    <span>•</span>
+                    <span>{formData.no ? `Order No: #${formData.no}` : (formData.is_ptf ? "PTF Direct Entry Mode" : "Sauda Linked Contract Entry")}</span>
+                  </p>
                 </div>
               </div>
 
@@ -3705,7 +3710,7 @@ function isPoMismatchResolved(poNo: string): boolean {
 
               <div className="border border-[#174C2C] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black rounded-b-md">
                  <table className="w-full border-collapse text-[10px]">
-                    <thead className="bg-[#174C2C] text-white border-b border-[#0f331d]">
+                    <thead className="bg-[#174C2C] text-amber-300 border-b border-[#0f331d]">
                        <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300">
                           <th className="px-1 py-1.5 w-10">Srl. No.</th>
                           <th className="px-1 py-1.5 w-16">Crop Year</th>
