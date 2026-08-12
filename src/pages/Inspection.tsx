@@ -536,15 +536,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider">
-                  BJL 2026 - 2027
-                </span>
-                <span className="text-xs text-emerald-200 font-semibold uppercase tracking-widest">
-                  Table: inspection_master
-                </span>
-              </div>
-              <h1 className="text-xl font-black text-white tracking-wide mt-0.5">
+              <h1 className="text-base font-bold text-white tracking-wide">
                 {viewMode === "form" ? "Mill Inspection Information Entry" : "INSPECTION MODULE REGISTER"}
               </h1>
             </div>
