@@ -900,42 +900,42 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-        {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN COMPACT THEME (HALF SIZE) */}
-        <div className="max-w-3xl mx-auto w-full bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-2.5 px-4 text-white shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 relative overflow-hidden">
+        {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN ULTRA COMPACT THEME (HALF SIZE) */}
+        <div className="max-w-2xl mx-auto w-full bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-lg border border-[#0d301b] py-1.5 px-3 text-white shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2 relative overflow-hidden">
           {/* Bottom Left Jute Bags Illustration */}
-          <div className="flex items-center gap-2.5">
-            <JuteBagStackIllustration className="w-12 h-10 shrink-0" />
+          <div className="flex items-center gap-2">
+            <JuteBagStackIllustration className="w-8 h-7 shrink-0" />
             <div>
-              <p className="font-serif font-bold text-[11px] text-amber-300 uppercase tracking-wider leading-tight">Bally Jute Quality Assurance</p>
-              <p className="text-[10px] text-emerald-100/90 leading-tight">
-                Verified weight bridge counts & inspection logs synced in real time.
+              <p className="font-serif font-bold text-[10px] text-amber-300 uppercase tracking-wider leading-none">Bally Jute Quality Assurance</p>
+              <p className="text-[9px] text-emerald-100/80 leading-none mt-0.5">
+                Verified weight bridge counts & logs synced in real time.
               </p>
             </div>
           </div>
 
           {/* Center Cumulative Cards */}
-          <div className="flex items-center gap-2 text-center">
-            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
-              <p className="text-[8px] font-bold text-emerald-200 uppercase">Loads</p>
-              <p className="text-xs font-bold font-mono text-amber-300">{filteredAmads.length} <span className="text-[9px] text-emerald-200 font-sans">Lorries</span></p>
+          <div className="flex items-center gap-1.5 text-center">
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
+              <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Loads</p>
+              <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{filteredAmads.length} <span className="text-[8px] text-emerald-200 font-sans">Lorries</span></p>
             </div>
-            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
-              <p className="text-[8px] font-bold text-emerald-200 uppercase">Packets</p>
-              <p className="text-xs font-bold font-mono text-amber-300">{totalBales} <span className="text-[9px] text-emerald-200 font-sans">Bales</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
+              <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Packets</p>
+              <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{totalBales} <span className="text-[8px] text-emerald-200 font-sans">Bales</span></p>
             </div>
-            <div className="bg-[#103A20] border border-[#235E39] px-2.5 py-1 rounded-md">
-              <p className="text-[8px] font-bold text-emerald-200 uppercase">Net Weight</p>
-              <p className="text-xs font-bold font-mono text-amber-300">{totalWeightMt.toFixed(3)} <span className="text-[9px] text-emerald-200 font-sans">MT</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
+              <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Net Weight</p>
+              <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{totalWeightMt.toFixed(3)} <span className="text-[8px] text-emerald-200 font-sans">MT</span></p>
             </div>
           </div>
 
           {/* Bottom Right Operational Status Badge */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="bg-[#103A20] text-white p-1.5 px-2.5 rounded-md flex items-center gap-1.5 border border-[#235E39] shadow-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="bg-[#103A20] text-white p-1 px-2 rounded flex items-center gap-1 border border-[#235E39] shadow-xs">
+              <ShieldCheck className="w-3 h-3 text-amber-300" />
               <div>
-                <p className="text-[8px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
-                <p className="text-[10px] font-bold leading-tight text-white">HUB ONLINE</p>
+                <p className="text-[7.5px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
+                <p className="text-[9px] font-bold leading-none text-white mt-0.5">HUB ONLINE</p>
               </div>
             </div>
           </div>
