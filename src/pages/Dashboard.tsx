@@ -887,28 +887,28 @@ export default function Dashboard({
       iconBg: 'bg-teal-950/20 text-teal-950'
     },
     { 
-      id: 'material_inspection', 
-      label: 'INSPECTION CHECKLIST', 
-      icon: ShieldCheck, 
-      desc: 'Mill Quality & Moisture Inspection', 
-      step: '4',
-      start: '#5583EE',
-      end: '#41D8DD',
-      textColor: 'text-white',
-      descColor: 'text-sky-100/90',
-      badgeColor: 'bg-white/15 text-white border-white/20',
-      iconBg: 'bg-white/15 text-white'
-    },
-    { 
       id: 'inspection', 
       label: 'INSPECTION', 
       icon: ClipboardCheck, 
       desc: 'Quality Audit Register', 
-      step: '4.1',
+      step: '4',
       start: '#10B981',
       end: '#059669',
       textColor: 'text-white',
       descColor: 'text-emerald-100/90',
+      badgeColor: 'bg-white/15 text-white border-white/20',
+      iconBg: 'bg-white/15 text-white'
+    },
+    { 
+      id: 'material_inspection', 
+      label: 'INSPECTION CHECKLIST', 
+      icon: ShieldCheck, 
+      desc: 'Mill Quality & Moisture Inspection', 
+      step: '4.1',
+      start: '#5583EE',
+      end: '#41D8DD',
+      textColor: 'text-white',
+      descColor: 'text-sky-100/90',
       badgeColor: 'bg-white/15 text-white border-white/20',
       iconBg: 'bg-white/15 text-white'
     },
@@ -1143,24 +1143,24 @@ export default function Dashboard({
           end: '#54E38E'
         },
         { 
-          id: 'material_inspection', 
-          mappedId: 'material_inspection',
-          label: 'INSPECTION CHECKLIST', 
-          icon: ShieldCheck, 
-          desc: 'Mill Quality & Moisture Inspection', 
-          step: '2.2',
-          start: '#5583EE',
-          end: '#41D8DD'
-        },
-        { 
           id: 'inspection', 
           mappedId: 'inspection',
           label: 'INSPECTION', 
           icon: ClipboardCheck, 
           desc: 'Quality Audit Register', 
-          step: '2.3',
+          step: '2.2',
           start: '#10B981',
           end: '#059669'
+        },
+        { 
+          id: 'material_inspection', 
+          mappedId: 'material_inspection',
+          label: 'INSPECTION CHECKLIST', 
+          icon: ShieldCheck, 
+          desc: 'Mill Quality & Moisture Inspection', 
+          step: '2.3',
+          start: '#5583EE',
+          end: '#41D8DD'
         },
         {
           id: 'mismatch',
