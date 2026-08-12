@@ -204,15 +204,16 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
   const fetchPurchaseOrders = async () => {
     try {
-      const [poRes, tempPoRes] = await Promise.all([
-        supabase ? supabase.from('purchase_master').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('purchase_master', 'created_at', false).then(d => ({ data: d, error: null })),
-        supabase ? supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('sauda_check_point', 'created_at', false).then(d => ({ data: d, error: null }))
+      const [tempPoRes, poRes] = await Promise.all([
+        supabase ? supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('sauda_check_point', 'created_at', false).then(d => ({ data: d, error: null })),
+        supabase ? supabase.from('purchase_master').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('purchase_master', 'created_at', false).then(d => ({ data: d, error: null }))
       ]);
 
-      const poData = poRes?.data || [];
-      const tempPoData = (tempPoRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp' }));
+      const tempPoData = (tempPoRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp', sourceTable: 'sauda_check_point' }));
+      const poData = (poRes?.data || []).map((po: any) => ({ ...po, sourceTable: 'purchase_master' }));
 
-      const mergedPos = [...poData, ...tempPoData];
+      // Prioritize Sauda Check Point entries
+      const mergedPos = [...tempPoData, ...poData];
       // Deduplicate by po_no
       const uniqueMap = new Map<string, any>();
       mergedPos.forEach((po: any) => {
@@ -252,7 +253,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       setPurchaseOrders(filtered);
     } catch (err) {
-      console.warn("Error in fetchPurchaseOrders from purchase_master:", err);
+      console.warn("Error in fetchPurchaseOrders from sauda_check_point / purchase_master:", err);
     }
   };
 
@@ -1125,8 +1126,84 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     </div>
 
                     {showPoDropdown && (
-                      <div className="absolute top-8 left-0 w-full bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
-                        {/* KEEP YOUR EXISTING DROPDOWN CONTENT HERE */}
+                      <div className="absolute top-8 left-0 min-w-[360px] w-full max-w-[480px] bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
+                        {purchaseOrders.length === 0 ? (
+                          <div className="p-3 text-xs text-gray-500 italic text-center">
+                            No active P.O. records found in sauda_check_point
+                          </div>
+                        ) : (
+                          (() => {
+                            const filteredList = purchaseOrders.filter(po => {
+                              if (!formData.po_no) return true;
+                              const search = formData.po_no.toLowerCase().trim();
+                              const poNo = String(po.po_no || '').toLowerCase();
+                              const supp = String(po.supplier || po.party_name || po.merchant || '').toLowerCase();
+                              const brok = String(po.broker || '').toLowerCase();
+                              return poNo.includes(search) || supp.includes(search) || brok.includes(search);
+                            });
+
+                            if (filteredList.length === 0) {
+                              return (
+                                <div className="p-3 text-xs text-gray-500 italic text-center">
+                                  No matching P.O. found for "{formData.po_no}"
+                                </div>
+                              );
+                            }
+
+                            return filteredList.map(po => (
+                              <div 
+                                key={po.po_id || po.po_no} 
+                                className="px-2.5 py-1.5 text-xs font-mono cursor-pointer hover:bg-indigo-50 hover:text-indigo-900 uppercase border-b border-gray-100 last:border-b-0 transition-colors"
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    const poSupplier = (po.supplier || po.party_name || po.merchant || '').toUpperCase();
+                                    const poBroker = (po.broker || '').toUpperCase();
+                                    const poChallanSupplier = (po.challan_supplier || poSupplier).toUpperCase();
+                                    const poArea = (po.area || '').toUpperCase();
+
+                                    setFormData(prev => {
+                                      const updated = {
+                                        ...prev,
+                                        po_no: po.po_no,
+                                        supplier: poSupplier || prev.supplier,
+                                        challan_supplier: poChallanSupplier || poSupplier || prev.challan_supplier,
+                                        broker: poBroker || prev.broker,
+                                        arrival_area_name: poArea || prev.arrival_area_name,
+                                        jci: 'No'
+                                      };
+
+                                      const matchedArea = areas.find((a: any) => String(a.area_name).trim().toUpperCase() === poArea);
+                                      if (matchedArea) {
+                                        updated.arrival_area_code = matchedArea.area_code;
+                                      }
+                                      if (po.purchase_unit_code) updated.unit_code = po.purchase_unit_code;
+                                      if (po.purchase_unit_name) updated.unit_name = po.purchase_unit_name;
+                                      if (po.ptf_no || po.is_ptf) updated.ptf = 'Yes';
+
+                                      return updated;
+                                    });
+
+                                    loadDetailsFromPo(po.po_no);
+                                    setShowPoDropdown(false);
+                                }}
+                              >
+                                <div className="flex items-center justify-between font-bold text-indigo-950">
+                                  <span className="flex items-center gap-1.5">
+                                    P.O. #{po.po_no}
+                                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans normal-case">
+                                      Sauda Check Point
+                                    </span>
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 font-normal">{po.po_date || ''}</span>
+                                </div>
+                                <div className="text-[11px] text-gray-600 flex items-center justify-between gap-2 mt-0.5">
+                                  <span className="truncate">Supp: <strong className="text-gray-800">{po.supplier || po.party_name || po.merchant || 'N/A'}</strong></span>
+                                  <span className="shrink-0 font-semibold text-emerald-700">{po.total_contract_mt || po.quantity || 0} MT</span>
+                                </div>
+                              </div>
+                            ));
+                          })()
+                        )}
                       </div>
                     )}
                   </div>
