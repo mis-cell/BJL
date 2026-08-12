@@ -3234,7 +3234,7 @@ function isPoMismatchResolved(poNo: string): boolean {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-black text-white tracking-tight uppercase">
+                    <h2 className="text-base font-black text-amber-300 tracking-tight uppercase">
                       {formData.no ? "EDIT PURCHASE ORDER" : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
                     </h2>
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-[#103A20] tracking-wider uppercase">
@@ -3731,15 +3731,15 @@ function isPoMismatchResolved(poNo: string): boolean {
                               </div>
                            </th>
                        </tr>
-                       <tr className="bg-[#e4e2de] divide-x divide-slate-400 border-t border-slate-400 text-[9px] font-bold">
-                          <th colSpan={2}></th>
-                          <th className="w-10">Code</th>
-                          <th className="w-max">Name</th>
-                          <th className="w-10">Code</th>
-                          <th className="w-max">Name</th>
-                          <th className="w-10">Code</th>
-                          <th className="w-max">Name</th>
-                          <th colSpan={1}></th>
+                       <tr className="bg-[#103A20] text-amber-300 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
+                          <th colSpan={2} className="py-1 px-1"></th>
+                          <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
+                          <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
+                          <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
+                          <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
+                          <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
+                          <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
+                          <th colSpan={1} className="py-1 px-1"></th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-300">

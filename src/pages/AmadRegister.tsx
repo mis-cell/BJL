@@ -667,64 +667,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-        {/* 4. DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY) */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
-              <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#C6A15B]" />
-                DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY)
-              </h3>
-              <span className="text-[9px] font-bold uppercase tracking-wider bg-[#F9F5EC] text-[#8C6D33] px-2 py-0.5 rounded border border-[#E6DDC8]">
-                Latest Days
-              </span>
-            </div>
 
-            <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="bg-[#F9F5EC] text-slate-600 border-b border-[#E6DDC8] text-[11px]">
-                    <th className="py-1.5 px-3 font-bold">Arrival Date</th>
-                    <th className="py-1.5 px-3 font-bold text-center">Lorry Count</th>
-                    <th className="py-1.5 px-3 font-bold text-right">Total Bales (Rpt)</th>
-                    <th className="py-1.5 px-3 font-bold text-right">Weight (MT)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {dateWiseArrivalList.slice(0, 5).map((rep) => {
-                    const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                    return (
-                      <tr
-                        key={rep.date}
-                        onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
-                        className={cn(
-                          "hover:bg-[#F9F5EC] cursor-pointer transition-colors text-xs",
-                          isSelectedDate && "bg-[#1E4D2B]/10 font-bold"
-                        )}
-                      >
-                        <td className="py-1.5 px-3 flex items-center gap-2 text-slate-800">
-                          <span className={cn("w-2 h-2 rounded-full bg-blue-600", isSelectedDate && "bg-[#1E4D2B]")} />
-                          {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="py-1.5 px-3 text-center text-slate-700 font-semibold">{rep.count} Trucks</td>
-                        <td className="py-1.5 px-3 text-right text-blue-700 font-bold">{rep.packets}</td>
-                        <td className="py-1.5 px-3 text-right text-rose-700 font-bold">{rep.weight.toFixed(3)} MT</td>
-                      </tr>
-                    );
-                  })}
-                  {dateWiseArrivalList.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-4 text-center text-slate-400 italic text-xs">No records available</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 font-medium italic mt-2">
-            * Click on any date row to immediately load that day's files in the ledger table.
-          </p>
-        </div>
 
         {/* 5. SEARCH & FILTER TOOLBAR */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
