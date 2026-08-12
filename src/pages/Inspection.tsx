@@ -89,18 +89,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     try {
       let dataList: MaterialInspectionRecord[] = [];
       if (supabase) {
-        // First try primary table material_inspection
+        // Query primary table inspection_master
         const { data, error } = await supabase
-          .from("material_inspection")
+          .from("inspection_master")
           .select("*")
           .order("created_at", { ascending: false });
 
         if (!error && data && data.length > 0) {
           dataList = data;
         } else {
-          // Fallback to mill_inspection_master
+          // Fallback to material_inspection if inspection_master is empty
           const { data: fallbackData } = await supabase
-            .from("mill_inspection_master")
+            .from("material_inspection")
             .select("*")
             .order("created_at", { ascending: false });
           if (fallbackData) dataList = fallbackData;
@@ -109,18 +109,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (dataList.length === 0) {
         try {
-          const cached = localStorage.getItem("material_inspection_records");
+          const cached = localStorage.getItem("inspection_master_records");
           if (cached) dataList = JSON.parse(cached);
         } catch (e) {}
       } else {
         try {
-          localStorage.setItem("material_inspection_records", JSON.stringify(dataList));
+          localStorage.setItem("inspection_master_records", JSON.stringify(dataList));
         } catch (e) {}
       }
 
       setRecords(dataList);
     } catch (err) {
-      console.error("Error fetching material_inspection records:", err);
+      console.error("Error fetching inspection_master records:", err);
     } finally {
       setLoading(false);
     }
@@ -132,14 +132,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setSelectedRecordDetails([]);
     if (supabase) {
       const { data } = await supabase
-        .from("material_inspection_details")
+        .from("inspection_details")
         .select("*")
         .eq("mr_no", rec.mr_no);
       if (data && data.length > 0) {
         setSelectedRecordDetails(data);
       } else {
         const { data: fallback } = await supabase
-          .from("mill_inspection_detail")
+          .from("material_inspection_details")
           .select("*")
           .eq("mr_no", rec.mr_no);
         if (fallback) setSelectedRecordDetails(fallback);
@@ -171,10 +171,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     try {
       if (supabase) {
-        await supabase.from("material_inspection").insert([payload]);
-        await supabase.from("mill_inspection_master").insert([payload]).then(() => {}, () => {});
+        await supabase.from("inspection_master").insert([payload]);
       }
-      alert(`Material Inspection Record ${newMrNo} created successfully!`);
+      alert(`Inspection Record ${newMrNo} created successfully in inspection_master!`);
       setShowCreateModal(false);
       setNewMrNo(`MRRC-2026-${Math.floor(1000 + Math.random() * 9000)}`);
       setNewPoNo("");
@@ -195,10 +194,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!confirm(`Are you sure you want to delete inspection record ${mr_no}?`)) return;
     try {
       if (supabase) {
-        await supabase.from("material_inspection").delete().eq("mr_no", mr_no);
-        await supabase.from("material_inspection_details").delete().eq("mr_no", mr_no);
-        await supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("mill_inspection_detail").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_master").delete().eq("mr_no", mr_no);
+        await supabase.from("inspection_details").delete().eq("mr_no", mr_no);
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       setShowDetailModal(false);
@@ -268,7 +265,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   BJL 2026 - 2027
                 </span>
                 <span className="text-xs text-emerald-200 font-semibold uppercase tracking-widest">
-                  Table: material_inspection
+                  Table: inspection_master
                 </span>
               </div>
               <h1 className="text-xl font-black text-white tracking-wide mt-0.5">
@@ -310,7 +307,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Audits</p>
               <p className="text-2xl font-black text-slate-900 mt-1">{totalInspections}</p>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">material_inspection records</p>
+              <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">inspection_master records</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
               <ShieldCheck className="w-6 h-6" />

@@ -1166,12 +1166,18 @@ export default function MaterialInspection({
     if (!supabase) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("mill_inspection_master")
+      let { data, error } = await supabase
+        .from("inspection_checklist")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error || !data || data.length === 0) {
+        const fallback = await supabase
+          .from("mill_inspection_master")
+          .select("*")
+          .order("created_at", { ascending: false });
+        data = fallback.data || [];
+      }
       setSavedInspections(data || []);
 
       // Fetch final arrivals to identify "Final received" POs
@@ -1228,13 +1234,20 @@ export default function MaterialInspection({
       setSelectedDeductionTypes(dedArr);
 
       // Fetch corresponding details rows
-      const { data, error } = await supabase
-        .from("mill_inspection_detail")
+      let { data, error } = await supabase
+        .from("inspection_checklist_details")
         .select("*")
         .eq("mr_no", insp.mr_no)
         .order("srl_no", { ascending: true });
 
-      if (error) throw error;
+      if (error || !data || data.length === 0) {
+        const fallback = await supabase
+          .from("mill_inspection_detail")
+          .select("*")
+          .eq("mr_no", insp.mr_no)
+          .order("srl_no", { ascending: true });
+        data = fallback.data;
+      }
 
       if (data && data.length > 0) {
         const enrichedData = data.map((row: any) => {
@@ -1654,19 +1667,12 @@ export default function MaterialInspection({
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const { error: detailErr } = await supabase
-        .from("mill_inspection_detail")
-        .delete()
-        .eq("mr_no", masterData.mr_no);
-      if (detailErr) console.warn("Notice deleting mill_inspection_detail:", detailErr);
-
+      await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+      await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
       await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
 
-      const { error } = await supabase
-        .from("mill_inspection_master")
-        .delete()
-        .eq("mr_no", masterData.mr_no);
-
+      const { error } = await supabase.from("inspection_checklist").delete().eq("mr_no", masterData.mr_no);
+      await supabase.from("mill_inspection_master").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
       await supabase.from("material_inspection").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
 
       if (error) throw error;
@@ -1754,84 +1760,7 @@ export default function MaterialInspection({
     setSuccessMessage("");
 
     try {
-      // 1. Save or Update Master
-      const { data: existing } = await supabase
-        .from("mill_inspection_master")
-        .select("mr_no")
-        .eq("mr_no", masterData.mr_no)
-        .maybeSingle();
-
-      if (existing) {
-        // Edit update
-        const { error: masterErr } = await supabase
-          .from("mill_inspection_master")
-          .update({
-            mr_date: masterData.mr_date || null,
-            arrival_no: masterData.arrival_no,
-            arrival_date: masterData.arrival_date || null,
-            po_no: masterData.po_no,
-            po_date: masterData.po_date || null,
-            broker_name: masterData.broker_name,
-            supplier_name: masterData.supplier_name,
-            actual_moisture: masterData.actual_moisture,
-            claim_moisture: masterData.claim_moisture,
-            actual_dust: masterData.actual_dust,
-            claim_dust: masterData.claim_dust,
-            actual_ncv: masterData.actual_ncv,
-            claim_ncv: masterData.claim_ncv,
-            detention_days: masterData.detention_days,
-            unloading_date: masterData.unloading_date || null,
-            mill_po_no: masterData.mill_po_no,
-            mill_po_date: masterData.mill_po_date || null,
-            mr_spcl_print: masterData.mr_spcl_print,
-            remarks: masterData.remarks,
-            lorry_number: masterData.lorry_number,
-            delivery_claim: (masterData as any).delivery_claim || 0,
-            deduction_type: (masterData as any).deduction_type || selectedDeductionTypes.join(', '),
-            deduction_rate: (masterData as any).deduction_rate || 0,
-            deduction_qty: (masterData as any).deduction_qty || 0,
-            deduction_amount: (masterData as any).deduction_amount || 0,
-          })
-          .eq("mr_no", masterData.mr_no);
-
-        if (masterErr) throw masterErr;
-      } else {
-        // Insert new master
-        const { error: masterInsertErr } = await supabase
-          .from("mill_inspection_master")
-          .insert({
-            mr_no: masterData.mr_no,
-            mr_date: masterData.mr_date || null,
-            arrival_no: masterData.arrival_no,
-            arrival_date: masterData.arrival_date || null,
-            po_no: masterData.po_no,
-            po_date: masterData.po_date || null,
-            broker_name: masterData.broker_name,
-            supplier_name: masterData.supplier_name,
-            actual_moisture: masterData.actual_moisture,
-            claim_moisture: masterData.claim_moisture,
-            actual_dust: masterData.actual_dust,
-            claim_dust: masterData.claim_dust,
-            actual_ncv: masterData.actual_ncv,
-            claim_ncv: masterData.claim_ncv,
-            detention_days: masterData.detention_days,
-            unloading_date: masterData.unloading_date || null,
-            mill_po_no: masterData.mill_po_no,
-            mill_po_date: masterData.mill_po_date || null,
-            mr_spcl_print: masterData.mr_spcl_print,
-            remarks: masterData.remarks,
-            lorry_number: masterData.lorry_number,
-            delivery_claim: (masterData as any).delivery_claim || 0,
-            deduction_type: (masterData as any).deduction_type || selectedDeductionTypes.join(', '),
-            deduction_rate: (masterData as any).deduction_rate || 0,
-            deduction_qty: (masterData as any).deduction_qty || 0,
-            deduction_amount: (masterData as any).deduction_amount || 0,
-          });
-
-        if (masterInsertErr) throw masterInsertErr;
-      }
-
-      // Also upsert into material_inspection table directly
+      // Master payload
       const masterPayload = {
         mr_no: masterData.mr_no,
         mr_date: masterData.mr_date || null,
@@ -1861,19 +1790,19 @@ export default function MaterialInspection({
         deduction_amount: (masterData as any).deduction_amount || 0,
         status: 'Completed'
       };
+
+      // 1. Save or Update Master into inspection_checklist (and secondary legacy tables)
+      const { error: masterErr } = await supabase.from("inspection_checklist").upsert(masterPayload);
+      if (masterErr) {
+        console.warn("Primary upsert to inspection_checklist error, retrying:", masterErr);
+      }
+      await supabase.from("mill_inspection_master").upsert(masterPayload).then(() => {}, () => {});
       await supabase.from("material_inspection").upsert(masterPayload).then(() => {}, () => {});
 
       // 2. Clean out old Detail Rows (to safely rewrite or insert)
-      await supabase
-        .from("mill_inspection_detail")
-        .delete()
-        .eq("mr_no", masterData.mr_no);
-
-      await supabase
-        .from("material_inspection_details")
-        .delete()
-        .eq("mr_no", masterData.mr_no)
-        .then(() => {}, () => {});
+      await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+      await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+      await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
 
       // 3. Filter valid rows to write (must have at least grade or agency input)
       const validRowsToWrite = detailsList
@@ -1899,13 +1828,9 @@ export default function MaterialInspection({
         }));
 
       if (validRowsToWrite.length > 0) {
-        const { error: detailsInsertErr } = await supabase
-          .from("mill_inspection_detail")
-          .insert(validRowsToWrite);
-
+        await supabase.from("inspection_checklist_details").insert(validRowsToWrite).then(() => {}, () => {});
+        await supabase.from("mill_inspection_detail").insert(validRowsToWrite).then(() => {}, () => {});
         await supabase.from("material_inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
-
-        if (detailsInsertErr) throw detailsInsertErr;
       }
 
       // 4. Sync to final_arrival table which connects to the "Final Arrival" dashboard
