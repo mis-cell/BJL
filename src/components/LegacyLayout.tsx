@@ -32,7 +32,8 @@ import {
   Lock,
   DoorClosed,
   Truck,
-  Menu
+  Menu,
+  ClipboardCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -217,10 +218,11 @@ export default function LegacyLayout({
       icon: ShieldCheck,
       subItems: [
         { id: 'tmr', label: 'TEMPORARY M.R', icon: Clock, pageId: 'amad' },
-        { id: 'final_mr', label: 'Final M.R', icon: CheckCircle2, pageId: 'final_arrival' },
-        { id: 'material_inspection', label: 'Material Inspection', icon: ShieldCheck, pageId: 'material_inspection' },
-        { id: 'satta_mismatch', label: 'Satta Mismatch', icon: AlertTriangle, pageId: 'mismatch' },
-        { id: 'material_mismatch', label: 'Material Mismatch', icon: AlertTriangle, pageId: 'material_mismatch' },
+        { id: 'final_mr', label: 'FINAL M.R', icon: CheckCircle2, pageId: 'final_arrival' },
+        { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
+        { id: 'inspection', label: 'INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
+        { id: 'satta_mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
+        { id: 'material_mismatch', label: 'MATERIAL MISMATCH', icon: AlertTriangle, pageId: 'material_mismatch' },
       ]
     },
     {

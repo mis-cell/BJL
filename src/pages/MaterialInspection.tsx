@@ -1660,10 +1660,14 @@ export default function MaterialInspection({
         .eq("mr_no", masterData.mr_no);
       if (detailErr) console.warn("Notice deleting mill_inspection_detail:", detailErr);
 
+      await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+
       const { error } = await supabase
         .from("mill_inspection_master")
         .delete()
         .eq("mr_no", masterData.mr_no);
+
+      await supabase.from("material_inspection").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
 
       if (error) throw error;
 
@@ -1827,11 +1831,49 @@ export default function MaterialInspection({
         if (masterInsertErr) throw masterInsertErr;
       }
 
+      // Also upsert into material_inspection table directly
+      const masterPayload = {
+        mr_no: masterData.mr_no,
+        mr_date: masterData.mr_date || null,
+        arrival_no: masterData.arrival_no,
+        arrival_date: masterData.arrival_date || null,
+        po_no: masterData.po_no,
+        po_date: masterData.po_date || null,
+        broker_name: masterData.broker_name,
+        supplier_name: masterData.supplier_name,
+        actual_moisture: masterData.actual_moisture,
+        claim_moisture: masterData.claim_moisture,
+        actual_dust: masterData.actual_dust,
+        claim_dust: masterData.claim_dust,
+        actual_ncv: masterData.actual_ncv,
+        claim_ncv: masterData.claim_ncv,
+        detention_days: masterData.detention_days,
+        unloading_date: masterData.unloading_date || null,
+        mill_po_no: masterData.mill_po_no,
+        mill_po_date: masterData.mill_po_date || null,
+        mr_spcl_print: masterData.mr_spcl_print,
+        remarks: masterData.remarks,
+        lorry_number: masterData.lorry_number,
+        delivery_claim: (masterData as any).delivery_claim || 0,
+        deduction_type: (masterData as any).deduction_type || selectedDeductionTypes.join(', '),
+        deduction_rate: (masterData as any).deduction_rate || 0,
+        deduction_qty: (masterData as any).deduction_qty || 0,
+        deduction_amount: (masterData as any).deduction_amount || 0,
+        status: 'Completed'
+      };
+      await supabase.from("material_inspection").upsert(masterPayload).then(() => {}, () => {});
+
       // 2. Clean out old Detail Rows (to safely rewrite or insert)
       await supabase
         .from("mill_inspection_detail")
         .delete()
         .eq("mr_no", masterData.mr_no);
+
+      await supabase
+        .from("material_inspection_details")
+        .delete()
+        .eq("mr_no", masterData.mr_no)
+        .then(() => {}, () => {});
 
       // 3. Filter valid rows to write (must have at least grade or agency input)
       const validRowsToWrite = detailsList
@@ -1860,6 +1902,8 @@ export default function MaterialInspection({
         const { error: detailsInsertErr } = await supabase
           .from("mill_inspection_detail")
           .insert(validRowsToWrite);
+
+        await supabase.from("material_inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
 
         if (detailsInsertErr) throw detailsInsertErr;
       }
@@ -3102,14 +3146,14 @@ export default function MaterialInspection({
         <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 max-w-7xl mx-auto w-full pb-10">
           
           {/* HEADER BAR */}
-          <div className="bg-[#0b1e36] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-blue-900 gap-4">
+          <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
             {/* Left Badge */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-amber-300 shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
                 <Scale className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="bg-blue-950 text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-blue-800 tracking-wider">
+                <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider">
                   BJL 2026 - 2027
                 </span>
               </div>
@@ -3125,7 +3169,7 @@ export default function MaterialInspection({
               <button
                 type="button"
                 onClick={() => handlePreparePrintInspection(masterData)}
-                className="px-4 py-2 bg-blue-900/70 hover:bg-blue-800 border border-blue-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
+                className="px-4 py-2 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
               >
                 <Printer className="w-4 h-4 text-amber-300" />
                 <span>Print</span>
@@ -3133,7 +3177,8 @@ export default function MaterialInspection({
               
               <div className="relative">
                 <select
- id="masterdata_mr_no_3135" name="masterdata_mr_no" aria-label="masterdata mr no"                  value={masterData.mr_no}
+                  id="masterdata_mr_no_3135" name="masterdata_mr_no" aria-label="masterdata mr no"
+                  value={masterData.mr_no}
                   onChange={(e) => {
                     const sel = savedInspections.find((i) => i.mr_no === e.target.value);
                     if (sel) {
@@ -3142,7 +3187,7 @@ export default function MaterialInspection({
                       setViewMode("entry");
                     }
                   }}
-                  className="bg-blue-950 border border-amber-400/70 text-amber-300 text-xs font-black px-3.5 py-2 rounded-lg appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 shadow-inner"
+                  className="bg-[#0b2415] border border-amber-400/70 text-amber-300 text-xs font-black px-3.5 py-2 rounded-lg appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400/50 shadow-inner"
                 >
                   <option value={masterData.mr_no}>{masterData.mr_no || 'MRRC-2026-0001'}</option>
                   {savedInspections.map((insp, idx) => (

@@ -47,7 +47,8 @@ import { Mail,
   ShoppingBag,
   Wrench,
   Warehouse,
-  Truck
+  Truck,
+  ClipboardCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getCurrentUserContext } from '../lib/permissions';
@@ -887,7 +888,7 @@ export default function Dashboard({
     },
     { 
       id: 'material_inspection', 
-      label: 'MATERIAL INSPECTION', 
+      label: 'INSPECTION CHECKLIST', 
       icon: ShieldCheck, 
       desc: 'Mill Quality & Moisture Inspection', 
       step: '4',
@@ -895,6 +896,19 @@ export default function Dashboard({
       end: '#41D8DD',
       textColor: 'text-white',
       descColor: 'text-sky-100/90',
+      badgeColor: 'bg-white/15 text-white border-white/20',
+      iconBg: 'bg-white/15 text-white'
+    },
+    { 
+      id: 'inspection', 
+      label: 'INSPECTION', 
+      icon: ClipboardCheck, 
+      desc: 'Quality Audit Register', 
+      step: '4.1',
+      start: '#10B981',
+      end: '#059669',
+      textColor: 'text-white',
+      descColor: 'text-emerald-100/90',
       badgeColor: 'bg-white/15 text-white border-white/20',
       iconBg: 'bg-white/15 text-white'
     },
@@ -1131,12 +1145,22 @@ export default function Dashboard({
         { 
           id: 'material_inspection', 
           mappedId: 'material_inspection',
-          label: 'Material Inspection', 
+          label: 'INSPECTION CHECKLIST', 
           icon: ShieldCheck, 
           desc: 'Mill Quality & Moisture Inspection', 
           step: '2.2',
           start: '#5583EE',
           end: '#41D8DD'
+        },
+        { 
+          id: 'inspection', 
+          mappedId: 'inspection',
+          label: 'INSPECTION', 
+          icon: ClipboardCheck, 
+          desc: 'Quality Audit Register', 
+          step: '2.3',
+          start: '#10B981',
+          end: '#059669'
         },
         {
           id: 'mismatch',

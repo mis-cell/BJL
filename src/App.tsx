@@ -42,6 +42,7 @@ import {
   Globe,
   DoorClosed,
   Truck,
+  ClipboardCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
@@ -67,6 +68,7 @@ import MaterialIssue from "./pages/MaterialIssue";
 import AdminDesk from "./pages/AdminDesk";
 import AIPortal from "./pages/AIPortal";
 import MaterialInspection from "./pages/MaterialInspection";
+import Inspection from "./pages/Inspection";
 import WeightBridge from "./pages/WeightBridge";
 import MrSettlement from "./pages/MrSettlement";
 import ClosingStockEntry from "./pages/ClosingStockEntry";
@@ -474,6 +476,7 @@ type Page =
   | "admindesk"
   | "ai_assistant"
   | "material_inspection"
+  | "inspection"
   | "mr_settlement"
   | "closing_stock"
   | "mismatch"
@@ -496,7 +499,8 @@ const allSidebarItems = [
   { id: "final_po", label: "Final P.O", icon: FileText },
   { id: "amad", label: "Temporary M.R", icon: Archive },
   { id: "final_arrival", label: "Final M.R", icon: CheckCircle2 },
-  { id: "material_inspection", label: "Quality Audit", icon: ShieldCheck },
+  { id: "material_inspection", label: "INSPECTION CHECKLIST", icon: ShieldCheck },
+  { id: "inspection", label: "INSPECTION", icon: ClipboardCheck },
   { id: "mismatch", label: "Mismatch Case", icon: AlertTriangle },
   { id: "club_po_mr", label: "Club P.O & M.R", icon: Link },
   { id: "mr_settlement", label: "M.R. Settlement", icon: FileCheck },
@@ -1259,6 +1263,13 @@ export default function App() {
                 <MaterialInspection
                   onClose={() => closePage("material_inspection", "dashboard")}
                   onLogEvent={logEvent}
+                />
+              </div>
+              <div
+                className={currentPage === "inspection" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+              >
+                <Inspection
+                  onNavigate={(page) => globalNavigate(page as Page)}
                 />
               </div>
               <div
