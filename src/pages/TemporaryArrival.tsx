@@ -386,11 +386,22 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
         : prev.electronic_net_weight;
 
+      // Calculate Final Weight as minimum positive value from Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
+      const validNetWeights = [
+        Number(updatedChallanWeight) || 0,
+        Number(updatedSupplierWeight) || 0,
+        Number(updatedElectronicWeight) || 0
+      ].filter(v => v > 0);
+
+      const minNetWeight = validNetWeights.length > 0 ? Math.min(...validNetWeights) : 0;
+      const finalWeight = Number(minNetWeight.toFixed(3));
+
       return {
         ...prev,
         challan_material_weight: updatedChallanWeight,
         supplier_net_weight: updatedSupplierWeight,
-        electronic_net_weight: updatedElectronicWeight
+        electronic_net_weight: updatedElectronicWeight,
+        weight_reduced: finalWeight
       };
     });
   }, [
@@ -398,7 +409,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     formData.supplier_challan_gross, 
     formData.supplier_tare_weight, 
     formData.electronic_gross_weight, 
-    formData.electronic_tare_weight
+    formData.electronic_tare_weight,
+    formData.supplier_net_weight,
+    formData.electronic_net_weight
   ]);
 
   const loadDetailsFromPo = async (poNo: string) => {
@@ -2021,7 +2034,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">SUPPLIER NET</span>
+                <span className="text-[10px] font-bold">MILL NET</span>
                 <input
  id="supplier_net_weight_1917" aria-label="supplier net weight"                  type="number"
                   step="0.001"
@@ -2052,7 +2065,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </h4>
 
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">ACTUAL GROSS</span>
+                <span className="text-[10px] font-bold">CHALLAN GROSS</span>
                 <input
  id="actual_gross_weight_1948" aria-label="actual gross weight"                  type="number"
                   step="0.001"
@@ -2064,7 +2077,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">SUPPLIER GROSS</span>
+                <span className="text-[10px] font-bold">MILL GROSS</span>
                 <input
  id="supplier_challan_gross_1960" aria-label="supplier challan gross"                  type="number"
                   step="0.001"
@@ -2095,7 +2108,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </h4>
 
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">ACTUAL TARE</span>
+                <span className="text-[10px] font-bold">CHALLAN TARE</span>
                 <input
  id="actual_tare_weight_1991" aria-label="actual tare weight"                  type="number"
                   step="0.001"
@@ -2107,7 +2120,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">SUPPLIER TARE</span>
+                <span className="text-[10px] font-bold">MILL TARE</span>
                 <input
  id="supplier_tare_weight_2003" aria-label="supplier tare weight"                  type="number"
                   step="0.001"
@@ -2136,11 +2149,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           {/* Footer */}
           <div className="border-t border-gray-300 bg-gray-50 px-4 py-2 flex justify-center items-center gap-3">
             <span className="text-[11px] font-bold text-[#174C2C] uppercase">
-              Weight Reduced in Discrepancy (M.Ton)
+              Final Weight (M.Ton)
             </span>
 
             <input
- id="weight_reduced_2034" aria-label="weight reduced"              type="number"
+ id="weight_reduced_2034" aria-label="final weight"              type="number"
               step="0.001"
               name="weight_reduced"
               value={formData.weight_reduced || ""}
