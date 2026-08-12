@@ -1057,9 +1057,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-hidden mt-3">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-visible relative z-30 mt-3">
           {/* Header */}
-          <div className="px-4 py-1.5 bg-[#174C2C] border-b border-[#0F351E]">
+          <div className="px-4 py-1.5 bg-[#174C2C] border-b border-[#0F351E] rounded-t-[11px]">
             <h2 className="text-xs font-bold text-white tracking-wide uppercase">
               Receipt Voucher Info
             </h2>
@@ -1434,10 +1434,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         </div>
 
         {/* ===========================Transport & Document Info=========================== */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-hidden mt-3">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-visible relative z-10 mt-3">
 
           {/* Header */}
-          <div className="bg-[#174C2C] px-4 py-1.5">
+          <div className="bg-[#174C2C] px-4 py-1.5 rounded-t-[11px]">
             <h3 className="text-white text-xs font-bold tracking-wide uppercase">
               Transport & Document Information
             </h3>
