@@ -170,7 +170,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       lorry_prefix: lorryInfo.prefix,
       lorry_suffix: lorryInfo.suffix,
       pan_no: initialData?.pan_no || '',
-      lorry_date: initialData?.lorry_date || today,
+      lorry_date: initialData?.lorry_date || '',
       consignment_note_no: initialData?.consignment_note_no || '',
       di_no: initialData?.di_no || '',
       di_date: initialData?.di_date || '',
@@ -644,6 +644,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       lorry_prefix: '',
       lorry_suffix: '',
       pan_no: '',
+      lorry_date: '',
       consignment_note_no: '',
       di_no: '',
       di_date: '',
@@ -1412,7 +1413,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Arrival Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="lorry_date_1329" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Lorry Arrival Date
+                    Lorry Arrival Date <span className="text-red-600 font-bold">*</span>
                   </label>
 
                   <input
@@ -1421,7 +1422,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold"
+                    required
+                    className={`flex-1 border rounded bg-white px-2 h-7 text-xs font-bold ${!formData.lorry_date ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-400'}`}
                   />
                 </div>
 
