@@ -364,6 +364,117 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     // Left empty intentionally to prevent restoring old drafts
   }, [initialData]);
 
+  // Auto-match and pull weights and party info from lorry_weighments table based on Lorry Arrival Date & Lorry Number
+  useEffect(() => {
+    const lorryDateStr = (formData.lorry_date || '').trim();
+    const lorryPrefix = (formData.lorry_prefix || '').trim();
+    const lorrySuffix = (formData.lorry_suffix || '').trim();
+    const combinedLorryClean = `${lorryPrefix}${lorrySuffix}`.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    if (!combinedLorryClean && !lorryDateStr) return;
+
+    let isMounted = true;
+
+    const syncFromLorryWeighments = async () => {
+      try {
+        let rows: any[] = [];
+        if (supabase) {
+          const { data } = await supabase.from('lorry_weighments').select('*');
+          rows = data || [];
+        } else {
+          rows = await dbModule.fetchAll('lorry_weighments').catch(() => []);
+        }
+
+        if (!rows || rows.length === 0 || !isMounted) return;
+
+        // Match by entry_date (or date) and lorry_no (or lorry_number / vehicle_no)
+        const matched = rows.find((r: any) => {
+          const rDate = String(r.entry_date || r.date || r.created_at || '').split('T')[0].trim();
+          const rLorryClean = String(r.lorry_no || r.lorry_number || r.vehicle_no || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+          const dateMatch = !lorryDateStr || rDate === lorryDateStr;
+          const lorryMatch = combinedLorryClean && (rLorryClean === combinedLorryClean || rLorryClean.includes(combinedLorryClean) || combinedLorryClean.includes(rLorryClean));
+
+          return dateMatch && lorryMatch;
+        });
+
+        if (matched && isMounted) {
+          const formatToMT = (val: any): number => {
+            if (val === null || val === undefined || val === '') return 0;
+            const num = Number(val);
+            if (isNaN(num) || num <= 0) return 0;
+            return num > 200 ? Number((num / 1000).toFixed(3)) : Number(num.toFixed(3));
+          };
+
+          const gateNet = formatToMT(matched.gate_net_weight ?? matched.stage1_net_weight);
+          const gateGross = formatToMT(matched.gate_gross_weight ?? matched.stage1_gross_weight);
+          const gateTare = formatToMT(matched.gate_tare_weight ?? matched.stage1_tare_weight);
+
+          const millGrossNum = Number(matched.mill_gross_weight ?? matched.stage2_gross_weight ?? 0);
+          const millTareNum = Number(matched.mill_tare_weight ?? matched.stage2_tare_weight ?? 0);
+          const millGross = formatToMT(millGrossNum);
+          const millTare = formatToMT(millTareNum);
+
+          let millNet = 0;
+          if (millGrossNum > 0 && millTareNum > 0) {
+            millNet = formatToMT(millGrossNum - millTareNum);
+          } else {
+            millNet = formatToMT(matched.mill_net_weight ?? matched.stage2_net_weight);
+          }
+
+          const elecGrossNum = Number(matched.electric_gross_weight ?? matched.stage3_gross_weight ?? 0);
+          const elecTareNum = Number(matched.electric_tare_weight ?? matched.stage3_tare_weight ?? 0);
+          const elecGross = formatToMT(elecGrossNum);
+          const elecTare = formatToMT(elecTareNum);
+
+          let elecNet = 0;
+          if (elecGrossNum > 0 && elecTareNum > 0) {
+            elecNet = formatToMT(elecGrossNum - elecTareNum);
+          } else {
+            elecNet = formatToMT(matched.electric_net_weight ?? matched.stage3_net_weight);
+          }
+
+          setFormData(prev => {
+            const updated = { ...prev };
+
+            // Weight fields
+            if (gateNet > 0) updated.challan_material_weight = gateNet;
+            if (millNet > 0) updated.supplier_net_weight = millNet;
+            if (elecNet > 0) updated.electronic_net_weight = elecNet;
+
+            if (gateGross > 0) updated.actual_gross_weight = gateGross;
+            if (millGross > 0) updated.supplier_challan_gross = millGross;
+            if (elecGross > 0) updated.electronic_gross_weight = elecGross;
+
+            if (gateTare > 0) updated.actual_tare_weight = gateTare;
+            if (millTare > 0) updated.supplier_tare_weight = millTare;
+            if (elecTare > 0) updated.electronic_tare_weight = elecTare;
+
+            // Auto-fill party_name if P.O. Number is BLANK
+            if (!prev.po_no || !prev.po_no.trim()) {
+              const party = (matched.party_name || matched.broker || matched.supplier || '').toUpperCase();
+              if (party) {
+                updated.broker = party;
+                updated.challan_supplier = party;
+                updated.supplier = party;
+              }
+            }
+
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.warn("Error matching with lorry_weighments:", err);
+      }
+    };
+
+    syncFromLorryWeighments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.lorry_date, formData.lorry_prefix, formData.lorry_suffix, formData.po_no]);
+
   // Sync and dynamically calculate net weights based on grid and scale inputs (supporting manual overwrites)
   useEffect(() => {
     let totalNetto = 0;
@@ -376,15 +487,15 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       const calculatedSupplierNet = (Number(prev.supplier_challan_gross) || 0) - (Number(prev.supplier_tare_weight) || 0);
       const calculatedElectronicNet = (Number(prev.electronic_gross_weight) || 0) - (Number(prev.electronic_tare_weight) || 0);
 
-      const updatedChallanWeight = Number(calculatedNetWeight.toFixed(3));
+      const updatedChallanWeight = calculatedNetWeight > 0 ? Number(calculatedNetWeight.toFixed(3)) : (prev.challan_material_weight || 0);
 
-      const updatedSupplierWeight = !prev.supplier_net_weight || Number(prev.supplier_net_weight) === 0
-        ? (Number(calculatedSupplierNet.toFixed(3)) > 0 ? Number(calculatedSupplierNet.toFixed(3)) : 0)
-        : prev.supplier_net_weight;
+      const updatedSupplierWeight = Number(calculatedSupplierNet.toFixed(3)) > 0 
+        ? Number(calculatedSupplierNet.toFixed(3)) 
+        : (prev.supplier_net_weight || 0);
 
-      const updatedElectronicWeight = !prev.electronic_net_weight || Number(prev.electronic_net_weight) === 0
-        ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
-        : prev.electronic_net_weight;
+      const updatedElectronicWeight = Number(calculatedElectronicNet.toFixed(3)) > 0 
+        ? Number(calculatedElectronicNet.toFixed(3)) 
+        : (prev.electronic_net_weight || 0);
 
       // Calculate Final Weight as minimum positive value from Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
       const validNetWeights = [
@@ -409,9 +520,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     formData.supplier_challan_gross, 
     formData.supplier_tare_weight, 
     formData.electronic_gross_weight, 
-    formData.electronic_tare_weight,
-    formData.supplier_net_weight,
-    formData.electronic_net_weight
+    formData.electronic_tare_weight
   ]);
 
   const loadDetailsFromPo = async (poNo: string) => {
