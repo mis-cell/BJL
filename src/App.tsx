@@ -49,7 +49,7 @@ import { cn } from "./lib/utils";
 import bjlAsset from "./assets/asset_bjl.png";
 import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
-import AmadEntry from "./pages/AmadEntry";
+import TemporaryArrival from "./pages/TemporaryArrival";
 import AmadRegister from "./pages/AmadRegister";
 import SaudaEntry from "./pages/SaudaEntry";
 import BardanaVouchers from "./pages/BardanaVouchers";
@@ -1258,7 +1258,7 @@ export default function App() {
               </div>
               {currentPage === "amad_entry" && (
                 <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                  <AmadEntry
+                  <TemporaryArrival
                     onCancel={() => closePage("amad_entry", "amad")}
                     onSave={() => closePage("amad_entry", "amad")}
                   />

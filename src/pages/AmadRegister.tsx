@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import PrintModal from '../components/PrintModal';
-import AmadEntry from './AmadEntry';
+import TemporaryArrival from './TemporaryArrival';
 import { dbModule } from '../services/dbModule';
 import { Amad } from '../types';
 import { supabase } from '../lib/supabase';
@@ -425,7 +425,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
   if (editingAmad) {
     return (
-      <AmadEntry 
+      <TemporaryArrival 
         initialData={editingAmad} 
         onCancel={() => setEditingAmad(null)} 
         onSave={() => { setEditingAmad(null); fetchAmads(); }} 

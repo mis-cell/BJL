@@ -17,7 +17,7 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
 
-export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: (d: any) => void; onCancel?: () => void; initialData?: Amad }) {
+export default function TemporaryArrival({ onSave, onCancel, initialData }: { onSave?: (d: any) => void; onCancel?: () => void; initialData?: Amad }) {
   const [loading, setLoading] = useState(false);
   const [showPoDropdown, setShowPoDropdown] = useState(false);
 
