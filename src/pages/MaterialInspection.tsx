@@ -3068,7 +3068,7 @@ export default function MaterialInspection({
         </datalist>
 
         {/* MAIN VISUAL CARD CONTAINER - BJL 2026 - 2027 INSPECTION CHECKLIST */}
-        <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 max-w-7xl mx-auto w-full pb-10">
+        <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
           
           {/* HEADER BAR */}
           <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">

@@ -519,7 +519,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
   return (
     <LegacyLayout title="Mill Inspection Information" subtitle="Quality inspection register & entry module">
-      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 max-w-[1800px] mx-auto w-full pb-10 px-2 sm:px-4">
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10 px-2 sm:px-4">
 
         {/* TOAST NOTIFICATION */}
         {toastMessage && (

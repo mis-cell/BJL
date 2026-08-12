@@ -1024,7 +1024,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
     
     <LegacyLayout title="Temporary M.R" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
           {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
             className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
@@ -1055,7 +1055,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}
-        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
           {/* Header */}
           <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
             <h2 className="text-sm font-bold text-white tracking-wide uppercase">
@@ -1342,7 +1342,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ===========================Transport & Document Info=========================== */}
-        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
 
           {/* Header */}
           <div className="bg-[#174C2C] px-5 py-3">
@@ -1654,7 +1654,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ===========================Receipt Grade Details=========================== */}
-        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
 
           {/* Header */}
           <div className="bg-[#174C2C] px-5 py-3 flex items-center justify-between">
@@ -1882,7 +1882,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ================= Weight Information ================= */}
-        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
 
           {/* Header */}
           <div className="bg-[#174C2C] text-white px-4 py-2 border-b border-[#0F351E]">
@@ -2045,7 +2045,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         
 
         {/* Bottom Action Bar */}
-        <div className="max-w-7xl mx-auto w-full rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-md overflow-hidden mt-5">
           <div className="flex justify-end items-center gap-3">
             <button
               onClick={clearForm}

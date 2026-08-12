@@ -475,7 +475,7 @@ export default function SaudaEntry({
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
         {/* 1. Integrated Sub-Header Banner (Deep Green) */}
-        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden max-w-7xl mx-auto w-full text-white">
+        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
           {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
             className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
@@ -516,7 +516,7 @@ export default function SaudaEntry({
         </div>
 
         {/* 2. Main Form Content */}
-        <main ref={formContainerRef} className="flex-1 space-y-5 max-w-7xl mx-auto w-full">
+        <main ref={formContainerRef} className="flex-1 space-y-5 w-full">
           {/* Section 1: Basic Details */}
           <BasicDetailsCard
             formData={formData}

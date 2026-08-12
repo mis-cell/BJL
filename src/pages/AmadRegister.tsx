@@ -558,7 +558,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     <div className="min-h-screen bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white">
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 p-3 md:p-4 space-y-4 max-w-[1700px] w-full mx-auto">
+      <div className="flex-1 p-3 md:p-4 space-y-4 w-full">
 
         {/* 2. HERO BANNER HEADER - DEEP GREEN COMPACT THEME */}
         <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3 md:p-4 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 relative overflow-hidden">
