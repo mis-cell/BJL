@@ -1055,44 +1055,46 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-4">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-hidden mt-3">
           {/* Header */}
-          <div className="px-6 py-3 bg-[#174C2C] border-b border-[#0F351E]">
-            <h2 className="text-sm font-bold text-white tracking-wide uppercase">
+          <div className="px-4 py-1.5 bg-[#174C2C] border-b border-[#0F351E]">
+            <h2 className="text-xs font-bold text-white tracking-wide uppercase">
               Receipt Voucher Info
             </h2>
           </div>
           {/* Body */}
-          <div className="p-5">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="p-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-1.5">
 
               {/* LEFT COLUMN */}
-              <div className="space-y-3">
+              <div className="space-y-1.5">
 
                 {/* Temporary M.R No. */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="arrival_no_1077" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="arrival_no_1077" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Temporary M.R No.
                   </label>
                   <input
- id="arrival_no_1077" aria-label="Temporary M.R No."                    type="text"
+                    id="arrival_no_1077" aria-label="Temporary M.R No."
+                    type="text"
                     name="arrival_no"
                     value={formData.arrival_no}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold focus:outline-none focus:ring-2 focus:ring-[#174C2C]/30"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
                   />
                 </div>
 
                 {/* P.O Number */}
-                <div className="flex items-start gap-3 relative">
-                  <label htmlFor="po_no_1094" className="w-40 text-[11px] font-bold text-gray-800 shrink-0 pt-2">
+                <div className="flex items-center gap-2 relative">
+                  <label htmlFor="po_no_1094" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     P.O. Number
                   </label>
 
                   <div className="flex-1 flex gap-1 relative overflow-visible">
                     <div className="flex-1 flex relative">
                       <input
- id="po_no_1094" aria-label="P.O. Number"                        type="text"
+                        id="po_no_1094" aria-label="P.O. Number"
+                        type="text"
                         name="po_no"
                         value={formData.po_no}
                         onChange={(e) => {
@@ -1106,11 +1108,11 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                         onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
                         autoComplete="off"
                         placeholder="-- TYPE OR SELECT P.O. --"
-                        className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold uppercase font-mono text-xs pr-8"
+                        className="w-full border border-gray-400 rounded bg-white px-2.5 h-7 font-bold uppercase font-mono text-[11px] pr-7"
                       />
 
                       <div
-                        className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-pointer text-gray-500 hover:text-black"
+                        className="absolute right-0 top-0 bottom-0 w-7 flex items-center justify-center cursor-pointer text-gray-500 hover:text-black"
                         onMouseDown={(e) => {
                           e.preventDefault();
                           const nextState = !showPoDropdown;
@@ -1118,12 +1120,12 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                           if (nextState) fetchPurchaseOrders();
                         }}
                       >
-                        <ChevronDown size={16} />
+                        <ChevronDown size={14} />
                       </div>
                     </div>
 
                     {showPoDropdown && (
-                      <div className="absolute top-10 left-0 w-full bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
+                      <div className="absolute top-8 left-0 w-full bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
                         {/* KEEP YOUR EXISTING DROPDOWN CONTENT HERE */}
                       </div>
                     )}
@@ -1131,28 +1133,30 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                 </div>
 
                 {/* Receipt Date */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="date_1140" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="date_1140" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Receipt Date
                   </label>
 
-                  <div className="flex-1 flex gap-3">
+                  <div className="flex-1 flex gap-2">
                     <input
- id="date_1140" aria-label="Receipt Date"                      type="date"
+                      id="date_1140" aria-label="Receipt Date"
+                      type="date"
                       name="date"
                       value={formData.date}
                       onChange={handleChange}
-                      className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                      className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold"
                     />
 
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-red-700 text-xs">J.C.I</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-red-700 text-[10px]">J.C.I</span>
 
                       <select
- id="jci_1151" aria-label="jci"                        name="jci"
+                        id="jci_1151" aria-label="jci"
+                        name="jci"
                         value={formData.jci}
                         onChange={handleChange}
-                        className="border border-gray-400 rounded-md bg-white px-2 h-9 font-bold"
+                        className="border border-gray-400 rounded bg-white px-1.5 h-7 text-xs font-bold"
                       >
                         <option value="No">No</option>
                         <option value="Yes">Yes</option>
@@ -1162,20 +1166,21 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                 </div>
 
                 {/* Challan Supplier */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="challan_supplier_1171" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="challan_supplier_1171" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Challan Supplier
                   </label>
 
                   <div className="flex-1">
                     <input
- id="challan_supplier_1171" aria-label="Challan Supplier"                      type="text"
+                      id="challan_supplier_1171" aria-label="Challan Supplier"
+                      type="text"
                       name="challan_supplier"
                       value={formData.challan_supplier}
                       onChange={handleChange}
                       list="challan_supplier_list"
                       placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
-                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                      className="w-full border border-gray-400 rounded bg-white px-2.5 h-7 uppercase font-bold font-mono text-[11px]"
                     />
 
                     <datalist id="challan_supplier_list">
@@ -1189,20 +1194,21 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                 </div>
 
                 {/* Supplier */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="supplier_1198" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="supplier_1198" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Supplier
                   </label>
 
                   <div className="flex-1">
                     <input
- id="supplier_1198" aria-label="Supplier"                      type="text"
+                      id="supplier_1198" aria-label="Supplier"
+                      type="text"
                       name="supplier"
                       value={formData.supplier}
                       onChange={handleChange}
                       list="supplier_list"
                       placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
-                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                      className="w-full border border-gray-400 rounded bg-white px-2.5 h-7 uppercase font-bold font-mono text-[11px]"
                     />
 
                     <datalist id="supplier_list">
@@ -1218,23 +1224,24 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
               </div>
 
               {/* RIGHT COLUMN */}
-              <div className="space-y-3">
+              <div className="space-y-1.5">
 
                 {/* Broker */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="broker_1230" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="broker_1230" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Broker
                   </label>
 
                   <div className="flex-1">
                     <input
- id="broker_1230" aria-label="Broker"                      type="text"
+                      id="broker_1230" aria-label="Broker"
+                      type="text"
                       name="broker"
                       value={formData.broker}
                       onChange={handleChange}
                       list="broker_list"
                       placeholder="-- TYPE OR SELECT BROKER --"
-                      className="w-full border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 uppercase font-bold font-mono text-xs"
+                      className="w-full border border-gray-400 rounded bg-white px-2.5 h-7 uppercase font-bold font-mono text-[11px]"
                     />
 
                     <datalist id="broker_list">
@@ -1249,89 +1256,95 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                 </div>
 
                 {/* Transporter */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="transporter_name_1257" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="transporter_name_1257" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Transporter Name
                   </label>
 
                   <input
- id="transporter_name_1257" aria-label="Transporter Name"                    type="text"
+                    id="transporter_name_1257" aria-label="Transporter Name"
+                    type="text"
                     name="transporter_name"
                     value={formData.transporter_name}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold"
                   />
                 </div>
 
                 {/* Challan */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="challan_rr_no_1272" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="challan_rr_no_1272" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Challan / R.R. No.
                   </label>
 
                   <input
- id="challan_rr_no_1272" aria-label="Challan / R.R. No."                    type="text"
+                    id="challan_rr_no_1272" aria-label="Challan / R.R. No."
+                    type="text"
                     name="challan_rr_no"
                     value={formData.challan_rr_no}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold"
                   />
                 </div>
 
                 {/* Lorry */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="lorry_prefix_1288" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="lorry_prefix_1288" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Lorry Number
                   </label>
 
-                  <div className="flex-1 flex gap-2">
+                  <div className="flex-1 flex gap-1.5">
                     <input
- id="lorry_prefix_1288" aria-label="Lorry Number"                      type="text"
+                      id="lorry_prefix_1288" aria-label="Lorry Number"
+                      type="text"
                       name="lorry_prefix"
                       value={formData.lorry_prefix}
                       onChange={handleChange}
                       placeholder="PREFIX"
-                      className="w-28 text-center uppercase border border-gray-400 rounded-md h-9 font-bold"
+                      className="w-24 text-center uppercase border border-gray-400 rounded h-7 text-xs font-bold"
                     />
 
                     <input
- id="lorry_suffix_1297" aria-label="SUFFIX"                      type="text"
+                      id="lorry_suffix_1297" aria-label="SUFFIX"
+                      type="text"
                       name="lorry_suffix"
                       value={formData.lorry_suffix}
                       onChange={handleChange}
                       placeholder="SUFFIX"
-                      className="flex-1 text-center uppercase border border-gray-400 rounded-md h-9 font-bold"
+                      className="flex-1 text-center uppercase border border-gray-400 rounded h-7 text-xs font-bold"
                     />
                   </div>
                 </div>
 
                 {/* Pan */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="pan_no_1314" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="pan_no_1314" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Pan No.
                   </label>
 
                   <input
- id="pan_no_1314" aria-label="Pan No."                    type="text"
+                    id="pan_no_1314" aria-label="Pan No."
+                    type="text"
                     name="pan_no"
                     value={formData.pan_no}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold font-mono"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold font-mono"
                   />
                 </div>
 
                 {/* Dispatch Date */}
-                <div className="flex items-center gap-3">
-                  <label htmlFor="lorry_date_1329" className="w-40 text-[11px] font-bold text-gray-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="lorry_date_1329" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
                     Lorry Dispatch Date
                   </label>
 
                   <input
- id="lorry_date_1329" aria-label="Lorry Dispatch Date"                    type="date"
+                    id="lorry_date_1329" aria-label="Lorry Dispatch Date"
+                    type="date"
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded-md bg-white px-3 py-1.5 h-9 font-bold"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold"
                   />
                 </div>
 
@@ -1342,61 +1355,64 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
         </div>
 
         {/* ===========================Transport & Document Info=========================== */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-hidden mt-3">
 
           {/* Header */}
-          <div className="bg-[#174C2C] px-5 py-3">
-            <h3 className="text-white text-sm font-bold tracking-wide">
+          <div className="bg-[#174C2C] px-4 py-1.5">
+            <h3 className="text-white text-xs font-bold tracking-wide uppercase">
               Transport & Document Information
             </h3>
           </div>
 
           {/* Body */}
-          <div className="p-5">
+          <div className="p-3">
 
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
 
               {/* ================= LEFT ================= */}
-              <div className="space-y-4">
+              <div className="space-y-1.5">
 
                 {/* Consignment */}
                 <div>
-                  <label htmlFor="consignment_note_no_1368" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="consignment_note_no_1368" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Consignment Note No.
                   </label>
 
                   <input
- id="consignment_note_no_1368" aria-label="Consignment Note No."                    type="text"
+                    id="consignment_note_no_1368" aria-label="Consignment Note No."
+                    type="text"
                     name="consignment_note_no"
                     value={formData.consignment_note_no}
                     onChange={handleChange}
-                    className="w-full h-10 rounded-lg border border-gray-300 px-3 font-semibold outline-none focus:border-[#174C2C]"
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-xs font-semibold outline-none focus:border-[#174C2C]"
                   />
                 </div>
 
                 {/* DI */}
                 <div>
-                  <label htmlFor="di_no_1385" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="di_no_1385" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     D.I. Details
                   </label>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
 
                     <input
- id="di_no_1385" aria-label="D.I. Details"                      type="text"
+                      id="di_no_1385" aria-label="D.I. Details"
+                      type="text"
                       name="di_no"
                       placeholder="DI Number"
                       value={formData.di_no}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
                     <input
- id="di_date_1394" aria-label="di date"                      type="date"
+                      id="di_date_1394" aria-label="di date"
+                      type="date"
                       name="di_date"
                       value={formData.di_date}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
                   </div>
@@ -1404,27 +1420,29 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Invoice */}
                 <div>
-                  <label htmlFor="invoice_no_1413" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="invoice_no_1413" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Invoice Details
                   </label>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
 
                     <input
- id="invoice_no_1413" aria-label="Invoice Details"                      type="text"
+                      id="invoice_no_1413" aria-label="Invoice Details"
+                      type="text"
                       name="invoice_no"
                       placeholder="Invoice Number"
                       value={formData.invoice_no}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
                     <input
- id="invoice_date_1422" aria-label="invoice date"                      type="date"
+                      id="invoice_date_1422" aria-label="invoice date"
+                      type="date"
                       name="invoice_date"
                       value={formData.invoice_date}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
                   </div>
@@ -1432,15 +1450,16 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* PTF */}
                 <div>
-                  <label htmlFor="ptf_1439" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="ptf_1439" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     P.T.F
                   </label>
 
                   <select
- id="ptf_1439" aria-label="P.T.F"                    name="ptf"
+                    id="ptf_1439" aria-label="P.T.F"
+                    name="ptf"
                     value={formData.ptf}
                     onChange={handleChange}
-                    className="w-full h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                   >
                     <option value="No">No</option>
                     <option value="Yes">Yes</option>
@@ -1449,27 +1468,29 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Lorry */}
                 <div>
-                  <label htmlFor="lorry_returned_1458" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="lorry_returned_1458" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Lorry Returned
                   </label>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
 
                     <select
- id="lorry_returned_1458" aria-label="Lorry Returned"                      name="lorry_returned"
+                      id="lorry_returned_1458" aria-label="Lorry Returned"
+                      name="lorry_returned"
                       value={formData.lorry_returned}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     >
                       <option value="No">No</option>
                       <option value="Yes">Yes</option>
                     </select>
 
                     <select
- id="lorry_returned_other_mill_1468" aria-label="lorry returned other mill"                      name="lorry_returned_other_mill"
+                      id="lorry_returned_other_mill_1468" aria-label="lorry returned other mill"
+                      name="lorry_returned_other_mill"
                       value={formData.lorry_returned_other_mill}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     >
                       <option value="No">Ret. Other Mill : No</option>
                       <option value="Yes">Ret. Other Mill : Yes</option>
@@ -1480,22 +1501,24 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Arrival Area */}
                 <div>
-                  <label htmlFor="arrival_area_code_1489" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="arrival_area_code_1489" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Arrival Area
                   </label>
 
                   <div className="flex gap-2">
 
                     <input
- id="arrival_area_code_1489" aria-label="Arrival Area"                      type="text"
+                      id="arrival_area_code_1489" aria-label="Arrival Area"
+                      type="text"
                       name="arrival_area_code"
                       value={formData.arrival_area_code}
                       readOnly
-                      className="w-20 h-10 rounded-lg border border-gray-300 bg-slate-100 text-center font-bold"
+                      className="w-16 h-7 rounded border border-gray-300 bg-slate-100 text-center text-xs font-bold"
                     />
 
                     <select
- id="arrival_area_name_1497" aria-label="arrival area name"                      name="arrival_area_name"
+                      id="arrival_area_name_1497" aria-label="arrival area name"
+                      name="arrival_area_name"
                       value={formData.arrival_area_name}
                       onChange={(e) => {
                         const matchedArea = areas.find(
@@ -1510,7 +1533,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                             : prev.arrival_area_code
                         }));
                       }}
-                      className="flex-1 h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="flex-1 h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     >
                       <option value="">-- SELECT AREA --</option>
 
@@ -1528,26 +1551,28 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
               {/* ================= RIGHT ================= */}
 
-              <div className="space-y-4">
+              <div className="space-y-1.5">
 
                 {/* Unit */}
                 <div>
-                  <label htmlFor="unit_code_1541" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="unit_code_1541" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Unit
                   </label>
 
                   <div className="flex gap-2">
 
                     <input
- id="unit_code_1541" aria-label="Unit"                      type="text"
+                      id="unit_code_1541" aria-label="Unit"
+                      type="text"
                       name="unit_code"
                       value={formData.unit_code}
                       readOnly
-                      className="w-20 h-10 rounded-lg border border-gray-300 bg-slate-100 text-center font-bold"
+                      className="w-16 h-7 rounded border border-gray-300 bg-slate-100 text-center text-xs font-bold"
                     />
 
                     <select
- id="unit_name_1549" aria-label="unit name"                      name="unit_name"
+                      id="unit_name_1549" aria-label="unit name"
+                      name="unit_name"
                       value={formData.unit_name || "BALES"}
                       onChange={(e) => {
                         const uVal = e.target.value;
@@ -1569,7 +1594,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                             "1",
                         }));
                       }}
-                      className="flex-1 h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="flex-1 h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     >
                       {Array.from(
                         new Set(
@@ -1587,27 +1612,29 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* Way Bill */}
                 <div>
-                  <label htmlFor="way_bill_no_1596" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="way_bill_no_1596" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Way Bill
                   </label>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
 
                     <input
- id="way_bill_no_1596" aria-label="Way Bill"                      type="text"
+                      id="way_bill_no_1596" aria-label="Way Bill"
+                      type="text"
                       name="way_bill_no"
                       value={formData.way_bill_no}
                       onChange={handleChange}
                       placeholder="Way Bill No."
-                      className="h-10 rounded-lg border border-gray-300 px-3 font-semibold"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
                     <input
- id="way_bill_date_1605" aria-label="way bill date"                      type="date"
+                      id="way_bill_date_1605" aria-label="way bill date"
+                      type="date"
                       name="way_bill_date"
                       value={formData.way_bill_date}
                       onChange={handleChange}
-                      className="h-10 rounded-lg border border-gray-300 px-3"
+                      className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
                   </div>
@@ -1615,33 +1642,35 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
 
                 {/* APMC */}
                 <div>
-                  <label htmlFor="apmc_fees_1622" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="apmc_fees_1622" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     A.P.M.C Fees (Rs.)
                   </label>
 
                   <input
- id="apmc_fees_1622" aria-label="A.P.M.C Fees (Rs.)"                    type="number"
+                    id="apmc_fees_1622" aria-label="A.P.M.C Fees (Rs.)"
+                    type="number"
                     name="apmc_fees"
                     placeholder="0.00"
                     value={formData.apmc_fees || ""}
                     onChange={handleChange}
-                    className="w-full h-10 rounded-lg border border-gray-300 px-3 text-right font-semibold"
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-semibold"
                   />
                 </div>
 
                 {/* Remarks */}
                 <div>
-                  <label htmlFor="remarks_1638" className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label htmlFor="remarks_1638" className="block text-[10px] font-bold text-gray-700 mb-0.5">
                     Remarks
                   </label>
 
                   <textarea
- id="remarks_1638" aria-label="Remarks"                    name="remarks"
-                    rows={6}
+                    id="remarks_1638" aria-label="Remarks"
+                    name="remarks"
+                    rows={2}
                     value={formData.remarks}
                     onChange={handleChange}
                     placeholder="Enter Remarks..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 font-semibold resize-none"
+                    className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-semibold resize-none h-14"
                   />
                 </div>
 
