@@ -687,7 +687,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
       const fullLorry = ((formData.lorry_prefix || '') + (formData.lorry_suffix || '')).trim();
       if (!fullLorry) missingFields.push("Lorry Number");
 
-      if (!formData.lorry_date || !formData.lorry_date.trim()) missingFields.push("Lorry Dispatch Date");
+      if (!formData.lorry_date || !formData.lorry_date.trim()) missingFields.push("Lorry Arrival Date");
       if (!formData.ptf || !formData.ptf.trim()) missingFields.push("P.T.F");
       if (!formData.arrival_area_name || !formData.arrival_area_name.trim()) missingFields.push("Arrival Area");
       if (!formData.unit_name || !formData.unit_name.trim()) missingFields.push("Unit");
@@ -1332,14 +1332,14 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   />
                 </div>
 
-                {/* Dispatch Date */}
+                {/* Arrival Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="lorry_date_1329" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Lorry Dispatch Date
+                    Lorry Arrival Date
                   </label>
 
                   <input
-                    id="lorry_date_1329" aria-label="Lorry Dispatch Date"
+                    id="lorry_date_1329" aria-label="Lorry Arrival Date"
                     type="date"
                     name="lorry_date"
                     value={formData.lorry_date}
@@ -2372,7 +2372,7 @@ export default function AmadEntry({ onSave, onCancel, initialData }: { onSave?: 
                   className="col-span-8 border border-gray-400 bg-white px-2 py-0.5 outline-none font-bold font-mono h-6" 
                 />
 
-                <span className="col-span-4 font-bold text-gray-800 text-right">Lorry Dispatch Date</span>
+                <span className="col-span-4 font-bold text-gray-800 text-right">Lorry Arrival Date</span>
                 <input 
                   type="date" 
                   name="lorry_date" 
