@@ -556,104 +556,37 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
   return (
     <div className="min-h-screen bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white">
-      
-      {/* 1. TOP NAVIGATION HEADER */}
-      <header className="bg-[#F9F5EC] border-b border-[#E6DDC8] px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-xs shrink-0">
-        {/* Left Branding */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#1E4D2B] text-[#C6A15B] flex flex-col items-center justify-center font-serif font-black shadow-md border border-[#C6A15B]/40 shrink-0">
-            <span className="text-sm leading-none">Bj</span>
-          </div>
-          <div>
-            <h1 className="font-serif font-extrabold text-lg text-[#1E4D2B] leading-tight tracking-wide">
-              Bally Jute Limited
-            </h1>
-            <p className="text-[10px] font-semibold text-[#8C6D33] tracking-wider uppercase font-mono">
-              ESTD. 1979 — Raw Jute ERP
-            </p>
-          </div>
-        </div>
-
-        {/* Center Navigation Bar */}
-        <nav className="flex items-center gap-1 bg-[#EAE3D2]/60 p-1 rounded-full border border-[#D9CEB4] overflow-x-auto max-w-full">
-          {navTabs.map((tab) => {
-            const isActive = tab.active;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (onNavigate) onNavigate(tab.id);
-                  else if (tab.id === 'dashboard' && onClose) onClose();
-                }}
-                className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-full transition-all duration-150 flex items-center gap-1 whitespace-nowrap cursor-pointer",
-                  isActive
-                    ? "bg-[#1E4D2B] text-white font-semibold shadow-xs"
-                    : "text-slate-700 hover:text-[#1E4D2B] hover:bg-[#D9CEB4]/40"
-                )}
-              >
-                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#C6A15B] animate-pulse" />}
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Right Admin Controls */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button className="relative p-2 rounded-full hover:bg-[#EAE3D2] text-[#1E4D2B] transition-colors cursor-pointer" title="Notifications">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-4 h-4 bg-[#D32F2F] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              3
-            </span>
-          </button>
-          <div className="h-6 w-px bg-[#D9CEB4]" />
-          <div className="flex items-center gap-2 pl-1 cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-[#1E4D2B] text-white flex items-center justify-center font-bold text-xs shadow-xs border border-[#C6A15B]">
-              A
-            </div>
-            <div className="text-left hidden sm:block">
-              <p className="text-xs font-bold text-slate-800 leading-none">Admin User</p>
-              <p className="text-[10px] font-medium text-[#8C6D33] leading-tight">Company Owner</p>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-          </div>
-        </div>
-      </header>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 p-4 md:p-6 space-y-5 max-w-[1700px] w-full mx-auto">
+      <div className="flex-1 p-3 md:p-4 space-y-4 max-w-[1700px] w-full mx-auto">
 
-        {/* 2. HERO BANNER HEADER */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 md:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative overflow-hidden">
-          <div className="flex items-center gap-3.5 z-10">
-            <div className="w-12 h-12 rounded-xl bg-[#1E4D2B]/10 text-[#1E4D2B] flex items-center justify-center border border-[#1E4D2B]/20 shrink-0">
-              <ClipboardCheck className="w-6 h-6" />
+        {/* 2. HERO BANNER HEADER - DEEP GREEN COMPACT THEME */}
+        <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3 md:p-4 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3 relative overflow-hidden">
+          <div className="flex items-center gap-3 z-10">
+            <div className="w-10 h-10 rounded-lg bg-[#103A20] text-amber-300 flex items-center justify-center border border-[#235E39] shrink-0 shadow-xs">
+              <ClipboardCheck className="w-5 h-5 text-amber-300" />
             </div>
             <div>
-              <h2 className="font-serif font-bold text-2xl text-[#1E4D2B] tracking-wide flex items-center gap-2">
+              <h2 className="font-serif font-bold text-lg text-white tracking-wide flex items-center gap-2">
                 Temporary M.R Dashboard
               </h2>
-              <p className="text-xs text-slate-600 font-medium flex items-center gap-1.5 mt-0.5">
-                Live Overview of Temporary Market Rate Operations <Leaf className="w-3.5 h-3.5 text-[#476A35]" />
+              <p className="text-[11px] text-emerald-200/90 font-medium flex items-center gap-1.5 mt-0.5">
+                Live Overview of Temporary Market Rate Operations <Leaf className="w-3.5 h-3.5 text-amber-300" />
               </p>
             </div>
           </div>
 
-          {/* Right Hero Controls & Artwork */}
-          <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-between md:justify-end">
-            <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700">
-              <Calendar className="w-3.5 h-3.5 text-[#1E4D2B]" />
+          {/* Right Hero Controls */}
+          <div className="flex items-center gap-2.5 z-10 w-full md:w-auto justify-between md:justify-end">
+            <div className="flex items-center gap-2 bg-[#103A20] border border-[#235E39] rounded-lg px-3 py-1 text-xs font-semibold text-emerald-100">
+              <Calendar className="w-3.5 h-3.5 text-amber-300" />
               <span>27 Jul 2026</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <ChevronDown className="w-3 h-3 text-emerald-300" />
             </div>
-            <button className="bg-[#1E4D2B] hover:bg-[#163E21] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer">
-              <Filter className="w-3.5 h-3.5" />
+            <button className="bg-[#103A20] border border-[#235E39] hover:bg-[#1c5932] text-white px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer">
+              <Filter className="w-3.5 h-3.5 text-amber-300" />
               Filter
             </button>
-            <div className="hidden lg:block ml-2">
-              <FactorySketchIllustration />
-            </div>
           </div>
         </div>
 
@@ -734,103 +667,63 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-        {/* 4. OPERATIONAL OVERVIEW SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          
-          {/* Left Table Panel: DATE WISE TOTAL ARRIVAL REPORT */}
-          <div className="lg:col-span-7 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
-                <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#C6A15B]" />
-                  DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY)
-                </h3>
-                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#F9F5EC] text-[#8C6D33] px-2 py-0.5 rounded border border-[#E6DDC8]">
-                  Latest Days
-                </span>
-              </div>
-
-              <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="bg-[#F9F5EC] text-slate-600 border-b border-[#E6DDC8] text-[11px]">
-                      <th className="py-1.5 px-3 font-bold">Arrival Date</th>
-                      <th className="py-1.5 px-3 font-bold text-center">Lorry Count</th>
-                      <th className="py-1.5 px-3 font-bold text-right">Total Bales (Rpt)</th>
-                      <th className="py-1.5 px-3 font-bold text-right">Weight (MT)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {dateWiseArrivalList.slice(0, 5).map((rep) => {
-                      const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                      return (
-                        <tr
-                          key={rep.date}
-                          onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
-                          className={cn(
-                            "hover:bg-[#F9F5EC] cursor-pointer transition-colors text-xs",
-                            isSelectedDate && "bg-[#1E4D2B]/10 font-bold"
-                          )}
-                        >
-                          <td className="py-1.5 px-3 flex items-center gap-2 text-slate-800">
-                            <span className={cn("w-2 h-2 rounded-full bg-blue-600", isSelectedDate && "bg-[#1E4D2B]")} />
-                            {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </td>
-                          <td className="py-1.5 px-3 text-center text-slate-700 font-semibold">{rep.count} Trucks</td>
-                          <td className="py-1.5 px-3 text-right text-blue-700 font-bold">{rep.packets}</td>
-                          <td className="py-1.5 px-3 text-right text-rose-700 font-bold">{rep.weight.toFixed(3)} MT</td>
-                        </tr>
-                      );
-                    })}
-                    {dateWiseArrivalList.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-4 text-center text-slate-400 italic text-xs">No records available</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500 font-medium italic mt-2">
-              * Click on any date row to immediately load that day's files in the ledger table.
-            </p>
-          </div>
-
-          {/* Right Graphic Panel: OPERATIONAL OVERVIEW */}
-          <div className="lg:col-span-5 bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
+        {/* 4. DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY) */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col justify-between">
+          <div>
             <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E6DDC8]">
               <h3 className="font-serif font-bold text-sm text-[#1E4D2B] flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#C6A15B]" />
-                OPERATIONAL OVERVIEW
+                <Calendar className="w-4 h-4 text-[#C6A15B]" />
+                DATE WISE TOTAL ARRIVAL REPORT (GLOBAL SUMMARY)
               </h3>
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-[#F9F5EC] text-[#8C6D33] px-2 py-0.5 rounded border border-[#E6DDC8]">
+                Latest Days
+              </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-center my-auto">
-              {/* Lorries Graphic */}
-              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
-                <p className="text-xl font-bold font-mono text-slate-900">{filteredAmads.length}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Lorries</p>
-                <div className="w-12 h-1 bg-[#1E4D2B] rounded-full mb-1" />
-                <Truck className="w-8 h-8 text-[#1E4D2B] opacity-80" />
-              </div>
-
-              {/* Bales Graphic */}
-              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
-                <p className="text-xl font-bold font-mono text-blue-900">{totalBales}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Bales</p>
-                <div className="w-12 h-1 bg-blue-800 rounded-full mb-1" />
-                <Package className="w-8 h-8 text-blue-800 opacity-80" />
-              </div>
-
-              {/* Weight Graphic */}
-              <div className="bg-[#F9F5EC] p-3 rounded-lg border border-[#E6DDC8] flex flex-col items-center">
-                <p className="text-xl font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-[10px] text-slate-500">MT</span></p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Net Weight</p>
-                <div className="w-12 h-1 bg-rose-700 rounded-full mb-1" />
-                <Scale className="w-8 h-8 text-rose-700 opacity-80" />
-              </div>
+            <div className="overflow-x-auto max-h-[140px] overflow-y-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="bg-[#F9F5EC] text-slate-600 border-b border-[#E6DDC8] text-[11px]">
+                    <th className="py-1.5 px-3 font-bold">Arrival Date</th>
+                    <th className="py-1.5 px-3 font-bold text-center">Lorry Count</th>
+                    <th className="py-1.5 px-3 font-bold text-right">Total Bales (Rpt)</th>
+                    <th className="py-1.5 px-3 font-bold text-right">Weight (MT)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {dateWiseArrivalList.slice(0, 5).map((rep) => {
+                    const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
+                    return (
+                      <tr
+                        key={rep.date}
+                        onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
+                        className={cn(
+                          "hover:bg-[#F9F5EC] cursor-pointer transition-colors text-xs",
+                          isSelectedDate && "bg-[#1E4D2B]/10 font-bold"
+                        )}
+                      >
+                        <td className="py-1.5 px-3 flex items-center gap-2 text-slate-800">
+                          <span className={cn("w-2 h-2 rounded-full bg-blue-600", isSelectedDate && "bg-[#1E4D2B]")} />
+                          {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="py-1.5 px-3 text-center text-slate-700 font-semibold">{rep.count} Trucks</td>
+                        <td className="py-1.5 px-3 text-right text-blue-700 font-bold">{rep.packets}</td>
+                        <td className="py-1.5 px-3 text-right text-rose-700 font-bold">{rep.weight.toFixed(3)} MT</td>
+                      </tr>
+                    );
+                  })}
+                  {dateWiseArrivalList.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-4 text-center text-slate-400 italic text-xs">No records available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+          <p className="text-[10px] text-slate-500 font-medium italic mt-2">
+            * Click on any date row to immediately load that day's files in the ledger table.
+          </p>
         </div>
 
         {/* 5. SEARCH & FILTER TOOLBAR */}
@@ -1064,80 +957,48 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-        {/* 8. BOTTOM SUMMARY CARDS & JUTE DECORATIONS */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden">
+        {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN COMPACT THEME */}
+        <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3 md:p-3.5 text-white shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 relative overflow-hidden">
           {/* Bottom Left Jute Bags Illustration */}
           <div className="flex items-center gap-3">
             <JuteBagStackIllustration />
             <div>
-              <p className="font-serif font-bold text-sm text-[#1E4D2B]">Bally Jute Quality Assurance</p>
-              <p className="text-[11px] text-slate-500 max-w-xs leading-snug">
+              <p className="font-serif font-bold text-xs text-amber-300 uppercase tracking-wider">Bally Jute Quality Assurance</p>
+              <p className="text-[11px] text-emerald-100/90 max-w-xs leading-snug">
                 Verified weight bridge counts and raw material inspection logs synced in real time.
               </p>
             </div>
           </div>
 
           {/* Center Cumulative Cards */}
-          <div className="flex items-center gap-4 text-center">
-            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Loads</p>
-              <p className="text-lg font-bold font-mono text-slate-900">{filteredAmads.length} <span className="text-xs text-slate-500 font-sans">Lorries</span></p>
+          <div className="flex items-center gap-3 text-center">
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
+              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Loads</p>
+              <p className="text-base font-bold font-mono text-amber-300">{filteredAmads.length} <span className="text-[10px] text-emerald-200 font-sans">Lorries</span></p>
             </div>
-            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Packets</p>
-              <p className="text-lg font-bold font-mono text-blue-900">{totalBales} <span className="text-xs text-slate-500 font-sans">Bales</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
+              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Packets</p>
+              <p className="text-base font-bold font-mono text-amber-300">{totalBales} <span className="text-[10px] text-emerald-200 font-sans">Bales</span></p>
             </div>
-            <div className="bg-[#F9F5EC] border border-[#E6DDC8] px-4 py-2 rounded-lg">
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Net Weight</p>
-              <p className="text-lg font-bold font-mono text-rose-700">{totalWeightMt.toFixed(3)} <span className="text-xs text-slate-500 font-sans">MT</span></p>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg">
+              <p className="text-[9px] font-bold text-emerald-200 uppercase">Cumulative Net Weight</p>
+              <p className="text-base font-bold font-mono text-amber-300">{totalWeightMt.toFixed(3)} <span className="text-[10px] text-emerald-200 font-sans">MT</span></p>
             </div>
           </div>
 
           {/* Bottom Right Operational Status Badge */}
-          <div className="flex items-center gap-3">
-            <div className="bg-[#1E4D2B] text-white p-2.5 rounded-lg flex items-center gap-2 shadow-xs">
-              <ShieldCheck className="w-5 h-5 text-[#C6A15B]" />
+          <div className="flex items-center gap-2">
+            <div className="bg-[#103A20] text-white p-2 rounded-lg flex items-center gap-2 border border-[#235E39] shadow-xs">
+              <ShieldCheck className="w-4 h-4 text-amber-300" />
               <div>
-                <p className="text-[10px] font-bold tracking-wider text-[#C6A15B] uppercase leading-none">STATUS</p>
-                <p className="text-xs font-bold leading-tight">OPERATIONAL HUB ONLINE</p>
+                <p className="text-[9px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
+                <p className="text-[11px] font-bold leading-tight text-white">OPERATIONAL HUB ONLINE</p>
               </div>
             </div>
-            <JuteRopeLeavesIllustration />
           </div>
         </div>
 
       </div>
-
-      {/* 9. BOTTOM SYSTEM FOOTER BAR */}
-      <footer className="bg-[#1E4D2B] text-white px-4 py-2 mt-auto border-t border-[#C6A15B]/30 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px] tracking-wider uppercase">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            SYSTEM ONLINE
-          </span>
-          <div className="h-4 w-px bg-white/20" />
-          <div className="flex items-center gap-1">
-            <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] text-white/80">SAUDA CHECK POINT ✕</span>
-            <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] text-white/80">FINAL P.O ✕</span>
-            <span className="bg-[#C6A15B] text-[#1E4D2B] px-2 py-0.5 rounded text-[10px] font-bold">TEMPORARY M.R</span>
-          </div>
-        </div>
-
-        <div className="text-[11px] font-mono text-white/90 text-center font-medium">
-          BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE v2.4.0
-        </div>
-
-        <div className="flex items-center gap-3 text-[11px] font-mono">
-          <span className="text-[#C6A15B]">15:43</span>
-          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">NUM</span>
-          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">CAPS</span>
-          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[9px]">SCRL</span>
-          <span className="text-white/80">F.Y. 2026-2027</span>
-          <button className="text-rose-300 hover:text-white p-0.5 cursor-pointer">
-            <Power className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </footer>
 
       {/* PRINT SLIP MODAL */}
       {isPrintingModalOpen && printData && (

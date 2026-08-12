@@ -2876,10 +2876,10 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
           <div className="flex-1 flex flex-col min-h-0 bg-[#faf9f5] border-2 border-black rounded-lg shadow-md overflow-hidden animate-fade-in font-mono mt-3 ">
             
             {/* Header styled like a formal document title */}
-            <div className="bg-[#024a68] text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-black shrink-0">
+            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-[#0d301b] shrink-0 shadow-md">
               <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-yellow-400" />
-                <span className="font-mono font-black uppercase text-sm tracking-widest">
+                <Briefcase className="h-5 w-5 text-amber-300" />
+                <span className="font-mono font-black uppercase text-sm tracking-widest text-white">
                   {editingContractId ? "MODIFICATION DESK" : "SAUDA SLIP COMPILER"}
                 </span>
               </div>

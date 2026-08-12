@@ -3221,7 +3221,7 @@ function isPoMismatchResolved(poNo: string): boolean {
       {viewMode === 'form' && (
         <LegacyLayout 
           title={isArchiveView ? "FINAL P.O ARCHIVE ENTRY" : (isTempPo ? "SAUDA CHECK POINT ENTRY" : "PURCHASE ORDER ENTRY")} 
-          subtitle={formData.no ? `Editing Order #${formData.no}` : "Enter purchase order parameters, broker & supplier details, and item rates"} 
+          subtitle={formData.no ? `Editing Order #${formData.no}` : ""} 
           onClose={() => setViewMode('register')}
         >
           <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-sm w-full flex flex-col overflow-hidden text-xs">
@@ -3241,9 +3241,11 @@ function isPoMismatchResolved(poNo: string): boolean {
                       {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
                     </span>
                   </div>
-                  <p className="text-[11px] text-emerald-200/90 font-medium">
-                    {formData.no ? `P.O No: ${formData.no}` : "Fill purchase order parameters, broker & supplier details, and item rates"}
-                  </p>
+                  {formData.no && (
+                    <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
+                      P.O No: {formData.no}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -3682,42 +3684,42 @@ function isPoMismatchResolved(poNo: string): boolean {
             </LegacyFieldset>
 
             <LegacyFieldset legend="Purchase Order Details (Items Table Matrix)">
-              <div className="flex items-center gap-2 p-1 bg-[#d4d0c8] border-b border-slate-400 justify-between ">
-                 <div className="text-[10px] font-bold text-slate-800 italic pl-1 flex items-center gap-1">
+              <div className="flex items-center gap-2 p-1.5 bg-[#174C2C] border-b border-[#0f331d] justify-between text-white rounded-t-md">
+                 <div className="text-[10px] font-bold text-amber-300 italic pl-1 flex items-center gap-1">
                     <span>⚡ Grid Row Status:</span>
                     {selectedItemSrl ? (
-                       <span className="text-blue-900 bg-blue-100/90 px-1.5 py-0.5 rounded-sm border border-blue-300 font-black">Active Item Row #{selectedItemSrl}</span>
+                       <span className="text-slate-900 bg-amber-300 px-2 py-0.5 rounded-sm font-black">Active Item Row #{selectedItemSrl}</span>
                     ) : (
-                       <span className="text-slate-600 font-normal">Click on any cell below to edit quantities or select items</span>
+                       <span className="text-emerald-200/90 font-normal">Click on any cell below to edit quantities or select items</span>
                     )}
                  </div>
                  <div className="flex gap-1.5 pr-1">
                     <button 
                       type="button"
                       onClick={handleAddItem}
-                      className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 text-black"
+                      className="bg-[#103A20] border border-[#235E39] text-white hover:bg-[#1c5932] px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
                     >
-                      <Plus className="w-3 h-3 text-emerald-800" /> Spawn Row
+                      <Plus className="w-3 h-3 text-amber-300" /> Spawn Row
                     </button>
                     <button 
                       type="button"
                       onClick={handleDeleteItem}
-                      className="bg-slate-200 border-t-white border-l-white border-r-gray-600 border-b-gray-600 border active:border-l-gray-600 active:border-t-gray-600 active:border-r-white active:border-b-white px-2.5 py-0.5 text-[10px] flex items-center gap-1 font-bold hover:bg-slate-300 pointer-events-auto text-black"
+                      className="bg-rose-900/80 border border-rose-700 text-white hover:bg-rose-800 px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
                     >
-                      <Trash2 className="w-3 h-3 text-rose-800" /> Delete Row
+                      <Trash2 className="w-3 h-3 text-rose-300" /> Delete Row
                     </button>
                  </div>
               </div>
 
-              <div className="border border-slate-400 bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
+              <div className="border border-[#174C2C] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black rounded-b-md">
                  <table className="w-full border-collapse text-[10px]">
-                    <thead className="bg-[#d4d0c8] border-b border-slate-400">
-                       <tr className="divide-x divide-slate-400 uppercase font-black">
-                          <th className="px-1 py-1 w-10">Srl. No.</th>
-                          <th className="px-1 py-1 w-16">Crop Year</th>
-                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Grade</th>
-                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Agency</th>
-                          <th className={`px-1 py-1 w-32 transition-colors duration-150 ${isSaudaActive ? 'bg-[#fff5d6] text-[#7c2d12]' : ''}`} colSpan={2}>Marka</th>
+                    <thead className="bg-[#174C2C] text-white border-b border-[#0f331d]">
+                       <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300">
+                          <th className="px-1 py-1.5 w-10">Srl. No.</th>
+                          <th className="px-1 py-1.5 w-16">Crop Year</th>
+                          <th className="px-1 py-1.5 w-32" colSpan={2}>Grade</th>
+                          <th className="px-1 py-1.5 w-32" colSpan={2}>Agency</th>
+                          <th className="px-1 py-1.5 w-32" colSpan={2}>Marka</th>
                           <th className="px-1 py-1 w-16 text-right group relative cursor-help">
                               <div className="flex items-center justify-end gap-1">
                                  <span>Rate/ m.T</span>
