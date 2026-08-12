@@ -561,20 +561,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   <span>Back to Register</span>
                 </button>
                 <button
-                  onClick={handleAddRow}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>＋ Add Inspection Row</span>
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print</span>
-                </button>
-                <button
                   onClick={handleSaveForm}
                   className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
                 >
@@ -584,14 +570,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               </>
             ) : (
               <>
-                <button
-                  onClick={() => onNavigate && onNavigate("material_inspection")}
-                  className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  <FileText className="w-4 h-4 text-slate-900" />
-                  <span>Inspection Checklist</span>
-                </button>
-
                 <button
                   onClick={handleOpenNewForm}
                   className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 border border-emerald-400/50 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
