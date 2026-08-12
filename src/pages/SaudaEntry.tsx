@@ -473,45 +473,35 @@ export default function SaudaEntry({
 
   return (
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
-      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-        {/* 1. Integrated Sub-Header Banner (Deep Green) */}
-        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
-          {/* Background Mill Illustration Artwork on the Right with light opacity */}
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
-            style={{ backgroundImage: `url('https://res.cloudinary.com/x6tw39wi/image/upload/v1785928946/icon_vffvx9.png')` }}
-          />
-
-          <div className="relative z-10 flex flex-col gap-1">
-            <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
-              Sauda Desk
-            </h2>
-            <nav className="flex items-center gap-1.5 text-xs font-semibold text-emerald-200/90 mt-1">
-              <span className="hover:text-amber-300 cursor-pointer transition-colors" onClick={onCancel}>Home</span>
-              <span>›</span>
-              <span className="hover:text-amber-300 cursor-pointer transition-colors" onClick={onCancel}>Sauda Desk</span>
-              <span>›</span>
-              <span className="font-bold text-white">
-                {initialData ? `Modify #${formData.sauda_no}` : "Add Sauda"}
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
+        {/* HEADER BAR - MATCHING MILL INSPECTION AESTHETIC */}
+        <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+          {/* Left Badge & Title */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
+                {formData.session || 'BJCL 2026 - 2027'}
               </span>
-            </nav>
+              <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow mt-0.5">
+                {initialData ? `MODIFY SAUDA #${formData.sauda_no}` : "NEW SAUDA CONTRACT ENTRY"}
+              </h1>
+            </div>
           </div>
 
-          {/* Action Controls & Session Badge */}
-          <div className="relative z-10 flex items-center gap-3">
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-4 py-2 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
               title="Back to Sauda Desk (Esc)"
             >
               <ArrowLeft className="h-4 w-4 text-amber-300" />
               <span>Back (Esc)</span>
             </button>
-            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-              <span className="text-emerald-200/80 font-medium">Session:</span>
-              <span className="font-bold text-amber-300 font-mono text-xs">{formData.session || 'BJCL/2026-2027/'}</span>
-            </div>
           </div>
         </div>
 

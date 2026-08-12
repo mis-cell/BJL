@@ -3224,49 +3224,41 @@ function isPoMismatchResolved(poNo: string): boolean {
           subtitle={formData.no ? `Editing Order #${formData.no}` : ""} 
           onClose={() => setViewMode('register')}
         >
-          <div className="bg-slate-100 rounded-2xl border border-slate-300 shadow-sm w-full flex flex-col overflow-hidden text-xs">
+          <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
             
-            {/* Header Bar - Sauda Dark Green Theme */}
-            <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] px-6 py-4 flex items-center justify-between border-b border-[#0d301b] shrink-0 text-white shadow-md rounded-t-2xl">
+            {/* Header Bar - Matching Mill Inspection Aesthetics */}
+            <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+              {/* Left Badge & Title */}
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-[#103A20] border border-[#235E39] rounded-xl text-amber-300 shadow-xs">
-                  <FileText className="h-5 w-5 text-amber-300" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
+                  <FileText className="w-5 h-5" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-black text-amber-300 tracking-tight uppercase">
-                      {formData.no ? "EDIT PURCHASE ORDER" : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
-                    </h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-[#103A20] tracking-wider uppercase">
-                      {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
-                    </span>
-                  </div>
-                  {formData.no && (
-                    <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
-                      P.O No: {formData.no}
-                    </p>
-                  )}
+                <div className="flex flex-col">
+                  <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
+                    {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
+                  </span>
+                  <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow mt-0.5">
+                    {formData.no ? `EDIT P.O #${formData.no}` : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
+                  </h1>
                 </div>
               </div>
 
+              {/* Right Action Controls */}
               <div className="flex items-center gap-3">
-                <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2 shadow-xs">
-                  <span className="text-emerald-200/80 font-medium">Session:</span>
-                  <span className="font-bold text-amber-300 font-mono text-xs">BJCL/2026-2027/</span>
-                </div>
                 <button
                   type="button"
                   onClick={() => setViewMode('register')}
-                  className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-100 hover:text-white hover:bg-[#1f6236] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="px-4 py-2 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
                   title="Close P.O Form & Return to Register (Esc)"
                 >
-                  <ArrowLeft className="w-4 h-4 text-amber-300" /> Back to Register
+                  <ArrowLeft className="w-4 h-4 text-amber-300" />
+                  <span>Back to Register</span>
                 </button>
               </div>
             </div>
 
             {/* Form Body */}
-            <div ref={poFormRef} className="p-4 sm:p-6 space-y-5">
+            <div ref={poFormRef} className="space-y-5 w-full">
             
             {/* Optional Calculator Modal */}
             {isCalcOpen && (
