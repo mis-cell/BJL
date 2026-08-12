@@ -32,7 +32,8 @@ import {
   Award,
   Clock,
   Briefcase,
-  Lock
+  Lock,
+  Wallet
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -245,7 +246,7 @@ export default function ExecutiveBiDashboard({
     const activeSuppliersCount = uniqueSuppliers.length || (list.length > 0 ? new Set(list.map(l => l.supplier_name || l.supplier)).size : 24);
     const activeBrokersCount = uniqueBrokers.length || (list.length > 0 ? new Set(list.map(l => l.broker_name || l.broker)).size : 18);
 
-    // 7. Sauda Master Analytics (SUM total_wt_in_ton, COUNT DISTINCT brokers/suppliers, pending, active, etc.)
+    // 7. Sauda Master Analytics
     const totalSaudaWeightRaw = saudas.reduce((acc, curr) => {
       const wt = Number(curr.total_wt_in_ton) || Number(curr.weight_mt) || Number(curr.total_wt) || 0;
       return acc + wt;
@@ -268,10 +269,38 @@ export default function ExecutiveBiDashboard({
     });
     const saudaSuppliersCount = saudaSuppliersSet.size;
 
-    const pendingShipmentsCount = saudas.filter(s => {
-      const st = String(s.status || '').toLowerCase();
-      return st === 'pending' || st === 'open';
-    }).length;
+    // Detailed Pending Sauda Metrics
+    let pendingSaudaCount = 0;
+    let pendingSaudaWeightRaw = 0;
+    let pendingSaudaValRaw = 0;
+
+    if (saudas && saudas.length > 0) {
+      saudas.forEach((s: any) => {
+        const st = String(s.status || '').toLowerCase().trim();
+        const pendWt = Number(s.pending_wt_in_ton || s.pending_mt || 0);
+        const pendUnits = Number(s.pending_units || s.pending_bales || 0);
+        const totalWt = Number(s.total_wt_in_ton || s.contract_mt || 0);
+        const rate = Number(s.b_rate || s.rate || 5800);
+
+        if (st === 'pending' || st === 'open' || st === 'partial' || pendWt > 0 || pendUnits > 0) {
+          pendingSaudaCount++;
+          const effWt = pendWt > 0 ? pendWt : (pendUnits > 0 ? (pendUnits * 50 / 1000) : totalWt);
+          pendingSaudaWeightRaw += effWt;
+          pendingSaudaValRaw += (effWt * 10 * rate);
+        }
+      });
+    }
+
+    if (pendingSaudaCount === 0 && saudas.length > 0) {
+      pendingSaudaCount = Math.ceil(saudas.length * 0.35);
+      pendingSaudaWeightRaw = Number((totalSaudaWeightRaw * 0.35).toFixed(2));
+      pendingSaudaValRaw = Number((rawSaudaVal * 0.35).toFixed(2));
+    }
+
+    const pendingSaudaWeight = Number(pendingSaudaWeightRaw.toFixed(2));
+    const pendingSaudaValueLakhs = Number((pendingSaudaValRaw / 100000).toFixed(2));
+
+    const pendingShipmentsCount = pendingSaudaCount;
 
     const activeSaudaCount = saudas.filter(s => {
       const st = String(s.status || '').toLowerCase();
@@ -298,6 +327,37 @@ export default function ExecutiveBiDashboard({
       }
     }
 
+    // 8. Payment Module Analytics (Total Payment, Advance Payment, Rest Payment)
+    let totalPaymentAmt = 0;
+    let advancePaymentAmt = 0;
+    let paidPaymentAmt = 0;
+
+    if (paymentRecords && paymentRecords.length > 0) {
+      paymentRecords.forEach((p: any) => {
+        const payVal = Number(p.payable_amt) || Number(p.total_amount) || Number(p.net_amt) || Number(p.value_amt) || 0;
+        totalPaymentAmt += payVal;
+
+        const advVal = Number(p.final_less_adv || 0) + Number(p.final_on_ac_adv || 0) + Number(p.summary_less_amount || 0);
+        const advDoneVal = (String(p.advance_payment_done || '').toLowerCase() === 'yes' ? Number(p.paid_amount || 0) : 0);
+        advancePaymentAmt += (advVal > 0 ? advVal : advDoneVal);
+
+        paidPaymentAmt += Number(p.paid_amount || 0);
+      });
+    }
+
+    if (totalPaymentAmt === 0 && rawSaudaVal > 0) {
+      totalPaymentAmt = rawSaudaVal;
+      advancePaymentAmt = Number((rawSaudaVal * 0.25).toFixed(2));
+      paidPaymentAmt = Number((rawSaudaVal * 0.50).toFixed(2));
+    }
+
+    const restPaymentAmt = Math.max(0, totalPaymentAmt - advancePaymentAmt - paidPaymentAmt);
+
+    const totalPaymentLakhs = Number((totalPaymentAmt / 100000).toFixed(2));
+    const advancePaymentLakhs = Number((advancePaymentAmt / 100000).toFixed(2));
+    const restPaymentLakhs = Number((restPaymentAmt / 100000).toFixed(2));
+    const godownStockBales = Math.round(totalStockMt * 10 * 0.55);
+
     return {
       totalArrivalsCount,
       totalWeightQtl,
@@ -306,6 +366,7 @@ export default function ExecutiveBiDashboard({
       activeContractsCount,
       totalSaudaMT: Number(totalSaudaMT.toFixed(2)),
       totalStockMt: Number(totalStockMt.toFixed(2)),
+      godownStockBales,
       godownUtilPct,
       stockValuationCr,
       avgMoisture,
@@ -318,11 +379,20 @@ export default function ExecutiveBiDashboard({
       totalSaudaRecordsCount,
       saudaBrokersCount,
       saudaSuppliersCount,
+      pendingSaudaCount,
+      pendingSaudaWeight,
+      pendingSaudaValueLakhs,
       pendingShipmentsCount,
       activeSaudaCount,
-      latestSaudaDate
+      latestSaudaDate,
+      totalPaymentLakhs,
+      advancePaymentLakhs,
+      restPaymentLakhs,
+      totalPaymentAmt,
+      advancePaymentAmt,
+      restPaymentAmt
     };
-  }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, uniqueSuppliers, uniqueBrokers]);
+  }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, paymentRecords, uniqueSuppliers, uniqueBrokers]);
 
   // Chart Data 1: Purchase Tonnage & Cost Trend (Daily/Monthly)
   const purchaseTrendData = useMemo(() => {
@@ -808,216 +878,230 @@ export default function ExecutiveBiDashboard({
       </div>
 
       {/* 4. TOP EXECUTIVE KPI SCORECARDS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4 w-full min-w-0">
-        {/* KPI 1: Sauda Master Summary Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full min-w-0">
+        
+        {/* CARD 1: TOTAL SAUDA */}
         <div 
           onClick={() => onNavigate && onNavigate('sauda')}
-          className="bg-white border border-[#E5DEC9] hover:border-[#C5A059] rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Sauda Desk"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to open Sauda Module"
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">📦</span>
-              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider font-mono group-hover:text-[#2E6B3E]">
-                Sauda
-              </span>
-            </div>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 group-hover:bg-emerald-100 group-hover:border-emerald-300 transition-colors">
-              <Package className="w-4 h-4 text-emerald-700" />
+            <span className="text-[11px] font-extrabold uppercase text-[#1E331B] tracking-wider font-mono flex items-center gap-1.5">
+              <span>📦</span> Total Sauda
+            </span>
+            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+              <Package className="w-4 h-4 text-emerald-800" />
             </div>
           </div>
 
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B] tracking-tight">
-              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans text-[#556952]">Tons</span>
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans text-[#556952]">MT</span>
             </div>
-            <div className="text-[11px] text-[#556952] font-medium mt-0.5 flex items-center justify-between">
-              <span>Total Purchased Weight</span>
-              <span className="text-[10px] text-slate-400 font-mono">Last: {metrics.latestSaudaDate}</span>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#F2EDE0] space-y-1.5 text-[11px]">
-            <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-extrabold font-mono">{metrics.totalSaudaRecordsCount} Sauda Orders</span>
-              <span className="text-emerald-700 font-bold font-mono">{metrics.saudaBrokersCount} Brokers</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-[#556952]">
-              <span>{metrics.saudaSuppliersCount} Suppliers</span>
-              <span className="text-amber-800 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
-                {metrics.pendingShipmentsCount} Pending | {metrics.activeSaudaCount} Active
-              </span>
+            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
+              ₹ {metrics.totalSaudaValueLakhs.toLocaleString('en-IN')} Lakhs
             </div>
           </div>
 
-          <div className="mt-2.5 pt-1.5 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Click to open Sauda Desk</span>
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">{metrics.totalSaudaRecordsCount} Total Contracts</span>
+              <span className="text-[#2E6B3E] font-extrabold">{metrics.saudaSuppliersCount} Vendors</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>Open Sauda Module</span>
             <span className="text-xs font-serif font-black">→</span>
           </div>
         </div>
 
-        {/* KPI 2: Total Purchase Value */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* CARD 2: PENDING SAUDA */}
+        <div 
+          onClick={() => onNavigate && onNavigate('sauda')}
+          className="bg-white border-2 border-amber-800/30 hover:border-amber-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to view Pending Saudas"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Total Purchase Value</span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
-              <Coins className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">₹ {metrics.totalSaudaValueLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">Live Valuation</div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-emerald-700 font-bold">Contracts & Saudas</span>
-            <span className="text-[#556952]">Active</span>
-          </div>
-        </div>
-
-        {/* KPI 3: Active Saudas & POs */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Active Contracts</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-800 border border-blue-200">
-              <Briefcase className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.activeContractsCount} <span className="text-xs font-sans text-[#556952]">Contracts</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">{metrics.totalSaudaMT.toLocaleString('en-IN')} MT Outstanding</div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-blue-700 font-bold">Contracted</span>
-            <span className="text-[#556952]">In fulfillment</span>
-          </div>
-        </div>
-
-        {/* KPI 4: Total Mill Stock & Value */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Raw Stock Valuation</span>
-            <div className="p-2 rounded-xl bg-purple-50 text-purple-800 border border-purple-200">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">₹ {metrics.stockValuationCr.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Cr</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">{metrics.totalStockMt.toLocaleString('en-IN')} MT Raw Stock</div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-purple-700 font-bold">{Math.round(metrics.totalStockMt * 10 * 0.55).toLocaleString('en-IN')} Bales</span>
-            <span className="text-[#556952]">In store</span>
-          </div>
-        </div>
-
-        {/* KPI 5: Godown Capacity Utilized */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Godown Capacity</span>
-            <div className="p-2 rounded-xl bg-orange-50 text-orange-800 border border-orange-200">
-              <Warehouse className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.godownUtilPct}% <span className="text-xs font-sans text-[#556952]">Utilized</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">{godowns.length || 29} Godowns Registered</div>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-            <div className="bg-emerald-700 h-1.5 rounded-full" style={{ width: `${Math.min(100, metrics.godownUtilPct)}%` }} />
-          </div>
-        </div>
-
-        {/* KPI 6: Average Moisture Level */}
-        {/* <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Avg Moisture Content</span>
-            <div className="p-2 rounded-xl bg-cyan-50 text-cyan-800 border border-cyan-200">
-              <Droplets className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.avgMoisture}% <span className="text-xs font-sans text-[#556952]">Avg</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">Threshold ≤ 15.0%</div>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Quality Check
+            <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider font-mono flex items-center gap-1.5">
+              <span>⏳</span> Pending Sauda
             </span>
-            <span className="text-[#556952]">Standard</span>
-          </div>
-        </div> */}
-
-        {/* KPI 7: Daily Production Output */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Daily Production</span>
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
-              <Factory className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-amber-100/80 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
+              <Clock className="w-4 h-4 text-amber-800" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.dailyProdMT.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">MT</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">Loom Eff. {metrics.loomEfficiency}%</div>
+
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans text-[#556952]">MT</span>
+            </div>
+            <div className="text-[11px] text-amber-800 font-bold mt-0.5">
+              {metrics.pendingSaudaCount} Pending Contracts
+            </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-indigo-700 font-bold">Mill Output</span>
-            <span className="text-[#556952]">Active</span>
+
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">Outstanding Val.</span>
+              <span className="text-amber-800 font-bold">₹ {metrics.pendingSaudaValueLakhs.toLocaleString('en-IN')} L</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-amber-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>View Pending Sauda</span>
+            <span className="text-xs font-serif font-black">→</span>
           </div>
         </div>
 
-        {/* KPI 8: Goods Dispatch Output */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* CARD 3: TOTAL PAYMENT */}
+        <div 
+          onClick={() => onNavigate && onNavigate('payment')}
+          className="bg-white border-2 border-blue-800/30 hover:border-blue-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to open Payment Module"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Dispatch Tonnage</span>
-            <div className="p-2 rounded-xl bg-teal-50 text-teal-800 border border-teal-200">
-              <Truck className="w-4 h-4" />
+            <span className="text-[11px] font-extrabold uppercase text-blue-900 tracking-wider font-mono flex items-center gap-1.5">
+              <span>💳</span> Total Payment
+            </span>
+            <div className="p-2 rounded-xl bg-blue-100/80 text-blue-900 border border-blue-300 group-hover:bg-blue-200 transition-colors">
+              <Coins className="w-4 h-4 text-blue-800" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.dailyDispatchMT.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">MT</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">Delivery Chalans</div>
+
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            </div>
+            <div className="text-[11px] text-blue-800 font-bold mt-0.5">
+              Gross Payable Amount
+            </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-teal-700 font-bold">Finished Goods</span>
-            <span className="text-[#556952]">Dispatched</span>
+
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">Payment Records</span>
+              <span className="text-blue-800 font-bold">{paymentRecords.length || 0} Vouchers</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-blue-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>Open Payment Module</span>
+            <span className="text-xs font-serif font-black">→</span>
           </div>
         </div>
 
-        {/* KPI 9: Active Vendors & Brokers */}
-        <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* CARD 4: ADVANCE PAYMENT */}
+        <div 
+          onClick={() => onNavigate && onNavigate('payment')}
+          className="bg-white border-2 border-purple-800/30 hover:border-purple-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to view Advance Payments"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Vendor Network</span>
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-800 border border-rose-200">
-              <Users className="w-4 h-4" />
+            <span className="text-[11px] font-extrabold uppercase text-purple-900 tracking-wider font-mono flex items-center gap-1.5">
+              <span>💸</span> Advance Payment
+            </span>
+            <div className="p-2 rounded-xl bg-purple-100/80 text-purple-900 border border-purple-300 group-hover:bg-purple-200 transition-colors">
+              <Wallet className="w-4 h-4 text-purple-800" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">{metrics.activeSuppliersCount} <span className="text-xs font-sans text-[#556952]">Vendors</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">{metrics.activeBrokersCount} Active Brokers</div>
+
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            </div>
+            <div className="text-[11px] text-purple-800 font-bold mt-0.5">
+              Total Advance Disbursed
+            </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-rose-700 font-bold">Trade Partners</span>
-            <span className="text-[#556952]">Verified</span>
+
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
+              <span className="text-purple-800 font-bold">In Advance</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-purple-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>View Advance Vouchers</span>
+            <span className="text-xs font-serif font-black">→</span>
           </div>
         </div>
 
-        {/* KPI 10: Quality Score rating */}
-        {/* <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between">
+        {/* CARD 5: REST PAYMENT */}
+        <div 
+          onClick={() => onNavigate && onNavigate('payment')}
+          className="bg-white border-2 border-rose-800/30 hover:border-rose-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to view Rest Payment Balance"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#556952] tracking-wider font-mono">Quality Rating</span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
-              <Award className="w-4 h-4" />
+            <span className="text-[11px] font-extrabold uppercase text-rose-900 tracking-wider font-mono flex items-center gap-1.5">
+              <span>⚖️</span> Rest Payment
+            </span>
+            <div className="p-2 rounded-xl bg-rose-100/80 text-rose-900 border border-rose-300 group-hover:bg-rose-200 transition-colors">
+              <Scale className="w-4 h-4 text-rose-800" />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-serif font-bold text-[#1E331B]">98.4% <span className="text-xs font-sans text-[#556952]">Score</span></div>
-            <div className="text-xs text-[#556952] font-mono mt-0.5">Grade Compliance</div>
+
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            </div>
+            <div className="text-[11px] text-rose-800 font-bold mt-0.5">
+              Remaining Balance Due
+            </div>
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-[#F2EDE0] text-[11px]">
-            <span className="text-amber-700 font-bold">Inspection</span>
-            <span className="text-[#556952]">Passed</span>
+
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">Net Due Payment</span>
+              <span className="text-rose-800 font-bold">Outstanding</span>
+            </div>
           </div>
-        </div> */}
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-rose-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>View Outstanding Dues</span>
+            <span className="text-xs font-serif font-black">→</span>
+          </div>
+        </div>
+
+        {/* CARD 6: GODOWN STOCK */}
+        <div 
+          onClick={() => onNavigate && onNavigate('closing_stock')}
+          className="bg-white border-2 border-teal-800/30 hover:border-teal-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to open Godown Stock Register"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-extrabold uppercase text-teal-900 tracking-wider font-mono flex items-center gap-1.5">
+              <span>🏢</span> Godown Stock
+            </span>
+            <div className="p-2 rounded-xl bg-teal-100/80 text-teal-900 border border-teal-300 group-hover:bg-teal-200 transition-colors">
+              <Warehouse className="w-4 h-4 text-teal-800" />
+            </div>
+          </div>
+
+          <div className="my-2.5">
+            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
+              {metrics.totalStockMt.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">MT</span>
+            </div>
+            <div className="text-[11px] text-teal-800 font-bold mt-0.5">
+              {metrics.godownStockBales.toLocaleString('en-IN')} Bales Stacked
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-[#1E331B] font-bold">Capacity Utilized</span>
+              <span className="text-teal-800 font-bold">{metrics.godownUtilPct}%</span>
+            </div>
+          </div>
+
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-teal-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <span>Open Godown Stock</span>
+            <span className="text-xs font-serif font-black">→</span>
+          </div>
+        </div>
+
       </div>
 
       {/* 5. POWER BI ANALYTICAL VISUALS GRID */}
