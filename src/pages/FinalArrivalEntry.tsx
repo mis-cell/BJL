@@ -1650,143 +1650,153 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </div>
         </div>
 
-        {/* 4. 3-COLUMN WEIGHBRIDGES & METRICS CARD */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* CARD 1 */}
-          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                <ClipboardCheck className="w-4 h-4 text-emerald-800" /> Supplier Weights Reference
+        {/* 4. UNIFIED WEIGHT INFORMATION CARD (Matching Temporary Arrival) */}
+        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-hidden mt-1">
+          {/* Header */}
+          <div className="bg-[#174C2C] text-white px-4 py-2 border-b border-[#0F351E]">
+            <h3 className="text-xs font-bold tracking-wide uppercase">
+              WEIGHT INFORMATION
+            </h3>
+          </div>
+
+          {/* Body: 3 Columns (NET WEIGHT | GROSS WEIGHT | TARE WEIGHT) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-300">
+
+            {/* NET WEIGHT */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                NET WEIGHT
               </h4>
-              <span className="text-[10px] text-red-500 font-bold">* mandatory</span>
-            </div>
-            <div className="space-y-2.5">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan Material Weight (M.T.) *</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">CHALLAN WT</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.challan_material_weight || 0}
                   onChange={(e) => handleInputChange('challan_material_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-bold font-mono text-slate-900 focus:border-[#103A20]"
-                  required
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Net Weight (M.Ton): *</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">MILL NET</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.supplier_net_weight || 0}
                   onChange={(e) => handleInputChange('supplier_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-emerald-50/30 border border-emerald-400 rounded px-2 outline-none text-xs font-bold font-mono text-emerald-950 focus:border-emerald-600"
-                  required
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Weighbridge Net: *</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">ELECTRONIC NET</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.electronic_net_weight || 0}
                   onChange={(e) => handleInputChange('electronic_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-red-50/20 border border-red-500 rounded px-2 outline-none text-xs font-bold font-mono text-red-950 focus:border-red-600"
-                  required
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
             </div>
-          </div>
 
-          {/* CARD 2 */}
-          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
-            <div className="border-b border-slate-100 pb-2">
-              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-emerald-800" /> Actual Weighbridge Metrics
+            {/* GROSS WEIGHT */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                GROSS WEIGHT
               </h4>
-            </div>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Actual Gross Weight (Lorry+RAW):</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">CHALLAN GROSS</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.actual_gross_weight || ''}
                   onChange={(e) => handleInputChange('actual_gross_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Challan Gross (M.Ton):</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">MILL GROSS</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.supplier_challan_gross || ''}
                   onChange={(e) => handleInputChange('supplier_challan_gross', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Gross Weight Scale:</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">ELECTRONIC GROSS</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.electronic_gross_weight || ''}
                   onChange={(e) => handleInputChange('electronic_gross_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-red-700 mb-1">Weight Reduced (Moisture Red M.T):</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={formData.weight_reduced || ''}
-                  onChange={(e) => handleInputChange('weight_reduced', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-amber-50/50 border border-amber-400 rounded px-2 outline-none text-xs font-bold font-mono text-amber-900 focus:border-amber-600"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
             </div>
-          </div>
 
-          {/* CARD 3 */}
-          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
-            <div className="border-b border-slate-100 pb-2">
-              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                <RefreshCw className="w-4 h-4 text-red-600" /> Empty Lorry Tare Metrics
+            {/* TARE WEIGHT */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                TARE WEIGHT
               </h4>
-            </div>
-            <div className="space-y-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Actual Tare Weight (Empty Lorry):</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">CHALLAN TARE</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.actual_tare_weight || ''}
                   onChange={(e) => handleInputChange('actual_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Tare Weight (M.Ton):</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">MILL TARE</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.supplier_tare_weight || ''}
                   onChange={(e) => handleInputChange('supplier_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Tare Weight Scale:</label>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">ELECTRONIC TARE</span>
                 <input
                   type="number"
-                  step="any"
+                  step="0.001"
                   value={formData.electronic_tare_weight || ''}
                   onChange={(e) => handleInputChange('electronic_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
             </div>
+
+          </div>
+
+          {/* Footer: FINAL WEIGHT (M.TON) */}
+          <div className="border-t border-gray-300 bg-gray-50/80 px-4 py-2 flex justify-center items-center gap-3">
+            <span className="text-[11px] font-bold text-[#174C2C] uppercase tracking-wide">
+              FINAL WEIGHT (M.TON)
+            </span>
+
+            <input
+              type="number"
+              step="0.001"
+              value={formData.weight_reduced || ''}
+              onChange={(e) => handleInputChange('weight_reduced', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-32 h-8 border border-red-300 rounded bg-white text-right px-2 font-black font-mono text-red-700 outline-none text-xs"
+            />
           </div>
         </div>
 
