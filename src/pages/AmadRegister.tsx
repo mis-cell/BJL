@@ -767,7 +767,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Lorry Number</th>
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Unit</th>
                   <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Qty</th>
-                  <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Weight (MT)</th>
+                  <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Final Weight (M.Ton)</th>
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Inspection Status</th>
                   <th className="py-3 px-3 font-semibold text-center">Actions</th>
                 </tr>
