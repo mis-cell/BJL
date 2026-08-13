@@ -205,48 +205,60 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     loadUnits();
   }, []);
 
-  // Combined PO options sourced directly from Temporary Arrivals + Purchase Orders
+  // Combined PO options sourced directly from Temporary Material Received table + Purchase Orders
   const combinedPoOptions = useMemo(() => {
-    const map = new Map<string, any>();
+    const list: any[] = [];
     
-    // Sourced from Temporary Arrival list
-    (temporaryArrivalList || []).forEach((ta: any) => {
+    // Sourced from Temporary Material Received list
+    (temporaryArrivalList || []).forEach((ta: any, idx: number) => {
       const poVal = (ta.po_no || '').trim().toUpperCase();
       const tempMrVal = (ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
-      const key = poVal || tempMrVal;
-      
-      if (key) {
-        map.set(key, {
-          po_no: poVal || tempMrVal,
-          display_label: poVal ? `${poVal} - ${ta.supplier || ta.challan_supplier || ''} (${ta.challan_material_weight || ta.quantity || 0} MT)` : `Temp M.R #${tempMrVal} - ${ta.supplier || ta.challan_supplier || ''}`,
-          temp_mr_no: tempMrVal,
-          supplier: ta.supplier || ta.challan_supplier || '',
-          broker: ta.broker || '',
-          po_date: ta.date || ta.temporary_arrival_date || '',
-          quantity: ta.challan_material_weight || ta.quantity || 0,
-          source: 'temp_arrival'
-        });
-      }
+      const supplierVal = (ta.supplier || ta.challan_supplier || '').trim();
+      const lorryVal = (ta.lorry_number || ta.lorry_no || ta.vehicle_no || '').trim();
+      const weightVal = ta.challan_material_weight || ta.quantity || 0;
+      const dateVal = ta.date || ta.temporary_arrival_date || ta.po_date || '';
+
+      list.push({
+        id: ta.id || ta.temporary_arrival_id || `temp_${idx}`,
+        po_no: poVal || tempMrVal || `TEMP-${idx + 1}`,
+        temp_mr_no: tempMrVal,
+        display_label: tempMrVal 
+          ? `Temp MR #${tempMrVal} ${poVal ? `(PO: ${poVal})` : ''} - ${supplierVal} ${lorryVal ? `[${lorryVal}]` : ''}` 
+          : `${poVal} - ${supplierVal} (${weightVal} MT)`,
+        supplier: supplierVal,
+        challan_supplier: ta.challan_supplier || supplierVal,
+        broker: ta.broker || '',
+        lorry_number: lorryVal,
+        po_date: dateVal,
+        quantity: weightVal,
+        source: 'temporary_material_received',
+        raw_item: ta
+      });
     });
 
-    // Sourced from Purchase Orders
-    (purchaseOrders || []).forEach((po: any) => {
+    // Sourced from Purchase Orders (append any POs not represented yet)
+    const existingPoKeys = new Set(list.map(i => i.po_no));
+    (purchaseOrders || []).forEach((po: any, idx: number) => {
       const key = String(po.po_no || '').trim().toUpperCase();
-      if (key && !map.has(key)) {
-        map.set(key, {
+      if (key && !existingPoKeys.has(key)) {
+        list.push({
+          id: po.po_id || po.id || `po_${idx}`,
           po_no: po.po_no,
-          display_label: `${po.po_no} - ${po.supplier || po.merchant || ''} (${po.total_contract_mt || po.quantity || 0} MT)`,
           temp_mr_no: '',
+          display_label: `${po.po_no} - ${po.supplier || po.merchant || ''} (${po.total_contract_mt || po.quantity || 0} MT)`,
           supplier: po.supplier || po.merchant || '',
+          challan_supplier: po.challan_supplier || po.supplier || po.merchant || '',
           broker: po.broker || '',
+          lorry_number: '',
           po_date: po.po_date || po.date || '',
           quantity: po.total_contract_mt || po.quantity || 0,
-          source: 'po'
+          source: 'purchase_orders',
+          raw_item: po
         });
       }
     });
 
-    return Array.from(map.values());
+    return list;
   }, [temporaryArrivalList, purchaseOrders]);
 
   // Load master registers on startup
@@ -705,8 +717,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const handleSelectPoOption = (item: any) => {
     handleInputChange('po_no', item.po_no);
     if (item.supplier) handleInputChange('supplier', item.supplier);
+    if (item.challan_supplier) handleInputChange('challan_supplier', item.challan_supplier);
     if (item.broker) handleInputChange('broker', item.broker);
     if (item.po_date) handleInputChange('po_date', item.po_date);
+    if (item.lorry_number) handleInputChange('lorry_number', item.lorry_number);
     
     if (item.temp_mr_no) {
       handleInputChange('temporary_arrival_no', item.temp_mr_no);
@@ -932,7 +946,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
   return (
     <LegacyLayout title="FINAL ARRIVAL" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel} activeNavTab="final_mr">
-      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-none">
+      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-text selection:bg-[#103A20] selection:text-white">
         
         {/* 1. HERO BANNER HEADER - DEEP GREEN THEME */}
         <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
@@ -1033,17 +1047,42 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   <ChevronDown size={14} />
                 </div>
                 {showPoDropdown && combinedPoOptions.length > 0 && (
-                  <div className="absolute top-9 left-0 w-[380px] bg-white border border-slate-300 rounded-lg max-h-48 overflow-y-auto z-[9999] shadow-xl">
+                  <div className="absolute top-9 left-0 w-[420px] bg-white border border-slate-300 rounded-lg max-h-60 overflow-y-auto z-[9999] shadow-xl">
                     {combinedPoOptions
-                      .filter(opt => !formData.po_no || opt.po_no.toLowerCase().includes(formData.po_no.toLowerCase()) || opt.display_label.toLowerCase().includes(formData.po_no.toLowerCase()))
+                      .filter(opt => 
+                        !formData.po_no || 
+                        opt.po_no.toLowerCase().includes(formData.po_no.toLowerCase()) || 
+                        opt.temp_mr_no.toLowerCase().includes(formData.po_no.toLowerCase()) ||
+                        opt.display_label.toLowerCase().includes(formData.po_no.toLowerCase())
+                      )
                       .map((opt, idx) => (
                         <div
-                          key={idx}
-                          className="px-3 py-1.5 text-xs font-mono cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-b-0 flex items-center justify-between"
-                          onClick={() => handleSelectPoOption(opt)}
+                          key={opt.id || idx}
+                          className="px-3 py-2 text-xs font-mono cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-b-0 flex flex-col gap-0.5"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectPoOption(opt);
+                          }}
                         >
-                          <span className="font-bold text-slate-800">{opt.po_no}</span>
-                          <span className="text-[10px] text-slate-500 font-sans">{opt.supplier}</span>
+                          <div className="flex items-center justify-between font-bold text-slate-800">
+                            <span className="flex items-center gap-1.5">
+                              <span>{opt.po_no}</span>
+                              {opt.temp_mr_no && opt.temp_mr_no !== opt.po_no && (
+                                <span className="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-1 rounded">
+                                  Temp MR #{opt.temp_mr_no}
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[10px] text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded font-sans font-medium">
+                              {opt.source === 'temporary_material_received' ? 'Temp Arrival' : 'PO Master'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-600 font-sans">
+                            <span className="truncate max-w-[280px]">
+                              {opt.supplier || 'No Supplier'} {opt.lorry_number ? `• Lorry: ${opt.lorry_number}` : ''}
+                            </span>
+                            <span className="text-slate-500 font-mono text-[10px]">{opt.po_date}</span>
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -1136,7 +1175,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </div>
 
           {/* ROW 3 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">Broker</label>
               <input
@@ -1157,17 +1196,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 onChange={(e) => handleInputChange('transporter_name', e.target.value)}
                 placeholder="Enter Transporter Name"
                 className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry No.</label>
-              <input
-                type="text"
-                value={formData.lorry_number || ''}
-                onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
-                placeholder="WB-12K-9901"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
               />
             </div>
 
@@ -1217,36 +1245,26 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Invoice No.</label>
-              <input
-                type="text"
-                value={formData.invoice_no || ''}
-                onChange={(e) => handleInputChange('invoice_no', e.target.value)}
-                placeholder="Enter Invoice No."
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">R.F.S</label>
-              <input
-                type="text"
-                value={formData.invoice_no || ''}
-                onChange={(e) => handleInputChange('invoice_no', e.target.value)}
-                placeholder="Enter Invoice No."
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
-              <input
-                type="date"
-                value={formData.invoice_date || ''}
-                onChange={(e) => handleInputChange('invoice_date', e.target.value)}
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
-              />
+            <div className="md:col-span-3 grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Invoice No.</label>
+                <input
+                  type="text"
+                  value={formData.invoice_no || ''}
+                  onChange={(e) => handleInputChange('invoice_no', e.target.value)}
+                  placeholder="Enter Invoice No."
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formData.invoice_date || ''}
+                  onChange={(e) => handleInputChange('invoice_date', e.target.value)}
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
             </div>
           </div>
 
