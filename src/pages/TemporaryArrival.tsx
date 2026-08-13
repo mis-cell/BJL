@@ -371,7 +371,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     const lorrySuffix = (formData.lorry_suffix || '').trim();
     const combinedLorryClean = `${lorryPrefix}${lorrySuffix}`.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-    if (!combinedLorryClean && !lorryDateStr) return;
+    // BOTH Lorry Arrival Date AND Full Lorry Number (Prefix & Suffix) are MANDATORY before pulling data
+    if (!lorryDateStr || !lorryPrefix || !lorrySuffix || !combinedLorryClean) return;
 
     let isMounted = true;
 
@@ -387,13 +388,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
         if (!rows || rows.length === 0 || !isMounted) return;
 
-        // Match by entry_date (or date) and lorry_no (or lorry_number / vehicle_no)
+        // Exact match by entry_date (or date) and lorry_no (or lorry_number / vehicle_no)
         const matched = rows.find((r: any) => {
           const rDate = String(r.entry_date || r.date || r.created_at || '').split('T')[0].trim();
           const rLorryClean = String(r.lorry_no || r.lorry_number || r.vehicle_no || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-          const dateMatch = !lorryDateStr || rDate === lorryDateStr;
-          const lorryMatch = combinedLorryClean && (rLorryClean === combinedLorryClean || rLorryClean.includes(combinedLorryClean) || combinedLorryClean.includes(rLorryClean));
+          const dateMatch = rDate === lorryDateStr;
+          const lorryMatch = rLorryClean === combinedLorryClean;
 
           return dateMatch && lorryMatch;
         });
