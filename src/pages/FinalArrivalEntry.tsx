@@ -234,11 +234,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         setPurchaseOrders(uniquePos.filter((po: any) => {
           if (!po.po_no || po.status === 'cancelled') return false;
           
-          // Only show POs from Final P.O. (status: 'final')
-          const isFinal = po.status === 'final' || po.status === 'moved_to_final';
           const isCurrentMatch = initialData && initialData.po_no && String(po.po_no).trim().toUpperCase() === String(initialData.po_no).trim().toUpperCase();
-          
-          if (!isFinal && !isCurrentMatch) return false;
           
           const pendingStr = String(po.pending ?? '').trim().toLowerCase();
           const statusStr = String(po.status ?? '').trim().toLowerCase();
@@ -594,6 +590,87 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     setDetails(updatedDetails);
   };
 
+  const loadDetailsFromPo = async (poNo: string) => {
+    if (!poNo || !poNo.trim()) return;
+    try {
+      const poNoUpper = poNo.trim().toUpperCase();
+      let filteredDetails: any[] = [];
+
+      if (supabase) {
+        const [pdmRes, scpRes] = await Promise.all([
+          supabase.from('purchase_detail_master').select('*').eq('po_no', poNo.trim()),
+          supabase.from('sauda_check_point_details').select('*').eq('po_no', poNo.trim())
+        ]);
+        const pdm = pdmRes.data || [];
+        const scp = scpRes.data || [];
+
+        if (pdm.length > 0) {
+          filteredDetails = pdm;
+        } else if (scp.length > 0) {
+          filteredDetails = scp;
+        } else {
+          const [pdmIns, scpIns] = await Promise.all([
+            supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoUpper),
+            supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoUpper)
+          ]);
+          filteredDetails = (pdmIns.data && pdmIns.data.length > 0) ? pdmIns.data : (scpIns.data || []);
+        }
+      }
+
+      if (!filteredDetails || filteredDetails.length === 0) {
+        const [allPdm, allScp] = await Promise.all([
+          dbModule.fetchAll('purchase_detail_master').catch(() => []),
+          dbModule.fetchAll('sauda_check_point_details').catch(() => [])
+        ]);
+        const pdm = (allPdm || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poNoUpper);
+        const scp = (allScp || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poNoUpper);
+        filteredDetails = pdm.length > 0 ? pdm : scp;
+      }
+
+      if (!filteredDetails || filteredDetails.length === 0) {
+        const matchedPo = purchaseOrders.find((p: any) => String(p.po_no).trim().toUpperCase() === poNoUpper);
+        if (matchedPo) {
+          if (Array.isArray(matchedPo.items) && matchedPo.items.length > 0) {
+            filteredDetails = matchedPo.items;
+          } else if (Array.isArray(matchedPo.details) && matchedPo.details.length > 0) {
+            filteredDetails = matchedPo.details;
+          }
+        }
+      }
+
+      if (filteredDetails && filteredDetails.length > 0) {
+        const newDetails: ArrivalDetailRow[] = filteredDetails.map((fd: any, index: number) => {
+          const gradeName = fd.grade_name || fd.variety || fd.item_name || '';
+          const gradeCode = fd.grade_code || fd.item_code || '';
+          const markaName = fd.marka_name || fd.marka || '';
+          const markaCode = fd.marka_code || '';
+          const agencyName = fd.agency_name || fd.agency || '';
+          const agencyCode = fd.agency_code || '';
+          const nettoVal = Number(fd.quantity_mt || fd.quantity || fd.netto_pnto || 0);
+
+          return {
+            srl_no: index + 1,
+            receipt_grade_code: gradeCode,
+            receipt_grade_name: gradeName,
+            crop_year: fd.crop_year || '2026-27',
+            challan_grade_name: gradeName,
+            agency_code: agencyCode,
+            agency_name: agencyName,
+            challan_marka_code: markaCode,
+            challan_marka_name: markaName,
+            netto_pnto: nettoVal,
+            quantity_chln: Math.round(nettoVal),
+            quantity_rcpt: Math.round(nettoVal),
+            remarks: fd.remarks || ''
+          };
+        });
+        setDetails(newDetails);
+      }
+    } catch (err) {
+      console.warn("Error loading details from PO:", err);
+    }
+  };
+
   const handleInputChange = (field: string, val: any) => {
     setFormData(prev => {
       const next = { ...prev, [field]: val };
@@ -615,6 +692,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             next.arrival_area_code = matchedArea.area_code;
           }
         }
+        loadDetailsFromPo(valUpper);
       }
       return next;
     });
