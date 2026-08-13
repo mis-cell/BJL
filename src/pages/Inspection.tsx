@@ -54,6 +54,7 @@ interface InspectionMasterRecord {
   deduction_amount?: number;
   status?: string;
   created_at?: string;
+  grid_details?: any;
 }
 
 interface InspectionDetailRow {
@@ -164,6 +165,7 @@ const detailFieldsConfig: { name: keyof InspectionDetailRow; label: string; type
 
 export default function Inspection({ onNavigate }: InspectionProps) {
   const [records, setRecords] = useState<InspectionMasterRecord[]>([]);
+  const [finalArrivalList, setFinalArrivalList] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -218,7 +220,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const fetchInspectionRecords = async () => {
     setLoading(true);
     try {
-      let dataList: InspectionMasterRecord[] = [];
+      // 1. Fetch saved inspection_master records
+      let inspectionMasterList: InspectionMasterRecord[] = [];
       if (supabase) {
         const { data, error } = await supabase
           .from("inspection_master")
@@ -226,34 +229,196 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           .order("created_at", { ascending: false });
 
         if (!error && data && data.length > 0) {
-          dataList = data;
+          inspectionMasterList = data;
         } else {
           // Fallback check
           const { data: fallback } = await supabase
             .from("material_inspection")
             .select("*")
             .order("created_at", { ascending: false });
-          if (fallback) dataList = fallback;
+          if (fallback) inspectionMasterList = fallback;
         }
       }
 
-      if (dataList.length === 0) {
+      if (inspectionMasterList.length === 0) {
         try {
           const cached = localStorage.getItem("inspection_master_records");
-          if (cached) dataList = JSON.parse(cached);
-        } catch (e) {}
-      } else {
-        try {
-          localStorage.setItem("inspection_master_records", JSON.stringify(dataList));
+          if (cached) inspectionMasterList = JSON.parse(cached);
         } catch (e) {}
       }
 
-      setRecords(dataList);
+      // 2. Fetch Final Arrival records (Data coming from Final Arrival)
+      let faList: any[] = [];
+      if (supabase) {
+        try {
+          const { data: faData } = await supabase
+            .from("final_arrival")
+            .select("*")
+            .order("created_at", { ascending: false });
+          if (faData && faData.length > 0) {
+            faList = faData;
+          }
+        } catch (e) {
+          console.error("Error fetching final_arrival:", e);
+        }
+      }
+
+      // Local storage fallbacks for Final Arrival & Amad Register
+      try {
+        const cachedFa = localStorage.getItem("final_arrival_vouchers");
+        if (cachedFa) {
+          const parsed = JSON.parse(cachedFa);
+          parsed.forEach((item: any) => {
+            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id))) {
+              faList.push(item);
+            }
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const cachedAmad = localStorage.getItem("amad_records");
+        if (cachedAmad) {
+          const parsed = JSON.parse(cachedAmad);
+          parsed.forEach((item: any) => {
+            if (!faList.some(f => (f.mr_no && f.mr_no === item.amad_no) || (f.final_arrival_no && f.final_arrival_no === item.temporary_arrival_no))) {
+              faList.push({
+                mr_no: item.amad_no,
+                final_arrival_no: item.temporary_arrival_no || item.amad_no,
+                date: item.date,
+                po_no: item.po_no,
+                po_date: item.po_date || item.date,
+                supplier: item.supplier,
+                broker: item.broker,
+                lorry_number: item.lorry_no,
+                grid_details: item.grid_details || item.details || item.items
+              });
+            }
+          });
+        }
+      } catch (e) {}
+
+      setFinalArrivalList(faList);
+
+      // 3. Merge Final Arrival into Inspection Master Records
+      const map = new Map<string, InspectionMasterRecord>();
+
+      // Put explicitly saved inspection records first
+      inspectionMasterList.forEach(rec => {
+        const k = (rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
+        if (k) map.set(k, rec);
+      });
+
+      // Integrate Final Arrival entries
+      faList.forEach(fa => {
+        const mrKey = (fa.mr_no || "").trim().toUpperCase();
+        const arrKey = (fa.final_arrival_no || fa.arrival_no || "").trim().toUpperCase();
+
+        const keyToUse = mrKey && mrKey !== "DIRECT REGISTER" ? mrKey : arrKey;
+        const existing = (mrKey && map.get(mrKey)) || (arrKey && map.get(arrKey));
+
+        if (existing) {
+          // Fill missing header attributes from Final Arrival record
+          if (!existing.po_no && fa.po_no) existing.po_no = fa.po_no;
+          if (!existing.po_date && (fa.po_date || fa.date)) existing.po_date = fa.po_date || fa.date;
+          if (!existing.supplier_name && (fa.supplier || fa.challan_supplier)) existing.supplier_name = fa.supplier || fa.challan_supplier;
+          if (!existing.broker_name && fa.broker) existing.broker_name = fa.broker;
+          if (!existing.lorry_number && fa.lorry_number) existing.lorry_number = fa.lorry_number;
+          if (!existing.arrival_no && fa.final_arrival_no) existing.arrival_no = fa.final_arrival_no;
+          if (!existing.arrival_date && fa.date) existing.arrival_date = fa.date;
+          if (!existing.grid_details) existing.grid_details = fa.grid_details || fa.items || fa.details;
+        } else {
+          // Derive inspection entry directly from Final Arrival record
+          const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
+            ? fa.mr_no
+            : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
+
+          const derivedRec: InspectionMasterRecord = {
+            mr_no: displayMrNo,
+            mr_date: fa.date || new Date().toISOString().split("T")[0],
+            arrival_no: fa.final_arrival_no || fa.arrival_no || "",
+            arrival_date: fa.date || new Date().toISOString().split("T")[0],
+            po_no: fa.po_no || "",
+            po_date: fa.po_date || fa.date || "",
+            broker_name: fa.broker || "",
+            supplier_name: fa.supplier || fa.challan_supplier || "",
+            lorry_number: fa.lorry_number || "",
+            actual_moisture: Number(fa.actual_moisture) || 0,
+            actual_dust: Number(fa.actual_dust) || 0,
+            actual_ncv: Number(fa.actual_ncv) || 0,
+            claim_moisture: Number(fa.claim_moisture) || 0,
+            claim_dust: Number(fa.claim_dust) || 0,
+            claim_ncv: Number(fa.claim_ncv) || 0,
+            deduction_amount: Number(fa.deduction_amount) || 0,
+            remarks: fa.remarks || "",
+            status: fa.status || (fa.actual_moisture ? "Completed" : "Pending"),
+            grid_details: fa.grid_details || fa.items || fa.details
+          };
+
+          if (keyToUse) map.set(keyToUse, derivedRec);
+          else map.set(displayMrNo.toUpperCase(), derivedRec);
+        }
+      });
+
+      const mergedList = Array.from(map.values());
+      setRecords(mergedList);
+
+      try {
+        localStorage.setItem("inspection_master_records", JSON.stringify(mergedList));
+      } catch (e) {}
     } catch (err) {
       console.error("Error fetching inspection_master records:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const populateFromFinalArrival = (fa: any) => {
+    const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
+      ? fa.mr_no
+      : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
+
+    setHeaderForm(prev => ({
+      ...prev,
+      mr_no: displayMrNo,
+      mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
+      arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
+      arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
+      po_no: fa.po_no || prev.po_no,
+      po_date: fa.po_date || fa.date || prev.po_date,
+      broker_name: fa.broker || prev.broker_name,
+      supplier_name: fa.supplier || fa.challan_supplier || prev.supplier_name,
+      lorry_number: fa.lorry_number || prev.lorry_number,
+      actual_moisture: Number(fa.actual_moisture) || prev.actual_moisture || 0,
+      actual_dust: Number(fa.actual_dust) || prev.actual_dust || 0,
+      actual_ncv: Number(fa.actual_ncv) || prev.actual_ncv || 0,
+      claim_moisture: Number(fa.claim_moisture) || prev.claim_moisture || 0,
+      claim_dust: Number(fa.claim_dust) || prev.claim_dust || 0,
+      claim_ncv: Number(fa.claim_ncv) || prev.claim_ncv || 0,
+      remarks: fa.remarks || prev.remarks
+    }));
+
+    const rawGrid = fa.grid_details || fa.details || fa.items;
+    if (Array.isArray(rawGrid) && rawGrid.length > 0) {
+      const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => ({
+        srl_no: i + 1,
+        arrival_grade: item.challan_grade_name || item.receipt_grade_name || item.grade || "",
+        stock_grade_code: item.receipt_grade_code || item.stock_grade_code || "",
+        stock_grade_name: item.receipt_grade_name || item.stock_grade_name || item.grade || "",
+        area: item.area_name || item.area || "",
+        agency: item.agency_name || item.agency || "",
+        marks: item.challan_marka_name || item.marka || item.marks || "",
+        crop_year: item.crop_year || "",
+        quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
+        unit: item.unit || "BALES",
+        challan_gross_wt: Number(item.challan_gross_wt || item.gross_weight || item.weight) || 0,
+        receipt_gross_wt: Number(item.receipt_gross_wt || item.gross_weight || item.weight) || 0,
+        tolerable: "Yes",
+        expanded: false
+      }));
+      setDetailRows(details);
+    }
+    showToast(`Loaded Final Arrival ${fa.final_arrival_no || displayMrNo} into inspection form.`);
   };
 
   const handleOpenNewForm = () => {
@@ -298,6 +463,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setDetailRows([]);
     setViewMode("form");
 
+    let loadedDetails: InspectionDetailRow[] = [];
+
     if (supabase) {
       const { data } = await supabase
         .from("inspection_details")
@@ -306,19 +473,46 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         .order("srl_no", { ascending: true });
 
       if (data && data.length > 0) {
-        setDetailRows(data.map(d => ({ ...d, expanded: false })));
+        loadedDetails = data.map(d => ({ ...d, expanded: false }));
       } else {
         const { data: fallback } = await supabase
           .from("material_inspection_details")
           .select("*")
           .eq("mr_no", rec.mr_no);
         if (fallback && fallback.length > 0) {
-          setDetailRows(fallback.map(d => ({ ...d, expanded: false })));
-        } else {
-          setDetailRows([{ unit: "BALES", quantity: 0, tolerable: "Yes", expanded: false }]);
+          loadedDetails = fallback.map(d => ({ ...d, expanded: false }));
         }
       }
     }
+
+    if (loadedDetails.length === 0) {
+      // Build detail rows from grid_details if available (from Final Arrival)
+      const rawGrid = rec.grid_details;
+      if (Array.isArray(rawGrid) && rawGrid.length > 0) {
+        loadedDetails = rawGrid.map((item: any, i: number) => ({
+          srl_no: i + 1,
+          arrival_grade: item.challan_grade_name || item.receipt_grade_name || item.grade || "",
+          stock_grade_code: item.receipt_grade_code || item.stock_grade_code || "",
+          stock_grade_name: item.receipt_grade_name || item.stock_grade_name || item.grade || "",
+          area: item.area_name || item.area || "",
+          agency: item.agency_name || item.agency || "",
+          marks: item.challan_marka_name || item.marka || item.marks || "",
+          crop_year: item.crop_year || "",
+          quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
+          unit: item.unit || "BALES",
+          challan_gross_wt: Number(item.challan_gross_wt || item.gross_weight || item.weight) || 0,
+          receipt_gross_wt: Number(item.receipt_gross_wt || item.gross_weight || item.weight) || 0,
+          tolerable: "Yes",
+          expanded: false
+        }));
+      }
+    }
+
+    if (loadedDetails.length === 0) {
+      loadedDetails = [{ unit: "BALES", quantity: 0, tolerable: "Yes", expanded: false }];
+    }
+
+    setDetailRows(loadedDetails);
   };
 
   const handleHeaderChange = (field: keyof InspectionMasterRecord, value: any) => {
@@ -773,6 +967,36 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   Header Form
                 </span>
               </div>
+
+              {/* Pick Final Arrival Banner */}
+              {finalArrivalList.length > 0 && (
+                <div className="bg-emerald-50/80 px-5 py-3 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-bold text-emerald-950">Import / Pick From Final Arrival:</span>
+                  </div>
+                  <select
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const selectedFa = finalArrivalList.find(f => 
+                        (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
+                        (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
+                        (f.mr_no && String(f.mr_no) === e.target.value)
+                      );
+                      if (selectedFa) populateFromFinalArrival(selectedFa);
+                    }}
+                    defaultValue=""
+                    className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
+                  >
+                    <option value="">-- Select Final Arrival Record / MR --</option>
+                    {finalArrivalList.map((fa, idx) => (
+                      <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no}>
+                        Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | MR: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5">
                 <div className="flex flex-col gap-1">
