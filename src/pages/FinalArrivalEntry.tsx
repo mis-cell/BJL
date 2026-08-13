@@ -1379,6 +1379,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   <th className="p-2 text-center" colSpan={2}>AGENCY</th>
                   <th className="p-2 text-center" colSpan={2}>CHALLAN MARKA</th>
                   <th className="p-2 text-center">MARKS (PHOTA)</th>
+                  <th className="p-2 text-center w-24">NETTO (M.T)</th>
                   <th className="p-2 text-center" colSpan={3}>QUANTITY</th>
                   <th className="p-2 text-center">REMARKS</th>
                   <th className="p-2 text-center w-10"></th>
@@ -1393,6 +1394,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   <th className="p-1 text-left">NAME</th>
                   <th className="p-1 text-center w-16">CODE</th>
                   <th className="p-1 text-left">NAME</th>
+                  <th className="p-1"></th>
                   <th className="p-1"></th>
                   <th className="p-1 text-right w-16">CHLN.</th>
                   <th className="p-1 text-right w-16">RCPT.</th>
@@ -1440,13 +1442,21 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                         className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none uppercase"
                       />
                     </td>
-                    <td className="p-1.5">
-                      <input
-                        type="text"
-                        value={row.crop_year}
+                    <td className="p-1.5 w-24">
+                      <select
+                        value={row.crop_year || '2026-27'}
                         onChange={(e) => handleRowChange(index, 'crop_year', e.target.value)}
-                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-center outline-none"
-                      />
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-center font-bold outline-none"
+                      >
+                        {row.crop_year && !['2024-25', '2025-26', '2026-27', '2027-28', '2028-29'].includes(row.crop_year) && (
+                          <option value={row.crop_year}>{row.crop_year}</option>
+                        )}
+                        <option value="2024-25">2024-25</option>
+                        <option value="2025-26">2025-26</option>
+                        <option value="2026-27">2026-27</option>
+                        <option value="2027-28">2027-28</option>
+                        <option value="2028-29">2028-29</option>
+                      </select>
                     </td>
                     <td className="p-1.5">
                       <input
@@ -1550,6 +1560,19 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                         onChange={(e) => handleRowChange(index, 'marks_phota', e.target.value)}
                         placeholder="Enter Marks"
                         className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5 w-24">
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={row.netto_pnto !== undefined && row.netto_pnto !== null ? row.netto_pnto : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleRowChange(index, 'netto_pnto', val === '' ? 0 : Number(val));
+                        }}
+                        placeholder="0.000"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs text-right font-bold outline-none font-mono"
                       />
                     </td>
                     <td className="p-1.5">
