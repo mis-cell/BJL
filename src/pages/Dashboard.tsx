@@ -417,8 +417,22 @@ export default function Dashboard({
           (matchPoNo(p.po_no, ar.po_no) || matchPoNo(p.contract_po_no, ar.po_no)) &&
           !matchingFinal.some(f => f.temporary_arrival_no === ar.temporary_arrival_no || f.mr_no === ar.amad_no)
         );
+        const getLowestNetWeight = (item: any): number => {
+          if (!item) return 0;
+          const nets = [
+            Number(item.electronic_net_weight),
+            Number(item.supplier_net_weight),
+            Number(item.challan_material_weight),
+            Number(item.weight_reduced),
+            item.weight_qtl ? Number(item.weight_qtl) / 10 : 0,
+            Number(item.weight),
+            Number(item.quantity)
+          ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+          return nets.length > 0 ? Math.min(...nets) : 0;
+        };
+
         const totalReceivedMt = [...matchingFinal, ...matchingTemp].reduce((sum: number, ar: any) => {
-          return sum + (Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10);
+          return sum + getLowestNetWeight(ar);
         }, 0);
 
         const isDbCompleted = p.pending === false || p.pending === 'No' || String(p.pending).toLowerCase() === 'false' || p.pending === 0;
@@ -448,7 +462,20 @@ export default function Dashboard({
 
       // Sum values for active arrivals
       const packetsSum = arrivals.reduce((sum: number, r: any) => sum + (Number(r.packets || r.total_packets) || 0), 0);
-      const weightSum = arrivals.reduce((sum: number, r: any) => sum + (Number(r.weight || r.weight_qtl) || 0), 0);
+      const getLowestNetWeightHelper = (item: any): number => {
+        if (!item) return 0;
+        const nets = [
+          Number(item.electronic_net_weight),
+          Number(item.supplier_net_weight),
+          Number(item.challan_material_weight),
+          Number(item.weight_reduced),
+          item.weight_qtl ? Number(item.weight_qtl) / 10 : 0,
+          Number(item.weight),
+          Number(item.quantity)
+        ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+        return nets.length > 0 ? Math.min(...nets) : 0;
+      };
+      const weightSum = arrivals.reduce((sum: number, r: any) => sum + (getLowestNetWeightHelper(r) * 10), 0);
 
       setArrivalsMetrics({
         totalPackets: packetsSum,

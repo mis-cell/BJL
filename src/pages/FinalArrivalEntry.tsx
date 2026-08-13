@@ -672,11 +672,22 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
         : prev.electronic_net_weight;
 
+      // Calculate Final Weight as minimum positive value from Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
+      const validNetWeights = [
+        Number(updatedChallanWeight) || 0,
+        Number(updatedSupplierWeight) || 0,
+        Number(updatedElectronicWeight) || 0
+      ].filter(v => v > 0);
+
+      const minNetWeight = validNetWeights.length > 0 ? Math.min(...validNetWeights) : 0;
+      const finalWeight = Number(minNetWeight.toFixed(3));
+
       return {
         ...prev,
         challan_material_weight: updatedChallanWeight,
         supplier_net_weight: updatedSupplierWeight,
-        electronic_net_weight: updatedElectronicWeight
+        electronic_net_weight: updatedElectronicWeight,
+        weight_reduced: finalWeight
       };
     });
   }, [

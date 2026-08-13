@@ -514,9 +514,24 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     }
   };
 
+  // Helper to extract lowest net weight (Final Weight in M.Ton)
+  const getLowestNetWeight = (item: any): number => {
+    if (!item) return 0;
+    const nets = [
+      Number(item.electronic_net_weight),
+      Number(item.supplier_net_weight),
+      Number(item.challan_material_weight),
+      Number(item.weight_reduced),
+      item.weight_qtl ? Number(item.weight_qtl) / 10 : 0,
+      Number(item.weight),
+      Number(item.quantity)
+    ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+    return nets.length > 0 ? Math.min(...nets) : 0;
+  };
+
   // Metrics
   const totalBales = filteredAmads.reduce((acc, a) => acc + (Number(a.total_packets || a.packets || 0)), 0);
-  const totalWeightMt = filteredAmads.reduce((acc, a) => acc + (Number(a.weight_qtl || a.weight || 0) / 10), 0);
+  const totalWeightMt = filteredAmads.reduce((acc, a) => acc + getLowestNetWeight(a), 0);
 
   // Inspection status counts
   const inspectedSet = new Set(inspectionsList.map(i => String(i.arrival_no || '').trim().toUpperCase()));
@@ -532,7 +547,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     }
     dateWiseArrivalsMap[d].count += 1;
     dateWiseArrivalsMap[d].packets += Number(a.total_packets || a.packets || 0);
-    dateWiseArrivalsMap[d].weight += (Number(a.weight_qtl || a.weight || 0) / 10);
+    dateWiseArrivalsMap[d].weight += getLowestNetWeight(a);
   });
 
   const dateWiseArrivalList = Object.entries(dateWiseArrivalsMap)
@@ -777,7 +792,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                   const isSelected = selectedAmadId === amad.amad_id;
                   const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '--';
                   const bales = Number(amad.total_packets || amad.packets || 0);
-                  const weightMt = (Number(amad.weight_qtl || amad.weight || 0) / 10);
+                  const weightMt = getLowestNetWeight(amad);
                   const isVoid = amad.status === 'cancelled';
                   const isInspected = inspectedSet.has(String(amad.amad_no || amad.temporary_arrival_no || '').trim().toUpperCase());
 

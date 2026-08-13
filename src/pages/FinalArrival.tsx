@@ -909,9 +909,23 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     return matchSearch && matchDateRange;
   });
 
+  const getLowestNetWeight = (item: any): number => {
+    if (!item) return 0;
+    const nets = [
+      Number(item.electronic_net_weight),
+      Number(item.supplier_net_weight),
+      Number(item.challan_material_weight),
+      Number(item.weight_reduced),
+      item.weight_qtl ? Number(item.weight_qtl) / 10 : 0,
+      Number(item.weight),
+      Number(item.quantity)
+    ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+    return nets.length > 0 ? Math.min(...nets) : 0;
+  };
+
   // Calculate dynamic summaries based on filtered list
   const totalBales = filteredRecords.reduce((acc, r) => acc + (Number(r.total_packets) || 0), 0);
-  const totalWeightMt = filteredRecords.reduce((acc, r) => acc + (Number(r.weight_qtl) || 0) / 10, 0);
+  const totalWeightMt = filteredRecords.reduce((acc, r) => acc + getLowestNetWeight(r), 0);
   const filteredVehiclesCount = filteredRecords.length;
 
   const totalFilteredCount = filteredRecords.length;
@@ -927,7 +941,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     }
     dateWiseArrivalsMap[d].count += 1;
     dateWiseArrivalsMap[d].packets += Number(r.total_packets || 0);
-    dateWiseArrivalsMap[d].weight += (Number(r.weight_qtl || 0) / 10);
+    dateWiseArrivalsMap[d].weight += getLowestNetWeight(r);
   });
 
   const dateWiseArrivalList = Object.entries(dateWiseArrivalsMap)
@@ -1286,7 +1300,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                     const isSelected = selectedRecordId === r.final_arrival_id;
                     const formattedDate = r.date ? new Date(r.date).toLocaleDateString('en-GB') : '--';
                     const bales = Number(r.total_packets || r.packets || 0);
-                    const weightMt = r.weight_qtl ? (r.weight_qtl / 10) : 0;
+                    const weightMt = getLowestNetWeight(r);
                     const isPending = !r.mr_no || r.mr_no.trim() === '' || r.mr_no.trim().toUpperCase() === 'DIRECT REGISTER';
                     const isVoid = r.status === 'cancelled';
                     
