@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Save, 
   X, 
   Plus, 
   Trash2, 
-  RefreshCw,
-  Archive,
-  ChevronDown,
-  Layers
+  RefreshCw, 
+  Archive, 
+  ChevronDown, 
+  Layers,
+  ClipboardCheck,
+  Calendar,
+  Filter,
+  Leaf
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
 import { dbModule } from '../services/dbModule';
-import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
+import LegacyLayout from '../components/LegacyLayout';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { supabase } from '../lib/supabase';
@@ -201,6 +205,50 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     loadUnits();
   }, []);
 
+  // Combined PO options sourced directly from Temporary Arrivals + Purchase Orders
+  const combinedPoOptions = useMemo(() => {
+    const map = new Map<string, any>();
+    
+    // Sourced from Temporary Arrival list
+    (temporaryArrivalList || []).forEach((ta: any) => {
+      const poVal = (ta.po_no || '').trim().toUpperCase();
+      const tempMrVal = (ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
+      const key = poVal || tempMrVal;
+      
+      if (key) {
+        map.set(key, {
+          po_no: poVal || tempMrVal,
+          display_label: poVal ? `${poVal} - ${ta.supplier || ta.challan_supplier || ''} (${ta.challan_material_weight || ta.quantity || 0} MT)` : `Temp M.R #${tempMrVal} - ${ta.supplier || ta.challan_supplier || ''}`,
+          temp_mr_no: tempMrVal,
+          supplier: ta.supplier || ta.challan_supplier || '',
+          broker: ta.broker || '',
+          po_date: ta.date || ta.temporary_arrival_date || '',
+          quantity: ta.challan_material_weight || ta.quantity || 0,
+          source: 'temp_arrival'
+        });
+      }
+    });
+
+    // Sourced from Purchase Orders
+    (purchaseOrders || []).forEach((po: any) => {
+      const key = String(po.po_no || '').trim().toUpperCase();
+      if (key && !map.has(key)) {
+        map.set(key, {
+          po_no: po.po_no,
+          display_label: `${po.po_no} - ${po.supplier || po.merchant || ''} (${po.total_contract_mt || po.quantity || 0} MT)`,
+          temp_mr_no: '',
+          supplier: po.supplier || po.merchant || '',
+          broker: po.broker || '',
+          po_date: po.po_date || po.date || '',
+          quantity: po.total_contract_mt || po.quantity || 0,
+          source: 'po'
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [temporaryArrivalList, purchaseOrders]);
+
   // Load master registers on startup
   useEffect(() => {
     async function loadMastersAndIncrement() {
@@ -250,7 +298,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         setMarkas(finalMarkas);
 
         if (!initialData) {
-          let nextNum = 501;
+          let nextNum = 502;
           if (allArrivals && allArrivals.length > 0) {
             let lastNum = 500;
             allArrivals.forEach((a: any) => {
@@ -372,7 +420,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             setDetails(parsedGrid.map((row: any, idx: number) => ({ ...row, srl_no: idx + 1 })));
           }
         }
-        alert(`Loaded Temporary M.R record #${tempMrNo}. Note: No matching Quality Inspection Report found.`);
       } else {
         alert(`No Temporary M.R record found matching "${tempMrNo}".`);
       }
@@ -501,97 +548,15 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             };
           });
           setDetails(newDetails);
-          alert(`Successfully mapped details & weights from Quality Inspection Report #${mrNoUpper}!`);
-        } else {
-          alert(`Quality inspection header found for #${mrNoUpper}, but no detailed row elements exist.`);
         }
-      } else {
-        alert(`Could not find an active Material Inspection with M.R. Number "${mrNoUpper}". Please select a valid inspection.`);
       }
     } catch (e: any) {
       alert("Error loading inspection records: " + e.message);
     }
   };
 
-  // Live Automatic Weight Calc logic
-  useEffect(() => {
-    let totalNetto = 0;
-    details.forEach(d => {
-      totalNetto += Number(d.netto_pnto) || 0;
-    });
-
-    const calculatedElectronicNet = (Number(formData.electronic_gross_weight) || 0) - (Number(formData.electronic_tare_weight) || 0);
-
-    setFormData(prev => {
-      const calculatedChallanWeight = Number(totalNetto.toFixed(3));
-      const updatedChallanWeight = prev.challan_material_weight === 0 || prev.challan_material_weight === "" || !prev.challan_material_weight
-        ? (calculatedChallanWeight > 0 ? calculatedChallanWeight : 0)
-        : prev.challan_material_weight;
-      
-      const calculatedSupplierNet = (Number(prev.supplier_challan_gross) || 0) - (Number(prev.supplier_tare_weight) || 0);
-      const updatedSupplierWeight = prev.supplier_net_weight === 0 || prev.supplier_net_weight === "" || !prev.supplier_net_weight
-        ? (Number(calculatedSupplierNet.toFixed(3)) > 0 ? Number(calculatedSupplierNet.toFixed(3)) : 0)
-        : prev.supplier_net_weight;
-
-      const updatedElectronicWeight = prev.electronic_net_weight === 0 || prev.electronic_net_weight === "" || !prev.electronic_net_weight
-        ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
-        : prev.electronic_net_weight;
-
-      return {
-        ...prev,
-        challan_material_weight: updatedChallanWeight,
-        supplier_net_weight: updatedSupplierWeight,
-        electronic_net_weight: updatedElectronicWeight
-      };
-    });
-  }, [
-    details, 
-    formData.supplier_challan_gross, 
-    formData.supplier_tare_weight, 
-    formData.electronic_gross_weight, 
-    formData.electronic_tare_weight
-  ]);
-
-  const handleRowChange = (index: number, field: keyof ArrivalDetailRow, val: any) => {
-    const updatedDetails = [...details];
-    
-    // Auto-fill grade name on grade code select change
-    if (field === 'receipt_grade_code') {
-      const g = grades.find(g => String(g.grade_code) === String(val));
-      if (g) {
-        updatedDetails[index].receipt_grade_name = g.grade_name;
-        updatedDetails[index].challan_grade_name = g.grade_name;
-      }
-    }
-    
-    // Auto-fill marka name on code change
-    if (field === 'challan_marka_code') {
-      const m = markas.find(m => String(m.marka_code) === String(val));
-      if (m) {
-        updatedDetails[index].challan_marka_name = m.marka_name;
-      }
-    }
-
-    updatedDetails[index] = {
-      ...updatedDetails[index],
-      [field]: val
-    } as ArrivalDetailRow;
-
-    if (field === 'quantity_chln') {
-      updatedDetails[index].quantity_rcpt = val;
-    }
-    
-    if (field === 'netto_pnto') {
-      const rounded = Math.round(Number(val) || 0);
-      updatedDetails[index].quantity_rcpt = rounded;
-      updatedDetails[index].quantity_chln = rounded;
-    }
-
-    setDetails(updatedDetails);
-  };
-
   const loadDetailsFromPo = async (poNo: string) => {
-    if (!poNo || !poNo.trim()) return;
+    if (!poNo) return;
     try {
       const poNoUpper = poNo.trim().toUpperCase();
       let filteredDetails: any[] = [];
@@ -671,6 +636,45 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     }
   };
 
+  // Live Automatic Weight Calc logic
+  useEffect(() => {
+    let totalNetto = 0;
+    details.forEach(d => {
+      totalNetto += Number(d.netto_pnto) || 0;
+    });
+
+    const calculatedElectronicNet = (Number(formData.electronic_gross_weight) || 0) - (Number(formData.electronic_tare_weight) || 0);
+
+    setFormData(prev => {
+      const calculatedChallanWeight = Number(totalNetto.toFixed(3));
+      const updatedChallanWeight = prev.challan_material_weight === 0 || prev.challan_material_weight === "" || !prev.challan_material_weight
+        ? (calculatedChallanWeight > 0 ? calculatedChallanWeight : 0)
+        : prev.challan_material_weight;
+      
+      const calculatedSupplierNet = (Number(prev.supplier_challan_gross) || 0) - (Number(prev.supplier_tare_weight) || 0);
+      const updatedSupplierWeight = prev.supplier_net_weight === 0 || prev.supplier_net_weight === "" || !prev.supplier_net_weight
+        ? (Number(calculatedSupplierNet.toFixed(3)) > 0 ? Number(calculatedSupplierNet.toFixed(3)) : 0)
+        : prev.supplier_net_weight;
+
+      const updatedElectronicWeight = prev.electronic_net_weight === 0 || prev.electronic_net_weight === "" || !prev.electronic_net_weight
+        ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
+        : prev.electronic_net_weight;
+
+      return {
+        ...prev,
+        challan_material_weight: updatedChallanWeight,
+        supplier_net_weight: updatedSupplierWeight,
+        electronic_net_weight: updatedElectronicWeight
+      };
+    });
+  }, [
+    details, 
+    formData.supplier_challan_gross, 
+    formData.supplier_tare_weight, 
+    formData.electronic_gross_weight, 
+    formData.electronic_tare_weight
+  ]);
+
   const handleInputChange = (field: string, val: any) => {
     setFormData(prev => {
       const next = { ...prev, [field]: val };
@@ -698,6 +702,21 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     });
   };
 
+  const handleSelectPoOption = (item: any) => {
+    handleInputChange('po_no', item.po_no);
+    if (item.supplier) handleInputChange('supplier', item.supplier);
+    if (item.broker) handleInputChange('broker', item.broker);
+    if (item.po_date) handleInputChange('po_date', item.po_date);
+    
+    if (item.temp_mr_no) {
+      handleInputChange('temporary_arrival_no', item.temp_mr_no);
+      loadDetailsFromAmad(item.temp_mr_no);
+    } else if (item.po_no) {
+      loadDetailsFromPo(item.po_no);
+    }
+    setShowPoDropdown(false);
+  };
+
   // Double direction linkages
   const handleAreaChange = (val: string) => {
     const upperVal = val.toUpperCase();
@@ -711,127 +730,53 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     });
   };
 
-  const handleAreaCodeChange = (val: string) => {
-    const upperVal = val.toUpperCase();
-    setFormData(prev => {
-      const matched = areas.find(a => String(a.area_code).toUpperCase() === upperVal);
-      return {
-        ...prev,
-        arrival_area_code: upperVal,
-        arrival_area_name: matched ? String(matched.area_name).toUpperCase() : prev.arrival_area_name
+  const handleRowChange = (index: number, field: keyof ArrivalDetailRow, val: any) => {
+    const updatedDetails = [...details];
+    
+    // Auto-fill grade name on grade code select change
+    if (field === 'receipt_grade_code') {
+      const g = grades.find(g => String(g.grade_code) === String(val));
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        receipt_grade_code: val,
+        receipt_grade_name: g ? g.grade_name : updatedDetails[index].receipt_grade_name,
+        challan_grade_name: g ? g.grade_name : updatedDetails[index].challan_grade_name
       };
-    });
-  };
-
-  const handleUnitCodeChange = (val: string) => {
-    setFormData(prev => {
-      const matched = val.toUpperCase() === 'I' ? 'BALES' : (val.toUpperCase() === 'II' ? 'LOOSE' : prev.unit_name);
-      return {
-        ...prev,
-        unit_code: val.toUpperCase(),
-        unit_name: matched
+    } else {
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        [field]: val
       };
-    });
-  };
-
-  const handleUnitNameChange = (val: string) => {
-    setFormData(prev => {
-      const matched = val.toUpperCase() === 'BALES' ? 'I' : (val.toUpperCase() === 'LOOSE' ? 'II' : prev.unit_code);
-      return {
-        ...prev,
-        unit_name: val.toUpperCase(),
-        unit_code: matched
-      };
-    });
+    }
+    
+    setDetails(updatedDetails);
   };
 
   const handleSave = async () => {
     if (initialData && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
-    if (loading) return;
+    if (!formData.arrival_no) {
+      alert("Arrival No. is mandatory.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      const missingFields: string[] = [];
-      if (!formData.arrival_no && !formData.mr_no) missingFields.push("Arrival No / Temporary M.R number");
-      if (!formData.supplier) missingFields.push("Supplier");
-      if ((Number(formData.challan_material_weight) || 0) <= 0) {
-        missingFields.push("Challan Material Weight (M.T)");
-      }
-      if ((Number(formData.supplier_net_weight) || 0) <= 0) {
-        missingFields.push("Supplier Net Weight (M.Ton)");
-      }
-      if ((Number(formData.electronic_net_weight) || 0) <= 0) {
-        missingFields.push("Electronic Weighbridge Net");
-      }
-
-      const activeRows = details.filter(row => 
-        row.receipt_grade_code || 
-        row.challan_marka_name || 
-        row.quantity_rcpt > 0 || 
-        row.netto_pnto > 0 ||
-        row.challan_grade_name
+      const activeRows = details.filter(d => 
+        d.receipt_grade_name || d.receipt_grade_code || d.challan_grade_name || Number(d.netto_pnto) > 0 || Number(d.quantity_chln) > 0 || Number(d.quantity_rcpt) > 0
       );
 
-      if (activeRows.length === 0) {
-        missingFields.push("At least one valid grade row in receipt grid");
-      }
-
-      if (missingFields.length > 0) {
-        alert("Please complete the required fields for Final M.R:\n\n• " + missingFields.join("\n• "));
-        setLoading(false);
-        return;
-      }
-
-      // Check to insert markas automatically
-      const uniqueNewMarkas: string[] = [];
-      activeRows.forEach(row => {
-        const markaName = (row.challan_marka_name || '').trim();
-        if (markaName) {
-          const exists = markas.some(m => (m.marka_name || '').trim().toUpperCase() === markaName.toUpperCase());
-          if (!exists && !uniqueNewMarkas.some(n => n.toUpperCase() === markaName.toUpperCase())) {
-            uniqueNewMarkas.push(markaName);
-          }
-        }
-      });
-
-      if (uniqueNewMarkas.length > 0) {
-        let maxMarkaCode = markas.reduce((acc, m) => {
-          const codeVal = parseInt(m.marka_code || '0', 10);
-          return isNaN(codeVal) ? acc : Math.max(acc, codeVal);
-        }, 170);
-
-        for (const name of uniqueNewMarkas) {
-          maxMarkaCode += 1;
-          const codeStr = String(maxMarkaCode).padStart(2, '0');
-          try {
-            await dbModule.insert('marka_master', {
-              marka_code: codeStr,
-              marka_name: name.toUpperCase()
-            });
-            activeRows.forEach(r => {
-              if ((r.challan_marka_name || '').trim().toUpperCase() === name.toUpperCase()) {
-                r.challan_marka_code = codeStr;
-                r.challan_marka_name = name.toUpperCase();
-              }
-            });
-          } catch (e) {
-            console.error("Failed to insert new marka name:", name, e);
-          }
-        }
-      }
-
-      const totalPacketsSum = Math.round(activeRows.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || 0), 0));
+      const totalPacketsSum = activeRows.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || Number(curr.quantity_chln) || 0), 0);
       const totalWeightSum = activeRows.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
       const payload = {
         financial_year: formData.financial_year,
         final_arrival_no: formData.arrival_no,
-        mr_no: formData.mr_no,
-        po_no: formData.po_no,
+        mr_no: formData.mr_no || null,
+        po_no: formData.po_no || null,
         po_date: formData.po_date || null,
-        date: formData.date,
+        date: formData.date || null,
         jci: formData.jci,
         challan_supplier: formData.challan_supplier,
         supplier: formData.supplier,
@@ -933,10 +878,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
   const totalReceiptQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || 0), 0);
   const totalChallanQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_chln) || 0), 0);
-  const totalNettoQuantity = details.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
   const resetFormToBlank = () => {
-    let nextNum = 501;
+    let nextNum = 502;
     setFormData({
       financial_year: '2026-2027',
       arrival_no: `FA-${nextNum}`,
@@ -986,906 +930,931 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     setDetails(getPaddedDetails(null));
   };
 
-  const deleteCurrentVoucher = async () => {
-    if (!initialData || !initialData.final_arrival_id) {
-      alert("No persistent voucher loaded to delete.");
-      return;
-    }
-    if (window.confirm(`Are you sure you want to completely delete Final Arrival Voucher #${formData.arrival_no}?`)) {
-      try {
-        await dbModule.delete('final_arrival', 'final_arrival_id', initialData.final_arrival_id);
-        alert("Voucher deleted successfully.");
-        if (onCancel) onCancel();
-      } catch (err: any) {
-        alert("Delete failed: " + err.message);
-      }
-    }
-  };
-
   return (
-    <LegacyLayout title="FINAL M.R" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel}>
-      <div className="bg-[#eae7e1] text-xs font-sans min-h-full flex flex-col">
-
-
-
-      <div className="flex-1 p-4 flex flex-col gap-3">
-        {/* Title Heading */}
-        <div className="text-center py-1">
-          <h1 className="text-3xl font-bold tracking-wide text-[#ac0000] font-sans">Final M.R Entry</h1>
+    <LegacyLayout title="FINAL ARRIVAL" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel} activeNavTab="final_mr">
+      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-none">
+        
+        {/* 1. HERO BANNER HEADER - DEEP GREEN THEME */}
+        <div className="bg-gradient-to-r from-[#174C2C] to-[#103A20] rounded-xl border border-[#0d301b] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#103A20] text-amber-300 flex items-center justify-center border border-[#235E39] shrink-0 shadow-xs">
+              <ClipboardCheck className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <h2 className="font-serif font-bold text-lg text-white tracking-wide flex items-center gap-2">
+                Final Arrival
+              </h2>
+              <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
+                Enter final M.R details and receipt grid items
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Master Details Frame Mockup */}
-        <div className="shrink-0 border border-[#808080] p-4 bg-white flex flex-col gap-1.5 shadow-sm">
-          {/* Row 1 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Temporary M.R No</span>
-            <input  id="formdata_temporary_arriva_944" name="formdata_temporary_arriva" aria-label="formdata temporary arriva"
-              type="text" 
-              value={formData.temporary_arrival_no || ''} 
-              onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
-              onBlur={() => {
-                if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
-              }}
-              className="w-[140px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-            <button
-              type="button"
-              onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
-              disabled={!formData.temporary_arrival_no}
-              className="bg-[#e4e0d8] border border-[#808080] px-2 py-0.5 text-[10px] font-bold text-gray-800 active:border-black disabled:opacity-50 font-sans cursor-pointer hover:bg-slate-200"
-            >
-              Fetch
-            </button>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_temporary_arriva_962" name="formdata_temporary_arriva" aria-label="formdata temporary arriva"
-              type="date" 
-              value={formData.temporary_arrival_date || ''} 
-              onChange={(e) => handleInputChange('temporary_arrival_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
-          </div>
+        {/* 2. MASTER FORM FIELDS CARD */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">
+          
+          {/* ROW 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
+            {/* Temporary M.R No */}
+            <div className="lg:col-span-1">
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary M.R No</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={formData.temporary_arrival_no || ''}
+                  onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
+                  onBlur={() => {
+                    if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
+                  }}
+                  placeholder="Enter Temporary M.R No"
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono font-semibold focus:border-[#103A20] focus:ring-1 focus:ring-[#103A20]"
+                />
+                <button
+                  type="button"
+                  onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
+                  className="bg-[#103A20] hover:bg-[#1c5932] text-white px-2.5 h-8 rounded text-xs font-bold transition-colors cursor-pointer shrink-0"
+                >
+                  Pick
+                </button>
+              </div>
+            </div>
 
-          {/* Row 2 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival No</span>
-            <input  id="formdata_arrival_no_973" name="formdata_arrival_no" aria-label="formdata arrival no"
-              type="text" 
-              value={formData.arrival_no || ''} 
-              onChange={(e) => handleInputChange('arrival_no', e.target.value)}
-              className="w-[180px] h-6 bg-white border border-[#ac0000] px-2 outline-none font-mono text-xs text-red-900 font-bold focus:bg-amber-50"
-            />
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_date_980" name="formdata_date" aria-label="formdata date"
-              type="date" 
-              value={formData.date || ''} 
-              onChange={(e) => handleInputChange('date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '100px' }}>Mill P.O No.</span>
-            <div className="relative flex items-center">
-              <div className="relative w-[180px]">
-                <input  id="select_po_989" name="select_po" aria-label="-- SELECT PO --"
-                  type="text" 
-                  value={formData.po_no || ''} 
+            {/* Date */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.temporary_arrival_date || ''}
+                onChange={(e) => handleInputChange('temporary_arrival_date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+              />
+            </div>
+
+            {/* Arrival No */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival No</label>
+              <input
+                type="text"
+                value={formData.arrival_no || ''}
+                onChange={(e) => handleInputChange('arrival_no', e.target.value)}
+                className="w-full h-8 bg-red-50/30 border border-red-500 rounded px-2 outline-none text-xs font-mono font-bold text-red-600 focus:border-red-700"
+              />
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.date || ''}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+              />
+            </div>
+
+            {/* MR / P.O No. */}
+            <div className="relative">
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">MR / P.O No.</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.po_no || ''}
                   onChange={(e) => handleInputChange('po_no', e.target.value)}
                   onFocus={() => setShowPoDropdown(true)}
                   onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
-                  autoComplete="new-password"
-                  placeholder="-- SELECT PO --"
-                  className="w-full h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50 uppercase pr-6"
+                  placeholder="-- SELECT MR / P.O --"
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20] pr-6"
                 />
-                <div 
-                  className="absolute right-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-pointer text-gray-500 hover:text-black"
+                <div
+                  className="absolute right-1 top-0 bottom-0 w-6 flex items-center justify-center cursor-pointer text-slate-500"
                   onMouseDown={(e) => { e.preventDefault(); setShowPoDropdown(!showPoDropdown); }}
                 >
                   <ChevronDown size={14} />
                 </div>
-                {showPoDropdown && purchaseOrders.length > 0 && (
-                   <div className="absolute top-6 left-0 w-[400px] bg-white border border-gray-400 max-h-48 overflow-y-auto z-[9999] shadow-2xl">
-                      {purchaseOrders
-                        .filter(po => !formData.po_no || po.po_no.toLowerCase().includes(formData.po_no.toLowerCase()))
-                        .map(po => (
-                          <div 
-                             key={po.po_id || po.po_no} 
-                             className="px-2 py-1 text-xs font-mono cursor-pointer hover:bg-blue-100 uppercase border-b border-gray-100 last:border-b-0"
-                             onClick={() => {
-                                 handleInputChange('po_no', po.po_no);
-                                 handleInputChange('supplier', po.supplier || po.merchant || formData.supplier);
-                                 handleInputChange('broker', po.broker || formData.broker);
-                                 handleInputChange('po_date', po.po_date || formData.po_date);
-                                 setShowPoDropdown(false);
-                             }}
-                          >
-                             <span className="font-bold text-indigo-900">{po.po_no}</span> - <span className="text-gray-600">{po.supplier || po.merchant}</span> <span className="text-gray-400">({po.quantity || po.total_contract_mt} MT)</span>
-                          </div>
+                {showPoDropdown && combinedPoOptions.length > 0 && (
+                  <div className="absolute top-9 left-0 w-[380px] bg-white border border-slate-300 rounded-lg max-h-48 overflow-y-auto z-[9999] shadow-xl">
+                    {combinedPoOptions
+                      .filter(opt => !formData.po_no || opt.po_no.toLowerCase().includes(formData.po_no.toLowerCase()) || opt.display_label.toLowerCase().includes(formData.po_no.toLowerCase()))
+                      .map((opt, idx) => (
+                        <div
+                          key={idx}
+                          className="px-3 py-1.5 text-xs font-mono cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-b-0 flex items-center justify-between"
+                          onClick={() => handleSelectPoOption(opt)}
+                        >
+                          <span className="font-bold text-slate-800">{opt.po_no}</span>
+                          <span className="text-[10px] text-slate-500 font-sans">{opt.supplier}</span>
+                        </div>
                       ))}
-                   </div>
+                  </div>
                 )}
               </div>
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_po_date_1029" name="formdata_po_date" aria-label="formdata po date"
-              type="date" 
-              value={formData.po_date || ''} 
-              onChange={(e) => handleInputChange('po_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>J.C.I</span>
-            <select  id="formdata_jci_no_1036" name="formdata_jci_no" aria-label="formdata jci no"
-              value={formData.jci || 'No'} 
-              onChange={(e) => handleInputChange('jci', e.target.value)}
-              className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none font-sans text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
 
-          {/* Row 3 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan Supplier</span>
-            <input  id="formdata_challan_supplier_1049" name="formdata_challan_supplier" aria-label="formdata challan supplier"
-              type="text" 
-              list="suppliers_dl"
-              value={formData.challan_supplier || ''} 
-              onChange={(e) => handleInputChange('challan_supplier', e.target.value.toUpperCase())}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
-
-          {/* Row 4 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Supplier</span>
-            <input  id="formdata_supplier_1061" name="formdata_supplier" aria-label="formdata supplier"
-              type="text" 
-              list="suppliers_dl"
-              value={formData.supplier || ''} 
-              onChange={(e) => handleInputChange('supplier', e.target.value.toUpperCase())}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
-
-          {/* Row 5 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Broker</span>
-            <input  id="formdata_broker_1073" name="formdata_broker" aria-label="formdata broker"
-              type="text" 
-              list="brokers_dl"
-              value={formData.broker || ''} 
-              onChange={(e) => handleInputChange('broker', e.target.value.toUpperCase())}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
-
-          {/* Row 6 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Transporter Name</span>
-            <input  id="formdata_transporter_name_1085" name="formdata_transporter_name" aria-label="formdata transporter name"
-              type="text" 
-              value={formData.transporter_name || ''} 
-              onChange={(e) => handleInputChange('transporter_name', e.target.value)}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-sans text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
-
-          {/* Row 7 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Challan / Railway Receipt No.</span>
-              <input  id="formdata_challan_rr_no_1097" name="formdata_challan_rr_no" aria-label="formdata challan rr no"
-                type="text" 
-                value={formData.challan_rr_no || ''} 
-                onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
-                className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+            {/* Date */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.po_date || ''}
+                onChange={(e) => handleInputChange('po_date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
               />
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_challan_rr_date_1105" name="formdata_challan_rr_date" aria-label="formdata challan rr date"
-              type="date" 
-              value={formData.challan_rr_date || ''} 
-              onChange={(e) => handleInputChange('challan_rr_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
+
+            {/* J.C.I No */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">J.C.I No</label>
+              <select
+                value={formData.jci || 'No'}
+                onChange={(e) => handleInputChange('jci', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
           </div>
 
-          {/* Row 8 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Lorry Number</span>
-            <input  id="e_g_wb_25k_9901_1116" name="e_g_wb_25k_9901" aria-label="e.g. WB-25K-9901"
-              type="text" 
-              value={formData.lorry_number || ''} 
-              onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
-              placeholder="e.g. WB-25K-9901"
-              className="w-[200px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 font-bold focus:border-black focus:bg-amber-50"
-            />
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '80px' }}>Pan No</span>
-            <input  id="formdata_pan_no_1124" name="formdata_pan_no" aria-label="formdata pan no"
-              type="text" 
-              value={formData.pan_no || ''} 
-              onChange={(e) => handleInputChange('pan_no', e.target.value.toUpperCase())}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
-
-          {/* Row 9 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Consignment Note No.</span>
-              <input  id="formdata_consignment_note_1136" name="formdata_consignment_note" aria-label="formdata consignment note"
-                type="text" 
-                value={formData.consignment_note_no || ''} 
-                onChange={(e) => handleInputChange('consignment_note_no', e.target.value)}
-                className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+          {/* ROW 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan Supplier</label>
+              <input
+                type="text"
+                list="suppliers_dl"
+                value={formData.challan_supplier || ''}
+                onChange={(e) => handleInputChange('challan_supplier', e.target.value.toUpperCase())}
+                placeholder="Enter Challan Supplier"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_consignment_note_1144" name="formdata_consignment_note" aria-label="formdata consignment note"
-              type="date" 
-              value={formData.consignment_note_date || ''} 
-              onChange={(e) => handleInputChange('consignment_note_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier</label>
+              <input
+                type="text"
+                list="suppliers_dl"
+                value={formData.supplier || ''}
+                onChange={(e) => handleInputChange('supplier', e.target.value.toUpperCase())}
+                placeholder="Enter Supplier"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry No.</label>
+              <input
+                type="text"
+                value={formData.lorry_number || ''}
+                onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
+                placeholder="WB-12K-9901"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Part No</label>
+              <input
+                type="text"
+                value={formData.pan_no || ''}
+                onChange={(e) => handleInputChange('pan_no', e.target.value.toUpperCase())}
+                placeholder="Enter Part No"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.di_date || ''}
+                onChange={(e) => handleInputChange('di_date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
           </div>
 
-          {/* Row 10 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>D.I. No.</span>
-              <input  id="formdata_di_no_1156" name="formdata_di_no" aria-label="formdata di no"
-                type="text" 
-                value={formData.di_no || ''} 
+          {/* ROW 3 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Broker</label>
+              <input
+                type="text"
+                list="brokers_dl"
+                value={formData.broker || ''}
+                onChange={(e) => handleInputChange('broker', e.target.value.toUpperCase())}
+                placeholder="Enter Broker"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Transporter Name</label>
+              <input
+                type="text"
+                value={formData.transporter_name || ''}
+                onChange={(e) => handleInputChange('transporter_name', e.target.value)}
+                placeholder="Enter Transporter Name"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry No.</label>
+              <input
+                type="text"
+                value={formData.lorry_number || ''}
+                onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
+                placeholder="WB-12K-9901"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">D.I. No.</label>
+              <input
+                type="text"
+                value={formData.di_no || ''}
                 onChange={(e) => handleInputChange('di_no', e.target.value)}
-                className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                placeholder="Enter D.I. No."
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_di_date_1164" name="formdata_di_date" aria-label="formdata di date"
-              type="date" 
-              value={formData.di_date || ''} 
-              onChange={(e) => handleInputChange('di_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.di_date || ''}
+                onChange={(e) => handleInputChange('di_date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
           </div>
 
-          {/* Row 11 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Invoice No.</span>
-              <input  id="formdata_invoice_no_1176" name="formdata_invoice_no" aria-label="formdata invoice no"
-                type="text" 
-                value={formData.invoice_no || ''} 
+          {/* ROW 4 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="md:col-span-2 grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan / Railway Receipt No.</label>
+                <input
+                  type="text"
+                  value={formData.challan_rr_no || ''}
+                  onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
+                  placeholder="Enter Challan / Railway Receipt No."
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formData.challan_rr_date || ''}
+                  onChange={(e) => handleInputChange('challan_rr_date', e.target.value)}
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Invoice No.</label>
+              <input
+                type="text"
+                value={formData.invoice_no || ''}
                 onChange={(e) => handleInputChange('invoice_no', e.target.value)}
-                className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                placeholder="Enter Invoice No."
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_invoice_date_1184" name="formdata_invoice_date" aria-label="formdata invoice date"
-              type="date" 
-              value={formData.invoice_date || ''} 
-              onChange={(e) => handleInputChange('invoice_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">R.F.S</label>
+              <input
+                type="text"
+                value={formData.invoice_no || ''}
+                onChange={(e) => handleInputChange('invoice_no', e.target.value)}
+                placeholder="Enter Invoice No."
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.invoice_date || ''}
+                onChange={(e) => handleInputChange('invoice_date', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
           </div>
 
-          {/* Row 12 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>P.T.F</span>
-            <select  id="select_1195" name="select" aria-label="select"
-              onChange={(e) => {
-                handleInputChange('ptf', e.target.value);
-              }}
-              className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '140px' }}>Lorry Returned</span>
-            <select  id="formdata_lorry_returned_n_1205" name="formdata_lorry_returned_n" aria-label="formdata lorry returned n"
-              value={formData.lorry_returned || 'No'} 
-              onChange={(e) => handleInputChange('lorry_returned', e.target.value)}
-              className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '240px' }}>Lorry Returned from Other Mill</span>
-            <select  id="formdata_lorry_returned_o_1214" name="formdata_lorry_returned_o" aria-label="formdata lorry returned o"
-              value={formData.lorry_returned_other_mill || 'No'} 
-              onChange={(e) => handleInputChange('lorry_returned_other_mill', e.target.value)}
-              className="w-[80px] h-6 bg-white border border-[#808080] px-1 outline-none text-xs focus:border-black focus:bg-amber-50"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
+          {/* ROW 5 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="md:col-span-2 grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Consignment Notice No.</label>
+                <input
+                  type="text"
+                  value={formData.consignment_note_no || ''}
+                  onChange={(e) => handleInputChange('consignment_note_no', e.target.value)}
+                  placeholder="Enter Consignment Note No."
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formData.consignment_note_date || ''}
+                  onChange={(e) => handleInputChange('consignment_note_date', e.target.value)}
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival Area</label>
+              <input
+                type="text"
+                list="areas_dl"
+                value={formData.arrival_area_name || ''}
+                onChange={(e) => handleAreaChange(e.target.value)}
+                placeholder="Search / Choose Transit Area"
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              />
+            </div>
           </div>
 
-          {/* Row 13 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Arrival Area</span>
-            <input  id="formdata_arrival_area_cod_1227" name="formdata_arrival_area_cod" aria-label="formdata arrival area cod"
-              type="text" 
-              value={formData.arrival_area_code || ''} 
-              onChange={(e) => handleAreaCodeChange(e.target.value)}
-              className="bg-white border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center"
-            />
-            <input  id="search_choose_transit_are_1233" name="search_choose_transit_are" aria-label="SEARCH / CHOOSE TRANSIT AREA"
-              type="text" 
-              list="areas_dl"
-              value={formData.arrival_area_name || ''} 
-              onChange={(e) => handleAreaChange(e.target.value)}
-              placeholder="SEARCH / CHOOSE TRANSIT AREA"
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none text-xs font-bold text-slate-800 uppercase focus:border-black focus:bg-amber-50"
-            />
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Unit</span>
-            <input  id="formdata_unit_code_1242" name="formdata_unit_code" aria-label="formdata unit code"
-              type="text" 
-              value={formData.unit_code || ''} 
-              onChange={(e) => handleUnitCodeChange(e.target.value)}
-              className="border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[50px] text-center bg-slate-50"
-              readOnly
-            />
-            <select  id="formdata_unit_name_bales_1249" name="formdata_unit_name_bales" aria-label="formdata unit name bales"
-              value={formData.unit_name || 'BALES'} 
-              onChange={(e) => handleUnitNameChange(e.target.value)}
-              className="border border-[#808080] px-1 h-6 outline-none text-xs w-[120px] bg-white font-bold cursor-pointer"
-            >
-              {Array.from(new Set([...unitList, formData.unit_name].filter(Boolean))).map((u: string) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
-          </div>
+          {/* ROW 6 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">R.F.S</label>
+              <select
+                value={formData.ptf || 'No'}
+                onChange={(e) => handleInputChange('ptf', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
 
-          {/* Row 14 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>Way Bill No.</span>
-              <input  id="formdata_way_bill_no_1264" name="formdata_way_bill_no" aria-label="formdata way bill no"
-                type="text" 
-                value={formData.way_bill_no || ''} 
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry Returned</label>
+              <select
+                value={formData.lorry_returned || 'No'}
+                onChange={(e) => handleInputChange('lorry_returned', e.target.value)}
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2 grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">R.R / G.R No.</label>
+                <input
+                  type="text"
+                  value={formData.way_bill_no || ''}
+                  onChange={(e) => handleInputChange('way_bill_no', e.target.value)}
+                  placeholder="Enter R.R / G.R No."
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formData.way_bill_date || ''}
+                  onChange={(e) => handleInputChange('way_bill_date', e.target.value)}
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Way Bill No.</label>
+              <input
+                type="text"
+                value={formData.way_bill_no || ''}
                 onChange={(e) => handleInputChange('way_bill_no', e.target.value)}
-                className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 focus:border-black focus:bg-amber-50"
+                placeholder="Enter Way Bill No."
+                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '50px' }}>Date</span>
-            <input  id="formdata_way_bill_date_1272" name="formdata_way_bill_date" aria-label="formdata way bill date"
-              type="date" 
-              value={formData.way_bill_date || ''} 
-              onChange={(e) => handleInputChange('way_bill_date', e.target.value)}
-              className="w-[130px] h-6 bg-white border border-[#808080] px-2 outline-none font-mono text-xs text-slate-800 text-center focus:border-black focus:bg-amber-50"
-            />
           </div>
 
-          {/* Row 15 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '180px' }}>A.P.M.C Fees</span>
-            <input  id="formdata_apmc_fees_1283" name="formdata_apmc_fees" aria-label="formdata apmc fees"
-              type="number" 
-              step="any"
-              value={formData.apmc_fees || ''} 
-              onChange={(e) => handleInputChange('apmc_fees', e.target.value === '' ? '' : Number(e.target.value))}
-              className="bg-white border border-[#808080] px-2 h-6 outline-none font-mono text-xs w-[120px] text-right focus:border-black focus:bg-amber-50"
-            />
-            
-            <span className="text-xs font-semibold text-gray-800 text-right shrink-0" style={{ width: '80px' }}>Remarks</span>
-            <input  id="formdata_remarks_1292" name="formdata_remarks" aria-label="formdata remarks"
-              type="text" 
-              value={formData.remarks || ''} 
-              onChange={(e) => handleInputChange('remarks', e.target.value)}
-              className="flex-1 h-6 bg-white border border-[#808080] px-2 outline-none text-xs text-slate-800 focus:border-black focus:bg-amber-50"
-            />
-          </div>
         </div>
 
-        {/* Dual level Receipt Grid Table */}
-        <div className="flex-1 min-h-[180px] border border-slate-400 bg-[#dfdfdf] shadow-sm overflow-auto">
-          <div className="flex items-center justify-between p-1.5 bg-[#d4d0c8] border-b border-slate-400">
-             <span className="text-[10px] font-bold uppercase text-slate-800">Final MR Receipt Grid Items</span>
-             <div className="flex items-center gap-1.5">
-                <button
-                   type="button"
-                   onClick={handleAddRow}
-                   className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
-                >
-                   + Spawn Row
-                </button>
-                <button
-                   type="button"
-                   onClick={handleDeleteRow}
-                   className="bg-rose-800 hover:bg-rose-900 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
-                >
-                   - Delete Row
-                </button>
-             </div>
+        {/* 3. FINAL MR RECEIPT GRID ITEMS CARD */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-800" />
+              <h3 className="font-bold text-slate-800 text-sm">Final MR Receipt Grid Items</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddRow}
+                className="bg-[#103A20] hover:bg-[#1c5932] text-white px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer"
+              >
+                + Spawn Row
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteRow}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer"
+              >
+                - Delete Row
+              </button>
+            </div>
           </div>
-          <table className="w-full table-fixed min-w-[950px]">
-            <thead className="bg-[#ac0000] text-white font-sans text-[10px] uppercase border-b border-slate-500">
-              <tr className="border-b border-red-800 text-center font-bold">
-                <th rowSpan={2} className="border-r border-red-800 w-10 text-center py-1">Srl. No</th>
-                <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Receipt Grade</th>
-                <th rowSpan={2} className="border-r border-red-800 w-20 text-center py-1">Crop Year</th>
-                <th rowSpan={2} className="border-r border-red-800 w-32 text-left py-1 pl-2">Challan Grade Name</th>
-                <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Agency</th>
-                <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Challan Marka</th>
-                <th rowSpan={2} className="border-r border-red-800 w-24 text-center py-1">Marks (Phota)</th>
-                <th colSpan={2} className="border-r border-red-800 text-center py-0.5">Quantity</th>
-                <th rowSpan={2} className="border-r border-red-800 w-16 text-center py-1">Unit</th>
-                <th rowSpan={2} className="text-left py-1 pl-2">Remarks</th>
-              </tr>
-              <tr className="text-center font-semibold">
-                <th className="border-r border-red-800 w-12 py-0.5">Code</th>
-                <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
-                <th className="border-r border-red-800 w-12 py-0.5">Code</th>
-                <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
-                <th className="border-r border-red-800 w-12 py-0.5">Code</th>
-                <th className="border-r border-red-800 w-28 text-left pl-2">Name</th>
-                <th className="border-r border-red-800 w-14 text-right pr-2">Chln.</th>
-                <th className="border-r border-red-800 w-14 text-right pr-2">Rcpt.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {details.map((row, index) => (
-                <tr key={index} className="border-b border-slate-300 hover:bg-amber-50/30 transition-colors h-7 text-xs font-mono">
-                  {/* Srl. No */}
-                  <td className="bg-slate-200 border-r border-slate-300 text-center font-bold text-gray-700 text-[11px]">
-                    {row.srl_no}
-                  </td>
-                  
-                  {/* Receipt Grade Code */}
-                  <td className="border-r border-slate-300">
-                    <select
- id="row_receipt_grade_code_1357" name="row_receipt_grade_code" aria-label="row receipt grade code"                      value={row.receipt_grade_code}
-                      onChange={(e) => handleRowChange(index, 'receipt_grade_code', e.target.value)}
-                      className="w-full h-full bg-slate-50 border-0 outline-none px-1 text-center font-bold text-slate-800 text-[11px]"
-                    >
-                      <option value="">--</option>
-                      {grades.map(g => (
-                        <option key={g.grade_code} value={g.grade_code}>{g.grade_code}</option>
-                      ))}
-                    </select>
-                  </td>
 
-                  {/* Receipt Grade Name */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_receipt_grade_name_1371" name="row_receipt_grade_name" aria-label="row receipt grade name"
-                      type="text"
-                      list="grades_dl"
-                      value={row.receipt_grade_name}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const matched = grades.find(g => String(g.grade_name).toUpperCase() === val);
-                        setDetails(prev => {
-                          const next = [...prev];
-                          next[index] = {
-                            ...next[index],
-                            receipt_grade_name: val,
-                            receipt_grade_code: matched ? matched.grade_code : next[index].receipt_grade_code,
-                            challan_grade_name: matched ? matched.grade_name : next[index].challan_grade_name
-                          };
-                          return next;
-                        });
-                      }}
-                      className="w-full h-full bg-white border-0 outline-none px-1 uppercase text-[11px]"
-                    />
-                  </td>
-
-                  {/* Crop Year */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_crop_year_1395" name="row_crop_year" aria-label="row crop year"
-                      type="text"
-                      value={row.crop_year}
-                      onChange={(e) => handleRowChange(index, 'crop_year', e.target.value)}
-                      className="w-full h-full bg-white border-0 outline-none px-1 text-center text-[11px]"
-                    />
-                  </td>
-
-                  {/* Challan Grade Name */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_challan_grade_name_1405" name="row_challan_grade_name" aria-label="row challan grade name"
-                      type="text"
-                      value={row.challan_grade_name}
-                      onChange={(e) => handleRowChange(index, 'challan_grade_name', e.target.value.toUpperCase())}
-                      className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
-                    />
-                  </td>
-
-                  {/* Agency Code */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_agency_code_1415" name="row_agency_code" aria-label="row agency code"
-                      type="text"
-                      value={row.agency_code || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const matched = agencies.find(a => String(a.agency_code).toUpperCase() === val);
-                        setDetails(prev => {
-                          const next = [...prev];
-                          next[index] = {
-                            ...next[index],
-                            agency_code: val,
-                            agency_name: matched ? String(matched.agency_name).toUpperCase() : next[index].agency_name
-                          };
-                          return next;
-                        });
-                      }}
-                      className="w-full h-full bg-[#ffffd2] border-0 outline-none px-1 text-center font-bold text-[11px]"
-                    />
-                  </td>
-
-                  {/* Agency Name */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_agency_name_1437" name="row_agency_name" aria-label="row agency name"
-                      type="text"
-                      list="agencies_dl"
-                      value={row.agency_name || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const matched = agencies.find(a => String(a.agency_name).toUpperCase() === val);
-                        setDetails(prev => {
-                          const next = [...prev];
-                          next[index] = {
-                            ...next[index],
-                            agency_name: val,
-                            agency_code: matched ? String(matched.agency_code).toUpperCase() : next[index].agency_code
-                          };
-                          return next;
-                        });
-                      }}
-                      className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
-                    />
-                  </td>
-
-                  {/* Challan Marka Code */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_challan_marka_code_1460" name="row_challan_marka_code" aria-label="row challan marka code"
-                      type="text"
-                      value={row.challan_marka_code || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const matched = markas.find(m => String(m.marka_code).toUpperCase() === val);
-                        setDetails(prev => {
-                          const next = [...prev];
-                          next[index] = {
-                            ...next[index],
-                            challan_marka_code: val,
-                            challan_marka_name: matched ? String(matched.marka_name).toUpperCase() : next[index].challan_marka_name
-                          };
-                          return next;
-                        });
-                      }}
-                      className="w-full h-full bg-[#ffffd2] border-0 outline-none px-1 text-center font-bold text-[11px]"
-                    />
-                  </td>
-
-                  {/* Challan Marka Name */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_challan_marka_name_1482" name="row_challan_marka_name" aria-label="row challan marka name"
-                      type="text"
-                      list="markas_dl"
-                      value={row.challan_marka_name || ''}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        const matched = markas.find(m => String(m.marka_name).toUpperCase() === val);
-                        setDetails(prev => {
-                          const next = [...prev];
-                          next[index] = {
-                            ...next[index],
-                            challan_marka_name: val,
-                            challan_marka_code: matched ? String(matched.marka_code).toUpperCase() : next[index].challan_marka_code
-                          };
-                          return next;
-                        });
-                      }}
-                      className="w-full h-full bg-white border-0 outline-none px-2 uppercase text-[11px]"
-                    />
-                  </td>
-
-                  {/* Marks (Phota) */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_marks_phota_1505" name="row_marks_phota" aria-label="row marks phota"
-                      type="text"
-                      value={row.marks_phota || ''}
-                      onChange={(e) => handleRowChange(index, 'marks_phota', e.target.value)}
-                      className="w-full h-full bg-white border-0 outline-none px-2 text-[11px]"
-                    />
-                  </td>
-
-                  {/* Quantity Chln. */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_quantity_chln_undefin_1515" name="row_quantity_chln_undefin" aria-label="row quantity chln undefin"
-                      type="number"
-                      step="1"
-                      value={row.quantity_chln !== undefined ? row.quantity_chln : 0}
-                      onChange={(e) => handleRowChange(index, 'quantity_chln', e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full h-full bg-white border-0 outline-none px-1 text-right text-[11px] font-bold"
-                    />
-                  </td>
-
-                  {/* Quantity Rcpt. */}
-                  <td className="border-r border-slate-300">
-                    <input  id="row_quantity_rcpt_undefin_1526" name="row_quantity_rcpt_undefin" aria-label="row quantity rcpt undefin"
-                      type="number"
-                      step="1"
-                      value={row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0}
-                      onChange={(e) => handleRowChange(index, 'quantity_rcpt', e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full h-full bg-amber-50 border-0 outline-none px-1 text-right text-[11px] font-bold text-indigo-950"
-                    />
-                  </td>
-
-                  {/* Unit */}
-                  <td className="border-r border-slate-300">
-                    <select
- id="row_unit_bales_1537" name="row_unit_bales" aria-label="row unit bales"                      value={row.unit || 'BALES'}
-                      onChange={(e) => handleRowChange(index, 'unit', e.target.value)}
-                      className="w-full h-full bg-white border-0 outline-none px-1 text-[10px] uppercase font-bold text-slate-700 cursor-pointer"
-                    >
-                      {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
-                        <option key={u} value={u}>{u}</option>
-                      ))}
-                    </select>
-                  </td>
-
-                  {/* Remarks */}
-                  <td>
-                    <input  id="row_remarks_1550" name="row_remarks" aria-label="row remarks"
-                      type="text"
-                      value={row.remarks}
-                      onChange={(e) => handleRowChange(index, 'remarks', e.target.value)}
-                      className="w-full h-full bg-white border-0 outline-none px-2 text-[11px]"
-                    />
-                  </td>
+          {/* TABLE */}
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[1000px] text-xs">
+              <thead className="bg-[#103A20] text-white text-[10px] font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="p-2 text-center w-12">SRL NO</th>
+                  <th className="p-2 text-center" colSpan={2}>RECEIPT GRADE</th>
+                  <th className="p-2 text-center w-24">CROP YEAR</th>
+                  <th className="p-2 text-center">CHALLAN GRADE</th>
+                  <th className="p-2 text-center" colSpan={2}>AGENCY</th>
+                  <th className="p-2 text-center" colSpan={2}>CHALLAN MARKA</th>
+                  <th className="p-2 text-center">MARKS (PHOTA)</th>
+                  <th className="p-2 text-center" colSpan={3}>QUANTITY</th>
+                  <th className="p-2 text-center">REMARKS</th>
+                  <th className="p-2 text-center w-10"></th>
                 </tr>
-              ))}
-            </tbody>
-            {/* Grid Total Footer summary row */}
-            <tfoot className="bg-slate-200 border-t border-slate-400 text-xs font-sans text-gray-700 h-8">
-              <tr className="font-bold">
-                <td colSpan={10} className="text-right pr-4 font-bold uppercase text-[10px]">Grid Total:</td>
-                <td className="text-right pr-2 border-r border-slate-300 text-slate-800 font-mono font-black">{totalChallanQuantity}</td>
-                <td className="text-right pr-2 border-r border-slate-300 text-blue-900 font-mono font-black">{totalReceiptQuantity}</td>
-                <td className="border-r border-slate-300"></td>
-                <td className="pl-4 uppercase text-[9px] text-gray-500">Auto-Calculated Summary</td>
-              </tr>
-            </tfoot>
-          </table>
+                <tr className="bg-[#174C2C] text-[9px]">
+                  <th className="p-1"></th>
+                  <th className="p-1 text-center w-16">CODE</th>
+                  <th className="p-1 text-left">NAME</th>
+                  <th className="p-1"></th>
+                  <th className="p-1 text-left">NAME</th>
+                  <th className="p-1 text-center w-16">CODE</th>
+                  <th className="p-1 text-left">NAME</th>
+                  <th className="p-1 text-center w-16">CODE</th>
+                  <th className="p-1 text-left">NAME</th>
+                  <th className="p-1"></th>
+                  <th className="p-1 text-right w-16">CHLN.</th>
+                  <th className="p-1 text-right w-16">RCPT.</th>
+                  <th className="p-1 text-center w-20">UNIT</th>
+                  <th className="p-1"></th>
+                  <th className="p-1"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {details.map((row, index) => (
+                  <tr key={index} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-1.5 text-center font-bold text-slate-600 bg-slate-50">{row.srl_no}</td>
+                    <td className="p-1.5">
+                      <select
+                        value={row.receipt_grade_code}
+                        onChange={(e) => handleRowChange(index, 'receipt_grade_code', e.target.value)}
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs outline-none"
+                      >
+                        <option value="">--</option>
+                        {grades.map(g => (
+                          <option key={g.grade_code} value={g.grade_code}>{g.grade_code}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        list="grades_dl"
+                        value={row.receipt_grade_name}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = grades.find(g => String(g.grade_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              receipt_grade_name: val,
+                              receipt_grade_code: matched ? matched.grade_code : next[index].receipt_grade_code,
+                              challan_grade_name: matched ? matched.grade_name : next[index].challan_grade_name
+                            };
+                            return next;
+                          });
+                        }}
+                        placeholder="Enter Name"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.crop_year}
+                        onChange={(e) => handleRowChange(index, 'crop_year', e.target.value)}
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-center outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.challan_grade_name}
+                        onChange={(e) => handleRowChange(index, 'challan_grade_name', e.target.value.toUpperCase())}
+                        placeholder="Enter Grade Name"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.agency_code || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = agencies.find(a => String(a.agency_code).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              agency_code: val,
+                              agency_name: matched ? String(matched.agency_name).toUpperCase() : next[index].agency_name
+                            };
+                            return next;
+                          });
+                        }}
+                        placeholder="Enter Code"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-center outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        list="agencies_dl"
+                        value={row.agency_name || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = agencies.find(a => String(a.agency_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              agency_name: val,
+                              agency_code: matched ? String(matched.agency_code).toUpperCase() : next[index].agency_code
+                            };
+                            return next;
+                          });
+                        }}
+                        placeholder="Enter Name"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.challan_marka_code || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = markas.find(m => String(m.marka_code).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              challan_marka_code: val,
+                              challan_marka_name: matched ? String(matched.marka_name).toUpperCase() : next[index].challan_marka_name
+                            };
+                            return next;
+                          });
+                        }}
+                        placeholder="Enter Code"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-center outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        list="markas_dl"
+                        value={row.challan_marka_name || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          const matched = markas.find(m => String(m.marka_name).toUpperCase() === val);
+                          setDetails(prev => {
+                            const next = [...prev];
+                            next[index] = {
+                              ...next[index],
+                              challan_marka_name: val,
+                              challan_marka_code: matched ? String(matched.marka_code).toUpperCase() : next[index].challan_marka_code
+                            };
+                            return next;
+                          });
+                        }}
+                        placeholder="Enter Name"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none uppercase"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.marks_phota || ''}
+                        onChange={(e) => handleRowChange(index, 'marks_phota', e.target.value)}
+                        placeholder="Enter Marks"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="number"
+                        value={row.quantity_chln !== undefined ? row.quantity_chln : 0}
+                        onChange={(e) => handleRowChange(index, 'quantity_chln', e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-right font-bold outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="number"
+                        value={row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0}
+                        onChange={(e) => handleRowChange(index, 'quantity_rcpt', e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-right font-bold outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5">
+                      <select
+                        value={row.unit || 'BALES'}
+                        onChange={(e) => handleRowChange(index, 'unit', e.target.value)}
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs outline-none font-semibold"
+                      >
+                        {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-1.5">
+                      <input
+                        type="text"
+                        value={row.remarks}
+                        onChange={(e) => handleRowChange(index, 'remarks', e.target.value)}
+                        placeholder="Enter Remarks"
+                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs outline-none"
+                      />
+                    </td>
+                    <td className="p-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetails(prev => prev.filter((_, i) => i !== index).map((r, i) => ({ ...r, srl_no: i + 1 })));
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 rounded cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* FOOTER TOTAL BAR */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleAddRow}
+              className="text-[#103A20] hover:text-[#1c5932] font-bold text-xs flex items-center gap-1 cursor-pointer"
+            >
+              + Add New Row
+            </button>
+            <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+              <span>GRID TOTAL:</span>
+              <span>CHLN: <span className="font-mono text-slate-900">{totalChallanQuantity}</span></span>
+              <span>RCPT: <span className="font-mono text-slate-900">{totalReceiptQuantity}</span></span>
+              <span className="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded font-bold text-[10px] uppercase">
+                AUTO-CALCULATED SUMMARY
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Triple Column Bottom Weighments Desk precisely matching Jute Screen layout */}
-        <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Column 1 */}
-          <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
-            <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1 flex items-center justify-between">
-              <span>Supplier Weights Reference</span>
-              <span className="text-[9px] text-red-600 font-bold lowercase font-sans">* mandatory</span>
-            </h3>
-            <div className="flex flex-col gap-1.5 mt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
-                  Challan Material Weight (M.T): <span className="text-red-600 font-bold">*</span>
-                </span>
-                <input  id="formdata_challan_material_1586" name="formdata_challan_material" aria-label="formdata challan material"
+        {/* 4. 3-COLUMN WEIGHBRIDGES & METRICS CARD */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* CARD 1 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <ClipboardCheck className="w-4 h-4 text-emerald-800" /> Supplier Weights Reference
+              </h4>
+              <span className="text-[10px] text-red-500 font-bold">* mandatory</span>
+            </div>
+            <div className="space-y-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan Material Weight (M.T.) *</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.challan_material_weight || 0}
                   onChange={(e) => handleInputChange('challan_material_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs font-bold text-slate-900 focus:bg-amber-50" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-bold font-mono text-slate-900 focus:border-[#103A20]"
                   required
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
-                  Supplier Net Weight (M.Ton): <span className="text-red-600 font-bold">*</span>
-                </span>
-                <input  id="formdata_supplier_net_wei_1599" name="formdata_supplier_net_wei" aria-label="formdata supplier net wei"
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Net Weight (M.Ton): *</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.supplier_net_weight || 0}
                   onChange={(e) => handleInputChange('supplier_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#f0fff0] border border-emerald-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs font-bold text-emerald-950 focus:bg-amber-50" 
+                  className="w-full h-8 bg-emerald-50/30 border border-emerald-400 rounded px-2 outline-none text-xs font-bold font-mono text-emerald-950 focus:border-emerald-600"
                   required
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52 flex items-center gap-1">
-                  Electronic Weighbridge Net: <span className="text-red-600 font-bold">*</span>
-                </span>
-                <input  id="formdata_electronic_net_w_1612" name="formdata_electronic_net_w" aria-label="formdata electronic net w"
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Weighbridge Net: *</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.electronic_net_weight || 0}
                   onChange={(e) => handleInputChange('electronic_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#fff0f0] border border-red-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs font-bold text-red-950 focus:bg-[#ffffd2]" 
+                  className="w-full h-8 bg-red-50/20 border border-red-500 rounded px-2 outline-none text-xs font-bold font-mono text-red-950 focus:border-red-600"
                   required
                 />
               </div>
             </div>
           </div>
 
-          {/* Column 2 */}
-          <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
-            <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1">Actual Weighbridge Metrics</h3>
-            <div className="flex flex-col gap-1.5 mt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Actual Gross Weight (Lorry+RAW):</span>
-                <input  id="formdata_actual_gross_wei_1630" name="formdata_actual_gross_wei" aria-label="formdata actual gross wei"
+          {/* CARD 2 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
+            <div className="border-b border-slate-100 pb-2">
+              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-emerald-800" /> Actual Weighbridge Metrics
+              </h4>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Actual Gross Weight (Lorry+RAW):</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.actual_gross_weight || ''}
                   onChange={(e) => handleInputChange('actual_gross_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-amber-50" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Supplier Challan Gross (M.Ton):</span>
-                <input  id="formdata_supplier_challan_1640" name="formdata_supplier_challan" aria-label="formdata supplier challan"
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Challan Gross (M.Ton):</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.supplier_challan_gross || ''}
                   onChange={(e) => handleInputChange('supplier_challan_gross', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-amber-50" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Electronic Gross Weight Scale:</span>
-                <input  id="formdata_electronic_gross_1650" name="formdata_electronic_gross" aria-label="formdata electronic gross"
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Gross Weight Scale:</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.electronic_gross_weight || ''}
                   onChange={(e) => handleInputChange('electronic_gross_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-[#ffffd2]" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#ac0000] w-52">Weight Reduced (Moisture Red M.T):</span>
-                <input  id="formdata_weight_reduced_1660" name="formdata_weight_reduced" aria-label="formdata weight reduced"
+              <div>
+                <label className="block text-[11px] font-bold text-red-700 mb-1">Weight Reduced (Moisture Red M.T):</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.weight_reduced || ''}
                   onChange={(e) => handleInputChange('weight_reduced', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#ffffdf] border border-amber-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs text-amber-900 font-bold focus:bg-amber-50" 
+                  className="w-full h-8 bg-amber-50/50 border border-amber-400 rounded px-2 outline-none text-xs font-bold font-mono text-amber-900 focus:border-amber-600"
                 />
               </div>
             </div>
           </div>
 
-          {/* Column 3 */}
-          <div className="border border-slate-400 bg-[#e4e0d8] p-3 flex flex-col gap-2 shadow-sm">
-            <h3 className="text-[10px] font-bold text-gray-700 uppercase tracking-wide border-b border-gray-400 pb-1">Empty Lorry Tare Metrics</h3>
-            <div className="flex flex-col gap-1.5 mt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Actual Tare Weight (Empty Lorry):</span>
-                <input  id="formdata_actual_tare_weig_1677" name="formdata_actual_tare_weig" aria-label="formdata actual tare weig"
+          {/* CARD 3 */}
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-4 shadow-xs space-y-3">
+            <div className="border-b border-slate-100 pb-2">
+              <h4 className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <RefreshCw className="w-4 h-4 text-red-600" /> Empty Lorry Tare Metrics
+              </h4>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Actual Tare Weight (Empty Lorry):</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.actual_tare_weight || ''}
                   onChange={(e) => handleInputChange('actual_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-amber-50" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Supplier Tare Weight (M.Ton):</span>
-                <input  id="formdata_supplier_tare_we_1687" name="formdata_supplier_tare_we" aria-label="formdata supplier tare we"
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier Tare Weight (M.Ton):</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.supplier_tare_weight || ''}
                   onChange={(e) => handleInputChange('supplier_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-amber-50" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-800 w-52">Electronic Tare Weight Scale:</span>
-                <input  id="formdata_electronic_tare__1697" name="formdata_electronic_tare_" aria-label="formdata electronic tare "
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Electronic Tare Weight Scale:</label>
+                <input
                   type="number"
                   step="any"
                   value={formData.electronic_tare_weight || ''}
                   onChange={(e) => handleInputChange('electronic_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-white border border-slate-400 font-mono text-right px-2 py-0.5 outline-none w-28 text-xs focus:bg-[#ffffd2]" 
+                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Operational Flow Button bar strictly based on Jute Screen visuals */}
-        <div className="bg-[#dfdfdf] border border-slate-400 p-2.5 flex flex-wrap justify-between items-center gap-2 shadow-inner">
-          <div className="flex gap-2.5">
-            <LegacyButton
-              onClick={resetFormToBlank}
-              icon={Plus}
-              variant="default"
-              className="bg-white border-2 border-[#808080] border-r-black border-b-black uppercase px-4 h-8 font-bold font-sans text-gray-800 active:border-t-black active:border-l-black active:bg-gray-100"
-            >
-              Add New
-            </LegacyButton>
+        {/* 5. BOTTOM ACTION TOOLBAR */}
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={resetFormToBlank}
+            className="bg-[#103A20] hover:bg-[#1c5932] text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
+          >
+            <Plus className="w-4 h-4 text-amber-300" /> ADD NEW
+          </button>
 
-            {initialData && (
-              <LegacyButton
-                onClick={deleteCurrentVoucher}
-                icon={Trash2}
-                variant="danger"
-                className="bg-red-50 border-2 border-red-500 uppercase px-4 h-8 font-bold font-sans text-red-900 hover:bg-red-100 active:border-red-900"
-              >
-                Delete
-              </LegacyButton>
-            )}
-          </div>
-
-          <div className="flex gap-2.5">
-            <LegacyButton
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              type="button"
               onClick={handleSave}
-              icon={Save}
-              variant="default"
               disabled={loading}
-              className="bg-[#ac0000] text-white border-2 border-[#800000] border-r-black border-b-black uppercase px-6 h-8 font-black hover:bg-red-800 font-sans active:border-t-black active:border-l-black"
+              className="bg-[#103A20] hover:bg-[#1c5932] text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {loading ? "SAVING..." : "Save"}
-            </LegacyButton>
+              <Save className="w-4 h-4 text-amber-300" /> {loading ? "SAVING..." : "SAVE"}
+            </button>
 
-            <LegacyButton
+            <button
+              type="button"
               onClick={onCancel}
-              icon={X}
-              variant="default"
-              className="bg-[#e4e0d8] border-2 border-[#808080] border-r-black border-b-black uppercase px-5 h-8 font-bold font-sans text-gray-800 active:border-t-black active:border-l-black"
+              className="border border-red-500 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              Cancel
-            </LegacyButton>
+              <X className="w-4 h-4" /> CANCEL
+            </button>
 
-            <LegacyButton
+            <button
+              type="button"
               onClick={onCancel}
-              icon={Archive}
-              variant="default"
-              className="bg-[#e4e0d8] border-2 border-[#808080] border-r-black border-b-black uppercase px-5 h-8 font-bold font-sans text-gray-800 active:border-t-black active:border-l-black"
+              className="border border-red-500 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              Exit
-            </LegacyButton>
+              <X className="w-4 h-4" /> EXIT
+            </button>
 
-            <LegacyButton
+            <button
+              type="button"
               onClick={onCancel}
-              icon={Layers}
-              variant="default"
-              className="bg-slate-100 border-2 border-[#808080] border-r-black border-b-black uppercase px-5 h-8 font-bold font-sans text-teal-950 active:border-t-black active:border-l-black"
+              className="border border-[#103A20] text-[#103A20] hover:bg-emerald-50 px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              View List
-            </LegacyButton>
+              <Archive className="w-4 h-4" /> VIEW LIST
+            </button>
           </div>
         </div>
 
-      </div>
+        {/* Datalists */}
+        <datalist id="brokers_dl">
+          {brokers.map((b, idx) => (
+            <option key={b.id || idx} value={String(b.brok_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      {/* Structured suggestions Datalists for premium user flow experience */}
-      <datalist id="brokers_dl">
-        {brokers.map((b, idx) => (
-          <option key={b.id || idx} value={String(b.brok_name).toUpperCase()} />
-        ))}
-      </datalist>
+        <datalist id="suppliers_dl">
+          {suppliers.map((s, idx) => (
+            <option key={s.id || idx} value={String(s.supp_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      <datalist id="suppliers_dl">
-        {suppliers.map((s, idx) => (
-          <option key={s.id || idx} value={String(s.supp_name).toUpperCase()} />
-        ))}
-      </datalist>
+        <datalist id="areas_dl">
+          {areas.map((a, idx) => (
+            <option key={a.id || idx} value={String(a.area_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      <datalist id="areas_dl">
-        {areas.map((a, idx) => (
-          <option key={a.id || idx} value={String(a.area_name).toUpperCase()} />
-        ))}
-      </datalist>
+        <datalist id="agencies_dl">
+          {agencies.map((agency, idx) => (
+            <option key={agency.id || idx} value={String(agency.agency_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      <datalist id="agencies_dl">
-        {agencies.map((agency, idx) => (
-          <option key={agency.id || idx} value={String(agency.agency_name).toUpperCase()} />
-        ))}
-      </datalist>
+        <datalist id="grades_dl">
+          {grades.map((g, idx) => (
+            <option key={g.id || idx} value={String(g.grade_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      <datalist id="grades_dl">
-        {grades.map((g, idx) => (
-          <option key={g.id || idx} value={String(g.grade_name).toUpperCase()} />
-        ))}
-      </datalist>
+        <datalist id="markas_dl">
+          {markas.map((m, idx) => (
+            <option key={m.id || idx} value={String(m.marka_name).toUpperCase()} />
+          ))}
+        </datalist>
 
-      <datalist id="markas_dl">
-        {markas.map((m, idx) => (
-          <option key={m.id || idx} value={String(m.marka_name).toUpperCase()} />
-        ))}
-      </datalist>
       </div>
     </LegacyLayout>
   );
