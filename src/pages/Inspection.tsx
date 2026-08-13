@@ -300,21 +300,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       setFinalArrivalList(faList);
 
-      // 3. Merge Final Arrival into Inspection Master Records
+      // 3. Enrich existing saved inspection records if missing details, but do NOT auto-create unsaved rows
       const map = new Map<string, InspectionMasterRecord>();
 
-      // Put explicitly saved inspection records first
       inspectionMasterList.forEach(rec => {
         const k = (rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
         if (k) map.set(k, rec);
       });
 
-      // Integrate Final Arrival entries
+      // Enrich saved records with info from Final Arrival if available
       faList.forEach(fa => {
         const mrKey = (fa.mr_no || "").trim().toUpperCase();
         const arrKey = (fa.final_arrival_no || fa.arrival_no || "").trim().toUpperCase();
 
-        const keyToUse = mrKey && mrKey !== "DIRECT REGISTER" ? mrKey : arrKey;
         const existing = (mrKey && map.get(mrKey)) || (arrKey && map.get(arrKey));
 
         if (existing) {
@@ -327,44 +325,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           if (!existing.arrival_no && fa.final_arrival_no) existing.arrival_no = fa.final_arrival_no;
           if (!existing.arrival_date && fa.date) existing.arrival_date = fa.date;
           if (!existing.grid_details) existing.grid_details = fa.grid_details || fa.items || fa.details;
-        } else {
-          // Derive inspection entry directly from Final Arrival record
-          const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
-            ? fa.mr_no
-            : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
-
-          const derivedRec: InspectionMasterRecord = {
-            mr_no: displayMrNo,
-            mr_date: fa.date || new Date().toISOString().split("T")[0],
-            arrival_no: fa.final_arrival_no || fa.arrival_no || "",
-            arrival_date: fa.date || new Date().toISOString().split("T")[0],
-            po_no: fa.po_no || "",
-            po_date: fa.po_date || fa.date || "",
-            broker_name: fa.broker || "",
-            supplier_name: fa.supplier || fa.challan_supplier || "",
-            lorry_number: fa.lorry_number || "",
-            actual_moisture: Number(fa.actual_moisture) || 0,
-            actual_dust: Number(fa.actual_dust) || 0,
-            actual_ncv: Number(fa.actual_ncv) || 0,
-            claim_moisture: Number(fa.claim_moisture) || 0,
-            claim_dust: Number(fa.claim_dust) || 0,
-            claim_ncv: Number(fa.claim_ncv) || 0,
-            deduction_amount: Number(fa.deduction_amount) || 0,
-            remarks: fa.remarks || "",
-            status: fa.status || (fa.actual_moisture ? "Completed" : "Pending"),
-            grid_details: fa.grid_details || fa.items || fa.details
-          };
-
-          if (keyToUse) map.set(keyToUse, derivedRec);
-          else map.set(displayMrNo.toUpperCase(), derivedRec);
         }
       });
 
-      const mergedList = Array.from(map.values());
-      setRecords(mergedList);
+      const displayList = Array.from(map.values());
+      setRecords(displayList);
 
       try {
-        localStorage.setItem("inspection_master_records", JSON.stringify(mergedList));
+        localStorage.setItem("inspection_master_records", JSON.stringify(displayList));
       } catch (e) {}
     } catch (err) {
       console.error("Error fetching inspection_master records:", err);
@@ -644,6 +612,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
       }
 
+      // Update local storage cache
+      try {
+        const cached = localStorage.getItem("inspection_master_records");
+        let list: InspectionMasterRecord[] = cached ? JSON.parse(cached) : [];
+        list = [payload, ...list.filter((r: any) => r.mr_no !== payload.mr_no)];
+        localStorage.setItem("inspection_master_records", JSON.stringify(list));
+      } catch (e) {}
+
       showToast(`Inspection ${headerForm.mr_no} saved successfully.`);
       fetchInspectionRecords();
       setViewMode("dashboard");
@@ -836,7 +812,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by M.R. No, P.O. No, Supplier, Lorry No..."
+                  placeholder="Search by Arrival No, P.O. No, Supplier, Lorry No..."
                   className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-700/50 bg-slate-50/50"
                 />
               </div>
@@ -871,8 +847,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 <table className="w-full text-left text-xs text-slate-700 border-collapse">
                   <thead>
                     <tr className="bg-[#174C2C] text-white font-extrabold uppercase tracking-wider text-[11px] border-b border-[#0F351E]">
-                      <th className="py-3 px-4">M.R. No</th>
-                      <th className="py-3 px-4">M.R. Date</th>
+                      <th className="py-3 px-4">Arrival No</th>
+                      <th className="py-3 px-4">Arrival Date</th>
                       <th className="py-3 px-4">P.O. No</th>
                       <th className="py-3 px-4">Supplier Name</th>
                       <th className="py-3 px-4">Broker Name</th>
@@ -988,10 +964,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     defaultValue=""
                     className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
                   >
-                    <option value="">-- Select Final Arrival Record / MR --</option>
+                    <option value="">-- Select Final Arrival Record --</option>
                     {finalArrivalList.map((fa, idx) => (
                       <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no}>
-                        Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | MR: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                        Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | Arrival No: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
                       </option>
                     ))}
                   </select>
@@ -1000,7 +976,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-extrabold text-slate-700">M. R. No.</label>
+                  <label className="text-xs font-extrabold text-slate-700">Arrival No.</label>
                   <input
                     type="text"
                     value={headerForm.mr_no || ""}
@@ -1010,7 +986,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-extrabold text-slate-700">M. R. Date</label>
+                  <label className="text-xs font-extrabold text-slate-700">Arrival Date</label>
                   <input
                     type="date"
                     value={headerForm.mr_date || ""}

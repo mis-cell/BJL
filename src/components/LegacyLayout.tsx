@@ -214,11 +214,11 @@ export default function LegacyLayout({
     },
     {
       id: 'tmr_mr',
-      label: 'T.M.R To M.R',
+      label: 'Temporary Arrival To Final Arrival',
       icon: ShieldCheck,
       subItems: [
-        { id: 'tmr', label: 'TEMPORARY M.R', icon: Clock, pageId: 'amad' },
-        { id: 'final_mr', label: 'FINAL M.R', icon: CheckCircle2, pageId: 'final_arrival' },
+        { id: 'tmr', label: 'TEMPORARY ARRIVAL', icon: Clock, pageId: 'amad' },
+        { id: 'final_mr', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
         { id: 'inspection', label: 'INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
         { id: 'satta_mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
@@ -230,8 +230,8 @@ export default function LegacyLayout({
       label: 'Club P.O To Payment',
       icon: Wallet,
       subItems: [
-        { id: 'club_po', label: 'Club P.O & M.R', icon: Link, pageId: 'club_po_mr' },
-        { id: 'mr_settlement', label: 'M.R Settlement', icon: FileCheck, pageId: 'mr_settlement' },
+        { id: 'club_po', label: 'Club P.O & Arrival', icon: Link, pageId: 'club_po_mr' },
+        { id: 'mr_settlement', label: 'Arrival Settlement', icon: FileCheck, pageId: 'mr_settlement' },
         { id: 'payment', label: 'Payment', icon: Wallet, pageId: 'payment' },
       ]
     },
@@ -252,7 +252,7 @@ export default function LegacyLayout({
       icon: Lock,
       subItems: [
         { id: 'po_archive', label: 'FINAL P.O ARCHIVE', icon: Archive, pageId: 'po_archive' },
-        { id: 'mr_archive', label: 'FINAL M.R ARCHIVE', icon: Archive, pageId: 'mr_archive' },
+        { id: 'mr_archive', label: 'FINAL ARRIVAL ARCHIVE', icon: Archive, pageId: 'mr_archive' },
       ]
     },
     {
