@@ -648,63 +648,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     }
   };
 
-  // Live Automatic Weight Calc logic
-  useEffect(() => {
-    let totalNetto = 0;
-    details.forEach(d => {
-      totalNetto += Number(d.netto_pnto) || 0;
-    });
-
-    const calculatedElectronicNet = (Number(formData.electronic_gross_weight) || 0) - (Number(formData.electronic_tare_weight) || 0);
-
-    setFormData(prev => {
-      const calculatedChallanWeight = Number(totalNetto.toFixed(3));
-      const updatedChallanWeight = prev.challan_material_weight === 0 || prev.challan_material_weight === "" || !prev.challan_material_weight
-        ? (calculatedChallanWeight > 0 ? calculatedChallanWeight : 0)
-        : prev.challan_material_weight;
-      
-      const calculatedSupplierNet = (Number(prev.supplier_challan_gross) || 0) - (Number(prev.supplier_tare_weight) || 0);
-      const updatedSupplierWeight = prev.supplier_net_weight === 0 || prev.supplier_net_weight === "" || !prev.supplier_net_weight
-        ? (Number(calculatedSupplierNet.toFixed(3)) > 0 ? Number(calculatedSupplierNet.toFixed(3)) : 0)
-        : prev.supplier_net_weight;
-
-      const updatedElectronicWeight = prev.electronic_net_weight === 0 || prev.electronic_net_weight === "" || !prev.electronic_net_weight
-        ? (Number(calculatedElectronicNet.toFixed(3)) > 0 ? Number(calculatedElectronicNet.toFixed(3)) : 0)
-        : prev.electronic_net_weight;
-
-      // Calculate Final Weight as minimum positive value from Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
-      const validNetWeights = [
-        Number(updatedChallanWeight) || 0,
-        Number(updatedSupplierWeight) || 0,
-        Number(updatedElectronicWeight) || 0
-      ].filter(v => v > 0);
-
-      const minNetWeight = validNetWeights.length > 0 ? Math.min(...validNetWeights) : 0;
-      const finalWeight = Number(minNetWeight.toFixed(3));
-
-      return {
-        ...prev,
-        challan_material_weight: updatedChallanWeight,
-        supplier_net_weight: updatedSupplierWeight,
-        electronic_net_weight: updatedElectronicWeight,
-        weight_reduced: finalWeight
-      };
-    });
-  }, [
-    details, 
-    formData.supplier_challan_gross, 
-    formData.supplier_tare_weight, 
-    formData.electronic_gross_weight, 
-    formData.electronic_tare_weight
-  ]);
-
   const handleInputChange = (field: string, val: any) => {
     setFormData(prev => {
       const next = { ...prev, [field]: val };
-      if (field === 'challan_material_weight') {
-        next.supplier_net_weight = val;
-        next.electronic_net_weight = val;
-      }
       if (field === 'po_no' && val) {
         const valUpper = String(val).trim().toUpperCase();
         const matched = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === valUpper);
@@ -1684,7 +1630,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <input
                   type="number"
                   step="0.001"
-                  value={formData.challan_material_weight || 0}
+                  value={formData.challan_material_weight ?? ''}
                   onChange={(e) => handleInputChange('challan_material_weight', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
@@ -1695,7 +1641,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <input
                   type="number"
                   step="0.001"
-                  value={formData.supplier_net_weight || 0}
+                  value={formData.supplier_net_weight ?? ''}
                   onChange={(e) => handleInputChange('supplier_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
@@ -1706,7 +1652,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 <input
                   type="number"
                   step="0.001"
-                  value={formData.electronic_net_weight || 0}
+                  value={formData.electronic_net_weight ?? ''}
                   onChange={(e) => handleInputChange('electronic_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
