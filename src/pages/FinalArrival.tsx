@@ -994,10 +994,12 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white">
-
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 p-4 md:p-6 space-y-5 max-w-[1700px] w-full mx-auto">
+    <LegacyLayout
+      title={isArchiveView ? "FINAL M.R ARCHIVE" : "FINAL M.R"}
+      onClose={onClose}
+      activeNavTab="final_mr"
+    >
+      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white p-2 md:p-4 space-y-5 max-w-[1700px] w-full mx-auto">
 
         {/* KPI CARDS GRID */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
@@ -2154,6 +2156,6 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                 </div>
         )}
       </PrintModal>
-    </div>
+    </LegacyLayout>
   );
 }
