@@ -415,9 +415,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           remarks: matchedAmad.remarks || prev.remarks,
           challan_material_weight: Number(matchedAmad.challan_material_weight) || Number(prev.challan_material_weight),
           actual_gross_weight: Number(matchedAmad.actual_gross_weight) || Number(prev.actual_gross_weight),
+          supplier_challan_gross: Number(matchedAmad.supplier_challan_gross) || Number(prev.supplier_challan_gross),
+          electronic_gross_weight: Number(matchedAmad.electronic_gross_weight) || Number(prev.electronic_gross_weight),
           actual_tare_weight: Number(matchedAmad.actual_tare_weight) || Number(prev.actual_tare_weight),
+          supplier_tare_weight: Number(matchedAmad.supplier_tare_weight) || Number(prev.supplier_tare_weight),
+          electronic_tare_weight: Number(matchedAmad.electronic_tare_weight) || Number(prev.electronic_tare_weight),
           supplier_net_weight: Number(matchedAmad.supplier_net_weight) || Number(prev.supplier_net_weight),
           electronic_net_weight: Number(matchedAmad.electronic_net_weight) || Number(prev.electronic_net_weight),
+          weight_reduced: Number(matchedAmad.weight_reduced) || Number(prev.weight_reduced),
         }));
 
         const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
@@ -796,7 +801,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         electronic_net_weight: formData.electronic_net_weight || 0,
         electronic_gross_weight: formData.electronic_gross_weight || 0,
         electronic_tare_weight: formData.electronic_tare_weight || 0,
-        weight_reduced: formData.weight_reduced || 0
+        weight_reduced: Number(finalWeightDisplayValue) || Number(formData.weight_reduced) || 0
       };
 
       try {
@@ -849,6 +854,19 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
   const totalReceiptQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || 0), 0);
   const totalChallanQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_chln) || 0), 0);
+
+  const calculatedLowestNetWeight = useMemo(() => {
+    const nets = [
+      Number(formData.electronic_net_weight),
+      Number(formData.supplier_net_weight),
+      Number(formData.challan_material_weight)
+    ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+    return nets.length > 0 ? Math.min(...nets) : '';
+  }, [formData.electronic_net_weight, formData.supplier_net_weight, formData.challan_material_weight]);
+
+  const finalWeightDisplayValue = (formData.weight_reduced !== undefined && formData.weight_reduced !== null && formData.weight_reduced !== 0 && formData.weight_reduced !== '')
+    ? formData.weight_reduced
+    : calculatedLowestNetWeight;
 
   const resetFormToBlank = () => {
     let nextNum = 502;
@@ -1750,7 +1768,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             <input
               type="number"
               step="0.001"
-              value={formData.weight_reduced || ''}
+              value={finalWeightDisplayValue}
               onChange={(e) => handleInputChange('weight_reduced', e.target.value === '' ? '' : Number(e.target.value))}
               className="w-32 h-8 border border-red-300 rounded bg-white text-right px-2 font-black font-mono text-red-700 outline-none text-xs"
             />
