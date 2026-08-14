@@ -1488,7 +1488,7 @@ function isPoMismatchResolved(poNo: string): boolean {
     }
   };
 
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo]);
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'p.o_archive', 'po_archive'] });
 
   useEffect(() => {
     fetchPosAndMasters();

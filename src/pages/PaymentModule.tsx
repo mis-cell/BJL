@@ -731,7 +731,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  useLiveAutoRefresh(initPage, []);
+  useLiveAutoRefresh(initPage, [], { tables: ['payment_master', 'm_r_settlement'] });
 
   useEffect(() => {
     initPage();

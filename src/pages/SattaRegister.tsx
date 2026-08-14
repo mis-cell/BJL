@@ -109,7 +109,7 @@ export default function SattaRegister({ onClose, onNew, onViewChart }: { onClose
     }
   };
 
-  useLiveAutoRefresh(fetchSattaData, []);
+  useLiveAutoRefresh(fetchSattaData, [], { tables: ['satta_master', 'satta_quality_details'] });
 
   useEffect(() => {
     fetchSattaData();

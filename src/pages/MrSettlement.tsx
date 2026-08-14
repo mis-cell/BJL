@@ -602,7 +602,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     return col;
   };
 
-  useLiveAutoRefresh(initPage, []);
+  useLiveAutoRefresh(initPage, [], { tables: ['m_r_settlement', 'final_arrival', 'mill_inspection_master', 'purchase_master'] });
 
   // Load dashboards & dropdowns
   async function initPage() {

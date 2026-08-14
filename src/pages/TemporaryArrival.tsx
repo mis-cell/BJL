@@ -260,7 +260,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     }
   };
 
-  useLiveAutoRefresh(fetchPurchaseOrders, []);
+  useLiveAutoRefresh(fetchPurchaseOrders, [], { tables: ['temporary_material_received', 'sauda_check_point', 'sauda_check_point_details', 'purchase_master', 'purchase_detail_master', 'lorry_weighments'] });
 
   // Load master records and set up real-time PO query subscription
   useEffect(() => {

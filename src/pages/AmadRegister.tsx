@@ -399,7 +399,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     fetchAmads();
   }, []);
 
-  useLiveAutoRefresh(fetchAmads, []);
+  useLiveAutoRefresh(fetchAmads, [], { tables: ['temporary_material_received', 'purchase_master', 'mill_inspection_master'] });
 
   const handleEditAmad = (amad: Amad) => {
     if (!enforceEditOrDeletePermission("Edit")) return;

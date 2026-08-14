@@ -323,7 +323,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     }
   };
 
-  useLiveAutoRefresh(fetchRecords, [isArchiveView]);
+  useLiveAutoRefresh(fetchRecords, [isArchiveView], { tables: ['final_arrival', 'm.r_archive'] });
 
   useEffect(() => {
     fetchRecords();
@@ -813,14 +813,8 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       runBackgroundStatusSync(true);
     }, 1500);
 
-    // Set interval to sync background updates every 15 seconds
-    const interval = setInterval(() => {
-      runBackgroundStatusSync(true);
-    }, 15000);
-
     return () => {
       clearTimeout(initialTimer);
-      clearInterval(interval);
     };
   }, [autoSyncEnabled]);
 

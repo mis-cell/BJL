@@ -234,7 +234,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
   useLiveAutoRefresh(() => {
     loadChartConfig();
     fetchRateHistory();
-  }, []);
+  }, [], { tables: ['satta_base_rates', 'satta_differentials', 'satta_calculated_rates'] });
 
   // Auto-select latest instance when entering range_list mode
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useLiveAutoRefresh } from "../hooks/useLiveAutoRefresh";
 import {
   Scale,
   Truck,
@@ -266,81 +267,80 @@ export default function LorryDispatchSystem({
   });
 
   // Load live data from Supabase table lorry_weighments
-  useEffect(() => {
-    async function loadLorryWeighments() {
-      if (!supabase) return;
-      try {
-        const { data, error } = await supabase
-          .from("lorry_weighments")
-          .select("*")
-          .then(res => res, () => ({ data: null, error: new Error('Table unavailable') }));
+  async function loadLorryWeighments() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from("lorry_weighments")
+        .select("*")
+        .then(res => res, () => ({ data: null, error: new Error('Table unavailable') }));
 
-        if (!error && data) {
-          const loaded: LorryRecord[] = data.map((row: any) => {
-            const millGross = Number(row.mill_gross_weight ?? row.stage1_gross_weight ?? 0);
-            const millTare = Number(row.mill_tare_weight ?? row.stage1_tare_weight ?? 0);
-            const elecGross = Number(row.electric_gross_weight ?? row.stage2_gross_weight ?? 0);
-            const elecTare = Number(row.electric_tare_weight ?? row.stage2_tare_weight ?? 0);
+      if (!error && data) {
+        const loaded: LorryRecord[] = data.map((row: any) => {
+          const millGross = Number(row.mill_gross_weight ?? row.stage1_gross_weight ?? 0);
+          const millTare = Number(row.mill_tare_weight ?? row.stage1_tare_weight ?? 0);
+          const elecGross = Number(row.electric_gross_weight ?? row.stage2_gross_weight ?? 0);
+          const elecTare = Number(row.electric_tare_weight ?? row.stage2_tare_weight ?? 0);
 
-            const millNet = millGross > 0 && millTare > 0 ? millGross - millTare : Number(row.gate_net_weight ?? 0);
-            const elecNet = elecGross > 0 && elecTare > 0 ? elecGross - elecTare : 0;
+          const millNet = millGross > 0 && millTare > 0 ? millGross - millTare : Number(row.gate_net_weight ?? 0);
+          const elecNet = elecGross > 0 && elecTare > 0 ? elecGross - elecTare : 0;
 
-            let finalNet = Number(row.gate_net_weight ?? 0);
-            if (millNet > 0 && elecNet > 0) {
-              finalNet = Math.round((millNet + elecNet) / 2);
-            } else if (millNet > 0 || elecNet > 0) {
-              finalNet = elecNet || millNet;
-            }
+          let finalNet = Number(row.gate_net_weight ?? 0);
+          if (millNet > 0 && elecNet > 0) {
+            finalNet = Math.round((millNet + elecNet) / 2);
+          } else if (millNet > 0 || elecNet > 0) {
+            finalNet = elecNet || millNet;
+          }
 
-            let dept: DepartmentType = "Jute";
-            if (row.department) {
-              const dStr = String(row.department).toLowerCase();
-              if (dStr.includes("store")) dept = "Store";
-              else if (dStr.includes("finish")) dept = "Finish Good";
-              else if (dStr.includes("other")) dept = "Other";
-            }
+          let dept: DepartmentType = "Jute";
+          if (row.department) {
+            const dStr = String(row.department).toLowerCase();
+            if (dStr.includes("store")) dept = "Store";
+            else if (dStr.includes("finish")) dept = "Finish Good";
+            else if (dStr.includes("other")) dept = "Other";
+          }
 
-            let statusVal: LorryStatus = (row.status as LorryStatus) || "GATE_ENTRY";
-            if (row.status === "GATE_ENTRY" && dept === "Jute") {
-              statusVal = "WAITING_FOR_MILL_GROSS";
-            }
+          let statusVal: LorryStatus = (row.status as LorryStatus) || "GATE_ENTRY";
+          if (row.status === "GATE_ENTRY" && dept === "Jute") {
+            statusVal = "WAITING_FOR_MILL_GROSS";
+          }
 
-            return {
-              id: String(row.id),
-              gatePassNo: row.gate_pass || row.ticket_number || `GP-${String(row.id).slice(0, 8)}`,
-              lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
-              driverPhone: row.driver_phone || "+91 98300 00000",
-              department: dept,
-              broker: row.party_name || row.broker || "N/A",
-              quality: row.description || row.grade || row.quality || "WN4",
-              mokam: row.mokam || "AMBAGAN",
-              marka: row.marka || "MJ",
-              status: statusVal,
-              inTime: row.in_time || row.created_at || new Date().toISOString(),
-              outTime: row.out_time || row.out_date,
-              millGrossWeight: millGross || undefined,
-              millTareWeight: millTare || undefined,
-              electricGrossWeight: elecGross || undefined,
-              electricTareWeight: elecTare || undefined,
-              millNetWeight: millNet || undefined,
-              electricNetWeight: elecNet || undefined,
-              finalNetWeight: finalNet || undefined,
-              remarks: row.mill_remarks || row.out_remarks || row.remarks || "",
-            };
-          });
+          return {
+            id: String(row.id),
+            gatePassNo: row.gate_pass || row.ticket_number || `GP-${String(row.id).slice(0, 8)}`,
+            lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
+            driverPhone: row.driver_phone || "+91 98300 00000",
+            department: dept,
+            broker: row.party_name || row.broker || "N/A",
+            quality: row.description || row.grade || row.quality || "WN4",
+            mokam: row.mokam || "AMBAGAN",
+            marka: row.marka || "MJ",
+            status: statusVal,
+            inTime: row.in_time || row.created_at || new Date().toISOString(),
+            outTime: row.out_time || row.out_date,
+            millGrossWeight: millGross || undefined,
+            millTareWeight: millTare || undefined,
+            electricGrossWeight: elecGross || undefined,
+            electricTareWeight: elecTare || undefined,
+            millNetWeight: millNet || undefined,
+            electricNetWeight: elecNet || undefined,
+            finalNetWeight: finalNet || undefined,
+            remarks: row.mill_remarks || row.out_remarks || row.remarks || "",
+          };
+        });
 
-          setLorries(loaded);
-        }
-      } catch (err) {
-        console.warn("Failed to load lorry_weighments:", err);
+        setLorries(loaded);
       }
+    } catch (err) {
+      console.warn("Failed to load lorry_weighments:", err);
     }
-    loadLorryWeighments();
+  }
 
-    // 4-second polling to ensure live synchronization across all desks/terminals
-    const interval = setInterval(loadLorryWeighments, 4000);
-    return () => clearInterval(interval);
+  useEffect(() => {
+    loadLorryWeighments();
   }, []);
+
+  useLiveAutoRefresh(loadLorryWeighments, [], { tables: ['lorry_weighments'] });
 
   const [settings, setSettings] = useState<SystemSettings>(() => {
     const saved = localStorage.getItem("bjl_settings");

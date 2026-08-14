@@ -707,51 +707,20 @@ export default function Dashboard({
 
   useLiveAutoRefresh(() => {
     if (isActive) loadStats();
-  }, [isActive]);
-
-  // Realtime subscription for Dashboard updates
-  React.useEffect(() => {
-    if (!supabase) return;
-    
-    // Subscribe to key operational tables that affect the dashboard
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sauda' },
-        () => { if (isActive) loadStats(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sauda_check_point' },
-        () => { if (isActive) loadStats(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'final_po' },
-        () => { if (isActive) loadStats(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sauda_master' },
-        () => { if (isActive) loadStats(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'purchase_master' },
-        () => { if (isActive) loadStats(); }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'temporary_material_received' },
-        () => { if (isActive) loadStats(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [loadStats, isActive]);
+  }, [isActive], { 
+    tables: [
+      'sauda_master', 
+      'purchase_master', 
+      'sauda_check_point', 
+      'temporary_material_received', 
+      'final_arrival', 
+      'mill_inspection_master', 
+      'payment_master', 
+      'm_r_settlement', 
+      'material_mismatch', 
+      'satta_mismatch'
+    ] 
+  });
 
   const arrivalTrendsData = React.useMemo(() => {
     const groups: Record<string, { name: string; packets: number; count: number }> = {};

@@ -1,25 +1,34 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-export function notifyDataChanged() {
+export function notifyDataChanged(tableName?: string) {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('app-data-updated'));
-    window.dispatchEvent(new CustomEvent('app:data-updated'));
+    const detail = tableName ? { table: tableName } : {};
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail }));
+    window.dispatchEvent(new CustomEvent('app:data-updated', { detail }));
   }
 }
 
-interface UseLiveAutoRefreshOptions {
-  intervalMs?: number; // default 8000ms (8 seconds)
-  tables?: string[];   // specific Supabase tables to listen for, or empty for all
-  enabled?: boolean;   // conditionally enable/disable
+export interface UseLiveAutoRefreshOptions {
+  tables?: string[];   // Specific Supabase tables to listen for
+  enabled?: boolean;   // Conditionally enable/disable (default true)
 }
 
+/**
+ * Table-specific Supabase Realtime auto-refresh hook.
+ * Replaces global 5s polling with event-driven Supabase Realtime subscriptions.
+ */
 export function useLiveAutoRefresh(
-  refreshCallback: () => void | Promise<void>,
+  refreshCallback: (payload?: any) => void | Promise<void>,
   deps: any[] = [],
-  options: UseLiveAutoRefreshOptions = {}
+  options: UseLiveAutoRefreshOptions | string[] = {}
 ) {
-  const { intervalMs = 8000, tables, enabled = true } = options;
+  // Support passing tables array directly as 3rd arg OR options object
+  const normalizedOptions: UseLiveAutoRefreshOptions = Array.isArray(options)
+    ? { tables: options }
+    : options;
+
+  const { tables = [], enabled = true } = normalizedOptions;
   const callbackRef = useRef(refreshCallback);
 
   useEffect(() => {
@@ -31,82 +40,90 @@ export function useLiveAutoRefresh(
 
     let isSubscribed = true;
 
-    const safeExecute = async () => {
+    const safeExecute = async (payload?: any) => {
       if (!isSubscribed) return;
       try {
-        await callbackRef.current();
+        await callbackRef.current(payload);
       } catch (e) {
-        console.warn('Auto refresh error:', e);
+        console.warn('[Realtime Auto Refresh] Error executing callback:', e);
       }
     };
 
-    // 1. Initial execution
+    // 1. Initial execution on component mount
     safeExecute();
 
-    // 2. Background polling interval
-    const timer = setInterval(() => {
-      safeExecute();
-    }, intervalMs);
+    // 2. Custom Event Listener for local table updates
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const changedTable = customEvent.detail?.table;
 
-    // 3. Event Listeners for window focus, visibility, and custom events
-    const handleTrigger = () => {
-      safeExecute();
-    };
-
-    window.addEventListener('focus', handleTrigger);
-    window.addEventListener('app-data-updated', handleTrigger);
-    window.addEventListener('app:data-updated', handleTrigger);
-    window.addEventListener('mismatch_resolved', handleTrigger);
-    window.addEventListener('storage', handleTrigger);
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
+      if (changedTable && tables.length > 0) {
+        // Only refresh if this hook listens to the specific table that changed
+        if (tables.includes(changedTable)) {
+          safeExecute();
+        }
+      } else {
+        // If no specific table was provided in the event or hook has no table filter
         safeExecute();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
 
-    // 4. Supabase Realtime Postgres Changes Listener
+    window.addEventListener('app-data-updated', handleCustomEvent);
+    window.addEventListener('app:data-updated', handleCustomEvent);
+
+    // 3. Supabase Realtime Postgres Changes Listener (NO setInterval POLLING)
     let channel: any = null;
     if (supabase) {
       try {
-        const channelName = `realtime-auto-sync-${Math.random().toString(36).substring(2, 8)}`;
+        const uniqueId = Math.random().toString(36).substring(2, 7);
+        const channelName = tables.length > 0
+          ? `rt-${tables.slice().sort().join('_')}-${uniqueId}`
+          : `rt-all-${uniqueId}`;
+
         channel = supabase.channel(channelName);
 
-        if (tables && tables.length > 0) {
+        if (tables.length > 0) {
+          // Listen ONLY to changes on the specified tables
           tables.forEach((t) => {
             channel = channel.on(
               'postgres_changes',
               { event: '*', schema: 'public', table: t },
-              handleTrigger
+              (payload: any) => {
+                safeExecute(payload);
+              }
             );
           });
         } else {
+          // Fallback if no tables provided: listen to public schema changes
           channel = channel.on(
             'postgres_changes',
             { event: '*', schema: 'public' },
-            handleTrigger
+            (payload: any) => {
+              safeExecute(payload);
+            }
           );
         }
 
-        channel.subscribe();
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            // Channel subscribed successfully
+          } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Re-sync on connection recovery
+            safeExecute();
+          }
+        });
       } catch (err) {
-        // Fall back to timer + event triggers
+        console.warn('[Realtime Auto Refresh] Channel setup failed:', err);
       }
     }
 
     return () => {
       isSubscribed = false;
-      clearInterval(timer);
-      window.removeEventListener('focus', handleTrigger);
-      window.removeEventListener('app-data-updated', handleTrigger);
-      window.removeEventListener('app:data-updated', handleTrigger);
-      window.removeEventListener('mismatch_resolved', handleTrigger);
-      window.removeEventListener('storage', handleTrigger);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('app-data-updated', handleCustomEvent);
+      window.removeEventListener('app:data-updated', handleCustomEvent);
       if (channel && supabase) {
         supabase.removeChannel(channel).catch(() => {});
       }
     };
-  }, [enabled, intervalMs, JSON.stringify(tables), ...deps]);
+  }, [enabled, JSON.stringify(tables), ...deps]);
 }

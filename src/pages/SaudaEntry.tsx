@@ -206,7 +206,7 @@ export default function SaudaEntry({
     loadMasterData();
   }, [initialData]);
 
-  useLiveAutoRefresh(loadMasterData, [initialData]);
+  useLiveAutoRefresh(loadMasterData, [initialData], { tables: ['sauda_master', 'broker_master', 'supply_master', 'area_master', 'agency_master', 'grade_master', 'marka_master', 'satta_base_rates', 'satta_differentials'] });
 
   // Recalculate Satta rate for a quality row based on Date, Area, Grade
   const recalculateRowRate = (date: string, area: string, grade: string) => {

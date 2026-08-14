@@ -167,7 +167,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     };
   }, []);
 
-  useLiveAutoRefresh(fetchLiveData, []);
+  useLiveAutoRefresh(fetchLiveData, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'temporary_material_received'] });
 
   // Fetch data directly from Supabase
   async function fetchLiveData() {

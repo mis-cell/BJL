@@ -577,7 +577,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     }
   };
 
-  useLiveAutoRefresh(loadMismatches, []);
+  useLiveAutoRefresh(loadMismatches, [], { tables: ['material_mismatch', 'satta_mismatch', 'sauda_check_point', 'satta_master'] });
 
   useEffect(() => {
     loadMismatches();

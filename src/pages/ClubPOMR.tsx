@@ -156,10 +156,10 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  useLiveAutoRefresh(loadInitialData, []);
+  useLiveAutoRefresh(loadInitialData, [], { tables: ['purchase_master', 'temporary_material_received', 'final_arrival'] });
   useLiveAutoRefresh(() => {
     if (selectedSupplier) fetchSupplierDocuments(selectedSupplier);
-  }, [selectedSupplier]);
+  }, [selectedSupplier], { tables: ['purchase_master', 'temporary_material_received', 'final_arrival'] });
 
   useEffect(() => {
     loadInitialData();

@@ -343,7 +343,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     fetchInspectionRecords();
   }, []);
 
-  useLiveAutoRefresh(fetchInspectionRecords, []);
+  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'final_arrival'] });
 
   const populateFromFinalArrival = (fa: any) => {
     const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")

@@ -426,7 +426,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   useLiveAutoRefresh(() => {
     if (isActive) fetchSaudas();
-  }, [isActive]);
+  }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received'] });
 
   useEffect(() => {
     if (isActive) {

@@ -753,7 +753,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setIsDbLoading(false);
   };
 
-  useLiveAutoRefresh(loadSaudaRecords, []);
+  useLiveAutoRefresh(loadSaudaRecords, [], { tables: ['sms_sauda', 'sauda_master'] });
 
   useEffect(() => {
     loadSaudaRecords();

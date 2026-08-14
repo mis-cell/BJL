@@ -482,7 +482,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
     loadData();
   }, []);
 
-  useLiveAutoRefresh(loadData, []);
+  useLiveAutoRefresh(loadData, [], { tables: ['satta_master', 'satta_base_rates', 'satta_differentials', 'satta_calculated_rates'] });
 
   const recalculateRowRate = (date: string, area: string, grade: string) => {
     if (!date || !area || !grade || baseRatesList.length === 0) return null;
