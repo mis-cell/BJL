@@ -77,7 +77,13 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     {qd.quality && !grades.some(g => g.grade_name === qd.quality || g.grade_code === qd.quality) && (
                       <option value={qd.quality}>{qd.quality}</option>
                     )}
-                    {grades.map((g, idx) => (
+                    {[...grades]
+                    .sort((a, b) =>
+                      (a.grade_name || a.grade_code || "").localeCompare(
+                        b.grade_name || b.grade_code || ""
+                      )
+                    )
+                    .map((g, idx) => (
                       <option key={idx} value={g.grade_name || g.grade_code}>
                         {g.grade_name || g.grade_code}
                       </option>
