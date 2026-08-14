@@ -1069,6 +1069,21 @@ function isPoMismatchResolved(poNo: string): boolean {
   const [sattaCalculatedRates, setSattaCalculatedRates] = useState<any[]>([]);
   const [sattaDifferentials, setSattaDifferentials] = useState<any[]>([]);
 
+  const lookupSattaBaseRate = (sDateStr: string, bases: any[] = sattaBaseRates) => {
+    const sDate = sDateStr || todayStr;
+    const sortedBases = [...bases]
+      .filter(b => b.start_date && b.start_date <= sDate)
+      .sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''));
+
+    if (sortedBases.length > 0 && sortedBases[0].base_rate) {
+      return String(sortedBases[0].base_rate);
+    }
+    if (bases.length > 0 && bases[0].base_rate) {
+      return String(bases[0].base_rate);
+    }
+    return '';
+  };
+
   const getSattaRateForRow = (
     rowAgencyName: string,
     rowGradeName: string,
@@ -1507,6 +1522,21 @@ function isPoMismatchResolved(poNo: string): boolean {
     };
   }, []);
 
+  // Auto-sync B. Rate from Satta Base Rate for given S Date
+  useEffect(() => {
+    if (sattaBaseRates.length > 0 && formData.s_date) {
+      const activeBase = lookupSattaBaseRate(formData.s_date, sattaBaseRates);
+      if (activeBase && (!formData.b_rate || formData.b_rate === '0' || formData.b_rate === '')) {
+        const updatedItems = recalculateAllRates(formData.items, formData.s_date, activeBase);
+        setFormData(prev => ({
+          ...prev,
+          b_rate: activeBase,
+          items: updatedItems
+        }));
+      }
+    }
+  }, [sattaBaseRates, formData.s_date]);
+
   const handleSaudaSelect = async (saudaNo: string) => {
     if (!saudaNo) {
       setFormData(prev => ({ ...prev, no: '' }));
@@ -1554,7 +1584,8 @@ function isPoMismatchResolved(poNo: string): boolean {
             const rowGradeName = matchingGrade?.grade_name || item.quality || '';
             const rowAgencyName = agencyObj?.agency_name || rowAgency;
             const sDate = sauda.date || todayStr;
-            const bRate = sauda.b_rate ? sauda.b_rate.toString() : '';
+            const autoBRate = lookupSattaBaseRate(sDate, sattaBaseRates);
+            const bRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? sauda.b_rate.toString() : autoBRate;
 
             const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, bRate);
             const finalRate = computedSattaRate !== null ? computedSattaRate : (item.rs || 0);
@@ -1612,7 +1643,7 @@ function isPoMismatchResolved(poNo: string): boolean {
       purchase_unit_name: sauda.unit_type || 'DRUMS',
       purchase_unit_code: purchaseUnitCode,
       weight_unit_kgs: weightUnitKgs,
-      b_rate: sauda.b_rate ? sauda.b_rate.toString() : '',
+      b_rate: bRate,
       date: sauda.date || todayStr,
       s_date: sauda.date || todayStr,
       delivery_from: sauda.date || todayStr,
@@ -1679,9 +1710,8 @@ function isPoMismatchResolved(poNo: string): boolean {
   };
 
   const handleGlobalAdd = () => {
-    const latestSatta = sattaBaseRates[0];
-    const defaultBRate = latestSatta ? String(latestSatta.base_rate || '') : '';
-    const defaultSDate = latestSatta && latestSatta.start_date ? latestSatta.start_date : todayStr;
+    const defaultSDate = todayStr;
+    const defaultBRate = lookupSattaBaseRate(defaultSDate, sattaBaseRates);
 
     setFormData({
       is_ptf: true,
@@ -1845,7 +1875,7 @@ function isPoMismatchResolved(poNo: string): boolean {
         terms_condition: poHeader.terms_condition || '',
         remarks: poHeader.remarks || '',
         po_identification: poHeader.po_identification || 'Direct Advance Payment',
-        b_rate: String(poHeader.b_rate || ''),
+        b_rate: (poHeader.b_rate && Number(poHeader.b_rate) > 0) ? String(poHeader.b_rate) : lookupSattaBaseRate(poHeader.s_date || todayStr, sattaBaseRates),
         s_date: poHeader.s_date || todayStr,
         items: mappedItems
       });
@@ -3649,10 +3679,13 @@ function isPoMismatchResolved(poNo: string): boolean {
                        isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.s_date} onChange={(e) => {
                         const val = e.target.value;
-                        const updatedItems = recalculateAllRates(formData.items, val, formData.b_rate);
+                        const autoBRate = lookupSattaBaseRate(val, sattaBaseRates);
+                        const newBRate = autoBRate || formData.b_rate;
+                        const updatedItems = recalculateAllRates(formData.items, val, newBRate);
                         setFormData({
                            ...formData, 
                            s_date: val,
+                           b_rate: newBRate,
                            items: updatedItems
                         });
                      }} />
