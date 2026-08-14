@@ -3263,37 +3263,51 @@ function isPoMismatchResolved(poNo: string): boolean {
         >
           <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
             
-            {/* Header Bar - Matching Mill Inspection Aesthetics */}
-            <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+            {/* Header Bar - Matching Mill Inspection Aesthetics (Compact Height) */}
+            <div className="bg-[#174C2C] text-white px-5 py-2.5 rounded-lg shadow-md flex flex-wrap items-center justify-between border border-[#0F351E] gap-3">
               {/* Left Badge & Title */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
-                  <FileText className="w-5 h-5" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
+                  <FileText className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
+                  <span className="bg-[#0b2415] text-amber-300 text-[10px] font-extrabold px-2 py-0 rounded border border-emerald-700/60 tracking-wider w-fit">
                     {formData.is_ptf ? "PTF Direct Entry" : "Sauda Linked"}
                   </span>
-                  <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow mt-0.5">
+                  <h1 className="text-base md:text-lg font-black uppercase tracking-wider text-amber-300 drop-shadow mt-0.5 leading-tight">
                     {formData.no ? `EDIT P.O #${formData.no}` : (isTempPo ? "NEW SAUDA CHECK POINT ENTRY" : "CREATE NEW PURCHASE ORDER (P.O)")}
                   </h1>
-                  <p className="text-xs font-bold text-amber-300 tracking-wide mt-1 flex items-center gap-2">
+                  <p className="text-[11px] font-bold text-amber-300 tracking-wide mt-0.5 flex items-center gap-1.5 leading-tight">
                     <span>Session: BJCL/2026-2027/</span>
-                    <span>•</span>
-                    <span>{formData.no ? `Order No: #${formData.no}` : (formData.is_ptf ? "PTF Direct Entry Mode" : "Sauda Linked Contract Entry")}</span>
+                    {formData.no ? (
+                      <>
+                        <span>•</span>
+                        <span>Order No: #{formData.no}</span>
+                      </>
+                    ) : formData.is_ptf ? (
+                      <>
+                        <span>•</span>
+                        <span>PTF Direct Entry Mode</span>
+                      </>
+                    ) : isTempPo ? null : (
+                      <>
+                        <span>•</span>
+                        <span>Sauda Linked Contract Entry</span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
 
               {/* Right Action Controls */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setViewMode('register')}
-                  className="px-4 py-2 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-lg text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95"
+                  className="px-3 py-1.5 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-md text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
                   title="Close P.O Form & Return to Register (Esc)"
                 >
-                  <ArrowLeft className="w-4 h-4 text-amber-300" />
+                  <ArrowLeft className="w-3.5 h-3.5 text-amber-300" />
                   <span>Back to Register</span>
                 </button>
               </div>
