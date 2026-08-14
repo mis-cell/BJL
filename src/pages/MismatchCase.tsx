@@ -498,13 +498,17 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code || '').trim() === String(detail.grade_code || detail.quality || header.grade_code || '').trim());
         const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.quality || detail.grade_code || header.grade || header.quality || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
         
-        // Extract rate and normalize to Rate per Quintal
+        // Extract rate and normalize to Rate per Quintal (e.g. 13400)
         const rawRate = Number(detail.rs || detail.rate_qntl || detail.rate_per_qtl || detail.b_rate || detail.rate_mt || detail.rate || header.b_rate || header.rate_qntl || header.rate || 0);
         if (rawRate <= 0) return;
 
-        // In Jute trading, rates (e.g. 13800, 16300, 13400) are entered in ₹/Quintal.
-        // If someone entered a value > 40000 (e.g. 138000 per MT), convert to Quintal (/10).
-        const poRateQtl = rawRate > 40000 ? rawRate / 10 : rawRate;
+        // Ensure rate is full Quintal rate (e.g. 13400)
+        let poRateQtl = rawRate;
+        if (poRateQtl > 0 && poRateQtl < 5000) {
+          poRateQtl = poRateQtl * 10;
+        } else if (poRateQtl > 50000) {
+          poRateQtl = poRateQtl / 10;
+        }
         const poRateMt = poRateQtl * 10;
 
         const poDate = header.date || header.po_date || header.b_date || '2026-04-02';
@@ -518,10 +522,18 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           sattaDiffRows
         );
 
-        // baseRate, differential, and finalRate from Satta Chart are in ₹/Quintal (e.g. 13500 base, -200 diff, 13300 final)
-        const sattaBaseRateQtl = baseRate;
-        const differentialQtl = differential;
-        const sattaFinalRateQtl = finalRate;
+        // Normalize Satta Base, Differential, and Final Rate to full Quintal values (e.g. Base 13500, Diff -200, Final 13300)
+        let sattaBaseRateQtl = baseRate;
+        if (sattaBaseRateQtl > 0 && sattaBaseRateQtl < 5000) {
+          sattaBaseRateQtl = sattaBaseRateQtl * 10;
+        }
+
+        let differentialQtl = differential;
+        if (differentialQtl !== 0 && Math.abs(differentialQtl) < 100) {
+          differentialQtl = differentialQtl * 10;
+        }
+
+        const sattaFinalRateQtl = sattaBaseRateQtl + differentialQtl;
         const sattaFinalRateMt = sattaFinalRateQtl * 10;
 
         const diffInRateQtl = poRateQtl - sattaFinalRateQtl;
@@ -1295,26 +1307,22 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                             <div className="font-black text-slate-900 text-sm">
                               ₹ {item.poRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ Qtl</span>
                             </div>
-                            <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
-                              (₹ {item.poRateMt.toLocaleString()} / m.T)
-                            </div>
                           </td>
                           <td className="p-3 border-r border-slate-200 bg-indigo-50/30">
                             <div className="font-black text-indigo-950 text-sm">
                               ₹ {item.sattaFinalRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span>
                             </div>
                             <div className="text-[10px] font-semibold text-indigo-800 mt-0.5">
-                              (Base ₹{item.sattaBaseRateQtl.toLocaleString()} {item.differentialQtl >= 0 ? `+ Diff ₹${item.differentialQtl}` : `- Diff ₹${Math.abs(item.differentialQtl)}`})
+                              (Base ₹{item.sattaBaseRateQtl.toLocaleString()} {item.differentialQtl >= 0 ? `+ Diff ₹${item.differentialQtl.toLocaleString()}` : `- Diff ₹${Math.abs(item.differentialQtl).toLocaleString()}`})
                             </div>
                           </td>
                           <td className="p-3 border-r border-slate-200 font-black">
                             {item.differenceQtl > 0 ? (
                               <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-xs inline-block">
                                 ⚠️ + ₹ {item.differenceQtl.toLocaleString()} / Qtl
-                                <div className="text-[9.5px] text-rose-800 font-semibold">(+ ₹ {item.differenceMt.toLocaleString()} / m.T)</div>
                               </div>
                             ) : item.differenceQtl < 0 ? (
-                              <div className="text-emerald-700 text-xs">
+                              <div className="text-emerald-700 text-xs font-bold">
                                 - ₹ {Math.abs(item.differenceQtl).toLocaleString()} / Qtl
                               </div>
                             ) : (
