@@ -1559,6 +1559,10 @@ function isPoMismatchResolved(poNo: string): boolean {
 
     let mappedItems: any[] = [];
     const isBales = (sauda.unit_type || '').toUpperCase() === 'BALES';
+    const sDate = sauda.date || todayStr;
+    const autoBRate = lookupSattaBaseRate(sDate, sattaBaseRates);
+    const selectedBRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? sauda.b_rate.toString() : autoBRate;
+
     if (supabase) {
       try {
         const { data: qDetails } = await supabase
@@ -1583,11 +1587,8 @@ function isPoMismatchResolved(poNo: string): boolean {
 
             const rowGradeName = matchingGrade?.grade_name || item.quality || '';
             const rowAgencyName = agencyObj?.agency_name || rowAgency;
-            const sDate = sauda.date || todayStr;
-            const autoBRate = lookupSattaBaseRate(sDate, sattaBaseRates);
-            const bRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? sauda.b_rate.toString() : autoBRate;
 
-            const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, bRate);
+            const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, selectedBRate);
             const finalRate = computedSattaRate !== null ? computedSattaRate : (item.rs || 0);
 
             return {
@@ -1643,7 +1644,7 @@ function isPoMismatchResolved(poNo: string): boolean {
       purchase_unit_name: sauda.unit_type || 'DRUMS',
       purchase_unit_code: purchaseUnitCode,
       weight_unit_kgs: weightUnitKgs,
-      b_rate: bRate,
+      b_rate: selectedBRate,
       date: sauda.date || todayStr,
       s_date: sauda.date || todayStr,
       delivery_from: sauda.date || todayStr,
