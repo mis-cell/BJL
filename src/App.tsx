@@ -447,6 +447,58 @@ import { supabase } from "./lib/supabase";
 
           -- Add mismatch clearance columns to sauda_check_point
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS mismatch_cleared BOOLEAN DEFAULT false;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS grid_details JSONB;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS details JSONB;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS items JSONB;
+
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS grid_details JSONB;
+
+          ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS grid_details JSONB;
+
+          ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS grid_details JSONB;
+
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS grid_details JSONB;
+
+          ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_area TEXT;
+          ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS grid_details JSONB;
+
+          ALTER TABLE IF EXISTS inspection_details ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS inspection_details ADD COLUMN IF NOT EXISTS agency TEXT;
+          ALTER TABLE IF EXISTS inspection_details ADD COLUMN IF NOT EXISTS marka TEXT;
+          ALTER TABLE IF EXISTS inspection_details ADD COLUMN IF NOT EXISTS marks TEXT;
+
+          ALTER TABLE IF EXISTS inspection_checklist_details ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist_details ADD COLUMN IF NOT EXISTS agency TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist_details ADD COLUMN IF NOT EXISTS marka TEXT;
+          ALTER TABLE IF EXISTS inspection_checklist_details ADD COLUMN IF NOT EXISTS marks TEXT;
+
+          ALTER TABLE IF EXISTS mill_inspection_detail ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_detail ADD COLUMN IF NOT EXISTS agency TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_detail ADD COLUMN IF NOT EXISTS marka TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_detail ADD COLUMN IF NOT EXISTS marks TEXT;
+
+          ALTER TABLE IF EXISTS material_inspection_details ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS material_inspection_details ADD COLUMN IF NOT EXISTS agency TEXT;
+          ALTER TABLE IF EXISTS material_inspection_details ADD COLUMN IF NOT EXISTS marka TEXT;
+          ALTER TABLE IF EXISTS material_inspection_details ADD COLUMN IF NOT EXISTS marks TEXT;
+
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS mismatch_remarks TEXT;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
