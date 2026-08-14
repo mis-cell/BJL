@@ -172,7 +172,7 @@ export interface SattaMismatchItem {
   resolvedAt?: string;
   resolvedBy?: string;
   approvalLevel?: string;
-  sourceType?: 'sauda_master' | 'sauda_check_point' | 'purchase_master';
+  sourceType?: 'sauda_master' | 'sms_sauda' | 'sauda_check_point' | 'purchase_master';
   sourceLabel?: string;
 }
 
@@ -268,7 +268,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     setLoading(true);
     try {
       // Direct fresh queries from database (no browser cache dependency)
-      const [scpRows, scpDetailRows, amadRows, inspMasterRows, dbMismatches, purchaseMasterRows, purchaseDetailRows, sattaBaseRows, sattaDiffRows, gradeRows, dbSattaMismatches, saudaMasterRows, saudaQualityRows, sattaMasterRows, sattaQualityRows] = await Promise.all([
+      const [scpRows, scpDetailRows, amadRows, inspMasterRows, dbMismatches, purchaseMasterRows, purchaseDetailRows, sattaBaseRows, sattaDiffRows, gradeRows, dbSattaMismatches, saudaMasterRows, saudaQualityRows, sattaMasterRows, sattaQualityRows, smsSaudaDbRows] = await Promise.all([
         supabase ? supabase.from('sauda_check_point').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_check_point').catch(() => []),
         supabase ? supabase.from('sauda_check_point_details').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_check_point_details').catch(() => []),
         dbModule.fetchAll('temporary_material_received').catch(() => []),
@@ -284,7 +284,15 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         dbModule.fetchAll('sauda_quality_details').catch(() => []),
         dbModule.fetchAll('satta_master').catch(() => []),
         dbModule.fetchAll('satta_quality_details').catch(() => []),
+        supabase ? supabase.from('sms_sauda').select('*').then(res => res.data || []) : Promise.resolve([]),
       ]);
+
+      let localSmsSaudas: any[] = [];
+      try {
+        localSmsSaudas = JSON.parse(localStorage.getItem('po_auto_sms_saudas') || '[]');
+      } catch (e) {}
+
+      const combinedSmsSaudas = [...smsSaudaDbRows, ...localSmsSaudas];
 
       const items: MaterialMismatchItem[] = [];
 
@@ -396,7 +404,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         header: any; 
         detail: any; 
         poNoFormatted: string; 
-        sourceType: 'sauda_master' | 'sauda_check_point' | 'purchase_master'; 
+        sourceType: 'sauda_master' | 'sms_sauda' | 'sauda_check_point' | 'purchase_master'; 
         sourceLabel: string;
       }[] = [];
 
@@ -411,7 +419,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             if (parts.length === 2 && parts[0] === 'BJCL') return `BJC${parts[1]}`;
           }
         }
-        const val = String(header.sauda_no || header.po_no || header.contract_po_no || header.satta_no || '').trim();
+        const val = String(header.sauda_no || header.po_no || header.contract_po_no || header.satta_no || header.order_no || '').trim();
         if (!val) return 'N/A';
         if (val.startsWith('BJC') || val.startsWith('BJCL')) return val;
         let yearPart = '26-27';
@@ -419,10 +427,10 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           const startYr = header.financial_year.split('-')[0].trim();
           if (startYr.length >= 4) yearPart = `${startYr.slice(-2)}-${(parseInt(startYr.slice(-2)) + 1).toString().padStart(2, '0')}`;
         }
-        return `BJC${val}/${yearPart}`;
+        return `BJC${val.replace(/^#/, '')}/${yearPart}`;
       };
 
-      // 1. Process sauda_master & sauda_quality_details (Sauda Book Entries)
+      // 1. Process sauda_master & sauda_quality_details (Sauda Desk Module)
       if (saudaMasterRows.length > 0) {
         saudaMasterRows.forEach((sm: any) => {
           const formattedNo = getFormattedOrderNo(sm);
@@ -433,10 +441,26 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
           if (matchingDetails.length > 0) {
             matchingDetails.forEach((qd: any) => {
-              saudaPoRowsToProcess.push({ header: sm, detail: qd, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
+              saudaPoRowsToProcess.push({ header: sm, detail: qd, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Desk Module' });
             });
           } else {
-            saudaPoRowsToProcess.push({ header: sm, detail: sm, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
+            saudaPoRowsToProcess.push({ header: sm, detail: sm, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Desk Module' });
+          }
+        });
+      }
+
+      // 1b. Process sms_sauda entries (SMS Sauda Desk / Sauda Desk Module)
+      if (combinedSmsSaudas.length > 0) {
+        combinedSmsSaudas.forEach((ss: any) => {
+          const formattedNo = getFormattedOrderNo(ss);
+          if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo)) {
+            saudaPoRowsToProcess.push({
+              header: ss,
+              detail: ss,
+              poNoFormatted: formattedNo,
+              sourceType: 'sms_sauda',
+              sourceLabel: 'Sauda Desk Module'
+            });
           }
         });
       }
@@ -724,7 +748,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
       sattaFilterStatus === 'all' ? true : item.status === sattaFilterStatus;
 
     const matchesSource = 
-      sattaSourceFilter === 'ALL' ? true : item.sourceType === sattaSourceFilter;
+      sattaSourceFilter === 'ALL' 
+        ? true 
+        : sattaSourceFilter === 'sauda_master' 
+          ? (item.sourceType === 'sauda_master' || item.sourceType === 'sms_sauda')
+          : item.sourceType === sattaSourceFilter;
 
     const matchesSupplier = 
       selectedSupplier === 'ALL' ? true : item.supplierName.toLowerCase() === selectedSupplier.toLowerCase();
@@ -774,7 +802,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
               <span>{variant === 'material' ? "Material Mismatch Board (Base Mode)" : "Satta Price Mismatch"}</span>
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Comparison across Sauda Check Point, Temporary P.O., and Material Inspections. Always fetched fresh from database.
+              {variant === 'material' 
+                ? "Comparison across Sauda Check Point, Temporary P.O., and Material Inspections. Always fetched fresh from database."
+                : "Validating contract rates registered in the Sauda Desk Module & Purchase Orders against active Satta Chart limits."}
             </p>
           </div>
 
@@ -1161,7 +1191,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
                 {/* Quick info chip */}
                 <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-                  Formula: <span className="text-slate-900 font-mono">Sauda Rate (₹/Qtl) vs. (Base Rate + Area/Grade Differential)</span>
+                  Validation: <span className="text-slate-900 font-bold">Sauda Desk Module & P.O. Rate (₹/Qtl)</span> vs <span className="text-indigo-900 font-bold">Satta Limit Rate (Base + Area/Grade Diff)</span>
                 </div>
               </div>
 
@@ -1190,9 +1220,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                         : "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100"
                     )}
                   >
-                    <span>🟢 Registered Saudas</span>
+                    <span>🟢 Sauda Desk Module</span>
                     <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-950 rounded-full text-[10px] font-black">
-                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_master').length}
+                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_master' || s.sourceType === 'sms_sauda').length}
                     </span>
                   </button>
                   <button
@@ -1276,16 +1306,16 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                               <span>{item.poNo}</span>
                             </div>
                             <div className="flex items-center gap-1.5 mt-1">
-                              {item.sourceType === 'sauda_master' ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-tight">
-                                  🟢 Registered Sauda
+                              {item.sourceType === 'sauda_master' || item.sourceType === 'sms_sauda' ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-tight inline-flex items-center gap-1">
+                                  🟢 Sauda Desk Module
                                 </span>
                               ) : item.sourceType === 'sauda_check_point' ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-900 border border-blue-300 uppercase tracking-tight">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-900 border border-blue-300 uppercase tracking-tight inline-flex items-center gap-1">
                                   🔵 Check Point P.O.
                                 </span>
                               ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-tight">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-tight inline-flex items-center gap-1">
                                   🟠 Purchase Order
                                 </span>
                               )}
