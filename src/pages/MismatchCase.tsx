@@ -1197,72 +1197,14 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
               {/* Second Row: Source Selector & Search Box */}
               <div className="pt-2 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                {/* Data Source Filter Buttons */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-black uppercase text-slate-500 mr-1">Source:</span>
-                  <button
-                    onClick={() => setSattaSourceFilter('ALL')}
-                    className={cn(
-                      "px-2.5 py-1 rounded text-xs font-extrabold border transition",
-                      sattaSourceFilter === 'ALL'
-                        ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                    )}
-                  >
-                    All Sources ({sattaMismatchList.length})
-                  </button>
-                  <button
-                    onClick={() => setSattaSourceFilter('sauda_master')}
-                    className={cn(
-                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
-                      sattaSourceFilter === 'sauda_master'
-                        ? "bg-emerald-800 text-white border-emerald-900 shadow-2xs"
-                        : "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100"
-                    )}
-                  >
-                    <span>🟢 Sauda Desk Module</span>
-                    <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-950 rounded-full text-[10px] font-black">
-                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_master' || s.sourceType === 'sms_sauda').length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSattaSourceFilter('sauda_check_point')}
-                    className={cn(
-                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
-                      sattaSourceFilter === 'sauda_check_point'
-                        ? "bg-blue-800 text-white border-blue-900 shadow-2xs"
-                        : "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100"
-                    )}
-                  >
-                    <span>🔵 P.O. Check Point</span>
-                    <span className="px-1.5 py-0.2 bg-blue-200 text-blue-950 rounded-full text-[10px] font-black">
-                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_check_point').length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSattaSourceFilter('purchase_master')}
-                    className={cn(
-                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
-                      sattaSourceFilter === 'purchase_master'
-                        ? "bg-amber-800 text-white border-amber-900 shadow-2xs"
-                        : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
-                    )}
-                  >
-                    <span>🟠 Purchase Orders</span>
-                    <span className="px-1.5 py-0.2 bg-amber-200 text-amber-950 rounded-full text-[10px] font-black">
-                      {sattaMismatchList.filter(s => s.sourceType === 'purchase_master').length}
-                    </span>
-                  </button>
-                </div>
-
                 {/* Search Box */}
-                <div className="relative w-full md:w-64">
+                <div className="relative w-full md:w-80 ml-auto">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Order No, Supplier, Broker..."
+                    placeholder="Search Sauda No, Supplier, Broker..."
                     className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-300 rounded bg-white focus:outline-none focus:border-indigo-600 text-slate-800 font-medium"
                   />
                 </div>
@@ -1280,7 +1222,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-2" />
                   <h3 className="text-sm font-extrabold text-slate-800 uppercase">No Satta Price Mismatches</h3>
                   <p className="text-xs text-slate-500 font-medium mt-1">
-                    No records match the selected status filter or source criteria.
+                    No records match the selected status filter or search criteria.
                   </p>
                 </div>
               ) : (
@@ -1288,7 +1230,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold uppercase text-[10.5px]">
-                        <th className="p-3 border-r border-slate-200">P.O. / Sauda No. & Source</th>
+                        <th className="p-3 border-r border-slate-200">Sauda No. & Date</th>
                         <th className="p-3 border-r border-slate-200">Supplier & Broker</th>
                         <th className="p-3 border-r border-slate-200">Area & Grade</th>
                         <th className="p-3 border-r border-slate-200 bg-slate-50">Sauda Rate (₹/Qtl)</th>
@@ -1304,21 +1246,6 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                           <td className="p-3 border-r border-slate-200 font-mono">
                             <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
                               <span>{item.poNo}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              {item.sourceType === 'sauda_master' || item.sourceType === 'sms_sauda' ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-tight inline-flex items-center gap-1">
-                                  🟢 Sauda Desk Module
-                                </span>
-                              ) : item.sourceType === 'sauda_check_point' ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-900 border border-blue-300 uppercase tracking-tight inline-flex items-center gap-1">
-                                  🔵 Check Point P.O.
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-tight inline-flex items-center gap-1">
-                                  🟠 Purchase Order
-                                </span>
-                              )}
                             </div>
                             <div className="text-[10px] text-slate-500 font-semibold mt-1">Date: {item.poDate}</div>
                             {item.saudaNo && item.saudaNo !== 'N/A' && item.saudaNo !== item.poNo && (
