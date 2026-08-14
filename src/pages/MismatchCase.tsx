@@ -430,7 +430,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         return `BJC${val.replace(/^#/, '')}/${yearPart}`;
       };
 
-      // 1. Process sauda_master & sauda_quality_details (Sauda Desk Module)
+      // 1. Process sauda_master & sauda_quality_details (Sauda Desk Entries)
       if (saudaMasterRows.length > 0) {
         saudaMasterRows.forEach((sm: any) => {
           const formattedNo = getFormattedOrderNo(sm);
@@ -449,7 +449,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         });
       }
 
-      // 1b. Process sms_sauda entries (SMS Sauda Desk / Sauda Desk Module)
+      // 1b. Process sms_sauda entries (SMS Sauda Desk)
       if (combinedSmsSaudas.length > 0) {
         combinedSmsSaudas.forEach((ss: any) => {
           const formattedNo = getFormattedOrderNo(ss);
@@ -465,53 +465,13 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         });
       }
 
-      // 2. Process sauda_check_point & sauda_check_point_details
-      if (scpRows.length > 0) {
-        scpRows.forEach((scp: any) => {
-          const formattedNo = scp.po_no || scp.contract_po_no || getFormattedOrderNo(scp);
-          const matchingDetails = scpDetailRows.filter((scpd: any) => 
-            String(scpd.po_no || scpd.contract_po_no || '').trim().toUpperCase() === String(scp.po_no || scp.contract_po_no || '').trim().toUpperCase()
-          );
-
-          if (matchingDetails.length > 0) {
-            matchingDetails.forEach((qd: any) => {
-              if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && r.detail.quality === qd.grade_code && r.detail.rs === qd.rate_qntl)) {
-                saudaPoRowsToProcess.push({ header: scp, detail: qd, poNoFormatted: formattedNo, sourceType: 'sauda_check_point', sourceLabel: 'P.O. Check Point' });
-              }
-            });
-          } else {
-            if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo)) {
-              saudaPoRowsToProcess.push({ header: scp, detail: scp, poNoFormatted: formattedNo, sourceType: 'sauda_check_point', sourceLabel: 'P.O. Check Point' });
-            }
-          }
-        });
-      }
-
-      // 3. Process purchase_master & purchase_detail_master
-      if (purchaseMasterRows.length > 0) {
-        purchaseMasterRows.forEach((pm: any) => {
-          const formattedNo = pm.po_no || getFormattedOrderNo(pm);
-          const matchingDetails = purchaseDetailRows.filter((pdm: any) => 
-            String(pdm.po_no || '').trim().toUpperCase() === String(pm.po_no || '').trim().toUpperCase()
-          );
-
-          if (matchingDetails.length > 0) {
-            matchingDetails.forEach((qd: any) => {
-              if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && (r.detail.quality === qd.grade_code || r.detail.grade_code === qd.grade_code))) {
-                saudaPoRowsToProcess.push({ header: pm, detail: qd, poNoFormatted: formattedNo, sourceType: 'purchase_master', sourceLabel: 'Purchase Order' });
-              }
-            });
-          }
-        });
-      }
-
-      // 4. Fallback: Any sauda_quality_details or detail rows not matched
+      // Fallback: Any sauda_quality_details not yet included
       saudaQualityRows.forEach((sq: any) => {
         const found = saudaPoRowsToProcess.some(r => r.detail === sq || (r.detail.sauda_id && r.detail.sauda_id === sq.sauda_id && r.detail.quality === sq.quality));
         if (!found) {
           const matchedHeader = saudaMasterRows.find((sm: any) => sm.sauda_id === sq.sauda_id || sm.sauda_no === sq.sauda_no) || sq;
           const formattedNo = getFormattedOrderNo(matchedHeader);
-          saudaPoRowsToProcess.push({ header: matchedHeader, detail: sq, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
+          saudaPoRowsToProcess.push({ header: matchedHeader, detail: sq, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Desk Module' });
         }
       });
 
@@ -804,7 +764,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               {variant === 'material' 
                 ? "Comparison across Sauda Check Point, Temporary P.O., and Material Inspections. Always fetched fresh from database."
-                : "Validating contract rates registered in the Sauda Desk Module & Purchase Orders against active Satta Chart limits."}
+                : "Validating contract rates registered in sauda_master (Sauda Desk) against active Satta Chart limits."}
             </p>
           </div>
 
@@ -1191,7 +1151,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
                 {/* Quick info chip */}
                 <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-                  Validation: <span className="text-slate-900 font-bold">Sauda Desk Module & P.O. Rate (₹/Qtl)</span> vs <span className="text-indigo-900 font-bold">Satta Limit Rate (Base + Area/Grade Diff)</span>
+                  Validation: <span className="text-slate-900 font-bold">sauda_master Rate (₹/Qtl)</span> vs <span className="text-indigo-900 font-bold">Satta Limit Rate (Base + Area/Grade Diff)</span>
                 </div>
               </div>
 
