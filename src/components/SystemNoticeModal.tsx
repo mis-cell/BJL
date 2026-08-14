@@ -64,42 +64,42 @@ export const SystemNoticeModal: React.FC<SystemNoticeModalProps> = ({
             <div className="absolute inset-0 opacity-25 pointer-events-none bg-[radial-gradient(#b8985c_1px,transparent_1px)] [background-size:14px_14px]" />
 
             {/* Center Lock Emblem */}
-            <div className="relative mb-5 flex items-center justify-center">
-              {/* Outer Dashed Golden Orbit */}
+            {/* <div className="relative mb-5 flex items-center justify-center">
+             
               <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-full border-2 border-dashed border-amber-400/60 flex items-center justify-center p-2 bg-amber-50/30 relative">
-                {/* Orbit Decorative Gold Dots */}
+                
                 <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-amber-400 shadow-sm" />
                 <span className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-2 rounded-full bg-amber-400 shadow-sm" />
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-amber-400 shadow-sm" />
 
-                {/* Inner Shield Badge Circle */}
+                
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-amber-50 via-white to-amber-100/80 border-2 border-amber-300/80 shadow-lg flex items-center justify-center relative">
-                  {/* Subtle Background Shield SVG */}
+                  
                   <Shield className="w-16 h-16 text-amber-200/50 absolute stroke-[1]" />
                   
-                  {/* Gold Padlock Icon */}
+                  
                   <div className="relative z-10 p-2 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-white shadow-md">
                     <Lock className="w-8 h-8 sm:w-9 sm:h-9 stroke-[2.2] fill-amber-100/20 text-white" />
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Section Subtitle */}
-            <div className="flex items-center justify-center gap-2.5 text-[#3d0818] font-black text-base sm:text-lg tracking-wider uppercase my-1">
+            {/* <div className="flex items-center justify-center gap-2.5 text-[#3d0818] font-black text-base sm:text-lg tracking-wider uppercase my-1">
               <span className="text-amber-500 tracking-widest text-xs">◆ ◆ ◆</span>
               <span>{statusText}</span>
               <span className="text-amber-500 tracking-widest text-xs">◆ ◆ ◆</span>
-            </div>
+            </div> */}
 
             {/* Shield Divider */}
-            <div className="flex items-center justify-center gap-3 w-full max-w-xs my-2.5">
+            {/* <div className="flex items-center justify-center gap-3 w-full max-w-xs my-2.5">
               <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
               <div className="w-6 h-6 rounded-md bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shadow-2xs">
                 <AlertTriangle className="w-3.5 h-3.5" />
               </div>
               <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-amber-400/80 to-transparent" />
-            </div>
+            </div> */}
 
             {/* Notice Message Payload */}
             <p className="text-slate-700 font-medium text-xs sm:text-sm max-w-sm leading-relaxed my-2">
@@ -125,7 +125,7 @@ export const SystemNoticeModal: React.FC<SystemNoticeModalProps> = ({
             {/* Action Footer Buttons */}
             <div className="w-full pt-5 mt-3 border-t border-amber-200/80 flex flex-col sm:flex-row items-center justify-center gap-3">
               {/* Learn More Button */}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setShowLearnMore(!showLearnMore)}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl border-2 border-amber-500/80 bg-white hover:bg-amber-50/80 text-[#3d0818] font-black text-[11px] tracking-wider uppercase flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98] cursor-pointer"
@@ -134,7 +134,7 @@ export const SystemNoticeModal: React.FC<SystemNoticeModalProps> = ({
                   i
                 </div>
                 <span>{showLearnMore ? "Hide Info" : "Learn More"}</span>
-              </button>
+              </button> */}
 
               {/* Acknowledge & Close Button */}
               <button
