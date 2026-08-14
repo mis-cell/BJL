@@ -204,21 +204,17 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
   const fetchPurchaseOrders = async () => {
     try {
-      const [tempPoRes, poRes, amadRes] = await Promise.all([
+      const [scpRes, amadRes] = await Promise.all([
         supabase ? supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('sauda_check_point', 'created_at', false).then(d => ({ data: d, error: null })),
-        supabase ? supabase.from('purchase_master').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('purchase_master', 'created_at', false).then(d => ({ data: d, error: null })),
         supabase ? supabase.from('temporary_material_received').select('*') : dbModule.fetchAll('temporary_material_received').then(d => ({ data: d, error: null }))
       ]);
 
       const amadList = amadRes?.data || [];
-      const tempPoData = (tempPoRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp', sourceTable: 'sauda_check_point' }));
-      const poData = (poRes?.data || []).map((po: any) => ({ ...po, sourceTable: 'purchase_master' }));
+      const tempPoData = (scpRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp', sourceTable: 'sauda_check_point' }));
 
-      // Prioritize Sauda Check Point entries
-      const mergedPos = [...tempPoData, ...poData];
-      // Deduplicate by po_no
+      // Deduplicate by po_no from sauda_check_point
       const uniqueMap = new Map<string, any>();
-      mergedPos.forEach((po: any) => {
+      tempPoData.forEach((po: any) => {
         if (po && po.po_no) {
           const key = String(po.po_no).trim().toUpperCase();
           if (!uniqueMap.has(key)) {
@@ -259,7 +255,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       setPurchaseOrders(filtered);
     } catch (err) {
-      console.warn("Error in fetchPurchaseOrders from sauda_check_point / purchase_master:", err);
+      console.warn("Error in fetchPurchaseOrders from sauda_check_point:", err);
     }
   };
 
@@ -538,36 +534,36 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       // 1. Query Supabase directly if available
       if (supabase) {
-        const [pdmRes, scpRes] = await Promise.all([
-          supabase.from('purchase_detail_master').select('*').eq('po_no', poNo.trim()),
-          supabase.from('sauda_check_point_details').select('*').eq('po_no', poNo.trim())
+        const [scpRes, pdmRes] = await Promise.all([
+          supabase.from('sauda_check_point_details').select('*').eq('po_no', poNo.trim()),
+          supabase.from('purchase_detail_master').select('*').eq('po_no', poNo.trim())
         ]);
-        const pdm = pdmRes.data || [];
         const scp = scpRes.data || [];
+        const pdm = pdmRes.data || [];
 
-        if (pdm.length > 0) {
-          filteredDetails = pdm;
-        } else if (scp.length > 0) {
+        if (scp.length > 0) {
           filteredDetails = scp;
+        } else if (pdm.length > 0) {
+          filteredDetails = pdm;
         } else {
           // Case insensitive fallback
-          const [pdmIns, scpIns] = await Promise.all([
-            supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoUpper),
-            supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoUpper)
+          const [scpIns, pdmIns] = await Promise.all([
+            supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoUpper),
+            supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoUpper)
           ]);
-          filteredDetails = (pdmIns.data && pdmIns.data.length > 0) ? pdmIns.data : (scpIns.data || []);
+          filteredDetails = (scpIns.data && scpIns.data.length > 0) ? scpIns.data : (pdmIns.data || []);
         }
       }
 
       // 2. Query dbModule fallback if still empty
       if (!filteredDetails || filteredDetails.length === 0) {
-        const [allPdm, allScp] = await Promise.all([
-          dbModule.fetchAll('purchase_detail_master').catch(() => []),
-          dbModule.fetchAll('sauda_check_point_details').catch(() => [])
+        const [allScp, allPdm] = await Promise.all([
+          dbModule.fetchAll('sauda_check_point_details').catch(() => []),
+          dbModule.fetchAll('purchase_detail_master').catch(() => [])
         ]);
-        const pdm = (allPdm || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poNoUpper);
         const scp = (allScp || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poNoUpper);
-        filteredDetails = pdm.length > 0 ? pdm : scp;
+        const pdm = (allPdm || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poNoUpper);
+        filteredDetails = scp.length > 0 ? scp : pdm;
       }
 
       // 3. Fallback to embedded items in purchaseOrders list
