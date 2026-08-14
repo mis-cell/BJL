@@ -291,6 +291,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 supplier: item.supplier,
                 broker: item.broker,
                 lorry_number: item.lorry_no,
+                arrival_area_name: item.arrival_area_name || item.arrival_area || item.area_name || item.area,
                 grid_details: item.grid_details || item.details || item.items
               });
             }
@@ -367,13 +368,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }));
 
     const rawGrid = fa.grid_details || fa.details || fa.items;
+    const voucherArea = (fa.arrival_area_name || fa.arrival_area || fa.area_name || fa.area || "").toUpperCase();
+
     if (Array.isArray(rawGrid) && rawGrid.length > 0) {
       const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => ({
         srl_no: i + 1,
         arrival_grade: item.challan_grade_name || item.receipt_grade_name || item.grade || "",
         stock_grade_code: item.receipt_grade_code || item.stock_grade_code || "",
         stock_grade_name: item.receipt_grade_name || item.stock_grade_name || item.grade || "",
-        area: item.area_name || item.area || "",
+        area: (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase(),
         agency: item.agency_name || item.agency || "",
         marks: item.challan_marka_name || item.marka || item.marks || "",
         crop_year: item.crop_year || "",
@@ -385,6 +388,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         expanded: false
       }));
       setDetailRows(details);
+    } else if (voucherArea) {
+      setDetailRows(prev => prev.map(r => ({ ...r, area: r.area || voucherArea })));
     }
     showToast(`Loaded Final Arrival ${fa.final_arrival_no || displayMrNo} into inspection form.`);
   };

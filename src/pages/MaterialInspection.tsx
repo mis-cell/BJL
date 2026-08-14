@@ -173,19 +173,38 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     try {
       let data: any[] = [];
       if (supabase) {
-        const { data: res, error } = await supabase
+        const { data: tempRes } = await supabase
           .from("temporary_material_received")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) throw error;
-        data = res || [];
+        const { data: finalRes } = await supabase
+          .from("final_arrival")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        data = [...(finalRes || []), ...(tempRes || [])];
       } else {
-        data = await dbModule.fetchAll("temporary_material_received").catch(() => []);
+        const tempRes = await dbModule.fetchAll("temporary_material_received").catch(() => []);
+        const finalRes = await dbModule.fetchAll("final_arrival").catch(() => []);
+        data = [...(finalRes || []), ...(tempRes || [])];
       }
+
+      try {
+        const cachedFa = localStorage.getItem("final_arrival_vouchers");
+        if (cachedFa) {
+          const parsed = JSON.parse(cachedFa);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              data.push(item);
+            });
+          }
+        }
+      } catch (e) {}
+
       setDbRecords(data);
     } catch (err: any) {
-      console.error(`Error fetching temporary_material_received for ${name}:`, err);
+      console.error(`Error fetching arrival records for ${name}:`, err);
       setFetchError("Unable to connect to database");
     } finally {
       setLoading(false);
@@ -1373,6 +1392,18 @@ export default function MaterialInspection({
           "BALES"
         ).toUpperCase();
 
+        const rowArea = (
+          row.area_name ||
+          row.area ||
+          row.arrival_area_name ||
+          row.arrival_area ||
+          voucher.arrival_area_name ||
+          voucher.arrival_area ||
+          voucher.area_name ||
+          voucher.area ||
+          ""
+        ).toUpperCase();
+
         return {
           srl_no: i + 1,
           arrival_grade: (
@@ -1382,7 +1413,7 @@ export default function MaterialInspection({
           ).toUpperCase(),
           stock_grade_code: (row.receipt_grade_code || "").toUpperCase(),
           stock_grade_name: (row.receipt_grade_name || "").toUpperCase(),
-          area: (voucher.arrival_area_name || "").toUpperCase(),
+          area: rowArea,
           agency: (row.agency_name || "").toUpperCase(),
           marka: (row.challan_marka_name || "").toUpperCase(),
           crop_year: (() => {
@@ -1401,6 +1432,14 @@ export default function MaterialInspection({
         };
       });
 
+      const voucherAreaHeader = (
+        voucher.arrival_area_name ||
+        voucher.arrival_area ||
+        voucher.area_name ||
+        voucher.area ||
+        ""
+      ).toUpperCase();
+
       const defaultUnit = voucherUnit || "BALES";
       while (mappedDetails.length < 5) {
         mappedDetails.push({
@@ -1408,7 +1447,7 @@ export default function MaterialInspection({
           arrival_grade: "",
           stock_grade_code: "",
           stock_grade_name: "",
-          area: "",
+          area: voucherAreaHeader,
           agency: "",
           marka: "",
           crop_year: "2026-27",
@@ -1424,6 +1463,22 @@ export default function MaterialInspection({
         `Matched & Auto-filled parameter fields & ledger rows as per Jute Arrival / PO #${voucher.po_no || voucher.temporary_arrival_no || voucher.amad_no || ""}!`,
       );
     } else {
+      const voucherAreaHeader = (
+        voucher.arrival_area_name ||
+        voucher.arrival_area ||
+        voucher.area_name ||
+        voucher.area ||
+        ""
+      ).toUpperCase();
+
+      if (voucherAreaHeader) {
+        setDetailsList((prev) =>
+          prev.map((r) => ({
+            ...r,
+            area: r.area || voucherAreaHeader,
+          }))
+        );
+      }
       setSuccessMessage(
         `Matched & Auto-filled parameters as per Jute Arrival / PO #${voucher.po_no || voucher.temporary_arrival_no || voucher.amad_no || ""}! Fill custom table parameters.`,
       );
