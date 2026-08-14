@@ -167,47 +167,51 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     };
   }, []);
 
-  useLiveAutoRefresh(fetchLiveData, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'temporary_material_received'] });
+  useLiveAutoRefresh(fetchLiveData, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'inspection_checklist'] });
 
-  // Fetch data directly from Supabase
+  // Fetch data directly from Supabase (Inspection only)
   async function fetchLiveData() {
     if (dbRecords.length === 0) setLoading(true);
     setFetchError(null);
     try {
       let data: any[] = [];
       if (supabase) {
-        const { data: tempRes } = await supabase
-          .from("temporary_material_received")
+        const { data: inspRes } = await supabase
+          .from("mill_inspection_master")
           .select("*")
           .order("created_at", { ascending: false });
 
-        const { data: finalRes } = await supabase
-          .from("final_arrival")
+        const { data: checklistRes } = await supabase
+          .from("inspection_checklist")
           .select("*")
           .order("created_at", { ascending: false });
 
-        data = [...(finalRes || []), ...(tempRes || [])];
-      } else {
-        const tempRes = await dbModule.fetchAll("temporary_material_received").catch(() => []);
-        const finalRes = await dbModule.fetchAll("final_arrival").catch(() => []);
-        data = [...(finalRes || []), ...(tempRes || [])];
-      }
-
-      try {
-        const cachedFa = localStorage.getItem("final_arrival_vouchers");
-        if (cachedFa) {
-          const parsed = JSON.parse(cachedFa);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((item: any) => {
-              data.push(item);
-            });
+        const combined = [...(inspRes || []), ...(checklistRes || [])];
+        const uniqueMap = new Map();
+        combined.forEach((item: any) => {
+          const key = item.mr_no || item.id;
+          if (key && !uniqueMap.has(key)) {
+            uniqueMap.set(key, item);
           }
-        }
-      } catch (e) {}
+        });
+        data = Array.from(uniqueMap.values());
+      } else {
+        const inspRes = await dbModule.fetchAll("mill_inspection_master").catch(() => []);
+        const checklistRes = await dbModule.fetchAll("inspection_checklist").catch(() => []);
+        const combined = [...(inspRes || []), ...(checklistRes || [])];
+        const uniqueMap = new Map();
+        combined.forEach((item: any) => {
+          const key = item.mr_no || item.id;
+          if (key && !uniqueMap.has(key)) {
+            uniqueMap.set(key, item);
+          }
+        });
+        data = Array.from(uniqueMap.values());
+      }
 
       setDbRecords(data);
     } catch (err: any) {
-      console.error(`Error fetching arrival records for ${name}:`, err);
+      console.error(`Error fetching inspection records for ${name}:`, err);
       setFetchError("Unable to connect to database");
     } finally {
       setLoading(false);
@@ -227,7 +231,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     dbRecords.forEach((record) => {
       let rawVal = "";
       if (fieldColumn === "temporary_arrival_no") {
-        rawVal = (record.temporary_arrival_no || record.amad_no || record.arrival_no || "").toString().trim();
+        rawVal = (record.arrival_no || record.temporary_arrival_no || record.ref_arrival_no || record.mr_no || "").toString().trim();
       } else if (fieldColumn === "po_no") {
         rawVal = (record.po_no || "").toString().trim();
       }
@@ -239,7 +243,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
       // Check if already inspected (unless it matches current selected value)
       const isAlreadyInspected = savedInspections.some(
         (insp) =>
-          (insp.arrival_no || insp.temporary_arrival_no || "").trim().toUpperCase() === upperKey ||
+          (insp.arrival_no || insp.temporary_arrival_no || insp.mr_no || "").trim().toUpperCase() === upperKey ||
           (fieldColumn === "po_no" && (insp.po_no || "").trim().toUpperCase() === upperKey)
       );
 
@@ -266,9 +270,10 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     return uniqueOptions.filter((opt) => {
       const valMatches = opt.val.toLowerCase().includes(searchLower);
       const poMatches = opt.record?.po_no?.toString().toLowerCase().includes(searchLower);
-      const suppMatches = opt.record?.supplier?.toString().toLowerCase().includes(searchLower);
-      const tempArrivalMatches = opt.record?.temporary_arrival_no?.toString().toLowerCase().includes(searchLower);
-      return valMatches || poMatches || suppMatches || tempArrivalMatches;
+      const suppMatches = (opt.record?.supplier_name || opt.record?.supplier || "").toString().toLowerCase().includes(searchLower);
+      const mrMatches = (opt.record?.mr_no || "").toString().toLowerCase().includes(searchLower);
+      const brokerMatches = (opt.record?.broker_name || opt.record?.broker || "").toString().toLowerCase().includes(searchLower);
+      return valMatches || poMatches || suppMatches || mrMatches || brokerMatches;
     });
   };
 
@@ -295,7 +300,8 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     <div ref={containerRef} className="relative flex-1">
       <div className="relative flex items-center">
         <input
- id="value_275" aria-label="value"          type="text"
+          id="value_275" aria-label="value"
+          type="text"
           name={name}
           value={value}
           disabled={disabled}
@@ -337,7 +343,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
             <div className="py-1">
               <div className="px-2 py-1 bg-slate-100 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider flex justify-between">
                 <span>{label}</span>
-                <span>Live Supabase Records</span>
+                <span>Inspection Records</span>
               </div>
               {options.map((opt, idx) => (
                 <div
@@ -354,13 +360,19 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
                   <span className="text-[10px] text-slate-500 truncate text-right">
                     {fieldColumn === "temporary_arrival_no"
                       ? `${opt.record?.po_no ? `P.O. #${opt.record.po_no}` : ""}${
-                          opt.record?.supplier ? ` | ${opt.record.supplier}` : ""
+                          (opt.record?.supplier_name || opt.record?.supplier) ? ` | ${opt.record.supplier_name || opt.record.supplier}` : ""
                         }`
                       : `${
-                          opt.record?.temporary_arrival_no
-                            ? `Temp Arr: ${opt.record.temporary_arrival_no}`
+                          opt.record?.mr_no
+                            ? `Insp: ${opt.record.mr_no}`
+                            : (opt.record?.arrival_no || opt.record?.temporary_arrival_no)
+                            ? `Arrival: ${opt.record.arrival_no || opt.record.temporary_arrival_no}`
                             : ""
-                        }${opt.record?.supplier ? ` | ${opt.record.supplier}` : ""}`}
+                        }${
+                          (opt.record?.supplier_name || opt.record?.supplier || opt.record?.broker_name || opt.record?.broker)
+                            ? ` | ${opt.record.supplier_name || opt.record.supplier || opt.record.broker_name || opt.record.broker}`
+                            : ""
+                        }`}
                   </span>
                 </div>
               ))}
@@ -973,24 +985,32 @@ export default function MaterialInspection({
             .select("agency_name")
             .order("agency_name")
             .limit(150),
-          supabase.from("marka_master").select("marka_name").order("marka_name").limit(150),
+          supabase.from("marka_master").select("marka_name").order("marka_name").limit(150).then(r => r.data || []),
           supabase
-            .from("temporary_material_received")
+            .from("mill_inspection_master")
             .select("*")
             .order("created_at", { ascending: false })
-            .limit(250),
-          supabase.from("unit_master").select("unit_name").order("unit_name").limit(150),
-          supabase.from("moisture_logic").select("*"),
+            .limit(250).then(r => r.data || []),
+          supabase.from("unit_master").select("unit_name").order("unit_name").limit(150).then(r => r.data || []),
+          supabase.from("moisture_logic").select("*").then(r => r.data || []),
           supabase.from("deduction_master").select("*").then(r => r.data || [], () => []),
         ]);
 
-        if (b) setBrokers(b.map(x => ({ name: x.brok_name })));
-        if (s) setSuppliers(s.map(x => ({ name: x.supp_name })));
-        if (g) setGrades(g.map(x => ({ code: x.grade_code, name: x.grade_name })));
-        if (ar) setAreas(ar.map(x => ({ name: x.area_name })));
-        if (ag) setAgencies(ag.map(x => ({ name: x.agency_name })));
-        if (m) setMarkas(m.map(x => ({ name: x.marka_name })));
-        if (av) setArrivalVouchers(av);
+        if (b) setBrokers(b.map((x: any) => ({ name: x.brok_name })));
+        if (s) setSuppliers(s.map((x: any) => ({ name: x.supp_name })));
+        if (g) setGrades(g.map((x: any) => ({ code: x.grade_code, name: x.grade_name })));
+        if (ar) setAreas(ar.map((x: any) => ({ name: x.area_name })));
+        if (ag) setAgencies(ag.map((x: any) => ({ name: x.agency_name })));
+        if (m) setMarkas(m.map((x: any) => ({ name: x.marka_name })));
+        if (av) {
+          const mapped = av.map((v: any) => ({
+            ...v,
+            temporary_arrival_no: v.arrival_no || v.temporary_arrival_no || v.ref_arrival_no || v.mr_no,
+            supplier: v.supplier_name || v.supplier,
+            broker: v.broker_name || v.broker,
+          }));
+          setArrivalVouchers(mapped);
+        }
         if (uData && uData.length > 0) {
           const fetchedUnits = uData.map((x: any) => x.unit_name).filter(Boolean);
           setUnitList(prev => Array.from(new Set([...fetchedUnits, ...prev])));
@@ -1018,15 +1038,14 @@ export default function MaterialInspection({
           setDeductionMasterList(defaultDeductions);
         }
       } else {
-        const [b, s, g, ar, ag, m, av, fa] = await Promise.all([
+        const [b, s, g, ar, ag, m, av] = await Promise.all([
           dbModule.fetchAll('broker_master').catch(() => []),
           dbModule.fetchAll('supply_master').catch(() => []),
           dbModule.fetchAll('grade_master').catch(() => []),
           dbModule.fetchAll('area_master').catch(() => []),
           dbModule.fetchAll('agency_master').catch(() => []),
           dbModule.fetchAll('marka_master').catch(() => []),
-          dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
-          dbModule.fetchAll('final_arrival', 'created_at', false).catch(() => []),
+          dbModule.fetchAll('mill_inspection_master', 'created_at', false).catch(() => []),
         ]);
         if (b) setBrokers(b.map((x: any) => ({ name: x.brok_name })));
         if (s) setSuppliers(s.map((x: any) => ({ name: x.supp_name })));
@@ -1034,11 +1053,15 @@ export default function MaterialInspection({
         if (ar) setAreas(ar.map((x: any) => ({ name: x.area_name })));
         if (ag) setAgencies(ag.map((x: any) => ({ name: x.agency_name })));
         if (m) setMarkas(m.map((x: any) => ({ name: x.marka_name })));
-        const mergedVouchers = [...(av || []), ...(fa || []).map((f: any) => ({
-          ...f,
-          temporary_arrival_no: f.final_arrival_no || f.temporary_arrival_no || f.arrival_no,
-        }))];
-        setArrivalVouchers(mergedVouchers);
+        if (av) {
+          const mapped = av.map((v: any) => ({
+            ...v,
+            temporary_arrival_no: v.arrival_no || v.temporary_arrival_no || v.ref_arrival_no || v.mr_no,
+            supplier: v.supplier_name || v.supplier,
+            broker: v.broker_name || v.broker,
+          }));
+          setArrivalVouchers(mapped);
+        }
       }
     } catch (err) {
       console.warn("Failed to load autocomplete lists:", err);
@@ -1066,7 +1089,7 @@ export default function MaterialInspection({
     if (supabase) {
       sub = supabase
         .channel('material_inspection_masters_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'temporary_material_received' }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'mill_inspection_master' }, () => {
           loadAllMasters();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inspections' }, () => {
@@ -3086,19 +3109,13 @@ export default function MaterialInspection({
               if (!v.po_no) return false;
               const arrivalVal = (v.temporary_arrival_no || v.arrival_no || v.amad_no || "").trim().toUpperCase();
               if (!arrivalVal) return false;
-              const isAlreadyInspected = savedInspections.some(
-                (insp) => (insp.arrival_no || insp.temporary_arrival_no || "").trim().toUpperCase() === arrivalVal
-              );
-              if (isAlreadyInspected && (masterData.po_no || "").trim().toUpperCase() !== (v.po_no || "").trim().toUpperCase()) {
-                return false;
-              }
               return true;
             })
             .map((v, idx) => (
               <option
                 key={idx}
                 value={v.po_no}
-              >{`P.O. #${v.po_no} | Temp Arrival No: ${v.temporary_arrival_no || v.arrival_no || v.amad_no || ""} | Supplier: ${v.supplier || ""}`}</option>
+              >{`P.O. #${v.po_no} | Inspection MR / Arr: ${v.mr_no || v.temporary_arrival_no || v.arrival_no || ""} | Supplier: ${v.supplier || v.supplier_name || ""}`}</option>
             ))}
         </datalist>
         <datalist id="arrivalNoList">
@@ -3106,12 +3123,6 @@ export default function MaterialInspection({
             .filter((v) => {
               const arrivalVal = (v.temporary_arrival_no || v.arrival_no || v.amad_no || "").trim().toUpperCase();
               if (!arrivalVal) return false;
-              const isAlreadyInspected = savedInspections.some(
-                (insp) => (insp.arrival_no || insp.temporary_arrival_no || "").trim().toUpperCase() === arrivalVal
-              );
-              if (isAlreadyInspected && (masterData.arrival_no || "").trim().toUpperCase() !== arrivalVal) {
-                return false;
-              }
               return true;
             })
             .map((v, idx) => {
@@ -3120,7 +3131,7 @@ export default function MaterialInspection({
                 <option
                   key={idx}
                   value={arrivalVal}
-                >{`Temp Arrival No: ${arrivalVal} | P.O. #${v.po_no || ""} | Supplier: ${v.supplier || ""}`}</option>
+                >{`Inspection MR / Arr No: ${arrivalVal} | P.O. #${v.po_no || ""} | Supplier: ${v.supplier || v.supplier_name || ""}`}</option>
               );
             })}
         </datalist>
