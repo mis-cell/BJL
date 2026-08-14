@@ -172,6 +172,8 @@ export interface SattaMismatchItem {
   resolvedAt?: string;
   resolvedBy?: string;
   approvalLevel?: string;
+  sourceType?: 'sauda_master' | 'sauda_check_point' | 'purchase_master';
+  sourceLabel?: string;
 }
 
 export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?: () => void; variant?: 'satta' | 'material' }) {
@@ -189,6 +191,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   // Satta Mismatch States
   const [sattaMismatchList, setSattaMismatchList] = useState<SattaMismatchItem[]>([]);
   const [sattaFilterStatus, setSattaFilterStatus] = useState<'all' | 'dispute' | 'ok' | 'resolved'>('dispute');
+  const [sattaSourceFilter, setSattaSourceFilter] = useState<'ALL' | 'sauda_master' | 'sauda_check_point' | 'purchase_master'>('ALL');
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -389,7 +392,13 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
       // --- Satta Mismatch Processing ---
       const sattaItems: SattaMismatchItem[] = [];
-      const saudaPoRowsToProcess: { header: any; detail: any; poNoFormatted: string }[] = [];
+      const saudaPoRowsToProcess: { 
+        header: any; 
+        detail: any; 
+        poNoFormatted: string; 
+        sourceType: 'sauda_master' | 'sauda_check_point' | 'purchase_master'; 
+        sourceLabel: string;
+      }[] = [];
 
       // Function to generate formatted Order No (e.g. BJC0158/26-27 or BJC4007/26-27)
       const getFormattedOrderNo = (header: any) => {
@@ -413,7 +422,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         return `BJC${val}/${yearPart}`;
       };
 
-      // 1. Process sauda_master & sauda_quality_details
+      // 1. Process sauda_master & sauda_quality_details (Sauda Book Entries)
       if (saudaMasterRows.length > 0) {
         saudaMasterRows.forEach((sm: any) => {
           const formattedNo = getFormattedOrderNo(sm);
@@ -424,10 +433,10 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
           if (matchingDetails.length > 0) {
             matchingDetails.forEach((qd: any) => {
-              saudaPoRowsToProcess.push({ header: sm, detail: qd, poNoFormatted: formattedNo });
+              saudaPoRowsToProcess.push({ header: sm, detail: qd, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
             });
           } else {
-            saudaPoRowsToProcess.push({ header: sm, detail: sm, poNoFormatted: formattedNo });
+            saudaPoRowsToProcess.push({ header: sm, detail: sm, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
           }
         });
       }
@@ -443,12 +452,12 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           if (matchingDetails.length > 0) {
             matchingDetails.forEach((qd: any) => {
               if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && r.detail.quality === qd.grade_code && r.detail.rs === qd.rate_qntl)) {
-                saudaPoRowsToProcess.push({ header: scp, detail: qd, poNoFormatted: formattedNo });
+                saudaPoRowsToProcess.push({ header: scp, detail: qd, poNoFormatted: formattedNo, sourceType: 'sauda_check_point', sourceLabel: 'P.O. Check Point' });
               }
             });
           } else {
             if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo)) {
-              saudaPoRowsToProcess.push({ header: scp, detail: scp, poNoFormatted: formattedNo });
+              saudaPoRowsToProcess.push({ header: scp, detail: scp, poNoFormatted: formattedNo, sourceType: 'sauda_check_point', sourceLabel: 'P.O. Check Point' });
             }
           }
         });
@@ -465,7 +474,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           if (matchingDetails.length > 0) {
             matchingDetails.forEach((qd: any) => {
               if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && (r.detail.quality === qd.grade_code || r.detail.grade_code === qd.grade_code))) {
-                saudaPoRowsToProcess.push({ header: pm, detail: qd, poNoFormatted: formattedNo });
+                saudaPoRowsToProcess.push({ header: pm, detail: qd, poNoFormatted: formattedNo, sourceType: 'purchase_master', sourceLabel: 'Purchase Order' });
               }
             });
           }
@@ -478,11 +487,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         if (!found) {
           const matchedHeader = saudaMasterRows.find((sm: any) => sm.sauda_id === sq.sauda_id || sm.sauda_no === sq.sauda_no) || sq;
           const formattedNo = getFormattedOrderNo(matchedHeader);
-          saudaPoRowsToProcess.push({ header: matchedHeader, detail: sq, poNoFormatted: formattedNo });
+          saudaPoRowsToProcess.push({ header: matchedHeader, detail: sq, poNoFormatted: formattedNo, sourceType: 'sauda_master', sourceLabel: 'Sauda Book Entry' });
         }
       });
 
-      saudaPoRowsToProcess.forEach(({ header, detail, poNoFormatted }) => {
+      saudaPoRowsToProcess.forEach(({ header, detail, poNoFormatted, sourceType, sourceLabel }) => {
         const poNo = poNoFormatted || String(detail.po_no || header.po_no || header.contract_po_no || header.sauda_no || '').trim().toUpperCase();
         if (!poNo || poNo === 'N/A') return;
 
@@ -545,7 +554,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           sattaFinalRateQtl,
           status: isResolved ? 'resolved' : (isDispute ? 'dispute' : 'ok'),
           issueDescription: isDispute 
-            ? `Sauda Contract Rate exceeds active Satta Chart parameters. Contract specifies ₹${poRateMt.toLocaleString()}/m.T (₹${poRateQtl.toLocaleString()}/Qtl), which exceeds active Satta limit of ₹${sattaFinalRateMt.toLocaleString()}/m.T (₹${sattaFinalRateQtl.toLocaleString()}/Qtl) by ₹${diffInRateMt.toLocaleString()}/m.T.`
+            ? `Sauda Contract Rate exceeds active Satta Chart parameters. Contract specifies ₹${poRateQtl.toLocaleString()}/Qtl (₹${poRateMt.toLocaleString()}/m.T), which exceeds active Satta limit of ₹${sattaFinalRateQtl.toLocaleString()}/Qtl (₹${sattaFinalRateMt.toLocaleString()}/m.T) by ₹${diffInRateQtl.toLocaleString()}/Qtl.`
             : "Sauda rate aligns with active Satta Chart parameters.",
           differenceMt: diffInRateMt,
           differenceQtl: diffInRateQtl,
@@ -553,7 +562,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           resolutionNotes: dbSattaMm?.remarks,
           resolvedAt: dbSattaMm?.approved_at ? String(dbSattaMm.approved_at).split('T')[0] : undefined,
           resolvedBy: dbSattaMm?.approved_by,
-          approvalLevel: dbSattaMm?.approval_level || 'L3/L5'
+          approvalLevel: dbSattaMm?.approval_level || 'L3/L5',
+          sourceType,
+          sourceLabel
         });
       });
 
@@ -688,6 +699,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     const matchesSearch = 
       item.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.poNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.saudaNo && item.saudaNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
       item.brokerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.area.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.grade.toLowerCase().includes(searchQuery.toLowerCase());
@@ -695,22 +707,25 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     const matchesStatus = 
       sattaFilterStatus === 'all' ? true : item.status === sattaFilterStatus;
 
+    const matchesSource = 
+      sattaSourceFilter === 'ALL' ? true : item.sourceType === sattaSourceFilter;
+
     const matchesSupplier = 
       selectedSupplier === 'ALL' ? true : item.supplierName.toLowerCase() === selectedSupplier.toLowerCase();
 
     const matchesBroker = 
       selectedBroker === 'ALL' ? true : item.brokerName.toLowerCase() === selectedBroker.toLowerCase();
 
-    return matchesSearch && matchesStatus && matchesSupplier && matchesBroker;
+    return matchesSearch && matchesStatus && matchesSource && matchesSupplier && matchesBroker;
   });
 
   const downloadCSV = () => {
     let csvContent = "";
     if (activeTab === 'ruka_to_satta') {
       csvContent = "data:text/csv;charset=utf-8," 
-        + ["Mismatch ID,P.O. / Sauda No,Date,Supplier,Area,Grade,Sauda Rate (m.T),Satta Limit Rate (m.T),Variance (m.T),Status,Approved By,Remarks"]
+        + ["Mismatch ID,P.O. / Sauda No,Date,Supplier,Area,Grade,Sauda Rate (₹/Qtl),Satta Limit Rate (₹/Qtl),Variance (₹/Qtl),Status,Approved By,Remarks"]
           .concat(sattaMismatchList.map(item => 
-            `"${item.id}","${item.poNo}","${item.poDate}","${item.supplierName}","${item.area}","${item.grade}","${item.poRateMt}","${item.sattaFinalRateMt}","${item.differenceMt}","${item.status}","${item.resolvedBy || 'N/A'}","${item.resolutionNotes || 'N/A'}"`
+            `"${item.id}","${item.poNo}","${item.poDate}","${item.supplierName}","${item.area}","${item.grade}","${item.poRateQtl}","${item.sattaFinalRateQtl}","${item.differenceQtl}","${item.status}","${item.resolvedBy || 'N/A'}","${item.resolutionNotes || 'N/A'}"`
           )).join("\n");
     } else {
       csvContent = "data:text/csv;charset=utf-8," 
@@ -1083,52 +1098,128 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         ) : (
           /* Satta Mismatch View */
           <div className="space-y-4">
-            <div className="bg-white border border-slate-300 p-3 rounded-lg shadow-xs flex flex-wrap justify-between items-center gap-3">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSattaFilterStatus('dispute')}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
-                    sattaFilterStatus === 'dispute' ? "bg-amber-700 text-white border-amber-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                  )}
-                >
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>Price Disputes ({sattaMismatchList.filter(s => s.status === 'dispute').length})</span>
-                </button>
-                <button
-                  onClick={() => setSattaFilterStatus('resolved')}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
-                    sattaFilterStatus === 'resolved' ? "bg-emerald-700 text-white border-emerald-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                  )}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>Approved ({sattaMismatchList.filter(s => s.status === 'resolved').length})</span>
-                </button>
-                <button
-                  onClick={() => setSattaFilterStatus('ok')}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
-                    sattaFilterStatus === 'ok' ? "bg-blue-700 text-white border-blue-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                  )}
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  <span>Aligned Rate ({sattaMismatchList.filter(s => s.status === 'ok').length})</span>
-                </button>
-                <button
-                  onClick={() => setSattaFilterStatus('all')}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition",
-                    sattaFilterStatus === 'all' ? "bg-slate-900 text-white border-slate-900 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
-                  )}
-                >
-                  All Records ({sattaMismatchList.length})
-                </button>
+            <div className="bg-white border border-slate-300 p-3 rounded-lg shadow-xs space-y-3">
+              {/* Top Row: Status Badges & Data Source Selector */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setSattaFilterStatus('dispute')}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                      sattaFilterStatus === 'dispute' ? "bg-amber-700 text-white border-amber-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    )}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>Price Disputes ({sattaMismatchList.filter(s => s.status === 'dispute').length})</span>
+                  </button>
+                  <button
+                    onClick={() => setSattaFilterStatus('resolved')}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                      sattaFilterStatus === 'resolved' ? "bg-emerald-700 text-white border-emerald-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    )}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Approved ({sattaMismatchList.filter(s => s.status === 'resolved').length})</span>
+                  </button>
+                  <button
+                    onClick={() => setSattaFilterStatus('ok')}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                      sattaFilterStatus === 'ok' ? "bg-blue-700 text-white border-blue-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    )}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>Aligned Rate ({sattaMismatchList.filter(s => s.status === 'ok').length})</span>
+                  </button>
+                  <button
+                    onClick={() => setSattaFilterStatus('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition",
+                      sattaFilterStatus === 'all' ? "bg-slate-900 text-white border-slate-900 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                    )}
+                  >
+                    All Status ({sattaMismatchList.length})
+                  </button>
+                </div>
+
+                {/* Quick info chip */}
+                <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
+                  Formula: <span className="text-slate-900 font-mono">Sauda Rate (₹/Qtl) vs. (Base Rate + Area/Grade Differential)</span>
+                </div>
               </div>
 
-              {/* Quick info chip */}
-              <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-                Formula: <span className="text-slate-900 font-mono">Sauda Rate vs. (Base Rate + Area/Grade Differential)</span>
+              {/* Second Row: Source Selector & Search Box */}
+              <div className="pt-2 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Data Source Filter Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-slate-500 mr-1">Source:</span>
+                  <button
+                    onClick={() => setSattaSourceFilter('ALL')}
+                    className={cn(
+                      "px-2.5 py-1 rounded text-xs font-extrabold border transition",
+                      sattaSourceFilter === 'ALL'
+                        ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                    )}
+                  >
+                    All Sources ({sattaMismatchList.length})
+                  </button>
+                  <button
+                    onClick={() => setSattaSourceFilter('sauda_master')}
+                    className={cn(
+                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
+                      sattaSourceFilter === 'sauda_master'
+                        ? "bg-emerald-800 text-white border-emerald-900 shadow-2xs"
+                        : "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100"
+                    )}
+                  >
+                    <span>🟢 Registered Saudas</span>
+                    <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-950 rounded-full text-[10px] font-black">
+                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_master').length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setSattaSourceFilter('sauda_check_point')}
+                    className={cn(
+                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
+                      sattaSourceFilter === 'sauda_check_point'
+                        ? "bg-blue-800 text-white border-blue-900 shadow-2xs"
+                        : "bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100"
+                    )}
+                  >
+                    <span>🔵 P.O. Check Point</span>
+                    <span className="px-1.5 py-0.2 bg-blue-200 text-blue-950 rounded-full text-[10px] font-black">
+                      {sattaMismatchList.filter(s => s.sourceType === 'sauda_check_point').length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setSattaSourceFilter('purchase_master')}
+                    className={cn(
+                      "px-2.5 py-1 rounded text-xs font-extrabold border transition flex items-center gap-1",
+                      sattaSourceFilter === 'purchase_master'
+                        ? "bg-amber-800 text-white border-amber-900 shadow-2xs"
+                        : "bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100"
+                    )}
+                  >
+                    <span>🟠 Purchase Orders</span>
+                    <span className="px-1.5 py-0.2 bg-amber-200 text-amber-950 rounded-full text-[10px] font-black">
+                      {sattaMismatchList.filter(s => s.sourceType === 'purchase_master').length}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Search Box */}
+                <div className="relative w-full md:w-64">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search Order No, Supplier, Broker..."
+                    className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-300 rounded bg-white focus:outline-none focus:border-indigo-600 text-slate-800 font-medium"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1143,7 +1234,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-2" />
                   <h3 className="text-sm font-extrabold text-slate-800 uppercase">No Satta Price Mismatches</h3>
                   <p className="text-xs text-slate-500 font-medium mt-1">
-                    All Sauda contract rates match active Satta Chart parameters.
+                    No records match the selected status filter or source criteria.
                   </p>
                 </div>
               ) : (
@@ -1151,12 +1242,12 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold uppercase text-[10.5px]">
-                        <th className="p-3 border-r border-slate-200">P.O. / Sauda No. & Date</th>
+                        <th className="p-3 border-r border-slate-200">P.O. / Sauda No. & Source</th>
                         <th className="p-3 border-r border-slate-200">Supplier & Broker</th>
                         <th className="p-3 border-r border-slate-200">Area & Grade</th>
-                        <th className="p-3 border-r border-slate-200 bg-slate-50">Sauda Contract Rate</th>
-                        <th className="p-3 border-r border-slate-200 bg-indigo-50/60 text-indigo-950 font-black">Satta Chart Limit Rate</th>
-                        <th className="p-3 border-r border-slate-200">Variance / Excess</th>
+                        <th className="p-3 border-r border-slate-200 bg-slate-50">Sauda Rate (₹/Qtl)</th>
+                        <th className="p-3 border-r border-slate-200 bg-indigo-50/60 text-indigo-950 font-black">Satta Limit Rate (₹/Qtl)</th>
+                        <th className="p-3 border-r border-slate-200">Variance / Excess (₹/Qtl)</th>
                         <th className="p-3 border-r border-slate-200">Status</th>
                         <th className="p-3">Action & Approval Remarks</th>
                       </tr>
@@ -1165,10 +1256,27 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                       {filteredSattaList.map(item => (
                         <tr key={item.id} className="hover:bg-slate-50 transition align-top">
                           <td className="p-3 border-r border-slate-200 font-mono">
-                            <div className="font-extrabold text-slate-900 text-sm">{item.poNo}</div>
-                            <div className="text-[10px] text-slate-500 font-semibold">{item.poDate}</div>
-                            {item.saudaNo && item.saudaNo !== 'N/A' && (
-                              <div className="text-[9.5px] text-indigo-700 font-bold mt-0.5">Sauda: {item.saudaNo}</div>
+                            <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                              <span>{item.poNo}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              {item.sourceType === 'sauda_master' ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 uppercase tracking-tight">
+                                  🟢 Registered Sauda
+                                </span>
+                              ) : item.sourceType === 'sauda_check_point' ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-100 text-blue-900 border border-blue-300 uppercase tracking-tight">
+                                  🔵 Check Point P.O.
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 uppercase tracking-tight">
+                                  🟠 Purchase Order
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-semibold mt-1">Date: {item.poDate}</div>
+                            {item.saudaNo && item.saudaNo !== 'N/A' && item.saudaNo !== item.poNo && (
+                              <div className="text-[9.5px] text-indigo-700 font-bold mt-0.5">Ref: {item.saudaNo}</div>
                             )}
                           </td>
                           <td className="p-3 border-r border-slate-200">
@@ -1180,30 +1288,30 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                             <div className="text-[11px] text-slate-600 font-medium">Grade: <span className="font-bold">{item.grade}</span></div>
                           </td>
                           <td className="p-3 border-r border-slate-200 bg-slate-50/50">
-                            <div className="font-black text-slate-900 text-xs">
-                              ₹ {item.poRateMt.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ m.T</span>
+                            <div className="font-black text-slate-900 text-sm">
+                              ₹ {item.poRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ Qtl</span>
                             </div>
-                            <div className="text-[10.5px] font-bold text-slate-600 mt-0.5">
-                              (₹ {item.poRateQtl.toLocaleString()} / Qtl)
+                            <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                              (₹ {item.poRateMt.toLocaleString()} / m.T)
                             </div>
                           </td>
                           <td className="p-3 border-r border-slate-200 bg-indigo-50/30">
-                            <div className="font-black text-indigo-950 text-xs">
-                              ₹ {item.sattaFinalRateMt.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ m.T</span>
+                            <div className="font-black text-indigo-950 text-sm">
+                              ₹ {item.sattaFinalRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span>
                             </div>
-                            <div className="text-[10.5px] font-bold text-indigo-800 mt-0.5">
-                              (Base ₹{item.sattaBaseRateMt.toLocaleString()} {item.differentialMt >= 0 ? `+ Diff ₹${item.differentialMt}` : `- Diff ₹${Math.abs(item.differentialMt)}`})
+                            <div className="text-[10px] font-semibold text-indigo-800 mt-0.5">
+                              (Base ₹{(item.sattaBaseRateMt / 10).toLocaleString()} {item.differentialMt >= 0 ? `+ Diff ₹${item.differentialMt / 10}` : `- Diff ₹${Math.abs(item.differentialMt / 10)}`})
                             </div>
                           </td>
                           <td className="p-3 border-r border-slate-200 font-black">
-                            {item.differenceMt > 0 ? (
-                              <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-[11px] inline-block">
-                                ⚠️ + ₹ {item.differenceMt.toLocaleString()} / m.T
-                                <div className="text-[9.5px] text-rose-800 font-bold">(+ ₹ {item.differenceQtl.toLocaleString()} / Qtl)</div>
+                            {item.differenceQtl > 0 ? (
+                              <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-xs inline-block">
+                                ⚠️ + ₹ {item.differenceQtl.toLocaleString()} / Qtl
+                                <div className="text-[9.5px] text-rose-800 font-semibold">(+ ₹ {item.differenceMt.toLocaleString()} / m.T)</div>
                               </div>
-                            ) : item.differenceMt < 0 ? (
+                            ) : item.differenceQtl < 0 ? (
                               <div className="text-emerald-700 text-xs">
-                                - ₹ {Math.abs(item.differenceMt).toLocaleString()} / m.T
+                                - ₹ {Math.abs(item.differenceQtl).toLocaleString()} / Qtl
                               </div>
                             ) : (
                               <span className="text-emerald-700 font-extrabold">Aligned</span>
