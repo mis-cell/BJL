@@ -2610,6 +2610,12 @@ function isPoMismatchResolved(poNo: string): boolean {
 
     // Check if this sauda's PO display number already exists as contract_po_no, po_no, or ptf_no in poList
     const isAlreadyUsed = poList.some(p => {
+      const sId = String(s.sauda_id || s.id || '').trim().toUpperCase();
+      const pSaudaId = String(p.sauda_id || p.sauda_id_ref || '').trim().toUpperCase();
+      if (sId && pSaudaId && sId === pSaudaId) {
+        return true;
+      }
+
       const pPo = String(p.po_no || '').trim().toUpperCase();
       const pContract = String(p.contract_po_no || '').trim().toUpperCase();
       const pPtf = String(p.ptf_no || '').trim().toUpperCase();

@@ -204,11 +204,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
   const fetchPurchaseOrders = async () => {
     try {
-      const [tempPoRes, poRes] = await Promise.all([
+      const [tempPoRes, poRes, amadRes] = await Promise.all([
         supabase ? supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('sauda_check_point', 'created_at', false).then(d => ({ data: d, error: null })),
-        supabase ? supabase.from('purchase_master').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('purchase_master', 'created_at', false).then(d => ({ data: d, error: null }))
+        supabase ? supabase.from('purchase_master').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('purchase_master', 'created_at', false).then(d => ({ data: d, error: null })),
+        supabase ? supabase.from('temporary_material_received').select('*') : dbModule.fetchAll('temporary_material_received').then(d => ({ data: d, error: null }))
       ]);
 
+      const amadList = amadRes?.data || [];
       const tempPoData = (tempPoRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp', sourceTable: 'sauda_check_point' }));
       const poData = (poRes?.data || []).map((po: any) => ({ ...po, sourceTable: 'purchase_master' }));
 
@@ -233,9 +235,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
           const isCurrentMatch = initialData && initialData.po_no && String(po.po_no).trim().toUpperCase() === String(initialData.po_no).trim().toUpperCase();
 
+          const poKey = String(po.po_no).trim().toUpperCase();
+          const amadMatches = amadList.filter((a: any) => String(a.po_no || '').trim().toUpperCase() === poKey);
+          const totalAmadWeight = amadMatches.reduce((sum: number, a: any) => sum + (parseFloat(a.challan_material_weight || a.quantity || 0) || 0), 0);
+
           const pendingStr = String(po.pending ?? '').trim().toLowerCase();
           const statusStr = String(po.status ?? '').trim().toLowerCase();
-          const receivedWt = parseFloat(po.received_weight_mt || po.received_mt) || 0;
+          const receivedWt = Math.max(parseFloat(po.received_weight_mt || po.received_mt) || 0, totalAmadWeight);
           const contractWt = parseFloat(po.total_contract_mt || po.quantity) || 0;
           const isCompleted = po.pending === false || pendingStr === 'no' || pendingStr === 'false' || po.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || (contractWt > 0 && receivedWt >= contractWt);
 

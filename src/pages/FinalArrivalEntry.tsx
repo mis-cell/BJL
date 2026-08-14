@@ -209,8 +209,37 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const combinedPoOptions = useMemo(() => {
     const list: any[] = [];
     
+    // Filter temporaryArrivalList to exclude those already converted to a Final Arrival
+    const pendingTempArrivals = (temporaryArrivalList || []).filter((ta: any) => {
+      const tempMrVal = String(ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
+      const tempId = String(ta.id || ta.temporary_arrival_id || '').trim().toUpperCase();
+
+      if (!tempMrVal && !tempId) return true;
+
+      // Keep if currently being edited
+      const isCurrentMatch = initialData && (
+        (initialData.temporary_arrival_no && String(initialData.temporary_arrival_no).trim().toUpperCase() === tempMrVal) ||
+        (initialData.arrival_no && String(initialData.arrival_no).trim().toUpperCase() === tempMrVal)
+      );
+      if (isCurrentMatch) return true;
+
+      // Check if already saved in final_arrival table (existingArrivals)
+      const isAlreadyFinalized = (existingArrivals || []).some((fa: any) => {
+        const faTempNo = String(fa.temporary_arrival_no || fa.amad_no || '').trim().toUpperCase();
+        const faArrNo = String(fa.arrival_no || fa.mr_no || '').trim().toUpperCase();
+        const faTempId = String(fa.temporary_arrival_id || '').trim().toUpperCase();
+
+        return (
+          (tempMrVal && (faTempNo === tempMrVal || faArrNo === tempMrVal)) ||
+          (tempId && faTempId === tempId)
+        );
+      });
+
+      return !isAlreadyFinalized;
+    });
+
     // Sourced from Temporary Material Received list
-    (temporaryArrivalList || []).forEach((ta: any, idx: number) => {
+    pendingTempArrivals.forEach((ta: any, idx: number) => {
       const poVal = (ta.po_no || '').trim().toUpperCase();
       const tempMrVal = (ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
       const supplierVal = (ta.supplier || ta.challan_supplier || '').trim();
@@ -259,7 +288,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     });
 
     return list;
-  }, [temporaryArrivalList, purchaseOrders]);
+  }, [temporaryArrivalList, purchaseOrders, existingArrivals, initialData]);
 
   // Load master registers on startup
   useEffect(() => {
