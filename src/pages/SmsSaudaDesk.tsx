@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -751,6 +752,8 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setSmsSaudas(loadedData);
     setIsDbLoading(false);
   };
+
+  useLiveAutoRefresh(loadSaudaRecords, []);
 
   useEffect(() => {
     loadSaudaRecords();

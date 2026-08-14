@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -575,6 +576,8 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
       setLoading(false);
     }
   };
+
+  useLiveAutoRefresh(loadMismatches, []);
 
   useEffect(() => {
     loadMismatches();

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { 
@@ -601,9 +602,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     return col;
   };
 
+  useLiveAutoRefresh(initPage, []);
+
   // Load dashboards & dropdowns
-  const initPage = async () => {
-    setLoading(true);
+  async function initPage() {
+    if (settledList.length === 0) setLoading(true);
     try {
       if (supabase) {
         // Fetch master registers for lookup

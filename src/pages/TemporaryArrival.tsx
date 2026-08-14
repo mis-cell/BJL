@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   Save, 
   X, 
@@ -258,6 +259,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       console.warn("Error in fetchPurchaseOrders from sauda_check_point:", err);
     }
   };
+
+  useLiveAutoRefresh(fetchPurchaseOrders, []);
 
   // Load master records and set up real-time PO query subscription
   useEffect(() => {

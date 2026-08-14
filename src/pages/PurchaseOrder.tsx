@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import { jsPDF } from 'jspdf';
@@ -1306,7 +1307,9 @@ function isPoMismatchResolved(poNo: string): boolean {
 
   // Fetch all registered records and masters
   const fetchPosAndMasters = async () => {
-    setLoading(true);
+    if (!poList || poList.length === 0) {
+      setLoading(true);
+    }
     const safeFetch = (table: string, orderBy?: string, ascending = false) => {
       return dbModule.fetchAll(table, orderBy, ascending).catch(err => {
         console.warn(`Failed to fetch ${table}:`, err);
@@ -1484,6 +1487,8 @@ function isPoMismatchResolved(poNo: string): boolean {
       setLoading(false);
     }
   };
+
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo]);
 
   useEffect(() => {
     fetchPosAndMasters();

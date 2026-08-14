@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import Papa from 'papaparse';
 import { 
   HandCoins, 
@@ -107,6 +108,8 @@ export default function SattaRegister({ onClose, onNew, onViewChart }: { onClose
       setIsLoading(false);
     }
   };
+
+  useLiveAutoRefresh(fetchSattaData, []);
 
   useEffect(() => {
     fetchSattaData();

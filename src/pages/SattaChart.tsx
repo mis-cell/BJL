@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   TrendingUp, 
   History, 
@@ -226,6 +227,11 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
 
   // Initialize and Seed Table if needed
   useEffect(() => {
+    loadChartConfig();
+    fetchRateHistory();
+  }, []);
+
+  useLiveAutoRefresh(() => {
     loadChartConfig();
     fetchRateHistory();
   }, []);

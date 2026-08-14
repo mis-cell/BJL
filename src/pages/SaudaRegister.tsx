@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import { 
@@ -422,6 +423,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       setIsRefreshing(false);
     }
   };
+
+  useLiveAutoRefresh(() => {
+    if (isActive) fetchSaudas();
+  }, [isActive]);
 
   useEffect(() => {
     if (isActive) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   CheckCircle2, 
@@ -267,7 +268,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   });
 
   const fetchRecords = async () => {
-    setLoading(true);
+    if (records.length === 0) setLoading(true);
     try {
       const targetTable = isArchiveView ? 'm.r_archive' : 'final_arrival';
       let { data, error } = await supabase
@@ -321,6 +322,8 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       setLoading(false);
     }
   };
+
+  useLiveAutoRefresh(fetchRecords, [isArchiveView]);
 
   useEffect(() => {
     fetchRecords();

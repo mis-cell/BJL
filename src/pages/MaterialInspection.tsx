@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLiveAutoRefresh } from "../hooks/useLiveAutoRefresh";
 import { motion, AnimatePresence } from "motion/react";
 import Papa from "papaparse";
 import {
@@ -166,9 +167,11 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     };
   }, []);
 
+  useLiveAutoRefresh(fetchLiveData, []);
+
   // Fetch data directly from Supabase
-  const fetchLiveData = async () => {
-    setLoading(true);
+  async function fetchLiveData() {
+    if (dbRecords.length === 0) setLoading(true);
     setFetchError(null);
     try {
       let data: any[] = [];

@@ -415,6 +415,32 @@ export default function LegacyLayout({
 
           {/* Right Notification & Profile User Menu - Anchored right */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto z-50">
+            {/* Realtime Connection Status Indicator Badge */}
+            <div 
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs transition-all",
+                isOnline 
+                  ? "bg-emerald-100/80 border-emerald-300 text-emerald-800" 
+                  : "bg-rose-100/80 border-rose-300 text-rose-800"
+              )}
+              title={isOnline ? "Supabase Realtime Live Data Sync Active" : "Reconnecting to Supabase Live Sync..."}
+            >
+              {isOnline ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                  </span>
+                  <span className="hidden xs:inline">Live</span>
+                </>
+              ) : (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-rose-600"></span>
+                  <span className="hidden xs:inline">Offline</span>
+                </>
+              )}
+            </div>
+
             {/* Notification Badge Bell */}
             <button
               onClick={() => setIsNotifOpen(true)}

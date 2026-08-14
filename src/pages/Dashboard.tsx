@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { Mail, 
   TrendingUp, 
   Users, X, User, 
@@ -703,6 +704,10 @@ export default function Dashboard({
       loadStats();
     }
   }, [loadStats, isActive]);
+
+  useLiveAutoRefresh(() => {
+    if (isActive) loadStats();
+  }, [isActive]);
 
   // Realtime subscription for Dashboard updates
   React.useEffect(() => {

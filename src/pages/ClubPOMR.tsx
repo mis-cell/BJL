@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   Link, 
   Unlink, 
@@ -154,6 +155,11 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       setLoading(false);
     }
   };
+
+  useLiveAutoRefresh(loadInitialData, []);
+  useLiveAutoRefresh(() => {
+    if (selectedSupplier) fetchSupplierDocuments(selectedSupplier);
+  }, [selectedSupplier]);
 
   useEffect(() => {
     loadInitialData();

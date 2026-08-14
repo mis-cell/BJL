@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLiveAutoRefresh } from "../hooks/useLiveAutoRefresh";
 import {
   ShieldCheck,
   Search,
@@ -213,12 +214,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  useEffect(() => {
-    fetchInspectionRecords();
-  }, []);
-
-  const fetchInspectionRecords = async () => {
-    setLoading(true);
+  async function fetchInspectionRecords() {
+    if (records.length === 0) setLoading(true);
     try {
       // 1. Fetch saved inspection_master records
       let inspectionMasterList: InspectionMasterRecord[] = [];
@@ -341,6 +338,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchInspectionRecords();
+  }, []);
+
+  useLiveAutoRefresh(fetchInspectionRecords, []);
 
   const populateFromFinalArrival = (fa: any) => {
     const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import Papa from 'papaparse';
 import { 
   Archive, 
@@ -361,7 +362,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   };
 
   const fetchAmads = async () => {
-    setLoading(true);
+    if (amadList.length === 0) setLoading(true);
     setRefreshMessage(null);
     try {
       const [data, poData, inspectionData] = await Promise.all([
@@ -397,6 +398,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   useEffect(() => {
     fetchAmads();
   }, []);
+
+  useLiveAutoRefresh(fetchAmads, []);
 
   const handleEditAmad = (amad: Amad) => {
     if (!enforceEditOrDeletePermission("Edit")) return;

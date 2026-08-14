@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
@@ -147,9 +148,8 @@ export default function SaudaEntry({
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
 
-  useEffect(() => {
-    async function loadMasterData() {
-      try {
+  async function loadMasterData() {
+    try {
         const [brokData, suppData, areaData, agcData, gradeData, markaData, allSaudas, sattaBaseRates, sattaDiffs] = await Promise.all([
           dbModule.fetchAll('broker_master'),
           dbModule.fetchAll('supply_master'),
@@ -200,10 +200,13 @@ export default function SaudaEntry({
       } catch (err) {
         console.error("Error loading master data:", err);
       }
-    }
+  }
 
+  useEffect(() => {
     loadMasterData();
   }, [initialData]);
+
+  useLiveAutoRefresh(loadMasterData, [initialData]);
 
   // Recalculate Satta rate for a quality row based on Date, Area, Grade
   const recalculateRowRate = (date: string, area: string, grade: string) => {

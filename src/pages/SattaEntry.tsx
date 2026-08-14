@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   Save, 
   X,
@@ -261,9 +262,8 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
      handleSave();
   });
 
-  useEffect(() => {
-    async function loadData() {
-      try {
+  async function loadData() {
+    try {
         // Pro-active Schema Check: Ensure Satta tables and columns exist in the live Supabase DB
         if (supabase) {
           try {
@@ -476,9 +476,13 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       } catch(e) {
         console.error("Error loading Satta masters:", e);
       }
-    }
+  }
+
+  useEffect(() => {
     loadData();
   }, []);
+
+  useLiveAutoRefresh(loadData, []);
 
   const recalculateRowRate = (date: string, area: string, grade: string) => {
     if (!date || !area || !grade || baseRatesList.length === 0) return null;

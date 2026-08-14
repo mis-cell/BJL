@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { 
@@ -729,6 +730,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       setLoading(false);
     }
   };
+
+  useLiveAutoRefresh(initPage, []);
 
   useEffect(() => {
     initPage();
