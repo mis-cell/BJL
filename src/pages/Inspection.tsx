@@ -950,34 +950,58 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               </div>
 
               {/* Pick Final Arrival Banner */}
-              {finalArrivalList.length > 0 && (
-                <div className="bg-emerald-50/80 px-5 py-3 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-700" />
-                    <span className="text-xs font-bold text-emerald-950">Import / Pick From Final Arrival:</span>
-                  </div>
-                  <select
-                    onChange={(e) => {
-                      if (!e.target.value) return;
-                      const selectedFa = finalArrivalList.find(f => 
-                        (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
-                        (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
-                        (f.mr_no && String(f.mr_no) === e.target.value)
-                      );
-                      if (selectedFa) populateFromFinalArrival(selectedFa);
-                    }}
-                    defaultValue=""
-                    className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
-                  >
-                    <option value="">-- Select Final Arrival Record --</option>
-                    {finalArrivalList.map((fa, idx) => (
-                      <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no}>
-                        Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | Arrival No: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+              {finalArrivalList.length > 0 && (() => {
+                const pendingArrivalList = finalArrivalList.filter(fa => {
+                  const faNo = String(fa.final_arrival_no || fa.mr_no || "").trim().toLowerCase();
+                  const faMrNo = String(fa.mr_no || fa.final_arrival_no || "").trim().toLowerCase();
+                  const faId = String(fa.final_arrival_id || "").trim().toLowerCase();
+
+                  if (!faNo && !faMrNo && !faId) return true;
+
+                  return !records.some(r => {
+                    const rMr = String(r.mr_no || "").trim().toLowerCase();
+                    const rArr = String(r.arrival_no || "").trim().toLowerCase();
+                    return (
+                      (faNo && (rMr === faNo || rArr === faNo)) ||
+                      (faMrNo && (rMr === faMrNo || rArr === faMrNo)) ||
+                      (faId && (rMr === faId || rArr === faId))
+                    );
+                  });
+                });
+
+                return (
+                  <div className="bg-emerald-50/80 px-5 py-3 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-700" />
+                      <span className="text-xs font-bold text-emerald-950">
+                        Import / Pick From Final Arrival ({pendingArrivalList.length} Pending):
+                      </span>
+                    </div>
+                    <select
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        const selectedFa = finalArrivalList.find(f => 
+                          (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
+                          (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
+                          (f.mr_no && String(f.mr_no) === e.target.value)
+                        );
+                        if (selectedFa) populateFromFinalArrival(selectedFa);
+                      }}
+                      defaultValue=""
+                      className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
+                    >
+                      <option value="">
+                        {pendingArrivalList.length > 0 ? "-- Select Final Arrival Record --" : "-- All Final Arrivals Inspected --"}
                       </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                      {pendingArrivalList.map((fa, idx) => (
+                        <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no}>
+                          Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | Arrival No: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5">
                 <div className="flex flex-col gap-1">
