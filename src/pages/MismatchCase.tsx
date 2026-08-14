@@ -159,8 +159,8 @@ export interface SattaMismatchItem {
   grade: string;
   poRateMt: number;
   poRateQtl: number;
-  sattaBaseRateMt: number;
-  differentialMt: number;
+  sattaBaseRateQtl: number;
+  differentialQtl: number;
   sattaFinalRateMt: number;
   sattaFinalRateQtl: number;
   status: 'dispute' | 'ok' | 'resolved';
@@ -498,13 +498,14 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code || '').trim() === String(detail.grade_code || detail.quality || header.grade_code || '').trim());
         const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.quality || detail.grade_code || header.grade || header.quality || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
         
-        // Extract rate and normalize to Rate per MT
+        // Extract rate and normalize to Rate per Quintal
         const rawRate = Number(detail.rs || detail.rate_qntl || detail.rate_per_qtl || detail.b_rate || detail.rate_mt || detail.rate || header.b_rate || header.rate_qntl || header.rate || 0);
         if (rawRate <= 0) return;
 
-        // Standardize: if rate < 5000 it is entered per Quintal -> convert to per MT (*10)
-        const poRateMt = rawRate < 5000 ? rawRate * 10 : rawRate;
-        const poRateQtl = poRateMt / 10;
+        // In Jute trading, rates (e.g. 13800, 16300, 13400) are entered in ₹/Quintal.
+        // If someone entered a value > 40000 (e.g. 138000 per MT), convert to Quintal (/10).
+        const poRateQtl = rawRate > 40000 ? rawRate / 10 : rawRate;
+        const poRateMt = poRateQtl * 10;
 
         const poDate = header.date || header.po_date || header.b_date || '2026-04-02';
         const poArea = header.area || detail.area || 'NORTHERN';
@@ -517,17 +518,20 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           sattaDiffRows
         );
 
-        const sattaFinalRateMt = finalRate;
-        const sattaFinalRateQtl = finalRate / 10;
+        // baseRate, differential, and finalRate from Satta Chart are in ₹/Quintal (e.g. 13500 base, -200 diff, 13300 final)
+        const sattaBaseRateQtl = baseRate;
+        const differentialQtl = differential;
+        const sattaFinalRateQtl = finalRate;
+        const sattaFinalRateMt = sattaFinalRateQtl * 10;
 
-        const diffInRateMt = poRateMt - sattaFinalRateMt;
-        const diffInRateQtl = diffInRateMt / 10;
+        const diffInRateQtl = poRateQtl - sattaFinalRateQtl;
+        const diffInRateMt = diffInRateQtl * 10;
 
-        const allowedVarianceMt = (GRADE_SATTA_VARIANCE_LIMITS[poGrade] !== undefined 
+        const allowedVarianceQtl = GRADE_SATTA_VARIANCE_LIMITS[poGrade] !== undefined 
           ? GRADE_SATTA_VARIANCE_LIMITS[poGrade] 
-          : (GRADE_SATTA_VARIANCE_LIMITS.DEFAULT || 0)) * 10;
+          : (GRADE_SATTA_VARIANCE_LIMITS.DEFAULT || 0);
 
-        const isDispute = diffInRateMt > allowedVarianceMt;
+        const isDispute = diffInRateQtl > allowedVarianceQtl;
 
         const itemId = `SAT-${detail.id || detail.item_id || `${poNo}-${poGrade}-${rawRate}`}`;
         const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => 
@@ -548,13 +552,13 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           grade: poGrade,
           poRateMt,
           poRateQtl,
-          sattaBaseRateMt: baseRate,
-          differentialMt: differential,
+          sattaBaseRateQtl,
+          differentialQtl,
           sattaFinalRateMt,
           sattaFinalRateQtl,
           status: isResolved ? 'resolved' : (isDispute ? 'dispute' : 'ok'),
           issueDescription: isDispute 
-            ? `Sauda Contract Rate exceeds active Satta Chart parameters. Contract specifies ₹${poRateQtl.toLocaleString()}/Qtl (₹${poRateMt.toLocaleString()}/m.T), which exceeds active Satta limit of ₹${sattaFinalRateQtl.toLocaleString()}/Qtl (₹${sattaFinalRateMt.toLocaleString()}/m.T) by ₹${diffInRateQtl.toLocaleString()}/Qtl.`
+            ? `Sauda Contract Rate exceeds active Satta Chart parameters. Contract specifies ₹${poRateQtl.toLocaleString()}/Qtl, which exceeds active Satta limit of ₹${sattaFinalRateQtl.toLocaleString()}/Qtl by ₹${diffInRateQtl.toLocaleString()}/Qtl.`
             : "Sauda rate aligns with active Satta Chart parameters.",
           differenceMt: diffInRateMt,
           differenceQtl: diffInRateQtl,
@@ -1300,7 +1304,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                               ₹ {item.sattaFinalRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span>
                             </div>
                             <div className="text-[10px] font-semibold text-indigo-800 mt-0.5">
-                              (Base ₹{(item.sattaBaseRateMt / 10).toLocaleString()} {item.differentialMt >= 0 ? `+ Diff ₹${item.differentialMt / 10}` : `- Diff ₹${Math.abs(item.differentialMt / 10)}`})
+                              (Base ₹{item.sattaBaseRateQtl.toLocaleString()} {item.differentialQtl >= 0 ? `+ Diff ₹${item.differentialQtl}` : `- Diff ₹${Math.abs(item.differentialQtl)}`})
                             </div>
                           </td>
                           <td className="p-3 border-r border-slate-200 font-black">
