@@ -238,7 +238,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       return !isAlreadyFinalized;
     });
 
-    // Sourced from Temporary Material Received list
+    // Sourced from Temporary Material Received list (Temporary Arrival Section)
     pendingTempArrivals.forEach((ta: any, idx: number) => {
       const poVal = (ta.po_no || '').trim().toUpperCase();
       const tempMrVal = (ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
@@ -249,7 +249,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
       list.push({
         id: ta.id || ta.temporary_arrival_id || `temp_${idx}`,
-        po_no: poVal || tempMrVal || `TEMP-${idx + 1}`,
+        po_no: tempMrVal || poVal || `TEMP-${idx + 1}`,
         temp_mr_no: tempMrVal,
         display_label: tempMrVal 
           ? `Temp MR #${tempMrVal} ${poVal ? `(PO: ${poVal})` : ''} - ${supplierVal} ${lorryVal ? `[${lorryVal}]` : ''}` 
@@ -265,30 +265,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       });
     });
 
-    // Sourced from Purchase Orders (append any POs not represented yet)
-    const existingPoKeys = new Set(list.map(i => i.po_no));
-    (purchaseOrders || []).forEach((po: any, idx: number) => {
-      const key = String(po.po_no || '').trim().toUpperCase();
-      if (key && !existingPoKeys.has(key)) {
-        list.push({
-          id: po.po_id || po.id || `po_${idx}`,
-          po_no: po.po_no,
-          temp_mr_no: '',
-          display_label: `${po.po_no} - ${po.supplier || po.merchant || ''} (${po.total_contract_mt || po.quantity || 0} MT)`,
-          supplier: po.supplier || po.merchant || '',
-          challan_supplier: po.challan_supplier || po.supplier || po.merchant || '',
-          broker: po.broker || '',
-          lorry_number: '',
-          po_date: po.po_date || po.date || '',
-          quantity: po.total_contract_mt || po.quantity || 0,
-          source: 'purchase_orders',
-          raw_item: po
-        });
-      }
-    });
-
     return list;
-  }, [temporaryArrivalList, purchaseOrders, existingArrivals, initialData]);
+  }, [temporaryArrivalList, existingArrivals, initialData]);
 
   // Load master registers on startup
   useEffect(() => {
