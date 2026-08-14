@@ -168,7 +168,19 @@ export default function SaudaEntry({
         if (agcData) setAgencies(agcData);
         if (gradeData) setGrades(gradeData);
         if (markaData) setMarkas(markaData);
-        if (sattaBaseRates) setBaseRatesList(sattaBaseRates);
+        if (sattaBaseRates && sattaBaseRates.length > 0) {
+          setBaseRatesList(sattaBaseRates);
+          const sorted = [...sattaBaseRates].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+          const targetDt = formData.b_date || formData.date || today;
+          const eff = sorted.find((r: any) => r.start_date <= targetDt) || sorted[sorted.length - 1];
+          if (eff && eff.base_rate) {
+            const activeBase = Number(eff.base_rate);
+            setFormData(prev => ({
+              ...prev,
+              b_rate: prev.b_rate && prev.b_rate > 0 ? prev.b_rate : activeBase
+            }));
+          }
+        }
         if (sattaDiffs) setDbDiffsList(sattaDiffs);
 
         // Auto-generate next Order No. if creating new Sauda
@@ -263,6 +275,15 @@ export default function SaudaEntry({
         const lorries = name === 'no_of_lorries' ? parseFloat(value) || 0 : parseFloat(prev.no_of_lorries as any) || 0;
         const wt = name === 'wt_per_lorry' ? parseFloat(value) || 0 : parseFloat(prev.wt_per_lorry as any) || 0;
         updated.total_wt_in_ton = parseFloat((lorries * wt).toFixed(3));
+      }
+
+      // Automatically update b_rate from active Satta Base Rates when date or b_date changes
+      if ((name === 'date' || name === 'b_date') && finalValue && baseRatesList.length > 0) {
+        const sorted = [...baseRatesList].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+        const eff = sorted.find((r: any) => r.start_date <= finalValue) || sorted[sorted.length - 1];
+        if (eff && eff.base_rate) {
+          updated.b_rate = Number(eff.base_rate);
+        }
       }
 
       // Automatically update quality rates if area or date changes

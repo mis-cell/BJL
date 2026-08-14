@@ -439,6 +439,18 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
         }
 
         setBaseRatesList(finalBaseRates);
+        if (finalBaseRates && finalBaseRates.length > 0) {
+          const sorted = [...finalBaseRates].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+          const targetDt = formData.b_date || formData.date || today;
+          const eff = sorted.find((r: any) => r.start_date <= targetDt) || sorted[sorted.length - 1];
+          if (eff && eff.base_rate) {
+            const activeBase = Number(eff.base_rate);
+            setFormData(prev => ({
+              ...prev,
+              b_rate: prev.b_rate && prev.b_rate > 0 ? prev.b_rate : activeBase
+            }));
+          }
+        }
         if (differentialsResult && differentialsResult.data) {
           setDbDiffsList(differentialsResult.data || []);
         }
@@ -577,6 +589,15 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
           updated.session = parts.join('/');
         } else {
           updated.session = `BJCL/${financialYear}/${cleanVal}`;
+        }
+      }
+
+      // Automatically update b_rate from active Satta Base Rates when date or b_date changes
+      if ((name === 'date' || name === 'b_date') && finalValue && baseRatesList.length > 0) {
+        const sorted = [...baseRatesList].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+        const eff = sorted.find((r: any) => r.start_date <= finalValue) || sorted[sorted.length - 1];
+        if (eff && eff.base_rate) {
+          updated.b_rate = Number(eff.base_rate);
         }
       }
 

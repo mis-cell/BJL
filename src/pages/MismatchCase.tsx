@@ -151,22 +151,27 @@ export interface MaterialMismatchItem {
 export interface SattaMismatchItem {
   id: string;
   poNo: string;
+  saudaNo?: string;
   poDate: string;
   supplierName: string;
   brokerName: string;
   area: string;
   grade: string;
-  poRate: number;
-  sattaBaseRate: number;
-  differential: number;
-  sattaFinalRate: number;
+  poRateMt: number;
+  poRateQtl: number;
+  sattaBaseRateMt: number;
+  differentialMt: number;
+  sattaFinalRateMt: number;
+  sattaFinalRateQtl: number;
   status: 'dispute' | 'ok' | 'resolved';
   issueDescription: string;
-  difference: number;
+  differenceMt: number;
+  differenceQtl: number;
   weightMt: number;
   resolutionNotes?: string;
   resolvedAt?: string;
   resolvedBy?: string;
+  approvalLevel?: string;
 }
 
 export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?: () => void; variant?: 'satta' | 'material' }) {
@@ -260,7 +265,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     setLoading(true);
     try {
       // Direct fresh queries from database (no browser cache dependency)
-      const [scpRows, scpDetailRows, amadRows, inspMasterRows, dbMismatches, purchaseMasterRows, purchaseDetailRows, sattaBaseRows, sattaDiffRows, gradeRows] = await Promise.all([
+      const [scpRows, scpDetailRows, amadRows, inspMasterRows, dbMismatches, purchaseMasterRows, purchaseDetailRows, sattaBaseRows, sattaDiffRows, gradeRows, dbSattaMismatches, saudaMasterRows, saudaQualityRows, sattaMasterRows, sattaQualityRows] = await Promise.all([
         supabase ? supabase.from('sauda_check_point').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_check_point').catch(() => []),
         supabase ? supabase.from('sauda_check_point_details').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_check_point_details').catch(() => []),
         dbModule.fetchAll('temporary_material_received').catch(() => []),
@@ -271,19 +276,24 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         supabase ? supabase.from('satta_base_rates').select('*').then(res => res.data || []) : Promise.resolve([]),
         supabase ? supabase.from('satta_differentials').select('*').then(res => res.data || []) : Promise.resolve([]),
         dbModule.fetchAll('grade_master').catch(() => []),
+        supabase ? supabase.from('satta_mismatch').select('*').then(res => res.data || []) : Promise.resolve([]),
+        dbModule.fetchAll('sauda_master').catch(() => []),
+        dbModule.fetchAll('sauda_quality_details').catch(() => []),
+        dbModule.fetchAll('satta_master').catch(() => []),
+        dbModule.fetchAll('satta_quality_details').catch(() => []),
       ]);
 
       const items: MaterialMismatchItem[] = [];
 
-      // Combine PO sources: sauda_check_point + purchase_master
-      const allPoRecords = [...scpRows, ...purchaseMasterRows];
+      // Combine PO sources: sauda_check_point + purchase_master + sauda_master + satta_master
+      const allPoRecords = [...scpRows, ...purchaseMasterRows, ...saudaMasterRows, ...sattaMasterRows];
       const poMap = new Map<string, any>();
       allPoRecords.forEach(p => {
-        const pNo = String(p.po_no || p.contract_po_no || '').trim().toUpperCase();
+        const pNo = String(p.po_no || p.contract_po_no || p.sauda_no || p.satta_no || '').trim().toUpperCase();
         if (pNo && !poMap.has(pNo)) poMap.set(pNo, p);
       });
 
-      const allDetailRecords = [...scpDetailRows, ...purchaseDetailRows];
+      const allDetailRecords = [...scpDetailRows, ...purchaseDetailRows, ...saudaQualityRows, ...sattaQualityRows];
 
       poMap.forEach((po, poNo) => {
         const matchingInspections = inspMasterRows.filter((i: any) => String(i.po_no || '').trim().toUpperCase() === poNo);
@@ -379,55 +389,94 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
       // --- Satta Mismatch Processing ---
       const sattaItems: SattaMismatchItem[] = [];
-      if (allPoRecords.length > 0 && purchaseDetailRows.length > 0) {
-        purchaseDetailRows.forEach((detail: any) => {
-          const matchedPo = allPoRecords.find((p: any) => p.po_no === detail.po_no);
-          if (matchedPo) {
-            const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code).trim() === String(detail.grade_code).trim());
-            const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.grade_code || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
-            const poRate = Number(detail.rate_qntl || detail.rate_per_qtl || 0);
-            const poDate = matchedPo.po_date || matchedPo.date || '2026-04-02';
-            const poArea = matchedPo.area || 'NORTHERN';
-            
-            const { baseRate, differential, finalRate } = getSattaRate(
-              parseDateToComparable(poDate),
-              poArea,
-              poGrade,
-              sattaBaseRows,
-              sattaDiffRows
-            );
-            
-            const allowedVariance = GRADE_SATTA_VARIANCE_LIMITS[poGrade] !== undefined 
-              ? GRADE_SATTA_VARIANCE_LIMITS[poGrade] 
-              : (GRADE_SATTA_VARIANCE_LIMITS.DEFAULT || 0);
-            const diffInRate = poRate - finalRate;
-            const hasMismatch = diffInRate > allowedVariance;
-            
-            if (poRate > 0) {
-              const id = `SAT-${detail.item_id || Math.random().toString(36).substring(2, 10)}`;
-              sattaItems.push({
-                id,
-                poNo: detail.po_no,
-                poDate: poDate,
-                supplierName: matchedPo.supplier || 'UNKNOWN SUPPLIER',
-                brokerName: matchedPo.broker || 'UNKNOWN BROKER',
-                area: poArea,
-                grade: poGrade,
-                poRate: poRate,
-                sattaBaseRate: baseRate,
-                differential: differential,
-                sattaFinalRate: finalRate,
-                status: hasMismatch ? 'dispute' : 'ok',
-                issueDescription: hasMismatch 
-                  ? `Rate mismatch detected (PO Contract Price is HIGH). Contract specifies ₹${(poRate * 10).toLocaleString()}/m.T, which exceeds active Satta limit of ₹${(finalRate * 10).toLocaleString()}/m.T.`
-                  : "Rate aligns with active Satta Chart parameters.",
-                difference: diffInRate,
-                weightMt: Number(detail.weight_mt || 0)
-              });
-            }
-          }
+      const saudaPoRowsToProcess: { header: any; detail: any }[] = [];
+
+      if (allDetailRecords.length > 0) {
+        allDetailRecords.forEach((detail: any) => {
+          const poNo = String(detail.po_no || detail.contract_po_no || detail.sauda_no || '').trim().toUpperCase();
+          const matchedPo = allPoRecords.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === poNo) || detail;
+          saudaPoRowsToProcess.push({ header: matchedPo, detail });
+        });
+      } else {
+        allPoRecords.forEach((po: any) => {
+          saudaPoRowsToProcess.push({ header: po, detail: po });
         });
       }
+
+      saudaPoRowsToProcess.forEach(({ header, detail }) => {
+        const poNo = String(detail.po_no || header.po_no || header.contract_po_no || header.sauda_no || '').trim().toUpperCase();
+        if (!poNo) return;
+
+        const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code || '').trim() === String(detail.grade_code || header.grade_code || '').trim());
+        const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.grade_code || header.grade || header.quality || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
+        
+        // Extract rate and normalize to Rate per MT
+        const rawRate = Number(detail.rs || detail.rate_qntl || detail.rate_per_qtl || detail.b_rate || detail.rate_mt || detail.rate || header.b_rate || header.rate_qntl || header.rate || 0);
+        if (rawRate <= 0) return;
+
+        // Standardize: if rate < 5000 it is entered per Quintal -> convert to per MT (*10)
+        const poRateMt = rawRate < 5000 ? rawRate * 10 : rawRate;
+        const poRateQtl = poRateMt / 10;
+
+        const poDate = header.po_date || header.date || header.b_date || '2026-04-02';
+        const poArea = header.area || detail.area || 'NORTHERN';
+
+        const { baseRate, differential, finalRate } = getSattaRate(
+          parseDateToComparable(poDate),
+          poArea,
+          poGrade,
+          sattaBaseRows,
+          sattaDiffRows
+        );
+
+        const sattaFinalRateMt = finalRate;
+        const sattaFinalRateQtl = finalRate / 10;
+
+        const diffInRateMt = poRateMt - sattaFinalRateMt;
+        const diffInRateQtl = poRateQtl - sattaFinalRateQtl;
+
+        const allowedVarianceMt = (GRADE_SATTA_VARIANCE_LIMITS[poGrade] !== undefined 
+          ? GRADE_SATTA_VARIANCE_LIMITS[poGrade] 
+          : (GRADE_SATTA_VARIANCE_LIMITS.DEFAULT || 0)) * 10;
+
+        const isDispute = diffInRateMt > allowedVarianceMt;
+
+        const itemId = `SAT-${detail.item_id || detail.id || poNo}`;
+        const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => 
+          String(sm.po_no || sm.sauda_no || '').trim().toUpperCase() === poNo ||
+          String(sm.mismatch_id || sm.id || '').toUpperCase() === itemId
+        );
+
+        const isResolved = dbSattaMm && dbSattaMm.status === 'resolved';
+
+        sattaItems.push({
+          id: itemId,
+          poNo,
+          saudaNo: header.po_contract || header.sauda_no || header.contract_no || 'N/A',
+          poDate,
+          supplierName: header.supplier || header.supplier_name || 'UNKNOWN SUPPLIER',
+          brokerName: header.broker || header.broker_name || 'UNKNOWN BROKER',
+          area: poArea,
+          grade: poGrade,
+          poRateMt,
+          poRateQtl,
+          sattaBaseRateMt: baseRate,
+          differentialMt: differential,
+          sattaFinalRateMt,
+          sattaFinalRateQtl,
+          status: isResolved ? 'resolved' : (isDispute ? 'dispute' : 'ok'),
+          issueDescription: isDispute 
+            ? `Sauda/PO Price exceeds active Satta Chart parameters. Contract specifies ₹${poRateMt.toLocaleString()}/m.T (₹${poRateQtl.toLocaleString()}/Qtl), which exceeds active Satta limit of ₹${sattaFinalRateMt.toLocaleString()}/m.T (₹${sattaFinalRateQtl.toLocaleString()}/Qtl) by ₹${diffInRateMt.toLocaleString()}/m.T.`
+            : "Sauda rate aligns with active Satta Chart parameters.",
+          differenceMt: diffInRateMt,
+          differenceQtl: diffInRateQtl,
+          weightMt: Number(detail.weight_mt || detail.total_wt_in_ton || header.total_wt_in_ton || 0),
+          resolutionNotes: dbSattaMm?.remarks,
+          resolvedAt: dbSattaMm?.approved_at ? String(dbSattaMm.approved_at).split('T')[0] : undefined,
+          resolvedBy: dbSattaMm?.approved_by,
+          approvalLevel: dbSattaMm?.approval_level || 'L3/L5'
+        });
+      });
 
       setSattaMismatchList(sattaItems);
     } catch (err) {
@@ -495,6 +544,38 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     setTimeout(() => setSuccessToast(null), 4000);
   };
 
+  const handleResolveSatta = async (itemId: string, itemPoNo: string) => {
+    const remarks = remarksMap[itemId] || '';
+    if (!remarks.trim()) {
+      alert("Mandatory approval remarks required for L3/L5 price dispute clearance.");
+      return;
+    }
+
+    const ctx = getCurrentUserContext();
+    const username = ctx.username || 'L3/L5 User';
+    const approvalLevel = (ctx.userLevel || ctx.userRole || 'L3/L5').toUpperCase();
+    const nowIso = new Date().toISOString();
+
+    if (supabase) {
+      await supabase.from('satta_mismatch').upsert({
+        id: itemId,
+        mismatch_id: itemId,
+        po_no: itemPoNo,
+        status: 'resolved',
+        remarks: remarks.trim(),
+        approved_by: username,
+        approved_at: nowIso,
+        approval_level: approvalLevel,
+      }, { onConflict: 'id' });
+    }
+
+    window.dispatchEvent(new CustomEvent('app-data-updated'));
+    await loadMismatches();
+
+    setSuccessToast(`Satta Price Dispute for [${itemPoNo}] approved and cleared by ${approvalLevel} level user.`);
+    setTimeout(() => setSuccessToast(null), 4000);
+  };
+
   const supplierOptions = Array.from(
     new Set(mismatchList.map(i => i.supplierName).filter(s => s && s !== 'N/A'))
   ).sort();
@@ -548,9 +629,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     let csvContent = "";
     if (activeTab === 'ruka_to_satta') {
       csvContent = "data:text/csv;charset=utf-8," 
-        + ["Mismatch ID,P.O. Number,Date,Supplier,Area,Grade,PO Rate (m.T),Satta Rate (m.T),Deviation,Status,Resolution Notes"]
+        + ["Mismatch ID,P.O. / Sauda No,Date,Supplier,Area,Grade,Sauda Rate (m.T),Satta Limit Rate (m.T),Variance (m.T),Status,Approved By,Remarks"]
           .concat(sattaMismatchList.map(item => 
-            `"${item.id}","${item.poNo}","${item.poDate}","${item.supplierName}","${item.area}","${item.grade}","${item.poRate * 10}","${item.sattaFinalRate * 10}","${item.difference * 10}","${item.status}","${item.resolutionNotes || 'N/A'}"`
+            `"${item.id}","${item.poNo}","${item.poDate}","${item.supplierName}","${item.area}","${item.grade}","${item.poRateMt}","${item.sattaFinalRateMt}","${item.differenceMt}","${item.status}","${item.resolvedBy || 'N/A'}","${item.resolutionNotes || 'N/A'}"`
           )).join("\n");
     } else {
       csvContent = "data:text/csv;charset=utf-8," 
@@ -923,78 +1004,197 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         ) : (
           /* Satta Mismatch View */
           <div className="space-y-4">
-            <div className="bg-white border border-slate-300 p-3 rounded-lg shadow-xs flex justify-between items-center">
-              <div className="flex gap-2">
+            <div className="bg-white border border-slate-300 p-3 rounded-lg shadow-xs flex flex-wrap justify-between items-center gap-3">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSattaFilterStatus('dispute')}
                   className={cn(
-                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition",
-                    sattaFilterStatus === 'dispute' ? "bg-amber-700 text-white border-amber-800" : "bg-slate-50 text-slate-700 border-slate-300"
+                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                    sattaFilterStatus === 'dispute' ? "bg-amber-700 text-white border-amber-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
                   )}
                 >
-                  Price Disputes ({sattaMismatchList.filter(s => s.status === 'dispute').length})
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Price Disputes ({sattaMismatchList.filter(s => s.status === 'dispute').length})</span>
+                </button>
+                <button
+                  onClick={() => setSattaFilterStatus('resolved')}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                    sattaFilterStatus === 'resolved' ? "bg-emerald-700 text-white border-emerald-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Approved ({sattaMismatchList.filter(s => s.status === 'resolved').length})</span>
+                </button>
+                <button
+                  onClick={() => setSattaFilterStatus('ok')}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition flex items-center gap-1.5",
+                    sattaFilterStatus === 'ok' ? "bg-blue-700 text-white border-blue-800 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Aligned Rate ({sattaMismatchList.filter(s => s.status === 'ok').length})</span>
                 </button>
                 <button
                   onClick={() => setSattaFilterStatus('all')}
                   className={cn(
                     "px-3 py-1.5 rounded text-xs font-extrabold uppercase border transition",
-                    sattaFilterStatus === 'all' ? "bg-slate-900 text-white border-slate-900" : "bg-slate-50 text-slate-700 border-slate-300"
+                    sattaFilterStatus === 'all' ? "bg-slate-900 text-white border-slate-900 shadow-xs" : "bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100"
                   )}
                 >
                   All Records ({sattaMismatchList.length})
                 </button>
               </div>
+
+              {/* Quick info chip */}
+              <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
+                Formula: <span className="text-slate-900 font-mono">Sauda Rate vs. (Base Rate + Area/Grade Differential)</span>
+              </div>
             </div>
 
             <div className="bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold uppercase text-[10.5px]">
-                      <th className="p-3 border-r border-slate-200">P.O Number & Date</th>
-                      <th className="p-3 border-r border-slate-200">Supplier & Broker</th>
-                      <th className="p-3 border-r border-slate-200">Area & Grade</th>
-                      <th className="p-3 border-r border-slate-200">PO Contract Price</th>
-                      <th className="p-3 border-r border-slate-200">Satta Chart Price</th>
-                      <th className="p-3 border-r border-slate-200">Variance</th>
-                      <th className="p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {filteredSattaList.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-50 transition">
-                        <td className="p-3 border-r border-slate-200 font-mono font-bold text-slate-900">
-                          {item.poNo}
-                          <div className="text-[10px] text-slate-500 font-semibold">{item.poDate}</div>
-                        </td>
-                        <td className="p-3 border-r border-slate-200 font-bold text-slate-800">
-                          {item.supplierName}
-                          <div className="text-[10.5px] text-slate-500 font-medium">Broker: {item.brokerName}</div>
-                        </td>
-                        <td className="p-3 border-r border-slate-200">
-                          {item.area} / <span className="font-bold">{item.grade}</span>
-                        </td>
-                        <td className="p-3 border-r border-slate-200 font-extrabold text-slate-900">
-                          ₹ {(item.poRate * 10).toLocaleString()} / m.T
-                        </td>
-                        <td className="p-3 border-r border-slate-200 font-extrabold text-indigo-900">
-                          ₹ {(item.sattaFinalRate * 10).toLocaleString()} / m.T
-                        </td>
-                        <td className="p-3 border-r border-slate-200 font-black text-rose-700">
-                          {item.difference > 0 ? `+ ₹ ${(item.difference * 10).toLocaleString()} / m.T` : 'Aligned'}
-                        </td>
-                        <td className="p-3 font-bold uppercase">
-                          {item.status === 'dispute' ? (
-                            <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px]">Price Dispute</span>
-                          ) : (
-                            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 rounded text-[10px]">OK</span>
-                          )}
-                        </td>
+              {loading ? (
+                <div className="p-12 text-center">
+                  <div className="animate-spin rounded-full h-7 w-7 border-2 border-indigo-700 border-t-transparent mx-auto" />
+                  <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mt-3">Evaluating Sauda rates against Satta Chart parameters...</p>
+                </div>
+              ) : filteredSattaList.length === 0 ? (
+                <div className="p-12 text-center bg-slate-50">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-2" />
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase">No Satta Price Mismatches</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    All Sauda contract rates match active Satta Chart parameters.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold uppercase text-[10.5px]">
+                        <th className="p-3 border-r border-slate-200">P.O. / Sauda No. & Date</th>
+                        <th className="p-3 border-r border-slate-200">Supplier & Broker</th>
+                        <th className="p-3 border-r border-slate-200">Area & Grade</th>
+                        <th className="p-3 border-r border-slate-200 bg-slate-50">Sauda Contract Rate</th>
+                        <th className="p-3 border-r border-slate-200 bg-indigo-50/60 text-indigo-950 font-black">Satta Chart Limit Rate</th>
+                        <th className="p-3 border-r border-slate-200">Variance / Excess</th>
+                        <th className="p-3 border-r border-slate-200">Status</th>
+                        <th className="p-3">Action & Approval Remarks</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {filteredSattaList.map(item => (
+                        <tr key={item.id} className="hover:bg-slate-50 transition align-top">
+                          <td className="p-3 border-r border-slate-200 font-mono">
+                            <div className="font-extrabold text-slate-900 text-sm">{item.poNo}</div>
+                            <div className="text-[10px] text-slate-500 font-semibold">{item.poDate}</div>
+                            {item.saudaNo && item.saudaNo !== 'N/A' && (
+                              <div className="text-[9.5px] text-indigo-700 font-bold mt-0.5">Sauda: {item.saudaNo}</div>
+                            )}
+                          </td>
+                          <td className="p-3 border-r border-slate-200">
+                            <div className="font-bold text-slate-800 uppercase">{item.supplierName}</div>
+                            <div className="text-[10.5px] text-slate-500 font-medium">Broker: <span className="font-semibold text-slate-700">{item.brokerName}</span></div>
+                          </td>
+                          <td className="p-3 border-r border-slate-200">
+                            <div className="font-bold text-slate-800">{item.area}</div>
+                            <div className="text-[11px] text-slate-600 font-medium">Grade: <span className="font-bold">{item.grade}</span></div>
+                          </td>
+                          <td className="p-3 border-r border-slate-200 bg-slate-50/50">
+                            <div className="font-black text-slate-900 text-xs">
+                              ₹ {item.poRateMt.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ m.T</span>
+                            </div>
+                            <div className="text-[10.5px] font-bold text-slate-600 mt-0.5">
+                              (₹ {item.poRateQtl.toLocaleString()} / Qtl)
+                            </div>
+                          </td>
+                          <td className="p-3 border-r border-slate-200 bg-indigo-50/30">
+                            <div className="font-black text-indigo-950 text-xs">
+                              ₹ {item.sattaFinalRateMt.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ m.T</span>
+                            </div>
+                            <div className="text-[10.5px] font-bold text-indigo-800 mt-0.5">
+                              (Base ₹{item.sattaBaseRateMt.toLocaleString()} {item.differentialMt >= 0 ? `+ Diff ₹${item.differentialMt}` : `- Diff ₹${Math.abs(item.differentialMt)}`})
+                            </div>
+                          </td>
+                          <td className="p-3 border-r border-slate-200 font-black">
+                            {item.differenceMt > 0 ? (
+                              <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-[11px] inline-block">
+                                ⚠️ + ₹ {item.differenceMt.toLocaleString()} / m.T
+                                <div className="text-[9.5px] text-rose-800 font-bold">(+ ₹ {item.differenceQtl.toLocaleString()} / Qtl)</div>
+                              </div>
+                            ) : item.differenceMt < 0 ? (
+                              <div className="text-emerald-700 text-xs">
+                                - ₹ {Math.abs(item.differenceMt).toLocaleString()} / m.T
+                              </div>
+                            ) : (
+                              <span className="text-emerald-700 font-extrabold">Aligned</span>
+                            )}
+                          </td>
+                          <td className="p-3 border-r border-slate-200 font-bold uppercase">
+                            {item.status === 'dispute' ? (
+                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
+                                Price Dispute
+                              </span>
+                            ) : item.status === 'resolved' ? (
+                              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                                Approved / Cleared
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                <Check className="h-3.5 w-3.5 text-blue-700" />
+                                OK
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 min-w-[200px]">
+                            {item.status === 'dispute' ? (
+                              canApproveMismatch() ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    rows={2}
+                                    placeholder="Enter dispute clearance remarks..."
+                                    value={remarksMap[item.id] || ''}
+                                    onChange={(e) => setRemarksMap({ ...remarksMap, [item.id]: e.target.value })}
+                                    className="w-full text-xs p-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 bg-white"
+                                  />
+                                  <button
+                                    onClick={() => handleResolveSatta(item.id, item.poNo)}
+                                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase px-3 py-1.5 rounded text-[10.5px] tracking-wider transition flex items-center justify-center gap-1.5 shadow-xs"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                    <span>Approve Price Dispute</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="bg-slate-100 border border-slate-200 text-slate-600 p-2 rounded text-[10px] font-bold text-center">
+                                  🔒 L3 / L5 Level User Approval Required
+                                </div>
+                              )
+                            ) : item.status === 'resolved' ? (
+                              <div className="bg-emerald-50 border border-emerald-200 p-2 rounded text-[10px] text-slate-800 space-y-1">
+                                <div className="font-extrabold text-emerald-950 flex items-center gap-1">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                                  <span>Approval Record</span>
+                                </div>
+                                <div><span className="font-bold">Approved By:</span> {item.resolvedBy || 'L3/L5 User'}</div>
+                                <div><span className="font-bold">Approval Level:</span> <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-950 font-black rounded text-[9.5px]">{item.approvalLevel || 'L3/L5'}</span></div>
+                                <div><span className="font-bold">Date:</span> {item.resolvedAt || 'N/A'}</div>
+                                <div><span className="font-bold">Remarks:</span> "{item.resolutionNotes || 'Approved'}"</div>
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-500 font-medium italic">
+                                Rate within acceptable limits. No action required.
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

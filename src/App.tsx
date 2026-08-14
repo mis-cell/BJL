@@ -299,6 +299,28 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS material_mismatch ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS material_mismatch ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
 
+          CREATE TABLE IF NOT EXISTS satta_mismatch (
+            id TEXT PRIMARY KEY,
+            mismatch_id TEXT,
+            po_no TEXT,
+            sauda_no TEXT,
+            status TEXT DEFAULT 'dispute',
+            remarks TEXT,
+            approved_by TEXT,
+            approved_at TIMESTAMP WITH TIME ZONE,
+            approval_level TEXT DEFAULT 'L3/L5',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          ALTER TABLE IF EXISTS satta_mismatch DISABLE ROW LEVEL SECURITY;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS mismatch_id TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS po_no TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS sauda_no TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'dispute';
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS remarks TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approved_by TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+
           DROP VIEW IF EXISTS material_inspection CASCADE;
           CREATE TABLE IF NOT EXISTS inspection_checklist (
             mr_no TEXT PRIMARY KEY,
