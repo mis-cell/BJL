@@ -389,26 +389,105 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
       // --- Satta Mismatch Processing ---
       const sattaItems: SattaMismatchItem[] = [];
-      const saudaPoRowsToProcess: { header: any; detail: any }[] = [];
+      const saudaPoRowsToProcess: { header: any; detail: any; poNoFormatted: string }[] = [];
 
-      if (allDetailRecords.length > 0) {
-        allDetailRecords.forEach((detail: any) => {
-          const poNo = String(detail.po_no || detail.contract_po_no || detail.sauda_no || '').trim().toUpperCase();
-          const matchedPo = allPoRecords.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === poNo) || detail;
-          saudaPoRowsToProcess.push({ header: matchedPo, detail });
-        });
-      } else {
-        allPoRecords.forEach((po: any) => {
-          saudaPoRowsToProcess.push({ header: po, detail: po });
+      // Function to generate formatted Order No (e.g. BJC0158/26-27 or BJC4007/26-27)
+      const getFormattedOrderNo = (header: any) => {
+        if (!header) return 'N/A';
+        if (header.session && header.session.trim()) {
+          const s = header.session.trim();
+          if (s.includes('/')) {
+            const parts = s.split('/').filter(Boolean);
+            if (parts.length >= 3) return s;
+            if (parts.length === 2 && parts[0] === 'BJCL') return `BJC${parts[1]}`;
+          }
+        }
+        const val = String(header.sauda_no || header.po_no || header.contract_po_no || header.satta_no || '').trim();
+        if (!val) return 'N/A';
+        if (val.startsWith('BJC') || val.startsWith('BJCL')) return val;
+        let yearPart = '26-27';
+        if (header.financial_year) {
+          const startYr = header.financial_year.split('-')[0].trim();
+          if (startYr.length >= 4) yearPart = `${startYr.slice(-2)}-${(parseInt(startYr.slice(-2)) + 1).toString().padStart(2, '0')}`;
+        }
+        return `BJC${val}/${yearPart}`;
+      };
+
+      // 1. Process sauda_master & sauda_quality_details
+      if (saudaMasterRows.length > 0) {
+        saudaMasterRows.forEach((sm: any) => {
+          const formattedNo = getFormattedOrderNo(sm);
+          const matchingDetails = saudaQualityRows.filter((sq: any) => 
+            (sq.sauda_id && sq.sauda_id === sm.sauda_id) ||
+            (sq.sauda_no && sm.sauda_no && String(sq.sauda_no).trim().toUpperCase() === String(sm.sauda_no).trim().toUpperCase())
+          );
+
+          if (matchingDetails.length > 0) {
+            matchingDetails.forEach((qd: any) => {
+              saudaPoRowsToProcess.push({ header: sm, detail: qd, poNoFormatted: formattedNo });
+            });
+          } else {
+            saudaPoRowsToProcess.push({ header: sm, detail: sm, poNoFormatted: formattedNo });
+          }
         });
       }
 
-      saudaPoRowsToProcess.forEach(({ header, detail }) => {
-        const poNo = String(detail.po_no || header.po_no || header.contract_po_no || header.sauda_no || '').trim().toUpperCase();
-        if (!poNo) return;
+      // 2. Process sauda_check_point & sauda_check_point_details
+      if (scpRows.length > 0) {
+        scpRows.forEach((scp: any) => {
+          const formattedNo = scp.po_no || scp.contract_po_no || getFormattedOrderNo(scp);
+          const matchingDetails = scpDetailRows.filter((scpd: any) => 
+            String(scpd.po_no || scpd.contract_po_no || '').trim().toUpperCase() === String(scp.po_no || scp.contract_po_no || '').trim().toUpperCase()
+          );
 
-        const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code || '').trim() === String(detail.grade_code || header.grade_code || '').trim());
-        const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.grade_code || header.grade || header.quality || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
+          if (matchingDetails.length > 0) {
+            matchingDetails.forEach((qd: any) => {
+              if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && r.detail.quality === qd.grade_code && r.detail.rs === qd.rate_qntl)) {
+                saudaPoRowsToProcess.push({ header: scp, detail: qd, poNoFormatted: formattedNo });
+              }
+            });
+          } else {
+            if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo)) {
+              saudaPoRowsToProcess.push({ header: scp, detail: scp, poNoFormatted: formattedNo });
+            }
+          }
+        });
+      }
+
+      // 3. Process purchase_master & purchase_detail_master
+      if (purchaseMasterRows.length > 0) {
+        purchaseMasterRows.forEach((pm: any) => {
+          const formattedNo = pm.po_no || getFormattedOrderNo(pm);
+          const matchingDetails = purchaseDetailRows.filter((pdm: any) => 
+            String(pdm.po_no || '').trim().toUpperCase() === String(pm.po_no || '').trim().toUpperCase()
+          );
+
+          if (matchingDetails.length > 0) {
+            matchingDetails.forEach((qd: any) => {
+              if (!saudaPoRowsToProcess.some(r => r.poNoFormatted === formattedNo && (r.detail.quality === qd.grade_code || r.detail.grade_code === qd.grade_code))) {
+                saudaPoRowsToProcess.push({ header: pm, detail: qd, poNoFormatted: formattedNo });
+              }
+            });
+          }
+        });
+      }
+
+      // 4. Fallback: Any sauda_quality_details or detail rows not matched
+      saudaQualityRows.forEach((sq: any) => {
+        const found = saudaPoRowsToProcess.some(r => r.detail === sq || (r.detail.sauda_id && r.detail.sauda_id === sq.sauda_id && r.detail.quality === sq.quality));
+        if (!found) {
+          const matchedHeader = saudaMasterRows.find((sm: any) => sm.sauda_id === sq.sauda_id || sm.sauda_no === sq.sauda_no) || sq;
+          const formattedNo = getFormattedOrderNo(matchedHeader);
+          saudaPoRowsToProcess.push({ header: matchedHeader, detail: sq, poNoFormatted: formattedNo });
+        }
+      });
+
+      saudaPoRowsToProcess.forEach(({ header, detail, poNoFormatted }) => {
+        const poNo = poNoFormatted || String(detail.po_no || header.po_no || header.contract_po_no || header.sauda_no || '').trim().toUpperCase();
+        if (!poNo || poNo === 'N/A') return;
+
+        const matchedGrade = (gradeRows || []).find((g: any) => String(g.grade_code || '').trim() === String(detail.grade_code || detail.quality || header.grade_code || '').trim());
+        const poGrade = (matchedGrade ? matchedGrade.grade_name || '' : (detail.quality || detail.grade_code || header.grade || header.quality || '')).trim().replace(/\./g, '').toUpperCase() || 'TD6';
         
         // Extract rate and normalize to Rate per MT
         const rawRate = Number(detail.rs || detail.rate_qntl || detail.rate_per_qtl || detail.b_rate || detail.rate_mt || detail.rate || header.b_rate || header.rate_qntl || header.rate || 0);
@@ -418,7 +497,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const poRateMt = rawRate < 5000 ? rawRate * 10 : rawRate;
         const poRateQtl = poRateMt / 10;
 
-        const poDate = header.po_date || header.date || header.b_date || '2026-04-02';
+        const poDate = header.date || header.po_date || header.b_date || '2026-04-02';
         const poArea = header.area || detail.area || 'NORTHERN';
 
         const { baseRate, differential, finalRate } = getSattaRate(
@@ -433,7 +512,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const sattaFinalRateQtl = finalRate / 10;
 
         const diffInRateMt = poRateMt - sattaFinalRateMt;
-        const diffInRateQtl = poRateQtl - sattaFinalRateQtl;
+        const diffInRateQtl = diffInRateMt / 10;
 
         const allowedVarianceMt = (GRADE_SATTA_VARIANCE_LIMITS[poGrade] !== undefined 
           ? GRADE_SATTA_VARIANCE_LIMITS[poGrade] 
@@ -441,7 +520,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
         const isDispute = diffInRateMt > allowedVarianceMt;
 
-        const itemId = `SAT-${detail.item_id || detail.id || poNo}`;
+        const itemId = `SAT-${detail.id || detail.item_id || `${poNo}-${poGrade}-${rawRate}`}`;
         const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => 
           String(sm.po_no || sm.sauda_no || '').trim().toUpperCase() === poNo ||
           String(sm.mismatch_id || sm.id || '').toUpperCase() === itemId
@@ -452,7 +531,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         sattaItems.push({
           id: itemId,
           poNo,
-          saudaNo: header.po_contract || header.sauda_no || header.contract_no || 'N/A',
+          saudaNo: header.po_contract || header.sauda_no || header.contract_no || poNo,
           poDate,
           supplierName: header.supplier || header.supplier_name || 'UNKNOWN SUPPLIER',
           brokerName: header.broker || header.broker_name || 'UNKNOWN BROKER',
@@ -466,7 +545,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           sattaFinalRateQtl,
           status: isResolved ? 'resolved' : (isDispute ? 'dispute' : 'ok'),
           issueDescription: isDispute 
-            ? `Sauda/PO Price exceeds active Satta Chart parameters. Contract specifies ₹${poRateMt.toLocaleString()}/m.T (₹${poRateQtl.toLocaleString()}/Qtl), which exceeds active Satta limit of ₹${sattaFinalRateMt.toLocaleString()}/m.T (₹${sattaFinalRateQtl.toLocaleString()}/Qtl) by ₹${diffInRateMt.toLocaleString()}/m.T.`
+            ? `Sauda Contract Rate exceeds active Satta Chart parameters. Contract specifies ₹${poRateMt.toLocaleString()}/m.T (₹${poRateQtl.toLocaleString()}/Qtl), which exceeds active Satta limit of ₹${sattaFinalRateMt.toLocaleString()}/m.T (₹${sattaFinalRateQtl.toLocaleString()}/Qtl) by ₹${diffInRateMt.toLocaleString()}/m.T.`
             : "Sauda rate aligns with active Satta Chart parameters.",
           differenceMt: diffInRateMt,
           differenceQtl: diffInRateQtl,
