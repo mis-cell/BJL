@@ -556,18 +556,23 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const cleanSaudaNo = String(header.po_contract || header.sauda_no || header.contract_no || '').trim().toUpperCase();
         const cleanRefNo = String(header.order_no || header.ref_no || header.sauda_id || '').trim().toUpperCase();
 
+        const poSuffix = cleanPoNo.split('/').pop() || '';
+        const saudaSuffix = cleanSaudaNo.split('/').pop() || '';
+
         const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => {
           const smPo = String(sm.po_no || '').trim().toUpperCase();
           const smSauda = String(sm.sauda_no || '').trim().toUpperCase();
           const smId = String(sm.mismatch_id || sm.id || '').toUpperCase();
           return (
-            (smPo && (smPo === cleanPoNo || cleanPoNo.includes(smPo) || smPo.includes(cleanPoNo))) ||
-            (smSauda && (smSauda === cleanSaudaNo || cleanSaudaNo.includes(smSauda) || smSauda.includes(cleanSaudaNo))) ||
+            (smPo && (smPo === cleanPoNo || cleanPoNo.includes(smPo) || smPo.includes(cleanPoNo) || (poSuffix && smPo.includes(poSuffix)))) ||
+            (smSauda && (smSauda === cleanSaudaNo || cleanSaudaNo.includes(smSauda) || smSauda.includes(cleanSaudaNo) || (saudaSuffix && smSauda.includes(saudaSuffix)))) ||
             (cleanRefNo && smSauda && (smSauda === cleanRefNo || cleanRefNo.includes(smSauda) || smSauda.includes(cleanRefNo))) ||
             (cleanRefNo && smPo && (smPo === cleanRefNo || cleanRefNo.includes(smPo) || smPo.includes(cleanRefNo))) ||
             smId === itemId.toUpperCase() ||
             (smPo && cleanSaudaNo && (smPo.includes(cleanSaudaNo) || cleanSaudaNo.includes(smPo))) ||
-            (smSauda && cleanPoNo && (smSauda.includes(cleanPoNo) || cleanPoNo.includes(smSauda)))
+            (smSauda && cleanPoNo && (smSauda.includes(cleanPoNo) || cleanPoNo.includes(smSauda))) ||
+            (poSuffix && smId.includes(poSuffix)) ||
+            (saudaSuffix && smId.includes(saudaSuffix))
           );
         });
 
@@ -584,6 +589,8 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           )) ||
           localStorage.getItem(`satta_resolved_${cleanPoNo}`) ||
           localStorage.getItem(`satta_resolved_${cleanSaudaNo}`) ||
+          (poSuffix && localStorage.getItem(`satta_resolved_${poSuffix}`)) ||
+          (saudaSuffix && localStorage.getItem(`satta_resolved_${saudaSuffix}`)) ||
           (cleanRefNo && localStorage.getItem(`satta_resolved_${cleanRefNo}`)) ||
           localStorage.getItem(`satta_resolved_${itemId.toUpperCase()}`)
         );

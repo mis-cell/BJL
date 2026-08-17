@@ -807,6 +807,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
   // Temporary P.O ↔ Material Inspection match status, keyed by po_no.
   const [matchResults, setMatchResults] = useState<Record<string, PoMatchResult>>({});
+  // DB Mismatch tables cache for cross-checking approval statuses
+  const [dbMaterialMismatches, setDbMaterialMismatches] = useState<any[]>([]);
+  const [dbSattaMismatches, setDbSattaMismatches] = useState<any[]>([]);
+
   // PTF creation mode: 'fresh' or 'reference' (against a cancelled P.O).
   const [ptfMode, setPtfMode] = useState<'fresh' | 'reference'>('fresh');
   // On the Final P.O view: po_nos that still exist in sauda_check_point (= not yet
@@ -840,13 +844,80 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     resolve,
   }));
 
-function isPoMismatchResolved(poNo: string): boolean {
-  if (!poNo) return false;
-  const targetPoNo = String(poNo).trim().toUpperCase();
-  const po = poList.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === targetPoNo);
-  if (po && (po.mismatch_cleared === true || po.mismatch_cleared === 'true')) return true;
-  return false;
-}
+  function isPoMismatchResolved(poOrItem: any): boolean {
+    if (!poOrItem) return false;
+    const item = typeof poOrItem === 'object' 
+      ? poOrItem 
+      : poList.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === String(poOrItem).trim().toUpperCase()) || { po_no: String(poOrItem) };
+    
+    const poNo = String(item.po_no || '').trim().toUpperCase();
+    const contractPoNo = String(item.contract_po_no || '').trim().toUpperCase();
+    const saudaNo = String(item.sauda_no || item.po_contract || item.contract_no || '').trim().toUpperCase();
+    const ptfNo = String(item.ptf_no || '').trim().toUpperCase();
+    
+    // Suffix extraction (e.g. 0153 from BJCL/2026-2027/0153 or BJC0153/26-27)
+    const poSuffix = poNo.split('/').pop() || '';
+    const saudaSuffix = saudaNo.split('/').pop() || '';
+    const tokens = [poNo, contractPoNo, saudaNo, ptfNo, poSuffix, saudaSuffix].filter(t => t && t !== 'N/A' && t !== 'UNDEFINED');
+
+    // 1. Direct record flags on item
+    if (
+      item.mismatch_cleared === true || 
+      item.mismatch_cleared === 'true' || 
+      item.satta_dispute_approved === true || 
+      item.satta_dispute_approved === 'true' ||
+      item.status === 'resolved' ||
+      item.status === 'cleared' ||
+      item.status === 'final' ||
+      item.status === 'approved'
+    ) {
+      return true;
+    }
+
+    // 2. Check localStorage tokens
+    for (const token of tokens) {
+      const matCache = localStorage.getItem(`material_resolved_${token.toUpperCase()}`);
+      const satCache = localStorage.getItem(`satta_resolved_${token.toUpperCase()}`);
+      const misCache = localStorage.getItem(`material_resolved_MIS-${token.toUpperCase()}`);
+      if (matCache || satCache || misCache) {
+        return true;
+      }
+    }
+
+    // 3. Check dbMaterialMismatches
+    const hasMaterialResolved = dbMaterialMismatches.some((m: any) => {
+      const mPo = String(m.po_no || '').trim().toUpperCase();
+      const mId = String(m.mismatch_id || m.id || '').toUpperCase();
+      const isResolvedStatus = m.status === 'resolved' || m.status === 'approved' || m.status === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
+      if (!isResolvedStatus) return false;
+      
+      return tokens.some(t => {
+        const tu = t.toUpperCase();
+        return (mPo && (mPo === tu || mPo.includes(tu) || tu.includes(mPo))) ||
+               (mId && (mId === `MIS-${tu}` || mId.includes(tu)));
+      });
+    });
+    if (hasMaterialResolved) return true;
+
+    // 4. Check dbSattaMismatches
+    const hasSattaResolved = dbSattaMismatches.some((s: any) => {
+      const sPo = String(s.po_no || '').trim().toUpperCase();
+      const sSauda = String(s.sauda_no || '').trim().toUpperCase();
+      const sId = String(s.mismatch_id || s.id || '').toUpperCase();
+      const isResolvedStatus = s.status === 'resolved' || s.status === 'approved' || s.status === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
+      if (!isResolvedStatus) return false;
+
+      return tokens.some(t => {
+        const tu = t.toUpperCase();
+        return (sPo && (sPo === tu || sPo.includes(tu) || tu.includes(sPo))) ||
+               (sSauda && (sSauda === tu || sSauda.includes(tu) || tu.includes(sSauda))) ||
+               (sId && (sId === `SAT-${tu}` || sId.includes(tu)));
+      });
+    });
+    if (hasSattaResolved) return true;
+
+    return false;
+  }
 
   // Compute header-level match against Material Inspection for the Temp P.O list.
   useEffect(() => {
@@ -1307,9 +1378,7 @@ function isPoMismatchResolved(poNo: string): boolean {
 
   // Fetch all registered records and masters
   const fetchPosAndMasters = async () => {
-    if (!poList || poList.length === 0) {
-      setLoading(true);
-    }
+    setLoading(true);
     const safeFetch = (table: string, orderBy?: string, ascending = false) => {
       return dbModule.fetchAll(table, orderBy, ascending).catch(err => {
         console.warn(`Failed to fetch ${table}:`, err);
@@ -1348,7 +1417,25 @@ function isPoMismatchResolved(poNo: string): boolean {
         }
       }
 
-      const [brokers, suppliers, areas, saudas, grades, markas, agencies, arrivals, finalArrivals, inspections, sattaBasesRes, sattaCalculatedRes, sattaDiffsRes] = await Promise.all([
+      const [
+        brokers, 
+        suppliers, 
+        areas, 
+        saudas, 
+        grades, 
+        markas, 
+        agencies, 
+        arrivals, 
+        finalArrivals, 
+        inspections, 
+        sattaBasesRes, 
+        sattaCalculatedRes, 
+        sattaDiffsRes,
+        matMismatchesRes,
+        satMismatchesRes,
+        dbMatMismatches,
+        dbSatMismatches
+      ] = await Promise.all([
         safeFetch('broker_master'),
         safeFetch('supply_master'),
         safeFetch('area_master'),
@@ -1361,8 +1448,18 @@ function isPoMismatchResolved(poNo: string): boolean {
         safeFetch('mill_inspection_master', 'created_at', false),
         safeSupabaseSelect('satta_base_rates', 'start_date', false),
         safeSupabaseSelect('satta_calculated_rates'),
-        safeSupabaseSelect('satta_differentials')
+        safeSupabaseSelect('satta_differentials'),
+        safeSupabaseSelect('material_mismatch'),
+        safeSupabaseSelect('satta_mismatch'),
+        safeFetch('material_mismatch'),
+        safeFetch('satta_mismatch'),
       ]);
+
+      const combinedMatMismatches = [...((matMismatchesRes as any)?.data || []), ...(dbMatMismatches || [])];
+      const combinedSatMismatches = [...((satMismatchesRes as any)?.data || []), ...(dbSatMismatches || [])];
+      setDbMaterialMismatches(combinedMatMismatches);
+      setDbSattaMismatches(combinedSatMismatches);
+
       const pos = initialPos;
       setAllTempArrivals(arrivals || []);
       setAllFinalArrivals(finalArrivals || []);
@@ -1424,8 +1521,15 @@ function isPoMismatchResolved(poNo: string): boolean {
         const arr: any = [...matchingFinal, ...matchingTemp][0];
         let passStatus: 'awaiting' | 'pass' | 'mismatch' = 'awaiting';
         const mismatchFields: string[] = [];
-        if (isPtfRow) {
-          // A PTF is a direct Final P.O candidate — always ready to Pass.
+        
+        // If mismatch is cleared / approved by admin or PTF, mark as pass immediately
+        const isCleared = p.mismatch_cleared === true || 
+          p.mismatch_cleared === 'true' || 
+          p.satta_dispute_approved === true || 
+          p.satta_dispute_approved === 'true' || 
+          isPoMismatchResolved(p);
+
+        if (isPtfRow || isCleared) {
           passStatus = 'pass';
         } else if (totalReceivedMt > 0 && arr) {
           // Only evaluate once material has actually been received.
@@ -2117,6 +2221,12 @@ function isPoMismatchResolved(poNo: string): boolean {
     if (!ok) return;
     try {
       setLoading(true);
+      const cleanPoNo = String(item.po_no || item.contract_po_no || '').trim().toUpperCase();
+      const poSuffix = cleanPoNo.split('/').pop() || '';
+      const saudaNo = String(item.sauda_no || item.po_contract || item.contract_no || '').trim().toUpperCase();
+      const saudaSuffix = saudaNo.split('/').pop() || '';
+      const allTokens = [cleanPoNo, poSuffix, saudaNo, saudaSuffix].filter(Boolean);
+
       if (supabase) {
         // Fetch full header from sauda_check_point
         const { data: scpHeader } = await supabase.from('sauda_check_point').select('*').eq('po_no', item.po_no).maybeSingle();
@@ -2128,7 +2238,9 @@ function isPoMismatchResolved(poNo: string): boolean {
         const poPayload = {
           ...headerData,
           status: 'final',
-          pending: false
+          pending: false,
+          mismatch_cleared: true,
+          satta_dispute_approved: true,
         };
         delete poPayload.po_id; // Let purchase_master auto-generate primary key if needed or keep po_no unique
         
@@ -2155,9 +2267,42 @@ function isPoMismatchResolved(poNo: string): boolean {
         // Remove from sauda_check_point and details
         await supabase.from('sauda_check_point_details').delete().eq('po_no', item.po_no);
         await supabase.from('sauda_check_point').delete().eq('po_no', item.po_no);
+
+        // Also update matching records in material_mismatch & satta_mismatch
+        try {
+          await supabase.from('material_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('po_no', item.po_no);
+          await supabase.from('satta_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('po_no', item.po_no);
+          if (saudaNo) {
+            await supabase.from('satta_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('sauda_no', saudaNo);
+            await supabase.from('sauda_master').update({ mismatch_cleared: true, satta_dispute_approved: true }).eq('sauda_no', saudaNo);
+            await supabase.from('sms_sauda').update({ mismatch_cleared: true, satta_dispute_approved: true }).eq('sauda_no', saudaNo);
+          }
+        } catch (_ignore) {}
       } else {
-        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'final' });
+        await dbModule.insert('purchase_master', {
+          ...item,
+          status: 'final',
+          pending: false,
+          mismatch_cleared: true,
+          satta_dispute_approved: true
+        }).catch(() => {});
+        await dbModule.delete('sauda_check_point', 'po_no', item.po_no).catch(() => {
+          return dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'final', mismatch_cleared: true });
+        });
       }
+
+      // Mark resolution tokens in localStorage
+      allTokens.forEach(t => {
+        try {
+          localStorage.setItem(`material_resolved_${t.toUpperCase()}`, 'true');
+          localStorage.setItem(`satta_resolved_${t.toUpperCase()}`, 'true');
+          localStorage.setItem(`material_resolved_MIS-${t.toUpperCase()}`, 'true');
+        } catch (_e) {}
+      });
+
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
+      window.dispatchEvent(new CustomEvent('mismatch_resolved', { detail: { poNo: item.po_no } }));
+
       alert(`PO #${item.po_no} successfully passed to Final P.O!`);
       await fetchPosAndMasters();
     } catch (e: any) {
@@ -3159,12 +3304,12 @@ function isPoMismatchResolved(poNo: string): boolean {
                                     );
                                  }
                                  return (
-                                    isPoMismatchResolved(item.po_no) ? (
+                                    isPoMismatchResolved(item) ? (
                                        <button
                                           onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="Material Mismatch approved — click to move to Final P.O"
-                                          className="text-[9px] font-black px-2 py-0.5 rounded-lg bg-emerald-700 text-white uppercase shadow-xs whitespace-nowrap cursor-pointer"
-                                       >MISMATCH PASS</button>
+                                          title="Mismatch Cleared & Approved by Admin — Click to Move to Final P.O"
+                                          className="text-[9px] font-black px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white uppercase shadow-xs whitespace-nowrap cursor-pointer transition-all border border-emerald-600"
+                                       >PASS ✓</button>
                                     ) : (
                                        <span
                                           className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help"
