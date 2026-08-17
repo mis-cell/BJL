@@ -722,7 +722,7 @@ const allSidebarItems = [
   { id: "material_inspection", label: "INSPECTION CHECKLIST", icon: ShieldCheck },
   { id: "mismatch", label: "Mismatch Case", icon: AlertTriangle },
   { id: "club_po_mr", label: "Club P.O & Arrival", icon: Link },
-  { id: "mr_settlement", label: "Arrival Settlement", icon: FileCheck },
+  { id: "mr_settlement", label: "Settlement", icon: FileCheck },
   { id: "issue", label: "Material Issue", icon: PackageCheck },
   { id: "bardana", label: "Godown Master", icon: Store },
   { id: "closing_stock", label: "Stock Inventory", icon: Layers },

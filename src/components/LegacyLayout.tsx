@@ -231,7 +231,7 @@ export default function LegacyLayout({
       icon: Wallet,
       subItems: [
         { id: 'club_po', label: 'Club P.O & Arrival', icon: Link, pageId: 'club_po_mr' },
-        { id: 'mr_settlement', label: 'Arrival Settlement', icon: FileCheck, pageId: 'mr_settlement' },
+        { id: 'mr_settlement', label: 'Settlement', icon: FileCheck, pageId: 'mr_settlement' },
         { id: 'payment', label: 'Payment', icon: Wallet, pageId: 'payment' },
       ]
     },

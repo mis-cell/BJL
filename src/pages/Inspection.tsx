@@ -161,7 +161,7 @@ const detailFieldsConfig: { name: keyof InspectionDetailRow; label: string; type
   { name: "chotta_grade", label: "Chotta & Habi Jabi Grade", type: "text" },
   { name: "tolerable", label: "Tolerable", type: "select" },
   { name: "row_remarks", label: "Remarks", type: "text" },
-  { name: "jqi_remarks", label: "JQI Remarks", type: "text" }
+  { name: "jqi_remarks", label: "JCI Remarks", type: "text" }
 ];
 
 export default function Inspection({ onNavigate }: InspectionProps) {
@@ -356,8 +356,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
       arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
       arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
-      po_no: fa.po_no || prev.po_no,
+      po_no: fa.po_no || fa.mr_no || prev.po_no,
       po_date: fa.po_date || fa.date || prev.po_date,
+      mill_po_no: fa.mr_no || fa.po_no || fa.mill_po_no || fa.arrival_no || displayMrNo || prev.mill_po_no || "",
+      mill_po_date: fa.date || fa.po_date || fa.arrival_date || prev.mill_po_date || new Date().toISOString().split("T")[0],
       broker_name: fa.broker || prev.broker_name,
       supplier_name: fa.supplier || fa.challan_supplier || prev.supplier_name,
       lorry_number: fa.lorry_number || prev.lorry_number,
@@ -498,10 +500,102 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const handleDetailChange = (index: number, field: keyof InspectionDetailRow, value: any) => {
     setDetailRows(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      const currentRow = { ...updated[index], [field]: value };
+
+      // Auto Calculate Lorry Moisture Read Avg from Min & Max
+      if (field === "lorry_read_min" || field === "lorry_read_max") {
+        const min = field === "lorry_read_min" ? Number(value) || 0 : Number(currentRow.lorry_read_min) || 0;
+        const max = field === "lorry_read_max" ? Number(value) || 0 : Number(currentRow.lorry_read_max) || 0;
+        let avg = 0;
+        if (min > 0 && max > 0) {
+          avg = Number(((min + max) / 2).toFixed(2));
+        } else if (min > 0 || max > 0) {
+          avg = min || max;
+        }
+        currentRow.lorry_read_avg = avg;
+      }
+
+      // Auto Calculate Insp. Moisture Read Avg from Min & Max
+      if (field === "insp_read_min" || field === "insp_read_max") {
+        const min = field === "insp_read_min" ? Number(value) || 0 : Number(currentRow.insp_read_min) || 0;
+        const max = field === "insp_read_max" ? Number(value) || 0 : Number(currentRow.insp_read_max) || 0;
+        let avg = 0;
+        if (min > 0 && max > 0) {
+          avg = Number(((min + max) / 2).toFixed(2));
+        } else if (min > 0 || max > 0) {
+          avg = min || max;
+        }
+        currentRow.insp_read_avg = avg;
+        if (avg > 0) {
+          currentRow.moisture_act = avg;
+        }
+      }
+
+      updated[index] = currentRow;
       return updated;
     });
   };
+
+  // Auto calculate Actual/Claim Moisture %, Dust %, NCV % header averages from detail rows
+  useEffect(() => {
+    if (!detailRows || detailRows.length === 0) return;
+
+    let totalActMoisture = 0, countActMoisture = 0;
+    let totalClaimMoisture = 0, countClaimMoisture = 0;
+    let totalActDust = 0, countActDust = 0;
+    let totalClaimDust = 0, countClaimDust = 0;
+    let totalActNcv = 0, countActNcv = 0;
+    let totalClaimNcv = 0, countClaimNcv = 0;
+
+    detailRows.forEach(row => {
+      const actM = Number(row.moisture_act) || Number(row.insp_read_avg) || 0;
+      if (actM > 0) { totalActMoisture += actM; countActMoisture++; }
+
+      const claimM = Number(row.moisture_claim) || 0;
+      if (claimM > 0) { totalClaimMoisture += claimM; countClaimMoisture++; }
+
+      const actD = Number(row.dust_act) || 0;
+      if (actD > 0) { totalActDust += actD; countActDust++; }
+
+      const claimD = Number(row.dust_claim) || 0;
+      if (claimD > 0) { totalClaimDust += claimD; countClaimDust++; }
+
+      const actN = Number(row.ncv_act) || 0;
+      if (actN > 0) { totalActNcv += actN; countActNcv++; }
+
+      const claimN = Number(row.ncv_claim) || 0;
+      if (claimN > 0) { totalClaimNcv += claimN; countClaimNcv++; }
+    });
+
+    const avgActMoisture = countActMoisture > 0 ? Number((totalActMoisture / countActMoisture).toFixed(2)) : 0;
+    const avgClaimMoisture = countClaimMoisture > 0 ? Number((totalClaimMoisture / countClaimMoisture).toFixed(2)) : 0;
+    const avgActDust = countActDust > 0 ? Number((totalActDust / countActDust).toFixed(2)) : 0;
+    const avgClaimDust = countClaimDust > 0 ? Number((totalClaimDust / countClaimDust).toFixed(2)) : 0;
+    const avgActNcv = countActNcv > 0 ? Number((totalActNcv / countActNcv).toFixed(2)) : 0;
+    const avgClaimNcv = countClaimNcv > 0 ? Number((totalClaimNcv / countClaimNcv).toFixed(2)) : 0;
+
+    setHeaderForm(prev => {
+      if (
+        prev.actual_moisture === avgActMoisture &&
+        prev.claim_moisture === avgClaimMoisture &&
+        prev.actual_dust === avgActDust &&
+        prev.claim_dust === avgClaimDust &&
+        prev.actual_ncv === avgActNcv &&
+        prev.claim_ncv === avgClaimNcv
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        actual_moisture: avgActMoisture || prev.actual_moisture || 0,
+        claim_moisture: avgClaimMoisture || prev.claim_moisture || 0,
+        actual_dust: avgActDust || prev.actual_dust || 0,
+        claim_dust: avgClaimDust || prev.claim_dust || 0,
+        actual_ncv: avgActNcv || prev.actual_ncv || 0,
+        claim_ncv: avgClaimNcv || prev.claim_ncv || 0,
+      };
+    });
+  }, [detailRows]);
 
   const handleAddRow = () => {
     setDetailRows(prev => [
@@ -1285,7 +1379,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Chotta &amp; Habi Jabi</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Tolerable</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">Remarks</th>
-                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">JQI Remarks</th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">JCI Remarks</th>
                       <th rowSpan={2} className="p-2 text-center sticky right-0 bg-[#1e3a8a] z-20 min-w-[190px]">Row Actions</th>
                     </tr>
                     <tr className="bg-[#243b68] text-white text-[11px]">
