@@ -2227,38 +2227,103 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const saudaSuffix = saudaNo.split('/').pop() || '';
       const allTokens = [cleanPoNo, poSuffix, saudaNo, saudaSuffix].filter(Boolean);
 
+      const VALID_PURCHASE_MASTER_COLS = [
+        'financial_year', 'purchase_order', 'po_type', 'ptf_no', 'pending', 'po_no', 'po_date',
+        'broker', 'supplier', 'challan_supplier', 'area', 'trans_paid_by', 'weight_unit_kgs',
+        'against_cancellation', 'purchase_unit_code', 'purchase_unit_name', 'total_lorries',
+        'units_per_lorry', 'total_units', 'weight_per_lorry', 'total_contract_mt', 'marka_type',
+        'marka_penalty', 'qty_penalty', 'delivery_from', 'delivery_to', 'grace_days', 'delivery_penalty',
+        'contract_po_no', 'contract_date', 'rate_detail', 'delivery_schedule', 'terms_condition',
+        'remarks', 'po_identification', 'b_rate', 's_date', 'status'
+      ];
+
       if (supabase) {
-        // Fetch full header from sauda_check_point
+        // Fetch full header from sauda_check_point or sauda_master
         const { data: scpHeader } = await supabase.from('sauda_check_point').select('*').eq('po_no', item.po_no).maybeSingle();
-        const headerData = scpHeader || item;
+        let saudaHeader: any = null;
+        if (!scpHeader && saudaNo) {
+          const { data: sData } = await supabase.from('sauda_master').select('*').or(`sauda_no.eq.${saudaNo},session.eq.${item.po_no}`).maybeSingle();
+          saudaHeader = sData;
+        }
+
+        const source = scpHeader || saudaHeader || item;
         
-        // Fetch details from sauda_check_point_details
-        const { data: scpDetails } = await supabase.from('sauda_check_point_details').select('*').eq('po_no', item.po_no);
+        // Fetch details from sauda_check_point_details or sauda_quality_details
+        let { data: scpDetails } = await supabase.from('sauda_check_point_details').select('*').eq('po_no', item.po_no);
+        if ((!scpDetails || scpDetails.length === 0) && (saudaNo || item.po_no)) {
+          const { data: sqDetails } = await supabase.from('sauda_quality_details').select('*').or(`sauda_no.eq.${saudaNo || ''},sauda_id.eq.${source?.sauda_id || ''}`);
+          if (sqDetails && sqDetails.length > 0) {
+            scpDetails = sqDetails;
+          }
+        }
         
-        const poPayload = {
-          ...headerData,
-          status: 'final',
+        const rawPayload: Record<string, any> = {
+          financial_year: source?.financial_year || item?.financial_year || '2026-2027',
+          purchase_order: 'FINAL PO',
+          po_type: source?.po_type || item?.po_type || 'Normal',
+          ptf_no: source?.ptf_no || item?.ptf_no || null,
           pending: true,
-          mismatch_cleared: true,
-          satta_dispute_approved: true,
+          po_no: item.po_no || source?.po_no || source?.session,
+          po_date: source?.date || source?.po_date || item.po_date || item.date || new Date().toISOString().split('T')[0],
+          broker: source?.broker || item.broker || '',
+          supplier: source?.supplier || item.supplier || '',
+          challan_supplier: source?.challan_supplier || item.challan_supplier || source?.supplier || item.supplier || '',
+          area: source?.area || item.area || '',
+          trans_paid_by: source?.trans_paid_by || item.trans_paid_by || null,
+          weight_unit_kgs: source?.weight_unit_kgs || item.weight_unit_kgs || null,
+          against_cancellation: source?.against_cancellation || item.against_cancellation || 'No',
+          purchase_unit_code: source?.purchase_unit_code || item.purchase_unit_code || null,
+          purchase_unit_name: source?.purchase_unit_name || source?.unit_type || item.purchase_unit_name || item.unit_type || 'BALES',
+          total_lorries: source?.total_lorries || source?.no_of_lorries || item.total_lorries || item.no_of_lorries || 1,
+          units_per_lorry: source?.units_per_lorry || item.units_per_lorry || null,
+          total_units: source?.total_units || source?.total_unit || item.total_units || item.total_unit || 0,
+          weight_per_lorry: source?.weight_per_lorry || source?.wt_per_lorry || item.weight_per_lorry || null,
+          total_contract_mt: source?.total_contract_mt || source?.total_wt_in_ton || item.total_contract_mt || item.total_wt_in_ton || 0,
+          marka_type: source?.marka_type || item.marka_type || null,
+          marka_penalty: source?.marka_penalty || item.marka_penalty || 0,
+          qty_penalty: source?.qty_penalty || item.qty_penalty || 5,
+          delivery_from: source?.delivery_from || source?.shipment_date || item.delivery_from || item.shipment_date || null,
+          delivery_to: source?.delivery_to || source?.shipment_date || item.delivery_to || item.shipment_date || null,
+          grace_days: source?.grace_days || source?.shipment_days || item.grace_days || 0,
+          delivery_penalty: source?.delivery_penalty || source?.shipment_penalty || item.delivery_penalty || 0,
+          contract_po_no: source?.contract_po_no || item.contract_po_no || '',
+          contract_date: source?.contract_date || source?.date || item.contract_date || null,
+          rate_detail: source?.rate_detail || item.rate_detail || '',
+          delivery_schedule: source?.delivery_schedule || item.delivery_schedule || '',
+          terms_condition: source?.terms_condition || item.terms_condition || 'Standard penalty Rs.5/day. Standard terms apply.',
+          remarks: source?.remarks || item.remarks || '',
+          po_identification: source?.po_identification || item.po_identification || 'Direct Advance Payment',
+          b_rate: source?.b_rate || item.b_rate || 0,
+          s_date: source?.s_date || source?.b_date || item.s_date || null,
+          status: 'final'
         };
-        delete poPayload.po_id; // Let purchase_master auto-generate primary key if needed or keep po_no unique
+
+        // Whitelist only valid columns of purchase_master to avoid Supabase 400 Bad Request
+        const poPayload: Record<string, any> = {};
+        for (const col of VALID_PURCHASE_MASTER_COLS) {
+          if (rawPayload[col] !== undefined) {
+            poPayload[col] = rawPayload[col];
+          }
+        }
         
         // Insert into purchase_master
-        await supabase.from('purchase_master').upsert(poPayload, { onConflict: 'po_no' });
+        const upsertRes = await supabase.from('purchase_master').upsert(poPayload, { onConflict: 'po_no' });
+        if (upsertRes.error) {
+          throw new Error(upsertRes.error.message);
+        }
         
         // Insert details into purchase_detail_master
         if (scpDetails && scpDetails.length > 0) {
-          const detailRows = scpDetails.map((d: any) => ({
+          const detailRows = scpDetails.map((d: any, idx: number) => ({
             po_no: item.po_no,
-            srl_no: d.srl_no,
-            crop_year: d.crop_year,
-            grade_code: d.grade_code,
-            agency_code: d.agency_code,
-            marka_code: d.marka_code,
-            quantity: d.quantity,
-            weight_mt: d.weight_mt,
-            rate_qntl: d.rate_qntl
+            srl_no: d.srl_no || (idx + 1),
+            crop_year: d.crop_year || d.crop || '2026-27',
+            grade_code: d.grade_code || d.grade || '',
+            agency_code: d.agency_code || d.agency || '',
+            marka_code: d.marka_code || d.marka || '',
+            quantity: d.quantity || d.qty || 0,
+            weight_mt: d.weight_mt || d.weight || 0,
+            rate_qntl: d.rate_qntl || d.rate || 0
           }));
           await supabase.from('purchase_detail_master').delete().eq('po_no', item.po_no);
           await supabase.from('purchase_detail_master').insert(detailRows);
@@ -3013,7 +3078,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             {/* Top Stat Cards & Chart layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Card 1: Pending POs */}
-              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between">
+              <div 
+                onClick={() => setStatusFilter('pending')}
+                className={`bg-white border rounded-[18px] p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'pending' ? 'ring-2 ring-rose-500 border-rose-400 bg-rose-50/20' : 'border-slate-200'
+                }`}
+                title="Filter table by Active Pending P.O."
+              >
                 <div>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Active Pending P.O.</p>
                   <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">{totalPendingPos}</p>
@@ -3024,7 +3095,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
               </div>
 
               {/* Card 2: Generated POs */}
-              <div className="bg-white border border-slate-200 rounded-[18px] p-4 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between">
+              <div 
+                onClick={() => setStatusFilter('all')}
+                className={`bg-white border rounded-[18px] p-4 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer ${
+                  statusFilter === 'all' ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/20' : 'border-slate-200'
+                }`}
+                title="Show all generated P.O records"
+              >
                 <div>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Generated POs</p>
                   <p className="text-2xl font-black text-slate-900 font-mono tracking-tight">{totalGeneratedPos}</p>
@@ -3050,14 +3127,26 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="flex-1 min-w-[90px]">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status Mix</p>
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => setStatusFilter('pending')}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg transition-all cursor-pointer text-left w-full ${
+                        statusFilter === 'pending' ? 'bg-rose-100/70 font-black' : 'hover:bg-slate-100'
+                      }`}
+                      title="Filter by Pending"
+                    >
                       <span className="w-2 h-2 rounded-full inline-block bg-rose-600" />
                       <span className="text-xs font-bold text-rose-700">Pending ({totalPendingPos})</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
+                    </button>
+                    <button 
+                      onClick={() => setStatusFilter('completed')}
+                      className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg transition-all cursor-pointer text-left w-full ${
+                        statusFilter === 'completed' ? 'bg-emerald-100/70 font-black' : 'hover:bg-slate-100'
+                      }`}
+                      title="Filter by Completed"
+                    >
                       <span className="w-2 h-2 rounded-full inline-block bg-emerald-600" />
                       <span className="text-xs font-bold text-emerald-700">Completed ({totalCompletedPos})</span>
-                    </div>
+                    </button>
                   </div>
                 </div>
                 <div className="w-16 h-12 relative flex justify-center items-center shrink-0">
@@ -3176,6 +3265,47 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      <Trash2 className="w-4 h-4 text-rose-600" /> Delete Selected
                    </button>
                  )}
+
+                 <div className="h-6 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
+
+                 {/* Status Filter Toggle Options right beside Print/Delete */}
+                 <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1 border border-slate-200">
+                   <button
+                     onClick={() => setStatusFilter('all')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                       statusFilter === 'all'
+                         ? 'bg-white text-slate-900 shadow-xs border border-slate-200 font-extrabold'
+                         : 'text-slate-600 hover:text-slate-900'
+                     }`}
+                     title="Show all Purchase Orders"
+                   >
+                     All ({totalGeneratedPos})
+                   </button>
+                   <button
+                     onClick={() => setStatusFilter('pending')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                       statusFilter === 'pending'
+                         ? 'bg-rose-50 text-rose-800 border border-rose-200 shadow-xs font-extrabold'
+                         : 'text-slate-600 hover:text-rose-700'
+                     }`}
+                     title="Show only Active Pending Purchase Orders"
+                   >
+                     <span className="w-2 h-2 rounded-full bg-rose-500" />
+                     Pending ({totalPendingPos})
+                   </button>
+                   <button
+                     onClick={() => setStatusFilter('completed')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                       statusFilter === 'completed'
+                         ? 'bg-emerald-600 text-white shadow-xs font-extrabold'
+                         : 'text-slate-600 hover:text-emerald-800'
+                     }`}
+                     title="Show Completed / Fully Received Purchase Orders"
+                   >
+                     <span className={`w-2 h-2 rounded-full ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
+                     Completed ({totalCompletedPos})
+                   </button>
+                 </div>
                </div>
 
                <div className="text-xs text-slate-500 font-medium italic">
