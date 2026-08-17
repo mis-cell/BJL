@@ -316,11 +316,46 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS mismatch_id TEXT;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS po_no TEXT;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS sauda_no TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS grade TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS field TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS expected_value TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS actual_value TEXT;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS expected_rate NUMERIC;
+          ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS actual_rate NUMERIC;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'dispute';
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS remarks TEXT;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS satta_mismatch ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS mismatch_cleared BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS mismatch_remarks TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_by TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+
+          ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS mismatch_cleared BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS mismatch_remarks TEXT;
+          ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS approved_by TEXT;
+          ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS mismatch_cleared BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS satta_dispute_approved BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS mismatch_remarks TEXT;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS satta_remarks TEXT;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_by TEXT;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS mismatch_cleared BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS satta_dispute_approved BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS mismatch_remarks TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS satta_remarks TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approved_by TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
 
           DROP VIEW IF EXISTS material_inspection CASCADE;
           DROP TABLE IF EXISTS inspection_master, inspection_details, inspection_checklist, inspection_checklist_details, mill_inspection_master, mill_inspection_detail CASCADE;

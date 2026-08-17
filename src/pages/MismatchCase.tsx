@@ -325,12 +325,18 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const matchRes = comparePoInspection(po, poDetails, enrichedInsp, allLorryReceipts);
 
         if (matchRes.hasInspection && matchRes.status === 'mismatch' && matchRes.mismatches.length > 0) {
-          const dbMm = dbMismatches.find((m: any) => 
-            String(m.po_no || '').trim().toUpperCase() === poNo || 
-            String(m.mismatch_id || '').toUpperCase() === `MIS-${poNo}`
-          );
+          const dbMm = (dbMismatches || []).find((m: any) => {
+            const mPo = String(m.po_no || '').trim().toUpperCase();
+            const mId = String(m.mismatch_id || '').toUpperCase();
+            const poUpper = poNo.toUpperCase();
+            return (
+              (mPo && (mPo === poUpper || poUpper.includes(mPo) || mPo.includes(poUpper))) ||
+              mId === `MIS-${poUpper}` ||
+              mId.includes(poUpper)
+            );
+          });
           
-          const isCleared = po.mismatch_cleared === true || (dbMm && dbMm.status === 'resolved');
+          const isCleared = po.mismatch_cleared === true || Boolean(dbMm && (dbMm.status === 'resolved' || Boolean(dbMm.approved_by)));
 
           const mismatchedLabels = matchRes.mismatches.map(m => m.mismatchLabel || `${m.field} mismatch`);
 
@@ -533,6 +539,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const itemId = `SAT-${detail.id || detail.item_id || `${poNo}-${poGrade}-${rawRate}`}`;
         const cleanPoNo = String(poNo || '').trim().toUpperCase();
         const cleanSaudaNo = String(header.po_contract || header.sauda_no || header.contract_no || '').trim().toUpperCase();
+        const cleanRefNo = String(header.order_no || header.ref_no || header.sauda_id || '').trim().toUpperCase();
 
         const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => {
           const smPo = String(sm.po_no || '').trim().toUpperCase();
@@ -541,11 +548,17 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           return (
             (smPo && (smPo === cleanPoNo || cleanPoNo.includes(smPo) || smPo.includes(cleanPoNo))) ||
             (smSauda && (smSauda === cleanSaudaNo || cleanSaudaNo.includes(smSauda) || smSauda.includes(cleanSaudaNo))) ||
-            smId === itemId.toUpperCase()
+            (cleanRefNo && smSauda && (smSauda === cleanRefNo || cleanRefNo.includes(smSauda))) ||
+            (cleanRefNo && smPo && (smPo === cleanRefNo || cleanRefNo.includes(smPo))) ||
+            smId === itemId.toUpperCase() ||
+            (smPo && cleanSaudaNo && (smPo.includes(cleanSaudaNo) || cleanSaudaNo.includes(smPo))) ||
+            (smSauda && cleanPoNo && (smSauda.includes(cleanPoNo) || cleanPoNo.includes(smSauda)))
           );
         });
 
-        const isResolved = header.satta_dispute_approved === true || (dbSattaMm && dbSattaMm.status === 'resolved');
+        const isResolved = header.satta_dispute_approved === true || 
+          header.mismatch_cleared === true || 
+          Boolean(dbSattaMm && (dbSattaMm.status === 'resolved' || Boolean(dbSattaMm.approved_by)));
 
         sattaItems.push({
           id: itemId,
@@ -613,8 +626,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     const approvalLevel = (ctx.userLevel || ctx.userRole || 'L3/L5').toUpperCase();
     const nowIso = new Date().toISOString();
 
-    const mismatchRecord = {
-      id: itemId,
+    const targetItem = mismatchList.find(i => i.id === itemId || i.poNo === itemPoNo);
+
+    const materialPayload: any = {
       mismatch_id: itemId,
       po_no: itemPoNo,
       status: 'resolved',
@@ -622,54 +636,93 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
       approved_by: username,
       approved_at: nowIso,
       approval_level: approvalLevel,
+      supplier: targetItem?.supplierName || null,
+      broker: targetItem?.brokerName || null,
+      area: targetItem?.area || null,
+      grade: targetItem?.grade || null,
+      agency: targetItem?.agency || null,
+      ptf_mode: targetItem?.ptfMode || null,
+      challan_supplier: targetItem?.challanSupplier || null,
+      rate_per_mt: targetItem?.ratePerMt || null,
+      lorry_number: targetItem?.lorryNumber || null,
+      issue_description: targetItem?.issueDescription || null,
+      mismatched_fields: Array.isArray(targetItem?.mismatchedFields) ? targetItem.mismatchedFields.join(', ') : (targetItem?.mismatchedFields || null),
+      severity: targetItem?.severity || 'medium',
     };
 
     if (supabase) {
       try {
-        await supabase.from('material_mismatch').upsert(mismatchRecord, { onConflict: 'id' });
+        const { data: existingRows } = await supabase
+          .from('material_mismatch')
+          .select('id, mismatch_id, po_no')
+          .or(`mismatch_id.eq.${itemId},po_no.eq.${itemPoNo}`);
+
+        if (existingRows && existingRows.length > 0) {
+          await supabase.from('material_mismatch').update(materialPayload).eq('id', existingRows[0].id);
+        } else {
+          await supabase.from('material_mismatch').insert(materialPayload);
+        }
       } catch (e) {
-        console.warn("material_mismatch upsert warning:", e);
+        console.warn("material_mismatch write warning:", e);
       }
 
-      try {
-        await supabase.from('sauda_check_point').update({
-          mismatch_cleared: true,
-          mismatch_remarks: remarks.trim(),
-          approved_by: username,
-          approved_at: nowIso,
-          approval_level: approvalLevel,
-        }).ilike('po_no', `%${itemPoNo}%`);
-      } catch (e) {}
+      const poTokens = [itemPoNo, itemPoNo.split('/').pop() || '', itemPoNo.replace(/^BJCL\//i, '')].filter(Boolean);
+      for (const token of poTokens) {
+        try {
+          await supabase.from('sauda_check_point').update({
+            mismatch_cleared: true,
+            mismatch_remarks: remarks.trim(),
+            approved_by: username,
+            approved_at: nowIso,
+            approval_level: approvalLevel,
+          }).ilike('po_no', `%${token}%`);
+        } catch (e) {}
 
-      try {
-        await supabase.from('purchase_master').update({
-          mismatch_cleared: true,
-          mismatch_remarks: remarks.trim(),
-          approved_by: username,
-          approved_at: nowIso,
-          approval_level: approvalLevel,
-        }).ilike('po_no', `%${itemPoNo}%`);
-      } catch (e) {}
+        try {
+          await supabase.from('purchase_master').update({
+            mismatch_cleared: true,
+            mismatch_remarks: remarks.trim(),
+            approved_by: username,
+            approved_at: nowIso,
+            approval_level: approvalLevel,
+          }).ilike('po_no', `%${token}%`);
+        } catch (e) {}
 
-      try {
-        await supabase.from('sauda_master').update({
-          mismatch_cleared: true,
-          mismatch_remarks: remarks.trim(),
-          approved_by: username,
-          approved_at: nowIso,
-          approval_level: approvalLevel,
-        }).ilike('sauda_no', `%${itemPoNo}%`);
-      } catch (e) {}
+        try {
+          await supabase.from('sauda_master').update({
+            mismatch_cleared: true,
+            mismatch_remarks: remarks.trim(),
+            approved_by: username,
+            approved_at: nowIso,
+            approval_level: approvalLevel,
+          }).ilike('sauda_no', `%${token}%`);
+        } catch (e) {}
+      }
     }
 
     // Direct persistence in dbModule as well
-    await dbModule.insert('material_mismatch', mismatchRecord).catch(() => {});
+    await dbModule.insert('material_mismatch', { ...materialPayload, id: itemId }).catch(() => {});
 
-    // 5. Dispatch global live update events
+    // Optimistically update local state immediately so user sees it resolved on screen
+    setMismatchList(prev => prev.map(m => {
+      if (m.id === itemId || m.poNo === itemPoNo) {
+        return {
+          ...m,
+          status: 'resolved',
+          resolutionNotes: remarks.trim(),
+          resolvedBy: username,
+          resolvedAt: nowIso.split('T')[0],
+          approvalLevel: approvalLevel,
+        };
+      }
+      return m;
+    }));
+
+    // Dispatch global live update events
     window.dispatchEvent(new CustomEvent('mismatch_resolved', { detail: { poNo: itemPoNo } }));
     window.dispatchEvent(new CustomEvent('app-data-updated'));
 
-    // 6. Refetch fresh data from database
+    // Refetch fresh data from database
     await loadMismatches();
 
     setSuccessToast(`Purchase Order [${itemPoNo}] Material Mismatch approved and cleared by ${approvalLevel} level user.`);
@@ -688,10 +741,19 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     const approvalLevel = (ctx.userLevel || ctx.userRole || 'L3/L5').toUpperCase();
     const nowIso = new Date().toISOString();
 
-    const sattaRecord = {
-      id: itemId,
+    const targetItem = sattaMismatchList.find(i => i.id === itemId || i.poNo === itemPoNo || i.saudaNo === itemPoNo);
+
+    const sattaPayload: any = {
       mismatch_id: itemId,
       po_no: itemPoNo,
+      sauda_no: targetItem?.saudaNo || itemPoNo,
+      area: targetItem?.area || null,
+      grade: targetItem?.grade || null,
+      field: 'Price Dispute',
+      expected_value: String(targetItem?.sattaFinalRateQtl || ''),
+      actual_value: String(targetItem?.poRateQtl || ''),
+      expected_rate: targetItem?.sattaFinalRateQtl || null,
+      actual_rate: targetItem?.poRateQtl || null,
       status: 'resolved',
       remarks: remarks.trim(),
       approved_by: username,
@@ -701,36 +763,64 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
     if (supabase) {
       try {
-        await supabase.from('satta_mismatch').upsert(sattaRecord, { onConflict: 'id' });
+        const { data: existingRows } = await supabase
+          .from('satta_mismatch')
+          .select('id, mismatch_id, po_no, sauda_no')
+          .or(`mismatch_id.eq.${itemId},po_no.eq.${itemPoNo},sauda_no.eq.${itemPoNo}`);
+
+        if (existingRows && existingRows.length > 0) {
+          await supabase.from('satta_mismatch').update(sattaPayload).eq('id', existingRows[0].id);
+        } else {
+          await supabase.from('satta_mismatch').insert(sattaPayload);
+        }
       } catch (e) {
-        console.warn("satta_mismatch upsert warning:", e);
+        console.warn("satta_mismatch write warning:", e);
       }
 
-      try {
-        await supabase.from('sauda_master').update({
-          satta_dispute_approved: true,
-          mismatch_cleared: true,
-          satta_remarks: remarks.trim(),
-          approved_by: username,
-          approved_at: nowIso,
-          approval_level: approvalLevel,
-        }).ilike('sauda_no', `%${itemPoNo}%`);
-      } catch (e) {}
+      // Update sauda_master and sms_sauda with approval flags
+      const saudaTokens = [itemPoNo, targetItem?.saudaNo, itemPoNo.split('/').pop() || '', (targetItem?.saudaNo || '').split('/').pop() || ''].filter(Boolean);
+      for (const token of saudaTokens) {
+        try {
+          await supabase.from('sauda_master').update({
+            satta_dispute_approved: true,
+            mismatch_cleared: true,
+            satta_remarks: remarks.trim(),
+            approved_by: username,
+            approved_at: nowIso,
+            approval_level: approvalLevel,
+          }).ilike('sauda_no', `%${token}%`);
+        } catch (e) {}
 
-      try {
-        await supabase.from('sms_sauda').update({
-          satta_dispute_approved: true,
-          mismatch_cleared: true,
-          satta_remarks: remarks.trim(),
-          approved_by: username,
-          approved_at: nowIso,
-          approval_level: approvalLevel,
-        }).ilike('sauda_no', `%${itemPoNo}%`);
-      } catch (e) {}
+        try {
+          await supabase.from('sms_sauda').update({
+            satta_dispute_approved: true,
+            mismatch_cleared: true,
+            satta_remarks: remarks.trim(),
+            approved_by: username,
+            approved_at: nowIso,
+            approval_level: approvalLevel,
+          }).ilike('sauda_no', `%${token}%`);
+        } catch (e) {}
+      }
     }
 
     // Direct persistence in dbModule as well
-    await dbModule.insert('satta_mismatch', sattaRecord).catch(() => {});
+    await dbModule.insert('satta_mismatch', { ...sattaPayload, id: itemId }).catch(() => {});
+
+    // Optimistically update local state immediately so user sees it resolved on screen
+    setSattaMismatchList(prev => prev.map(s => {
+      if (s.id === itemId || s.poNo === itemPoNo || (s.saudaNo && s.saudaNo === itemPoNo)) {
+        return {
+          ...s,
+          status: 'resolved',
+          resolutionNotes: remarks.trim(),
+          resolvedBy: username,
+          resolvedAt: nowIso.split('T')[0],
+          approvalLevel: approvalLevel,
+        };
+      }
+      return s;
+    }));
 
     window.dispatchEvent(new CustomEvent('app-data-updated'));
     await loadMismatches();
