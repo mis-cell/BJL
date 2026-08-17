@@ -1065,6 +1065,15 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       return;
     }
 
+    const hasPo = Boolean((masterData.po_no && masterData.po_no.trim()) || (selectedPoNo && selectedPoNo.trim()));
+    const hasMr = Boolean((masterData.mr_no && masterData.mr_no.trim()) || (selectedMrNo && selectedMrNo.trim()) || (masterData.arrival_no && masterData.arrival_no.trim()));
+
+    if (!hasPo && !hasMr) {
+      setErrorMessage("Validation Error: Both 'Final P.O' and 'Inspection' have no data. Please select at least one Final P.O or Inspection record before saving.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -2017,7 +2026,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 {/* Final P.O Selector */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-black uppercase text-purple-900 flex items-center justify-between">
-                    <span>Select Contract Final P.O (purchase_master) *</span>
+                    <span>Final P.O</span>
                     {selectedPoNo && <span className="text-purple-700 font-mono font-bold">P.O: {selectedPoNo}</span>}
                   </label>
                   <select
@@ -2025,7 +2034,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     onChange={e => handlePoSelection(e.target.value)}
                     className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
                   >
-                    <option value="">-- Choose Contract Final P.O --</option>
+                    <option value="">-- Choose Final P.O --</option>
                     {purchaseOrders.map((po, i) => (
                       <option key={i} value={po.po_no}>
                         {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
@@ -2037,7 +2046,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 {/* Verified M.R & Inspection Selector */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-black uppercase text-emerald-900 flex items-center justify-between">
-                    <span>Select Verified M.R / Arrival / Inspection (Inspection Module Register)</span>
+                    <span>Inspection</span>
                     {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
                   </label>
                   <select
@@ -2045,7 +2054,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     onChange={e => handleMrSelection(e.target.value)}
                     className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   >
-                    <option value="">-- Choose Verified M.R / Arrival / Inspection --</option>
+                    <option value="">-- Choose Inspection --</option>
                     {(selectedPoNo ? verifiedArrivals.filter(a => a.po_no === selectedPoNo) : verifiedArrivals).map((arr, i) => (
                       <option key={i} value={arr.mr_no || arr.final_arrival_no || arr.arrival_no}>
                         M.R: {arr.mr_no || arr.final_arrival_no || arr.arrival_no} | Supplier: {arr.supplier || arr.supplier_name || 'N/A'} | P.O: {arr.po_no || arr.mill_po_no || 'N/A'} {arr.lorry_number ? `| Lorry: ${arr.lorry_number}` : ''}
@@ -2056,7 +2065,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </div>
 
               {/* Active PO / MR Summary Linkage Banner */}
-              {(selectedPoData || selectedMrNo || masterData.po_no || masterData.mr_no) && (
+              {(selectedPoData || selectedMrNo || masterData.po_no || masterData.mr_no) ? (
                 <div className="bg-white/90 p-2.5 rounded-lg border border-purple-200 text-xs flex flex-wrap items-center justify-between gap-3 text-slate-700 shadow-xs">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-extrabold text-slate-900 text-[11px]">Contract Active Linkage:</span>
@@ -2077,6 +2086,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     <div><span className="text-slate-400">Broker:</span> <strong className="text-slate-900">{masterData.broker || '-'}</strong></div>
                     <div><span className="text-slate-400">Lorry / Vehicle:</span> <strong className="text-slate-900">{masterData.lorry_number || '-'}</strong></div>
                   </div>
+                </div>
+              ) : (
+                <div className="bg-amber-50/90 p-2 rounded-lg border border-amber-200 text-xs flex items-center gap-2 text-amber-800 font-semibold">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Please select a <strong>Final P.O</strong> or <strong>Inspection</strong> record. At least one selection is required to save a payment record.</span>
                 </div>
               )}
             </div>
@@ -2574,6 +2588,19 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </table>
               </div>
             </div>
+
+            {/* Inline Error Message */}
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-800 text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+                <button onClick={() => setErrorMessage('')} className="p-1 hover:bg-red-100 rounded">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 pt-2">
