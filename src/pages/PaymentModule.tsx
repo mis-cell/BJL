@@ -668,20 +668,73 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           console.warn("Supabase purchase_master fetch error:", err);
         }
 
-        // 3. Fetch Final Arrivals (final_arrival)
+        // 3. Fetch Final Arrivals (final_arrival) & Inspection Module Register (inspection_master, mill_inspection_master, inspection_checklist)
         try {
-          const { data: aList, error: aErr } = await supabase
-            .from('final_arrival')
-            .select('*')
-            .order('created_at', { ascending: false });
-          if (!aErr && aList) {
-            arrList = aList;
-          } else {
-            const { data: aListPlain } = await supabase.from('final_arrival').select('*');
-            if (aListPlain) arrList = aListPlain;
-          }
+          const [aRes, imRes, mimRes, icRes] = await Promise.all([
+            supabase.from('final_arrival').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('inspection_checklist').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+          ]);
+
+          const combinedMap = new Map<string, any>();
+
+          (aRes || []).forEach((item: any) => {
+            const key = item.mr_no || item.final_arrival_no || item.arrival_no;
+            if (key) combinedMap.set(key, { ...item, source_module: 'final_arrival' });
+          });
+
+          (imRes || []).forEach((item: any) => {
+            const key = item.mr_no || item.arrival_no || item.final_arrival_no;
+            if (key) {
+              const existing = combinedMap.get(key) || {};
+              combinedMap.set(key, {
+                ...existing,
+                ...item,
+                mr_no: key,
+                supplier: item.supplier_name || item.supplier || existing.supplier,
+                broker: item.broker_name || item.broker || existing.broker,
+                po_no: item.po_no || item.mill_po_no || existing.po_no,
+                source_module: 'inspection_master'
+              });
+            }
+          });
+
+          (mimRes || []).forEach((item: any) => {
+            const key = item.mr_no || item.arrival_no;
+            if (key) {
+              const existing = combinedMap.get(key) || {};
+              combinedMap.set(key, {
+                ...existing,
+                ...item,
+                mr_no: key,
+                supplier: item.supplier_name || item.supplier || existing.supplier,
+                broker: item.broker_name || item.broker || existing.broker,
+                po_no: item.po_no || item.mill_po_no || existing.po_no,
+                source_module: 'mill_inspection_master'
+              });
+            }
+          });
+
+          (icRes || []).forEach((item: any) => {
+            const key = item.mr_no || item.arrival_no;
+            if (key) {
+              const existing = combinedMap.get(key) || {};
+              combinedMap.set(key, {
+                ...existing,
+                ...item,
+                mr_no: key,
+                supplier: item.supplier_name || item.supplier || existing.supplier,
+                broker: item.broker_name || item.broker || existing.broker,
+                po_no: item.po_no || item.mill_po_no || existing.po_no,
+                source_module: 'inspection_checklist'
+              });
+            }
+          });
+
+          arrList = Array.from(combinedMap.values());
         } catch (err) {
-          console.warn("Supabase final_arrival fetch error:", err);
+          console.warn("Supabase final_arrival/inspection fetch error:", err);
         }
       }
 
@@ -698,9 +751,78 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         if (poList.length === 0) {
           poList = await dbModule.fetchAll('purchase_master').catch(() => []);
         }
-        if (arrList.length === 0) {
-          arrList = await dbModule.fetchAll('final_arrival').catch(() => []);
+
+        const [localArr, localInsp, localMillInsp] = await Promise.all([
+          dbModule.fetchAll('final_arrival').catch(() => []),
+          dbModule.fetchAll('inspection_master').catch(() => []),
+          dbModule.fetchAll('mill_inspection_master').catch(() => [])
+        ]);
+
+        const mergedMap = new Map<string, any>();
+        (arrList || []).forEach((a: any) => {
+          const k = a.mr_no || a.final_arrival_no || a.arrival_no;
+          if (k) mergedMap.set(k, a);
+        });
+        (localArr || []).forEach((a: any) => {
+          const k = a.mr_no || a.final_arrival_no || a.arrival_no;
+          if (k && !mergedMap.has(k)) mergedMap.set(k, a);
+        });
+        (localInsp || []).forEach((a: any) => {
+          const k = a.mr_no || a.arrival_no;
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, {
+              ...existing,
+              ...a,
+              mr_no: k,
+              supplier: a.supplier_name || a.supplier || existing.supplier,
+              broker: a.broker_name || a.broker || existing.broker,
+              po_no: a.po_no || a.mill_po_no || existing.po_no
+            });
+          }
+        });
+        (localMillInsp || []).forEach((a: any) => {
+          const k = a.mr_no || a.arrival_no;
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, {
+              ...existing,
+              ...a,
+              mr_no: k,
+              supplier: a.supplier_name || a.supplier || existing.supplier,
+              broker: a.broker_name || a.broker || existing.broker,
+              po_no: a.po_no || a.mill_po_no || existing.po_no
+            });
+          }
+        });
+
+        // Also check cached inspection_master_records in localStorage
+        try {
+          const cachedInsp = localStorage.getItem('inspection_master_records');
+          if (cachedInsp) {
+            const parsedInsp = JSON.parse(cachedInsp);
+            if (Array.isArray(parsedInsp)) {
+              parsedInsp.forEach((ci: any) => {
+                const k = ci.mr_no || ci.arrival_no;
+                if (k) {
+                  const existing = mergedMap.get(k) || {};
+                  mergedMap.set(k, {
+                    ...existing,
+                    ...ci,
+                    mr_no: k,
+                    supplier: ci.supplier_name || ci.supplier || existing.supplier,
+                    broker: ci.broker_name || ci.broker || existing.broker,
+                    po_no: ci.po_no || ci.mill_po_no || existing.po_no
+                  });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Cached inspection merge notice:", e);
         }
+
+        arrList = Array.from(mergedMap.values());
       } catch (err) {
         console.warn("dbModule fallback fetch error:", err);
       }
@@ -731,7 +853,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  useLiveAutoRefresh(initPage, [], { tables: ['payment_master', 'm_r_settlement'] });
+  useLiveAutoRefresh(initPage, [], { tables: ['payment_master', 'm_r_settlement', 'final_arrival', 'inspection_master', 'mill_inspection_master', 'inspection_checklist'] });
 
   useEffect(() => {
     initPage();
@@ -1886,7 +2008,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {purchaseOrders.length} Final P.O Records
                   </span>
                   <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
-                    {verifiedArrivals.length} Verified M.R Records
+                    {verifiedArrivals.length} Verified M.R & Inspection Records
                   </span>
                 </div>
               </div>
@@ -1912,10 +2034,10 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   </select>
                 </div>
 
-                {/* Verified M.R Selector */}
+                {/* Verified M.R & Inspection Selector */}
                 <div className="space-y-1">
                   <label className="block text-[10px] font-black uppercase text-emerald-900 flex items-center justify-between">
-                    <span>Select Verified M.R / Arrival (final_arrival)</span>
+                    <span>Select Verified M.R / Arrival / Inspection (Inspection Module Register)</span>
                     {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
                   </label>
                   <select
@@ -1923,10 +2045,10 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     onChange={e => handleMrSelection(e.target.value)}
                     className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   >
-                    <option value="">-- Choose Verified M.R / Arrival --</option>
+                    <option value="">-- Choose Verified M.R / Arrival / Inspection --</option>
                     {(selectedPoNo ? verifiedArrivals.filter(a => a.po_no === selectedPoNo) : verifiedArrivals).map((arr, i) => (
-                      <option key={i} value={arr.mr_no || arr.final_arrival_no}>
-                        M.R: {arr.mr_no || arr.final_arrival_no} | Supplier: {arr.supplier || 'N/A'} | P.O: {arr.po_no || 'N/A'}
+                      <option key={i} value={arr.mr_no || arr.final_arrival_no || arr.arrival_no}>
+                        M.R: {arr.mr_no || arr.final_arrival_no || arr.arrival_no} | Supplier: {arr.supplier || arr.supplier_name || 'N/A'} | P.O: {arr.po_no || arr.mill_po_no || 'N/A'} {arr.lorry_number ? `| Lorry: ${arr.lorry_number}` : ''}
                       </option>
                     ))}
                   </select>
