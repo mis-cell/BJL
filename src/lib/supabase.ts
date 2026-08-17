@@ -1470,19 +1470,25 @@ if (supabase) {
       // Mismatch tables — one per mismatch type. Created empty; populated only by
       // real discrepancies (no seed/dummy data).
       `CREATE TABLE IF NOT EXISTS satta_mismatch (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         id TEXT PRIMARY KEY,
+         mismatch_id TEXT,
          sauda_no TEXT, po_no TEXT, area TEXT, grade TEXT,
          field TEXT, expected_value TEXT, actual_value TEXT,
          expected_rate NUMERIC(15,2), actual_rate NUMERIC(15,2),
-         status TEXT DEFAULT 'open', remarks TEXT,
+         status TEXT DEFAULT 'dispute', remarks TEXT,
+         approved_by TEXT, approved_at TIMESTAMP WITH TIME ZONE, approval_level TEXT DEFAULT 'L3/L5',
          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
       `ALTER TABLE IF EXISTS satta_mismatch DISABLE ROW LEVEL SECURITY;`,
       `CREATE TABLE IF NOT EXISTS material_mismatch (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         id TEXT PRIMARY KEY,
+         mismatch_id TEXT,
          po_no TEXT, arrival_no TEXT, inspection_no TEXT, area TEXT, grade TEXT,
-         field TEXT, expected_value TEXT, actual_value TEXT,
-         status TEXT DEFAULT 'open', remarks TEXT,
+         supplier TEXT, broker TEXT, agency TEXT, ptf_mode TEXT, challan_supplier TEXT,
+         rate_per_mt TEXT, lorry_number TEXT, issue_description TEXT,
+         field TEXT, expected_value TEXT, actual_value TEXT, difference TEXT, mismatched_fields TEXT, severity TEXT,
+         status TEXT DEFAULT 'pending', remarks TEXT,
+         approved_by TEXT, approved_at TIMESTAMP WITH TIME ZONE, approval_level TEXT DEFAULT 'L3/L5',
          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
       `ALTER TABLE IF EXISTS material_mismatch DISABLE ROW LEVEL SECURITY;`,
