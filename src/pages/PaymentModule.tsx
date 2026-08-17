@@ -455,6 +455,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const [paymentList, setPaymentList] = useState<PaymentMaster[]>([]);
   const [verifiedArrivals, setVerifiedArrivals] = useState<any[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+  const [saudaCheckPoints, setSaudaCheckPoints] = useState<any[]>([]);
+  const [showAllPos, setShowAllPos] = useState<boolean>(false);
   
   const [selectedPoNo, setSelectedPoNo] = useState<string>('');
   const [selectedPoData, setSelectedPoData] = useState<any>(null);
@@ -474,6 +476,28 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const [areaMasterList, setAreaMasterList] = useState<any[]>([]);
 
   // Advance Recovery Calculation Engine
+  const findMatchingPo = (targetPoNo: string, poArray: any[]) => {
+    if (!targetPoNo || !poArray || poArray.length === 0) return null;
+    const cleanTarget = String(targetPoNo).trim().toUpperCase();
+    const targetSuffix = cleanTarget.split('/').pop() || '';
+
+    return poArray.find((p: any) => {
+      const pNo = String(p.po_no || p.contract_po_no || '').trim().toUpperCase();
+      const pSuffix = pNo.split('/').pop() || '';
+      const sNo = String(p.sauda_no || p.po_contract || p.contract_no || '').trim().toUpperCase();
+      const sSuffix = sNo.split('/').pop() || '';
+
+      if (pNo === cleanTarget) return true;
+      if (sNo && sNo === cleanTarget) return true;
+      if (pNo && (pNo.includes(cleanTarget) || cleanTarget.includes(pNo))) return true;
+      if (targetSuffix && targetSuffix.length >= 3) {
+        if (pSuffix === targetSuffix || (pNo && pNo.includes(targetSuffix))) return true;
+        if (sSuffix === targetSuffix || (sNo && sNo.includes(targetSuffix))) return true;
+      }
+      return false;
+    });
+  };
+
   const getPoTotalAdvancePaid = (poNo: string): number => {
     if (!poNo) return 0;
     const poObj = purchaseOrders.find(p => p.po_no === poNo || p.contract_po_no === poNo);
@@ -621,6 +645,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       let aData: any[] = [];
       let payData: any[] = [];
       let poList: any[] = [];
+      let scpList: any[] = [];
       let arrList: any[] = [];
 
       if (supabase) {
@@ -666,6 +691,14 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           }
         } catch (err) {
           console.warn("Supabase purchase_master fetch error:", err);
+        }
+
+        // 2b. Fetch Sauda Check Point (Temporary / Pending POs)
+        try {
+          const { data: sList } = await supabase.from('sauda_check_point').select('*');
+          if (sList) scpList = sList;
+        } catch (err) {
+          console.warn("Supabase sauda_check_point fetch error:", err);
         }
 
         // 3. Fetch Final Arrivals (final_arrival) & Inspection Module Register (inspection_master, mill_inspection_master, inspection_checklist)
@@ -829,6 +862,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       setPaymentList(payData);
       setPurchaseOrders(poList);
+      setSaudaCheckPoints(scpList);
 
       const verified = (arrList || []).filter(item => {
         const status = String(item.status || '').toLowerCase();
@@ -985,12 +1019,17 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
     const arrival = verifiedArrivals.find(a => (a.mr_no === mrNo || a.final_arrival_no === mrNo));
     if (arrival) {
-      const poNo = arrival.po_no || masterData.po_no;
-      const po = overridePo || purchaseOrders.find(p => p.po_no === poNo);
-      if (poNo && !selectedPoNo) {
-        setSelectedPoNo(poNo);
-        if (po) setSelectedPoData(po);
+      const rawPoNo = arrival.po_no || arrival.mill_po_no || masterData.po_no;
+      const matchedPo = overridePo || findMatchingPo(rawPoNo, purchaseOrders);
+      if (matchedPo) {
+        setSelectedPoNo(matchedPo.po_no);
+        setSelectedPoData(matchedPo);
+      } else {
+        setSelectedPoNo('');
+        setSelectedPoData(null);
       }
+      const po = matchedPo;
+      const poNo = matchedPo ? matchedPo.po_no : rawPoNo;
 
       // Ensure masters are loaded
       let gList = gradeMasterList;
@@ -2022,47 +2061,127 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                {/* Final P.O Selector */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-black uppercase text-purple-900 flex items-center justify-between">
-                    <span>Final P.O</span>
-                    {selectedPoNo && <span className="text-purple-700 font-mono font-bold">P.O: {selectedPoNo}</span>}
-                  </label>
-                  <select
- id="selectedpono_1898" name="selectedpono" aria-label="selectedpono"                    value={selectedPoNo}
-                    onChange={e => handlePoSelection(e.target.value)}
-                    className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
-                  >
-                    <option value="">-- Choose Final P.O --</option>
-                    {purchaseOrders.map((po, i) => (
-                      <option key={i} value={po.po_no}>
-                        {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* PO and Inspection Selector Logic */}
+              {(() => {
+                const selectedArrival = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
+                const inspectionPoNo = selectedArrival?.po_no || selectedArrival?.mill_po_no || '';
+                const matchedFinalPo = inspectionPoNo ? findMatchingPo(inspectionPoNo, purchaseOrders) : null;
+                const matchedScpPo = (!matchedFinalPo && inspectionPoNo) ? findMatchingPo(inspectionPoNo, saudaCheckPoints) : null;
+                const isPoNotInFinal = Boolean(selectedMrNo && inspectionPoNo && !matchedFinalPo);
 
-                {/* Verified M.R & Inspection Selector */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-black uppercase text-emerald-900 flex items-center justify-between">
-                    <span>Inspection</span>
-                    {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
-                  </label>
-                  <select
- id="selectedmrno_1918" name="selectedmrno" aria-label="selectedmrno"                    value={selectedMrNo}
-                    onChange={e => handleMrSelection(e.target.value)}
-                    className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                  >
-                    <option value="">-- Choose Inspection --</option>
-                    {(selectedPoNo ? verifiedArrivals.filter(a => a.po_no === selectedPoNo) : verifiedArrivals).map((arr, i) => (
-                      <option key={i} value={arr.mr_no || arr.final_arrival_no || arr.arrival_no}>
-                        M.R: {arr.mr_no || arr.final_arrival_no || arr.arrival_no} | Supplier: {arr.supplier || arr.supplier_name || 'N/A'} | P.O: {arr.po_no || arr.mill_po_no || 'N/A'} {arr.lorry_number ? `| Lorry: ${arr.lorry_number}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                return (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      {/* Final P.O Selector */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase text-purple-900">
+                          <label className="flex items-center gap-1.5">
+                            <span>Final P.O</span>
+                            {selectedPoNo && <span className="text-purple-700 font-mono font-bold">({selectedPoNo})</span>}
+                          </label>
+                          {selectedMrNo && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllPos(prev => !prev)}
+                              className="text-[10px] font-semibold text-purple-600 hover:text-purple-800 underline lowercase"
+                            >
+                              {showAllPos ? 'filter to matching' : `show all (${purchaseOrders.length})`}
+                            </button>
+                          )}
+                        </div>
+                        <select
+                          id="selectedpono_1898"
+                          name="selectedpono"
+                          aria-label="selectedpono"
+                          value={selectedPoNo}
+                          onChange={e => handlePoSelection(e.target.value)}
+                          className={`w-full p-2 border rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm ${
+                            isPoNotInFinal && !selectedPoNo ? 'border-amber-300 bg-amber-50/50' : 'border-purple-300'
+                          }`}
+                        >
+                          {isPoNotInFinal && !showAllPos ? (
+                            <>
+                              <option value="">
+                                ⚠️ P.O [{inspectionPoNo}] is Not in Final P.O (In Sauda Check Point)
+                              </option>
+                              {purchaseOrders.map((po, i) => (
+                                <option key={i} value={po.po_no}>
+                                  {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
+                                </option>
+                              ))}
+                            </>
+                          ) : (
+                            <>
+                              <option value="">-- Choose Final P.O --</option>
+                              {matchedFinalPo && (
+                                <option value={matchedFinalPo.po_no} className="font-bold text-emerald-800 bg-emerald-50">
+                                  ✓ Matched Final P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
+                                </option>
+                              )}
+                              {purchaseOrders
+                                .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no)
+                                .map((po, i) => (
+                                  <option key={i} value={po.po_no}>
+                                    {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
+                                  </option>
+                                ))}
+                            </>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* Verified M.R & Inspection Selector */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-black uppercase text-emerald-900 flex items-center justify-between">
+                          <span>Inspection</span>
+                          {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
+                        </label>
+                        <select
+                          id="selectedmrno_1918"
+                          name="selectedmrno"
+                          aria-label="selectedmrno"
+                          value={selectedMrNo}
+                          onChange={e => handleMrSelection(e.target.value)}
+                          className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                        >
+                          <option value="">-- Choose Inspection --</option>
+                          {(selectedPoNo ? verifiedArrivals.filter(a => findMatchingPo(a.po_no, [{ po_no: selectedPoNo }])) : verifiedArrivals).map((arr, i) => (
+                            <option key={i} value={arr.mr_no || arr.final_arrival_no || arr.arrival_no}>
+                              M.R: {arr.mr_no || arr.final_arrival_no || arr.arrival_no} | Supplier: {arr.supplier || arr.supplier_name || 'N/A'} | P.O: {arr.po_no || arr.mill_po_no || 'N/A'} {arr.lorry_number ? `| Lorry: ${arr.lorry_number}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Notice if Inspection P.O is in Check Point and not in Final P.O */}
+                    {isPoNotInFinal && (
+                      <div className="p-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-xs flex items-start gap-2 shadow-xs">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <div className="font-bold flex items-center gap-2">
+                            <span>Inspection P.O ({inspectionPoNo}) is NOT in Final P.O yet</span>
+                            <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
+                              Status: In Sauda Check Point
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-amber-800 mt-0.5">
+                            {matchedScpPo ? (
+                              <span>
+                                This P.O is currently located in <strong>Sauda Check Point / Temporary P.O</strong> (Sauda: {matchedScpPo.sauda_no || matchedScpPo.po_no}). Once mismatches are cleared and approved in Sauda Check Point, click <strong>"Pass ✓"</strong> to promote it to Final P.O.
+                              </span>
+                            ) : (
+                              <span>
+                                This P.O has not yet been passed/promoted to <strong>Final P.O</strong> (purchase_master). You can still proceed with Inspection details, or select an existing Final P.O using "Show All".
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Active PO / MR Summary Linkage Banner */}
               {(selectedPoData || selectedMrNo || masterData.po_no || masterData.mr_no) ? (
