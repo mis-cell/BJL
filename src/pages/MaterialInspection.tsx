@@ -167,47 +167,66 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     };
   }, []);
 
-  useLiveAutoRefresh(fetchLiveData, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'inspection_checklist'] });
+  useLiveAutoRefresh(fetchLiveData, [], { tables: ['inspection_master', 'mill_inspection_master', 'mill_inspection_detail', 'inspection_checklist'] });
 
-  // Fetch data directly from Supabase (Inspection only)
+  // Fetch data directly from Supabase & LocalStorage (Inspection and Mill Inspection Register)
   async function fetchLiveData() {
     if (dbRecords.length === 0) setLoading(true);
     setFetchError(null);
     try {
       let data: any[] = [];
       if (supabase) {
-        const { data: inspRes } = await supabase
-          .from("mill_inspection_master")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const [inspMasterRes, millInspRes, checklistRes, finalArrRes] = await Promise.all([
+          supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+          supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+          supabase.from("inspection_checklist").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+          supabase.from("final_arrival").select("*").order("date", { ascending: false }).then(r => r, () => ({ data: [] })),
+        ]);
 
-        const { data: checklistRes } = await supabase
-          .from("inspection_checklist")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        const combined = [...(inspRes || []), ...(checklistRes || [])];
+        const combined = [
+          ...((inspMasterRes as any)?.data || []),
+          ...((millInspRes as any)?.data || []),
+          ...((checklistRes as any)?.data || []),
+          ...((finalArrRes as any)?.data || []),
+        ];
         const uniqueMap = new Map();
         combined.forEach((item: any) => {
-          const key = item.mr_no || item.id;
+          const key = item.mr_no || item.id || item.mill_po_no || item.po_no || item.temporary_arrival_no || item.arrival_no;
           if (key && !uniqueMap.has(key)) {
             uniqueMap.set(key, item);
           }
         });
         data = Array.from(uniqueMap.values());
       } else {
+        const inspMasterRes = await dbModule.fetchAll("inspection_master").catch(() => []);
         const inspRes = await dbModule.fetchAll("mill_inspection_master").catch(() => []);
         const checklistRes = await dbModule.fetchAll("inspection_checklist").catch(() => []);
-        const combined = [...(inspRes || []), ...(checklistRes || [])];
+        const combined = [...(inspMasterRes || []), ...(inspRes || []), ...(checklistRes || [])];
         const uniqueMap = new Map();
         combined.forEach((item: any) => {
-          const key = item.mr_no || item.id;
+          const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
           if (key && !uniqueMap.has(key)) {
             uniqueMap.set(key, item);
           }
         });
         data = Array.from(uniqueMap.values());
       }
+
+      // Merge cached inspection_master_records from localStorage if present
+      try {
+        const cached = localStorage.getItem("inspection_master_records");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
+              if (key && !data.some(d => d.mr_no === key || d.mill_po_no === key)) {
+                data.unshift(item);
+              }
+            });
+          }
+        }
+      } catch (e) {}
 
       setDbRecords(data);
     } catch (err: any) {
@@ -226,33 +245,47 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
 
   // Extract, deduplicate, filter and sort options in ascending order
   const getOptions = () => {
-    const map = new Map<string, { val: string; record: any }>();
+    const map = new Map<string, { val: string; record: any; labelType?: string }>();
 
     dbRecords.forEach((record) => {
-      let rawVal = "";
       if (fieldColumn === "temporary_arrival_no") {
-        rawVal = (record.arrival_no || record.temporary_arrival_no || record.ref_arrival_no || record.mr_no || "").toString().trim();
+        const arrVals = [record.arrival_no, record.temporary_arrival_no, record.ref_arrival_no, record.mr_no].filter(Boolean);
+        arrVals.forEach((val) => {
+          const rawVal = String(val).trim();
+          if (!rawVal) return;
+          const upperKey = rawVal.toUpperCase();
+
+          const isAlreadyInspected = savedInspections.some(
+            (insp) =>
+              (insp.arrival_no || insp.temporary_arrival_no || insp.mr_no || "").trim().toUpperCase() === upperKey
+          );
+
+          if (isAlreadyInspected && (value || "").trim().toUpperCase() !== upperKey) {
+            return;
+          }
+
+          if (!map.has(upperKey)) {
+            map.set(upperKey, { val: rawVal, record, labelType: "Arrival No." });
+          }
+        });
       } else if (fieldColumn === "po_no") {
-        rawVal = (record.po_no || "").toString().trim();
-      }
+        // Support Mill P.O. No. and standard P.O. No. from INSPECTION MODULE REGISTER
+        const poCandidates = [
+          { val: record.mill_po_no, label: "Mill P.O. No." },
+          { val: record.po_no, label: "P.O. No." },
+          { val: record.mr_no, label: "MR / Insp No." }
+        ];
 
-      if (!rawVal) return;
+        poCandidates.forEach(({ val, label }) => {
+          if (!val) return;
+          const rawVal = String(val).trim();
+          if (!rawVal) return;
+          const upperKey = rawVal.toUpperCase();
 
-      const upperKey = rawVal.toUpperCase();
-
-      // Check if already inspected (unless it matches current selected value)
-      const isAlreadyInspected = savedInspections.some(
-        (insp) =>
-          (insp.arrival_no || insp.temporary_arrival_no || insp.mr_no || "").trim().toUpperCase() === upperKey ||
-          (fieldColumn === "po_no" && (insp.po_no || "").trim().toUpperCase() === upperKey)
-      );
-
-      if (isAlreadyInspected && (value || "").trim().toUpperCase() !== upperKey) {
-        return;
-      }
-
-      if (!map.has(upperKey)) {
-        map.set(upperKey, { val: rawVal, record });
+          if (!map.has(upperKey)) {
+            map.set(upperKey, { val: rawVal, record, labelType: label });
+          }
+        });
       }
     });
 
@@ -270,10 +303,11 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     return uniqueOptions.filter((opt) => {
       const valMatches = opt.val.toLowerCase().includes(searchLower);
       const poMatches = opt.record?.po_no?.toString().toLowerCase().includes(searchLower);
+      const millPoMatches = opt.record?.mill_po_no?.toString().toLowerCase().includes(searchLower);
       const suppMatches = (opt.record?.supplier_name || opt.record?.supplier || "").toString().toLowerCase().includes(searchLower);
       const mrMatches = (opt.record?.mr_no || "").toString().toLowerCase().includes(searchLower);
       const brokerMatches = (opt.record?.broker_name || opt.record?.broker || "").toString().toLowerCase().includes(searchLower);
-      return valMatches || poMatches || suppMatches || mrMatches || brokerMatches;
+      return valMatches || poMatches || millPoMatches || suppMatches || mrMatches || brokerMatches;
     });
   };
 
@@ -324,7 +358,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
 
       {/* Auto-complete Dropdown Menu */}
       {isOpen && !disabled && (
-        <div className="absolute left-0 top-full mt-1 w-full min-w-[240px] max-w-md bg-white border border-blue-400 rounded-md shadow-2xl z-[100] max-h-60 overflow-y-auto divide-y divide-gray-100 animate-in fade-in duration-100">
+        <div className="absolute left-0 top-full mt-1 w-full min-w-[280px] max-w-md bg-white border border-blue-400 rounded-md shadow-2xl z-[100] max-h-60 overflow-y-auto divide-y divide-gray-100 animate-in fade-in duration-100">
           {loading ? (
             <div className="p-3 text-xs text-slate-500 flex items-center justify-center gap-2 font-medium bg-slate-50">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
@@ -343,7 +377,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
             <div className="py-1">
               <div className="px-2 py-1 bg-slate-100 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider flex justify-between">
                 <span>{label}</span>
-                <span>Inspection Records</span>
+                <span>INSPECTION REGISTER RECORDS</span>
               </div>
               {options.map((opt, idx) => (
                 <div
@@ -354,17 +388,24 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
                   }}
                   className="px-2.5 py-1.5 text-xs hover:bg-blue-50 cursor-pointer transition-colors flex items-center justify-between gap-2 border-b border-slate-100 last:border-b-0"
                 >
-                  <span className="font-bold text-blue-900 shrink-0">
-                    {opt.val}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-blue-900 shrink-0">
+                      {opt.val}
+                    </span>
+                    {opt.labelType && (
+                      <span className="text-[9px] font-semibold text-emerald-700">
+                        {opt.labelType}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] text-slate-500 truncate text-right">
                     {fieldColumn === "temporary_arrival_no"
-                      ? `${opt.record?.po_no ? `P.O. #${opt.record.po_no}` : ""}${
+                      ? `${opt.record?.po_no || opt.record?.mill_po_no ? `P.O. #${opt.record.mill_po_no || opt.record.po_no}` : ""}${
                           (opt.record?.supplier_name || opt.record?.supplier) ? ` | ${opt.record.supplier_name || opt.record.supplier}` : ""
                         }`
                       : `${
                           opt.record?.mr_no
-                            ? `Insp: ${opt.record.mr_no}`
+                            ? `Insp MR #${opt.record.mr_no}`
                             : (opt.record?.arrival_no || opt.record?.temporary_arrival_no)
                             ? `Arrival: ${opt.record.arrival_no || opt.record.temporary_arrival_no}`
                             : ""
@@ -1206,24 +1247,49 @@ export default function MaterialInspection({
     });
   };
 
-  // Sync / Load inspection records for Modal View search
+  // Sync / Load inspection records for Modal View search and selection
   const loadSavedInspectionsList = async () => {
     if (!supabase) return;
     setLoading(true);
     try {
-      let { data, error } = await supabase
-        .from("inspection_checklist")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [checklistRes, inspMasterRes, millInspRes] = await Promise.all([
+        supabase.from("inspection_checklist").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+        supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+        supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+      ]);
 
-      if (error || !data || data.length === 0) {
-        const fallback = await supabase
-          .from("mill_inspection_master")
-          .select("*")
-          .order("created_at", { ascending: false });
-        data = fallback.data || [];
-      }
-      setSavedInspections(data || []);
+      const combined = [
+        ...((checklistRes as any)?.data || []),
+        ...((inspMasterRes as any)?.data || []),
+        ...((millInspRes as any)?.data || []),
+      ];
+
+      const uniqueMap = new Map();
+      combined.forEach((item: any) => {
+        const key = item.mr_no || item.id;
+        if (key && !uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+        }
+      });
+
+      // Merge cached inspection_master_records from localStorage if present
+      try {
+        const cached = localStorage.getItem("inspection_master_records");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              const key = item.mr_no || item.id;
+              if (key && !uniqueMap.has(key)) {
+                uniqueMap.set(key, item);
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
+      const allInspections = Array.from(uniqueMap.values());
+      setSavedInspections(allInspections);
 
       // Fetch final arrivals to identify "Final received" POs
       const { data: arrivalsData, error: arrivalsErr } = await supabase
@@ -1266,6 +1332,7 @@ export default function MaterialInspection({
       const voucher = getVoucherForInspection(insp);
       const mappedInsp = {
         ...insp,
+        po_no: insp.po_no || (insp as any).mill_po_no || "",
         broker_name: (insp.broker_name || "").toUpperCase(),
         supplier_name: (insp.supplier_name || "").toUpperCase(),
         lorry_number: insp.lorry_number || (voucher as any)?.lorry_number || (voucher as any)?.lorry_no || (voucher as any)?.vehicle_no || "",
@@ -1278,7 +1345,7 @@ export default function MaterialInspection({
         : Array.isArray((insp as any).deduction_types) ? (insp as any).deduction_types : [];
       setSelectedDeductionTypes(dedArr);
 
-      // Fetch corresponding details rows
+      // Fetch corresponding details rows from all detail tables
       let { data, error } = await supabase
         .from("inspection_checklist_details")
         .select("*")
@@ -1286,6 +1353,15 @@ export default function MaterialInspection({
         .order("srl_no", { ascending: true });
 
       if (error || !data || data.length === 0) {
+        const fallback1 = await supabase
+          .from("inspection_details")
+          .select("*")
+          .eq("mr_no", insp.mr_no)
+          .order("srl_no", { ascending: true });
+        data = fallback1.data;
+      }
+
+      if (!data || data.length === 0) {
         const fallback = await supabase
           .from("mill_inspection_detail")
           .select("*")
@@ -1342,15 +1418,17 @@ export default function MaterialInspection({
       }
     }
 
+    const selectedPoNo = voucher.mill_po_no || voucher.po_no || "";
     setMasterData((prev) => ({
       ...prev,
-      arrival_no: voucher.temporary_arrival_no || voucher.amad_no || prev.arrival_no,
-      arrival_date: voucher.date || prev.arrival_date,
-      po_no: voucher.po_no || prev.po_no,
-      po_date: voucher.lorry_date || voucher.date || prev.po_date,
-      broker_name: (voucher.broker || prev.broker_name || "").toUpperCase(),
+      arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
+      arrival_date: voucher.date || voucher.arrival_date || prev.arrival_date,
+      po_no: selectedPoNo || prev.po_no,
+      po_date: voucher.mill_po_date || voucher.po_date || voucher.lorry_date || voucher.date || prev.po_date,
+      broker_name: (voucher.broker || voucher.broker_name || prev.broker_name || "").toUpperCase(),
       supplier_name: (
         voucher.supplier ||
+        voucher.supplier_name ||
         prev.supplier_name ||
         ""
       ).toUpperCase(),
@@ -1872,15 +1950,17 @@ export default function MaterialInspection({
         status: 'Completed'
       };
 
-      // 1. Save or Update Master into inspection_checklist (and secondary legacy tables)
-      const { error: masterErr } = await supabase.from("inspection_checklist").upsert(masterPayload);
+      // 1. Save or Update Master into all inspection master tables
+      const { error: masterErr } = await supabase.from("inspection_master").upsert(masterPayload);
       if (masterErr) {
-        console.warn("Primary upsert to inspection_checklist error, retrying:", masterErr);
+        console.warn("Primary upsert to inspection_master error, retrying:", masterErr);
       }
       await supabase.from("mill_inspection_master").upsert(masterPayload).then(() => {}, () => {});
+      await supabase.from("inspection_checklist").upsert(masterPayload).then(() => {}, () => {});
       await supabase.from("material_inspection").upsert(masterPayload).then(() => {}, () => {});
 
       // 2. Clean out old Detail Rows (to safely rewrite or insert)
+      await supabase.from("inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
       await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
       await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
       await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
@@ -1900,6 +1980,7 @@ export default function MaterialInspection({
           area: row.area,
           agency: row.agency,
           marka: row.marka,
+          marks: row.marka,
           crop_year: row.crop_year,
           lot: row.lot,
           quantity: row.quantity === "" ? 0 : Number(row.quantity),
@@ -1909,6 +1990,7 @@ export default function MaterialInspection({
         }));
 
       if (validRowsToWrite.length > 0) {
+        await supabase.from("inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
         await supabase.from("inspection_checklist_details").insert(validRowsToWrite).then(() => {}, () => {});
         await supabase.from("mill_inspection_detail").insert(validRowsToWrite).then(() => {}, () => {});
         await supabase.from("material_inspection_details").insert(validRowsToWrite).then(() => {}, () => {});

@@ -653,9 +653,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (supabase) {
         await supabase.from("inspection_master").upsert([payload]);
+        await supabase.from("mill_inspection_master").upsert([payload]).then(() => {}, () => {});
+        await supabase.from("inspection_checklist").upsert([payload]).then(() => {}, () => {});
+        await supabase.from("material_inspection").upsert([payload]).then(() => {}, () => {});
         
         // Clean out old detail rows
         await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no);
+        await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
+        await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
 
         // Prepare detail rows
         const validDetails = detailRows.map((row, idx) => ({
@@ -667,6 +673,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           area: row.area || "",
           agency: row.agency || "",
           marks: row.marks || "",
+          marka: row.marks || "",
           crop_year: row.crop_year || "",
           lot: row.lot || "",
           quantity: Number(row.quantity) || 0,
@@ -706,11 +713,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           chotta_grade: row.chotta_grade || "",
           tolerable: row.tolerable || "Yes",
           row_remarks: row.row_remarks || "",
-          jqi_remarks: row.jqi_remarks || ""
+          jqi_remarks: row.jqi_remarks || "",
+          jci_remarks: row.jqi_remarks || ""
         }));
 
         if (validDetails.length > 0) {
           await supabase.from("inspection_details").insert(validDetails);
+          await supabase.from("mill_inspection_detail").insert(validDetails).then(() => {}, () => {});
+          await supabase.from("inspection_checklist_details").insert(validDetails).then(() => {}, () => {});
+          await supabase.from("material_inspection_details").insert(validDetails).then(() => {}, () => {});
         }
       }
 
@@ -722,6 +733,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         localStorage.setItem("inspection_master_records", JSON.stringify(list));
       } catch (e) {}
 
+      window.dispatchEvent(new Event("app-data-updated"));
       showToast(`Inspection ${headerForm.mr_no} saved successfully.`);
       fetchInspectionRecords();
       setViewMode("dashboard");
@@ -734,8 +746,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!confirm(`Are you sure you want to delete inspection record ${mr_no}?`)) return;
     try {
       if (supabase) {
-        await supabase.from("inspection_master").delete().eq("mr_no", mr_no);
-        await supabase.from("inspection_details").delete().eq("mr_no", mr_no);
+        await supabase.from("inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("mill_inspection_detail").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_checklist_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("material_inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+
+        await supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_checklist").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await supabase.from("material_inspection").delete().eq("mr_no", mr_no).then(() => {}, () => {});
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       showToast(`Record ${mr_no} deleted.`);
