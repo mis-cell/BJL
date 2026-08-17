@@ -398,7 +398,8 @@ export function comparePoInspection(
 
   // Weight check triggers if single lorry (totalLorries <= 1) and ALL lorries received (remainingLorries === 0).
   if (totalLorries <= 1 && remainingLorries === 0 && contractMt > 0 && totalReceivedWeightSum > 0) {
-    const tol = calculateWeightTolerance(contractMt, totalReceivedWeightSum);
+    const unit = po.purchase_unit_name || po.unit_type || po.unit || 'BALES';
+    const tol = calculateWeightTolerance(contractMt, totalReceivedWeightSum, unit);
     if (!tol.isAcceptable) {
       mismatches.push({
         field: 'Total Contract (M.Ton)',
