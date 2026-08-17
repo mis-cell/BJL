@@ -1,3 +1,5 @@
+import { calculateWeightTolerance } from './weightTolerance';
+
 // Temporary P.O  ↔  Material Inspection / Final M.R field-by-field comparison.
 //
 // Compared fields (Sauda Check Point ↔ Temporary P.O ↔ Material Inspection):
@@ -394,15 +396,15 @@ export function comparePoInspection(
 
   const remainingLorries = Math.max(0, totalLorries - receivedLorriesCount);
 
-  // Weight check ONLY triggers if single lorry (totalLorries <= 1) and ALL lorries received (remainingLorries === 0).
+  // Weight check triggers if single lorry (totalLorries <= 1) and ALL lorries received (remainingLorries === 0).
   if (totalLorries <= 1 && remainingLorries === 0 && contractMt > 0 && totalReceivedWeightSum > 0) {
-    const diffPct = (Math.abs(contractMt - totalReceivedWeightSum) / contractMt) * 100;
-    if (diffPct > 5) {
+    const tol = calculateWeightTolerance(contractMt, totalReceivedWeightSum);
+    if (!tol.isAcceptable) {
       mismatches.push({
         field: 'Total Contract (M.Ton)',
-        mismatchLabel: 'Total Contract Weight mismatch',
-        poValue: `${contractMt.toFixed(3)} MT`,
-        inspValue: `${totalReceivedWeightSum.toFixed(3)} MT`,
+        mismatchLabel: tol.isOverDelivery ? 'Excess Weight (Over Tolerance)' : 'Short Weight (Under Tolerance)',
+        poValue: `${contractMt.toFixed(3)} MT (${tol.formattedTolerance})`,
+        inspValue: `${totalReceivedWeightSum.toFixed(3)} MT [Allowed: ${tol.formattedRange}]`,
       });
     }
   }

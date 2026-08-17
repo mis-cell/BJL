@@ -19,7 +19,6 @@ import {
   Download,
   AlertTriangle,
   ChevronRight,
-  Calculator,
   CheckCircle2,
   FileSpreadsheet,
   Grid,
@@ -498,45 +497,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     });
   };
 
-  const getPoTotalAdvancePaid = (poNo: string): number => {
-    if (!poNo) return 0;
-    const poObj = purchaseOrders.find(p => p.po_no === poNo || p.contract_po_no === poNo);
-    const poAdvance = Number(poObj?.total_advance || poObj?.advance_amount || poObj?.adv_amt || 0);
-
-    const advanceVouchersSum = paymentList
-      .filter(p => p.po_no === poNo && ((p.advance_payment_done || 'No').toLowerCase() === 'yes' || (p.po_type || '').toLowerCase().includes('advance')))
-      .reduce((sum, p) => sum + Number(p.paid_amount || p.payable_amt || p.total_amount || 0), 0);
-
-    return Math.max(poAdvance, advanceVouchersSum);
-  };
-
-  const calculateSuggestedAdvanceRecovery = (poNo: string, mrWeightMt: number, grossVal: number) => {
-    const totalAdvance = getPoTotalAdvancePaid(poNo);
-    if (totalAdvance <= 0) return { totalAdvance: 0, suggestedDeduction: 0, ratioPct: 0, totalContractMt: 0 };
-
-    const poObj = purchaseOrders.find(p => p.po_no === poNo || p.contract_po_no === poNo);
-    const totalContractMt = parseFloat(poObj?.total_contract_mt || poObj?.contract_mt || 0) || 0;
-
-    let ratioPct = 0;
-    let suggestedDeduction = 0;
-
-    if (totalContractMt > 0 && mrWeightMt > 0) {
-      ratioPct = Math.min(100, (mrWeightMt / totalContractMt) * 100);
-      suggestedDeduction = Math.min(totalAdvance, Math.round(totalAdvance * (mrWeightMt / totalContractMt) * 100) / 100);
-    } else {
-      const poValue = Number(poObj?.total_amt || poObj?.total_amount || 0);
-      if (poValue > 0 && grossVal > 0) {
-        ratioPct = Math.min(100, (grossVal / poValue) * 100);
-        suggestedDeduction = Math.min(totalAdvance, Math.round(totalAdvance * (grossVal / poValue) * 100) / 100);
-      } else {
-        suggestedDeduction = totalAdvance;
-        ratioPct = 100;
-      }
-    }
-
-    return { totalAdvance, suggestedDeduction, ratioPct, totalContractMt };
-  };
-
   const ensurePaymentTablesExist = async () => {
     if (!supabase) return;
     try {
@@ -982,10 +942,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
-      const mrWeight = Number(masterData.electronic_scale_net || 0);
-      const { suggestedDeduction } = calculateSuggestedAdvanceRecovery(poNo, mrWeight, grossVal);
-      const netPayable = Math.max(0, grossVal - suggestedDeduction);
-      const defaultPaid = netPayable > 0 ? Math.round(netPayable * 0.93 * 100) / 100 : 0;
+      const defaultPaid = grossVal > 0 ? Math.round(grossVal * 0.93 * 100) / 100 : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -997,9 +954,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         broker: po.broker || po.broker_name || prev.broker,
         rate_qntl: Number(po.b_rate || po.rate_qntl || 0),
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
-        final_less_adv: suggestedDeduction,
-        payable_amt: netPayable > 0 ? netPayable : (grossVal > 0 ? grossVal : prev.payable_amt),
-        paid_amount: netPayable > 0 ? defaultPaid : prev.paid_amount,
+        payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
       }));
 
       setDetailCols(cols);
@@ -1067,10 +1023,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || totalColAmt || 0);
+      const defaultPaid = grossVal > 0 ? Math.round(grossVal * 0.93 * 100) / 100 : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
-      const { suggestedDeduction } = calculateSuggestedAdvanceRecovery(poNo, mrWeight, grossVal);
-      const netPayable = Math.max(0, grossVal - suggestedDeduction);
-      const defaultPaid = netPayable > 0 ? Math.round(netPayable * 0.93 * 100) / 100 : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -1085,10 +1039,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         arrival_no: arrival.final_arrival_no || arrival.mr_no || prev.arrival_no,
         arrival_date: arrival.date || prev.arrival_date,
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
-        final_less_adv: suggestedDeduction,
-        payable_amt: netPayable > 0 ? netPayable : (grossVal > 0 ? grossVal : prev.payable_amt),
-        paid_amount: netPayable > 0 ? defaultPaid : prev.paid_amount,
-        net_amt: netPayable > 0 ? netPayable : prev.net_amt,
+        payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
+        net_amt: grossVal > 0 ? grossVal : prev.net_amt,
         electronic_scale_net: mrWeight,
         challan_weight: Number(arrival.challan_material_weight || prev.challan_weight)
       }));
@@ -1150,8 +1103,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         remarks: masterData.remarks || '',
         status: 'completed',
         payment_status: 'Paid',
-        advance_payment_done: masterData.advance_payment_done || 'No',
-        final_less_adv: Number(masterData.final_less_adv) || 0
+        advance_payment_done: masterData.advance_payment_done || 'No'
       };
 
       let savedMaster: any = null;
@@ -2323,136 +2275,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </select>
               </div>
             </div>
-
-            {/* ADVANCE RECOVERY CALCULATION ENGINE */}
-            {(() => {
-              const poNo = masterData.po_no || selectedPoNo;
-              const mrWeight = Number(masterData.electronic_scale_net || 0);
-              const grossVal = Number(masterData.total_amount || masterData.payable_amt || 0);
-              const { totalAdvance, suggestedDeduction, ratioPct, totalContractMt } = calculateSuggestedAdvanceRecovery(poNo, mrWeight, grossVal);
-
-              return (
-                <div className="p-3 bg-gradient-to-r from-amber-50 via-indigo-50/60 to-purple-50/60 border border-amber-300 rounded-xl space-y-2 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-amber-200 pb-2 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <Calculator className="w-4 h-4 text-amber-700" />
-                      <span className="text-xs font-black uppercase text-amber-950 tracking-wider">
-                        Advance Recovery Calculation Engine (Pro-Rata Settlement)
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold">
-                      <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300 font-mono">
-                        P.O Total Advance Paid: ₹ {totalAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                      {ratioPct > 0 && (
-                        <span className="bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded border border-indigo-300">
-                          Consignment Ratio: {ratioPct.toFixed(1)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1">
-                    {/* Gross Bill Amount */}
-                    <div>
-                      <label htmlFor="gross_material_invoice_va_2119" className="block text-[10px] font-extrabold uppercase text-slate-700 mb-1">
-                        Gross Material Invoice Value (₹)
-                      </label>
-                      <input
- id="gross_material_invoice_va_2119" name="gross_material_invoice_va" aria-label="Gross Material Invoice Value (₹)"                        type="number"
-                        step="0.01"
-                        value={masterData.total_amount || masterData.payable_amt || 0}
-                        onChange={e => {
-                          const gross = parseFloat(e.target.value) || 0;
-                          const currentAdv = Number(masterData.final_less_adv || 0);
-                          const net = Math.max(0, gross - currentAdv);
-                          const paid = Math.round(net * 0.93 * 100) / 100;
-                          setMasterData({
-                            ...masterData,
-                            total_amount: gross,
-                            payable_amt: net,
-                            paid_amount: paid
-                          });
-                        }}
-                        className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
-                      />
-                      <span className="text-[9.5px] text-slate-500 font-medium">Before Advance Deduction</span>
-                    </div>
-
-                    {/* Pro-Rata Advance Recovery Deduction */}
-                    <div className="bg-amber-100/70 p-2 rounded-lg border border-amber-300">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[10px] font-black uppercase text-amber-950">
-                          Advance Recovery Deduction (₹) *
-                        </label>
-                        {totalAdvance > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const net = Math.max(0, (masterData.total_amount || 0) - suggestedDeduction);
-                              const paid = Math.round(net * 0.93 * 100) / 100;
-                              setMasterData({
-                                ...masterData,
-                                final_less_adv: suggestedDeduction,
-                                payable_amt: net,
-                                paid_amount: paid
-                              });
-                            }}
-                            className="text-[9px] font-bold px-1.5 py-0.2 bg-amber-200 text-amber-900 hover:bg-amber-300 rounded border border-amber-400"
-                            title="Auto-apply calculated pro-rata deduction"
-                          >
-                            Auto Pro-Rata
-                          </button>
-                        )}
-                      </div>
-                      <input
- id="masterdata_final_less_adv_2166" name="masterdata_final_less_adv" aria-label="masterdata final less adv"                        type="number"
-                        step="0.01"
-                        value={masterData.final_less_adv || 0}
-                        onChange={e => {
-                          const adv = parseFloat(e.target.value) || 0;
-                          const gross = Number(masterData.total_amount || masterData.payable_amt || 0);
-                          const net = Math.max(0, gross - adv);
-                          const paid = Math.round(net * 0.93 * 100) / 100;
-                          setMasterData({
-                            ...masterData,
-                            final_less_adv: adv,
-                            payable_amt: net,
-                            paid_amount: paid
-                          });
-                        }}
-                        className="w-full p-2 font-black text-sm border border-amber-400 rounded bg-white text-amber-950 shadow-xs focus:ring-2 focus:ring-amber-500 font-mono"
-                      />
-                      <span className="text-[9.5px] text-amber-800 font-bold block mt-0.5">
-                        {totalAdvance > 0
-                          ? `Suggested Pro-Rata: ₹ ${suggestedDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${ratioPct.toFixed(1)}% of PO Advance)`
-                          : 'No Advance Paid on P.O'}
-                      </span>
-                    </div>
-
-                    {/* Calculated Net Payable Amount */}
-                    <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-300">
-                      <label className="block text-[10px] font-black uppercase text-emerald-950 mb-1">
-                        Net Settlement Payable (₹)
-                      </label>
-                      <div className="text-base font-black text-emerald-900 font-mono p-1.5 bg-white rounded border border-emerald-300 shadow-xs">
-                        ₹ {(masterData.payable_amt || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                      <span className="text-[9.5px] text-emerald-700 font-bold block mt-1">
-                        Gross (₹ {(masterData.total_amount || 0).toLocaleString('en-IN')}) - Advance (₹ {(masterData.final_less_adv || 0).toLocaleString('en-IN')})
-                      </span>
-                    </div>
-
-                    {/* Pro-Rata Weight & Delivery Summary */}
-                    <div className="p-2 bg-white/80 rounded-lg border border-slate-200 text-[10.5px] space-y-1 text-slate-700">
-                      <div className="font-extrabold text-slate-900 text-[11px] border-b pb-0.5">Consignment Basis:</div>
-                      <div>M.R Weight: <strong className="text-purple-900">{mrWeight > 0 ? `${mrWeight.toFixed(3)} MT` : 'Not Set'}</strong></div>
-                      <div>P.O Contract: <strong className="text-slate-800">{totalContractMt > 0 ? `${totalContractMt.toFixed(3)} MT` : 'Bulk Contract'}</strong></div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* Financial Amounts & Settlement Panel */}
             <div className="p-3 bg-gradient-to-r from-slate-50 via-purple-50/20 to-amber-50/20 border border-slate-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">

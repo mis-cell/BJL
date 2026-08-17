@@ -37,6 +37,7 @@ import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
 import { comparePoInspection, PoMatchResult } from '../lib/poMatch';
+import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import PoPrintSlip from '../components/PoPrintSlip';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from '../lib/permissions';
@@ -728,7 +729,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
         const contractMt = parseFloat(row.total_contract_mt) || parseFloat(row.quantity) || 0;
         const rcvdMt = parseFloat(row.received_weight_mt) || 0;
-        const pStatus = row.status ? String(row.status).toUpperCase() : (row.pending === false ? 'COMPLETED' : 'PENDING');
+        const tol = calculateWeightTolerance(contractMt, rcvdMt);
+        const pStatus = row.status ? String(row.status).toUpperCase() : (tol.isCompleted || row.pending === false ? 'COMPLETED' : 'PENDING');
 
         return {
           "PO / PTF No": row.po_no || row.ptf_no || '',
@@ -745,6 +747,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           "Total Units / Bales": row.total_units || 0,
           "Total Contract Wt (MT)": contractMt,
           "Received Weight (MT)": rcvdMt,
+          "Weight Tolerance": tol.formattedTolerance,
+          "Acceptable Range (MT)": tol.formattedRange,
           "Status": pStatus,
           "Session / Year": row.session || row.financial_year || '',
           "Crop Year": row.crop_year || '',
@@ -1510,8 +1514,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const weightOf = (ar: any) => Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10;
         const totalReceivedMt = matchingFinal.reduce((sum: number, ar: any) => sum + weightOf(ar), 0);
 
-        const isExplicitCompleted = p.status === 'completed';
-        const isWeightCompleted = contractWeight > 0 && totalReceivedMt >= (contractWeight - 0.05);
+        const tol = calculateWeightTolerance(contractWeight, totalReceivedMt);
+        const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
+        const isWeightCompleted = tol.isCompleted;
         const computedPending = (isExplicitCompleted || isWeightCompleted) ? false : true;
 
         // Pass / Mismatch: compare this P.O against its matched Temporary M.R on
@@ -1555,6 +1560,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           challan_supplier: (p.challan_supplier || p.supplier || '').toUpperCase(),
           pending: computedPending,
           received_weight_mt: totalReceivedMt,
+          weight_tolerance: tol,
           pass_status: passStatus,
           mismatch_fields: mismatchFields
         };
@@ -2158,7 +2164,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const totalReceivedMt = matchingFinal.reduce((sum: number, ar: any) => sum + weightOf(ar), 0);
 
       const contractWeight = parseFloat(formData.total_contract_mt) || 0;
-      const isWeightCompleted = contractWeight > 0 && totalReceivedMt >= (contractWeight - 0.01);
+      const tol = calculateWeightTolerance(contractWeight, totalReceivedMt);
+      const isWeightCompleted = tol.isCompleted;
       const isPendingVal = isWeightCompleted ? false : (formData.pending === 'Yes');
       
       const payload = {
@@ -2961,8 +2968,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const statusStr = String(p.status ?? '').trim().toLowerCase();
     const receivedWt = parseFloat(p.received_weight_mt) || 0;
     const contractWt = parseFloat(p.total_contract_mt) || 0;
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || (contractWt > 0 && receivedWt >= contractWt);
-    const computedStatus = isCompleted ? 'completed' : (receivedWt > 0 ? 'partial' : 'pending');
+    const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt);
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
 
     // Users like L1, L2, L3, L4 can ONLY see Pending and Partial data (Completed is hidden)
     if (!canSeeCompleted && computedStatus === 'completed') {
@@ -3004,8 +3012,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const statusStr = String(p.status ?? '').trim().toLowerCase();
     const receivedWt = parseFloat(p.received_weight_mt) || 0;
     const contractWt = parseFloat(p.total_contract_mt) || 0;
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || (contractWt > 0 && receivedWt >= contractWt);
-    const computedStatus = isCompleted ? 'completed' : (receivedWt > 0 ? 'partial' : 'pending');
+    const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt);
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
     if (!canSeeCompleted && computedStatus === 'completed') {
       return false;
     }
@@ -3038,7 +3047,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const statusStr = String(p.status ?? '').trim().toLowerCase();
     const receivedWt = parseFloat(p.received_weight_mt) || 0;
     const contractWt = parseFloat(p.total_contract_mt) || 0;
-    return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || (contractWt > 0 && receivedWt >= contractWt);
+    const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt);
+    return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
   }).length;
   const totalPendingPos = scopedPos.length - totalCompletedPos;
   const totalGeneratedPos = scopedPos.length;
@@ -3410,29 +3420,38 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                            <td className={cn("px-3 uppercase truncate max-w-[150px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.broker}</td>
                            <td className={cn("px-3 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200/60 text-[10px]", isSelected ? "text-slate-200" : "text-slate-700")}>{item.purchase_unit_name || 'BALES'}</td>
                            <td className={cn("px-3 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.total_units || 0}</td>
-                           <td className="px-3 py-1.5 text-left font-mono border-r border-slate-200/60 min-w-[210px]">
-                              <div className="flex items-center justify-between gap-1 text-[10px]">
-                                 <span className={cn("font-black whitespace-nowrap", isSelected ? "text-emerald-200" : "text-emerald-800")}>
-                                    {(item.received_weight_mt || 0).toFixed(3)} MT Rcvd
-                                 </span>
-                                 <span className={cn("font-sans text-[8.5px]", isSelected ? "text-slate-200" : "text-slate-400")}>of</span>
-                                 <span className={cn("font-bold whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
-                                    {parseFloat(item.total_contract_mt || 0).toFixed(3)} MT
-                                 </span>
-                              </div>
+                           <td className="px-3 py-1.5 text-left font-mono border-r border-slate-200/60 min-w-[220px]">
                               {(() => {
                                  const contract = parseFloat(item.total_contract_mt || 0) || 0;
                                  const rcvd = Number(item.received_weight_mt || 0);
+                                 const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd);
                                  const pct = contract > 0 ? Math.min(100, Math.max(0, (rcvd / contract) * 100)) : 0;
-                                 const barGradient = pct >= 99.9 
+                                 const barGradient = tol.isCompleted 
                                     ? 'from-emerald-500 to-green-400' 
                                     : pct > 0 
                                     ? 'from-blue-600 to-cyan-400' 
                                     : 'from-slate-300 to-slate-400';
                                  return (
-                                    <div className="mt-1 space-y-0.5">
-                                       <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden p-0.2" title={`${pct.toFixed(1)}% received`}>
-                                          <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${pct}%` }} />
+                                    <div>
+                                       <div className="flex items-center justify-between gap-1 text-[10px]">
+                                          <span className={cn("font-black whitespace-nowrap", isSelected ? "text-emerald-200" : (tol.isCompleted ? "text-emerald-700 font-bold" : "text-emerald-800"))}>
+                                             {rcvd.toFixed(3)} MT Rcvd
+                                          </span>
+                                          <span className={cn("font-sans text-[8.5px]", isSelected ? "text-slate-200" : "text-slate-400")}>of</span>
+                                          <span className={cn("font-bold whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
+                                             {contract.toFixed(3)} MT
+                                          </span>
+                                       </div>
+                                       <div className="mt-1 space-y-0.5">
+                                          <div className="w-full h-1.5 rounded-full bg-slate-200/80 overflow-hidden p-0.2" title={`${pct.toFixed(1)}% received. Tolerance: ${tol.formattedTolerance} (Acceptable: ${tol.formattedRange})`}>
+                                             <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${tol.isCompleted ? 100 : pct}%` }} />
+                                          </div>
+                                          <div className={cn("flex items-center justify-between text-[8px] font-mono leading-none pt-0.5", isSelected ? "text-slate-200/80" : "text-slate-500")}>
+                                             <span title={`Tolerance Rule: MAX(3% of ${contract.toFixed(3)} MT, 1.500 MT) = ${tol.formattedTolerance}`}>Tol: {tol.formattedTolerance}</span>
+                                             <span className={cn("font-bold", tol.isCompleted ? (isSelected ? "text-emerald-300" : "text-emerald-700 font-extrabold") : "")} title="Acceptable Weight Range">
+                                                {tol.formattedRange}
+                                             </span>
+                                          </div>
                                        </div>
                                     </div>
                                  );
@@ -3440,14 +3459,20 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                            </td>
                            <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60">
                               {(() => {
-                                 const isOverdue = isPoPending && item.delivery_to &&
+                                 const contract = parseFloat(item.total_contract_mt || 0) || 0;
+                                 const rcvd = Number(item.received_weight_mt || 0);
+                                 const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd);
+                                 const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+                                 const isOverdue = !isCompletedPo && item.delivery_to &&
                                     new Date(item.delivery_to) < new Date(new Date().toDateString());
                                  return (
                                     <div className="flex flex-col items-center gap-0.5">
-                                       {isPoPending ? (
-                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
+                                       {isCompletedPo ? (
+                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
+                                       ) : tol.isOverDelivery ? (
+                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-amber-500 text-white border-amber-400" : "text-amber-800 bg-amber-50 border-amber-300")}>EXCESS WT</span>
                                        ) : (
-                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-200")}>COMPLETED</span>
+                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
                                        )}
                                        {isOverdue && (
                                          <span title={`Delivery was due ${item.delivery_to}`} className="text-[8px] font-black px-1.5 text-amber-800 bg-amber-100 rounded border border-amber-300 uppercase">Overdue</span>
