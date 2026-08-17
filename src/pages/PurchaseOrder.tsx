@@ -2238,7 +2238,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const poPayload = {
           ...headerData,
           status: 'final',
-          pending: false,
+          pending: true,
           mismatch_cleared: true,
           satta_dispute_approved: true,
         };
@@ -2282,7 +2282,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         await dbModule.insert('purchase_master', {
           ...item,
           status: 'final',
-          pending: false,
+          pending: true,
           mismatch_cleared: true,
           satta_dispute_approved: true
         }).catch(() => {});
@@ -3138,13 +3138,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             {/* Top Toolbar Action Belt */}
             <div className="bg-white border border-slate-200 rounded-[18px] p-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
                <div className="flex flex-wrap items-center gap-2">
-                 <button
-                   onClick={handleGlobalAdd}
-                   className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-                   title="Create empty PTF PO directly"
-                 >
-                   <Plus className="w-4 h-4 text-emerald-300" /> New Manual P.O (PTF)
-                 </button>
+                 {isTempPo && (
+                   <button
+                     onClick={handleGlobalAdd}
+                     className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                     title="Create empty PTF PO directly"
+                   >
+                     <Plus className="w-4 h-4 text-emerald-300" /> New Manual P.O (PTF)
+                   </button>
+                 )}
 
                  <button
                    onClick={() => {
@@ -3391,15 +3393,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                </div>
             </div>
 
-            {/* Floating Quick Add Button */}
-            <button
-              onClick={handleGlobalAdd}
-              className="fixed bottom-12 right-8 z-30 bg-[#174C2C] hover:bg-[#103A20] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#0d301b] group"
-              title="Create New Manual P.O"
-            >
-              <Plus className="w-5 h-5 text-emerald-300 group-hover:rotate-90 transition-transform duration-300" />
-              <span>New P.O</span>
-            </button>
+            {/* Floating Quick Add Button - Only for Sauda Check Point */}
+            {isTempPo && (
+              <button
+                onClick={handleGlobalAdd}
+                className="fixed bottom-12 right-8 z-30 bg-[#174C2C] hover:bg-[#103A20] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#0d301b] group"
+                title="Create New Manual P.O"
+              >
+                <Plus className="w-5 h-5 text-emerald-300 group-hover:rotate-90 transition-transform duration-300" />
+                <span>New P.O</span>
+              </button>
+            )}
           </div>
         </LegacyLayout>
       )}
