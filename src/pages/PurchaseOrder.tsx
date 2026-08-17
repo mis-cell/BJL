@@ -1909,28 +1909,64 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     setLoading(true);
     try {
       const allDetails = await dbModule.fetchAll(DETAIL_TABLE);
-      const filteredDetails = allDetails
+      let filteredDetails = allDetails
         .filter((d: any) => d.po_no === poHeader.po_no)
         .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
       
+      // Fallback: If no details in current table, query sauda_check_point_details or sauda_quality_details
+      if ((!filteredDetails || filteredDetails.length === 0) && supabase) {
+        const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').eq('po_no', poHeader.po_no);
+        if (scpDet && scpDet.length > 0) {
+          filteredDetails = scpDet;
+        } else {
+          // Extract sauda number if present
+          const saudaToken = (poHeader.contract_po_no || poHeader.po_no || '').split('/').pop() || '';
+          const { data: saudaRec } = await supabase.from('sauda_master').select('*').or(`session.eq.${poHeader.po_no},sauda_no.eq.${saudaToken}`).maybeSingle();
+          if (saudaRec) {
+            const { data: qDet } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', saudaRec.sauda_id);
+            if (qDet && qDet.length > 0) {
+              filteredDetails = qDet.map((qd: any, i: number) => ({
+                po_no: poHeader.po_no,
+                srl_no: i + 1,
+                crop_year: '2026-27',
+                grade_code: qd.quality,
+                agency_code: qd.agency,
+                marka_code: qd.marka,
+                quantity: qd.qty,
+                rate_qntl: qd.rs
+              }));
+            }
+          }
+        }
+      }
+
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filteredDetails.map((d: any, index: number) => {
-        const qtyVal = d.quantity || 0;
+        const qtyVal = d.quantity || d.qty || 0;
         const weightVal = isBales 
           ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight_mt || 0);
+          : (d.weight_mt || d.weight || 0);
+        
+        const rawGrade = d.grade_code || d.quality || d.grade || '';
+        const rawAgency = d.agency_code || d.agency || '';
+        const rawMarka = d.marka_code || d.marka || '';
+
+        const gradeObj = gradeList.find(g => g.grade_code === rawGrade || g.grade_name?.trim().toUpperCase() === rawGrade?.trim().toUpperCase());
+        const agencyObj = agencyList.find(a => a.agency_code === rawAgency || a.agency_name?.trim().toUpperCase() === rawAgency?.trim().toUpperCase());
+        const markaObj = markaList.find(m => m.marka_code === rawMarka || m.marka_name?.trim().toUpperCase() === rawMarka?.trim().toUpperCase());
+
         return {
           srl: index + 1,
-          crop: d.crop_year || '2025-26',
-          grade_code: d.grade_code || '',
-          grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_code || '',
-          agency_code: d.agency_code || '',
-          agency_name: agencyList.find(a => a.agency_code === d.agency_code)?.agency_name || d.agency_code || '',
-          marka_code: d.marka_code || '',
-          marka_name: markaList.find(m => m.marka_code === d.marka_code)?.marka_name || d.marka_code || '',
+          crop: d.crop_year || d.crop || '2025-26',
+          grade_code: gradeObj?.grade_code || rawGrade,
+          grade_name: gradeObj?.grade_name || rawGrade || '',
+          agency_code: agencyObj?.agency_code || rawAgency,
+          agency_name: agencyObj?.agency_name || rawAgency || '',
+          marka_code: markaObj?.marka_code || rawMarka,
+          marka_name: markaObj?.marka_name || rawMarka || '',
           qty: qtyVal,
           weight: weightVal,
-          rate: d.rate_qntl || 0
+          rate: d.rate_qntl || d.rate || d.rs || 0
         };
       });
 
@@ -2314,17 +2350,32 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         
         // Insert details into purchase_detail_master
         if (scpDetails && scpDetails.length > 0) {
-          const detailRows = scpDetails.map((d: any, idx: number) => ({
-            po_no: item.po_no,
-            srl_no: d.srl_no || (idx + 1),
-            crop_year: d.crop_year || d.crop || '2026-27',
-            grade_code: d.grade_code || d.grade || '',
-            agency_code: d.agency_code || d.agency || '',
-            marka_code: d.marka_code || d.marka || '',
-            quantity: d.quantity || d.qty || 0,
-            weight_mt: d.weight_mt || d.weight || 0,
-            rate_qntl: d.rate_qntl || d.rate || 0
-          }));
+          const isBales = (rawPayload.purchase_unit_name || 'BALES') === 'BALES';
+          const detailRows = scpDetails.map((d: any, idx: number) => {
+            const rawGrade = d.grade_code || d.quality || d.grade || '';
+            const rawAgency = d.agency_code || d.agency || '';
+            const rawMarka = d.marka_code || d.marka || '';
+
+            const gMatch = gradeList.find(g => g.grade_code === rawGrade || g.grade_name?.trim().toUpperCase() === rawGrade?.trim().toUpperCase());
+            const aMatch = agencyList.find(a => a.agency_code === rawAgency || a.agency_name?.trim().toUpperCase() === rawAgency?.trim().toUpperCase());
+            const mMatch = markaList.find(m => m.marka_code === rawMarka || m.marka_name?.trim().toUpperCase() === rawMarka?.trim().toUpperCase());
+
+            const qty = Number(d.quantity || d.qty || 0);
+            const wt = d.weight_mt || d.weight || (isBales ? parseFloat(((qty * 147.5) / 1000).toFixed(3)) : 0);
+            const rate = Number(d.rate_qntl || d.rate || d.rs || 0);
+
+            return {
+              po_no: item.po_no,
+              srl_no: d.srl_no || (idx + 1),
+              crop_year: d.crop_year || d.crop || '2026-27',
+              grade_code: gMatch ? gMatch.grade_code : (rawGrade || ''),
+              agency_code: aMatch ? aMatch.agency_code : (rawAgency || ''),
+              marka_code: mMatch ? mMatch.marka_code : (rawMarka || ''),
+              quantity: qty,
+              weight_mt: Number(wt),
+              rate_qntl: rate
+            };
+          });
           await supabase.from('purchase_detail_master').delete().eq('po_no', item.po_no);
           await supabase.from('purchase_detail_master').insert(detailRows);
         }
