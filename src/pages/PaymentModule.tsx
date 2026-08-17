@@ -2095,38 +2095,22 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           aria-label="selectedpono"
                           value={selectedPoNo}
                           onChange={e => handlePoSelection(e.target.value)}
-                          className={`w-full p-2 border rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm ${
-                            isPoNotInFinal && !selectedPoNo ? 'border-amber-300 bg-amber-50/50' : 'border-purple-300'
-                          }`}
+                          className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
                         >
-                          {isPoNotInFinal && !showAllPos ? (
-                            <>
-                              <option value="">
-                                ⚠️ P.O [{inspectionPoNo}] is Not in Final P.O (In Sauda Check Point)
-                              </option>
-                              {purchaseOrders.map((po, i) => (
-                                <option key={i} value={po.po_no}>
-                                  {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
-                                </option>
-                              ))}
-                            </>
-                          ) : (
-                            <>
-                              <option value="">-- Choose Final P.O --</option>
-                              {matchedFinalPo && (
-                                <option value={matchedFinalPo.po_no} className="font-bold text-emerald-800 bg-emerald-50">
-                                  ✓ Matched Final P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
-                                </option>
-                              )}
-                              {purchaseOrders
-                                .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no)
-                                .map((po, i) => (
-                                  <option key={i} value={po.po_no}>
-                                    {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
-                                  </option>
-                                ))}
-                            </>
+                          <option value="">-- Choose Final P.O --</option>
+                          {matchedFinalPo && (
+                            <option value={matchedFinalPo.po_no} className="font-bold text-emerald-800 bg-emerald-50">
+                              ✓ Matched Final P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
+                            </option>
                           )}
+                          {purchaseOrders
+                            .filter(po => !isPoNotInFinal || showAllPos)
+                            .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no)
+                            .map((po, i) => (
+                              <option key={i} value={po.po_no}>
+                                {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
+                              </option>
+                            ))}
                         </select>
                       </div>
 
