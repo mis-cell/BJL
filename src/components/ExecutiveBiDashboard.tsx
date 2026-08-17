@@ -1105,8 +1105,76 @@ export default function ExecutiveBiDashboard({
       </div>
 
       {/* 5. POWER BI ANALYTICAL VISUALS GRID */}
+      {/* Row 1: Supplier Market Share Donut + Broker Performance Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Visual 4: Broker Performance Horizontal Bar Chart */}
+        <div className="lg:col-span-7 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                Broker Tonnage & Fulfillment Scorecard
+              </h3>
+              <p className="text-[11px] text-[#556952] mt-0.5">Ranked by contract completion rate and quality compliance</p>
+            </div>
+            <span className="text-[10px] bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg font-mono font-bold">
+              Ranked Bar
+            </span>
+          </div>
 
-      {/* Row 1: Purchase Tonnage & Cost Trend + Quality Grade Composition */}
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+              <BarChart data={brokerPerformanceData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#556952' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#556952' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="tonnageMT" name="Tonnage (MT)" fill="#1F4D2B" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="fulfillment" name="Fulfillment %" fill="#C5A059" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        {/* Visual 3: Supplier Market Share Donut Chart */}
+        <div className="lg:col-span-5 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-700" />
+                Supplier Procurement Share (%)
+              </h3>
+              <p className="text-[11px] text-[#556952] mt-0.5">Top suppliers by total volume contribution</p>
+            </div>
+            <span className="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg font-mono font-bold">
+              Donut Chart
+            </span>
+          </div>
+
+          <div className="h-64 w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+              <PieChart>
+                <Pie
+                  data={supplierShareData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={90}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={({ name, percent }: any) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {supplierShareData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      {/* Row 2: Purchase Tonnage & Cost Trend + Quality Grade Composition */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Visual 1: Purchase Tonnage & Cost Area Chart */}
         <div className="lg:col-span-7 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
@@ -1194,81 +1262,10 @@ export default function ExecutiveBiDashboard({
         </div>
       </div>
 
-      {/* Row 2: Supplier Market Share Donut + Broker Performance Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Visual 3: Supplier Market Share Donut Chart */}
-        <div className="lg:col-span-5 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-700" />
-                Supplier Procurement Share (%)
-              </h3>
-              <p className="text-[11px] text-[#556952] mt-0.5">Top suppliers by total volume contribution</p>
-            </div>
-            <span className="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg font-mono font-bold">
-              Donut Chart
-            </span>
-          </div>
-
-          <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-              <PieChart>
-                <Pie
-                  data={supplierShareData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }: any) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {supplierShareData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Visual 4: Broker Performance Horizontal Bar Chart */}
-        <div className="lg:col-span-7 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                Broker Tonnage & Fulfillment Scorecard
-              </h3>
-              <p className="text-[11px] text-[#556952] mt-0.5">Ranked by contract completion rate and quality compliance</p>
-            </div>
-            <span className="text-[10px] bg-purple-50 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg font-mono font-bold">
-              Ranked Bar
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-              <BarChart data={brokerPerformanceData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#556952' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#556952' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="tonnageMT" name="Tonnage (MT)" fill="#1F4D2B" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="fulfillment" name="Fulfillment %" fill="#C5A059" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
       {/* Row 3: End-to-End Jute Mill Flow Pipeline + Department Target vs Actual */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Visual 5: End-to-End Process Pipeline Flow */}
-        <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
+        {/* <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
@@ -1298,68 +1295,7 @@ export default function ExecutiveBiDashboard({
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Visual 6: Department Target vs Actual Production Output */}
-        <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
-                <Factory className="w-4 h-4 text-emerald-700" />
-                Department Target vs. Actual Output (MT)
-              </h3>
-              <p className="text-[11px] text-[#556952] mt-0.5">Comparing target production vs actual department yields</p>
-            </div>
-            <span className="text-[10px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-lg font-mono font-bold">
-              Grouped Bar
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-              <BarChart data={deptOutputData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
-                <XAxis dataKey="dept" tick={{ fontSize: 9, fill: '#556952' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#556952' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="target" name="Target (MT)" fill="#D6CAA8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="actual" name="Actual Output (MT)" fill="#1F4D2B" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 4: Moisture Distribution Scatter & Godown Storage Capacity Heatmap */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Visual 7: Moisture vs Weight Scatter Plot */}
-        <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
-                <Droplets className="w-4 h-4 text-emerald-700" />
-                Moisture % vs. Shipment Tonnage Correlation
-              </h3>
-            </div>
-            <span className="text-[10px] bg-cyan-50 text-cyan-800 border border-cyan-200 px-2.5 py-1 rounded-lg font-mono font-bold">
-              Scatter Plot
-            </span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-              <ScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
-                <XAxis dataKey="moisture" name="Moisture %" unit="%" domain={[11, 17]} tick={{ fontSize: 10, fill: '#556952' }} />
-                <YAxis dataKey="weight" name="Tonnage" unit=" Qtl" tick={{ fontSize: 10, fill: '#556952' }} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
-                <Scatter name="Shipments" data={moistureScatterData} fill="#1F4D2B" />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
+        </div> */}
         {/* Visual 8: Godown Capacity Heatmap Bar Chart */}
         <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
@@ -1389,6 +1325,67 @@ export default function ExecutiveBiDashboard({
             </ResponsiveContainer>
           </div>
         </div>
+        
+      </div>
+
+      {/* Row 4: Moisture Distribution Scatter & Godown Storage Capacity Heatmap */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Visual 7: Moisture vs Weight Scatter Plot */}
+        {/* <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
+                <Droplets className="w-4 h-4 text-emerald-700" />
+                Moisture % vs. Shipment Tonnage Correlation
+              </h3>
+            </div>
+            <span className="text-[10px] bg-cyan-50 text-cyan-800 border border-cyan-200 px-2.5 py-1 rounded-lg font-mono font-bold">
+              Scatter Plot
+            </span>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+              <ScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
+                <XAxis dataKey="moisture" name="Moisture %" unit="%" domain={[11, 17]} tick={{ fontSize: 10, fill: '#556952' }} />
+                <YAxis dataKey="weight" name="Tonnage" unit=" Qtl" tick={{ fontSize: 10, fill: '#556952' }} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
+                <Scatter name="Shipments" data={moistureScatterData} fill="#1F4D2B" />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div> */}
+        {/* Visual 6: Department Target vs Actual Production Output */}
+        {/* <div className="lg:col-span-6 bg-white border border-[#E5DEC9] rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4 border-b border-[#F2EDE0] pb-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
+                <Factory className="w-4 h-4 text-emerald-700" />
+                Department Target vs. Actual Output (MT)
+              </h3>
+              <p className="text-[11px] text-[#556952] mt-0.5">Comparing target production vs actual department yields</p>
+            </div>
+            <span className="text-[10px] bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-lg font-mono font-bold">
+              Grouped Bar
+            </span>
+          </div>
+
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+              <BarChart data={deptOutputData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
+                <XAxis dataKey="dept" tick={{ fontSize: 9, fill: '#556952' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#556952' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#FAF7F0', borderColor: '#D6CAA8', borderRadius: '12px', fontSize: '11px' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                <Bar dataKey="target" name="Target (MT)" fill="#D6CAA8" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" name="Actual Output (MT)" fill="#1F4D2B" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div> */}
+        
       </div>
 
       {/* 6. POWER BI STYLE EXECUTIVE MATRIX CROSSTAB TABLE */}

@@ -345,7 +345,6 @@ export default function Dashboard({
         { gdn_code: "30", gdn_name: "SELECTION SHED", gdn_capacity: 450, gdn_short_name: "SHED" },
         { gdn_code: "31", gdn_name: "8B", gdn_capacity: 450, gdn_short_name: "8B" }
       ];
-
       const mergedGdns = (godownsRes && godownsRes.length > 0) ? godownsRes : FALLBACK_GODOWNS_WITH_CAPACITY;
       setGodowns(mergedGdns);
 
