@@ -243,7 +243,6 @@ export default function LegacyLayout({
         { id: 'issue', label: 'Material Issue', icon: PackageCheck, pageId: 'issue' },
         { id: 'stock_inventory', label: 'Stock Inventory', icon: Layers, pageId: 'closing_stock' },
         { id: 'requisition', label: 'Requisition Desk', icon: ClipboardList, pageId: 'requisition_desk' },
-        { id: 'weighbridge', label: 'Weight Bridge', icon: Scale, pageId: 'weight_bridge' },
       ]
     },
     {

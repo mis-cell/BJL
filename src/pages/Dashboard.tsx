@@ -1267,16 +1267,6 @@ export default function Dashboard({
           step: '4.3',
           start: '#FFFEE0',
           end: '#E8F5E9'
-        },
-        { 
-          id: 'weight_bridge', 
-          mappedId: 'weight_bridge',
-          label: 'Weight Bridge', 
-          icon: Scale, 
-          desc: '3-Stage Lorry Weighment Management', 
-          step: '4.4',
-          start: '#0284C7',
-          end: '#0369A1'
         }
       ]
     },
