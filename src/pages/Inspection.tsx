@@ -356,6 +356,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
       arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
       arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
+      unloading_date: fa.unloading_date || fa.date || prev.unloading_date || new Date().toISOString().split("T")[0],
       po_no: fa.po_no || fa.mr_no || prev.po_no,
       po_date: fa.po_date || fa.date || prev.po_date,
       mill_po_no: fa.mr_no || fa.po_no || fa.mill_po_no || fa.arrival_no || displayMrNo || prev.mill_po_no || "",

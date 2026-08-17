@@ -104,6 +104,16 @@ interface InspectionMaster {
   deduction_rate?: number;
   deduction_qty?: number;
   deduction_amount?: number;
+  consignment_no?: string;
+  consignment_date?: string;
+  mr_print_date?: string;
+  advance_amount?: number;
+  on_account_advance_amount?: number;
+  settlement_amount?: number;
+  sent_settlement_date?: string;
+  lorry_returned?: string;
+  lorry_returned_other_mill?: string;
+  arrival_remarks?: string;
 }
 
 interface InspectionDetailRow {
@@ -1332,6 +1342,7 @@ export default function MaterialInspection({
       const voucher = getVoucherForInspection(insp);
       const mappedInsp = {
         ...insp,
+        unloading_date: insp.unloading_date || (insp as any).date || (insp as any).mr_date || (voucher as any)?.unloading_date || (voucher as any)?.date || insp.arrival_date || "",
         po_no: insp.po_no || (insp as any).mill_po_no || "",
         broker_name: (insp.broker_name || "").toUpperCase(),
         supplier_name: (insp.supplier_name || "").toUpperCase(),
@@ -1419,22 +1430,31 @@ export default function MaterialInspection({
     }
 
     const selectedPoNo = voucher.mill_po_no || voucher.po_no || "";
-    setMasterData((prev) => ({
-      ...prev,
-      arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
-      arrival_date: voucher.date || voucher.arrival_date || prev.arrival_date,
-      po_no: selectedPoNo || prev.po_no,
-      po_date: voucher.mill_po_date || voucher.po_date || voucher.lorry_date || voucher.date || prev.po_date,
-      broker_name: (voucher.broker || voucher.broker_name || prev.broker_name || "").toUpperCase(),
-      supplier_name: (
-        voucher.supplier ||
-        voucher.supplier_name ||
-        prev.supplier_name ||
-        ""
-      ).toUpperCase(),
-      lorry_number: voucher.lorry_number || voucher.lorry_no || voucher.vehicle_no || prev.lorry_number || "",
-      remarks: voucher.remarks || prev.remarks,
-    }));
+
+    setMasterData((prev) => {
+      const voucherArrivalDate = voucher.date || voucher.arrival_date || prev.arrival_date || new Date().toISOString().split("T")[0];
+      const voucherUnloadingDate = voucher.unloading_date || voucher.date || voucher.arrival_date || prev.unloading_date || voucherArrivalDate;
+
+      return {
+        ...prev,
+        arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
+        arrival_date: voucherArrivalDate,
+        unloading_date: voucherUnloadingDate,
+        consignment_date: voucher.consignment_date || voucher.date || voucher.arrival_date || prev.consignment_date,
+        mr_print_date: voucher.mr_print_date || voucher.date || prev.mr_print_date,
+        po_no: selectedPoNo || prev.po_no,
+        po_date: voucher.mill_po_date || voucher.po_date || voucher.lorry_date || voucher.date || prev.po_date,
+        broker_name: (voucher.broker || voucher.broker_name || prev.broker_name || "").toUpperCase(),
+        supplier_name: (
+          voucher.supplier ||
+          voucher.supplier_name ||
+          prev.supplier_name ||
+          ""
+        ).toUpperCase(),
+        lorry_number: voucher.lorry_number || voucher.lorry_no || voucher.vehicle_no || prev.lorry_number || "",
+        remarks: voucher.remarks || prev.remarks,
+      };
+    });
 
     if (voucher.po_no && supabase) {
       (async () => {
