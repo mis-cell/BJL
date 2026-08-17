@@ -21,7 +21,8 @@ import {
   Copy,
   ArrowLeft,
   Save,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import LegacyLayout from "../components/LegacyLayout";
@@ -106,10 +107,40 @@ interface InspectionDetailRow {
   chotta_tot_wt_grd?: number;
   chotta_grade?: string;
   tolerable?: string;
+  premium?: string;
+  is_premium?: boolean;
   row_remarks?: string;
   jqi_remarks?: string;
   expanded?: boolean;
 }
+
+// Calculate Quantity in Metric Tons (MT)
+export const calculateQtyInMt = (row: InspectionDetailRow): number => {
+  if (row.challan_gross_wt && Number(row.challan_gross_wt) > 0) {
+    return Number(Number(row.challan_gross_wt).toFixed(3));
+  }
+  if (row.receipt_gross_wt && Number(row.receipt_gross_wt) > 0) {
+    return Number(Number(row.receipt_gross_wt).toFixed(3));
+  }
+  const qty = Number(row.quantity) || 0;
+  const unit = (row.unit || "BALES").toUpperCase();
+  if (unit.includes("BALE") || unit.includes("BALES")) {
+    return Number((qty * 0.18).toFixed(3)); // 1 Standard Jute Bale = ~180 kg = 0.180 MT
+  }
+  if (unit.includes("KG")) {
+    return Number((qty * 0.001).toFixed(3));
+  }
+  if (unit.includes("QTL") || unit.includes("QUINTAL")) {
+    return Number((qty * 0.10).toFixed(3));
+  }
+  if (unit.includes("DRUM")) {
+    return Number((qty * 0.20).toFixed(3));
+  }
+  if (unit.includes("BAG")) {
+    return Number((qty * 0.05).toFixed(3));
+  }
+  return Number(qty.toFixed(3));
+};
 
 interface InspectionProps {
   onNavigate?: (page: string) => void;
@@ -160,6 +191,7 @@ const detailFieldsConfig: { name: keyof InspectionDetailRow; label: string; type
   { name: "chotta_tot_wt_grd", label: "Chotta & Habi Jabi Tot. Wt. Grd%", type: "number" },
   { name: "chotta_grade", label: "Chotta & Habi Jabi Grade", type: "text" },
   { name: "tolerable", label: "Tolerable", type: "select" },
+  { name: "premium", label: "Premium (MT Mode)", type: "select" },
   { name: "row_remarks", label: "Remarks", type: "text" },
   { name: "jqi_remarks", label: "JCI Remarks", type: "text" }
 ];
@@ -713,6 +745,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           chotta_tot_wt_grd: Number(row.chotta_tot_wt_grd) || 0,
           chotta_grade: row.chotta_grade || "",
           tolerable: row.tolerable || "Yes",
+          premium: row.is_premium || row.premium === "Yes" ? "Yes" : "No",
           row_remarks: row.row_remarks || "",
           jqi_remarks: row.jqi_remarks || "",
           jci_remarks: row.jqi_remarks || ""
@@ -1397,7 +1430,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th colSpan={4} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Mill Settlement %</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Ropes</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Chotta &amp; Habi Jabi</th>
-                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Tolerable</th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[90px]">Tolerable</th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px] bg-gradient-to-b from-[#1d4ed8] to-[#1e3a8a] text-amber-300">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span className="font-black flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                            Premium
+                          </span>
+                          <span className="text-[9px] font-semibold text-blue-100 opacity-90">(Show Qty in MT)</span>
+                        </div>
+                      </th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">Remarks</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">JCI Remarks</th>
                       <th rowSpan={2} className="p-2 text-center sticky right-0 bg-[#1e3a8a] z-20 min-w-[190px]">Row Actions</th>
@@ -1516,20 +1558,66 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
                           {/* Quantity & Unit */}
                           <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              value={row.quantity || 0}
-                              onChange={(e) => handleDetailChange(idx, "quantity", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
-                            />
+                            <div className="flex flex-col gap-0.5">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={
+                                  (row.is_premium || row.premium === "Yes")
+                                    ? calculateQtyInMt(row)
+                                    : (row.quantity || 0)
+                                }
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (row.is_premium || row.premium === "Yes") {
+                                    handleDetailChange(idx, "challan_gross_wt", val);
+                                    const currentUnit = (row.unit || "BALES").toUpperCase();
+                                    const convertedQty = currentUnit.includes("BALE") ? Math.round(val / 0.18) : val;
+                                    handleDetailChange(idx, "quantity", convertedQty);
+                                  } else {
+                                    handleDetailChange(idx, "quantity", val);
+                                  }
+                                }}
+                                className={`w-full border rounded px-2 py-1 text-xs font-bold transition-all ${
+                                  (row.is_premium || row.premium === "Yes")
+                                    ? "border-amber-400 bg-amber-50 text-amber-950 font-black ring-1 ring-amber-300"
+                                    : "border-slate-300 text-slate-900"
+                                }`}
+                              />
+                              {(row.is_premium || row.premium === "Yes") ? (
+                                <div className="flex items-center justify-between text-[9px] font-mono text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 font-black">
+                                  <span>⚡ MT:</span>
+                                  <span>{calculateQtyInMt(row).toFixed(3)} MT</span>
+                                </div>
+                              ) : (
+                                <span className="text-[9px] text-slate-500 font-medium">
+                                  ≈ {calculateQtyInMt(row).toFixed(3)} MT
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.unit || "BALES"}
-                              onChange={(e) => handleDetailChange(idx, "unit", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
+                            <div className="flex flex-col gap-0.5">
+                              <input
+                                type="text"
+                                value={
+                                  (row.is_premium || row.premium === "Yes")
+                                    ? "M.T."
+                                    : (row.unit || "BALES")
+                                }
+                                onChange={(e) => handleDetailChange(idx, "unit", e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-xs text-center font-bold uppercase transition-all ${
+                                  (row.is_premium || row.premium === "Yes")
+                                    ? "border-amber-400 bg-amber-100/80 text-amber-950 font-black"
+                                    : "border-slate-300 text-slate-900"
+                                }`}
+                              />
+                              {(row.is_premium || row.premium === "Yes") && (
+                                <span className="text-[9px] font-bold text-amber-800 text-center uppercase tracking-tight">
+                                  Metric Ton
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Weights */}
@@ -1856,11 +1944,45 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             <select
                               value={row.tolerable || "Yes"}
                               onChange={(e) => handleDetailChange(idx, "tolerable", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-white"
+                              className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-white font-medium"
                             >
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
                             </select>
+                          </td>
+
+                          {/* Premium (Click to Show Quantity in Metric Ton) */}
+                          <td className="p-1.5 border-r border-slate-200 text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
+                                  const nextVal = !isCurrentlyPremium;
+                                  handleDetailChange(idx, "is_premium", nextVal);
+                                  handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
+                                  if (nextVal) {
+                                    handleDetailChange(idx, "unit", "M.T.");
+                                  }
+                                }}
+                                className={`px-2.5 py-1.5 rounded text-xs font-black transition-all flex items-center justify-center gap-1.5 w-full shadow-sm cursor-pointer active:scale-95 ${
+                                  row.is_premium || row.premium === "Yes"
+                                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 border border-amber-500 shadow-md ring-2 ring-amber-300/70 animate-pulse"
+                                    : "bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-950 border border-slate-300"
+                                }`}
+                                title="Click on Premium to toggle Quantity display in Metric Tons"
+                              >
+                                <Sparkles className={`w-3.5 h-3.5 ${row.is_premium || row.premium === "Yes" ? "text-amber-950 fill-amber-950" : "text-slate-400"}`} />
+                                <span className="whitespace-nowrap">
+                                  {row.is_premium || row.premium === "Yes" ? "★ Premium" : "Premium"}
+                                </span>
+                              </button>
+                              {(row.is_premium || row.premium === "Yes") && (
+                                <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
+                                  {calculateQtyInMt(row).toFixed(3)} MT
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Remarks */}
