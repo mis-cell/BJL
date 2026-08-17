@@ -246,33 +246,33 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  async function fetchInspectionRecords() {
-    if (records.length === 0) setLoading(true);
+  async function fetchInspectionRecords(isManual: boolean = false) {
+    setLoading(true);
     try {
-      // 1. Fetch saved inspection_master records
-      let inspectionMasterList: InspectionMasterRecord[] = [];
+      // 1. Fetch saved material_inspection records
+      let inspectionList: InspectionMasterRecord[] = [];
       if (supabase) {
         const { data, error } = await supabase
-          .from("inspection_master")
+          .from("material_inspection")
           .select("*")
           .order("created_at", { ascending: false });
 
         if (!error && data && data.length > 0) {
-          inspectionMasterList = data;
+          inspectionList = data;
         } else {
           // Fallback check
           const { data: fallback } = await supabase
-            .from("material_inspection")
+            .from("inspection_master")
             .select("*")
             .order("created_at", { ascending: false });
-          if (fallback) inspectionMasterList = fallback;
+          if (fallback && fallback.length > 0) inspectionList = fallback;
         }
       }
 
-      if (inspectionMasterList.length === 0) {
+      if (inspectionList.length === 0) {
         try {
-          const cached = localStorage.getItem("inspection_master_records");
-          if (cached) inspectionMasterList = JSON.parse(cached);
+          const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
+          if (cached) inspectionList = JSON.parse(cached);
         } catch (e) {}
       }
 
@@ -333,7 +333,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       // 3. Enrich existing saved inspection records if missing details, but do NOT auto-create unsaved rows
       const map = new Map<string, InspectionMasterRecord>();
 
-      inspectionMasterList.forEach(rec => {
+      inspectionList.forEach(rec => {
         const k = (rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
         if (k) map.set(k, rec);
       });
@@ -362,10 +362,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setRecords(displayList);
 
       try {
+        localStorage.setItem("material_inspection_records", JSON.stringify(displayList));
         localStorage.setItem("inspection_master_records", JSON.stringify(displayList));
       } catch (e) {}
+
+      if (isManual) {
+        showToast("Inspection register data refreshed successfully.");
+      }
     } catch (err) {
-      console.error("Error fetching inspection_master records:", err);
+      console.error("Error fetching material_inspection records:", err);
+      if (isManual) {
+        showToast("Failed to refresh records from database.");
+      }
     } finally {
       setLoading(false);
     }
@@ -375,7 +383,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     fetchInspectionRecords();
   }, []);
 
-  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['mill_inspection_master', 'mill_inspection_detail', 'final_arrival'] });
+  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival'] });
 
   const populateFromFinalArrival = (fa: any) => {
     const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
@@ -478,7 +486,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     if (supabase) {
       const { data } = await supabase
-        .from("inspection_details")
+        .from("material_inspection_details")
         .select("*")
         .eq("mr_no", rec.mr_no)
         .order("srl_no", { ascending: true });
@@ -487,7 +495,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         loadedDetails = data.map(d => ({ ...d, expanded: false }));
       } else {
         const { data: fallback } = await supabase
-          .from("material_inspection_details")
+          .from("inspection_details")
           .select("*")
           .eq("mr_no", rec.mr_no);
         if (fallback && fallback.length > 0) {
@@ -685,16 +693,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       };
 
       if (supabase) {
-        await supabase.from("inspection_master").upsert([payload]);
-        await supabase.from("mill_inspection_master").upsert([payload]).then(() => {}, () => {});
-        await supabase.from("inspection_checklist").upsert([payload]).then(() => {}, () => {});
-        await supabase.from("material_inspection").upsert([payload]).then(() => {}, () => {});
+        await supabase.from("material_inspection").upsert([payload]);
+        await supabase.from("inspection_master").upsert([payload]).then(() => {}, () => {});
         
         // Clean out old detail rows
-        await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no);
-        await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
-        await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
-        await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
+        await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
+        await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
 
         // Prepare detail rows
         const validDetails = detailRows.map((row, idx) => ({
@@ -752,18 +756,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }));
 
         if (validDetails.length > 0) {
-          await supabase.from("inspection_details").insert(validDetails);
-          await supabase.from("mill_inspection_detail").insert(validDetails).then(() => {}, () => {});
-          await supabase.from("inspection_checklist_details").insert(validDetails).then(() => {}, () => {});
-          await supabase.from("material_inspection_details").insert(validDetails).then(() => {}, () => {});
+          await supabase.from("material_inspection_details").insert(validDetails);
+          await supabase.from("inspection_details").insert(validDetails).then(() => {}, () => {});
         }
       }
 
       // Update local storage cache
       try {
-        const cached = localStorage.getItem("inspection_master_records");
+        const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
         let list: InspectionMasterRecord[] = cached ? JSON.parse(cached) : [];
         list = [payload, ...list.filter((r: any) => r.mr_no !== payload.mr_no)];
+        localStorage.setItem("material_inspection_records", JSON.stringify(list));
         localStorage.setItem("inspection_master_records", JSON.stringify(list));
       } catch (e) {}
 
@@ -780,17 +783,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!confirm(`Are you sure you want to delete inspection record ${mr_no}?`)) return;
     try {
       if (supabase) {
+        await supabase.from("material_inspection_details").delete().eq("mr_no", mr_no);
         await supabase.from("inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("mill_inspection_detail").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("inspection_checklist_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("material_inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-
+        await supabase.from("material_inspection").delete().eq("mr_no", mr_no);
         await supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("inspection_checklist").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("material_inspection").delete().eq("mr_no", mr_no).then(() => {}, () => {});
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
+      try {
+        const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
+        if (cached) {
+          const list = JSON.parse(cached).filter((r: any) => r.mr_no !== mr_no);
+          localStorage.setItem("material_inspection_records", JSON.stringify(list));
+          localStorage.setItem("inspection_master_records", JSON.stringify(list));
+        }
+      } catch (e) {}
       showToast(`Record ${mr_no} deleted.`);
     } catch (err: any) {
       alert("Delete failed: " + err.message);
@@ -896,8 +902,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 </button>
 
                 <button
-                  onClick={fetchInspectionRecords}
-                  className="p-2 bg-[#0b2415]/80 hover:bg-[#123920] border border-emerald-400/50 rounded-lg text-white transition-all cursor-pointer shadow-sm"
+                  onClick={() => fetchInspectionRecords(true)}
+                  disabled={loading}
+                  className="p-2 bg-[#0b2415]/80 hover:bg-[#123920] active:scale-95 border border-emerald-400/50 rounded-lg text-white transition-all cursor-pointer shadow-sm disabled:opacity-50"
                   title="Refresh Data"
                 >
                   <RefreshCw className={`w-4 h-4 text-amber-300 ${loading ? "animate-spin" : ""}`} />
@@ -916,7 +923,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Audits</p>
                   <p className="text-2xl font-black text-slate-900 mt-1">{totalInspections}</p>
-                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">inspection_master records</p>
+                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">material_inspection records</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
                   <ShieldCheck className="w-6 h-6" />
