@@ -1212,24 +1212,24 @@ export default function Dashboard({
           end: '#92EFFD'
         },
         { 
-          id: 'mr_settlement', 
-          mappedId: 'mr_settlement',
-          label: 'M.R Settlement', 
-          icon: FileCheck, 
-          desc: 'Weighbridge Quantity Settlements', 
-          step: '3.2',
-          start: '#D279EE',
-          end: '#F8C390'
-        },
-        { 
           id: 'payment', 
           mappedId: 'payment',
           label: 'Payment', 
           icon: Wallet, 
           desc: 'Record Cash & Bank Payments', 
-          step: '3.3',
+          step: '3.2',
           start: '#FB7185',
           end: '#F43F5E'
+        },
+        { 
+          id: 'mr_settlement', 
+          mappedId: 'mr_settlement',
+          label: 'M.R Settlement', 
+          icon: FileCheck, 
+          desc: 'Weighbridge Quantity Settlements', 
+          step: '3.3',
+          start: '#D279EE',
+          end: '#F8C390'
         }
       ]
     },
