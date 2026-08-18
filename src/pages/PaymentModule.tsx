@@ -190,16 +190,13 @@ const emptyDetailColumn = (index: number): PaymentDetailColumn => ({
 
 export const getColWtMt = (col?: PaymentDetailColumn): number => {
   if (!col) return 0;
-  const qty = Number(col.quantity) || 0;
-  const wtQty = Number(col.wt_quantity) || 0;
-  const phota = Number(col.wt_phota) || 0;
   const arrWt = Number(col.arr_qty_wt) || 0;
-
+  if (arrWt > 0) return arrWt;
+  const wtQty = Number(col.wt_quantity) || 0;
   if (wtQty > 0) return wtQty;
-  if (qty > 0) {
-    if (phota > 0) return qty * phota;
-    if (arrWt > 0) return arrWt;
-  }
+  const qty = Number(col.quantity) || 0;
+  const phota = Number(col.wt_phota) || 0;
+  if (qty > 0 && phota > 0) return qty * phota;
   return 0;
 };
 
@@ -208,9 +205,8 @@ export const getColAmount = (col?: PaymentDetailColumn): number => {
   const wtMt = getColWtMt(col);
   const reconRate = Number(col.rate_value) || 0;
   if (wtMt <= 0 || reconRate <= 0) return 0;
-  const wtKg = wtMt * 1000;
-  const rateKg = reconRate / 100;
-  return wtKg * rateKg;
+  // If Rate is Rate/MT (e.g. 14100), Amount = Weight(MT) * Rate(/MT)
+  return wtMt * reconRate;
 };
 
 // Robust helper to parse grid_details / items from string or array or object
@@ -353,9 +349,13 @@ export const mapItemsToDetailCols = (
       const agency = resolveAgency(item);
       const area = resolveArea(item);
       const marka = resolveMarka(item);
-      const qty = Number(item.quantity || item.qty || item.quantity_rcpt || item.quantity_chln || item.packets || item.units || item.total_units || 0);
-      const wt = Number(item.weight_mt || item.weight || item.arr_qty_wt || item.netto_pnto || item.total_wt_in_ton || (item.weight_qtl ? Number(item.weight_qtl) / 10 : 0));
-      const rate = Number(item.rate_qntl || item.rate || item.rate_value || item.rate_per_mt || poHeader?.b_rate || defaultRate || 0);
+      const qty = Number(item.quantity !== undefined && item.quantity !== null && item.quantity !== '' ? item.quantity : (item.quantity_rcpt || item.quantity_chln || item.qty || item.packets || item.units || item.total_units || 0));
+      const wt = Number(
+        item.final_receipt_wt !== undefined && item.final_receipt_wt !== null && item.final_receipt_wt !== ''
+          ? item.final_receipt_wt
+          : (item.receipt_gross_wt || item.challan_gross_wt || item.weight_mt || item.weight || item.arr_qty_wt || item.netto_pnto || item.total_wt_in_ton || (item.weight_qtl ? Number(item.weight_qtl) / 10 : 0))
+      );
+      const rate = Number(item.rate_per_mt || item.rate_mt || item.rate_qntl || item.rate || item.rate_value || poHeader?.b_rate || defaultRate || 0);
 
       newCols[idx] = {
         ...emptyDetailColumn(idx + 1),
@@ -1008,10 +1008,27 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         }
       }
 
-      // Map detail columns from arrival grid_details, or fallback to PO items
-      let rawArrItems = parseGridOrItems(arrival.grid_details || arrival.items);
-      if (rawArrItems.length === 0 && po) {
-        rawArrItems = await getPoItemDetails(po);
+      // Map detail columns from arrival grid_details / inspection details, or fallback to PO items
+      let rawArrItems = parseGridOrItems(arrival.grid_details || arrival.items || arrival.details);
+      
+      if (rawArrItems.length === 0 && supabase) {
+        try {
+          const targetMr = arrival.mr_no || arrival.final_arrival_no || mrNo;
+          const [midRes, idRes] = await Promise.all([
+            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMr),
+            supabase.from('inspection_details').select('*').eq('mr_no', targetMr)
+          ]);
+          if (midRes.data && midRes.data.length > 0) rawArrItems = midRes.data;
+          else if (idRes.data && idRes.data.length > 0) rawArrItems = idRes.data;
+        } catch (e) {
+          console.warn("Failed to fetch inspection details:", e);
+        }
+      }
+
+      const poItems = po ? await getPoItemDetails(po) : [];
+
+      if (rawArrItems.length === 0 && poItems.length > 0) {
+        rawArrItems = poItems;
       }
 
       let cols = mapItemsToDetailCols(rawArrItems, Number(po?.b_rate || po?.rate_qntl || 0), po || arrival, {
@@ -1020,6 +1037,28 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         areaMasters: aList,
         markaMasters: mList
       });
+
+      // Merge PO item line rates into the inspection detail columns
+      if (poItems.length > 0) {
+        cols = cols.map((col, idx) => {
+          if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
+          const matchedPoItem = poItems.find(p => {
+            const pGrade = String(p.grade_name || p.grade || p.grade_code || '').trim().toUpperCase();
+            const cGrade = String(col.grade || '').trim().toUpperCase();
+            return pGrade && cGrade && (pGrade === cGrade || pGrade.includes(cGrade) || cGrade.includes(pGrade));
+          }) || poItems[idx];
+
+          if (matchedPoItem) {
+            const lineRate = Number(
+              matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || matchedPoItem.b_rate || 0
+            );
+            if (lineRate > 0) {
+              return { ...col, rate_value: lineRate };
+            }
+          }
+          return col;
+        });
+      }
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || totalColAmt || 0);
