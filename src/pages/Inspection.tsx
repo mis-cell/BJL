@@ -25,6 +25,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { dbModule } from "../services/dbModule";
 import LegacyLayout from "../components/LegacyLayout";
 
 interface InspectionMasterRecord {
@@ -276,19 +277,79 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } catch (e) {}
       }
 
-      // 2. Fetch Final Arrival records (Data coming from Final Arrival)
+      // 2. Fetch Final Arrival & Purchase Master records (Data coming from Final Arrival & purchase_master)
       let faList: any[] = [];
       if (supabase) {
         try {
-          const { data: faData } = await supabase
-            .from("final_arrival")
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (faData && faData.length > 0) {
-            faList = faData;
+          const [faRes, pmRes, mimRes, tmrRes] = await Promise.all([
+            supabase.from("final_arrival").select("*").order("created_at", { ascending: false }),
+            supabase.from("purchase_master").select("*").order("created_at", { ascending: false }),
+            supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }),
+            supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false })
+          ]);
+
+          if (faRes.data && faRes.data.length > 0) {
+            faList.push(...faRes.data);
+          }
+
+          if (pmRes.data && pmRes.data.length > 0) {
+            pmRes.data.forEach((pm: any) => {
+              if (!faList.some(f => (f.po_no && f.po_no === pm.po_no) || (f.mr_no && f.mr_no === pm.po_no))) {
+                faList.push({
+                  mr_no: pm.po_no,
+                  final_arrival_no: pm.po_no,
+                  date: pm.date || pm.po_date,
+                  po_no: pm.po_no,
+                  po_date: pm.date || pm.po_date,
+                  supplier: pm.supplier || pm.challan_supplier,
+                  broker: pm.broker,
+                  lorry_number: pm.lorry_no || pm.lorry_number,
+                  arrival_area_name: pm.area,
+                  grid_details: pm.items || pm.details || pm.grid_details
+                });
+              }
+            });
+          }
+
+          if (mimRes.data && mimRes.data.length > 0) {
+            mimRes.data.forEach((mim: any) => {
+              if (!faList.some(f => (mim.mr_no && f.mr_no === mim.mr_no) || (mim.final_arrival_no && f.final_arrival_no === mim.final_arrival_no))) {
+                faList.push({
+                  mr_no: mim.mr_no || mim.arrival_no,
+                  final_arrival_no: mim.final_arrival_no || mim.arrival_no || mim.mr_no,
+                  date: mim.date || mim.mr_date,
+                  po_no: mim.po_no,
+                  po_date: mim.po_date || mim.date,
+                  supplier: mim.supplier || mim.supplier_name,
+                  broker: mim.broker || mim.broker_name,
+                  lorry_number: mim.lorry_number || mim.lorry_no,
+                  arrival_area_name: mim.arrival_area_name || mim.area,
+                  grid_details: mim.grid_details || mim.details || mim.items
+                });
+              }
+            });
+          }
+
+          if (tmrRes.data && tmrRes.data.length > 0) {
+            tmrRes.data.forEach((tmr: any) => {
+              if (!faList.some(f => (tmr.amad_no && f.mr_no === tmr.amad_no) || (tmr.temporary_arrival_no && f.final_arrival_no === tmr.temporary_arrival_no))) {
+                faList.push({
+                  mr_no: tmr.amad_no || tmr.temporary_arrival_no,
+                  final_arrival_no: tmr.temporary_arrival_no || tmr.amad_no,
+                  date: tmr.date || tmr.arrival_date,
+                  po_no: tmr.po_no,
+                  po_date: tmr.po_date || tmr.date,
+                  supplier: tmr.supplier || tmr.challan_supplier,
+                  broker: tmr.broker,
+                  lorry_number: tmr.lorry_no || tmr.lorry_number,
+                  arrival_area_name: tmr.arrival_area_name || tmr.area,
+                  grid_details: tmr.grid_details || tmr.details || tmr.items
+                });
+              }
+            });
           }
         } catch (e) {
-          console.error("Error fetching final_arrival:", e);
+          console.error("Error fetching arrivals & purchase_master:", e);
         }
       }
 
@@ -383,12 +444,98 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     fetchInspectionRecords();
   }, []);
 
-  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival'] });
+  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'mill_inspection_master', 'temporary_material_received'] });
 
-  const populateFromFinalArrival = (fa: any) => {
+  const loadDetailsForPo = async (poNo: string) => {
+    if (!poNo) return;
+    try {
+      const poClean = poNo.trim();
+      const poUpper = poClean.toUpperCase();
+      let matchedItems: any[] = [];
+
+      if (supabase) {
+        const [pdmRes, scpRes, midRes, pmRes] = await Promise.all([
+          supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
+          supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
+          supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${poClean},mr_no.ilike.${poUpper},po_no.eq.${poClean}`),
+          supabase.from('purchase_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`)
+        ]);
+
+        if (pmRes.data && pmRes.data.length > 0) {
+          const pm = pmRes.data[0];
+          setHeaderForm(prev => ({
+            ...prev,
+            supplier_name: pm.supplier || pm.challan_supplier || prev.supplier_name,
+            broker_name: pm.broker || prev.broker_name,
+            po_date: pm.date || pm.po_date || prev.po_date,
+            lorry_number: pm.lorry_no || pm.lorry_number || prev.lorry_number
+          }));
+        }
+
+        matchedItems = (pdmRes.data && pdmRes.data.length > 0)
+          ? pdmRes.data
+          : ((scpRes.data && scpRes.data.length > 0)
+              ? scpRes.data
+              : (midRes.data || []));
+      }
+
+      if (!matchedItems || matchedItems.length === 0) {
+        const [allPdm, allScp] = await Promise.all([
+          dbModule.fetchAll('purchase_detail_master').catch(() => []),
+          dbModule.fetchAll('sauda_check_point_details').catch(() => [])
+        ]);
+        const pdm = (allPdm || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poUpper);
+        const scp = (allScp || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poUpper);
+        matchedItems = pdm.length > 0 ? pdm : scp;
+      }
+
+      if (matchedItems && matchedItems.length > 0) {
+        const details: InspectionDetailRow[] = matchedItems.map((item: any, i: number) => {
+          const gradeName = item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || "";
+          const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
+          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || "").toUpperCase();
+          const agencyName = item.agency_name || item.agency || "";
+          const agencyCode = item.agency_code || "";
+          const markaName = item.marka_name || item.challan_marka_name || item.marka || item.marks || "";
+          const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
+          const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+
+          return {
+            srl_no: item.srl_no || (i + 1),
+            arrival_grade: gradeName,
+            stock_grade_code: gradeCode,
+            stock_grade_name: gradeName,
+            area: areaName,
+            agency: agencyName,
+            agency_code: agencyCode,
+            marks: markaName,
+            crop_year: item.crop_year || "2026-27",
+            quantity: qtyVal,
+            unit: item.unit || "BALES",
+            challan_gross_wt: nettoVal,
+            receipt_gross_wt: nettoVal,
+            final_receipt_wt: nettoVal,
+            tolerable: item.tolerable || "Yes",
+            premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
+            is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
+            row_remarks: item.remarks || item.row_remarks || "",
+            expanded: false
+          };
+        });
+        setDetailRows(details);
+        showToast(`Loaded ${details.length} item(s) from purchase_detail_master.`);
+      }
+    } catch (e) {
+      console.warn("Error loading details from PO:", e);
+    }
+  };
+
+  const populateFromFinalArrival = async (fa: any) => {
     const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
       ? fa.mr_no
       : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
+
+    const poNo = fa.po_no || fa.mr_no || "";
 
     setHeaderForm(prev => ({
       ...prev,
@@ -397,7 +544,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
       arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
       unloading_date: fa.unloading_date || fa.date || prev.unloading_date || new Date().toISOString().split("T")[0],
-      po_no: fa.po_no || fa.mr_no || prev.po_no,
+      po_no: poNo || prev.po_no,
       po_date: fa.po_date || fa.date || prev.po_date,
       mill_po_no: fa.mr_no || fa.po_no || fa.mill_po_no || fa.arrival_no || displayMrNo || prev.mill_po_no || "",
       mill_po_date: fa.date || fa.po_date || fa.arrival_date || prev.mill_po_date || new Date().toISOString().split("T")[0],
@@ -413,27 +560,90 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       remarks: fa.remarks || prev.remarks
     }));
 
-    const rawGrid = fa.grid_details || fa.details || fa.items;
+    let rawGrid = fa.grid_details || fa.details || fa.items;
     const voucherArea = (fa.arrival_area_name || fa.arrival_area || fa.area_name || fa.area || "").toUpperCase();
 
+    if (typeof rawGrid === "string") {
+      try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+    }
+
+    // Query purchase_detail_master / sauda_check_point_details / mill_inspection_detail if missing or empty
+    if (!Array.isArray(rawGrid) || rawGrid.length === 0) {
+      const searchKeys = [fa.po_no, fa.mr_no, fa.final_arrival_no, fa.arrival_no].filter(Boolean);
+      if (searchKeys.length > 0 && supabase) {
+        try {
+          for (const key of searchKeys) {
+            const cleanKey = String(key).trim();
+            const upperKey = cleanKey.toUpperCase();
+            const [pdmRes, scpRes, midRes] = await Promise.all([
+              supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
+              supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
+              supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`)
+            ]);
+
+            const found = (pdmRes.data && pdmRes.data.length > 0)
+              ? pdmRes.data
+              : ((scpRes.data && scpRes.data.length > 0)
+                  ? scpRes.data
+                  : (midRes.data || []));
+
+            if (found.length > 0) {
+              rawGrid = found;
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn("Could not load from purchase_detail_master:", e);
+        }
+      }
+
+      if (!rawGrid || rawGrid.length === 0) {
+        try {
+          const [allPdm, allScp] = await Promise.all([
+            dbModule.fetchAll('purchase_detail_master').catch(() => []),
+            dbModule.fetchAll('sauda_check_point_details').catch(() => [])
+          ]);
+          const poUpper = String(poNo || '').trim().toUpperCase();
+          const pdm = (allPdm || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poUpper);
+          const scp = (allScp || []).filter((d: any) => String(d.po_no).trim().toUpperCase() === poUpper);
+          rawGrid = pdm.length > 0 ? pdm : scp;
+        } catch (e) {}
+      }
+    }
+
     if (Array.isArray(rawGrid) && rawGrid.length > 0) {
-      const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => ({
-        srl_no: i + 1,
-        arrival_grade: item.challan_grade_name || item.receipt_grade_name || item.grade || "",
-        stock_grade_code: item.receipt_grade_code || item.stock_grade_code || "",
-        stock_grade_name: item.receipt_grade_name || item.stock_grade_name || item.grade || "",
-        area: (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase(),
-        agency: item.agency_name || item.agency || "",
-        marks: item.challan_marka_name || item.marka || item.marks || "",
-        crop_year: item.crop_year || "",
-        quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
-        unit: item.unit || "BALES",
-        challan_gross_wt: Number(item.challan_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
-        receipt_gross_wt: Number(item.receipt_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
-        final_receipt_wt: Number(item.netto_pnto || item.receipt_gross_wt || item.challan_gross_wt || item.gross_weight || item.weight) || 0,
-        tolerable: "Yes",
-        expanded: false
-      }));
+      const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => {
+        const gradeName = item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || "";
+        const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
+        const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase();
+        const agencyName = item.agency_name || item.agency || "";
+        const agencyCode = item.agency_code || "";
+        const markaName = item.marka_name || item.challan_marka_name || item.marka || item.marks || "";
+        const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
+        const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+
+        return {
+          srl_no: item.srl_no || (i + 1),
+          arrival_grade: gradeName,
+          stock_grade_code: gradeCode,
+          stock_grade_name: gradeName,
+          area: areaName,
+          agency: agencyName,
+          agency_code: agencyCode,
+          marks: markaName,
+          crop_year: item.crop_year || "2026-27",
+          quantity: qtyVal,
+          unit: item.unit || "BALES",
+          challan_gross_wt: nettoVal,
+          receipt_gross_wt: nettoVal,
+          final_receipt_wt: nettoVal,
+          tolerable: item.tolerable || "Yes",
+          premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
+          is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
+          row_remarks: item.remarks || item.row_remarks || "",
+          expanded: false
+        };
+      });
       setDetailRows(details);
     } else if (voucherArea) {
       setDetailRows(prev => prev.map(r => ({ ...r, area: r.area || voucherArea })));
@@ -486,46 +696,85 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     let loadedDetails: InspectionDetailRow[] = [];
 
     if (supabase) {
-      const { data } = await supabase
-        .from("material_inspection_details")
-        .select("*")
-        .eq("mr_no", rec.mr_no)
-        .order("srl_no", { ascending: true });
+      const [midRes, inspRes, millDetRes] = await Promise.all([
+        supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true }),
+        supabase.from("inspection_details").select("*").eq("mr_no", rec.mr_no),
+        supabase.from("mill_inspection_detail").select("*").eq("mr_no", rec.mr_no)
+      ]);
 
-      if (data && data.length > 0) {
-        loadedDetails = data.map(d => ({ ...d, expanded: false }));
-      } else {
-        const { data: fallback } = await supabase
-          .from("inspection_details")
-          .select("*")
-          .eq("mr_no", rec.mr_no);
-        if (fallback && fallback.length > 0) {
-          loadedDetails = fallback.map(d => ({ ...d, expanded: false }));
-        }
+      if (midRes.data && midRes.data.length > 0) {
+        loadedDetails = midRes.data.map(d => ({ ...d, expanded: false }));
+      } else if (inspRes.data && inspRes.data.length > 0) {
+        loadedDetails = inspRes.data.map(d => ({ ...d, expanded: false }));
+      } else if (millDetRes.data && millDetRes.data.length > 0) {
+        loadedDetails = millDetRes.data.map(d => ({ ...d, expanded: false }));
       }
     }
 
     if (loadedDetails.length === 0) {
       // Build detail rows from grid_details if available (from Final Arrival)
-      const rawGrid = rec.grid_details;
+      let rawGrid = rec.grid_details;
+      if (typeof rawGrid === 'string') {
+        try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+      }
+
       if (Array.isArray(rawGrid) && rawGrid.length > 0) {
-        loadedDetails = rawGrid.map((item: any, i: number) => ({
-          srl_no: i + 1,
-          arrival_grade: item.challan_grade_name || item.receipt_grade_name || item.grade || "",
-          stock_grade_code: item.receipt_grade_code || item.stock_grade_code || "",
-          stock_grade_name: item.receipt_grade_name || item.stock_grade_name || item.grade || "",
-          area: item.area_name || item.area || "",
-          agency: item.agency_name || item.agency || "",
-          marks: item.challan_marka_name || item.marka || item.marks || "",
-          crop_year: item.crop_year || "",
-          quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
-          unit: item.unit || "BALES",
-          challan_gross_wt: Number(item.challan_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
-          receipt_gross_wt: Number(item.receipt_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
-          final_receipt_wt: Number(item.netto_pnto || item.receipt_gross_wt || item.challan_gross_wt || item.gross_weight || item.weight) || 0,
-          tolerable: "Yes",
-          expanded: false
-        }));
+        loadedDetails = rawGrid.map((item: any, i: number) => {
+          const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
+          const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+
+          return {
+            srl_no: item.srl_no || (i + 1),
+            arrival_grade: item.grade_name || item.challan_grade_name || item.receipt_grade_name || item.variety || item.grade || "",
+            stock_grade_code: item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "",
+            stock_grade_name: item.grade_name || item.receipt_grade_name || item.stock_grade_name || item.grade || "",
+            area: (item.area_name || item.area || "").toUpperCase(),
+            agency: item.agency_name || item.agency || "",
+            agency_code: item.agency_code || "",
+            marks: item.marka_name || item.challan_marka_name || item.marka || item.marks || "",
+            crop_year: item.crop_year || "2026-27",
+            quantity: qtyVal,
+            unit: item.unit || "BALES",
+            challan_gross_wt: nettoVal,
+            receipt_gross_wt: nettoVal,
+            final_receipt_wt: nettoVal,
+            tolerable: item.tolerable || "Yes",
+            premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
+            is_premium: item.is_premium || item.premium === "Yes",
+            row_remarks: item.remarks || item.row_remarks || "",
+            expanded: false
+          };
+        });
+      }
+    }
+
+    // If still empty, attempt to load from purchase_detail_master by PO number
+    if (loadedDetails.length === 0 && rec.po_no) {
+      if (supabase) {
+        const poClean = rec.po_no.trim();
+        const { data: pdm } = await supabase.from('purchase_detail_master').select('*').eq('po_no', poClean);
+        if (pdm && pdm.length > 0) {
+          loadedDetails = pdm.map((item: any, i: number) => {
+            const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.weight || item.quantity || 0);
+            return {
+              srl_no: item.srl_no || (i + 1),
+              arrival_grade: item.grade_name || item.variety || item.grade || "",
+              stock_grade_code: item.grade_code || "",
+              stock_grade_name: item.grade_name || item.variety || item.grade || "",
+              area: (item.area || "").toUpperCase(),
+              agency: item.agency || item.agency_name || "",
+              marks: item.marka || item.marka_name || "",
+              crop_year: item.crop_year || "2026-27",
+              quantity: Number(item.quantity || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0,
+              unit: item.unit || "BALES",
+              challan_gross_wt: nettoVal,
+              receipt_gross_wt: nettoVal,
+              final_receipt_wt: nettoVal,
+              tolerable: "Yes",
+              expanded: false
+            };
+          });
+        }
       }
     }
 
@@ -538,6 +787,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
   const handleHeaderChange = (field: keyof InspectionMasterRecord, value: any) => {
     setHeaderForm(prev => ({ ...prev, [field]: value }));
+    if (field === 'po_no' && value) {
+      loadDetailsForPo(value);
+    }
   };
 
   const handleDetailChange = (index: number, field: keyof InspectionDetailRow, value: any) => {
@@ -1150,11 +1402,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
                     >
                       <option value="">
-                        {pendingArrivalList.length > 0 ? "-- Select Final Arrival Record --" : "-- All Final Arrivals Inspected --"}
+                        {pendingArrivalList.length > 0 ? "-- Select Final Arrival / P.O. Record --" : "-- All Final Arrivals Inspected --"}
                       </option>
                       {pendingArrivalList.map((fa, idx) => (
-                        <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no}>
-                          Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | Arrival No: {fa.mr_no || fa.final_arrival_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                        <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
+                          Arrival / PO #{fa.final_arrival_no || fa.mr_no || fa.po_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
                         </option>
                       ))}
                     </select>
