@@ -749,7 +749,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           chotta_tot_wt_grd: Number(row.chotta_tot_wt_grd) || 0,
           chotta_grade: row.chotta_grade || "",
           tolerable: row.tolerable || "Yes",
-          premium: row.is_premium || row.premium === "Yes" ? "Yes" : "No",
+          premium: row.premium !== undefined && row.premium !== null ? String(row.premium) : (row.is_premium ? "Yes" : "No"),
           row_remarks: row.row_remarks || "",
           jqi_remarks: row.jqi_remarks || "",
           jci_remarks: row.jqi_remarks || ""
@@ -1958,33 +1958,48 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             </select>
                           </td>
 
-                          {/* Premium (Click to Show Quantity in Metric Ton) */}
+                          {/* Premium (Manual Input / Qty in MT) */}
                           <td className="p-1.5 border-r border-slate-200 text-center">
                             <div className="flex flex-col items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
-                                  const nextVal = !isCurrentlyPremium;
-                                  handleDetailChange(idx, "is_premium", nextVal);
-                                  handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
-                                  if (nextVal) {
-                                    handleDetailChange(idx, "unit", "M.T.");
-                                  }
-                                }}
-                                className={`px-2.5 py-1.5 rounded text-xs font-black transition-all flex items-center justify-center gap-1.5 w-full shadow-sm cursor-pointer active:scale-95 ${
-                                  row.is_premium || row.premium === "Yes"
-                                    ? "bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 border border-amber-500 shadow-md ring-2 ring-amber-300/70 animate-pulse"
-                                    : "bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-950 border border-slate-300"
-                                }`}
-                                title="Click on Premium to toggle Quantity display in Metric Tons"
-                              >
-                                <Sparkles className={`w-3.5 h-3.5 ${row.is_premium || row.premium === "Yes" ? "text-amber-950 fill-amber-950" : "text-slate-400"}`} />
-                                <span className="whitespace-nowrap">
-                                  {row.is_premium || row.premium === "Yes" ? "★ Premium" : "Premium"}
-                                </span>
-                              </button>
-                              {(row.is_premium || row.premium === "Yes") && (
+                              <div className="flex items-center gap-1 w-full">
+                                <input
+                                  type="text"
+                                  value={row.premium !== undefined && row.premium !== null ? row.premium : (row.is_premium ? "Yes" : "")}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleDetailChange(idx, "premium", val);
+                                    if (val.trim() !== "" && val.toLowerCase() !== "no") {
+                                      handleDetailChange(idx, "is_premium", true);
+                                    } else {
+                                      handleDetailChange(idx, "is_premium", false);
+                                    }
+                                  }}
+                                  placeholder="Type premium..."
+                                  className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-amber-50/40 font-bold text-amber-950 text-center"
+                                  title="Enter premium manually or type Yes"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
+                                    const nextVal = !isCurrentlyPremium;
+                                    handleDetailChange(idx, "is_premium", nextVal);
+                                    handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
+                                    if (nextVal) {
+                                      handleDetailChange(idx, "unit", "M.T.");
+                                    }
+                                  }}
+                                  className={`p-1 rounded text-xs transition-all cursor-pointer shrink-0 ${
+                                    row.is_premium || row.premium === "Yes"
+                                      ? "bg-amber-400 text-slate-950 font-bold shadow-sm"
+                                      : "bg-slate-100 hover:bg-amber-100 text-slate-600"
+                                  }`}
+                                  title="Toggle Premium status / MT mode"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              {(row.is_premium || row.premium === "Yes" || (row.premium && row.premium.toString().toLowerCase() !== "no" && row.premium.toString().trim() !== "")) && (
                                 <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
                                   {calculateQtyInMt(row).toFixed(3)} MT
                                 </span>

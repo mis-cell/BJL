@@ -91,6 +91,10 @@ import { supabase } from "./lib/supabase";
     if (typeof window !== 'undefined') sessionStorage.setItem('app_db_patched', '1');
     await supabase.rpc("exec_sql", { query: "ALTER TABLE user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;" }).then(() => {}, () => {});
     await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;" }).then(() => {}, () => {});
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE inspection_checklist ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
+    await supabase.rpc("exec_sql", { query: "ALTER TABLE material_inspection ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 

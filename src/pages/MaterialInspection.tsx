@@ -120,6 +120,7 @@ interface InspectionMaster {
   receipt_gross_wt?: number;
   total_challan_gross_wt?: number;
   total_receipt_gross_wt?: number;
+  arival_apmc_fees?: number;
 }
 
 interface InspectionDetailRow {
@@ -473,7 +474,7 @@ export default function MaterialInspection({
 
   // Page States
   const [viewMode, setViewMode] = useState<"dashboard" | "entry">("dashboard");
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -858,6 +859,7 @@ export default function MaterialInspection({
     consignment_no: "",
     consignment_date: new Date().toISOString().split("T")[0],
     arrival_remarks: "",
+    arival_apmc_fees: 0,
   });
 
   const createEmptyRow = (srl: number): InspectionDetailRow => ({
@@ -1621,6 +1623,7 @@ export default function MaterialInspection({
         ).toUpperCase(),
         lorry_number: voucher.lorry_number || voucher.lorry_no || voucher.vehicle_no || prev.lorry_number || "",
         remarks: voucher.remarks || prev.remarks,
+        arival_apmc_fees: Number(voucher.apmc_fees || 0),
       };
     });
 
@@ -2146,6 +2149,7 @@ export default function MaterialInspection({
         consignment_no: (masterData as any).consignment_no || null,
         consignment_date: (masterData as any).consignment_date || null,
         arrival_remarks: (masterData as any).arrival_remarks || null,
+        arival_apmc_fees: Number((masterData as any).arival_apmc_fees) || 0,
         status: 'Completed'
       };
 
@@ -3973,6 +3977,24 @@ export default function MaterialInspection({
                         onChange={handleMasterChange}
                         placeholder="0.00"
                         className="w-full h-8 rounded border border-slate-300 pl-7 pr-2.5 font-bold text-right disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="w-48 font-semibold text-slate-700">Arival APMC Fees</label>
+                    <div className="flex-1 relative flex items-center">
+                      <span className="absolute left-2.5 text-slate-500 font-bold">₹</span>
+                      <input
+                        id="arival_apmc_fees_inspect"
+                        aria-label="Arival APMC Fees"
+                        type="number"
+                        step="0.01"
+                        name="arival_apmc_fees"
+                        value={(masterData as any).arival_apmc_fees || ''}
+                        disabled={!isEditMode}
+                        onChange={handleMasterChange}
+                        placeholder="0.00"
+                        className="w-full h-8 rounded border border-slate-300 pl-7 pr-2.5 font-bold text-right bg-amber-50/40 text-amber-900 disabled:bg-slate-100"
                       />
                     </div>
                   </div>
