@@ -822,6 +822,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       if (!formData.arrival_area_name || !formData.arrival_area_name.trim()) missingFields.push("Arrival Area");
       if (!formData.unit_name || !formData.unit_name.trim()) missingFields.push("Unit");
 
+      if (formData.apmc_fees === undefined || formData.apmc_fees === null || String(formData.apmc_fees).trim() === '' || isNaN(Number(formData.apmc_fees)) || Number(formData.apmc_fees) < 0) {
+        missingFields.push("A.P.M.C Fees (Rs.) (Mandatory field, enter at least 0)");
+      }
+
       if ((Number(formData.challan_material_weight) || 0) <= 0) {
         missingFields.push("CHALLAN WEIGHT (M.T)");
       }
@@ -1850,17 +1854,20 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* APMC */}
                 <div>
                   <label htmlFor="apmc_fees_1622" className="block text-[10px] font-bold text-gray-700 mb-0.5">
-                    A.P.M.C Fees (Rs.)
+                    A.P.M.C Fees (Rs.) <span className="text-red-600 font-bold">*</span>
                   </label>
 
                   <input
                     id="apmc_fees_1622" aria-label="A.P.M.C Fees (Rs.)"
                     type="number"
+                    step="0.01"
+                    min="0"
                     name="apmc_fees"
+                    required
                     placeholder="0.00"
-                    value={formData.apmc_fees || ""}
+                    value={formData.apmc_fees !== undefined && formData.apmc_fees !== null ? formData.apmc_fees : ""}
                     onChange={handleChange}
-                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-semibold"
+                    className={`w-full h-7 rounded border px-2 text-right text-xs font-bold ${String(formData.apmc_fees ?? '').trim() === '' || Number(formData.apmc_fees) < 0 ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-[#174C2C]'}`}
                   />
                 </div>
 

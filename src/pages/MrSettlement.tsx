@@ -518,16 +518,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     gList?: any[],
     agList?: any[],
     mList?: any[],
-    arList?: any[]
+    arList?: any[],
+    inspItem?: any
   ): SettlementDetailColumn => {
     const col = emptyDetailColumn(idx);
-    if (!item && !pDet) return col;
+    if (!item && !pDet && !inspItem) return col;
 
     // 1. Grade
     const rawGrade = 
       item?.grade || item?.grade_name || item?.stock_grade_name || item?.receipt_grade_name || item?.arrival_grade || 
       item?.grade_code || item?.stock_grade_code || item?.receipt_grade_code || item?.challan_grade_name || 
       item?.quality || item?.stock_grade ||
+      inspItem?.grade || inspItem?.grade_name || inspItem?.stock_grade_name || inspItem?.arrival_grade ||
       pDet?.grade_name || pDet?.grade_code || pDet?.grade || pDet?.quality || '';
     
     col.grade = resolveGradeName(rawGrade, gList) || rawGrade || '';
@@ -535,13 +537,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // 2. Area
     const rawArea = 
       item?.area || item?.arrival_area_name || faMaster?.arrival_area_name || inspMaster?.arrival_area_name || 
-      pDet?.area || poData?.area || '';
+      inspItem?.area || pDet?.area || poData?.area || '';
     
     col.area = resolveAreaName(rawArea, arList) || rawArea || '';
 
     // 3. Agency
     const rawAgency = 
       item?.agency_name || item?.agency || item?.agency_code || 
+      inspItem?.agency_name || inspItem?.agency ||
       pDet?.agency_name || pDet?.agency_code || pDet?.agency || poData?.agency || '';
     
     col.agency = resolveAgencyName(rawAgency, agList) || rawAgency || '';
@@ -549,11 +552,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // 4. Marka / Crop
     const rawMarka = 
       item?.marka_name || item?.challan_marka_name || item?.marka || item?.marka_code || item?.challan_marka_code || 
+      inspItem?.marka_name || inspItem?.marka ||
       pDet?.marka_name || pDet?.marka_code || pDet?.marka || '';
     const resolvedMarka = resolveMarkaName(rawMarka, mList) || rawMarka || '';
 
     const rawCrop = 
-      item?.crop_year || item?.crop || faMaster?.crop_year || inspMaster?.crop_year || pDet?.crop_year || poData?.crop_year || '';
+      item?.crop_year || item?.crop || inspItem?.crop_year || faMaster?.crop_year || inspMaster?.crop_year || pDet?.crop_year || poData?.crop_year || '';
 
     col.marka_crop = (resolvedMarka ? resolvedMarka : '') + 
       (rawCrop ? (resolvedMarka ? ` / ${rawCrop}` : rawCrop) : '');
@@ -561,6 +565,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // 5. Quantity
     const rawQty = 
       item?.quantity || item?.quantity_rcpt || item?.quantity_chln || item?.qty || item?.packets || item?.total_packets || item?.bales || 
+      inspItem?.quantity ||
       pDet?.quantity || pDet?.qty || 0;
     
     col.quantity = Number(rawQty) || 0;
@@ -568,36 +573,106 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // 6. Arrival Quantity / Weight (Arr Qty Wt)
     const rawWt = 
       item?.weight || item?.weight_qtl || item?.arr_qty_wt || item?.challan_gross_wt || item?.netto_pnto || 
+      inspItem?.final_receipt_wt || inspItem?.weight || inspItem?.weight_qtl ||
       pDet?.weight_mt || pDet?.weight_qtl || 0;
     
-    col.arr_qty_wt = col.quantity > 0 || item?.weight || item?.arr_qty_wt ? (Number(rawWt) || 0) : 0;
+    col.arr_qty_wt = col.quantity > 0 || item?.weight || item?.arr_qty_wt || inspItem?.final_receipt_wt ? (Number(rawWt) || 0) : 0;
     col.min_qty_wt = col.arr_qty_wt;
 
     // 7. Rate
     const rawRate = 
       item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 
+      inspItem?.rate || inspItem?.rate_qntl ||
       pDet?.rate_qntl || pDet?.rate || poData?.rate_qntl || 0;
     
     col.rate_value = Number(rawRate) || 0;
 
     // 8. Wt / Phota
-    col.wt_phota = col.quantity > 0 ? col.arr_qty_wt / col.quantity : (Number(item?.marks_phota) || 0);
+    col.wt_phota = col.quantity > 0 ? col.arr_qty_wt / col.quantity : (Number(item?.marks_phota || inspItem?.marks_phota) || 0);
 
-    // Moisture / Dust default claims
-    if (item?.moist_claim != null) col.moist_claim = Number(item.moist_claim);
+    // 9. Active Deductions / Claims Audit Sheet mappings from Inspection Details:
+    // Grade Down (%)
+    // SETT (%) comes from Inspection "Gr. Down" in "Mill Settlement %" table
+    const rawGdSett = inspItem?.settlement_grade_down ?? item?.settlement_grade_down ?? 
+      inspItem?.grade_down_sett ?? item?.grade_down_sett ?? 
+      inspItem?.gd_sett ?? item?.gd_sett ?? 
+      inspItem?.sett_grade_down ?? item?.sett_grade_down;
+    if (rawGdSett != null) col.gd_sett = Number(rawGdSett);
+
+    // CLAIM (%) comes from Inspection "Grade Down Claim" or "Grade Down Act"
+    const rawGdClaim = inspItem?.grade_down_claim ?? item?.grade_down_claim ?? 
+      inspItem?.claim_grade_down ?? item?.claim_grade_down ?? 
+      inspItem?.grade_down_act ?? item?.grade_down_act ?? 
+      inspItem?.actual_grade_down ?? item?.actual_grade_down ?? 
+      inspItem?.gd_claim ?? item?.gd_claim;
+    if (rawGdClaim != null) col.gd_claim = Number(rawGdClaim);
+    else if (inspMaster?.claim_grade_down != null) col.gd_claim = Number(inspMaster.claim_grade_down);
+
+    // Moisture (%)
+    // SETT (%) comes from Inspection "Moisture" in "Mill Settlement %" table
+    const rawMoistSett = inspItem?.settlement_moisture ?? item?.settlement_moisture ?? 
+      inspItem?.moisture_sett ?? item?.moisture_sett ?? 
+      inspItem?.moist_sett ?? item?.moist_sett ?? 
+      inspItem?.sett_moisture ?? item?.sett_moisture;
+    if (rawMoistSett != null) col.moist_sett = Number(rawMoistSett);
+
+    // CLAIM (%) comes from Inspection "Moisture Claim" or "Moisture Act" or "Insp Read Avg"
+    const rawMoistClaim = inspItem?.moisture_claim ?? item?.moisture_claim ?? 
+      inspItem?.claim_moisture ?? item?.claim_moisture ?? 
+      inspItem?.moisture_act ?? item?.moisture_act ?? 
+      inspItem?.actual_moisture ?? item?.actual_moisture ?? 
+      inspItem?.insp_read_avg ?? item?.insp_read_avg ?? 
+      inspItem?.moist_claim ?? item?.moist_claim;
+    if (rawMoistClaim != null) col.moist_claim = Number(rawMoistClaim);
     else if (inspMaster?.claim_moisture != null) col.moist_claim = Number(inspMaster.claim_moisture);
 
-    if (item?.moist_sett != null) col.moist_sett = Number(item.moist_sett);
+    // Dust (%)
+    // SETT (%) comes from Inspection "Dust" in "Mill Settlement %" table
+    const rawDustSett = inspItem?.settlement_dust ?? item?.settlement_dust ?? 
+      inspItem?.dust_sett ?? item?.dust_sett ?? 
+      inspItem?.sett_dust ?? item?.sett_dust;
+    if (rawDustSett != null) col.dust_sett = Number(rawDustSett);
 
-    if (item?.dust_claim != null) col.dust_claim = Number(item.dust_claim);
+    // CLAIM (%) comes from Inspection "Dust Claim" or "Dust Act"
+    const rawDustClaim = inspItem?.dust_claim ?? item?.dust_claim ?? 
+      inspItem?.claim_dust ?? item?.claim_dust ?? 
+      inspItem?.dust_act ?? item?.dust_act ?? 
+      inspItem?.actual_dust ?? item?.actual_dust ?? 
+      inspItem?.dust_claim ?? item?.dust_claim;
+    if (rawDustClaim != null) col.dust_claim = Number(rawDustClaim);
     else if (inspMaster?.claim_dust != null) col.dust_claim = Number(inspMaster.claim_dust);
 
-    if (item?.dust_sett != null) col.dust_sett = Number(item.dust_sett);
+    // NCV (%)
+    // SETT (%) comes from Inspection "NCV" in "Mill Settlement %" table
+    const rawNcvSett = inspItem?.settlement_ncv ?? item?.settlement_ncv ?? 
+      inspItem?.ncv_sett ?? item?.ncv_sett ?? 
+      inspItem?.sett_ncv ?? item?.sett_ncv;
+    if (rawNcvSett != null) col.ncv_sett = Number(rawNcvSett);
 
-    if (item?.ncv_claim != null) col.ncv_claim = Number(item.ncv_claim);
+    // CLAIM (%) comes from Inspection "NCV Claim" or "NCV Act"
+    const rawNcvClaim = inspItem?.ncv_claim ?? item?.ncv_claim ?? 
+      inspItem?.claim_ncv ?? item?.claim_ncv ?? 
+      inspItem?.ncv_act ?? item?.ncv_act ?? 
+      inspItem?.actual_ncv ?? item?.actual_ncv ?? 
+      inspItem?.ncv_claim ?? item?.ncv_claim;
+    if (rawNcvClaim != null) col.ncv_claim = Number(rawNcvClaim);
     else if (inspMaster?.claim_ncv != null) col.ncv_claim = Number(inspMaster.claim_ncv);
 
-    if (item?.ncv_sett != null) col.ncv_sett = Number(item.ncv_sett);
+    // PO / Grade / Delivery Claim
+    const rawPoGradeSett = inspItem?.po_grade_sett ?? item?.po_grade_sett;
+    if (rawPoGradeSett != null) col.po_grade_sett = Number(rawPoGradeSett);
+
+    const rawPoGradeClaim = inspItem?.po_grade_claim ?? item?.po_grade_claim ?? 
+      inspItem?.delivery_claim ?? item?.delivery_claim;
+    if (rawPoGradeClaim != null) col.po_grade_claim = Number(rawPoGradeClaim);
+    else if (inspMaster?.delivery_claim != null) col.po_grade_claim = Number(inspMaster.delivery_claim);
+
+    // Total Claim calculation
+    const mF = (Number(col.moist_claim || 0) - Number(col.moist_sett || 0));
+    const dF = (Number(col.dust_claim || 0) - Number(col.dust_sett || 0));
+    const nF = (Number(col.ncv_claim || 0) - Number(col.ncv_sett || 0));
+    const gdF = (Number(col.gd_claim || 0) - Number(col.gd_sett || 0));
+    col.claim_settlement = Number((mF + dF + nF + gdF).toFixed(2));
 
     return col;
   };
@@ -1004,20 +1079,42 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      const { data: inspMaster } = await supabase
-        .from('mill_inspection_master')
-        .select('*')
-        .eq('mr_no', targetMrNo)
-        .maybeSingle();
+      let inspMaster: any = null;
+      try {
+        const [matInspRes, millInspRes, inspMRes] = await Promise.all([
+          supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
+          supabase.from('mill_inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
+          supabase.from('inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle()
+        ]);
+        inspMaster = matInspRes?.data || millInspRes?.data || inspMRes?.data || null;
+      } catch (e) {
+        console.warn("Error fetching inspection master:", e);
+      }
 
       let inspDetails: any[] = [];
       if (inspMaster) {
-        const { data: iDet } = await supabase
-          .from('mill_inspection_detail')
-          .select('*')
-          .eq('mr_no', targetMrNo)
-          .order('srl_no', { ascending: true });
-        if (iDet) inspDetails = iDet;
+        if (inspMaster.grid_details) {
+          if (Array.isArray(inspMaster.grid_details)) inspDetails = inspMaster.grid_details;
+          else if (typeof inspMaster.grid_details === 'string') {
+            try { inspDetails = JSON.parse(inspMaster.grid_details); } catch (e) {}
+          }
+        } else if (inspMaster.details && Array.isArray(inspMaster.details)) {
+          inspDetails = inspMaster.details;
+        }
+      }
+
+      if (inspDetails.length === 0) {
+        try {
+          const [matDetRes, millDetRes, inspDetRes] = await Promise.all([
+            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true }),
+            supabase.from('mill_inspection_detail').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true }),
+            supabase.from('inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true })
+          ]);
+          const fetchedDet = matDetRes?.data || millDetRes?.data || inspDetRes?.data || [];
+          if (fetchedDet.length > 0) inspDetails = fetchedDet;
+        } catch (e) {
+          console.warn("Error fetching inspection details:", e);
+        }
       }
 
       const poNoForDet = faMaster?.po_no || inspMaster?.po_no || '';
@@ -1099,8 +1196,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             const newCols = [1, 2, 3, 4].map(idx => {
               const dbMatch = existingDetails.find(d => d.col_index === idx);
               const srcItem = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
+              const inspItem = inspDetails[idx - 1] || null;
               const pDet = poDetails[idx - 1] || null;
-              const fallbackCol = buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null);
+              const fallbackCol = buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
 
               if (dbMatch) {
                 const merged = { ...emptyDetailColumn(idx), ...dbMatch };
@@ -1111,6 +1209,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (!merged.quantity && fallbackCol.quantity) merged.quantity = fallbackCol.quantity;
                 if (!merged.arr_qty_wt && fallbackCol.arr_qty_wt) merged.arr_qty_wt = fallbackCol.arr_qty_wt;
                 if (!merged.rate_value && fallbackCol.rate_value) merged.rate_value = fallbackCol.rate_value;
+                if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;
+                if (merged.gd_claim == null || merged.gd_claim === 0) merged.gd_claim = fallbackCol.gd_claim;
+                if (merged.moist_sett == null || merged.moist_sett === 0) merged.moist_sett = fallbackCol.moist_sett;
+                if (merged.moist_claim == null || merged.moist_claim === 0) merged.moist_claim = fallbackCol.moist_claim;
+                if (merged.dust_sett == null || merged.dust_sett === 0) merged.dust_sett = fallbackCol.dust_sett;
+                if (merged.dust_claim == null || merged.dust_claim === 0) merged.dust_claim = fallbackCol.dust_claim;
+                if (merged.ncv_sett == null || merged.ncv_sett === 0) merged.ncv_sett = fallbackCol.ncv_sett;
+                if (merged.ncv_claim == null || merged.ncv_claim === 0) merged.ncv_claim = fallbackCol.ncv_claim;
                 return merged;
               }
               return fallbackCol;
@@ -1119,8 +1225,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           } else {
             const newCols = [1, 2, 3, 4].map(idx => {
               const srcItem = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
+              const inspItem = inspDetails[idx - 1] || null;
               const pDet = poDetails[idx - 1] || null;
-              return buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null);
+              return buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
             });
             setDetailCols(newCols);
           }
@@ -1157,8 +1264,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         const populatedCols = [1, 2, 3, 4].map(idx => {
           const item = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
+          const inspItem = inspDetails[idx - 1] || null;
           const pDet = poDetails[idx - 1] || null;
-          return buildSettlementCol(idx, item, pDet, faMaster, inspMaster, null);
+          return buildSettlementCol(idx, item, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
         });
 
         const activeColsCount = populatedCols.filter(c => 
@@ -1180,14 +1288,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             c.po_grade_sett = 0;
             c.claim_settlement = 0;
           } else if (inspMaster) {
-            if (inspMaster.claim_moisture != null) c.moist_claim = Number((Number(inspMaster.claim_moisture) / activeColsCount).toFixed(2));
-            if (inspMaster.claim_dust != null) c.dust_claim = Number((Number(inspMaster.claim_dust) / activeColsCount).toFixed(2));
-            if (inspMaster.claim_ncv != null) c.ncv_claim = Number((Number(inspMaster.claim_ncv) / activeColsCount).toFixed(2));
+            if (c.moist_claim === 0 && inspMaster.claim_moisture != null) c.moist_claim = Number((Number(inspMaster.claim_moisture) / activeColsCount).toFixed(2));
+            if (c.dust_claim === 0 && inspMaster.claim_dust != null) c.dust_claim = Number((Number(inspMaster.claim_dust) / activeColsCount).toFixed(2));
+            if (c.ncv_claim === 0 && inspMaster.claim_ncv != null) c.ncv_claim = Number((Number(inspMaster.claim_ncv) / activeColsCount).toFixed(2));
+            if (c.gd_claim === 0 && inspMaster.claim_grade_down != null) c.gd_claim = Number((Number(inspMaster.claim_grade_down) / activeColsCount).toFixed(2));
           }
+          const gdF = (Number(c.gd_claim || 0) - Number(c.gd_sett || 0));
           const mF = (Number(c.moist_claim || 0) - Number(c.moist_sett || 0));
           const dF = (Number(c.dust_claim || 0) - Number(c.dust_sett || 0));
           const nF = (Number(c.ncv_claim || 0) - Number(c.ncv_sett || 0));
-          c.claim_settlement = Number((mF + dF + nF).toFixed(2));
+          c.claim_settlement = Number((gdF + mF + dF + nF).toFixed(2));
         });
 
         setMasterData(prefilledMaster);
@@ -1225,8 +1335,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       const populatedCols = [1, 2, 3, 4].map(idx => {
         const item = inspDetails[idx - 1] || null;
+        const inspItem = inspDetails[idx - 1] || null;
         const pDet = poDetails[idx - 1] || null;
-        return buildSettlementCol(idx, item, pDet, null, inspMaster, null);
+        return buildSettlementCol(idx, item, pDet, null, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
       });
 
       const activeColsCountFallback = populatedCols.filter(c => 
@@ -1248,14 +1359,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           c.po_grade_sett = 0;
           c.claim_settlement = 0;
         } else if (inspMaster) {
-          if (inspMaster.claim_moisture != null) c.moist_claim = Number((Number(inspMaster.claim_moisture) / activeColsCountFallback).toFixed(2));
-          if (inspMaster.claim_dust != null) c.dust_claim = Number((Number(inspMaster.claim_dust) / activeColsCountFallback).toFixed(2));
-          if (inspMaster.claim_ncv != null) c.ncv_claim = Number((Number(inspMaster.claim_ncv) / activeColsCountFallback).toFixed(2));
+          if (c.moist_claim === 0 && inspMaster.claim_moisture != null) c.moist_claim = Number((Number(inspMaster.claim_moisture) / activeColsCountFallback).toFixed(2));
+          if (c.dust_claim === 0 && inspMaster.claim_dust != null) c.dust_claim = Number((Number(inspMaster.claim_dust) / activeColsCountFallback).toFixed(2));
+          if (c.ncv_claim === 0 && inspMaster.claim_ncv != null) c.ncv_claim = Number((Number(inspMaster.claim_ncv) / activeColsCountFallback).toFixed(2));
+          if (c.gd_claim === 0 && inspMaster.claim_grade_down != null) c.gd_claim = Number((Number(inspMaster.claim_grade_down) / activeColsCountFallback).toFixed(2));
         }
+        const gdF = (Number(c.gd_claim || 0) - Number(c.gd_sett || 0));
         const mF = (Number(c.moist_claim || 0) - Number(c.moist_sett || 0));
         const dF = (Number(c.dust_claim || 0) - Number(c.dust_sett || 0));
         const nF = (Number(c.ncv_claim || 0) - Number(c.ncv_sett || 0));
-        c.claim_settlement = Number((mF + dF + nF).toFixed(2));
+        c.claim_settlement = Number((gdF + mF + dF + nF).toFixed(2));
       });
 
       setMasterData(prefilledMaster);
@@ -3592,10 +3705,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           {[1, 2, 3, 4].map(idx => {
                             const col = detailCols[idx-1];
                             const isColActive = (Number(col?.quantity) || 0) > 0 || (Number(col?.arr_qty_wt) || 0) > 0 || (Number(col?.wt_quantity) || 0) > 0;
+                            const gdF = isColActive ? (Number(col?.gd_claim || 0) - Number(col?.gd_sett || 0)) : 0;
                             const mF = isColActive ? (Number(col?.moist_claim || 0) - Number(col?.moist_sett || 0)) : 0;
                             const dF = isColActive ? (Number(col?.dust_claim || 0) - Number(col?.dust_sett || 0)) : 0;
                             const nF = isColActive ? (Number(col?.ncv_claim || 0) - Number(col?.ncv_sett || 0)) : 0;
-                            const totalClaimVal = mF + dF + nF;
+                            const totalClaimVal = gdF + mF + dF + nF;
                             return (
                               <td key={idx} colSpan={3} className="px-2 py-1.5 border-r border-gray-300 text-center font-black text-red-700 bg-red-100/50 text-[11px]">
                                 {isColActive ? `${totalClaimVal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%` : '0.0%'}

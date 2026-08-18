@@ -369,7 +369,17 @@ export const mapItemsToDetailCols = (
         marka_crop: marka,
         quantity: qty,
         arr_qty_wt: wt,
-        rate_value: rate
+        rate_value: rate,
+        gd_claim: Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.grade_down_act ?? 0),
+        gd_sett: Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? 0),
+        moist_claim: Number(item.moist_claim ?? item.moisture_claim ?? item.claim_moisture ?? item.moisture_act ?? 0),
+        moist_sett: Number(item.moist_sett ?? item.settlement_moisture ?? item.moisture_sett ?? 0),
+        dust_claim: Number(item.dust_claim ?? item.dust_claim ?? item.claim_dust ?? item.dust_act ?? 0),
+        dust_sett: Number(item.dust_sett ?? item.settlement_dust ?? item.dust_sett ?? 0),
+        ncv_claim: Number(item.ncv_claim ?? item.ncv_claim ?? item.claim_ncv ?? item.ncv_act ?? 0),
+        ncv_sett: Number(item.ncv_sett ?? item.settlement_ncv ?? item.ncv_sett ?? 0),
+        po_grade_claim: Number(item.po_grade_claim ?? item.delivery_claim ?? 0),
+        po_grade_sett: Number(item.po_grade_sett ?? 0),
       };
     }
   });
