@@ -22,7 +22,8 @@ import {
   ArrowLeft,
   Save,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Lock
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
@@ -126,7 +127,67 @@ interface InspectionDetailRow {
   jqi_remarks?: string;
   jci_remarks?: string;
   expanded?: boolean;
+  is_auto?: boolean;
+  auto_fields?: string[];
 }
+
+export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionDetailRow): boolean => {
+  if (row.is_auto === false) return false;
+  if (field === "lorry_read_avg" || field === "insp_read_avg") return true;
+  if (row.auto_fields && Array.isArray(row.auto_fields) && row.auto_fields.includes(field as string)) {
+    return true;
+  }
+  if (row.is_auto) {
+    const defaultAutoFields: (keyof InspectionDetailRow)[] = [
+      "arrival_grade",
+      "stock_grade_code",
+      "stock_grade_name",
+      "area",
+      "agency",
+      "agency_code",
+      "marks",
+      "crop_year",
+      "quantity",
+      "unit",
+      "challan_gross_wt",
+      "receipt_gross_wt",
+      "rate",
+      "rate_qntl"
+    ];
+    if (defaultAutoFields.includes(field)) {
+      return true;
+    }
+    const val = row[field];
+    if (val !== undefined && val !== null && val !== "" && val !== 0 && val !== "0") {
+      if (
+        field === "lot" ||
+        field === "final_receipt_wt" ||
+        field === "moisture_act" ||
+        field === "moisture_claim" ||
+        field === "dust_act" ||
+        field === "dust_claim" ||
+        field === "ncv_act" ||
+        field === "ncv_claim" ||
+        field === "grade_down_act" ||
+        field === "grade_down_claim" ||
+        field === "settlement_moisture" ||
+        field === "settlement_grade_down" ||
+        field === "settlement_dust" ||
+        field === "settlement_ncv"
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+export const getFieldInputStyle = (isBlocked: boolean, customClasses = "") => {
+  if (isBlocked) {
+    return `w-full border border-blue-300/90 bg-blue-50/90 text-blue-950 font-bold rounded px-2 py-1 text-xs cursor-not-allowed select-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] transition-all ${customClasses}`;
+  }
+  return `w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 bg-white text-slate-900 transition-all ${customClasses}`;
+};
 
 // Calculate Quantity in Metric Tons (MT)
 export const calculateQtyInMt = (row: InspectionDetailRow): number => {
@@ -465,22 +526,45 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       const poClean = poNo.trim();
       const poUpper = poClean.toUpperCase();
       let matchedItems: any[] = [];
+      let gradeMap: Record<string, string> = {};
+      let agencyMap: Record<string, string> = {};
+      let markaMap: Record<string, string> = {};
 
       if (supabase) {
-        const [pdmRes, scpRes, midRes, pmRes] = await Promise.all([
+        const [pdmRes, scpRes, midRes, pmRes, gradesRes, agenciesRes, markasRes] = await Promise.all([
           supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${poClean},mr_no.ilike.${poUpper},po_no.eq.${poClean}`),
-          supabase.from('purchase_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`)
+          supabase.from('purchase_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
+          supabase.from('grade_master').select('*'),
+          supabase.from('agency_master').select('*'),
+          supabase.from('marka_master').select('*')
         ]);
+
+        if (gradesRes.data) {
+          gradesRes.data.forEach((g: any) => {
+            if (g.grade_code && g.grade_name) gradeMap[g.grade_code] = g.grade_name;
+          });
+        }
+        if (agenciesRes.data) {
+          agenciesRes.data.forEach((a: any) => {
+            if (a.agency_code && a.agency_name) agencyMap[a.agency_code] = a.agency_name;
+          });
+        }
+        if (markasRes.data) {
+          markasRes.data.forEach((m: any) => {
+            if (m.marka_code && m.marka_name) markaMap[m.marka_code] = m.marka_name;
+          });
+        }
 
         if (pmRes.data && pmRes.data.length > 0) {
           const pm = pmRes.data[0];
           setHeaderForm(prev => ({
             ...prev,
+            po_no: pm.po_no || prev.po_no,
+            po_date: pm.date || pm.po_date || prev.po_date,
             supplier_name: pm.supplier || pm.challan_supplier || prev.supplier_name,
             broker_name: pm.broker || prev.broker_name,
-            po_date: pm.date || pm.po_date || prev.po_date,
             lorry_number: pm.lorry_no || pm.lorry_number || prev.lorry_number
           }));
         }
@@ -504,27 +588,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (matchedItems && matchedItems.length > 0) {
         const details: InspectionDetailRow[] = matchedItems.map((item: any, i: number) => {
-          const gradeName = item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || "";
           const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
-          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || "").toUpperCase();
-          const agencyName = item.agency_name || item.agency || "";
+          const resolvedGradeName = gradeMap[gradeCode] || item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || gradeCode;
           const agencyCode = item.agency_code || "";
-          const markaName = item.marka_name || item.challan_marka_name || item.marka || item.marks || "";
+          const resolvedAgencyName = agencyMap[agencyCode] || item.agency_name || item.agency || agencyCode;
+          const markaCode = item.marka_code || item.challan_marka_code || "";
+          const resolvedMarkaName = markaMap[markaCode] || item.marka_name || item.challan_marka_name || item.marka || item.marks || markaCode;
+          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || "").toUpperCase();
           const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
           const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+          const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
           return {
             srl_no: item.srl_no || (i + 1),
-            arrival_grade: gradeName,
+            arrival_grade: resolvedGradeName,
             stock_grade_code: gradeCode,
-            stock_grade_name: gradeName,
+            stock_grade_name: resolvedGradeName,
             area: areaName,
-            agency: agencyName,
+            agency: resolvedAgencyName,
             agency_code: agencyCode,
-            marks: markaName,
+            marks: resolvedMarkaName,
             crop_year: item.crop_year || "2026-27",
             quantity: qtyVal,
             unit: item.unit || "BALES",
+            rate: rateVal,
+            rate_qntl: rateVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
             final_receipt_wt: nettoVal,
@@ -532,6 +620,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
             is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
             row_remarks: item.remarks || item.row_remarks || "",
+            is_auto: true,
             expanded: false
           };
         });
@@ -654,6 +743,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
           is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
           row_remarks: item.remarks || item.row_remarks || "",
+          is_auto: true,
           expanded: false
         };
       });
@@ -716,11 +806,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ]);
 
       if (midRes.data && midRes.data.length > 0) {
-        loadedDetails = midRes.data.map(d => ({ ...d, expanded: false }));
+        loadedDetails = midRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
       } else if (inspRes.data && inspRes.data.length > 0) {
-        loadedDetails = inspRes.data.map(d => ({ ...d, expanded: false }));
+        loadedDetails = inspRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
       } else if (millDetRes.data && millDetRes.data.length > 0) {
-        loadedDetails = millDetRes.data.map(d => ({ ...d, expanded: false }));
+        loadedDetails = millDetRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
       }
     }
 
@@ -755,6 +845,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
             is_premium: item.is_premium || item.premium === "Yes",
             row_remarks: item.remarks || item.row_remarks || "",
+            is_auto: true,
             expanded: false
           };
         });
@@ -784,6 +875,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               receipt_gross_wt: nettoVal,
               final_receipt_wt: nettoVal,
               tolerable: "Yes",
+              is_auto: true,
               expanded: false
             };
           });
@@ -802,6 +894,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setHeaderForm(prev => ({ ...prev, [field]: value }));
     if (field === 'po_no' && value) {
       loadDetailsForPo(value);
+    } else if ((field === 'mr_no' || field === 'arrival_no') && value) {
+      const cleanVal = String(value).trim().toUpperCase();
+      const match = finalArrivalList.find(fa => 
+        String(fa.mr_no || '').trim().toUpperCase() === cleanVal ||
+        String(fa.final_arrival_no || '').trim().toUpperCase() === cleanVal ||
+        String(fa.arrival_no || '').trim().toUpperCase() === cleanVal
+      );
+      if (match) {
+        populateFromFinalArrival(match);
+      }
     }
   };
 
@@ -1441,8 +1543,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-emerald-700" />
                       <span className="text-xs font-bold text-emerald-950">
-                        Import / Pick From Final Arrival ({pendingArrivalList.length} Pending):
+                        Import / Pick From Final Arrival & Purchase Master:
                       </span>
+                      {pendingArrivalList.length > 0 && (
+                        <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          {pendingArrivalList.length} Pending
+                        </span>
+                      )}
                     </div>
                     <select
                       onChange={(e) => {
@@ -1450,21 +1557,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                         const selectedFa = finalArrivalList.find(f => 
                           (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
                           (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
-                          (f.mr_no && String(f.mr_no) === e.target.value)
+                          (f.mr_no && String(f.mr_no) === e.target.value) ||
+                          (f.po_no && String(f.po_no) === e.target.value)
                         );
                         if (selectedFa) populateFromFinalArrival(selectedFa);
                       }}
                       defaultValue=""
                       className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
                     >
-                      <option value="">
-                        {pendingArrivalList.length > 0 ? "-- Select Final Arrival / P.O. Record --" : "-- All Final Arrivals Inspected --"}
-                      </option>
-                      {pendingArrivalList.map((fa, idx) => (
-                        <option key={idx} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
-                          Arrival / PO #{fa.final_arrival_no || fa.mr_no || fa.po_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
-                        </option>
-                      ))}
+                      <option value="">-- Select Final Arrival / P.O. Record to Auto-Fill --</option>
+                      {pendingArrivalList.length > 0 && (
+                        <optgroup label="Pending Inspection">
+                          {pendingArrivalList.map((fa, idx) => (
+                            <option key={`p-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
+                              Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="All Final Arrivals & POs">
+                        {finalArrivalList.map((fa, idx) => (
+                          <option key={`a-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
+                            Arrival #{fa.final_arrival_no || fa.mr_no || fa.po_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
                 );
@@ -1697,18 +1814,33 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
               <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-extrabold text-slate-900">Inspection Details</h2>
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-base font-extrabold text-slate-900">Inspection Details</h2>
+                    <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-0.5 rounded-full border border-blue-200">
+                      {detailRows.length} {detailRows.length === 1 ? "Row" : "Rows"}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Horizontal scroll + Expand Row on every record for comprehensive quality audit details
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-1 rounded-full border border-blue-200">
-                    {detailRows.length} {detailRows.length === 1 ? "Row" : "Rows"}
-                  </span>
+
+                {/* Color Legend & Add Row */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs text-[11px]">
+                    <span className="font-bold text-slate-500 mr-1">Field Legend:</span>
+                    <span className="inline-flex items-center gap-1 bg-blue-100/90 text-blue-900 border border-blue-300 px-2 py-0.5 rounded font-extrabold shadow-2xs" title="Auto-populated from Arrival / PO / Master (Protected from manual edits)">
+                      <Lock className="w-3 h-3 text-blue-700" />
+                      Auto-Populated &amp; Blocked
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded font-medium">
+                      Manual Entry Allowed
+                    </span>
+                  </div>
+
                   <button
                     onClick={handleAddRow}
-                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 shadow-sm"
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-1 shadow-sm transition-all"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Row</span>
@@ -1793,633 +1925,832 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {detailRows.map((row, idx) => (
-                      <React.Fragment key={idx}>
-                        <tr className={`border-b border-slate-200 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"} ${row.expanded ? "bg-blue-50/50" : ""}`}>
-                          {/* Srl No */}
-                          <td className="p-2 border-r border-slate-200 text-center font-extrabold text-slate-700 sticky left-0 bg-white z-10">
-                            {idx + 1}
-                          </td>
+                    {detailRows.map((row, idx) => {
+                      const isArrivalGradeBlocked = isAutoBlocked(row, "arrival_grade");
+                      const isStockGradeCodeBlocked = isAutoBlocked(row, "stock_grade_code");
+                      const isStockGradeNameBlocked = isAutoBlocked(row, "stock_grade_name");
+                      const isAreaBlocked = isAutoBlocked(row, "area");
+                      const isAgencyBlocked = isAutoBlocked(row, "agency");
+                      const isMarksBlocked = isAutoBlocked(row, "marks");
+                      const isCropYearBlocked = isAutoBlocked(row, "crop_year");
+                      const isLotBlocked = isAutoBlocked(row, "lot");
+                      const isQuantityBlocked = isAutoBlocked(row, "quantity");
+                      const isUnitBlocked = isAutoBlocked(row, "unit");
+                      const isChallanGrossWtBlocked = isAutoBlocked(row, "challan_gross_wt");
+                      const isReceiptGrossWtBlocked = isAutoBlocked(row, "receipt_gross_wt");
+                      const isGrossWeightBatchBlocked = isAutoBlocked(row, "gross_weight_batch");
+                      const isAddWeightBlocked = isAutoBlocked(row, "add_weight");
+                      const isLessWeightBlocked = isAutoBlocked(row, "less_weight");
+                      const isReducedWeightBlocked = isAutoBlocked(row, "reduced_weight");
+                      const isLorryMoistureMinBlocked = isAutoBlocked(row, "lorry_moisture_min");
+                      const isLorryMoistureMaxBlocked = isAutoBlocked(row, "lorry_moisture_max");
+                      const isLorryReadMinBlocked = isAutoBlocked(row, "lorry_read_min");
+                      const isLorryReadMaxBlocked = isAutoBlocked(row, "lorry_read_max");
+                      const isInspReadMinBlocked = isAutoBlocked(row, "insp_read_min");
+                      const isInspReadMaxBlocked = isAutoBlocked(row, "insp_read_max");
+                      const isMoistureActBlocked = isAutoBlocked(row, "moisture_act");
+                      const isMoistureClaimBlocked = isAutoBlocked(row, "moisture_claim");
+                      const isDustActBlocked = isAutoBlocked(row, "dust_act");
+                      const isDustClaimBlocked = isAutoBlocked(row, "dust_claim");
+                      const isNcvActBlocked = isAutoBlocked(row, "ncv_act");
+                      const isNcvClaimBlocked = isAutoBlocked(row, "ncv_claim");
+                      const isGradeDownActBlocked = isAutoBlocked(row, "grade_down_act");
+                      const isGradeDownClaimBlocked = isAutoBlocked(row, "grade_down_claim");
+                      const isFinalReceiptWtBlocked = isAutoBlocked(row, "final_receipt_wt");
+                      const isSettlementMoistureBlocked = isAutoBlocked(row, "settlement_moisture");
+                      const isSettlementGradeDownBlocked = isAutoBlocked(row, "settlement_grade_down");
+                      const isSettlementDustBlocked = isAutoBlocked(row, "settlement_dust");
+                      const isSettlementNcvBlocked = isAutoBlocked(row, "settlement_ncv");
+                      const isRopesWeightBlocked = isAutoBlocked(row, "ropes_weight");
+                      const isRopesTotWtGrdBlocked = isAutoBlocked(row, "ropes_tot_wt_grd");
+                      const isRopesGradeBlocked = isAutoBlocked(row, "ropes_grade");
+                      const isChottaWeightBlocked = isAutoBlocked(row, "chotta_weight");
+                      const isChottaTotWtGrdBlocked = isAutoBlocked(row, "chotta_tot_wt_grd");
+                      const isChottaGradeBlocked = isAutoBlocked(row, "chotta_grade");
 
-                          {/* Arrival Grade */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.arrival_grade || ""}
-                              onChange={(e) => handleDetailChange(idx, "arrival_grade", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500"
-                            />
-                          </td>
+                      return (
+                        <React.Fragment key={idx}>
+                          <tr className={`border-b border-slate-200 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"} ${row.expanded ? "bg-blue-50/50" : ""}`}>
+                            {/* Srl No */}
+                            <td className="p-2 border-r border-slate-200 text-center font-extrabold text-slate-700 sticky left-0 bg-white z-10">
+                              <div className="flex items-center justify-center gap-1">
+                                <span>{idx + 1}</span>
+                                {row.is_auto && (
+                                  <span title="Auto-filled from Arrival / PO">
+                                    <Lock className="w-2.5 h-2.5 text-blue-600 inline" />
+                                  </span>
+                                )}
+                              </div>
+                            </td>
 
-                          {/* Stock Grade Code & Name */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.stock_grade_code || ""}
-                              onChange={(e) => handleDetailChange(idx, "stock_grade_code", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.stock_grade_name || ""}
-                              onChange={(e) => handleDetailChange(idx, "stock_grade_name", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500"
-                            />
-                          </td>
-
-                          {/* Area & Agency */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.area || ""}
-                              onChange={(e) => handleDetailChange(idx, "area", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.agency || ""}
-                              onChange={(e) => handleDetailChange(idx, "agency", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Marks, Crop Year, Lot */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.marks || ""}
-                              onChange={(e) => handleDetailChange(idx, "marks", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.crop_year || ""}
-                              onChange={(e) => handleDetailChange(idx, "crop_year", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.lot || ""}
-                              onChange={(e) => handleDetailChange(idx, "lot", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Quantity & Unit */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <div className="flex flex-col gap-0.5">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={
-                                  (row.is_premium || row.premium === "Yes")
-                                    ? calculateQtyInMt(row)
-                                    : (row.quantity || 0)
-                                }
-                                onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  if (row.is_premium || row.premium === "Yes") {
-                                    handleDetailChange(idx, "challan_gross_wt", val);
-                                    const currentUnit = (row.unit || "BALES").toUpperCase();
-                                    const convertedQty = currentUnit.includes("BALE") ? Math.round(val / 0.18) : val;
-                                    handleDetailChange(idx, "quantity", convertedQty);
-                                  } else {
-                                    handleDetailChange(idx, "quantity", val);
-                                  }
-                                }}
-                                className={`w-full border rounded px-2 py-1 text-xs font-bold transition-all ${
-                                  (row.is_premium || row.premium === "Yes")
-                                    ? "border-amber-400 bg-amber-50 text-amber-950 font-black ring-1 ring-amber-300"
-                                    : "border-slate-300 text-slate-900"
-                                }`}
-                              />
-                              {(row.is_premium || row.premium === "Yes") ? (
-                                <div className="flex items-center justify-between text-[9px] font-mono text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 font-black">
-                                  <span>⚡ MT:</span>
-                                  <span>{calculateQtyInMt(row).toFixed(3)} MT</span>
-                                </div>
-                              ) : (
-                                <span className="text-[9px] text-slate-500 font-medium">
-                                  ≈ {calculateQtyInMt(row).toFixed(3)} MT
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <div className="flex flex-col gap-0.5">
+                            {/* Arrival Grade */}
+                            <td className="p-1.5 border-r border-slate-200">
                               <input
                                 type="text"
-                                value={
-                                  (row.is_premium || row.premium === "Yes")
-                                    ? "M.T."
-                                    : (row.unit || "BALES")
-                                }
-                                onChange={(e) => handleDetailChange(idx, "unit", e.target.value)}
-                                className={`w-full border rounded px-2 py-1 text-xs text-center font-bold uppercase transition-all ${
-                                  (row.is_premium || row.premium === "Yes")
-                                    ? "border-amber-400 bg-amber-100/80 text-amber-950 font-black"
-                                    : "border-slate-300 text-slate-900"
-                                }`}
+                                readOnly={isArrivalGradeBlocked}
+                                tabIndex={isArrivalGradeBlocked ? -1 : 0}
+                                title={isArrivalGradeBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.arrival_grade || ""}
+                                onChange={(e) => !isArrivalGradeBlocked && handleDetailChange(idx, "arrival_grade", e.target.value)}
+                                className={getFieldInputStyle(isArrivalGradeBlocked)}
                               />
-                              {(row.is_premium || row.premium === "Yes") && (
-                                <span className="text-[9px] font-bold text-amber-800 text-center uppercase tracking-tight">
-                                  Metric Ton
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Weights */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.challan_gross_wt || 0}
-                              onChange={(e) => handleDetailChange(idx, "challan_gross_wt", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.receipt_gross_wt || 0}
-                              onChange={(e) => handleDetailChange(idx, "receipt_gross_wt", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.gross_weight_batch || 0}
-                              onChange={(e) => handleDetailChange(idx, "gross_weight_batch", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.add_weight || 0}
-                              onChange={(e) => handleDetailChange(idx, "add_weight", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.less_weight || 0}
-                              onChange={(e) => handleDetailChange(idx, "less_weight", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.reduced_weight || 0}
-                              onChange={(e) => handleDetailChange(idx, "reduced_weight", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono"
-                            />
-                          </td>
+                            {/* Stock Grade Code & Name */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isStockGradeCodeBlocked}
+                                tabIndex={isStockGradeCodeBlocked ? -1 : 0}
+                                title={isStockGradeCodeBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.stock_grade_code || ""}
+                                onChange={(e) => !isStockGradeCodeBlocked && handleDetailChange(idx, "stock_grade_code", e.target.value)}
+                                className={getFieldInputStyle(isStockGradeCodeBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isStockGradeNameBlocked}
+                                tabIndex={isStockGradeNameBlocked ? -1 : 0}
+                                title={isStockGradeNameBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.stock_grade_name || ""}
+                                onChange={(e) => !isStockGradeNameBlocked && handleDetailChange(idx, "stock_grade_name", e.target.value)}
+                                className={getFieldInputStyle(isStockGradeNameBlocked)}
+                              />
+                            </td>
 
-                          {/* Lorry Moisture Min / Max */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.lorry_moisture_min || 0}
-                              onChange={(e) => handleDetailChange(idx, "lorry_moisture_min", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.lorry_moisture_max || 0}
-                              onChange={(e) => handleDetailChange(idx, "lorry_moisture_max", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
+                            {/* Area & Agency */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isAreaBlocked}
+                                tabIndex={isAreaBlocked ? -1 : 0}
+                                title={isAreaBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.area || ""}
+                                onChange={(e) => !isAreaBlocked && handleDetailChange(idx, "area", e.target.value)}
+                                className={getFieldInputStyle(isAreaBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isAgencyBlocked}
+                                tabIndex={isAgencyBlocked ? -1 : 0}
+                                title={isAgencyBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.agency || ""}
+                                onChange={(e) => !isAgencyBlocked && handleDetailChange(idx, "agency", e.target.value)}
+                                className={getFieldInputStyle(isAgencyBlocked)}
+                              />
+                            </td>
 
-                          {/* Lorry Read Min / Max / Avg */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.lorry_read_min || 0}
-                              onChange={(e) => handleDetailChange(idx, "lorry_read_min", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.lorry_read_max || 0}
-                              onChange={(e) => handleDetailChange(idx, "lorry_read_max", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.lorry_read_avg || 0}
-                              onChange={(e) => handleDetailChange(idx, "lorry_read_avg", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-blue-700"
-                            />
-                          </td>
+                            {/* Marks, Crop Year, Lot */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isMarksBlocked}
+                                tabIndex={isMarksBlocked ? -1 : 0}
+                                title={isMarksBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.marks || ""}
+                                onChange={(e) => !isMarksBlocked && handleDetailChange(idx, "marks", e.target.value)}
+                                className={getFieldInputStyle(isMarksBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isCropYearBlocked}
+                                tabIndex={isCropYearBlocked ? -1 : 0}
+                                title={isCropYearBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.crop_year || ""}
+                                onChange={(e) => !isCropYearBlocked && handleDetailChange(idx, "crop_year", e.target.value)}
+                                className={getFieldInputStyle(isCropYearBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isLotBlocked}
+                                tabIndex={isLotBlocked ? -1 : 0}
+                                title={isLotBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.lot || ""}
+                                onChange={(e) => !isLotBlocked && handleDetailChange(idx, "lot", e.target.value)}
+                                className={getFieldInputStyle(isLotBlocked)}
+                              />
+                            </td>
 
-                          {/* Insp Read Min / Max / Avg */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.insp_read_min || 0}
-                              onChange={(e) => handleDetailChange(idx, "insp_read_min", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.insp_read_max || 0}
-                              onChange={(e) => handleDetailChange(idx, "insp_read_max", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.insp_read_avg || 0}
-                              onChange={(e) => handleDetailChange(idx, "insp_read_avg", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-blue-700"
-                            />
-                          </td>
-
-                          {/* Moisture Act / Claim */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.moisture_act || 0}
-                              onChange={(e) => handleDetailChange(idx, "moisture_act", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-blue-800"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.moisture_claim || 0}
-                              onChange={(e) => handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-purple-800"
-                            />
-                          </td>
-
-                          {/* Dust Act / Claim */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.dust_act || 0}
-                              onChange={(e) => handleDetailChange(idx, "dust_act", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-amber-800"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.dust_claim || 0}
-                              onChange={(e) => handleDetailChange(idx, "dust_claim", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-purple-800"
-                            />
-                          </td>
-
-                          {/* NCV Act / Claim */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.ncv_act || 0}
-                              onChange={(e) => handleDetailChange(idx, "ncv_act", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.ncv_claim || 0}
-                              onChange={(e) => handleDetailChange(idx, "ncv_claim", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-bold text-purple-800"
-                            />
-                          </td>
-
-                          {/* Grade Down Act / Claim */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.grade_down_act || 0}
-                              onChange={(e) => handleDetailChange(idx, "grade_down_act", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.grade_down_claim || 0}
-                              onChange={(e) => handleDetailChange(idx, "grade_down_claim", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Final Receipt Wt */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.final_receipt_wt || 0}
-                              onChange={(e) => handleDetailChange(idx, "final_receipt_wt", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs font-mono font-bold"
-                            />
-                          </td>
-
-                          {/* Settlement % */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.settlement_moisture || 0}
-                              onChange={(e) => handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.settlement_grade_down || 0}
-                              onChange={(e) => handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.settlement_dust || 0}
-                              onChange={(e) => handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.settlement_ncv || 0}
-                              onChange={(e) => handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Ropes */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.ropes_weight || 0}
-                              onChange={(e) => handleDetailChange(idx, "ropes_weight", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.ropes_tot_wt_grd || 0}
-                              onChange={(e) => handleDetailChange(idx, "ropes_tot_wt_grd", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.ropes_grade || ""}
-                              onChange={(e) => handleDetailChange(idx, "ropes_grade", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Chotta & Habi Jabi */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.chotta_weight || 0}
-                              onChange={(e) => handleDetailChange(idx, "chotta_weight", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={row.chotta_tot_wt_grd || 0}
-                              onChange={(e) => handleDetailChange(idx, "chotta_tot_wt_grd", Number(e.target.value))}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.chotta_grade || ""}
-                              onChange={(e) => handleDetailChange(idx, "chotta_grade", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Tolerable */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <select
-                              value={row.tolerable || "Yes"}
-                              onChange={(e) => handleDetailChange(idx, "tolerable", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-white font-medium"
-                            >
-                              <option value="Yes">Yes</option>
-                              <option value="No">No</option>
-                            </select>
-                          </td>
-
-                          {/* Premium (Manual Input / Qty in MT) */}
-                          <td className="p-1.5 border-r border-slate-200 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex items-center gap-1 w-full">
+                            {/* Quantity & Unit */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <div className="flex flex-col gap-0.5">
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  readOnly={isQuantityBlocked}
+                                  tabIndex={isQuantityBlocked ? -1 : 0}
+                                  title={isQuantityBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                  value={
+                                    (row.is_premium || row.premium === "Yes")
+                                      ? calculateQtyInMt(row)
+                                      : (row.quantity || 0)
+                                  }
+                                  onChange={(e) => {
+                                    if (isQuantityBlocked) return;
+                                    const val = Number(e.target.value);
+                                    if (row.is_premium || row.premium === "Yes") {
+                                      handleDetailChange(idx, "challan_gross_wt", val);
+                                      const currentUnit = (row.unit || "BALES").toUpperCase();
+                                      const convertedQty = currentUnit.includes("BALE") ? Math.round(val / 0.18) : val;
+                                      handleDetailChange(idx, "quantity", convertedQty);
+                                    } else {
+                                      handleDetailChange(idx, "quantity", val);
+                                    }
+                                  }}
+                                  className={
+                                    (row.is_premium || row.premium === "Yes")
+                                      ? "w-full border border-amber-400 bg-amber-50 text-amber-950 font-black ring-1 ring-amber-300 rounded px-2 py-1 text-xs"
+                                      : getFieldInputStyle(isQuantityBlocked, "font-bold")
+                                  }
+                                />
+                                {(row.is_premium || row.premium === "Yes") ? (
+                                  <div className="flex items-center justify-between text-[9px] font-mono text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 font-black">
+                                    <span>⚡ MT:</span>
+                                    <span>{calculateQtyInMt(row).toFixed(3)} MT</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[9px] text-slate-500 font-medium">
+                                    ≈ {calculateQtyInMt(row).toFixed(3)} MT
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <div className="flex flex-col gap-0.5">
                                 <input
                                   type="text"
-                                  value={row.premium !== undefined && row.premium !== null ? row.premium : (row.is_premium ? "Yes" : "")}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    handleDetailChange(idx, "premium", val);
-                                    if (val.trim() !== "" && val.toLowerCase() !== "no") {
-                                      handleDetailChange(idx, "is_premium", true);
-                                    } else {
-                                      handleDetailChange(idx, "is_premium", false);
-                                    }
-                                  }}
-                                  placeholder="Type premium..."
-                                  className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-amber-50/40 font-bold text-amber-950 text-center"
-                                  title="Enter premium manually or type Yes"
+                                  readOnly={isUnitBlocked}
+                                  tabIndex={isUnitBlocked ? -1 : 0}
+                                  title={isUnitBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                  value={
+                                    (row.is_premium || row.premium === "Yes")
+                                      ? "M.T."
+                                      : (row.unit || "BALES")
+                                  }
+                                  onChange={(e) => !isUnitBlocked && handleDetailChange(idx, "unit", e.target.value)}
+                                  className={
+                                    (row.is_premium || row.premium === "Yes")
+                                      ? "w-full border border-amber-400 bg-amber-100/80 text-amber-950 font-black rounded px-2 py-1 text-xs text-center uppercase"
+                                      : getFieldInputStyle(isUnitBlocked, "text-center uppercase font-bold")
+                                  }
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
-                                    const nextVal = !isCurrentlyPremium;
-                                    handleDetailChange(idx, "is_premium", nextVal);
-                                    handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
-                                    if (nextVal) {
-                                      handleDetailChange(idx, "unit", "M.T.");
-                                    }
-                                  }}
-                                  className={`p-1 rounded text-xs transition-all cursor-pointer shrink-0 ${
-                                    row.is_premium || row.premium === "Yes"
-                                      ? "bg-amber-400 text-slate-950 font-bold shadow-sm"
-                                      : "bg-slate-100 hover:bg-amber-100 text-slate-600"
-                                  }`}
-                                  title="Toggle Premium status / MT mode"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                              {(row.is_premium || row.premium === "Yes" || (row.premium && row.premium.toString().toLowerCase() !== "no" && row.premium.toString().trim() !== "")) && (
-                                <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
-                                  {calculateQtyInMt(row).toFixed(3)} MT
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Remarks */}
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.row_remarks || ""}
-                              onChange={(e) => handleDetailChange(idx, "row_remarks", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-                          <td className="p-1.5 border-r border-slate-200">
-                            <input
-                              type="text"
-                              value={row.jqi_remarks || ""}
-                              onChange={(e) => handleDetailChange(idx, "jqi_remarks", e.target.value)}
-                              className="w-full border border-slate-300 rounded px-2 py-1 text-xs"
-                            />
-                          </td>
-
-                          {/* Row Actions Sticky Cell */}
-                          <td className="p-2 sticky right-0 bg-white z-10 text-center border-l border-slate-200">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleToggleExpand(idx)}
-                                className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${
-                                  row.expanded ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-blue-600 text-white hover:bg-blue-700"
-                                }`}
-                              >
-                                {row.expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                <span>{row.expanded ? "Collapse" : "Expand"}</span>
-                              </button>
-                              <button
-                                onClick={() => handleDuplicateRow(idx)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-[11px] font-bold"
-                                title="Duplicate Row"
-                              >
-                                <Copy className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteRow(idx)}
-                                className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[11px] font-bold"
-                                title="Delete Row"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-
-                        {/* EXPANDED ROW PANEL */}
-                        {row.expanded && (
-                          <tr className="bg-slate-50 border-b-2 border-blue-200">
-                            <td colSpan={48} className="p-4">
-                              <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-inner">
-                                <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
-                                  <span className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
-                                    <Layers className="w-4 h-4 text-blue-600" />
-                                    Expanded Inspection Detail View for Row #{idx + 1}
+                                {(row.is_premium || row.premium === "Yes") && (
+                                  <span className="text-[9px] font-bold text-amber-800 text-center uppercase tracking-tight">
+                                    Metric Ton
                                   </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Weights */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isChallanGrossWtBlocked}
+                                tabIndex={isChallanGrossWtBlocked ? -1 : 0}
+                                title={isChallanGrossWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.challan_gross_wt || 0}
+                                onChange={(e) => !isChallanGrossWtBlocked && handleDetailChange(idx, "challan_gross_wt", Number(e.target.value))}
+                                className={getFieldInputStyle(isChallanGrossWtBlocked, "font-mono font-bold")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isReceiptGrossWtBlocked}
+                                tabIndex={isReceiptGrossWtBlocked ? -1 : 0}
+                                title={isReceiptGrossWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.receipt_gross_wt || 0}
+                                onChange={(e) => !isReceiptGrossWtBlocked && handleDetailChange(idx, "receipt_gross_wt", Number(e.target.value))}
+                                className={getFieldInputStyle(isReceiptGrossWtBlocked, "font-mono font-bold")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isGrossWeightBatchBlocked}
+                                tabIndex={isGrossWeightBatchBlocked ? -1 : 0}
+                                title={isGrossWeightBatchBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.gross_weight_batch || 0}
+                                onChange={(e) => !isGrossWeightBatchBlocked && handleDetailChange(idx, "gross_weight_batch", Number(e.target.value))}
+                                className={getFieldInputStyle(isGrossWeightBatchBlocked, "font-mono")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isAddWeightBlocked}
+                                tabIndex={isAddWeightBlocked ? -1 : 0}
+                                title={isAddWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.add_weight || 0}
+                                onChange={(e) => !isAddWeightBlocked && handleDetailChange(idx, "add_weight", Number(e.target.value))}
+                                className={getFieldInputStyle(isAddWeightBlocked, "font-mono")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isLessWeightBlocked}
+                                tabIndex={isLessWeightBlocked ? -1 : 0}
+                                title={isLessWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.less_weight || 0}
+                                onChange={(e) => !isLessWeightBlocked && handleDetailChange(idx, "less_weight", Number(e.target.value))}
+                                className={getFieldInputStyle(isLessWeightBlocked, "font-mono")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isReducedWeightBlocked}
+                                tabIndex={isReducedWeightBlocked ? -1 : 0}
+                                title={isReducedWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.reduced_weight || 0}
+                                onChange={(e) => !isReducedWeightBlocked && handleDetailChange(idx, "reduced_weight", Number(e.target.value))}
+                                className={getFieldInputStyle(isReducedWeightBlocked, "font-mono")}
+                              />
+                            </td>
+
+                            {/* Lorry Moisture Min / Max */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isLorryMoistureMinBlocked}
+                                tabIndex={isLorryMoistureMinBlocked ? -1 : 0}
+                                title={isLorryMoistureMinBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.lorry_moisture_min || 0}
+                                onChange={(e) => !isLorryMoistureMinBlocked && handleDetailChange(idx, "lorry_moisture_min", Number(e.target.value))}
+                                className={getFieldInputStyle(isLorryMoistureMinBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isLorryMoistureMaxBlocked}
+                                tabIndex={isLorryMoistureMaxBlocked ? -1 : 0}
+                                title={isLorryMoistureMaxBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.lorry_moisture_max || 0}
+                                onChange={(e) => !isLorryMoistureMaxBlocked && handleDetailChange(idx, "lorry_moisture_max", Number(e.target.value))}
+                                className={getFieldInputStyle(isLorryMoistureMaxBlocked)}
+                              />
+                            </td>
+
+                            {/* Lorry Read Min / Max / Avg */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isLorryReadMinBlocked}
+                                tabIndex={isLorryReadMinBlocked ? -1 : 0}
+                                title={isLorryReadMinBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.lorry_read_min || 0}
+                                onChange={(e) => !isLorryReadMinBlocked && handleDetailChange(idx, "lorry_read_min", Number(e.target.value))}
+                                className={getFieldInputStyle(isLorryReadMinBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isLorryReadMaxBlocked}
+                                tabIndex={isLorryReadMaxBlocked ? -1 : 0}
+                                title={isLorryReadMaxBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.lorry_read_max || 0}
+                                onChange={(e) => !isLorryReadMaxBlocked && handleDetailChange(idx, "lorry_read_max", Number(e.target.value))}
+                                className={getFieldInputStyle(isLorryReadMaxBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={true}
+                                tabIndex={-1}
+                                title="Auto-calculated average (Locked)"
+                                value={row.lorry_read_avg || 0}
+                                className={getFieldInputStyle(true, "text-blue-900 font-black")}
+                              />
+                            </td>
+
+                            {/* Insp Read Min / Max / Avg */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isInspReadMinBlocked}
+                                tabIndex={isInspReadMinBlocked ? -1 : 0}
+                                title={isInspReadMinBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.insp_read_min || 0}
+                                onChange={(e) => !isInspReadMinBlocked && handleDetailChange(idx, "insp_read_min", Number(e.target.value))}
+                                className={getFieldInputStyle(isInspReadMinBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isInspReadMaxBlocked}
+                                tabIndex={isInspReadMaxBlocked ? -1 : 0}
+                                title={isInspReadMaxBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.insp_read_max || 0}
+                                onChange={(e) => !isInspReadMaxBlocked && handleDetailChange(idx, "insp_read_max", Number(e.target.value))}
+                                className={getFieldInputStyle(isInspReadMaxBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={true}
+                                tabIndex={-1}
+                                title="Auto-calculated average (Locked)"
+                                value={row.insp_read_avg || 0}
+                                className={getFieldInputStyle(true, "text-blue-900 font-black")}
+                              />
+                            </td>
+
+                            {/* Moisture Act / Claim */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isMoistureActBlocked}
+                                tabIndex={isMoistureActBlocked ? -1 : 0}
+                                title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.moisture_act || 0}
+                                onChange={(e) => !isMoistureActBlocked && handleDetailChange(idx, "moisture_act", Number(e.target.value))}
+                                className={getFieldInputStyle(isMoistureActBlocked, "text-blue-900 font-bold")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isMoistureClaimBlocked}
+                                tabIndex={isMoistureClaimBlocked ? -1 : 0}
+                                title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.moisture_claim || 0}
+                                onChange={(e) => !isMoistureClaimBlocked && handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
+                                className={getFieldInputStyle(isMoistureClaimBlocked, "text-purple-900 font-bold")}
+                              />
+                            </td>
+
+                            {/* Dust Act / Claim */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isDustActBlocked}
+                                tabIndex={isDustActBlocked ? -1 : 0}
+                                title={isDustActBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.dust_act || 0}
+                                onChange={(e) => !isDustActBlocked && handleDetailChange(idx, "dust_act", Number(e.target.value))}
+                                className={getFieldInputStyle(isDustActBlocked, "text-amber-900 font-bold")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isDustClaimBlocked}
+                                tabIndex={isDustClaimBlocked ? -1 : 0}
+                                title={isDustClaimBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.dust_claim || 0}
+                                onChange={(e) => !isDustClaimBlocked && handleDetailChange(idx, "dust_claim", Number(e.target.value))}
+                                className={getFieldInputStyle(isDustClaimBlocked, "text-purple-900 font-bold")}
+                              />
+                            </td>
+
+                            {/* NCV Act / Claim */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isNcvActBlocked}
+                                tabIndex={isNcvActBlocked ? -1 : 0}
+                                title={isNcvActBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.ncv_act || 0}
+                                onChange={(e) => !isNcvActBlocked && handleDetailChange(idx, "ncv_act", Number(e.target.value))}
+                                className={getFieldInputStyle(isNcvActBlocked, "text-emerald-900 font-bold")}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isNcvClaimBlocked}
+                                tabIndex={isNcvClaimBlocked ? -1 : 0}
+                                title={isNcvClaimBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.ncv_claim || 0}
+                                onChange={(e) => !isNcvClaimBlocked && handleDetailChange(idx, "ncv_claim", Number(e.target.value))}
+                                className={getFieldInputStyle(isNcvClaimBlocked, "text-purple-900 font-bold")}
+                              />
+                            </td>
+
+                            {/* Grade Down Act / Claim */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isGradeDownActBlocked}
+                                tabIndex={isGradeDownActBlocked ? -1 : 0}
+                                title={isGradeDownActBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.grade_down_act || 0}
+                                onChange={(e) => !isGradeDownActBlocked && handleDetailChange(idx, "grade_down_act", Number(e.target.value))}
+                                className={getFieldInputStyle(isGradeDownActBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isGradeDownClaimBlocked}
+                                tabIndex={isGradeDownClaimBlocked ? -1 : 0}
+                                title={isGradeDownClaimBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.grade_down_claim || 0}
+                                onChange={(e) => !isGradeDownClaimBlocked && handleDetailChange(idx, "grade_down_claim", Number(e.target.value))}
+                                className={getFieldInputStyle(isGradeDownClaimBlocked)}
+                              />
+                            </td>
+
+                            {/* Final Receipt Wt */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isFinalReceiptWtBlocked}
+                                tabIndex={isFinalReceiptWtBlocked ? -1 : 0}
+                                title={isFinalReceiptWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.final_receipt_wt || 0}
+                                onChange={(e) => !isFinalReceiptWtBlocked && handleDetailChange(idx, "final_receipt_wt", Number(e.target.value))}
+                                className={getFieldInputStyle(isFinalReceiptWtBlocked, "font-mono font-bold")}
+                              />
+                            </td>
+
+                            {/* Settlement % */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isSettlementMoistureBlocked}
+                                tabIndex={isSettlementMoistureBlocked ? -1 : 0}
+                                title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.settlement_moisture || 0}
+                                onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
+                                className={getFieldInputStyle(isSettlementMoistureBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isSettlementGradeDownBlocked}
+                                tabIndex={isSettlementGradeDownBlocked ? -1 : 0}
+                                title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.settlement_grade_down || 0}
+                                onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
+                                className={getFieldInputStyle(isSettlementGradeDownBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isSettlementDustBlocked}
+                                tabIndex={isSettlementDustBlocked ? -1 : 0}
+                                title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.settlement_dust || 0}
+                                onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
+                                className={getFieldInputStyle(isSettlementDustBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isSettlementNcvBlocked}
+                                tabIndex={isSettlementNcvBlocked ? -1 : 0}
+                                title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.settlement_ncv || 0}
+                                onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
+                                className={getFieldInputStyle(isSettlementNcvBlocked)}
+                              />
+                            </td>
+
+                            {/* Ropes */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isRopesWeightBlocked}
+                                tabIndex={isRopesWeightBlocked ? -1 : 0}
+                                title={isRopesWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.ropes_weight || 0}
+                                onChange={(e) => !isRopesWeightBlocked && handleDetailChange(idx, "ropes_weight", Number(e.target.value))}
+                                className={getFieldInputStyle(isRopesWeightBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isRopesTotWtGrdBlocked}
+                                tabIndex={isRopesTotWtGrdBlocked ? -1 : 0}
+                                title={isRopesTotWtGrdBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.ropes_tot_wt_grd || 0}
+                                onChange={(e) => !isRopesTotWtGrdBlocked && handleDetailChange(idx, "ropes_tot_wt_grd", Number(e.target.value))}
+                                className={getFieldInputStyle(isRopesTotWtGrdBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isRopesGradeBlocked}
+                                tabIndex={isRopesGradeBlocked ? -1 : 0}
+                                title={isRopesGradeBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.ropes_grade || ""}
+                                onChange={(e) => !isRopesGradeBlocked && handleDetailChange(idx, "ropes_grade", e.target.value)}
+                                className={getFieldInputStyle(isRopesGradeBlocked)}
+                              />
+                            </td>
+
+                            {/* Chotta & Habi Jabi */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isChottaWeightBlocked}
+                                tabIndex={isChottaWeightBlocked ? -1 : 0}
+                                title={isChottaWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.chotta_weight || 0}
+                                onChange={(e) => !isChottaWeightBlocked && handleDetailChange(idx, "chotta_weight", Number(e.target.value))}
+                                className={getFieldInputStyle(isChottaWeightBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="number"
+                                step="0.01"
+                                readOnly={isChottaTotWtGrdBlocked}
+                                tabIndex={isChottaTotWtGrdBlocked ? -1 : 0}
+                                title={isChottaTotWtGrdBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.chotta_tot_wt_grd || 0}
+                                onChange={(e) => !isChottaTotWtGrdBlocked && handleDetailChange(idx, "chotta_tot_wt_grd", Number(e.target.value))}
+                                className={getFieldInputStyle(isChottaTotWtGrdBlocked)}
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                readOnly={isChottaGradeBlocked}
+                                tabIndex={isChottaGradeBlocked ? -1 : 0}
+                                title={isChottaGradeBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                value={row.chotta_grade || ""}
+                                onChange={(e) => !isChottaGradeBlocked && handleDetailChange(idx, "chotta_grade", e.target.value)}
+                                className={getFieldInputStyle(isChottaGradeBlocked)}
+                              />
+                            </td>
+
+                            {/* Tolerable */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <select
+                                value={row.tolerable || "Yes"}
+                                onChange={(e) => handleDetailChange(idx, "tolerable", e.target.value)}
+                                className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                              </select>
+                            </td>
+
+                            {/* Premium (Manual Input / Qty in MT) */}
+                            <td className="p-1.5 border-r border-slate-200 text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="flex items-center gap-1 w-full">
+                                  <input
+                                    type="text"
+                                    value={row.premium !== undefined && row.premium !== null ? row.premium : (row.is_premium ? "Yes" : "")}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      handleDetailChange(idx, "premium", val);
+                                      if (val.trim() !== "" && val.toLowerCase() !== "no") {
+                                        handleDetailChange(idx, "is_premium", true);
+                                      } else {
+                                        handleDetailChange(idx, "is_premium", false);
+                                      }
+                                    }}
+                                    placeholder="Type premium..."
+                                    className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-amber-50/40 font-bold text-amber-950 text-center"
+                                    title="Enter premium manually or type Yes"
+                                  />
                                   <button
-                                    onClick={() => handleToggleExpand(idx)}
-                                    className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+                                    type="button"
+                                    onClick={() => {
+                                      const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
+                                      const nextVal = !isCurrentlyPremium;
+                                      handleDetailChange(idx, "is_premium", nextVal);
+                                      handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
+                                      if (nextVal) {
+                                        handleDetailChange(idx, "unit", "M.T.");
+                                      }
+                                    }}
+                                    className={`p-1 rounded text-xs transition-all cursor-pointer shrink-0 ${
+                                      row.is_premium || row.premium === "Yes"
+                                        ? "bg-amber-400 text-slate-950 font-bold shadow-sm"
+                                        : "bg-slate-100 hover:bg-amber-100 text-slate-600"
+                                    }`}
+                                    title="Toggle Premium status / MT mode"
                                   >
-                                    Close Panel ✕
+                                    <Sparkles className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
+                                {(row.is_premium || row.premium === "Yes" || (row.premium && row.premium.toString().toLowerCase() !== "no" && row.premium.toString().trim() !== "")) && (
+                                  <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
+                                    {calculateQtyInMt(row).toFixed(3)} MT
+                                  </span>
+                                )}
+                              </div>
+                            </td>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                  {detailFieldsConfig.map(cfg => (
-                                    <div key={cfg.name} className="flex flex-col gap-1">
-                                      <label className="text-[11px] font-extrabold text-slate-600">{cfg.label}</label>
-                                      {cfg.type === "select" ? (
-                                        <select
-                                          value={(row[cfg.name] as string) || "Yes"}
-                                          onChange={(e) => handleDetailChange(idx, cfg.name, e.target.value)}
-                                          className="border border-slate-300 rounded px-2.5 py-1.5 bg-white font-medium text-slate-900"
-                                        >
-                                          <option value="Yes">Yes</option>
-                                          <option value="No">No</option>
-                                        </select>
-                                      ) : (
-                                        <input
-                                          type={cfg.type}
-                                          step={cfg.type === "number" ? "0.01" : undefined}
-                                          value={(row[cfg.name] as any) ?? ""}
-                                          onChange={(e) =>
-                                            handleDetailChange(
-                                              idx,
-                                              cfg.name,
-                                              cfg.type === "number" ? Number(e.target.value) : e.target.value
-                                            )
-                                          }
-                                          className="border border-slate-300 rounded px-2.5 py-1.5 bg-white font-medium text-slate-900 focus:outline-none focus:border-blue-500"
-                                        />
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
+                            {/* Remarks */}
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                value={row.row_remarks || ""}
+                                onChange={(e) => handleDetailChange(idx, "row_remarks", e.target.value)}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"
+                                placeholder="Row remarks..."
+                              />
+                            </td>
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                value={row.jqi_remarks || ""}
+                                onChange={(e) => handleDetailChange(idx, "jqi_remarks", e.target.value)}
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white"
+                                placeholder="JCI remarks..."
+                              />
+                            </td>
+
+                            {/* Row Actions Sticky Cell */}
+                            <td className="p-2 sticky right-0 bg-white z-10 text-center border-l border-slate-200">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => handleToggleExpand(idx)}
+                                  className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${
+                                    row.expanded ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-blue-600 text-white hover:bg-blue-700"
+                                  }`}
+                                >
+                                  {row.expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                  <span>{row.expanded ? "Collapse" : "Expand"}</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDuplicateRow(idx)}
+                                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-[11px] font-bold"
+                                  title="Duplicate Row"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRow(idx)}
+                                  className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[11px] font-bold"
+                                  title="Delete Row"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
                               </div>
                             </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
+
+                          {/* EXPANDED ROW PANEL */}
+                          {row.expanded && (
+                            <tr className="bg-slate-50 border-b-2 border-blue-200">
+                              <td colSpan={48} className="p-4">
+                                <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-inner">
+                                  <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+                                    <span className="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
+                                      <Layers className="w-4 h-4 text-blue-600" />
+                                      Expanded Inspection Detail View for Row #{idx + 1}
+                                      {row.is_auto && (
+                                        <span className="ml-2 inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded border border-blue-200">
+                                          <Lock className="w-2.5 h-2.5" /> Auto-populated data locked
+                                        </span>
+                                      )}
+                                    </span>
+                                    <button
+                                      onClick={() => handleToggleExpand(idx)}
+                                      className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+                                    >
+                                      Close Panel ✕
+                                    </button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                    {detailFieldsConfig.map(cfg => {
+                                      const isBlocked = isAutoBlocked(row, cfg.name);
+                                      return (
+                                        <div key={cfg.name} className="flex flex-col gap-1">
+                                          <div className="flex items-center justify-between">
+                                            <label className="text-[11px] font-extrabold text-slate-600">{cfg.label}</label>
+                                            {isBlocked && (
+                                              <span className="text-[10px] text-blue-700 flex items-center gap-0.5 font-bold">
+                                                <Lock className="w-2.5 h-2.5" /> Locked
+                                              </span>
+                                            )}
+                                          </div>
+                                          {cfg.type === "select" ? (
+                                            <select
+                                              disabled={isBlocked}
+                                              value={(row[cfg.name] as string) || "Yes"}
+                                              onChange={(e) => !isBlocked && handleDetailChange(idx, cfg.name, e.target.value)}
+                                              className={isBlocked ? "border border-blue-300 bg-blue-50/90 text-blue-950 font-bold rounded px-2.5 py-1.5 text-xs cursor-not-allowed" : "border border-slate-300 rounded px-2.5 py-1.5 bg-white font-medium text-slate-900"}
+                                            >
+                                              <option value="Yes">Yes</option>
+                                              <option value="No">No</option>
+                                            </select>
+                                          ) : (
+                                            <input
+                                              type={cfg.type}
+                                              step={cfg.type === "number" ? "0.01" : undefined}
+                                              readOnly={isBlocked}
+                                              tabIndex={isBlocked ? -1 : 0}
+                                              value={(row[cfg.name] as any) ?? ""}
+                                              onChange={(e) =>
+                                                !isBlocked && handleDetailChange(
+                                                  idx,
+                                                  cfg.name,
+                                                  cfg.type === "number" ? Number(e.target.value) : e.target.value
+                                                )
+                                              }
+                                              className={getFieldInputStyle(isBlocked, "px-2.5 py-1.5")}
+                                            />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
