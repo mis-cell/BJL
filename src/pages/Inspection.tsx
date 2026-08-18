@@ -428,8 +428,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         crop_year: item.crop_year || "",
         quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
         unit: item.unit || "BALES",
-        challan_gross_wt: Number(item.challan_gross_wt || item.gross_weight || item.weight) || 0,
-        receipt_gross_wt: Number(item.receipt_gross_wt || item.gross_weight || item.weight) || 0,
+        challan_gross_wt: Number(item.challan_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
+        receipt_gross_wt: Number(item.receipt_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
+        final_receipt_wt: Number(item.netto_pnto || item.receipt_gross_wt || item.challan_gross_wt || item.gross_weight || item.weight) || 0,
         tolerable: "Yes",
         expanded: false
       }));
@@ -519,8 +520,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           crop_year: item.crop_year || "",
           quantity: Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales) || 0,
           unit: item.unit || "BALES",
-          challan_gross_wt: Number(item.challan_gross_wt || item.gross_weight || item.weight) || 0,
-          receipt_gross_wt: Number(item.receipt_gross_wt || item.gross_weight || item.weight) || 0,
+          challan_gross_wt: Number(item.challan_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
+          receipt_gross_wt: Number(item.receipt_gross_wt || item.netto_pnto || item.gross_weight || item.weight) || 0,
+          final_receipt_wt: Number(item.netto_pnto || item.receipt_gross_wt || item.challan_gross_wt || item.gross_weight || item.weight) || 0,
           tolerable: "Yes",
           expanded: false
         }));
