@@ -837,6 +837,16 @@ export default function MaterialInspection({
     deduction_rate: 0,
     deduction_qty: 0,
     deduction_amount: 0,
+    advance_amount: 0,
+    on_account_advance_amount: 0,
+    settlement_amount: 0,
+    sent_settlement_date: "",
+    lorry_returned: "No",
+    lorry_returned_other_mill: "No",
+    mr_print_date: new Date().toISOString().split("T")[0],
+    consignment_no: "",
+    consignment_date: new Date().toISOString().split("T")[0],
+    arrival_remarks: "",
   });
 
   const createEmptyRow = (srl: number): InspectionDetailRow => ({
@@ -976,7 +986,7 @@ export default function MaterialInspection({
   });
 
   const [qualityMatrix, setQualityMatrix] = useState<any>(initialQualityMatrix());
-  const [showAllFourSpecs, setShowAllFourSpecs] = useState(false);
+  const [showAllFourSpecs, setShowAllFourSpecs] = useState(true);
 
   const hasDataInRow = (i: number) => {
     const row = detailsList[i];
@@ -1202,6 +1212,137 @@ export default function MaterialInspection({
   const totalChallanGrossWt = React.useMemo(() => {
     return detailsList.reduce((acc, r) => acc + (Number(r.challan_gross_wt) || 0), 0);
   }, [detailsList]);
+
+  const [paymentOpsInfo, setPaymentOpsInfo] = useState<{
+    paidAmount: number;
+    totalBill: number;
+    pct: number;
+    source: 'payment_master' | 'calculated_93' | null;
+    voucherNo?: string | null;
+    advanceDone?: string;
+    loading: boolean;
+  }>({
+    paidAmount: 0,
+    totalBill: 0,
+    pct: 93.0,
+    source: null,
+    loading: false,
+  });
+
+  const syncAdvanceFromPaymentOperations = async (forceUpdate: boolean = false, overrideArrival?: any) => {
+    try {
+      const arrNo = (overrideArrival?.temporary_arrival_no || overrideArrival?.arrival_no || masterData.arrival_no || '').trim();
+      const poNo = (overrideArrival?.po_no || overrideArrival?.mill_po_no || masterData.po_no || '').trim();
+      const mrNo = (overrideArrival?.mr_no || masterData.mr_no || '').trim();
+
+      if (!arrNo && !poNo && !mrNo) return;
+
+      setPaymentOpsInfo(prev => ({ ...prev, loading: true }));
+
+      let foundPayment: any = null;
+      if (supabase) {
+        if (mrNo) {
+          const { data } = await supabase.from('payment_master').select('*').eq('mr_no', mrNo).maybeSingle();
+          if (data) foundPayment = data;
+        }
+        if (!foundPayment && arrNo) {
+          const { data } = await supabase.from('payment_master').select('*').or(`arrival_no.eq.${arrNo},mr_no.eq.${arrNo}`).maybeSingle();
+          if (data) foundPayment = data;
+        }
+        if (!foundPayment && poNo) {
+          const { data } = await supabase.from('payment_master').select('*').eq('po_no', poNo).maybeSingle();
+          if (data) foundPayment = data;
+        }
+      }
+
+      if (!foundPayment) {
+        const localPay: any[] = await dbModule.fetchAll('payment_master').catch(() => []);
+        foundPayment = localPay.find(p => 
+          (mrNo && (p.mr_no === mrNo || p.arrival_no === mrNo)) ||
+          (arrNo && (p.arrival_no === arrNo || p.mr_no === arrNo)) ||
+          (poNo && p.po_no === poNo)
+        );
+      }
+
+      if (foundPayment && Number(foundPayment.paid_amount || 0) > 0) {
+        const paidAmt = Number(foundPayment.paid_amount || 0);
+        const payableAmt = Number(foundPayment.payable_amt || foundPayment.total_amount || 0);
+        const pct = payableAmt > 0 ? Math.round((paidAmt / payableAmt) * 1000) / 10 : 93.0;
+
+        setPaymentOpsInfo({
+          paidAmount: paidAmt,
+          totalBill: payableAmt,
+          pct,
+          source: 'payment_master',
+          voucherNo: foundPayment.voucher_no || null,
+          advanceDone: foundPayment.advance_payment_done || 'No',
+          loading: false,
+        });
+
+        if (forceUpdate || !(masterData as any).advance_amount || Number((masterData as any).advance_amount) === 0) {
+          setMasterData(prev => ({
+            ...prev,
+            advance_amount: paidAmt,
+          }));
+        }
+        return;
+      }
+
+      let poRecord = selectedPoData;
+      if (!poRecord && poNo && supabase) {
+        const { data } = await supabase.from('purchase_master').select('*').eq('po_no', poNo).maybeSingle();
+        if (data) poRecord = data;
+      }
+
+      let rate = Number(poRecord?.b_rate || poRecord?.rate_qntl || poRecord?.rate || 0);
+      if (rate === 0 && poNo && supabase) {
+        const { data: details } = await supabase.from('purchase_detail_master').select('*').eq('po_no', poNo).limit(1);
+        if (details && details.length > 0) {
+          rate = Number(details[0].rate || details[0].rate_qntl || details[0].b_rate || 0);
+        }
+      }
+
+      const grossWtMt = (overrideArrival && Number(overrideArrival.challan_gross_wt || overrideArrival.total_actual_weight || 0) > 0)
+        ? (Number(overrideArrival.challan_gross_wt || overrideArrival.total_actual_weight) > 100 ? Number(overrideArrival.challan_gross_wt || overrideArrival.total_actual_weight) / 1000 : Number(overrideArrival.challan_gross_wt || overrideArrival.total_actual_weight))
+        : (totalChallanGrossWt > 0 ? totalChallanGrossWt : Number(masterData.challan_gross_wt || 0));
+
+      let totalBill = 0;
+      if (rate > 0 && grossWtMt > 0) {
+        totalBill = Math.round(grossWtMt * 10 * rate * 100) / 100;
+      } else if (poRecord?.total_amount && Number(poRecord.total_amount) > 0) {
+        totalBill = Number(poRecord.total_amount);
+      } else if (poRecord?.contract_value && Number(poRecord.contract_value) > 0) {
+        totalBill = Number(poRecord.contract_value);
+      }
+
+      const default93 = totalBill > 0 ? Math.round(totalBill * 0.93 * 100) / 100 : 0;
+
+      setPaymentOpsInfo({
+        paidAmount: default93,
+        totalBill,
+        pct: 93.0,
+        source: 'calculated_93',
+        voucherNo: null,
+        loading: false,
+      });
+
+      if (forceUpdate || !(masterData as any).advance_amount || Number((masterData as any).advance_amount) === 0) {
+        if (default93 > 0) {
+          setMasterData(prev => ({
+            ...prev,
+            advance_amount: default93,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn("Error syncing advance amount from Payment Operations:", err);
+      setPaymentOpsInfo(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  React.useEffect(() => {
+    syncAdvanceFromPaymentOperations(false);
+  }, [masterData.arrival_no, masterData.po_no, totalChallanGrossWt]);
 
   const totalReceiptGrossWt = React.useMemo(() => {
     return detailsList.reduce((acc, r) => acc + (Number(r.receipt_gross_wt ?? r.challan_gross_wt) || 0), 0);
@@ -1623,6 +1764,7 @@ export default function MaterialInspection({
         `Matched & Auto-filled parameters as per Jute Arrival / PO #${voucher.po_no || voucher.temporary_arrival_no || voucher.amad_no || ""}! Fill custom table parameters.`,
       );
     }
+    syncAdvanceFromPaymentOperations(true, voucher);
   };
 
   // Automatically calculate claim moisture, claim dust, and claim ncv when actual parameters or rules change
@@ -1983,6 +2125,16 @@ export default function MaterialInspection({
         deduction_rate: (masterData as any).deduction_rate || 0,
         deduction_qty: (masterData as any).deduction_qty || 0,
         deduction_amount: (masterData as any).deduction_amount || 0,
+        advance_amount: Number((masterData as any).advance_amount) || 0,
+        on_account_advance_amount: Number((masterData as any).on_account_advance_amount) || 0,
+        settlement_amount: Number((masterData as any).settlement_amount) || 0,
+        sent_settlement_date: (masterData as any).sent_settlement_date || null,
+        lorry_returned: (masterData as any).lorry_returned || 'No',
+        lorry_returned_other_mill: (masterData as any).lorry_returned_other_mill || 'No',
+        mr_print_date: (masterData as any).mr_print_date || null,
+        consignment_no: (masterData as any).consignment_no || null,
+        consignment_date: (masterData as any).consignment_date || null,
+        arrival_remarks: (masterData as any).arrival_remarks || null,
         status: 'Completed'
       };
 
@@ -3678,16 +3830,32 @@ export default function MaterialInspection({
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="w-36 font-semibold text-slate-700">Advance Amount <span className="text-red-500">*</span></label>
-                    <input
- id="advance_amount_3386" aria-label="0.00"                      type="number"
-                      name="advance_amount"
-                      value={(masterData as any).advance_amount || ''}
-                      disabled={!isEditMode}
-                      onChange={handleMasterChange}
-                      placeholder="0.00"
-                      className="w-28 h-8 rounded border border-slate-300 px-2.5 font-semibold text-right disabled:bg-slate-100"
-                    />
+                    <div className="flex items-center gap-2 flex-1">
+                      <label className="w-36 font-semibold text-slate-700">Advance Amount <span className="text-red-500">*</span></label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-2 text-xs font-bold text-slate-400">₹</span>
+                        <input
+                          id="advance_amount_3386" aria-label="0.00"
+                          type="number"
+                          step="0.01"
+                          name="advance_amount"
+                          value={(masterData as any).advance_amount || ''}
+                          disabled={!isEditMode}
+                          onChange={handleMasterChange}
+                          placeholder="0.00"
+                          className="w-28 h-8 rounded border border-emerald-300 pl-5 pr-2 font-black text-emerald-950 bg-emerald-50/70 text-right disabled:bg-slate-100"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isEditMode}
+                        onClick={() => syncAdvanceFromPaymentOperations(true)}
+                        title="Fetch Paid Amount (93.0% of total bill) from Payment Operations"
+                        className="px-2 py-1 h-8 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] flex items-center gap-1 shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                      >
+                        <span>⚡ 93% Paid Amt</span>
+                      </button>
+                    </div>
                     <span className="font-semibold text-slate-600 shrink-0 text-[11px]">On-Account Advance</span>
                     <input
  id="on_account_advance_amount_3396" aria-label="Enter Amount"                      type="number"
@@ -3698,6 +3866,26 @@ export default function MaterialInspection({
                       placeholder="Enter Amount"
                       className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-semibold text-right disabled:bg-slate-100"
                     />
+                  </div>
+                  <div className="pl-36 text-[10px] -mt-2 mb-1">
+                    {paymentOpsInfo.source === 'payment_master' ? (
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
+                        ✓ From Payment Ops ({paymentOpsInfo.voucherNo || 'Voucher'}): <strong>₹{paymentOpsInfo.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                        {paymentOpsInfo.totalBill > 0 && (
+                          <span className="text-emerald-900 font-normal">
+                            ({((paymentOpsInfo.paidAmount / paymentOpsInfo.totalBill) * 100).toFixed(1)}% of bill ₹{paymentOpsInfo.totalBill.toLocaleString('en-IN', { minimumFractionDigits: 2 })})
+                          </span>
+                        )}
+                      </span>
+                    ) : paymentOpsInfo.totalBill > 0 ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                        Payment Ops standard: <strong className="text-emerald-800">93.0% of total bill (₹{paymentOpsInfo.totalBill.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) = ₹{paymentOpsInfo.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">
+                        Payment Operations &rarr; Paid Amount (93.0% of total bill)
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <label htmlFor="arrival_remarks_3408" className="w-36 font-semibold text-slate-700">Arrival Remarks</label>
@@ -4013,11 +4201,11 @@ export default function MaterialInspection({
                       ))}
                     </tr>
 
-                    {/* Row 4: Moc */}
+                    {/* Row 4: NCV % */}
                     <tr className="hover:bg-blue-50/50">
                       <td className="px-3 py-1.5 border-r border-slate-200 flex items-center gap-1.5 font-bold text-emerald-900">
                         <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span>Moc</span>
+                        <span>NCV %</span>
                       </td>
                       {['1st', '2nd', '3rd', '4th'].map((col, idx) => (
                         <React.Fragment key={idx}>
