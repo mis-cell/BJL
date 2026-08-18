@@ -506,7 +506,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
-          const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || 0);
+          const lMin = Number(item.lorry_read_min || 0);
+          const lMax = Number(item.lorry_read_max || 0);
+          const lAvg = Number(item.lorry_read_avg || (lMin > 0 && lMax > 0 ? (lMin + lMax) / 2 : (lMin || lMax)) || 0);
+
+          const iMin = Number(item.insp_read_min || 0);
+          const iMax = Number(item.insp_read_max || 0);
+          const iAvg = Number(item.insp_read_avg || (iMin > 0 && iMax > 0 ? (iMin + iMax) / 2 : (iMin || iMax)) || 0);
+
+          const highestAvg = Math.max(lAvg, iAvg);
+
+          const moistAct = Number(item.moisture_act || (highestAvg > 0 ? highestAvg : 0) || item.actual_moisture || 0);
+          const moistClaim = Number(item.moisture_claim || (highestAvg > 0 ? highestAvg : 0) || item.claim_moisture || 0);
           const gdAct = Number(item.grade_down_act || item.grade_down || 0);
           const dustAct = Number(item.dust_act || item.actual_dust || 0);
           const ncvAct = Number(item.ncv_act || item.actual_ncv || 0);
@@ -660,7 +671,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
         const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
 
-        const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || fa.actual_moisture || 0);
+        const lMin = Number(item.lorry_read_min || 0);
+        const lMax = Number(item.lorry_read_max || 0);
+        const lAvg = Number(item.lorry_read_avg || (lMin > 0 && lMax > 0 ? (lMin + lMax) / 2 : (lMin || lMax)) || 0);
+
+        const iMin = Number(item.insp_read_min || 0);
+        const iMax = Number(item.insp_read_max || 0);
+        const iAvg = Number(item.insp_read_avg || (iMin > 0 && iMax > 0 ? (iMin + iMax) / 2 : (iMin || iMax)) || 0);
+
+        const highestAvg = Math.max(lAvg, iAvg);
+
+        const moistAct = Number(item.moisture_act || (highestAvg > 0 ? highestAvg : 0) || item.actual_moisture || fa.actual_moisture || 0);
+        const moistClaim = Number(item.moisture_claim || (highestAvg > 0 ? highestAvg : 0) || item.claim_moisture || fa.claim_moisture || 0);
         const gdAct = Number(item.grade_down_act || item.grade_down || 0);
         const dustAct = Number(item.dust_act || item.actual_dust || fa.actual_dust || 0);
         const ncvAct = Number(item.ncv_act || item.actual_ncv || fa.actual_ncv || 0);
@@ -935,9 +957,24 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           avg = min || max;
         }
         currentRow.insp_read_avg = avg;
-        if (avg > 0) {
-          currentRow.moisture_act = avg;
-          currentRow.settlement_moisture = avg;
+      }
+
+      // Auto-pull HIGHEST Value between Lorry Read Avg & Insp Read Avg into Moisture % Act., Claim, and Mill Settlement % Moisture
+      if (
+        field === "lorry_read_min" ||
+        field === "lorry_read_max" ||
+        field === "lorry_read_avg" ||
+        field === "insp_read_min" ||
+        field === "insp_read_max" ||
+        field === "insp_read_avg"
+      ) {
+        const lorryAvg = Number(currentRow.lorry_read_avg) || 0;
+        const inspAvg = Number(currentRow.insp_read_avg) || 0;
+        const highestMoisture = Number(Math.max(lorryAvg, inspAvg).toFixed(2));
+        if (highestMoisture > 0) {
+          currentRow.moisture_act = highestMoisture;
+          currentRow.moisture_claim = highestMoisture;
+          currentRow.settlement_moisture = highestMoisture;
         }
       }
 
@@ -1891,7 +1928,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Lorry Moisture</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Lorry Moisture Read (%)</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Insp. Moisture Read (%)</th>
-                      <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Moisture %</th>
+                      <th colSpan={2} className="p-2 border-r border-blue-400 text-center bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white font-black shadow-inner">
+                        <div className="flex items-center justify-center gap-1">
+                          <Sparkles className="w-3 h-3 text-cyan-300 fill-cyan-300" />
+                          <span className="tracking-wide">Moisture %</span>
+                        </div>
+                      </th>
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Dust %</th>
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">NCV %</th>
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Grade Down %</th>
@@ -1929,8 +1971,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Min</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Max</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Avg</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Act.</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Claim</th>
+                      <th className="p-1.5 border-r border-blue-500 text-center min-w-[90px] bg-blue-900 text-blue-100 font-black" title="Auto-pulled highest value between Lorry Avg and Insp Avg">Act.</th>
+                      <th className="p-1.5 border-r border-blue-500 text-center min-w-[90px] bg-blue-900 text-blue-100 font-black" title="Auto-pulled highest value between Lorry Avg and Insp Avg">Claim</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Act.</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Claim</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Act.</th>
@@ -2314,29 +2356,29 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               />
                             </td>
 
-                            {/* Moisture Act / Claim */}
-                            <td className="p-1.5 border-r border-slate-200">
+                            {/* Moisture Act / Claim (Highlighted in Blue Theme with Auto Highest Value) */}
+                            <td className="p-1.5 border-r border-blue-200 bg-blue-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isMoistureActBlocked}
                                 tabIndex={isMoistureActBlocked ? -1 : 0}
-                                title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.moisture_act || 0}
+                                title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Act. (Auto-pulled highest value between Lorry Avg and Insp Avg)"}
+                                value={row.moisture_act ?? 0}
                                 onChange={(e) => !isMoistureActBlocked && handleDetailChange(idx, "moisture_act", Number(e.target.value))}
-                                className={getFieldInputStyle(isMoistureActBlocked, "text-blue-900 font-bold")}
+                                className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-blue-950 font-black text-center ${isMoistureActBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-blue-200 bg-blue-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isMoistureClaimBlocked}
                                 tabIndex={isMoistureClaimBlocked ? -1 : 0}
-                                title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.moisture_claim || 0}
+                                title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim (Auto-pulled highest value between Lorry Avg and Insp Avg)"}
+                                value={row.moisture_claim ?? 0}
                                 onChange={(e) => !isMoistureClaimBlocked && handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
-                                className={getFieldInputStyle(isMoistureClaimBlocked, "text-purple-900 font-bold")}
+                                className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-indigo-950 font-black text-center ${isMoistureClaimBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
 
