@@ -351,113 +351,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } catch (e) {}
       }
 
-      // 2. Fetch Final Arrival & Purchase Master records (Data coming from Final Arrival & purchase_master)
+      // 2. Fetch Final Arrival records (Actual physical arrivals received at the mill)
       let faList: any[] = [];
       if (supabase) {
         try {
-          const [faRes, pmRes, mimRes, tmrRes] = await Promise.all([
-            supabase.from("final_arrival").select("*").order("created_at", { ascending: false }),
-            supabase.from("purchase_master").select("*").order("created_at", { ascending: false }),
-            supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }),
-            supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false })
-          ]);
+          const faRes = await supabase
+            .from("final_arrival")
+            .select("*")
+            .order("created_at", { ascending: false });
 
           if (faRes.data && faRes.data.length > 0) {
             faList.push(...faRes.data);
           }
-
-          if (pmRes.data && pmRes.data.length > 0) {
-            pmRes.data.forEach((pm: any) => {
-              if (!faList.some(f => (f.po_no && f.po_no === pm.po_no) || (f.mr_no && f.mr_no === pm.po_no))) {
-                faList.push({
-                  mr_no: pm.po_no,
-                  final_arrival_no: pm.po_no,
-                  date: pm.date || pm.po_date,
-                  po_no: pm.po_no,
-                  po_date: pm.date || pm.po_date,
-                  supplier: pm.supplier || pm.challan_supplier,
-                  broker: pm.broker,
-                  lorry_number: pm.lorry_no || pm.lorry_number,
-                  arrival_area_name: pm.area,
-                  grid_details: pm.items || pm.details || pm.grid_details
-                });
-              }
-            });
-          }
-
-          if (mimRes.data && mimRes.data.length > 0) {
-            mimRes.data.forEach((mim: any) => {
-              if (!faList.some(f => (mim.mr_no && f.mr_no === mim.mr_no) || (mim.final_arrival_no && f.final_arrival_no === mim.final_arrival_no))) {
-                faList.push({
-                  mr_no: mim.mr_no || mim.arrival_no,
-                  final_arrival_no: mim.final_arrival_no || mim.arrival_no || mim.mr_no,
-                  date: mim.date || mim.mr_date,
-                  po_no: mim.po_no,
-                  po_date: mim.po_date || mim.date,
-                  supplier: mim.supplier || mim.supplier_name,
-                  broker: mim.broker || mim.broker_name,
-                  lorry_number: mim.lorry_number || mim.lorry_no,
-                  arrival_area_name: mim.arrival_area_name || mim.area,
-                  grid_details: mim.grid_details || mim.details || mim.items
-                });
-              }
-            });
-          }
-
-          if (tmrRes.data && tmrRes.data.length > 0) {
-            tmrRes.data.forEach((tmr: any) => {
-              if (!faList.some(f => (tmr.amad_no && f.mr_no === tmr.amad_no) || (tmr.temporary_arrival_no && f.final_arrival_no === tmr.temporary_arrival_no))) {
-                faList.push({
-                  mr_no: tmr.amad_no || tmr.temporary_arrival_no,
-                  final_arrival_no: tmr.temporary_arrival_no || tmr.amad_no,
-                  date: tmr.date || tmr.arrival_date,
-                  po_no: tmr.po_no,
-                  po_date: tmr.po_date || tmr.date,
-                  supplier: tmr.supplier || tmr.challan_supplier,
-                  broker: tmr.broker,
-                  lorry_number: tmr.lorry_no || tmr.lorry_number,
-                  arrival_area_name: tmr.arrival_area_name || tmr.area,
-                  grid_details: tmr.grid_details || tmr.details || tmr.items
-                });
-              }
-            });
-          }
         } catch (e) {
-          console.error("Error fetching arrivals & purchase_master:", e);
+          console.error("Error fetching arrivals from final_arrival:", e);
         }
       }
 
-      // Local storage fallbacks for Final Arrival & Amad Register
+      // Local storage fallbacks for Final Arrival Vouchers
       try {
         const cachedFa = localStorage.getItem("final_arrival_vouchers");
         if (cachedFa) {
           const parsed = JSON.parse(cachedFa);
           parsed.forEach((item: any) => {
-            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id))) {
+            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id) || (f.mr_no && f.mr_no === item.mr_no))) {
               faList.push(item);
-            }
-          });
-        }
-      } catch (e) {}
-
-      try {
-        const cachedAmad = localStorage.getItem("amad_records");
-        if (cachedAmad) {
-          const parsed = JSON.parse(cachedAmad);
-          parsed.forEach((item: any) => {
-            if (!faList.some(f => (f.mr_no && f.mr_no === item.amad_no) || (f.final_arrival_no && f.final_arrival_no === item.temporary_arrival_no))) {
-              faList.push({
-                mr_no: item.amad_no,
-                final_arrival_no: item.temporary_arrival_no || item.amad_no,
-                date: item.date,
-                po_no: item.po_no,
-                po_date: item.po_date || item.date,
-                supplier: item.supplier,
-                broker: item.broker,
-                lorry_number: item.lorry_no,
-                arrival_area_name: item.arrival_area_name || item.arrival_area || item.area_name || item.area,
-                grid_details: item.grid_details || item.details || item.items
-              });
             }
           });
         }
@@ -1543,7 +1461,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-emerald-700" />
                       <span className="text-xs font-bold text-emerald-950">
-                        Import / Pick From Final Arrival & Purchase Master:
+                        Import / Pick From Final Arrival:
                       </span>
                       {pendingArrivalList.length > 0 && (
                         <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
@@ -1565,9 +1483,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       defaultValue=""
                       className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
                     >
-                      <option value="">-- Select Final Arrival / P.O. Record to Auto-Fill --</option>
+                      <option value="">-- Select Final Arrival Record to Auto-Fill --</option>
                       {pendingArrivalList.length > 0 && (
-                        <optgroup label="Pending Inspection">
+                        <optgroup label="Pending Inspection Arrivals">
                           {pendingArrivalList.map((fa, idx) => (
                             <option key={`p-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
                               Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
@@ -1575,7 +1493,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           ))}
                         </optgroup>
                       )}
-                      <optgroup label="All Final Arrivals & POs">
+                      <optgroup label="All Final Arrivals">
                         {finalArrivalList.map((fa, idx) => (
                           <option key={`a-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
                             Arrival #{fa.final_arrival_no || fa.mr_no || fa.po_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
