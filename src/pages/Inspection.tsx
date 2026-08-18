@@ -69,11 +69,15 @@ interface InspectionDetailRow {
   stock_grade_name?: string;
   area?: string;
   agency?: string;
+  agency_code?: string;
   marks?: string;
+  marka?: string;
   crop_year?: string;
   lot?: string;
   quantity?: number;
   unit?: string;
+  rate?: number | string;
+  rate_qntl?: number | string;
   challan_gross_wt?: number;
   receipt_gross_wt?: number;
   gross_weight_batch?: number;
@@ -96,6 +100,14 @@ interface InspectionDetailRow {
   ncv_claim?: number;
   grade_down_act?: number;
   grade_down_claim?: number;
+  actual_moisture?: number;
+  claim_moisture?: number;
+  actual_dust?: number;
+  claim_dust?: number;
+  actual_ncv?: number;
+  claim_ncv?: number;
+  actual_grade_down?: number;
+  claim_grade_down?: number;
   final_receipt_wt?: number;
   settlement_moisture?: number;
   settlement_grade_down?: number;
@@ -112,6 +124,7 @@ interface InspectionDetailRow {
   is_premium?: boolean;
   row_remarks?: string;
   jqi_remarks?: string;
+  jci_remarks?: string;
   expanded?: boolean;
 }
 
@@ -940,35 +953,50 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
 
     try {
-      const payload: InspectionMasterRecord = {
+      const payload: any = {
         ...headerForm,
+        date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
+        broker: headerForm.broker_name || (headerForm as any).broker || "",
+        supplier: headerForm.supplier_name || (headerForm as any).supplier || "",
         status: headerForm.status || "Completed",
+        grid_details: detailRows,
+        details: detailRows,
         created_at: headerForm.created_at || new Date().toISOString()
       };
 
       if (supabase) {
-        await supabase.from("material_inspection").upsert([payload]);
+        const { error: masterErr } = await supabase.from("material_inspection").upsert([payload]);
+        if (masterErr) {
+          console.warn("Error upserting to material_inspection:", masterErr);
+        }
+        await supabase.from("mill_inspection_master").upsert([payload]).then(() => {}, () => {});
         await supabase.from("inspection_master").upsert([payload]).then(() => {}, () => {});
+        await supabase.from("inspection_checklist").upsert([payload]).then(() => {}, () => {});
         
         // Clean out old detail rows
         await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
         await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
+        await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
 
         // Prepare detail rows
         const validDetails = detailRows.map((row, idx) => ({
           mr_no: headerForm.mr_no,
-          srl_no: idx + 1,
+          srl_no: row.srl_no || idx + 1,
           arrival_grade: row.arrival_grade || "",
           stock_grade_code: row.stock_grade_code || "",
           stock_grade_name: row.stock_grade_name || "",
           area: row.area || "",
           agency: row.agency || "",
-          marks: row.marks || "",
-          marka: row.marks || "",
-          crop_year: row.crop_year || "",
+          agency_code: (row as any).agency_code || "",
+          marks: row.marks || row.marka || "",
+          marka: row.marks || row.marka || "",
+          crop_year: row.crop_year || "2026-27",
           lot: row.lot || "",
           quantity: Number(row.quantity) || 0,
           unit: row.unit || "BALES",
+          rate: Number((row as any).rate || (row as any).rate_qntl || 0) || 0,
+          rate_qntl: Number((row as any).rate_qntl || (row as any).rate || 0) || 0,
           challan_gross_wt: Number(row.challan_gross_wt) || 0,
           receipt_gross_wt: Number(row.receipt_gross_wt) || 0,
           gross_weight_batch: Number(row.gross_weight_batch) || 0,
@@ -983,14 +1011,22 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           insp_read_min: Number(row.insp_read_min) || 0,
           insp_read_max: Number(row.insp_read_max) || 0,
           insp_read_avg: Number(row.insp_read_avg) || 0,
-          moisture_act: Number(row.moisture_act) || 0,
-          moisture_claim: Number(row.moisture_claim) || 0,
-          dust_act: Number(row.dust_act) || 0,
-          dust_claim: Number(row.dust_claim) || 0,
-          ncv_act: Number(row.ncv_act) || 0,
-          ncv_claim: Number(row.ncv_claim) || 0,
-          grade_down_act: Number(row.grade_down_act) || 0,
-          grade_down_claim: Number(row.grade_down_claim) || 0,
+          moisture_act: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
+          moisture_claim: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
+          dust_act: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
+          dust_claim: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
+          ncv_act: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
+          ncv_claim: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
+          grade_down_act: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
+          grade_down_claim: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
+          actual_moisture: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
+          claim_moisture: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
+          actual_dust: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
+          claim_dust: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
+          actual_ncv: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
+          claim_ncv: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
+          actual_grade_down: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
+          claim_grade_down: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
           final_receipt_wt: Number(row.final_receipt_wt) || 0,
           settlement_moisture: Number(row.settlement_moisture) || 0,
           settlement_grade_down: Number(row.settlement_grade_down) || 0,
@@ -1004,15 +1040,35 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           chotta_grade: row.chotta_grade || "",
           tolerable: row.tolerable || "Yes",
           premium: row.premium !== undefined && row.premium !== null ? String(row.premium) : (row.is_premium ? "Yes" : "No"),
+          is_premium: Boolean(row.is_premium || row.premium === "Yes"),
           row_remarks: row.row_remarks || "",
           jqi_remarks: row.jqi_remarks || "",
-          jci_remarks: row.jqi_remarks || ""
+          jci_remarks: row.jci_remarks || row.jqi_remarks || ""
         }));
 
         if (validDetails.length > 0) {
           await supabase.from("material_inspection_details").insert(validDetails);
           await supabase.from("inspection_details").insert(validDetails).then(() => {}, () => {});
+          await supabase.from("inspection_checklist_details").insert(validDetails).then(() => {}, () => {});
+          await supabase.from("mill_inspection_detail").insert(validDetails).then(() => {}, () => {});
         }
+
+        // Sync with final_arrival table
+        try {
+          await supabase.from("final_arrival").upsert({
+            mr_no: headerForm.mr_no,
+            mr_date: headerForm.mr_date || null,
+            temporary_arrival_no: headerForm.arrival_no,
+            arrival_date: headerForm.arrival_date || null,
+            date: headerForm.arrival_date || headerForm.mr_date || null,
+            po_no: headerForm.po_no,
+            po_date: headerForm.po_date || null,
+            broker: headerForm.broker_name,
+            supplier: headerForm.supplier_name,
+            lorry_number: headerForm.lorry_number,
+            status: 'Completed'
+          });
+        } catch (faErr) {}
       }
 
       // Update local storage cache

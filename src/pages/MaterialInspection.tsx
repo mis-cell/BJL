@@ -131,22 +131,62 @@ interface InspectionDetailRow {
   stock_grade_name: string;
   area: string;
   agency: string;
+  agency_code?: string;
   marka: string;
+  marks?: string;
   crop_year: string;
   lot: string;
   quantity: number | string;
   unit: string;
   challan_gross_wt: number | string;
   receipt_gross_wt?: number | string;
+  rate?: number | string;
+  rate_qntl?: number | string;
   actual_grade_down?: number | string;
   claim_grade_down?: number | string;
+  grade_down_act?: number | string;
+  grade_down_claim?: number | string;
+  settlement_grade_down?: number | string;
   actual_moisture?: number | string;
   claim_moisture?: number | string;
+  moisture_act?: number | string;
+  moisture_claim?: number | string;
+  settlement_moisture?: number | string;
   actual_dust?: number | string;
   claim_dust?: number | string;
+  dust_act?: number | string;
+  dust_claim?: number | string;
+  settlement_dust?: number | string;
   actual_ncv?: number | string;
   claim_ncv?: number | string;
-  rate?: number | string;
+  ncv_act?: number | string;
+  ncv_claim?: number | string;
+  settlement_ncv?: number | string;
+  gross_weight_batch?: number;
+  add_weight?: number;
+  less_weight?: number;
+  reduced_weight?: number;
+  lorry_moisture_min?: number;
+  lorry_moisture_max?: number;
+  lorry_read_min?: number;
+  lorry_read_max?: number;
+  lorry_read_avg?: number;
+  insp_read_min?: number;
+  insp_read_max?: number;
+  insp_read_avg?: number;
+  final_receipt_wt?: number;
+  ropes_weight?: number;
+  ropes_tot_wt_grd?: number;
+  ropes_grade?: string;
+  chotta_weight?: number;
+  chotta_tot_wt_grd?: number;
+  chotta_grade?: string;
+  tolerable?: string;
+  premium?: string;
+  is_premium?: boolean;
+  row_remarks?: string;
+  jqi_remarks?: string;
+  jci_remarks?: string;
 }
 
 interface SupabaseAutoCompleteInputProps {
@@ -1562,9 +1602,51 @@ export default function MaterialInspection({
           return row;
         });
         setDetailsList(enrichedData);
+
+        // Populate qualityMatrix from stored matrix or detail rows
+        const colKeys = ['1st', '2nd', '3rd', '4th'];
+        let loadedMatrix = (insp as any).quality_matrix;
+        if (typeof loadedMatrix === "string") {
+          try {
+            loadedMatrix = JSON.parse(loadedMatrix);
+          } catch (e) {}
+        }
+        if (!loadedMatrix || typeof loadedMatrix !== "object" || !loadedMatrix.grade_down) {
+          loadedMatrix = initialQualityMatrix();
+          enrichedData.slice(0, 4).forEach((row: any, i: number) => {
+            const col = colKeys[i];
+            loadedMatrix.grade_down[col] = {
+              dept: String(row.actual_grade_down ?? row.grade_down_act ?? (i === 0 ? insp.actual_grade_down : '') ?? ''),
+              claim: String(row.claim_grade_down ?? row.grade_down_claim ?? (i === 0 ? insp.claim_grade_down : '') ?? ''),
+              sett: String(row.settlement_grade_down ?? '')
+            };
+            loadedMatrix.moisture[col] = {
+              dept: String(row.actual_moisture ?? row.moisture_act ?? (i === 0 ? insp.actual_moisture : '') ?? ''),
+              claim: String(row.claim_moisture ?? row.moisture_claim ?? (i === 0 ? insp.claim_moisture : '') ?? ''),
+              sett: String(row.settlement_moisture ?? '')
+            };
+            loadedMatrix.dust[col] = {
+              dept: String(row.actual_dust ?? row.dust_act ?? (i === 0 ? insp.actual_dust : '') ?? ''),
+              claim: String(row.claim_dust ?? row.dust_claim ?? (i === 0 ? insp.claim_dust : '') ?? ''),
+              sett: String(row.settlement_dust ?? '')
+            };
+            loadedMatrix.moc[col] = {
+              dept: String(row.actual_ncv ?? row.ncv_act ?? (i === 0 ? insp.actual_ncv : '') ?? ''),
+              claim: String(row.claim_ncv ?? row.ncv_claim ?? (i === 0 ? insp.claim_ncv : '') ?? ''),
+              sett: String(row.settlement_ncv ?? '')
+            };
+            loadedMatrix.po_rate[col] = {
+              dept: String(row.rate ?? row.rate_qntl ?? ''),
+              claim: String(row.rate_claim ?? ''),
+              sett: String(row.rate_sett ?? '')
+            };
+          });
+        }
+        setQualityMatrix(loadedMatrix);
       } else {
         // Fallback placeholder rows
         setDetailsList([1, 2, 3, 4, 5].map(createEmptyRow));
+        setQualityMatrix(initialQualityMatrix());
       }
 
       setIsEditMode(true);
@@ -1665,6 +1747,23 @@ export default function MaterialInspection({
       ""
     ).toUpperCase();
 
+    // If pDetails is empty, attempt to load from purchase_detail_master
+    if ((!pDetails || pDetails.length === 0) && voucher.po_no && supabase) {
+      (async () => {
+        try {
+          const { data: pdm } = await supabase
+            .from("purchase_detail_master")
+            .select("*")
+            .or(`po_no.eq.${voucher.po_no.trim()},po_no.ilike.${voucher.po_no.trim()}`);
+          if (pdm && pdm.length > 0) {
+            handleAutoFillFromVoucher({ ...voucher, grid_details: pdm });
+          }
+        } catch (e) {
+          console.warn("Async purchase details load error:", e);
+        }
+      })();
+    }
+
     if (pDetails && pDetails.length > 0) {
       const mappedDetails = pDetails.map((row: any, i: number) => {
         const qtyRcpt = Number(row.quantity_rcpt) || 0;
@@ -1699,18 +1798,22 @@ export default function MaterialInspection({
           ""
         ).toUpperCase();
 
+        const rowRate = row.rate_qntl || row.rate || row.b_rate || row.base_rate || "";
+
         return {
           srl_no: i + 1,
           arrival_grade: (
             row.challan_grade_name ||
             row.receipt_grade_name ||
+            row.arrival_grade ||
             ""
           ).toUpperCase(),
-          stock_grade_code: (row.receipt_grade_code || "").toUpperCase(),
-          stock_grade_name: (row.receipt_grade_name || "").toUpperCase(),
+          stock_grade_code: (row.receipt_grade_code || row.stock_grade_code || "").toUpperCase(),
+          stock_grade_name: (row.receipt_grade_name || row.stock_grade_name || "").toUpperCase(),
           area: rowArea,
-          agency: (row.agency_name || "").toUpperCase(),
-          marka: (row.challan_marka_name || "").toUpperCase(),
+          agency: (row.agency_name || row.agency || "").toUpperCase(),
+          marka: (row.challan_marka_name || row.marka || "").toUpperCase(),
+          marks: (row.challan_marka_name || row.marks || row.marka || "").toUpperCase(),
           crop_year: (() => {
             const rawCy = String(row.crop_year || voucher.financial_year || "").trim();
             if (!rawCy) return "2026-27";
@@ -1720,10 +1823,19 @@ export default function MaterialInspection({
             if (rawCy === "2027-2028") return "2027-28";
             return rawCy;
           })(),
-          lot: "",
+          lot: row.lot || "",
           quantity: derivedQuantity,
           unit: rowUnit,
+          rate: rowRate,
           challan_gross_wt: row.netto_pnto || row.challan_gross_wt || "",
+          actual_moisture: row.moisture_act || row.actual_moisture || voucher.actual_moisture || voucher.moisture_act || "",
+          claim_moisture: row.moisture_claim || row.claim_moisture || voucher.claim_moisture || voucher.moisture_claim || "",
+          actual_dust: row.dust_act || row.actual_dust || voucher.actual_dust || voucher.dust_act || "",
+          claim_dust: row.dust_claim || row.claim_dust || voucher.claim_dust || voucher.dust_claim || "",
+          actual_ncv: row.ncv_act || row.actual_ncv || voucher.actual_ncv || voucher.ncv_act || "",
+          claim_ncv: row.ncv_claim || row.claim_ncv || voucher.claim_ncv || voucher.ncv_claim || "",
+          actual_grade_down: row.grade_down_act || row.actual_grade_down || voucher.actual_grade_down || voucher.grade_down_act || "",
+          claim_grade_down: row.grade_down_claim || row.claim_grade_down || voucher.claim_grade_down || voucher.grade_down_claim || "",
         };
       });
 
@@ -1745,15 +1857,59 @@ export default function MaterialInspection({
           area: voucherAreaHeader,
           agency: "",
           marka: "",
+          marks: "",
           crop_year: "2026-27",
           lot: "",
           quantity: "",
+          rate: "",
           unit: defaultUnit,
           challan_gross_wt: "",
+          actual_moisture: "",
+          claim_moisture: "",
+          actual_dust: "",
+          claim_dust: "",
+          actual_ncv: "",
+          claim_ncv: "",
+          actual_grade_down: "",
+          claim_grade_down: "",
         });
       }
 
       setDetailsList(mappedDetails);
+
+      // Populate quality matrix
+      const colKeys = ['1st', '2nd', '3rd', '4th'];
+      const newMatrix = initialQualityMatrix();
+      mappedDetails.slice(0, 4).forEach((row: any, i: number) => {
+        const col = colKeys[i];
+        newMatrix.grade_down[col] = {
+          dept: String(row.actual_grade_down || (i === 0 ? masterData.actual_grade_down : '') || ''),
+          claim: String(row.claim_grade_down || (i === 0 ? masterData.claim_grade_down : '') || ''),
+          sett: ''
+        };
+        newMatrix.moisture[col] = {
+          dept: String(row.actual_moisture || (i === 0 ? masterData.actual_moisture : '') || ''),
+          claim: String(row.claim_moisture || (i === 0 ? masterData.claim_moisture : '') || ''),
+          sett: ''
+        };
+        newMatrix.dust[col] = {
+          dept: String(row.actual_dust || (i === 0 ? masterData.actual_dust : '') || ''),
+          claim: String(row.claim_dust || (i === 0 ? masterData.claim_dust : '') || ''),
+          sett: ''
+        };
+        newMatrix.moc[col] = {
+          dept: String(row.actual_ncv || (i === 0 ? masterData.actual_ncv : '') || ''),
+          claim: String(row.claim_ncv || (i === 0 ? masterData.claim_ncv : '') || ''),
+          sett: ''
+        };
+        newMatrix.po_rate[col] = {
+          dept: String(row.rate || ''),
+          claim: '',
+          sett: ''
+        };
+      });
+      setQualityMatrix(newMatrix);
+
       setSuccessMessage(
         `Matched & Auto-filled parameter fields & ledger rows as per Jute Arrival / PO #${voucher.po_no || voucher.temporary_arrival_no || voucher.amad_no || ""}!`,
       );
@@ -2115,12 +2271,15 @@ export default function MaterialInspection({
       const masterPayload = {
         mr_no: masterData.mr_no,
         mr_date: masterData.mr_date || null,
+        date: masterData.mr_date || masterData.arrival_date || null,
         arrival_no: masterData.arrival_no,
         arrival_date: masterData.arrival_date || null,
         po_no: masterData.po_no,
         po_date: masterData.po_date || null,
         broker_name: masterData.broker_name,
+        broker: masterData.broker_name,
         supplier_name: masterData.supplier_name,
+        supplier: masterData.supplier_name,
         actual_moisture: masterData.actual_moisture,
         claim_moisture: masterData.claim_moisture,
         actual_dust: masterData.actual_dust,
@@ -2150,6 +2309,9 @@ export default function MaterialInspection({
         consignment_date: (masterData as any).consignment_date || null,
         arrival_remarks: (masterData as any).arrival_remarks || null,
         arival_apmc_fees: Number((masterData as any).arival_apmc_fees) || 0,
+        quality_matrix: qualityMatrix,
+        grid_details: detailsList,
+        details: detailsList,
         status: 'Completed'
       };
 
@@ -2169,28 +2331,119 @@ export default function MaterialInspection({
       await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
 
       // 3. Filter valid rows to write (must have at least grade or agency input)
+      const colKeys = ['1st', '2nd', '3rd', '4th'];
       const validRowsToWrite = detailsList
         .filter(
           (row) =>
             row.arrival_grade || row.stock_grade_code || row.area || row.agency,
         )
-        .map((row) => ({
-          mr_no: masterData.mr_no,
-          srl_no: row.srl_no,
-          arrival_grade: row.arrival_grade,
-          stock_grade_code: row.stock_grade_code,
-          stock_grade_name: row.stock_grade_name,
-          area: row.area,
-          agency: row.agency,
-          marka: row.marka,
-          marks: row.marka,
-          crop_year: row.crop_year,
-          lot: row.lot,
-          quantity: row.quantity === "" ? 0 : Number(row.quantity),
-          unit: row.unit || "BALES",
-          challan_gross_wt:
-            row.challan_gross_wt === "" ? 0 : Number(row.challan_gross_wt),
-        }));
+        .map((row, idx) => {
+          const colKey = colKeys[idx];
+
+          const qmGradeDownDept = qualityMatrix.grade_down?.[colKey]?.dept;
+          const qmGradeDownClaim = qualityMatrix.grade_down?.[colKey]?.claim;
+          const qmGradeDownSett = qualityMatrix.grade_down?.[colKey]?.sett;
+
+          const qmMoistureDept = qualityMatrix.moisture?.[colKey]?.dept;
+          const qmMoistureClaim = qualityMatrix.moisture?.[colKey]?.claim;
+          const qmMoistureSett = qualityMatrix.moisture?.[colKey]?.sett;
+
+          const qmDustDept = qualityMatrix.dust?.[colKey]?.dept;
+          const qmDustClaim = qualityMatrix.dust?.[colKey]?.claim;
+          const qmDustSett = qualityMatrix.dust?.[colKey]?.sett;
+
+          const qmNcvDept = qualityMatrix.moc?.[colKey]?.dept;
+          const qmNcvClaim = qualityMatrix.moc?.[colKey]?.claim;
+          const qmNcvSett = qualityMatrix.moc?.[colKey]?.sett;
+
+          const qmPoRateDept = qualityMatrix.po_rate?.[colKey]?.dept;
+          const qmPoRateClaim = qualityMatrix.po_rate?.[colKey]?.claim;
+          const qmPoRateSett = qualityMatrix.po_rate?.[colKey]?.sett;
+
+          const rowGradeDownAct = Number(qmGradeDownDept ?? row.actual_grade_down ?? row.grade_down_act ?? (idx === 0 ? masterData.actual_grade_down : 0)) || 0;
+          const rowGradeDownClaim = Number(qmGradeDownClaim ?? row.claim_grade_down ?? row.grade_down_claim ?? (idx === 0 ? masterData.claim_grade_down : 0)) || 0;
+          const rowGradeDownSett = Number(qmGradeDownSett ?? row.settlement_grade_down ?? 0) || 0;
+
+          const rowMoistureAct = Number(qmMoistureDept ?? row.actual_moisture ?? row.moisture_act ?? (idx === 0 ? masterData.actual_moisture : 0)) || 0;
+          const rowMoistureClaim = Number(qmMoistureClaim ?? row.claim_moisture ?? row.moisture_claim ?? (idx === 0 ? masterData.claim_moisture : 0)) || 0;
+          const rowMoistureSett = Number(qmMoistureSett ?? row.settlement_moisture ?? 0) || 0;
+
+          const rowDustAct = Number(qmDustDept ?? row.actual_dust ?? row.dust_act ?? (idx === 0 ? masterData.actual_dust : 0)) || 0;
+          const rowDustClaim = Number(qmDustClaim ?? row.claim_dust ?? row.dust_claim ?? (idx === 0 ? masterData.claim_dust : 0)) || 0;
+          const rowDustSett = Number(qmDustSett ?? row.settlement_dust ?? 0) || 0;
+
+          const rowNcvAct = Number(qmNcvDept ?? row.actual_ncv ?? row.ncv_act ?? (idx === 0 ? masterData.actual_ncv : 0)) || 0;
+          const rowNcvClaim = Number(qmNcvClaim ?? row.claim_ncv ?? row.ncv_claim ?? (idx === 0 ? masterData.claim_ncv : 0)) || 0;
+          const rowNcvSett = Number(qmNcvSett ?? row.settlement_ncv ?? 0) || 0;
+
+          const rowRate = Number(qmPoRateDept ?? row.rate ?? row.rate_qntl ?? 0) || 0;
+
+          return {
+            mr_no: masterData.mr_no,
+            srl_no: row.srl_no || idx + 1,
+            arrival_grade: row.arrival_grade || "",
+            stock_grade_code: row.stock_grade_code || "",
+            stock_grade_name: row.stock_grade_name || "",
+            area: row.area || "",
+            agency: row.agency || "",
+            agency_code: (row as any).agency_code || "",
+            marka: row.marka || "",
+            marks: row.marka || "",
+            crop_year: row.crop_year || "2026-27",
+            lot: row.lot || "",
+            quantity: row.quantity === "" ? 0 : Number(row.quantity),
+            unit: row.unit || "BALES",
+            rate: rowRate,
+            rate_qntl: rowRate,
+            challan_gross_wt: row.challan_gross_wt === "" ? 0 : Number(row.challan_gross_wt),
+            receipt_gross_wt: Number((row as any).receipt_gross_wt) || 0,
+            gross_weight_batch: Number((row as any).gross_weight_batch) || 0,
+            add_weight: Number((row as any).add_weight) || 0,
+            less_weight: Number((row as any).less_weight) || 0,
+            reduced_weight: Number((row as any).reduced_weight) || 0,
+            lorry_moisture_min: Number((row as any).lorry_moisture_min) || 0,
+            lorry_moisture_max: Number((row as any).lorry_moisture_max) || 0,
+            lorry_read_min: Number((row as any).lorry_read_min) || 0,
+            lorry_read_max: Number((row as any).lorry_read_max) || 0,
+            lorry_read_avg: Number((row as any).lorry_read_avg) || 0,
+            insp_read_min: Number((row as any).insp_read_min) || 0,
+            insp_read_max: Number((row as any).insp_read_max) || 0,
+            insp_read_avg: Number((row as any).insp_read_avg) || 0,
+            moisture_act: rowMoistureAct,
+            moisture_claim: rowMoistureClaim,
+            dust_act: rowDustAct,
+            dust_claim: rowDustClaim,
+            ncv_act: rowNcvAct,
+            ncv_claim: rowNcvClaim,
+            grade_down_act: rowGradeDownAct,
+            grade_down_claim: rowGradeDownClaim,
+            actual_moisture: rowMoistureAct,
+            claim_moisture: rowMoistureClaim,
+            actual_dust: rowDustAct,
+            claim_dust: rowDustClaim,
+            actual_ncv: rowNcvAct,
+            claim_ncv: rowNcvClaim,
+            actual_grade_down: rowGradeDownAct,
+            claim_grade_down: rowGradeDownClaim,
+            final_receipt_wt: Number((row as any).final_receipt_wt) || 0,
+            settlement_moisture: rowMoistureSett,
+            settlement_grade_down: rowGradeDownSett,
+            settlement_dust: rowDustSett,
+            settlement_ncv: rowNcvSett,
+            ropes_weight: Number((row as any).ropes_weight) || 0,
+            ropes_tot_wt_grd: Number((row as any).ropes_tot_wt_grd) || 0,
+            ropes_grade: (row as any).ropes_grade || "",
+            chotta_weight: Number((row as any).chotta_weight) || 0,
+            chotta_tot_wt_grd: Number((row as any).chotta_tot_wt_grd) || 0,
+            chotta_grade: (row as any).chotta_grade || "",
+            tolerable: (row as any).tolerable || "Yes",
+            premium: (row as any).premium !== undefined && (row as any).premium !== null ? String((row as any).premium) : "No",
+            is_premium: Boolean((row as any).is_premium),
+            row_remarks: (row as any).row_remarks || "",
+            jqi_remarks: (row as any).jqi_remarks || "",
+            jci_remarks: (row as any).jci_remarks || (row as any).jqi_remarks || "",
+          };
+        });
 
       if (validRowsToWrite.length > 0) {
         await supabase.from("inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
