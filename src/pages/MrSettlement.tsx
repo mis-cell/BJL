@@ -1031,6 +1031,45 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         if (pDetData) poDetails = pDetData;
       }
 
+      // Fetch Temporary Arrival record to retrieve A.P.M.C Fees (Rs.)
+      let tempArrivalData: any = null;
+      try {
+        const poNo = poNoForDet;
+        const lorryNo = faMaster?.lorry_number || inspMaster?.lorry_number || '';
+        const arrNo = faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || targetMrNo;
+
+        const [tempRes, dbTemp] = await Promise.all([
+          supabase.from('temporary_material_received').select('*'),
+          dbModule.fetchAll('temporary_material_received').catch(() => [])
+        ]);
+        const allTemp = [...(tempRes.data || []), ...(dbTemp || [])];
+
+        if (allTemp.length > 0) {
+          const match = allTemp.find((t: any) => {
+            const tAmad = String(t.amad_no || t.temporary_arrival_no || t.arrival_no || '').trim().toUpperCase();
+            const tLorry = String(t.lorry_number || t.vehicle_no || '').trim().toUpperCase();
+            const tPo = String(t.po_no || '').trim().toUpperCase();
+            const targetUpper = String(arrNo || targetMrNo).trim().toUpperCase();
+            const lorryUpper = String(lorryNo).trim().toUpperCase();
+            const poUpper = String(poNo).trim().toUpperCase();
+
+            return (
+              (targetUpper && (tAmad === targetUpper || tAmad.includes(targetUpper) || targetUpper.includes(tAmad))) ||
+              (tLorry && lorryUpper && (tLorry === lorryUpper || tLorry.includes(lorryUpper) || lorryUpper.includes(tLorry))) ||
+              (tPo && poUpper && tPo === poUpper && tLorry && lorryUpper && tLorry === lorryUpper) ||
+              (tPo && poUpper && tPo === poUpper)
+            );
+          });
+          if (match) tempArrivalData = match;
+        }
+      } catch (e) {
+        console.warn("Could not fetch temporary arrival APMC fees:", e);
+      }
+
+      const resolvedArrivalApmcFees = Number(
+        tempArrivalData?.apmc_fees ?? tempArrivalData?.arival_apmc_fees ?? faMaster?.apmc_fees ?? faMaster?.arival_apmc_fees ?? inspMaster?.apmc_fees ?? 0
+      );
+
       await syncPaymentModuleData(targetMrNo, poNoForDet);
 
       // Check if settlement already exists for this MR. If yes, load for editing!
@@ -1043,7 +1082,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         if (existingMaster) {
           setIsEdit(true);
-          setMasterData(existingMaster);
+          const mergedMaster = {
+            ...existingMaster,
+            arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees
+          };
+          setMasterData(mergedMaster);
 
           const { data: existingDetails } = await supabase
             .from('mr_settlement_detail')
@@ -1108,6 +1151,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           challan_weight: Number(faMaster.challan_material_weight || faMaster.weight_qtl) || 0,
           supplier_net_wt: Number(faMaster.supplier_net_weight || faMaster.weight_qtl) || 0,
           electronic_scale_net: Number(faMaster.electronic_net_weight || faMaster.weight_qtl) || 0,
+          arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0
         };
 
@@ -1175,6 +1219,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: inspMaster.arrival_no || '',
         arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
         remarks: inspMaster.remarks || '',
+        arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0
       };
 
