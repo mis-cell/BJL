@@ -157,27 +157,6 @@ export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionD
     if (defaultAutoFields.includes(field)) {
       return true;
     }
-    const val = row[field];
-    if (val !== undefined && val !== null && val !== "" && val !== 0 && val !== "0") {
-      if (
-        field === "lot" ||
-        field === "final_receipt_wt" ||
-        field === "moisture_act" ||
-        field === "moisture_claim" ||
-        field === "dust_act" ||
-        field === "dust_claim" ||
-        field === "ncv_act" ||
-        field === "ncv_claim" ||
-        field === "grade_down_act" ||
-        field === "grade_down_claim" ||
-        field === "settlement_moisture" ||
-        field === "settlement_grade_down" ||
-        field === "settlement_dust" ||
-        field === "settlement_ncv"
-      ) {
-        return true;
-      }
-    }
   }
   return false;
 };
@@ -527,6 +506,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
+          const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || 0);
+          const gdAct = Number(item.grade_down_act || item.grade_down || 0);
+          const dustAct = Number(item.dust_act || item.actual_dust || 0);
+          const ncvAct = Number(item.ncv_act || item.actual_ncv || 0);
+
           return {
             srl_no: item.srl_no || (i + 1),
             arrival_grade: resolvedGradeName,
@@ -544,6 +528,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
             final_receipt_wt: nettoVal,
+            moisture_act: moistAct,
+            moisture_claim: Number(item.moisture_claim || item.claim_moisture || 0),
+            grade_down_act: gdAct,
+            grade_down_claim: Number(item.grade_down_claim || 0),
+            dust_act: dustAct,
+            dust_claim: Number(item.dust_claim || item.claim_dust || 0),
+            ncv_act: ncvAct,
+            ncv_claim: Number(item.ncv_claim || item.claim_ncv || 0),
+            settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
+            settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
+            settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
+            settlement_ncv: Number(item.settlement_ncv !== undefined && item.settlement_ncv !== null && item.settlement_ncv !== "" ? item.settlement_ncv : ncvAct),
             tolerable: item.tolerable || "Yes",
             premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
             is_premium: item.is_premium || item.premium === "Yes",
@@ -664,6 +660,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
         const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
 
+        const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || fa.actual_moisture || 0);
+        const gdAct = Number(item.grade_down_act || item.grade_down || 0);
+        const dustAct = Number(item.dust_act || item.actual_dust || fa.actual_dust || 0);
+        const ncvAct = Number(item.ncv_act || item.actual_ncv || fa.actual_ncv || 0);
+
         return {
           srl_no: item.srl_no || (i + 1),
           arrival_grade: gradeName,
@@ -679,6 +680,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
           final_receipt_wt: nettoVal,
+          moisture_act: moistAct,
+          moisture_claim: Number(item.moisture_claim || item.claim_moisture || fa.claim_moisture || 0),
+          grade_down_act: gdAct,
+          grade_down_claim: Number(item.grade_down_claim || 0),
+          dust_act: dustAct,
+          dust_claim: Number(item.dust_claim || item.claim_dust || fa.claim_dust || 0),
+          ncv_act: ncvAct,
+          ncv_claim: Number(item.ncv_claim || item.claim_ncv || fa.claim_ncv || 0),
+          settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
+          settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
+          settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
+          settlement_ncv: Number(item.settlement_ncv !== undefined && item.settlement_ncv !== null && item.settlement_ncv !== "" ? item.settlement_ncv : ncvAct),
           tolerable: item.tolerable || "Yes",
           premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
           is_premium: item.is_premium || item.premium === "Yes",
@@ -778,6 +791,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
           const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
 
+          const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || rec.actual_moisture || 0);
+          const gdAct = Number(item.grade_down_act || item.grade_down || 0);
+          const dustAct = Number(item.dust_act || item.actual_dust || rec.actual_dust || 0);
+          const ncvAct = Number(item.ncv_act || item.actual_ncv || rec.actual_ncv || 0);
+
           return {
             srl_no: item.srl_no || (i + 1),
             arrival_grade: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "",
@@ -793,6 +811,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
             final_receipt_wt: nettoVal,
+            moisture_act: moistAct,
+            moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
+            grade_down_act: gdAct,
+            grade_down_claim: Number(item.grade_down_claim || 0),
+            dust_act: dustAct,
+            dust_claim: Number(item.dust_claim || item.claim_dust || rec.claim_dust || 0),
+            ncv_act: ncvAct,
+            ncv_claim: Number(item.ncv_claim || item.claim_ncv || rec.claim_ncv || 0),
+            settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
+            settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
+            settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
+            settlement_ncv: Number(item.settlement_ncv !== undefined && item.settlement_ncv !== null && item.settlement_ncv !== "" ? item.settlement_ncv : ncvAct),
             tolerable: item.tolerable || "Yes",
             premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
             is_premium: item.is_premium || item.premium === "Yes",
@@ -812,6 +842,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         if (pdm && pdm.length > 0) {
           loadedDetails = pdm.map((item: any, i: number) => {
             const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.weight || item.quantity || 0);
+            const moistAct = Number(item.moisture_act || item.actual_moisture || rec.actual_moisture || 0);
+            const gdAct = Number(item.grade_down_act || item.grade_down || 0);
+            const dustAct = Number(item.dust_act || item.actual_dust || rec.actual_dust || 0);
+            const ncvAct = Number(item.ncv_act || item.actual_ncv || rec.actual_ncv || 0);
+
             return {
               srl_no: item.srl_no || (i + 1),
               arrival_grade: item.grade_name || item.variety || item.grade || "",
@@ -826,6 +861,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               challan_gross_wt: nettoVal,
               receipt_gross_wt: nettoVal,
               final_receipt_wt: nettoVal,
+              moisture_act: moistAct,
+              moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
+              grade_down_act: gdAct,
+              grade_down_claim: Number(item.grade_down_claim || 0),
+              dust_act: dustAct,
+              dust_claim: Number(item.dust_claim || item.claim_dust || rec.claim_dust || 0),
+              ncv_act: ncvAct,
+              ncv_claim: Number(item.ncv_claim || item.claim_ncv || rec.claim_ncv || 0),
+              settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
+              settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
+              settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
+              settlement_ncv: Number(item.settlement_ncv !== undefined && item.settlement_ncv !== null && item.settlement_ncv !== "" ? item.settlement_ncv : ncvAct),
               tolerable: "Yes",
               is_auto: true,
               expanded: false
@@ -890,7 +937,28 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         currentRow.insp_read_avg = avg;
         if (avg > 0) {
           currentRow.moisture_act = avg;
+          currentRow.settlement_moisture = avg;
         }
+      }
+
+      // Auto-pull Moisture Act into Mill Settlement % Moisture
+      if (field === "moisture_act") {
+        currentRow.settlement_moisture = Number(value) || 0;
+      }
+
+      // Auto-pull Grade Down Act into Mill Settlement % Gr. Down
+      if (field === "grade_down_act") {
+        currentRow.settlement_grade_down = Number(value) || 0;
+      }
+
+      // Auto-pull Dust Act into Mill Settlement % Dust
+      if (field === "dust_act") {
+        currentRow.settlement_dust = Number(value) || 0;
+      }
+
+      // Auto-pull NCV Act into Mill Settlement % NCV
+      if (field === "ncv_act") {
+        currentRow.settlement_ncv = Number(value) || 0;
       }
 
       updated[index] = currentRow;
@@ -1828,7 +1896,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">NCV %</th>
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Grade Down %</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">Final Receipt Wt. (Claim)</th>
-                      <th colSpan={4} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Mill Settlement %</th>
+                      <th colSpan={4} className="p-2 border-r border-emerald-400 text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-black shadow-inner">
+                        <div className="flex items-center justify-center gap-1">
+                          <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
+                          <span className="tracking-wide">Mill Settlement %</span>
+                        </div>
+                      </th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Ropes</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Chotta &amp; Habi Jabi</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[90px]">Tolerable</th>
@@ -1864,10 +1937,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Claim</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Act.</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Claim</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Moisture</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Gr. Down</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Dust</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">NCV</th>
+                      <th className="p-1.5 border-r border-emerald-500 text-center min-w-[90px] bg-emerald-800 text-emerald-100 font-black" title="Auto-pulled from Moisture % Act.">Moisture</th>
+                      <th className="p-1.5 border-r border-emerald-500 text-center min-w-[90px] bg-emerald-800 text-emerald-100 font-black" title="Auto-pulled from Grade Down % Act.">Gr. Down</th>
+                      <th className="p-1.5 border-r border-emerald-500 text-center min-w-[90px] bg-emerald-800 text-emerald-100 font-black" title="Auto-pulled from Dust % Act.">Dust</th>
+                      <th className="p-1.5 border-r border-emerald-500 text-center min-w-[90px] bg-emerald-800 text-emerald-100 font-black" title="Auto-pulled from NCV % Act.">NCV</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Weight (Kg)</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[100px]">Tot. Wt. Grd%</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Grade</th>
@@ -2359,53 +2432,53 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               />
                             </td>
 
-                            {/* Settlement % */}
-                            <td className="p-1.5 border-r border-slate-200">
+                            {/* Settlement % (Highlighted in Emerald Theme) */}
+                            <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isSettlementMoistureBlocked}
                                 tabIndex={isSettlementMoistureBlocked ? -1 : 0}
-                                title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.settlement_moisture || 0}
+                                title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture (Auto-pulled from Act. Moisture)"}
+                                value={row.settlement_moisture ?? 0}
                                 onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
-                                className={getFieldInputStyle(isSettlementMoistureBlocked)}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isSettlementGradeDownBlocked}
                                 tabIndex={isSettlementGradeDownBlocked ? -1 : 0}
-                                title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.settlement_grade_down || 0}
+                                title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Gr. Down (Auto-pulled from Act. Grade Down)"}
+                                value={row.settlement_grade_down ?? 0}
                                 onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
-                                className={getFieldInputStyle(isSettlementGradeDownBlocked)}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementGradeDownBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isSettlementDustBlocked}
                                 tabIndex={isSettlementDustBlocked ? -1 : 0}
-                                title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.settlement_dust || 0}
+                                title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Dust (Auto-pulled from Act. Dust)"}
+                                value={row.settlement_dust ?? 0}
                                 onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
-                                className={getFieldInputStyle(isSettlementDustBlocked)}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementDustBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isSettlementNcvBlocked}
                                 tabIndex={isSettlementNcvBlocked ? -1 : 0}
-                                title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.settlement_ncv || 0}
+                                title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % NCV (Auto-pulled from Act. NCV)"}
+                                value={row.settlement_ncv ?? 0}
                                 onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
-                                className={getFieldInputStyle(isSettlementNcvBlocked)}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementNcvBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
 
