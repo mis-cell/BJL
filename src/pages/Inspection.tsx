@@ -513,8 +513,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const markaCode = item.marka_code || item.challan_marka_code || "";
           const resolvedMarkaName = markaMap[markaCode] || item.marka_name || item.challan_marka_name || item.marka || item.marks || markaCode;
           const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || "").toUpperCase();
-          const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
-          const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+          const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
+          let qtyVal = 0;
+          if (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== "") {
+            qtyVal = Number(item.quantity_rcpt);
+          } else if (item.quantity_chln !== undefined && item.quantity_chln !== null && item.quantity_chln !== "") {
+            qtyVal = Number(item.quantity_chln);
+          } else if (item.quantity !== undefined && item.quantity !== null && item.quantity !== "") {
+            qtyVal = Number(item.quantity);
+          } else if (item.bales !== undefined && item.bales !== null && item.bales !== "") {
+            qtyVal = Number(item.bales);
+          }
+          const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
           return {
@@ -528,7 +538,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             marks: resolvedMarkaName,
             crop_year: item.crop_year || "2026-27",
             quantity: qtyVal,
-            unit: item.unit || "BALES",
+            unit: unitVal,
             rate: rateVal,
             rate_qntl: rateVal,
             challan_gross_wt: nettoVal,
@@ -536,7 +546,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             final_receipt_wt: nettoVal,
             tolerable: item.tolerable || "Yes",
             premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
-            is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
+            is_premium: item.is_premium || item.premium === "Yes",
             row_remarks: item.remarks || item.row_remarks || "",
             is_auto: true,
             expanded: false
@@ -633,14 +643,26 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     if (Array.isArray(rawGrid) && rawGrid.length > 0) {
       const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => {
-        const gradeName = item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || "";
-        const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
+        const gradeName = item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.item_name || item.grade || "";
+        const gradeCode = item.receipt_grade_code || item.grade_code || item.stock_grade_code || item.item_code || "";
         const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase();
         const agencyName = item.agency_name || item.agency || "";
         const agencyCode = item.agency_code || "";
-        const markaName = item.marka_name || item.challan_marka_name || item.marka || item.marks || "";
-        const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
-        const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+        const markaName = item.challan_marka_name || item.marka_name || item.marks_phota || item.marka || item.marks || "";
+        const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
+        
+        let qtyVal = 0;
+        if (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== "") {
+          qtyVal = Number(item.quantity_rcpt);
+        } else if (item.quantity_chln !== undefined && item.quantity_chln !== null && item.quantity_chln !== "") {
+          qtyVal = Number(item.quantity_chln);
+        } else if (item.quantity !== undefined && item.quantity !== null && item.quantity !== "") {
+          qtyVal = Number(item.quantity);
+        } else if (item.bales !== undefined && item.bales !== null && item.bales !== "") {
+          qtyVal = Number(item.bales);
+        }
+
+        const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
 
         return {
           srl_no: item.srl_no || (i + 1),
@@ -653,13 +675,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           marks: markaName,
           crop_year: item.crop_year || "2026-27",
           quantity: qtyVal,
-          unit: item.unit || "BALES",
+          unit: unitVal,
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
           final_receipt_wt: nettoVal,
           tolerable: item.tolerable || "Yes",
           premium: item.premium !== undefined && item.premium !== null ? String(item.premium) : "",
-          is_premium: item.is_premium || item.premium === "Yes" || (item.premium && String(item.premium).trim() !== "" && String(item.premium).toLowerCase() !== "no"),
+          is_premium: item.is_premium || item.premium === "Yes",
           row_remarks: item.remarks || item.row_remarks || "",
           is_auto: true,
           expanded: false
@@ -741,21 +763,33 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (Array.isArray(rawGrid) && rawGrid.length > 0) {
         loadedDetails = rawGrid.map((item: any, i: number) => {
-          const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0);
-          const qtyVal = Number(item.quantity || item.quantity_rcpt || item.quantity_chln || item.bales || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0;
+          const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
+          
+          let qtyVal = 0;
+          if (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== "") {
+            qtyVal = Number(item.quantity_rcpt);
+          } else if (item.quantity_chln !== undefined && item.quantity_chln !== null && item.quantity_chln !== "") {
+            qtyVal = Number(item.quantity_chln);
+          } else if (item.quantity !== undefined && item.quantity !== null && item.quantity !== "") {
+            qtyVal = Number(item.quantity);
+          } else if (item.bales !== undefined && item.bales !== null && item.bales !== "") {
+            qtyVal = Number(item.bales);
+          }
+
+          const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
 
           return {
             srl_no: item.srl_no || (i + 1),
-            arrival_grade: item.grade_name || item.challan_grade_name || item.receipt_grade_name || item.variety || item.grade || "",
-            stock_grade_code: item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "",
-            stock_grade_name: item.grade_name || item.receipt_grade_name || item.stock_grade_name || item.grade || "",
+            arrival_grade: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "",
+            stock_grade_code: item.receipt_grade_code || item.grade_code || item.stock_grade_code || item.item_code || "",
+            stock_grade_name: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "",
             area: (item.area_name || item.area || "").toUpperCase(),
             agency: item.agency_name || item.agency || "",
             agency_code: item.agency_code || "",
-            marks: item.marka_name || item.challan_marka_name || item.marka || item.marks || "",
+            marks: item.challan_marka_name || item.marka_name || item.marks_phota || item.marka || item.marks || "",
             crop_year: item.crop_year || "2026-27",
             quantity: qtyVal,
-            unit: item.unit || "BALES",
+            unit: unitVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
             final_receipt_wt: nettoVal,
@@ -2002,43 +2036,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               <div className="flex flex-col gap-0.5">
                                 <input
                                   type="number"
-                                  step="0.001"
+                                  step="1"
                                   readOnly={isQuantityBlocked}
                                   tabIndex={isQuantityBlocked ? -1 : 0}
                                   title={isQuantityBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                  value={
-                                    (row.is_premium || row.premium === "Yes")
-                                      ? calculateQtyInMt(row)
-                                      : (row.quantity || 0)
-                                  }
+                                  value={row.quantity !== undefined && row.quantity !== null ? row.quantity : 0}
                                   onChange={(e) => {
                                     if (isQuantityBlocked) return;
                                     const val = Number(e.target.value);
-                                    if (row.is_premium || row.premium === "Yes") {
-                                      handleDetailChange(idx, "challan_gross_wt", val);
-                                      const currentUnit = (row.unit || "BALES").toUpperCase();
-                                      const convertedQty = currentUnit.includes("BALE") ? Math.round(val / 0.18) : val;
-                                      handleDetailChange(idx, "quantity", convertedQty);
-                                    } else {
-                                      handleDetailChange(idx, "quantity", val);
-                                    }
+                                    handleDetailChange(idx, "quantity", val);
                                   }}
-                                  className={
-                                    (row.is_premium || row.premium === "Yes")
-                                      ? "w-full border border-amber-400 bg-amber-50 text-amber-950 font-black ring-1 ring-amber-300 rounded px-2 py-1 text-xs"
-                                      : getFieldInputStyle(isQuantityBlocked, "font-bold")
-                                  }
+                                  className={getFieldInputStyle(isQuantityBlocked, "font-bold font-mono text-right")}
                                 />
-                                {(row.is_premium || row.premium === "Yes") ? (
-                                  <div className="flex items-center justify-between text-[9px] font-mono text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 font-black">
-                                    <span>⚡ MT:</span>
-                                    <span>{calculateQtyInMt(row).toFixed(3)} MT</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-[9px] text-slate-500 font-medium">
-                                    ≈ {calculateQtyInMt(row).toFixed(3)} MT
-                                  </span>
-                                )}
+                                <span className="text-[9px] text-slate-500 font-medium">
+                                  ≈ {calculateQtyInMt(row).toFixed(3)} MT
+                                </span>
                               </div>
                             </td>
                             <td className="p-1.5 border-r border-slate-200">
@@ -2048,23 +2060,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                   readOnly={isUnitBlocked}
                                   tabIndex={isUnitBlocked ? -1 : 0}
                                   title={isUnitBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                  value={
-                                    (row.is_premium || row.premium === "Yes")
-                                      ? "M.T."
-                                      : (row.unit || "BALES")
-                                  }
-                                  onChange={(e) => !isUnitBlocked && handleDetailChange(idx, "unit", e.target.value)}
-                                  className={
-                                    (row.is_premium || row.premium === "Yes")
-                                      ? "w-full border border-amber-400 bg-amber-100/80 text-amber-950 font-black rounded px-2 py-1 text-xs text-center uppercase"
-                                      : getFieldInputStyle(isUnitBlocked, "text-center uppercase font-bold")
-                                  }
+                                  value={row.unit || "BALES"}
+                                  onChange={(e) => !isUnitBlocked && handleDetailChange(idx, "unit", e.target.value.toUpperCase())}
+                                  className={getFieldInputStyle(isUnitBlocked, "text-center uppercase font-bold")}
                                 />
-                                {(row.is_premium || row.premium === "Yes") && (
-                                  <span className="text-[9px] font-bold text-amber-800 text-center uppercase tracking-tight">
-                                    Metric Ton
-                                  </span>
-                                )}
                               </div>
                             </td>
 
