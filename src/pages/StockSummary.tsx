@@ -138,6 +138,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
   const [endDateFilter, setEndDateFilter] = useState('');
   const [metricCalculationMode, setMetricCalculationMode] = useState<'cumulative' | 'period'>('cumulative');
   const [loading, setLoading] = useState(false);
+  const [OpenStock, setOpenStock] = useState(false);
 
   // Form input states for Opening Stock
   const [formState, setFormState] = useState({
@@ -1312,236 +1313,463 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
     <LegacyLayout title="Inventory" subtitle="" onClose={onClose}>
       <div className="space-y-4">
         {/* Global Counters Ribbon */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-           <StockMetric 
-             label="Total Opening Stock" 
-             bales={totalOpeningQty} 
-             weight={totalOpeningWt} 
-             type="bales" 
-             subText={getOpeningStockDateInfo()}
-           />
-           <StockMetric 
-             label="Issued to Godown (+)" 
-             bales={totalIssuedToGodownBales} 
-             weight={totalIssuedToGodownWeight} 
-             type="sold" 
-             subText={getIssuedToGodownDateInfo()}
-           />
-           <StockMetric 
-             label="Godown to Factory (-)" 
-             bales={totalIssuedToFactoryBales} 
-             weight={totalIssuedToFactoryWeight} 
-             type="weight" 
-             subText={getIssuedToFactoryDateInfo()}
-           />
-           <StockMetric 
-             label="Current Stock Balance" 
-             bales={currentClosingStockBales} 
-             weight={currentClosingStockWeight} 
-             type="stock" 
-             subText={getCurrentStockBalanceDateInfo()}
-           />
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+  
+          {/* Opening Stock */}
+          <div className="relative bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
+
+            <div className="flex items-center justify-between gap-2 pl-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 truncate">
+                  Total Opening Stock
+                </p>
+
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-xl font-black text-slate-800">
+                    {totalOpeningQty}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase text-slate-400">
+                    Bales
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">
+                  Weight
+                </p>
+                <p className="text-sm font-black text-blue-700">
+                  {totalOpeningWt?.toFixed(3)}
+                </p>
+                <span className="text-[8px] font-bold text-slate-400">
+                  M.T.
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+              <span className="text-[8px] font-semibold text-slate-400">
+                {getOpeningStockDateInfo()}
+              </span>
+            </div>
+          </div>
+
+
+          {/* Issued to Godown */}
+          <div className="relative bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-600" />
+
+            <div className="flex items-center justify-between gap-2 pl-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 truncate">
+                  Issued to Godown (+)
+                </p>
+
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-xl font-black text-slate-800">
+                    {totalIssuedToGodownBales}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase text-slate-400">
+                    Bales
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">
+                  Weight
+                </p>
+                <p className="text-sm font-black text-emerald-700">
+                  {totalIssuedToGodownWeight?.toFixed(3)}
+                </p>
+                <span className="text-[8px] font-bold text-slate-400">
+                  M.T.
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+              <span className="text-[8px] font-semibold text-slate-400">
+                {getIssuedToGodownDateInfo()}
+              </span>
+            </div>
+          </div>
+
+
+          {/* Godown to Factory */}
+          <div className="relative bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />
+
+            <div className="flex items-center justify-between gap-2 pl-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 truncate">
+                  Godown to Factory (-)
+                </p>
+
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-xl font-black text-slate-800">
+                    {totalIssuedToFactoryBales}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase text-slate-400">
+                    Bales
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">
+                  Weight
+                </p>
+                <p className="text-sm font-black text-amber-700">
+                  {totalIssuedToFactoryWeight?.toFixed(3)}
+                </p>
+                <span className="text-[8px] font-bold text-slate-400">
+                  M.T.
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+              <span className="text-[8px] font-semibold text-slate-400">
+                {getIssuedToFactoryDateInfo()}
+              </span>
+            </div>
+          </div>
+
+
+          {/* Current Stock */}
+          <div className="relative bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 shadow-sm hover:shadow-md transition-all overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />
+
+            <div className="flex items-center justify-between gap-2 pl-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400 truncate">
+                  Current Stock Balance
+                </p>
+
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-xl font-black text-white">
+                    {currentClosingStockBales}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase text-slate-400">
+                    Bales
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-[9px] font-bold text-slate-500 uppercase">
+                  Weight
+                </p>
+                <p className="text-sm font-black text-cyan-400">
+                  {currentClosingStockWeight?.toFixed(3)}
+                </p>
+                <span className="text-[8px] font-bold text-slate-500">
+                  M.T.
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-1.5 pt-1.5 border-t border-white/10">
+              <span className="text-[8px] font-semibold text-slate-500">
+                {getCurrentStockBalanceDateInfo()}
+              </span>
+            </div>
+          </div>
+
         </div>
 
         {/* Windows Classic Tab Selectors & Integrated Period Controls */}
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center border-b border-[#808080]/65 bg-[#d4d0c8] p-1 gap-2 ">
-          <div className="flex gap-1">
-            <button 
-              onClick={() => setActiveTab('opening')}
-              className={cn(
-                "px-4 py-1.5 text-xs font-black uppercase tracking-tight transition-all cursor-pointer border-2 border-white",
-                activeTab === 'opening' 
-                  ? "bg-white text-indigo-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.15)] translate-y-px" 
-                  : "bg-legacy-bg text-gray-700 hover:bg-white/50"
-              )}
-            >
-              📋 Stock Inventory Ledgers
-            </button>
-            <button 
-              onClick={() => setActiveTab('live')}
-              className={cn(
-                "px-4 py-1.5 text-xs font-black uppercase tracking-tight transition-all cursor-pointer border-2 border-white",
-                activeTab === 'live' 
-                  ? "bg-white text-indigo-900 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.15)] translate-y-px" 
-                  : "bg-legacy-bg text-gray-700 hover:bg-white/50"
-              )}
-            >
-              📉 Live Inventory Valuation
-            </button>
-          </div>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-          {/* Integrated Stock Period & Mode selectors (Placed dynamically in screenshot 2 area) */}
-          <div className="flex flex-wrap items-center gap-2 lg:ml-auto bg-white/40 p-1 border border-white/60 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.05)] rounded-sm">
-            <span className="text-[9px] font-black uppercase text-indigo-950 px-1 border-r border-gray-400">
-              📅 Stock Period:
-            </span>
-            <span className="text-[9px] font-bold text-gray-700">
-              {startDateFilter || endDateFilter ? (
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                  <span className="font-mono font-black text-red-700 bg-white px-1 border border-gray-300">
-                    {startDateFilter ? formatDateBeautiful(startDateFilter) : 'Start'} to {endDateFilter ? formatDateBeautiful(endDateFilter) : 'End'}
-                  </span>
+          {/* Main Navigation */}
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+
+            {/* Left Navigation Area */}
+            <div className="flex flex-wrap items-center gap-2">
+
+              {/* Opening Stock */}
+              <button
+                onClick={() => setActiveTab('opening')}
+                className={cn(
+                  "group flex items-center gap-2 rounded-lg border px-4 py-2 text-[11px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer",
+                  activeTab === 'opening'
+                    ? "border-[#1c4587] bg-[#1c4587] text-white shadow-md"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-[#1c4587]/40 hover:bg-blue-50 hover:text-[#1c4587]"
+                )}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-sm">
+                  📋
+                </span>
+                <span>Stock Inventory</span>
+              </button>
+
+              {/* Live Inventory */}
+              <button
+                onClick={() => setActiveTab('live')}
+                className={cn(
+                  "group flex items-center gap-2 rounded-lg border px-4 py-2 text-[11px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer",
+                  activeTab === 'live'
+                    ? "border-[#0b6e54] bg-[#0b6e54] text-white shadow-md"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-[#0b6e54]/40 hover:bg-emerald-50 hover:text-[#0b6e54]"
+                )}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-sm">
+                  📉
+                </span>
+                <span>Live Inventory</span>
+              </button>
+
+              {/* Opening Sub Tabs */}
+              {activeTab === 'opening' && (
+                <div className="flex flex-wrap items-center gap-1 border-l border-slate-200 pl-2">
+
+                  {/* Godown Wise Stock */}
                   <button
-                    onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                    className="text-[8px] font-black text-red-700 border border-red-400 hover:bg-red-50 bg-white px-1.5 py-0.2 shadow-xs cursor-pointer uppercase tracking-tight"
-                    title="Clear date filter"
+                    onClick={() => setStockSubTab('opening')}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-2 text-[10px] font-bold uppercase transition-all cursor-pointer",
+                      stockSubTab === 'opening'
+                        ? "bg-blue-50 text-[#1c4587] ring-1 ring-[#1c4587]/20 shadow-sm"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    )}
                   >
-                    Reset
+                    <span>📦</span>
+                    <span>Godown Stocks</span>
                   </button>
-                </span>
-              ) : (
-                <span className="text-gray-500 font-mono font-bold bg-white/60 px-1 border border-gray-300">
-                  ALL HISTORY (LATEST)
-                </span>
-              )}
-            </span>
 
-            <span className="text-[9px] font-black uppercase text-indigo-950 px-1 border-l border-gray-300 border-r border-gray-400">
-              Calculation Mode:
-            </span>
-            <div className="inline-flex rounded border border-gray-400 p-0.5 bg-white">
-              <button
-                onClick={() => setMetricCalculationMode('cumulative')}
-                className={cn(
-                  "px-1.5 py-0.5 text-[8px] font-black uppercase tracking-tight transition-all cursor-pointer",
-                  metricCalculationMode === 'cumulative'
-                    ? "bg-indigo-950 text-white rounded-xs"
-                    : "text-gray-600 hover:bg-gray-100"
-                )}
-                title="True cumulative stock balance as of end period"
-              >
-                📈 As-Of
-              </button>
-              <button
-                onClick={() => setMetricCalculationMode('period')}
-                className={cn(
-                  "px-1.5 py-0.5 text-[8px] font-black uppercase tracking-tight transition-all cursor-pointer",
-                  metricCalculationMode === 'period'
-                    ? "bg-indigo-950 text-white rounded-xs"
-                    : "text-gray-600 hover:bg-gray-100"
-                )}
-                title="Only activity/transactions occurred inside selected period"
-              >
-                📊 Period Activity
-              </button>
+                  {/* Monthly Opening Stock */}
+                  <button
+                    onClick={() => setStockSubTab('closing')}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md px-3 py-2 text-[10px] font-bold uppercase transition-all cursor-pointer",
+                      stockSubTab === 'closing'
+                        ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200 shadow-sm"
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                    )}
+                  >
+                    <span>🔴</span>
+                    <span>Monthly Opening Stock</span>
+                  </button>
+
+                </div>
+              )}
             </div>
+
+            {/* Right Controls */}
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 lg:ml-auto">
+
+              {/* Stock Period */}
+              <div className="flex items-center gap-2 border-r border-slate-200 pr-2">
+
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-100 text-xs">
+                  📅
+                </div>
+
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+                    Stock Period
+                  </span>
+
+                  {startDateFilter || endDateFilter ? (
+                    <div className="flex items-center gap-1.5">
+
+                      <span className="flex items-center gap-1 rounded border border-blue-200 bg-white px-1.5 py-0.5 text-[9px] font-black text-[#1c4587] shadow-xs">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
+
+                        {startDateFilter
+                          ? formatDateBeautiful(startDateFilter)
+                          : 'Start'}
+
+                        <span className="text-slate-400">→</span>
+
+                        {endDateFilter
+                          ? formatDateBeautiful(endDateFilter)
+                          : 'End'}
+                      </span>
+
+                      <button
+                        onClick={() => {
+                          setStartDateFilter('');
+                          setEndDateFilter('');
+                        }}
+                        className="rounded border border-rose-200 bg-white px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-600 transition-colors hover:bg-rose-50 cursor-pointer"
+                        title="Clear date filter"
+                      >
+                        Reset
+                      </button>
+
+                    </div>
+                  ) : (
+                    <span className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                      ALL HISTORY
+                    </span>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Calculation Mode */}
+              <div className="flex items-center gap-2">
+
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-xs">
+                  📊
+                </div>
+
+                <div className="flex flex-col leading-tight">
+                  <span className="mb-1 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                    Calculation Mode
+                  </span>
+
+                  <div className="inline-flex w-fit rounded-md border border-slate-200 bg-white p-0.5 shadow-xs">
+
+                    {/* As Of */}
+                    <button
+                      onClick={() => setMetricCalculationMode('cumulative')}
+                      className={cn(
+                        "flex items-center gap-1 rounded px-2 py-1 text-[9px] font-black uppercase transition-all cursor-pointer",
+                        metricCalculationMode === 'cumulative'
+                          ? "bg-[#1c4587] text-white shadow-sm"
+                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      )}
+                      title="True cumulative stock balance as of end period"
+                    >
+                      📈
+                      <span>As-Of</span>
+                    </button>
+
+                    {/* Period Activity */}
+                    <button
+                      onClick={() => setMetricCalculationMode('period')}
+                      className={cn(
+                        "flex items-center gap-1 rounded px-2 py-1 text-[9px] font-black uppercase transition-all cursor-pointer",
+                        metricCalculationMode === 'period'
+                          ? "bg-[#0b6e54] text-white shadow-sm"
+                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      )}
+                      title="Only activity/transactions occurred inside selected period"
+                    >
+                      📊
+                      <span>Period Activity</span>
+                    </button>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
+
         </div>
 
         {activeTab === 'opening' ? (
           /* Tab 1: Latest Stock Ledgers (Opening / Closing Switcher without cramped sidebar) */
-          <div className="space-y-3">
-            
-            {/* Windows 95 Retro Style Sub-Tabs Switcher */}
-            <div className="flex border-b border-[#808080]/30 bg-[#d4d0c8] p-1 gap-1.5 ">
-              <button 
-                onClick={() => setStockSubTab('opening')}
-                className={cn(
-                  "px-3.5 py-1 text-[11px] font-black uppercase tracking-tight transition-all cursor-pointer border-2",
-                  stockSubTab === 'opening' 
-                    ? "bg-white border-white text-indigo-950 font-black shadow-[1px_1px_0_0_black]" 
-                    : "bg-[#d4d0c8] border-[#d4d0c8] text-gray-600 hover:bg-[#c0c0c0]"
-                )}
-              >
-                📦 Godown Wise Stock Entry (Opening)
-              </button>
-              <button 
-                onClick={() => setStockSubTab('closing')}
-                className={cn(
-                  "px-3.5 py-1 text-[11px] font-black uppercase tracking-tight transition-all cursor-pointer border-2",
-                  stockSubTab === 'closing' 
-                    ? "bg-white border-white text-indigo-950 font-black shadow-[1px_1px_0_0_black]" 
-                    : "bg-[#d4d0c8] border-[#d4d0c8] text-gray-600 hover:bg-[#c0c0c0]"
-                )}
-              >
-                🔴 Monthly Opening Stock Ledger
-              </button>
-            </div>
-            
+          <div className="space-y-3">         
             {/* Action options (2nd Screenshot Options) */}
             <>
-              <div className="flex gap-1.5 items-center flex-wrap  bg-[#c0c0c0] p-1 border border-black/20 shadow-sm">
-                  <button
-                    onClick={() => {
-                      if (stockSubTab === 'opening') {
-                        resetForm();
+              <div className="flex items-center gap-2 w-full bg-white border border-slate-200 rounded-lg px-2.5 py-2 shadow-sm">
+
+                {/* New Record */}
+                <button
+                  onClick={() => {
+                    if (stockSubTab === 'opening') {
+                      resetForm();
+                    } else {
+                      resetClosingForm();
+                    }
+                    setIsEditing(false);
+                    setIsFormModalOpen(true);
+                  }}
+                  className="h-8 px-3.5 bg-[#174C2C] hover:bg-[#103A20] text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5 stroke-[3]" />
+                  {stockSubTab === 'opening' ? 'New Opening Record' : 'New Monthly Record'}
+                </button>
+
+                {/* Export */}
+                <button
+                  onClick={handleExportToCSV}
+                  title="Download active ledger records as CSV format"
+                  className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Export CSV
+                </button>
+
+                {/* Print */}
+                <button
+                  onClick={() => {
+                    if (stockSubTab === 'opening') {
+                      if (selectedStockId) {
+                        const target = openingStocks.find(s => s.id === selectedStockId);
+                        if (target) handlePreparePrint(target);
                       } else {
-                        resetClosingForm();
+                        alert("Please select an Opening Stock row first.");
                       }
-                      setIsEditing(false);
-                      setIsFormModalOpen(true);
-                    }}
-                    className="bg-[#000080] hover:bg-blue-800 text-white shadow-[1px_1px_0_0_black] px-4 text-[10px] uppercase font-black tracking-wide h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {stockSubTab === 'opening' ? 'New Opening Record' : 'New Monthly Record'}
-                  </button>
-                  <button 
-                    onClick={handleExportToCSV} 
-                    className="bg-[#24a148] hover:bg-[#1e853c] text-white shadow-[1px_1px_0_0_black] px-3.5 text-[10px] uppercase font-black tracking-wide h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors cursor-pointer"
-                    title="Download active ledger records as CSV format"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-100" /> Export to CSV
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (stockSubTab === 'opening') {
-                        if (selectedStockId) {
-                          const target = openingStocks.find(s => s.id === selectedStockId);
-                          if (target) handlePreparePrint(target);
-                        } else {
-                          alert("Please select an Opening Stock row first.");
-                        }
+                    } else {
+                      if (selectedClosingStockId) {
+                        const target = closingStocks.find(s => s.id === selectedClosingStockId);
+                        if (target) handlePrepareClosingPrint(target);
                       } else {
-                        if (selectedClosingStockId) {
-                          const target = closingStocks.find(s => s.id === selectedClosingStockId);
-                          if (target) handlePrepareClosingPrint(target);
-                        } else {
-                          alert("Please select a Opening Stock row first.");
-                        }
+                        alert("Please select a Monthly Stock row first.");
                       }
-                    }}
-                    className="bg-[#d4d0c8] hover:bg-white text-slate-900 border border-black/25 shadow-[1px_1px_0_0_black] px-3.5 text-[10px] uppercase font-black tracking-wide h-6 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer"
-                  >
-                    <Printer className="h-3.5 w-3.5" /> Print Selected Slip
-                  </button>
-                  
+                    }
+                  }}
+                  className="h-8 px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+                >
+                  <Printer className="h-3.5 w-3.5 text-slate-600" />
+                  Print Slip
+                </button>
+
+                {/* Divider */}
+                <div className="h-6 w-px bg-slate-200 mx-0.5" />
+
+                {/* Search */}
+                <div className="flex items-center flex-1 min-w-0 h-8 bg-slate-50 border border-slate-300 rounded-md overflow-hidden focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20 transition-all">
+
+                  <div className="flex items-center justify-center w-8 h-full bg-slate-100 border-r border-slate-200 shrink-0">
+                    <Search className="h-3.5 w-3.5 text-slate-500" />
+                  </div>
+
+                  <input
+                    id="searchquery_1518"
+                    name="searchquery"
+                    aria-label="searchquery"
+                    className="flex-1 min-w-0 h-full bg-transparent px-2.5 text-[11px] font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                    placeholder={stockSubTab === 'opening' ? "Search opening ledger latest stock (e.g. Forbesganj, TD-5, Godown)..." : "Search monthly closing ledger latest stock (e.g. Rate, Bales, Variety, Remarks)..." }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="h-full px-2 text-[9px] font-extrabold uppercase text-red-600 hover:bg-red-50 border-l border-slate-200 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
 
-                {/* Dynamic Search & Reloader Panel */}
-                <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center">
-                  <div className="flex bg-white border border-gray-400 p-px flex-1">
-                    <div className="bg-gray-100 flex items-center px-1.5 border-r border-gray-300">
-                      <Search className="h-3.5 w-3.5 text-gray-500" />
-                    </div>
-                    <input  id="searchquery_1518" name="searchquery" aria-label="searchquery"
-                      className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
-                      placeholder={stockSubTab === 'opening' 
-                        ? "Search opening ledger latest stock (e.g. Forbesganj, TD-5, Godown)..." 
-                        : "Search monthly closing ledger latest stock (e.g. Rate, Bales, Variety, Remarks)..."
-                      }
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {searchQuery && (
-                      <button 
-                        onClick={() => setSearchQuery('')}
-                        className="text-[10px] uppercase font-black text-red-700 px-2 hover:bg-slate-50 border-l border-gray-200 cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-1 h-full font-bold">
-                    <LegacyButton 
-                      icon={RefreshCw} 
-                      label="Re-load" 
-                      onClick={stockSubTab === 'opening' ? loadOpeningStocks : loadClosingStocks} 
-                    />
-                  </div>
-                </div>
-              </>
+                {/* Reload */}
+                <button
+                  onClick={
+                    stockSubTab === 'opening'
+                      ? loadOpeningStocks
+                      : loadClosingStocks
+                  }
+                  className="h-8 px-3 bg-slate-700 hover:bg-slate-800 text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+                  title="Reload records"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reload
+                </button>
+
+              </div>
+            </>
 
             {/* 15.1 Opening Stocks Ledger Grid layout */}
             {stockSubTab === 'opening' ? (() => {
@@ -1573,199 +1801,232 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
               });
 
               return (
+                
                 <div className="space-y-4">
                   
                   {/* METRICS ROW */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-100">
+
                     {/* Total Quantity */}
-                    <div className="bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 p-4 rounded-xl flex items-center justify-between shadow-xs transition-all ">
-                      <div className="space-y-1 text-left">
-                        <span className="text-[10px] font-black uppercase text-indigo-950/70 tracking-wider block">Total Bales Entry</span>
-                        <p className="text-2xl font-black font-mono text-indigo-950 tracking-tight leading-none">
-                          {gwtTotalQty.toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                    <div className="group bg-white border border-indigo-100 hover:border-indigo-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-950/60 block leading-none mb-1">
+                          Total Bales Entry
+                        </span>
+
+                        <p className="text-xl font-black font-mono text-indigo-950 tracking-tight leading-none">
+                          {gwtTotalQty.toLocaleString(undefined, {
+                            maximumFractionDigits: 3
+                          })}
                         </p>
-                        <span className="text-[8px] font-black text-slate-400 block uppercase">Across active openings</span>
+
+                        <span className="text-[7px] font-bold text-slate-400 uppercase block mt-1">
+                          Across active openings
+                        </span>
                       </div>
-                      <div className="p-3 bg-indigo-50 text-indigo-950 rounded-lg">
-                        <Box className="h-5 w-5" />
+
+                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100 transition-colors">
+                        <Box className="h-4 w-4" />
                       </div>
                     </div>
+
 
                     {/* Total Weight */}
-                    <div className="bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 p-4 rounded-xl flex items-center justify-between shadow-xs transition-all ">
-                      <div className="space-y-1 text-left">
-                        <span className="text-[10px] font-black uppercase text-teal-950/70 tracking-wider block">Total Book Weight</span>
-                        <p className="text-2xl font-black font-mono text-teal-800 tracking-tight leading-none">
-                          {(gwtTotalWeight / 10).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                    <div className="group bg-white border border-teal-100 hover:border-teal-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-teal-950/60 block leading-none mb-1">
+                          Total Book Weight
+                        </span>
+
+                        <p className="text-xl font-black font-mono text-teal-800 tracking-tight leading-none">
+                          {(gwtTotalWeight / 10).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 3
+                          })}
                         </p>
-                        <span className="text-[8px] font-black text-teal-600 block uppercase">MT</span>
+
+                        <span className="text-[7px] font-bold text-teal-600 uppercase block mt-1">
+                          MT
+                        </span>
                       </div>
-                      <div className="p-3 bg-teal-50 text-teal-700 rounded-lg">
-                        <Layers className="h-5 w-5" />
+
+                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-teal-50 text-teal-700 group-hover:bg-teal-100 transition-colors">
+                        <Layers className="h-4 w-4" />
                       </div>
                     </div>
 
+
                     {/* Active Godowns */}
-                    <div className="bg-white border-2 border-dashed border-amber-200 hover:border-amber-400 p-4 rounded-xl flex items-center justify-between shadow-xs transition-all ">
-                      <div className="space-y-1 text-left">
-                        <span className="text-[10px] font-black uppercase text-amber-950/70 tracking-wider block">Active Godowns</span>
-                        <p className="text-2xl font-black font-mono text-amber-900 tracking-tight leading-none">
+                    <div className="group bg-white border border-amber-100 hover:border-amber-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-950/60 block leading-none mb-1">
+                          Active Godowns
+                        </span>
+
+                        <p className="text-xl font-black font-mono text-amber-900 tracking-tight leading-none">
                           {gwtDistinctGodownsCount}
                         </p>
+
                         <button
                           type="button"
                           onClick={() => setShowCapacityPopup(true)}
-                          className="text-[8px] font-black text-sky-700 hover:text-sky-900 hover:underline block uppercase text-left cursor-pointer"
+                          className="text-[7px] font-extrabold text-sky-700 hover:text-sky-900 hover:underline uppercase text-left mt-1 cursor-pointer"
                         >
-                          Verify Godown Capacity ↗
+                          Verify Capacity ↗
                         </button>
                       </div>
-                      <div className="p-3 bg-amber-50 text-amber-700 rounded-lg">
-                        <MapPin className="h-5 w-5" />
+
+                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-amber-50 text-amber-700 group-hover:bg-amber-100 transition-colors">
+                        <MapPin className="h-4 w-4" />
                       </div>
                     </div>
 
-                    {/* Average Weight per Bale */}
-                    <div className="bg-white border-2 border-dashed border-emerald-200 hover:border-emerald-400 p-4 rounded-xl flex items-center justify-between shadow-xs transition-all ">
-                      <div className="space-y-1 text-left">
-                        <span className="text-[10px] font-black uppercase text-emerald-950/70 tracking-wider block">Avg Wt / Bale</span>
-                        <p className="text-2xl font-black font-mono text-emerald-800 tracking-tight leading-none">
+
+                    {/* Average Weight */}
+                    <div className="group bg-white border border-emerald-100 hover:border-emerald-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-950/60 block leading-none mb-1">
+                          Avg Wt / Bale
+                        </span>
+
+                        <p className="text-xl font-black font-mono text-emerald-800 tracking-tight leading-none">
                           {(gwtOverallAvgWt / 10).toFixed(4)}
                         </p>
-                        <span className="text-[8px] font-black text-emerald-600 block uppercase">MT / unit ratio</span>
+
+                        <span className="text-[7px] font-bold text-emerald-600 uppercase block mt-1">
+                          MT / Unit Ratio
+                        </span>
                       </div>
-                      <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg">
-                        <Percent className="h-5 w-5" />
+
+                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100 transition-colors">
+                        <Percent className="h-4 w-4" />
                       </div>
                     </div>
+
                   </div>
 
                   {/* CHARTS ROW */}
                   {filteredSavedStocks.length > 0 ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-150">
-                      {/* Left Column: Grade-Wise Stock Distribution */}
-                      <div className="lg:col-span-8 bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
-                        <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase text-indigo-950 flex items-center gap-1.5">
-                            <Layers className="h-4 w-4 text-emerald-700 animate-pulse" />
-                            Grade-Wise Stock Distribution
-                          </span>
+                  <>
+                    <div className="lg:col-span-8 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center">
+                            <Layers className="h-4 w-4 text-emerald-700" />
+                          </div>
+
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wide text-indigo-950 leading-none">
+                              Grade-Wise Stock Distribution
+                            </p>
+                            <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
+                              Current stock by grade
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 pt-1 justify-start">
-                          {Object.values(
-                            filteredSavedStocks.reduce((acc: { [key: string]: { grade: string, qty: number } }, r) => {
+                        <span className="text-[8px] font-black uppercase text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded">
+                          {Object.keys(
+                            filteredSavedStocks.reduce((acc: any, r) => {
                               const g = r.grade || "Unknown";
-                              if (!acc[g]) acc[g] = { grade: g, qty: 0 };
-                              acc[g].qty += Number(r.quantity || 0);
+                              if (!acc[g]) acc[g] = true;
                               return acc;
                             }, {})
-                          ).map((itm: any) => (
-                            <div key={itm.grade} className="border border-slate-200 bg-slate-50 p-2 text-center rounded-lg min-w-[70px]  hover:bg-slate-100/50 transition-colors">
-                              <p className="text-[9px] font-black uppercase text-slate-800 leading-none mb-1">{itm.grade}</p>
-                              <p className="text-[8.5px] font-bold text-slate-500 font-mono">{itm.qty} Bales</p>
-                            </div>
-                          ))}
-                        </div>
+                          ).length} Grades
+                        </span>
 
-                        <div className="h-[210px] w-full pt-4 font-mono text-[9px]">
-                          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                            <BarChart
-                              layout="vertical"
-                              data={Object.values(
-                                filteredSavedStocks.reduce((acc: { [key: string]: { grade: string, qty: number, wt: number } }, r) => {
-                                  const name = r.grade || "Unknown";
-                                  if (!acc[name]) acc[name] = { grade: name, qty: 0, wt: 0 };
-                                  acc[name].qty += Number(r.quantity || 0);
-                                  acc[name].wt += Number(r.weight || 0) / 10;
-                                  return acc;
-                                }, {})
-                              )}
-                              margin={{ top: 5, right: 15, left: -5, bottom: 5 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                              <XAxis type="number" stroke="#475569" fontSize={9} />
-                              <YAxis dataKey="grade" type="category" stroke="#475569" fontSize={9} />
-                              <Tooltip 
-                                contentStyle={{ backgroundColor: "#1e293b", color: "#f8fafc", fontSize: "9px", fontFamily: "monospace", border: "1px solid #334155" }}
-                              />
-                              <Legend wrapperStyle={{ fontSize: "9px" }} />
-                              <Bar name="Quantity (bales)" dataKey="qty" fill="#008080" radius={[0, 3, 3, 0]} />
-                              <Bar name="Net weight (MT)" dataKey="wt" fill="#f59e0b" radius={[0, 3, 3, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
                       </div>
 
-                      {/* Right Column: Calculations & Capacity Share */}
-                      <div className="lg:col-span-4 space-y-4 text-left">
-                        {/* Weighted calculations card */}
-                        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
-                          <div className="border-b border-slate-100 pb-2 flex items-center gap-1">
-                            <ClipboardList className="h-4 w-4 text-[#008080]" />
-                            <span className="text-[10px] font-black uppercase text-indigo-950">Weighted Summary</span>
-                          </div>
+                      {/* Grade List */}
+                      <div className="px-3 py-2">
 
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>Storage Utilisation (Active GDNs)</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {activeGdnCapacityMT > 0 ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-105 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#008080] h-full rounded-full transition-all duration-500"
-                                  style={{ width: `${Math.min(100, activeGdnCapacityMT > 0 ? ((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100 : 0)}%` }}
-                                />
-                              </div>
+                        <div className="flex flex-wrap gap-1.5">
+
+                          {Object.values(
+                            filteredSavedStocks.reduce(
+                              (
+                                acc: {
+                                  [key: string]: {
+                                    grade: string;
+                                    qty: number;
+                                  };
+                                },
+                                r
+                              ) => {
+
+                                const g = r.grade || "Unknown";
+
+                                if (!acc[g]) {
+                                  acc[g] = {
+                                    grade: g,
+                                    qty: 0
+                                  };
+                                }
+
+                                acc[g].qty += Number(r.quantity || 0);
+
+                                return acc;
+
+                              },
+                              {}
+                            )
+                          ).map((itm: any) => (
+
+                            <div
+                              key={itm.grade}
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                                px-2.5
+                                py-1.5
+                                bg-slate-50
+                                border
+                                border-slate-200
+                                rounded-md
+                                hover:bg-emerald-50
+                                hover:border-emerald-300
+                                transition-all
+                              "
+                            >
+
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+
+                              <span className="text-[9px] font-black uppercase text-slate-700">
+                                {itm.grade}
+                              </span>
+
+                              <span className="h-3 border-l border-slate-300" />
+
+                              <span className="text-[9px] font-black font-mono text-indigo-950">
+                                {Number(itm.qty).toLocaleString()}
+                              </span>
+
+                              <span className="text-[7px] font-bold uppercase text-slate-400">
+                                Bales
+                              </span>
+
                             </div>
 
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>Tossa & TD Grade Ratio</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {gwtTotalQty > 0 
-                                    ? ((filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100).toFixed(1)
-                                    : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#4f46e5] h-full rounded-full transition-all duration-500"
-                                  style={{ 
-                                    width: `${gwtTotalQty > 0 
-                                      ? (filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100
-                                      : 0}%` 
-                                  }}
-                                />
-                              </div>
-                            </div>
+                          ))}
 
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>JCI block entries</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {filteredSavedStocks.length > 0 
-                                    ? ((filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100).toFixed(1)
-                                    : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#64748b] h-full rounded-full transition-all duration-500"
-                                  style={{ 
-                                    width: `${filteredSavedStocks.length > 0 
-                                      ? (filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100
-                                      : 0}%` 
-                                  }}
-                                />
-                              </div>
+                          {filteredSavedStocks.length === 0 && (
+                            <div className="w-full text-center py-3 text-[9px] font-bold uppercase text-slate-400">
+                              No grade-wise stock available
                             </div>
-                          </div>
+                          )}
+
                         </div>
 
+                      </div>
+
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-150">
+                      
+                      {/* Left Column: Grade-Wise Stock Distribution */}
+                      <div className="lg:col-span-8 bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
                         {/* Godown Wise Capacity Share (Donut Chart - only if entries present) */}
                         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-4">
                           <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
@@ -1843,345 +2104,1248 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                             </div>
                           )}
                         </div>
+                      </div>
+                      {/* Right Column: Calculations & Capacity Share */}
+                      <div className="lg:col-span-4 space-y-4 text-left">
+                        {/* <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
+                          <div className="border-b border-slate-100 pb-2 flex items-center gap-1">
+                            <ClipboardList className="h-4 w-4 text-[#008080]" />
+                            <span className="text-[10px] font-black uppercase text-indigo-950">Weighted Summary</span>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
+                                <span>Storage Utilisation (Active GDNs)</span>
+                                <span className="font-mono text-indigo-950 font-black">
+                                  {activeGdnCapacityMT > 0 ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-105 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-[#008080] h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min(100, activeGdnCapacityMT > 0 ? ((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100 : 0)}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
+                                <span>Tossa & TD Grade Ratio</span>
+                                <span className="font-mono text-indigo-950 font-black">
+                                  {gwtTotalQty > 0 
+                                    ? ((filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100).toFixed(1)
+                                    : "0.0"}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-[#4f46e5] h-full rounded-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${gwtTotalQty > 0 
+                                      ? (filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100
+                                      : 0}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
+                                <span>JCI block entries</span>
+                                <span className="font-mono text-indigo-950 font-black">
+                                  {filteredSavedStocks.length > 0 
+                                    ? ((filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100).toFixed(1)
+                                    : "0.0"}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-[#64748b] h-full rounded-full transition-all duration-500"
+                                  style={{ 
+                                    width: `${filteredSavedStocks.length > 0 
+                                      ? (filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100
+                                      : 0}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div> */}
+
+                        
 
                         {/* Date Wise Total Opening Stock Report (Global Summary) */}
-                        <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-3 shadow-xs space-y-2 flex flex-col">
-                          <div className="border-b border-gray-400 pb-1 flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase text-indigo-950 flex items-center gap-1.5">
-                              <Calendar className="h-4 w-4 text-red-700 animate-pulse" />
-                              Date Wise Opening Stock Report
-                            </span>
-                            <span className="text-[8px] uppercase tracking-wider font-extrabold text-gray-500 bg-white/50 px-1 border border-gray-300">Latest Days</span>
+                        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+
+                          {/* Header */}
+                          <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-md bg-teal-50 border border-teal-100 flex items-center justify-center">
+                                <Sparkles className="h-3.5 w-3.5 text-teal-700" />
+                              </div>
+
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-800 leading-none">
+                                  Godown Capacity Share
+                                </p>
+                                <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
+                                  Storage Utilisation
+                                </p>
+                              </div>
+                            </div>
+
+                            {gwtTotalWeight > 0 && (
+                              <div className="text-right">
+                                <p className="text-[15px] font-black font-mono text-teal-700 leading-none">
+                                  {activeGdnCapacityMT > 0
+                                    ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
+                                    : "0.0"}%
+                                </p>
+                                <p className="text-[7px] font-black uppercase text-slate-400">
+                                  Used
+                                </p>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="bg-white border border-gray-400 h-[120px] overflow-y-auto">
-                            <table className="w-full text-left text-[9px] border-collapse font-mono">
-                              <thead>
-                                <tr className="bg-gray-100 border-b border-gray-300 sticky top-0 font-bold text-gray-600 ">
-                                  <th className="px-2 py-0.5 border-r border-gray-200">Stock Date</th>
-                                  <th className="px-2 py-0.5 text-center border-r border-gray-200">Entries</th>
-                                  <th className="px-2 py-0.5 text-right border-r border-gray-200">Total Qty (Bales)</th>
-                                  <th className="px-2 py-0.5 text-right font-black">Weight (MT)</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100">
-                                {dateWiseOpeningList.map((rep) => {
-                                  const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                                  return (
-                                    <tr 
-                                      key={rep.date} 
-                                      className="hover:bg-blue-50 cursor-pointer"
-                                      onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
+                          {gwtTotalWeight > 0 ? (
+                            <div className="p-3">
+
+                              {/* Summary Row */}
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+
+                                {/* Used */}
+                                <div className="bg-teal-50 border border-teal-100 rounded-md px-2.5 py-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-teal-700">
+                                      Used
+                                    </span>
+                                    <span className="w-2 h-2 rounded-full bg-teal-600" />
+                                  </div>
+
+                                  <p className="text-[14px] font-black font-mono text-teal-900 leading-none mt-1">
+                                    {(gwtTotalWeight / 10).toFixed(2)}
+                                    <span className="text-[8px] ml-1 font-bold">MT</span>
+                                  </p>
+
+                                  <p className="text-[7px] text-teal-600 font-bold uppercase mt-1">
+                                    {activeGdnCapacityMT > 0
+                                      ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
+                                      : "0.0"}%
+                                    Capacity
+                                  </p>
+                                </div>
+
+                                {/* Free */}
+                                <div className="bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-slate-500">
+                                      Free
+                                    </span>
+                                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                                  </div>
+
+                                  <p className="text-[14px] font-black font-mono text-slate-800 leading-none mt-1">
+                                    {Math.max(
+                                      0,
+                                      activeGdnCapacityMT - gwtTotalWeight / 10
+                                    ).toFixed(2)}
+                                    <span className="text-[8px] ml-1 font-bold">MT</span>
+                                  </p>
+
+                                  <p className="text-[7px] text-slate-400 font-bold uppercase mt-1">
+                                    {activeGdnCapacityMT > 0
+                                      ? (
+                                          (Math.max(
+                                            0,
+                                            activeGdnCapacityMT - gwtTotalWeight / 10
+                                          ) /
+                                            activeGdnCapacityMT) *
+                                          100
+                                        ).toFixed(1)
+                                      : "0.0"}%
+                                    Available
+                                  </p>
+                                </div>
+
+                                {/* Total Capacity */}
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-md px-2.5 py-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-indigo-700">
+                                      Capacity
+                                    </span>
+                                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                                  </div>
+
+                                  <p className="text-[14px] font-black font-mono text-indigo-900 leading-none mt-1">
+                                    {activeGdnCapacityMT.toFixed(2)}
+                                    <span className="text-[8px] ml-1 font-bold">MT</span>
+                                  </p>
+
+                                  <p className="text-[7px] text-indigo-500 font-bold uppercase mt-1">
+                                    Active Godowns
+                                  </p>
+                                </div>
+
+                              </div>
+
+                              {/* Capacity Progress */}
+                              <div className="mb-3">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[8px] font-black uppercase text-slate-500">
+                                    Overall Capacity
+                                  </span>
+
+                                  <span className="text-[8px] font-black font-mono text-teal-700">
+                                    {activeGdnCapacityMT > 0
+                                      ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
+                                      : "0.0"}%
+                                  </span>
+                                </div>
+
+                                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                  <div
+                                    className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${Math.min(
+                                        100,
+                                        activeGdnCapacityMT > 0
+                                          ? ((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100
+                                          : 0
+                                      )}%`
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Active Godown Allocation */}
+                              <div className="border-t border-slate-100 pt-2">
+
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[8px] font-black uppercase text-slate-500">
+                                    Active Godown Allocation
+                                  </span>
+
+                                  <span className="text-[7px] font-bold uppercase text-slate-400">
+                                    {activeGodownData.length} Godown
+                                    {activeGodownData.length !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto pr-1">
+
+                                  {activeGodownData.map((g, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="group border border-slate-200 bg-slate-50 hover:bg-white hover:border-teal-200 rounded-md px-2 py-1.5 transition-all"
                                     >
-                                      <td className="px-2 py-0.5 font-bold text-gray-700 flex items-center gap-1">
-                                        <span className={cn("w-1.5 h-1.5 rounded-full bg-blue-600 inline-block", isSelectedDate && "bg-red-600 animate-pulse")} />
-                                        {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                      </td>
-                                      <td className="px-2 py-0.5 text-center font-black text-slate-800">{rep.count} nodes</td>
-                                      <td className="px-2 py-0.5 text-right font-black text-blue-750">{rep.quantity.toLocaleString(undefined, {maximumFractionDigits: 1})}</td>
-                                      <td className="px-2 py-0.5 text-right font-black text-emerald-850">{(rep.weight / 10).toFixed(2)} MT</td>
-                                    </tr>
-                                  );
-                                })}
-                                {dateWiseOpeningList.length === 0 && (
-                                  <tr>
-                                    <td colSpan={4} className="text-center py-4 text-gray-400 uppercase font-bold text-[9px]">No opening calendar data loaded.</td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                          
-                          <div className="flex justify-between items-center mt-1 text-[8px] text-gray-500 font-bold  leading-normal">
-                            <span>* Click on any date row to immediately load that day's records.</span>
-                            {(startDateFilter || endDateFilter) && (
-                              <button 
-                                onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                                className="text-red-700 font-extrabold border border-red-300 hover:bg-red-50 px-1 bg-white cursor-pointer"
-                              >
-                                Clear Filter
-                              </button>
+                                      <div className="flex items-center justify-between gap-2">
+
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="w-1.5 h-5 bg-teal-600 rounded-full shrink-0" />
+
+                                          <div className="min-w-0">
+                                            <p className="text-[8px] font-black uppercase text-slate-800 truncate">
+                                              Godown {g.name}
+                                            </p>
+
+                                            <p className="text-[7px] text-slate-400 font-bold uppercase">
+                                              Capacity {g.capacity} MT
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                          <p className="text-[9px] font-black font-mono text-indigo-900">
+                                            {g.storedWeight.toFixed(2)} MT
+                                          </p>
+
+                                          <p className="text-[7px] font-black text-teal-600">
+                                            {g.utilPercent.toFixed(1)}% Used
+                                          </p>
+                                        </div>
+
+                                      </div>
+
+                                      {/* Individual Godown Progress */}
+                                      <div className="mt-1.5 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                                          style={{
+                                            width: `${Math.min(100, g.utilPercent)}%`
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                </div>
+                              </div>
+
+                            </div>
+                          ) : (
+                            <div className="px-4 py-5 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <Sparkles className="h-4 w-4 text-slate-400" />
+                                </div>
+
+                                <p className="text-[9px] font-bold uppercase text-slate-400">
+                                  No stored weight logged
+                                </p>
+
+                                <p className="text-[8px] text-slate-300 mt-0.5">
+                                  Godown capacity sharing will appear here.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+                        <div className="lg:col-span-4">
+                          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2 flex items-center justify-center h-full min-h-[60px]">
+                            {OpenStock === false && (
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenStock(true)}
+                                  className="h-9 w-full max-w-[260px] px-6 bg-teal-700 hover:bg-teal-800 text-white rounded-md text-[12px] font-black uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
+                                >
+                                  Opening Stock Ledger
+                                </button>
+                            )}
+                            {OpenStock === true && (
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenStock(false)}
+                                  className="h-9 w-full max-w-[260px] px-6 bg-teal-700 hover:bg-teal-800 text-white rounded-md text-[12px] font-black uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
+                                >
+                                  Close Stock Ledger
+                                </button>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
+                  </>
                   ) : null}
 
-                  {/* TABLE CONTAINER */}
-                  <div className="border border-gray-400 bg-white shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)] overflow-x-auto min-h-[300px]">
-                  <table className="w-full border-collapse text-[10px]">
-                    <thead className="bg-[#c0c0c0] font-black italic">
-                      <tr className="border-b border-gray-400 h-8 text-slate-800 uppercase text-left  text-[9px] tracking-tight">
-                        <th className="px-3 border-r border-slate-350 w-24">Date</th>
-                        <th className="px-3 border-r border-slate-350 min-w-[150px]">Godown / Warehouse</th>
-                        <th className="px-3 border-r border-slate-350">Area Station</th>
-                        <th className="px-3 border-r border-slate-350">Grade Component</th>
-                        <th className="px-2 border-r border-slate-350 text-center">JCI</th>
-                        <th className="px-2 border-r border-slate-350 text-center">Unit</th>
-                        <th className="px-3 border-r border-slate-350 text-right">Quantity</th>
-                        <th className="px-3 border-r border-slate-350 text-right font-black">Weight (MT)</th>
-                        <th className="px-3 border-r border-slate-350 text-right font-black">Avg Wt</th>
-                        <th className="px-2 text-center w-20">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-250 font-bold text-slate-900">
-                      {filteredSavedStocks.length > 0 ? (
-                        filteredSavedStocks.map((row, i) => {
-                          const isSelected = selectedStockId === row.id;
-                          return (
-                            <tr 
-                              key={row.id || i}
-                              onClick={() => setSelectedStockId(row.id || null)}
-                              onDoubleClick={() => handleEdit(row)}
-                              className={cn(
-                                "h-8 border-b border-gray-100 cursor-pointer hover:bg-[#ffffd0]/60 transition-colors",
-                                isSelected ? "bg-[#0a246a] text-white" : (i % 2 === 0 ? "bg-white" : "bg-gray-50/40")
-                              )}
-                            >
-                              <td className={cn("px-3 border-r border-slate-100 font-mono", isSelected ? "text-slate-100 font-extrabold" : "text-stone-600")}>{row.opening_date}</td>
-                              <td className={cn("px-3 border-r border-slate-100 font-extrabold uppercase truncate max-w-[180px]", isSelected ? "text-yellow-300" : "text-blue-900")} title={row.godown}>{row.godown || "-"}</td>
-                              <td className={cn("px-3 border-r border-slate-100 uppercase", isSelected ? "text-indigo-100" : "text-stone-700")}>{row.area || "-"}</td>
-                              <td className={cn("px-3 border-r border-slate-100 uppercase font-extrabold", isSelected ? "text-yellow-250" : "text-slate-750")}>{row.grade || "-"}</td>
-                              <td className="px-2 border-r border-slate-100 text-center">
-                                {row.jci === 'Yes' ? (
-                                  <span className={cn("border px-1 py-0.2 rounded text-[8px] font-black uppercase tracking-widest", isSelected ? "bg-teal-900 text-teal-100 border-teal-500" : "bg-teal-100 text-teal-800 border-teal-200")}>Govt</span>
-                                ) : (
-                                  <span className={cn("border px-1 py-0.2 rounded text-[8px] uppercase font-bold", isSelected ? "bg-slate-700 text-slate-350 border-slate-650" : "bg-gray-150/10 text-slate-500 border-slate-200")}>No</span>
-                                )}
-                              </td>
-                              <td className={cn("px-2 border-r border-slate-100 text-center font-black", isSelected ? "text-teal-200" : "text-slate-650")}>{row.unit || "BALES"}</td>
-                              <td className={cn("px-3 border-r border-slate-100 text-right font-mono text-xs font-black", isSelected ? "text-white" : "text-indigo-950")}>{Number(row.quantity).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 3})}</td>
-                              <td className={cn("px-3 border-r border-slate-100 text-right font-mono text-xs font-black", isSelected ? "text-green-300" : "text-emerald-850")}>{(Number(row.weight) / 10).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 3})}</td>
-                              <td className={cn("px-3 border-r border-slate-100 text-right font-mono text-xs font-bold", isSelected ? "text-yellow-250" : "text-indigo-800")}>
-                                {row.avg_weight ? (Number(row.avg_weight) / 10).toFixed(4) : (Number(row.quantity) > 0 ? ((Number(row.weight) / Number(row.quantity)) / 10).toFixed(4) : '0.0000')}
-                              </td>
-                              <td className="px-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-center items-center gap-1.5">
-                                  <button
-                                    onClick={() => handleEdit(row)}
-                                    title="Edit Opening Record"
-                                    className={cn(
-                                      "p-1 hover:bg-black/15 rounded transition-all cursor-pointer border border-transparent",
-                                      isSelected ? "text-blue-200 hover:text-white" : "text-blue-700 hover:border-blue-200"
-                                    )}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(row.id, `${row.grade} @ ${row.godown}`)}
-                                    title="Delete Opening Record"
-                                    className={cn(
-                                      "p-1 hover:bg-black/15 rounded transition-all cursor-pointer border border-transparent",
-                                      isSelected ? "text-red-300 hover:text-white" : "text-rose-700 hover:border-rose-200"
-                                    )}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan={9} className="py-20 text-center font-bold text-gray-400 uppercase italic tracking-wider">
-                            {loading ? "Synchronizing ledger node databases..." : "No Opening Stock master rows reported."}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                  {/* OPENING STOCK TABLE + SUMMARY — SINGLE BLOCK */}
+                  {OpenStock === true && (
+                    <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
 
-                {/* Opening Summary stats bar */}
-                <div className="bg-[#808080] p-1 flex justify-between gap-1 items-center border border-black/10 ">
-                  <div className="flex gap-2 flex-wrap pb-0.5">
-                    <div className="bg-white px-3 py-1 border border-gray-400 min-w-[120px] shadow-sm">
-                      <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Count Nodes</span>
-                      <span className="text-xs font-black italic text-stone-850 tracking-tight">{filteredSavedStocks.length} Record Entries</span>
-                    </div>
-                    <div className="bg-white px-3 py-1 border border-gray-400 min-w-[140px] shadow-sm">
-                      <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Sum Total Qty</span>
-                      <span className="text-sm font-black italic text-indigo-950 tracking-tight">{totalOpeningQty.toLocaleString(undefined, {maximumFractionDigits: 3})} Units</span>
-                    </div>
-                    <div className="bg-white px-3 py-1 border border-gray-400 min-w-[150px] shadow-sm">
-                      <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Sum Total Weight</span>
-                      <span className="text-sm font-black italic text-emerald-950 tracking-tight">{(totalOpeningWt / 10).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 3})} MT</span>
-                    </div>
-                  </div>
-                  <div className="hidden md:block text-[8px] font-mono font-black italic text-neutral-100 pr-2 uppercase">Verified Opening Store baseline</div>
-                </div>
-              </div>
-              );
-            })() : (
-              /* 15.2 Monthly Closing Stocks Ledger Grid layout */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-100">
-                <div className="lg:col-span-8 space-y-3">
-                  <div className="border border-gray-400 bg-white shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)] overflow-x-auto min-h-[300px]">
-                    <table className="w-full border-collapse text-[10px]">
-                      <thead className="bg-[#c0c0c0] font-black italic">
-                        <tr className="border-b border-gray-400 h-8 text-slate-800 uppercase text-left  text-[9px] tracking-tight">
-                          <th className="px-3 border-r border-slate-350 w-24">Date</th>
-                          <th className="px-3 border-r border-slate-350 min-w-[150px]">Godown / Location</th>
-                          <th className="px-3 border-r border-slate-350">Commodity</th>
-                          <th className="px-3 border-r border-slate-350">Variety</th>
-                          <th className="px-3 border-r border-slate-350">Grade Code</th>
-                          <th className="px-3 border-r border-slate-350 text-right">Physical Bales</th>
-                          <th className="px-3 border-r border-slate-350 text-right">Weight (MT)</th>
-                          <th className="px-3 border-r border-slate-350 text-right">Rate / MT</th>
-                          <th className="px-3 border-r border-slate-350 text-right font-black">Total Value (Rs.)</th>
-                          <th className="px-2 text-center w-20">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-250 font-bold text-slate-900">
-                        {filteredClosingStocks.length > 0 ? (
-                          filteredClosingStocks.map((row, i) => {
-                            const isSelected = selectedClosingStockId === row.id;
-                            return (
-                              <tr 
-                                key={row.id || i}
-                                onClick={() => setSelectedClosingStockId(row.id || null)}
-                                onDoubleClick={() => handleEditClosing(row)}
-                                className={cn(
-                                  "h-8 border-b border-gray-100 cursor-pointer hover:bg-[#ffeed0]/60 transition-colors",
-                                  isSelected ? "bg-red-950 text-white" : (i % 2 === 0 ? "bg-white" : "bg-gray-50/40")
-                                )}
-                              >
-                                <td className={cn("px-3 border-r border-slate-100 font-mono", isSelected ? "text-red-100 font-extrabold" : "text-stone-600")}>{row.stock_date}</td>
-                                <td className={cn("px-3 border-r border-slate-100 font-extrabold uppercase truncate max-w-[180px]", isSelected ? "text-yellow-300" : "text-red-900")} title={row.godown}>{row.godown || "-"}</td>
-                                <td className={cn("px-3 border-r border-slate-100 uppercase", isSelected ? "text-red-100" : "text-stone-700")}>{row.commodity || "RAW JUTE"}</td>
-                                <td className={cn("px-3 border-r border-slate-100 uppercase font-extrabold", isSelected ? "text-stone-100" : "text-stone-850")}>{row.variety || "TOSSA"}</td>
-                                <td className={cn("px-3 border-r border-slate-100 uppercase font-black", isSelected ? "text-yellow-250" : "text-slate-750")}>{row.grade || "-"}</td>
-                                <td className={cn("px-3 border-r border-slate-100 text-right font-mono", isSelected ? "text-white" : "text-slate-700")}>{Number(row.no_of_bales).toLocaleString()}</td>
-                                <td className={cn("px-3 border-r border-slate-100 text-right font-mono", isSelected ? "text-slate-205" : "text-emerald-800")}>{(Number(row.weight_qtl) / 10).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                <td className={cn("px-3 border-r border-slate-100 text-right font-mono", isSelected ? "text-indigo-200" : "text-slate-650")}>₹ {(Number(row.rate_per_qtl) * 10).toFixed(2)}</td>
-                                <td className={cn("px-3 border-r border-slate-100 text-right font-mono text-xs font-black", isSelected ? "text-green-300" : "text-indigo-950")}>₹ {Number(row.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                                <td className="px-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex justify-center items-center gap-1.5">
-                                    <button
-                                      onClick={() => handleEditClosing(row)}
-                                      title="Edit Closing Record"
+                      {/* Table Header / Section Bar */}
+                      <div className="flex items-center justify-between px-4 py-1.2 bg-[#174C2C] border-b-2 border-[#0F351F] shadow-sm">
+                        <div className="flex items-center gap-3 bg-[#174C2C] px-3 py-2 rounded-md border border-[#174C2C] shadow-sm">
+                          <div className="w-8 h-8 rounded-md bg-white/10 border border-white/20 flex items-center justify-center">
+                            <ClipboardList className="h-4.5 w-4.5 text-white" />
+                          </div>
+
+                          <div>
+                            <span className="text-[13px] font-black uppercase tracking-wide text-white">
+                              Opening Stock Ledger
+                            </span>
+                            <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-100/80 mt-0.5">
+                              Verified opening store baseline
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-[8px] font-black uppercase text-slate-400">
+                          {filteredSavedStocks.length} Records
+                        </div>
+                      </div>
+
+                      {/* TABLE */}
+                      <div className="overflow-x-auto min-h-[300px]">
+                        <table className="w-full border-collapse text-[10px]">
+
+                          <thead>
+                            <tr className="bg-slate-100 border-b border-slate-200 h-8 text-slate-600 uppercase text-[8px] tracking-wide font-black text-left">
+
+                              <th className="px-3 border-r border-slate-200 w-24">
+                                Date
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200 min-w-[150px]">
+                                Godown / Warehouse
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200">
+                                Area Station
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200">
+                                Grade Component
+                              </th>
+
+                              <th className="px-2 border-r border-slate-200 text-center">
+                                JCI
+                              </th>
+
+                              <th className="px-2 border-r border-slate-200 text-center">
+                                Unit
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200 text-right">
+                                Quantity
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200 text-right">
+                                Weight (MT)
+                              </th>
+
+                              <th className="px-3 border-r border-slate-200 text-right">
+                                Avg Wt
+                              </th>
+
+                              <th className="px-2 text-center w-20">
+                                Actions
+                              </th>
+
+                            </tr>
+                          </thead>
+
+                          <tbody className="font-bold text-slate-900">
+
+                            {filteredSavedStocks.length > 0 ? (
+
+                              filteredSavedStocks.map((row, i) => {
+
+                                const isSelected = selectedStockId === row.id;
+
+                                return (
+                                  <tr
+                                    key={row.id || i}
+                                    onClick={() => setSelectedStockId(row.id || null)}
+                                    onDoubleClick={() => handleEdit(row)}
+                                    className={cn(
+                                      "h-9 border-b border-slate-100 cursor-pointer transition-all",
+                                      isSelected
+                                        ? "bg-indigo-950 text-white"
+                                        : "hover:bg-indigo-50/60",
+                                      !isSelected && i % 2 !== 0
+                                        ? "bg-slate-50/40"
+                                        : ""
+                                    )}
+                                  >
+
+                                    {/* DATE */}
+                                    <td
                                       className={cn(
-                                        "p-1 hover:bg-black/15 rounded transition-all cursor-pointer border border-transparent",
-                                        isSelected ? "text-blue-200 hover:text-white" : "text-blue-700 hover:border-blue-200"
+                                        "px-3 border-r border-slate-100 font-mono",
+                                        isSelected
+                                          ? "text-slate-200"
+                                          : "text-slate-500"
                                       )}
                                     >
-                                      <Edit className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteClosing(row.id, `${row.grade} @ ${row.godown}`)}
-                                      title="Delete Closing Record"
+                                      {row.opening_date}
+                                    </td>
+
+                                    {/* GODOWN */}
+                                    <td
                                       className={cn(
-                                        "p-1 hover:bg-black/15 rounded transition-all cursor-pointer border border-transparent",
-                                        isSelected ? "text-red-300 hover:text-white" : "text-rose-700 hover:border-rose-200"
+                                        "px-3 border-r border-slate-100 font-black uppercase truncate max-w-[180px]",
+                                        isSelected
+                                          ? "text-yellow-300"
+                                          : "text-indigo-900"
+                                      )}
+                                      title={row.godown}
+                                    >
+                                      {row.godown || "-"}
+                                    </td>
+
+                                    {/* AREA */}
+                                    <td
+                                      className={cn(
+                                        "px-3 border-r border-slate-100 uppercase",
+                                        isSelected
+                                          ? "text-indigo-100"
+                                          : "text-slate-600"
                                       )}
                                     >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
+                                      {row.area || "-"}
+                                    </td>
+
+                                    {/* GRADE */}
+                                    <td
+                                      className={cn(
+                                        "px-3 border-r border-slate-100 uppercase font-black",
+                                        isSelected
+                                          ? "text-yellow-200"
+                                          : "text-slate-800"
+                                      )}
+                                    >
+                                      {row.grade || "-"}
+                                    </td>
+
+                                    {/* JCI */}
+                                    <td className="px-2 border-r border-slate-100 text-center">
+
+                                      {row.jci === 'Yes' ? (
+
+                                        <span
+                                          className={cn(
+                                            "inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wide border",
+                                            isSelected
+                                              ? "bg-teal-900 text-teal-100 border-teal-500"
+                                              : "bg-teal-50 text-teal-700 border-teal-200"
+                                          )}
+                                        >
+                                          Govt
+                                        </span>
+
+                                      ) : (
+
+                                        <span
+                                          className={cn(
+                                            "inline-flex items-center px-1.5 py-0.5 rounded text-[7px] uppercase font-bold border",
+                                            isSelected
+                                              ? "bg-slate-700 text-slate-300 border-slate-600"
+                                              : "bg-slate-50 text-slate-400 border-slate-200"
+                                          )}
+                                        >
+                                          No
+                                        </span>
+
+                                      )}
+
+                                    </td>
+
+                                    {/* UNIT */}
+                                    <td
+                                      className={cn(
+                                        "px-2 border-r border-slate-100 text-center font-black",
+                                        isSelected
+                                          ? "text-teal-200"
+                                          : "text-slate-600"
+                                      )}
+                                    >
+                                      {row.unit || "BALES"}
+                                    </td>
+
+                                    {/* QUANTITY */}
+                                    <td
+                                      className={cn(
+                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-black",
+                                        isSelected
+                                          ? "text-white"
+                                          : "text-indigo-950"
+                                      )}
+                                    >
+                                      {Number(row.quantity).toLocaleString(undefined, {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 3
+                                      })}
+                                    </td>
+
+                                    {/* WEIGHT */}
+                                    <td
+                                      className={cn(
+                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-black",
+                                        isSelected
+                                          ? "text-green-300"
+                                          : "text-emerald-700"
+                                      )}
+                                    >
+                                      {(Number(row.weight) / 10).toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 3
+                                      })}
+                                    </td>
+
+                                    {/* AVG WEIGHT */}
+                                    <td
+                                      className={cn(
+                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-bold",
+                                        isSelected
+                                          ? "text-yellow-200"
+                                          : "text-indigo-700"
+                                      )}
+                                    >
+                                      {row.avg_weight
+                                        ? (Number(row.avg_weight) / 10).toFixed(4)
+                                        : (
+                                            Number(row.quantity) > 0
+                                              ? (
+                                                  (Number(row.weight) /
+                                                    Number(row.quantity)) /
+                                                  10
+                                                ).toFixed(4)
+                                              : "0.0000"
+                                          )}
+                                    </td>
+
+                                    {/* ACTIONS */}
+                                    <td
+                                      className="px-2 text-center"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+
+                                      <div className="flex justify-center items-center gap-1">
+
+                                        <button
+                                          onClick={() => handleEdit(row)}
+                                          title="Edit Opening Record"
+                                          className={cn(
+                                            "w-6 h-6 rounded flex items-center justify-center transition-all cursor-pointer",
+                                            isSelected
+                                              ? "text-blue-200 hover:bg-white/10 hover:text-white"
+                                              : "text-blue-700 hover:bg-blue-50"
+                                          )}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </button>
+
+                                        <button
+                                          onClick={() =>
+                                            handleDelete(
+                                              row.id,
+                                              `${row.grade} @ ${row.godown}`
+                                            )
+                                          }
+                                          title="Delete Opening Record"
+                                          className={cn(
+                                            "w-6 h-6 rounded flex items-center justify-center transition-all cursor-pointer",
+                                            isSelected
+                                              ? "text-red-300 hover:bg-white/10 hover:text-white"
+                                              : "text-rose-700 hover:bg-rose-50"
+                                          )}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+
+                                      </div>
+
+                                    </td>
+
+                                  </tr>
+                                );
+
+                              })
+
+                            ) : (
+
+                              <tr>
+                                <td
+                                  colSpan={10}
+                                  className="py-16 text-center text-slate-400"
+                                >
+                                  <div className="flex flex-col items-center gap-1">
+
+                                    <ClipboardList className="h-7 w-7 text-slate-300" />
+
+                                    <span className="font-black uppercase text-[9px] tracking-wide">
+                                      {loading
+                                        ? "Synchronizing ledger node databases..."
+                                        : "No Opening Stock master rows reported."
+                                      }
+                                    </span>
+
                                   </div>
                                 </td>
                               </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan={10} className="py-20 text-center font-bold text-gray-400 uppercase italic tracking-wider">
-                              No Monthly Opening Stock records reported. Use "New Monthly Record" to register.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
 
-                  {/* Closing Summary stats bar */}
-                  <div className="bg-[#808080] p-1 flex justify-between gap-1 items-center border border-black/10 ">
-                    <div className="flex gap-2 flex-wrap pb-0.5">
-                      <div className="bg-white px-3 py-1 border border-gray-400 min-w-[120px] shadow-sm">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Node Rows</span>
-                        <span className="text-xs font-black italic text-stone-850 tracking-tight">{filteredClosingStocks.length} Record Entries</span>
+                            )}
+
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="bg-white px-3 py-1 border border-gray-400 min-w-[130px] shadow-sm">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Sum Total Bales</span>
-                        <span className="text-sm font-black italic text-indigo-950 tracking-tight">{totalClosingBales.toLocaleString()} Bales</span>
+
+                      {/* SUMMARY — SAME BLOCK */}
+                      <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+
+                          {/* RECORD COUNT */}
+                          <div className="bg-white border border-slate-200 rounded-md px-3 py-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="block text-[7px] font-black uppercase text-slate-400">
+                                Count Nodes
+                              </span>
+
+                              <span className="text-[11px] font-black text-slate-800">
+                                {filteredSavedStocks.length}
+                              </span>
+
+                              <span className="text-[7px] font-bold text-slate-400 ml-1 uppercase">
+                                Record Entries
+                              </span>
+                            </div>
+
+                            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
+                              <ClipboardList className="h-3 w-3 text-slate-500" />
+                            </div>
+                          </div>
+
+                          {/* TOTAL QUANTITY */}
+                          <div className="bg-indigo-50 border border-indigo-100 rounded-md px-3 py-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="block text-[7px] font-black uppercase text-indigo-500">
+                                Sum Total Qty
+                              </span>
+
+                              <span className="text-[13px] font-black font-mono text-indigo-950">
+                                {totalOpeningQty.toLocaleString(undefined, {
+                                  maximumFractionDigits: 3
+                                })}
+                              </span>
+
+                              <span className="text-[7px] font-bold text-indigo-400 ml-1 uppercase">
+                                Units
+                              </span>
+                            </div>
+
+                            <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
+                              <Box className="h-3 w-3 text-indigo-600" />
+                            </div>
+                          </div>
+
+                          {/* TOTAL WEIGHT */}
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-md px-3 py-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="block text-[7px] font-black uppercase text-emerald-600">
+                                Sum Total Weight
+                              </span>
+
+                              <span className="text-[13px] font-black font-mono text-emerald-900">
+                                {(totalOpeningWt / 10).toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 3
+                                })}
+                              </span>
+
+                              <span className="text-[7px] font-bold text-emerald-500 ml-1 uppercase">
+                                MT
+                              </span>
+                            </div>
+
+                            <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
+                              <Layers className="h-3 w-3 text-emerald-600" />
+                            </div>
+                          </div>
+
+                        </div>
+
                       </div>
-                      <div className="bg-white px-3 py-1 border border-gray-400 min-w-[140px] shadow-sm">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Sum Total Weight</span>
-                        <span className="text-sm font-black italic text-emerald-950 tracking-tight">{(totalClosingWt / 10).toLocaleString(undefined, {minimumFractionDigits: 2})} MT</span>
-                      </div>
-                      <div className="bg-white px-3 py-1 border border-gray-400 min-w-[180px] shadow-sm">
-                        <span className="text-[8px] font-bold text-gray-500 uppercase leading-none block">Store Assets Book Value</span>
-                        <span className="text-sm font-black italic text-blue-900 tracking-tight">₹ {totalClosingValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                      </div>
+
                     </div>
-                    <div className="hidden md:block text-[8px] font-mono font-black italic text-rose-100 pr-2 uppercase">Monthly Inventory Book Value</div>
-                  </div>
+                  )}
                 </div>
+              );
+            })() : (
+              /* 15.2 Monthly Closing Stocks Ledger Grid layout */
+              <div className="space-y-5 animate-in fade-in duration-100">
 
-                <div className="lg:col-span-4 space-y-4 text-left">
-                  {/* Date Wise Total Monthly Stock Report (Global Summary) */}
-                  <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-3 shadow-xs space-y-2 flex flex-col">
-                    <div className="border-b border-gray-400 pb-1 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase text-indigo-950 flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4 text-red-700 animate-pulse" />
-                        Date Wise Monthly Stock Report
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider font-extrabold text-gray-500 bg-white/50 px-1 border border-gray-300">Latest Days</span>
-                    </div>
+  {/* ========================================================= */}
+  {/* 1. DATE WISE STOCK REPORT - FULL WIDTH SINGLE BLOCK */}
+  {/* ========================================================= */}
+  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
 
-                    <div className="bg-white border border-gray-400 h-[240px] overflow-y-auto">
-                      <table className="w-full text-left text-[9px] border-collapse font-mono">
-                        <thead>
-                          <tr className="bg-gray-100 border-b border-gray-300 sticky top-0 font-bold text-gray-600 ">
-                            <th className="px-2 py-0.5 border-r border-gray-200">Stock Date</th>
-                            <th className="px-2 py-0.5 text-center border-r border-gray-200">Entries</th>
-                            <th className="px-2 py-0.5 text-right border-r border-gray-200">Bales</th>
-                            <th className="px-2 py-0.5 text-right font-black">Weight (MT)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {dateWiseClosingList.map((rep) => {
-                            const isSelectedDate = startDateFilter === rep.date && endDateFilter === rep.date;
-                            return (
-                              <tr 
-                                key={rep.date} 
-                                className="hover:bg-blue-50 cursor-pointer"
-                                onClick={() => { setStartDateFilter(rep.date); setEndDateFilter(rep.date); }}
-                              >
-                                <td className="px-2 py-0.5 font-bold text-gray-700 flex items-center gap-1">
-                                  <span className={cn("w-1.5 h-1.5 rounded-full bg-blue-600 inline-block", isSelectedDate && "bg-red-600 animate-pulse")} />
-                                  {new Date(rep.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </td>
-                                <td className="px-2 py-0.5 text-center font-black text-slate-800">{rep.count} nodes</td>
-                                <td className="px-2 py-0.5 text-right font-black text-blue-750">{rep.quantity.toLocaleString()}</td>
-                                <td className="px-2 py-0.5 text-right font-black text-emerald-850">{(rep.weight / 10).toFixed(2)} MT</td>
-                              </tr>
-                            );
-                          })}
-                          {dateWiseClosingList.length === 0 && (
-                            <tr>
-                              <td colSpan={4} className="text-center py-4 text-gray-400 uppercase font-bold text-[9px]">No closing calendar data loaded.</td>
-                            </tr>
+    {/* Header */}
+    <div className="bg-[#174C2C] px-4 py-2.5 flex items-center justify-between">
+
+      <div className="flex items-center gap-2">
+
+        <div className="h-7 w-7 rounded-md bg-white/10 border border-white/20 flex items-center justify-center">
+          <Calendar className="h-3.5 w-3.5 text-white" />
+        </div>
+
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-wider text-white">
+            Date Wise Stock Report
+          </div>
+
+          <div className="text-[8px] text-emerald-100 font-semibold">
+            Monthly inventory summary
+          </div>
+        </div>
+
+      </div>
+
+      <span className="text-[8px] uppercase tracking-wider font-black text-white bg-white/10 border border-white/20 px-2 py-1 rounded">
+        Latest Days
+      </span>
+
+    </div>
+
+
+    {/* Date Report Table */}
+    <div className="p-3">
+
+      <div className="bg-slate-50 rounded-md border border-slate-200 overflow-hidden">
+
+        <div className="max-h-[220px] overflow-y-auto">
+
+          <table className="w-full text-left text-[9px] border-collapse font-mono">
+
+            <thead>
+              <tr className="bg-slate-100 border-b border-slate-200 sticky top-0 font-black text-slate-500 uppercase">
+
+                <th className="px-3 py-2 border-r border-slate-200">
+                  Stock Date
+                </th>
+
+                <th className="px-3 py-2 text-center border-r border-slate-200">
+                  Entries
+                </th>
+
+                <th className="px-3 py-2 text-right border-r border-slate-200">
+                  Physical Bales
+                </th>
+
+                <th className="px-3 py-2 text-right border-r border-slate-200">
+                  Weight (MT)
+                </th>
+
+                <th className="px-3 py-2 text-right">
+                  Action
+                </th>
+
+              </tr>
+            </thead>
+
+
+            <tbody className="divide-y divide-slate-100">
+
+              {dateWiseClosingList.map((rep) => {
+
+                const isSelectedDate =
+                  startDateFilter === rep.date &&
+                  endDateFilter === rep.date;
+
+                return (
+                  <tr
+                    key={rep.date}
+                    onClick={() => {
+                      setStartDateFilter(rep.date);
+                      setEndDateFilter(rep.date);
+                    }}
+                    className={cn(
+                      "cursor-pointer transition-colors h-9",
+                      isSelectedDate
+                        ? "bg-emerald-50"
+                        : "bg-white hover:bg-slate-50"
+                    )}
+                  >
+
+                    {/* Date */}
+                    <td className="px-3 font-bold text-slate-700">
+
+                      <div className="flex items-center gap-2">
+
+                        <span
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full inline-block",
+                            isSelectedDate
+                              ? "bg-red-500 animate-pulse"
+                              : "bg-[#174C2C]"
                           )}
-                        </tbody>
-                      </table>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mt-1 text-[8px] text-gray-500 font-bold  leading-normal">
-                      <span>* Click on any date row to immediately load that day's records.</span>
-                      {(startDateFilter || endDateFilter) && (
-                        <button 
-                          onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
-                          className="text-red-700 font-extrabold border border-red-300 hover:bg-red-50 px-1 bg-white cursor-pointer"
-                        >
-                          Clear Filter
-                        </button>
+                        />
+
+                        {new Date(rep.date).toLocaleDateString(
+                          "en-GB",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )}
+
+                      </div>
+
+                    </td>
+
+
+                    {/* Entries */}
+                    <td className="px-3 text-center font-black text-slate-700 border-l border-slate-100">
+                      {rep.count}
+                    </td>
+
+
+                    {/* Bales */}
+                    <td className="px-3 text-right font-black text-[#174C2C] border-l border-slate-100">
+                      {rep.quantity.toLocaleString()}
+                    </td>
+
+
+                    {/* Weight */}
+                    <td className="px-3 text-right font-black text-emerald-700 border-l border-slate-100">
+                      {(rep.weight / 10).toFixed(2)} MT
+                    </td>
+
+
+                    {/* Action */}
+                    <td className="px-3 text-right border-l border-slate-100">
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStartDateFilter(rep.date);
+                          setEndDateFilter(rep.date);
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-[8px] font-black uppercase transition-all cursor-pointer",
+                          isSelectedDate
+                            ? "bg-[#174C2C] text-white"
+                            : "bg-emerald-50 text-[#174C2C] hover:bg-[#174C2C] hover:text-white"
+                        )}
+                      >
+                        {isSelectedDate ? "Selected" : "View"}
+                      </button>
+
+                    </td>
+
+                  </tr>
+                );
+
+              })}
+
+
+              {dateWiseClosingList.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="text-center py-8 text-slate-400 uppercase font-bold text-[9px]"
+                  >
+                    No closing calendar data loaded.
+                  </td>
+                </tr>
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      {/* Footer */}
+      <div className="mt-3 flex items-center justify-between gap-3">
+
+        <span className="text-[8px] text-slate-400 font-bold">
+          Click any date to load that day's closing stock records.
+        </span>
+
+        {(startDateFilter || endDateFilter) && (
+          <button
+            type="button"
+            onClick={() => {
+              setStartDateFilter("");
+              setEndDateFilter("");
+            }}
+            className="px-3 py-1.5 rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 font-black text-[8px] uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            Clear Filter
+          </button>
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  {/* ========================================================= */}
+  {/* 2. CLOSING STOCK RECORDS - SECOND BLOCK */}
+  {/* ========================================================= */}
+  <div>
+
+    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+
+      {/* Header */}
+      <div className="bg-[#174C2C] px-4 py-2.5 flex items-center justify-between">
+
+        <div>
+          <div className="text-[11px] font-black text-white uppercase tracking-wider">
+            Closing Stock Records
+          </div>
+
+          <div className="text-[8px] text-emerald-100 font-semibold mt-0.5">
+            Monthly inventory closing details
+          </div>
+        </div>
+
+        <div className="bg-white/10 border border-white/20 rounded px-2 py-1">
+          <span className="text-[8px] font-black text-white uppercase">
+            {filteredClosingStocks.length} Records
+          </span>
+        </div>
+
+      </div>
+
+
+      {/* Main Table */}
+      <div className="overflow-x-auto min-h-[300px]">
+
+        <table className="w-full border-collapse text-[10px]">
+
+          <thead className="bg-slate-50">
+
+            <tr className="border-b border-slate-200 h-9 text-slate-600 uppercase text-left text-[9px]">
+
+              <th className="px-3 border-r border-slate-200 w-24">
+                Date
+              </th>
+
+              <th className="px-3 border-r border-slate-200 min-w-[150px]">
+                Godown / Location
+              </th>
+
+              <th className="px-3 border-r border-slate-200">
+                Commodity
+              </th>
+
+              <th className="px-3 border-r border-slate-200">
+                Variety
+              </th>
+
+              <th className="px-3 border-r border-slate-200">
+                Grade Code
+              </th>
+
+              <th className="px-3 border-r border-slate-200 text-right">
+                Physical Bales
+              </th>
+
+              <th className="px-3 border-r border-slate-200 text-right">
+                Weight (MT)
+              </th>
+
+              <th className="px-3 border-r border-slate-200 text-right">
+                Rate / MT
+              </th>
+
+              <th className="px-3 border-r border-slate-200 text-right">
+                Total Value (Rs.)
+              </th>
+
+              <th className="px-2 text-center w-20">
+                Actions
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody className="font-bold text-slate-800">
+
+            {filteredClosingStocks.length > 0 ? (
+
+              filteredClosingStocks.map((row, i) => {
+
+                const isSelected =
+                  selectedClosingStockId === row.id;
+
+                return (
+                  <tr
+                    key={row.id || i}
+                    onClick={() =>
+                      setSelectedClosingStockId(row.id || null)
+                    }
+                    onDoubleClick={() =>
+                      handleEditClosing(row)
+                    }
+                    className={cn(
+                      "h-9 border-b border-slate-100 cursor-pointer transition-all",
+                      isSelected
+                        ? "bg-[#174C2C] text-white"
+                        : i % 2 === 0
+                          ? "bg-white hover:bg-emerald-50"
+                          : "bg-slate-50/60 hover:bg-emerald-50"
+                    )}
+                  >
+
+                    <td className="px-3 font-mono">
+                      {row.stock_date}
+                    </td>
+
+                    <td className="px-3 font-extrabold uppercase truncate max-w-[180px]">
+                      {row.godown || "-"}
+                    </td>
+
+                    <td className="px-3 uppercase">
+                      {row.commodity || "RAW JUTE"}
+                    </td>
+
+                    <td className="px-3 uppercase font-extrabold">
+                      {row.variety || "TOSSA"}
+                    </td>
+
+                    <td className="px-3 uppercase font-black">
+                      {row.grade || "-"}
+                    </td>
+
+                    <td className="px-3 text-right font-mono">
+                      {Number(row.no_of_bales).toLocaleString()}
+                    </td>
+
+                    <td className="px-3 text-right font-mono">
+                      {(Number(row.weight_qtl) / 10).toLocaleString(
+                        undefined,
+                        {
+                          minimumFractionDigits: 2,
+                        }
                       )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    </td>
+
+                    <td className="px-3 text-right font-mono">
+                      ₹ {(Number(row.rate_per_qtl) * 10).toFixed(2)}
+                    </td>
+
+                    <td className="px-3 text-right font-mono text-xs font-black">
+                      ₹{" "}
+                      {Number(row.total_value).toLocaleString(
+                        undefined,
+                        {
+                          minimumFractionDigits: 2,
+                        }
+                      )}
+                    </td>
+
+                    <td
+                      className="px-2 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+
+                      <div className="flex justify-center items-center gap-1">
+
+                        <button
+                          onClick={() =>
+                            handleEditClosing(row)
+                          }
+                          title="Edit Closing Record"
+                          className="h-6 w-6 flex items-center justify-center rounded-md text-[#174C2C] hover:bg-emerald-100 cursor-pointer"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            handleDeleteClosing(
+                              row.id,
+                              `${row.grade} @ ${row.godown}`
+                            )
+                          }
+                          title="Delete Closing Record"
+                          className="h-6 w-6 flex items-center justify-center rounded-md text-red-600 hover:bg-red-50 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+                );
+
+              })
+
+            ) : (
+
+              <tr>
+                <td
+                  colSpan={10}
+                  className="py-20 text-center text-slate-400 uppercase italic tracking-wider"
+                >
+                  No Monthly Opening Stock records reported.
+                  <br />
+                  <span className="text-[9px]">
+                    Use "New Monthly Record" to register.
+                  </span>
+                </td>
+              </tr>
+
+            )}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+    {/* ========================================================= */}
+    {/* 3. SUMMARY BLOCK - UNDER CLOSING STOCK TABLE */}
+    {/* ========================================================= */}
+    <div className="mt-4 grid grid-cols-2 xl:grid-cols-4 gap-3">
+
+      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm">
+        <div className="text-[8px] font-black text-slate-400 uppercase">
+          Record Entries
+        </div>
+
+        <div className="mt-1 text-sm font-black text-slate-800">
+          {filteredClosingStocks.length}
+        </div>
+      </div>
+
+
+      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm">
+        <div className="text-[8px] font-black text-slate-400 uppercase">
+          Total Bales
+        </div>
+
+        <div className="mt-1 text-sm font-black text-[#174C2C]">
+          {totalClosingBales.toLocaleString()}
+          <span className="text-[8px] ml-1 text-slate-400">
+            BALES
+          </span>
+        </div>
+      </div>
+
+
+      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm">
+        <div className="text-[8px] font-black text-slate-400 uppercase">
+          Total Weight
+        </div>
+
+        <div className="mt-1 text-sm font-black text-emerald-700">
+          {(totalClosingWt / 10).toLocaleString(
+            undefined,
+            {
+              minimumFractionDigits: 2,
+            }
+          )}
+
+          <span className="text-[8px] ml-1 text-slate-400">
+            MT
+          </span>
+        </div>
+      </div>
+
+
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 shadow-sm">
+
+        <div className="text-[8px] font-black text-emerald-700 uppercase">
+          Store Asset Value
+        </div>
+
+        <div className="mt-1 text-sm font-black text-[#174C2C]">
+          ₹{" "}
+          {totalClosingValue.toLocaleString(
+            undefined,
+            {
+              minimumFractionDigits: 2,
+            }
+          )}
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
             )}
 
           </div>
@@ -2293,18 +3457,20 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
           <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-lg flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
             
             {/* Old School Windows Titlebar */}
-            <div className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white px-4 py-2 flex items-center justify-between border-b border-white ">
+            <div className="bg-[#174C2C] text-white px-4 py-2 flex items-center justify-between border-b border-white">
               <div className="flex items-center gap-2">
-                <span>📁</span>
                 <span className="text-xs font-black uppercase tracking-wider font-sans">
                   {isEditing ? 'Modify Stock Ledger Entry' : 'Add New Store Ledger Row'}
                 </span>
               </div>
-              <button 
+
+              <button
+                type="button"
                 onClick={() => setIsFormModalOpen(false)}
-                className="bg-[#d4d0c8] text-slate-800 border-2 border-white shadow-[1px_1px_0px_black] active:shadow-[inset_1px_1px_0px_black] h-5 w-5 flex items-center justify-center font-black text-xs cursor-pointer "
+                className="h-6 w-6 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-bold transition-all duration-150 cursor-pointer active:scale-95"
+                title="Close"
               >
-                ✕
+                ×
               </button>
             </div>
 
@@ -2312,41 +3478,69 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
               {stockSubTab === 'opening' ? (
                 /* Opening Stock Input Form elements */
                 <LegacyFieldset legend={isEditing ? "🔧 UPDATE OPENING STOCK" : "➕ ADD NEW OPENING RECORD"}>
-                  <form onSubmit={handleSubmit} className="space-y-3 font-semibold text-slate-800 text-xs">
-                    
+                  <form
+                    onSubmit={handleSubmit}
+                    className="space-y-3 font-semibold text-slate-800 text-xs"
+                  >
                     {/* Opening Date */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="formstate_opening_date_2326"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Opening Date *
                       </label>
-                      <div className="flex border border-gray-400 bg-white">
-                        <div className="px-1.5 bg-gray-100 flex items-center border-r border-gray-400">
-                          <Calendar className="h-3.5 w-3.5 text-slate-500" />
+
+                      <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20">
+                        <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
+                          <Calendar className="h-3.5 w-3.5 text-[#174C2C]" />
                         </div>
-                        <input  id="formstate_opening_date_2326" name="formstate_opening_date" aria-label="formstate opening date"
+
+                        <input
+                          id="formstate_opening_date_2326"
+                          name="formstate_opening_date"
+                          aria-label="formstate opening date"
                           type="date"
                           required
                           value={formState.opening_date}
-                          onChange={(e) => setFormState(p => ({ ...p, opening_date: e.target.value }))}
-                          className="flex-1 px-2 py-1 bg-white outline-none font-bold text-xs"
+                          onChange={(e) =>
+                            setFormState((p) => ({
+                              ...p,
+                              opening_date: e.target.value,
+                            }))
+                          }
+                          className="flex-1 px-2.5 py-2 bg-white outline-none font-bold text-xs text-slate-700"
                         />
                       </div>
                     </div>
 
                     {/* Godown */}
                     <div>
-                      <label htmlFor="godown_2341" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="godown_2341"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Godown *
                       </label>
-                      <input  id="godown_2341" name="godown" aria-label="Godown *"
+
+                      <input
+                        id="godown_2341"
+                        name="godown"
+                        aria-label="Godown *"
                         type="text"
                         required
                         list="godown_op_datalist"
                         value={formState.godown}
-                        onChange={(e) => setFormState(p => ({ ...p, godown: e.target.value }))}
+                        onChange={(e) =>
+                          setFormState((p) => ({
+                            ...p,
+                            godown: e.target.value,
+                          }))
+                        }
                         placeholder="Select or Type Godown..."
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none uppercase font-mono"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                       />
+
                       <datalist id="godown_op_datalist">
                         {mergedGodowns.map((g, i) => (
                           <option key={i} value={g.gdn_name} />
@@ -2356,21 +3550,34 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Area Station */}
                     <div>
-                      <label htmlFor="area_station_2362" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="area_station_2362"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Area Station *
                       </label>
-                      <input  id="area_station_2362" name="area_station" aria-label="Area Station *"
+
+                      <input
+                        id="area_station_2362"
+                        name="area_station"
+                        aria-label="Area Station *"
                         type="text"
                         required
                         list="area_op_datalist"
                         value={formState.area}
-                        onChange={(e) => setFormState(p => ({ ...p, area: e.target.value }))}
+                        onChange={(e) =>
+                          setFormState((p) => ({
+                            ...p,
+                            area: e.target.value,
+                          }))
+                        }
                         placeholder="Select or Type Area..."
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none uppercase font-mono"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                       />
+
                       <datalist id="area_op_datalist">
                         {mergedAreas.map((a, i) => {
-                          const aName = a.area_name || a.name || '';
+                          const aName = a.area_name || a.name || "";
                           return <option key={i} value={aName} />;
                         })}
                       </datalist>
@@ -2378,66 +3585,116 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Component Grade */}
                     <div>
-                      <label htmlFor="component_grade_2384" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="component_grade_2384"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Component Grade *
                       </label>
-                      <input  id="component_grade_2384" name="component_grade" aria-label="Component Grade *"
+
+                      <input
+                        id="component_grade_2384"
+                        name="component_grade"
+                        aria-label="Component Grade *"
                         type="text"
                         required
                         list="grade_op_datalist"
                         value={formState.grade}
-                        onChange={(e) => setFormState(p => ({ ...p, grade: e.target.value }))}
+                        onChange={(e) =>
+                          setFormState((p) => ({
+                            ...p,
+                            grade: e.target.value,
+                          }))
+                        }
                         placeholder="Select or Type Grade..."
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none uppercase font-mono"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                       />
+
                       <datalist id="grade_op_datalist">
                         {mergedGrades.map((g, i) => {
-                          const gName = g.grade_name || g.name || g.code || '';
+                          const gName = g.grade_name || g.name || g.code || "";
                           return <option key={i} value={gName} />;
                         })}
                       </datalist>
                     </div>
 
-                    {/* JCI status */}
+                    {/* JCI Status */}
                     <div>
-                      <label htmlFor="is_j_c_i_govt_supplied_2406" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="is_j_c_i_govt_supplied_2406"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Is J.C.I Govt Supplied? *
                       </label>
+
                       <select
- id="is_j_c_i_govt_supplied_2406" name="is_j_c_i_govt_supplied" aria-label="Is J.C.I Govt Supplied? *"                        required
+                        id="is_j_c_i_govt_supplied_2406"
+                        name="is_j_c_i_govt_supplied"
+                        aria-label="Is J.C.I Govt Supplied? *"
+                        required
                         value={formState.jci}
-                        onChange={(e) => setFormState(p => ({ ...p, jci: e.target.value }))}
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none"
+                        onChange={(e) =>
+                          setFormState((p) => ({
+                            ...p,
+                            jci: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
                       >
                         <option value="No">No - Private/Regular Commercial</option>
                         <option value="Yes">Yes - Government JCI</option>
                       </select>
                     </div>
 
-                    {/* Unit & quantity */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Unit & Quantity */}
+                    <div className="grid grid-cols-2 gap-3">
+
+                      {/* Unit */}
                       <div>
-                        <label htmlFor="unit_master_2423" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="unit_master_2423"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Unit Master *
                         </label>
-                        <select  id="unit_master_2423" name="unit_master" aria-label="Unit Master *"
+
+                        <select
+                          id="unit_master_2423"
+                          name="unit_master"
+                          aria-label="Unit Master *"
                           required
                           value={formState.unit}
-                          onChange={(e) => setFormState(p => ({ ...p, unit: e.target.value }))}
-                          className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none uppercase cursor-pointer"
+                          onChange={(e) =>
+                            setFormState((p) => ({
+                              ...p,
+                              unit: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 uppercase cursor-pointer"
                         >
                           <option value="">-- SELECT UNIT --</option>
+
                           {mergedUnits.map((u, i) => (
-                            <option key={i} value={u.unit_name}>{u.unit_name}</option>
+                            <option key={i} value={u.unit_name}>
+                              {u.unit_name}
+                            </option>
                           ))}
                         </select>
                       </div>
 
+                      {/* Quantity */}
                       <div>
-                        <label htmlFor="quantity_2440" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="quantity_2440"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Quantity *
                         </label>
-                        <input  id="quantity_2440" name="quantity" aria-label="Quantity *"
+
+                        <input
+                          id="quantity_2440"
+                          name="quantity"
+                          aria-label="Quantity *"
                           type="number"
                           required
                           min="0"
@@ -2446,25 +3703,40 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                           value={formState.quantity}
                           onChange={(e) => {
                             const val = e.target.value;
-                            setFormState(p => {
+
+                            setFormState((p) => {
                               const qty = parseFloat(val) || 0;
                               const wt = parseFloat(p.weight) || 0;
-                              const avg = qty > 0 ? (wt / qty).toFixed(3) : '';
-                              return { ...p, quantity: val, avg_weight: avg };
+                              const avg = qty > 0 ? (wt / qty).toFixed(3) : "";
+
+                              return {
+                                ...p,
+                                quantity: val,
+                                avg_weight: avg,
+                              };
                             });
                           }}
-                          className="w-full border border-gray-400 bg-white px-3 py-1 font-bold text-xs outline-none font-mono"
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                         />
                       </div>
                     </div>
 
-                    {/* Weight and Avg Weight Split Grid */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Weight & Average Weight */}
+                    <div className="grid grid-cols-2 gap-3">
+
+                      {/* Net Weight */}
                       <div>
-                        <label htmlFor="net_weight_quintals_2467" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="net_weight_quintals_2467"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Net Weight (Quintals) *
                         </label>
-                        <input  id="net_weight_quintals_2467" name="net_weight_quintals" aria-label="Net Weight (Quintals) *"
+
+                        <input
+                          id="net_weight_quintals_2467"
+                          name="net_weight_quintals"
+                          aria-label="Net Weight (Quintals) *"
                           type="number"
                           required
                           min="0"
@@ -2473,118 +3745,189 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                           value={formState.weight}
                           onChange={(e) => {
                             const val = e.target.value;
-                            setFormState(p => {
+
+                            setFormState((p) => {
                               const qty = parseFloat(p.quantity) || 0;
                               const wt = parseFloat(val) || 0;
-                              const avg = qty > 0 ? (wt / qty).toFixed(3) : '';
-                              return { ...p, weight: val, avg_weight: avg };
+                              const avg = qty > 0 ? (wt / qty).toFixed(3) : "";
+
+                              return {
+                                ...p,
+                                weight: val,
+                                avg_weight: avg,
+                              };
                             });
                           }}
-                          className="w-full border border-gray-400 bg-white px-3 py-1 font-bold text-xs outline-none font-mono"
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                         />
                       </div>
 
+                      {/* Average Weight */}
                       <div>
-                        <label htmlFor="avg_wt_wt_qty_2491" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="avg_wt_wt_qty_2491"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Avg Wt (Wt / Qty)
                         </label>
-                        <input  id="avg_wt_wt_qty_2491" name="avg_wt_wt_qty" aria-label="Avg Wt (Wt / Qty)"
+
+                        <input
+                          id="avg_wt_wt_qty_2491"
+                          name="avg_wt_wt_qty"
+                          aria-label="Avg Wt (Wt / Qty)"
                           type="text"
                           readOnly
                           placeholder="0.000"
-                          value={formState.avg_weight || '0.000'}
-                          className="w-full border border-gray-400 bg-teal-50/50 px-3 py-1 font-black text-xs outline-none font-mono text-teal-900 cursor-not-allowed"
+                          value={formState.avg_weight || "0.000"}
+                          className="w-full rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 font-black text-xs outline-none font-mono text-[#174C2C] cursor-not-allowed shadow-sm"
                         />
                       </div>
                     </div>
 
-                    {/* Submissions */}
-                    <div className="flex gap-2 pt-2 justify-end">
+                    {/* Bottom Action Area */}
+                    <div className="flex items-center justify-end gap-2 pt-3 mt-1 border-t border-slate-200">
+
+                      {/* Cancel */}
                       <button
                         type="button"
                         onClick={() => setIsFormModalOpen(false)}
-                        className="px-4 py-1.5 bg-gray-500 border-2 border-white shadow-[1px_1px_0px_black] font-black text-[10px] text-white uppercase"
+                        className="px-4 py-2 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95"
                       >
                         Cancel
                       </button>
+
+                      {/* Save */}
                       <button
                         type="submit"
                         disabled={loading}
-                        className="px-6 py-1.5 bg-[#1e40af] border-2 border-white shadow-[1px_1px_0px_black] text-white font-black uppercase text-[10px] tracking-wider cursor-pointer"
+                        className="px-5 py-2 rounded-md bg-[#174C2C] hover:bg-[#103A20] border border-[#174C2C] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loading ? 'Saving...' : '💾 Save Record'}
+                        {loading ? "Saving..." : "💾 Save Record"}
                       </button>
-                    </div>
 
+                    </div>
                   </form>
                 </LegacyFieldset>
               ) : (
                 /* Closing Stock Input Form elements */
                 <LegacyFieldset legend={isEditing ? "🔧 UPDATE CLOSING INVENTORY" : "➕ RECORD CLOSING STOCK"}>
-                  <form onSubmit={handleClosingSubmit} className="space-y-3 font-semibold text-slate-800 text-xs">
-                    
+                  <form
+                    onSubmit={handleClosingSubmit}
+                    className="space-y-3 font-semibold text-slate-800 text-xs"
+                  >
                     {/* Stock Date */}
                     <div>
-                      <label className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="closingformstate_stock_da_2535"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Opening Stock Audit Date *
                       </label>
-                      <div className="flex border border-gray-400 bg-white">
-                        <div className="px-1.5 bg-gray-100 flex items-center border-r border-gray-400">
-                          <Calendar className="h-3.5 w-3.5 text-slate-500" />
+
+                      <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20">
+                        <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
+                          <Calendar className="h-3.5 w-3.5 text-[#174C2C]" />
                         </div>
-                        <input  id="closingformstate_stock_da_2535" name="closingformstate_stock_da" aria-label="closingformstate stock da"
+
+                        <input
+                          id="closingformstate_stock_da_2535"
+                          name="closingformstate_stock_da"
+                          aria-label="closingformstate stock da"
                           type="date"
                           required
                           value={closingFormState.stock_date}
-                          onChange={(e) => setClosingFormState(p => ({ ...p, stock_date: e.target.value }))}
-                          className="flex-1 px-2 py-1 bg-white outline-none font-bold text-xs"
+                          onChange={(e) =>
+                            setClosingFormState((p) => ({
+                              ...p,
+                              stock_date: e.target.value,
+                            }))
+                          }
+                          className="flex-1 px-2.5 py-2 bg-white outline-none font-bold text-xs text-slate-700"
                         />
                       </div>
                     </div>
 
                     {/* Godown Location */}
                     <div>
-                      <label htmlFor="godown_location_2550" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="godown_location_2550"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Godown Location *
                       </label>
+
                       <select
- id="godown_location_2550" name="godown_location" aria-label="Godown Location *"                        required
+                        id="godown_location_2550"
+                        name="godown_location"
+                        aria-label="Godown Location *"
+                        required
                         value={closingFormState.godown}
-                        onChange={(e) => setClosingFormState(p => ({ ...p, godown: e.target.value }))}
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none"
+                        onChange={(e) =>
+                          setClosingFormState((p) => ({
+                            ...p,
+                            godown: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
                       >
                         <option value="">-- SELECT STORAGE LOCATION --</option>
+
                         {mergedGodowns.map((g, i) => (
                           <option key={i} value={g.gdn_name}>
-                            {g.gdn_name} {g.gdn_code ? `[${g.gdn_code}]` : ''}
+                            {g.gdn_name} {g.gdn_code ? `[${g.gdn_code}]` : ""}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     {/* Commodity & Variety */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="commodity_2571" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="commodity_2571"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Commodity *
                         </label>
-                        <input  id="commodity_2571" name="commodity" aria-label="Commodity *"
+
+                        <input
+                          id="commodity_2571"
+                          name="commodity"
+                          aria-label="Commodity *"
                           type="text"
                           required
                           value={closingFormState.commodity}
-                          onChange={(e) => setClosingFormState(p => ({ ...p, commodity: e.target.value }))}
-                          className="w-full border border-gray-400 bg-white px-2.5 py-1 font-bold text-xs outline-none"
+                          onChange={(e) =>
+                            setClosingFormState((p) => ({
+                              ...p,
+                              commodity: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                         />
                       </div>
+
                       <div>
-                        <label htmlFor="variety_2583" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="variety_2583"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Variety
                         </label>
-                        <input  id="variety_2583" name="variety" aria-label="Variety"
+
+                        <input
+                          id="variety_2583"
+                          name="variety"
+                          aria-label="Variety"
                           type="text"
                           value={closingFormState.variety}
-                          onChange={(e) => setClosingFormState(p => ({ ...p, variety: e.target.value }))}
-                          className="w-full border border-gray-400 bg-white px-2.5 py-1 font-bold text-xs outline-none uppercase"
+                          onChange={(e) =>
+                            setClosingFormState((p) => ({
+                              ...p,
+                              variety: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                           placeholder="e.g. TOSSA"
                         />
                       </div>
@@ -2592,141 +3935,233 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                     {/* Quality Grade */}
                     <div>
-                      <label htmlFor="quality_grade_rating_2598" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                      <label
+                        htmlFor="quality_grade_rating_2598"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
                         Quality Grade Rating *
                       </label>
+
                       <select
- id="quality_grade_rating_2598" name="quality_grade_rating" aria-label="Quality Grade Rating *"                        required
+                        id="quality_grade_rating_2598"
+                        name="quality_grade_rating"
+                        aria-label="Quality Grade Rating *"
+                        required
                         value={closingFormState.grade}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setClosingFormState(p => ({ ...p, grade: val }));
-                          if (val === 'CUSTOM_MANUAL') {
+
+                          setClosingFormState((p) => ({
+                            ...p,
+                            grade: val,
+                          }));
+
+                          if (val === "CUSTOM_MANUAL") {
                             setShowCustomGradeClosing(true);
                           } else {
                             setShowCustomGradeClosing(false);
-                            setCustomGradeValueClosing('');
+                            setCustomGradeValueClosing("");
                           }
                         }}
-                        className="w-full border border-gray-400 bg-white px-2 py-1 font-bold text-xs outline-none"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
                       >
                         <option value="">-- SELECT GRADE --</option>
+
                         {mergedGrades.map((g, i) => {
-                          const gName = g.grade_name || g.name || g.code || '';
+                          const gName = g.grade_name || g.name || g.code || "";
+
                           return (
-                            <option key={i} value={gName}>{gName}</option>
+                            <option key={i} value={gName}>
+                              {gName}
+                            </option>
                           );
                         })}
-                        <option value="CUSTOM_MANUAL">✍ WRITE CUSTOM SYSTEM GRADE</option>
+
+                        <option value="CUSTOM_MANUAL">
+                          ✍ WRITE CUSTOM SYSTEM GRADE
+                        </option>
                       </select>
 
+                      {/* Custom Grade */}
                       {showCustomGradeClosing && (
-                        <input  id="type_custom_jute_grade_na_2624" name="type_custom_jute_grade_na" aria-label="Type custom Jute Grade name..."
-                          type="text"
-                          required
-                          placeholder="Type custom Jute Grade name..."
-                          value={customGradeValueClosing}
-                          onChange={(e) => setCustomGradeValueClosing(e.target.value)}
-                          className="w-full mt-1.5 border border-[#808080] bg-yellow-50/50 p-1 px-2 text-xs font-bold outline-none uppercase"
-                        />
+                        <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-1.5">
+                          <div className="text-[8px] font-black uppercase tracking-wider text-amber-700 mb-1">
+                            Custom Grade
+                          </div>
+
+                          <input
+                            id="type_custom_jute_grade_na_2624"
+                            name="type_custom_jute_grade_na"
+                            aria-label="Type custom Jute Grade name..."
+                            type="text"
+                            required
+                            placeholder="Type custom Jute Grade name..."
+                            value={customGradeValueClosing}
+                            onChange={(e) => setCustomGradeValueClosing(e.target.value)}
+                            className="w-full rounded-md border border-amber-300 bg-white px-2 py-2 text-xs font-bold outline-none uppercase text-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                          />
+                        </div>
                       )}
                     </div>
 
-                    {/* Physical Bales & Weight Estimation */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Physical Bales & Weight */}
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="no_of_bales_2641" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px]  font-mono">
+                        <label
+                          htmlFor="no_of_bales_2641"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           No. of Bales *
                         </label>
-                        <input  id="no_of_bales_2641" name="no_of_bales" aria-label="No. of Bales *"
+
+                        <input
+                          id="no_of_bales_2641"
+                          name="no_of_bales"
+                          aria-label="No. of Bales *"
                           type="number"
                           required
                           min="0"
                           value={closingFormState.no_of_bales}
-                          onChange={(e) => handleClosingFieldChange('no_of_bales', e.target.value)}
-                          className="w-full border border-gray-400 bg-white px-3 py-1 font-bold text-xs outline-none font-mono"
+                          onChange={(e) =>
+                            handleClosingFieldChange("no_of_bales", e.target.value)
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                           placeholder="0"
                         />
                       </div>
+
                       <div>
-                        <label htmlFor="net_weight_qtl_2655" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="net_weight_qtl_2655"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Net Weight (Qtl) *
                         </label>
-                        <input  id="net_weight_qtl_2655" name="net_weight_qtl" aria-label="Net Weight (Qtl) *"
+
+                        <input
+                          id="net_weight_qtl_2655"
+                          name="net_weight_qtl"
+                          aria-label="Net Weight (Qtl) *"
                           type="number"
                           required
                           min="0"
                           step="any"
                           value={closingFormState.weight_qtl}
-                          onChange={(e) => handleClosingFieldChange('weight_qtl', e.target.value)}
-                          className="w-full border border-gray-400 bg-white px-3 py-1 font-bold text-xs outline-none font-mono"
+                          onChange={(e) =>
+                            handleClosingFieldChange("weight_qtl", e.target.value)
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                           placeholder="0.00"
                         />
                       </div>
                     </div>
 
-                    {/* Rate & Asset Value calculation */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Rate & Asset Value */}
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="rate_per_qtl_2674" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="rate_per_qtl_2674"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Rate per Qtl *
                         </label>
-                        <input  id="rate_per_qtl_2674" name="rate_per_qtl" aria-label="Rate per Qtl *"
+
+                        <input
+                          id="rate_per_qtl_2674"
+                          name="rate_per_qtl"
+                          aria-label="Rate per Qtl *"
                           type="number"
                           required
                           min="0"
                           step="any"
                           value={closingFormState.rate_per_qtl}
-                          onChange={(e) => handleClosingFieldChange('rate_per_qtl', e.target.value)}
-                          className="w-full border border-gray-400 bg-white px-3 py-1 font-bold text-xs outline-none font-mono"
+                          onChange={(e) =>
+                            handleClosingFieldChange("rate_per_qtl", e.target.value)
+                          }
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                           placeholder="6500"
                         />
                       </div>
+
                       <div>
-                        <label htmlFor="asset_book_value_rs_2689" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
+                        <label
+                          htmlFor="asset_book_value_rs_2689"
+                          className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                        >
                           Asset Book Value (Rs.)
                         </label>
-                        <input  id="asset_book_value_rs_2689" name="asset_book_value_rs" aria-label="Asset Book Value (Rs.)"
-                          type="text"
-                          disabled
-                          value={Number(closingFormState.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                          className="w-full border border-gray-300 bg-gray-50/70 px-3 py-1 font-black text-xs outline-none text-right font-mono text-emerald-800"
-                        />
+
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-emerald-700 font-black text-[10px]">
+                            ₹
+                          </span>
+
+                          <input
+                            id="asset_book_value_rs_2689"
+                            name="asset_book_value_rs"
+                            aria-label="Asset Book Value (Rs.)"
+                            type="text"
+                            disabled
+                            value={Number(closingFormState.total_value).toLocaleString(
+                              undefined,
+                              {
+                                minimumFractionDigits: 2,
+                              }
+                            )}
+                            className="w-full rounded-md border border-emerald-200 bg-emerald-50 px-3 pl-7 py-2 font-black text-xs outline-none text-right font-mono text-emerald-800 cursor-not-allowed"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Remarks & auditing operator ID */}
+                    {/* Remarks */}
                     <div>
-                      <label htmlFor="remarks_storage_quality_n_2703" className="block mb-1 font-black text-indigo-950 uppercase tracking-widest text-[9px] ">
-                        Remarks / Storage quality notes
+                      <label
+                        htmlFor="remarks_storage_quality_n_2703"
+                        className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      >
+                        Remarks / Storage Quality Notes
                       </label>
-                      <input  id="remarks_storage_quality_n_2703" name="remarks_storage_quality_n" aria-label="Remarks / Storage quality notes"
+
+                      <input
+                        id="remarks_storage_quality_n_2703"
+                        name="remarks_storage_quality_n"
+                        aria-label="Remarks / Storage quality notes"
                         type="text"
                         value={closingFormState.remarks}
-                        onChange={(e) => setClosingFormState(p => ({ ...p, remarks: e.target.value }))}
-                        className="w-full border border-gray-400 bg-white p-1 px-2.5 text-xs font-bold outline-none"
+                        onChange={(e) =>
+                          setClosingFormState((p) => ({
+                            ...p,
+                            remarks: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
                         placeholder="e.g. Wet stack audits completed alright."
                       />
                     </div>
 
-                    {/* Submissions */}
-                    <div className="flex gap-2 pt-2 justify-end">
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-2 pt-3 mt-2 border-t border-slate-200">
+
+                      {/* Cancel */}
                       <button
                         type="button"
                         onClick={() => setIsFormModalOpen(false)}
-                        className="px-4 py-1.5 bg-gray-500 border-2 border-white shadow-[1px_1px_0px_black] font-black text-[10px] text-white uppercase"
+                        className="px-4 py-2 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95"
                       >
                         Cancel
                       </button>
+
+                      {/* Register Closing */}
                       <button
                         type="submit"
                         disabled={loading}
-                        className="px-6 py-1.5 bg-red-900 border-2 border-white shadow-[1px_1px_0px_black] text-white font-black uppercase text-[10px] tracking-wider cursor-pointer font-sans"
+                        className="px-5 py-2 rounded-md bg-[#174C2C] hover:bg-[#103A20] border border-[#174C2C] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loading ? 'Creating...' : '💾 Register Closing'}
+                        {loading ? "Creating..." : "💾 Register Closing"}
                       </button>
-                    </div>
 
+                    </div>
                   </form>
                 </LegacyFieldset>
               )}
