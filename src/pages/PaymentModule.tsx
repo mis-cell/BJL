@@ -205,8 +205,12 @@ export const getColAmount = (col?: PaymentDetailColumn): number => {
   const wtMt = getColWtMt(col);
   const reconRate = Number(col.rate_value) || 0;
   if (wtMt <= 0 || reconRate <= 0) return 0;
-  // If Rate is Rate/MT (e.g. 14100), Amount = Weight(MT) * Rate(/MT)
-  return wtMt * reconRate;
+  // Weight (MT) converted to kg = wtMt * 1000 (or Qtl = wtMt * 10)
+  // Rate (₹/Qtl) converted to ₹/kg = reconRate / 100
+  // Amount = 5460 kg * 141/kg = 54.60 Qtl * 14100
+  const wtKg = wtMt * 1000;
+  const rateKg = reconRate / 100;
+  return wtKg * rateKg;
 };
 
 // Robust helper to parse grid_details / items from string or array or object
