@@ -1578,20 +1578,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               {/* Pick Final Arrival Banner */}
               {finalArrivalList.length > 0 && (() => {
                 const pendingArrivalList = finalArrivalList.filter(fa => {
-                  const faNo = String(fa.final_arrival_no || fa.mr_no || "").trim().toLowerCase();
-                  const faMrNo = String(fa.mr_no || fa.final_arrival_no || "").trim().toLowerCase();
+                  const faNo = String(fa.final_arrival_no || fa.arrival_no || "").trim().toLowerCase();
+                  const faMrNo = String(fa.mr_no || "").trim().toLowerCase();
                   const faId = String(fa.final_arrival_id || "").trim().toLowerCase();
-
-                  if (!faNo && !faMrNo && !faId) return true;
+                  const faPoNo = String(fa.po_no || "").trim().toLowerCase();
+                  const faLorry = String(fa.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
                   return !records.some(r => {
                     const rMr = String(r.mr_no || "").trim().toLowerCase();
                     const rArr = String(r.arrival_no || "").trim().toLowerCase();
-                    return (
-                      (faNo && (rMr === faNo || rArr === faNo)) ||
-                      (faMrNo && (rMr === faMrNo || rArr === faMrNo)) ||
-                      (faId && (rMr === faId || rArr === faId))
-                    );
+                    const rPo = String(r.po_no || "").trim().toLowerCase();
+                    const rLorry = String(r.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+                    // 1. Direct arrival / MR number match
+                    if (faNo && (rMr === faNo || rArr === faNo || rMr.includes(faNo) || rArr.includes(faNo))) return true;
+                    if (faMrNo && (rMr === faMrNo || rArr === faMrNo)) return true;
+                    if (faId && (rMr === faId || rArr === faId || rMr === `fa-${faId}` || rArr === `fa-${faId}`)) return true;
+
+                    // 2. Both PO number and Arrival / Lorry match
+                    if (faPoNo && rPo && faPoNo === rPo) {
+                      if (faNo && (rArr === faNo || rMr === faNo)) return true;
+                      if (faLorry && rLorry && faLorry === rLorry) return true;
+                      if (!faLorry || !rLorry) return true;
+                    }
+
+                    return false;
                   });
                 });
 
@@ -1602,16 +1613,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <span className="text-xs font-bold text-emerald-950">
                         Import / Pick From Final Arrival:
                       </span>
-                      {pendingArrivalList.length > 0 && (
+                      {pendingArrivalList.length > 0 ? (
                         <span className="bg-emerald-200 text-emerald-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
                           {pendingArrivalList.length} Pending
+                        </span>
+                      ) : (
+                        <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          All Arrivals Inspected
                         </span>
                       )}
                     </div>
                     <select
                       onChange={(e) => {
                         if (!e.target.value) return;
-                        const selectedFa = finalArrivalList.find(f => 
+                        const selectedFa = pendingArrivalList.find(f => 
                           (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
                           (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
                           (f.mr_no && String(f.mr_no) === e.target.value) ||
@@ -1622,23 +1637,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       defaultValue=""
                       className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
                     >
-                      <option value="">-- Select Final Arrival Record to Auto-Fill --</option>
-                      {pendingArrivalList.length > 0 && (
-                        <optgroup label="Pending Inspection Arrivals">
+                      {pendingArrivalList.length > 0 ? (
+                        <>
+                          <option value="">-- Select Pending Arrival Record to Auto-Fill --</option>
                           {pendingArrivalList.map((fa, idx) => (
                             <option key={`p-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
                               Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
                             </option>
                           ))}
-                        </optgroup>
+                        </>
+                      ) : (
+                        <option value="" disabled>-- No Pending Arrivals (All Already Inspected) --</option>
                       )}
-                      <optgroup label="All Final Arrivals">
-                        {finalArrivalList.map((fa, idx) => (
-                          <option key={`a-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
-                            Arrival #{fa.final_arrival_no || fa.mr_no || fa.po_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
-                          </option>
-                        ))}
-                      </optgroup>
                     </select>
                   </div>
                 );
