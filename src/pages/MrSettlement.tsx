@@ -57,6 +57,7 @@ interface SettlementMaster {
   summary_delivery_claim: number;
   summary_rate_wt_claim: number;
   summary_instl_rate: number;
+  summary_premium_wt?: number;
   summary_material_value: number;
   summary_misc_add?: number;
   summary_misc_less?: number;
@@ -242,6 +243,7 @@ const initialMaster = (): SettlementMaster => ({
   summary_delivery_claim: 0,
   summary_rate_wt_claim: 0,
   summary_instl_rate: 0,
+  summary_premium_wt: 0,
   summary_material_value: 0,
   summary_misc_add: 0,
   summary_misc_less: 0,
@@ -1169,6 +1171,38 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       await syncPaymentModuleData(targetMrNo, poNoForDet);
 
+      // Calculate total Premium Quantity (MT) from Inspection Details and convert to Quintals (MT * 10)
+      let totalPremMt = 0;
+      if (inspDetails && inspDetails.length > 0) {
+        inspDetails.forEach((row: any) => {
+          const isPrem = row.is_premium === true || 
+            row.premium === "Yes" || 
+            (row.premium != null && String(row.premium).trim() !== "" && String(row.premium).toLowerCase() !== "no");
+          if (isPrem) {
+            const explicitNum = Number(row.premium_mt || row.premium_quantity || (typeof row.premium === 'number' ? row.premium : NaN));
+            if (!isNaN(explicitNum) && explicitNum > 0) {
+              totalPremMt += explicitNum;
+            } else {
+              if (row.challan_gross_wt && Number(row.challan_gross_wt) > 0) {
+                totalPremMt += Number(row.challan_gross_wt);
+              } else if (row.receipt_gross_wt && Number(row.receipt_gross_wt) > 0) {
+                totalPremMt += Number(row.receipt_gross_wt);
+              } else {
+                const q = Number(row.quantity) || 0;
+                const u = String(row.unit || "BALES").toUpperCase();
+                if (u.includes("BALE")) totalPremMt += q * 0.18;
+                else if (u.includes("KG")) totalPremMt += q * 0.001;
+                else if (u.includes("QTL") || u.includes("QUINTAL")) totalPremMt += q * 0.10;
+                else if (u.includes("DRUM")) totalPremMt += q * 0.20;
+                else if (u.includes("BAG")) totalPremMt += q * 0.05;
+                else totalPremMt += q;
+              }
+            }
+          }
+        });
+      }
+      const calculatedPremWtQtl = Number((totalPremMt * 10).toFixed(2));
+
       // Check if settlement already exists for this MR. If yes, load for editing!
       if (!forceSync) {
         const { data: existingMaster } = await supabase
@@ -1181,6 +1215,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           setIsEdit(true);
           const mergedMaster = {
             ...existingMaster,
+            summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null) 
+              ? existingMaster.summary_premium_wt 
+              : (existingMaster.summary_instl_rate || calculatedPremWtQtl),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees
           };
           setMasterData(mergedMaster);
@@ -1258,6 +1295,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           challan_weight: Number(faMaster.challan_material_weight || faMaster.weight_qtl) || 0,
           supplier_net_wt: Number(faMaster.supplier_net_weight || faMaster.weight_qtl) || 0,
           electronic_scale_net: Number(faMaster.electronic_net_weight || faMaster.weight_qtl) || 0,
+          summary_premium_wt: calculatedPremWtQtl,
+          summary_instl_rate: calculatedPremWtQtl,
           arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0
         };
@@ -1329,6 +1368,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: inspMaster.arrival_no || '',
         arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
         remarks: inspMaster.remarks || '',
+        summary_premium_wt: calculatedPremWtQtl,
+        summary_instl_rate: calculatedPremWtQtl,
         arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0
       };
@@ -1448,27 +1489,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const weightKg = electronicScaleNetMT * 1000;
     const calculatedRateWtClaim = Number((weightKg * (totalClaimPct / 100)).toFixed(3));
 
-    // Calculate Moisture Amount: "Moisture Claim (KG)" * Rate aff. Cd. Cl (converted to per KG)
-    const effectiveRateAffCdCl = Number(masterData.summary_rate_aff_cd_cl) > 0 ? Number(masterData.summary_rate_aff_cd_cl) : nextRatePerMt;
-    const rateAffCdClPerKg = effectiveRateAffCdCl / 1000;
-    const calculatedMoistureAmount = Number((rateAffCdClPerKg * calculatedRateWtClaim).toFixed(2));
-
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
     const finalLessAmount = 0;
 
-    // Calculate Premium Amount: Premium Rate (₹/Qtl) * Addtl Quality Claims in Qtl
+    // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
     const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
-    const addtlQualityClaimsQtl = Number(masterData.summary_less_amount) || 0;
-    const calculatedPremiumAmount = Number((premiumRatePerQtl * addtlQualityClaimsQtl).toFixed(2));
+    const premiumWeightQtl = (masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0)
+      ? Number(masterData.summary_premium_wt)
+      : Number(masterData.summary_less_amount || 0);
+    const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
     const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
 
-    // Valuation calculation = Material Value + Add Amt + Premium Amt - Moisture Amount - Deduction Amount - Ded Claim Total - Qty Claim - Val Less Amt - Ex/Short
+    // Valuation calculation = Material Value + Add Amt + Premium Amt - Deduction Amount - Ded Claim Total - Qty Claim - Val Less Amt - Ex/Short
     const calculatedValuationVal = Number((
       calculatedMaterialValue 
       + Number(masterData.val_add_amt || 0) 
       + calculatedPremiumAmount 
-      - calculatedMoistureAmount 
       - calculatedDeductionAmount 
       - finalLessAmount 
       - Number(masterData.val_qty_claim || 0) 
@@ -1521,7 +1558,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         prev.final_apmc_fees !== finalApmcFees ||
         prev.summary_rate_wt_claim !== calculatedRateWtClaim ||
         prev.summary_rate_aff_cd_cl !== targetRateAffCdCl ||
-        prev.summary_instl_rate !== calculatedMoistureAmount ||
         prev.val_premium_amt !== calculatedPremiumAmount ||
         prev.summary_delivery_claim !== calculatedDeliveryClaim ||
         (!prev.actual_apmc_fees && calculatedApmcFees > 0 && prev.actual_apmc_fees !== nextActualApmcFees) ||
@@ -1541,7 +1577,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           rate_qntl: nextRatePerMt,
           summary_rate_aff_cd_cl: targetRateAffCdCl,
           summary_rate_wt_claim: calculatedRateWtClaim,
-          summary_instl_rate: calculatedMoistureAmount,
           val_premium_amt: calculatedPremiumAmount,
           summary_delivery_claim: calculatedDeliveryClaim
         };
@@ -1549,7 +1584,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       return prev;
     });
 
-  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_deduction_amount, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
+  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
 
   // Handle master updates
   const handleMasterChange = (field: keyof SettlementMaster, value: any) => {
@@ -1694,7 +1729,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_rate_aff_cd_cl: Number(masterData.summary_rate_aff_cd_cl) || 0,
           summary_delivery_claim: Number(masterData.summary_delivery_claim) || 0,
           summary_rate_wt_claim: Number(masterData.summary_rate_wt_claim) || 0,
-          summary_instl_rate: Number(masterData.summary_instl_rate) || 0,
+          summary_instl_rate: Number(masterData.summary_premium_wt ?? masterData.summary_instl_rate ?? 0),
+          summary_premium_wt: Number(masterData.summary_premium_wt ?? 0),
           summary_material_value: Number(masterData.summary_material_value) || 0,
           summary_misc_add: Number(masterData.summary_misc_add) || 0,
           summary_misc_less: Number(masterData.summary_misc_less) || 0,
@@ -2668,13 +2704,21 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="moisture_amount_2511" className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Amount</label>
-                      <input  id="moisture_amount_2511" name="moisture_amount" aria-label="Moisture Amount"
+                      <div className="group relative flex items-center gap-1">
+                        <label htmlFor="premium_wt_qtl_field" className="text-gray-500 uppercase font-semibold text-[8.5px]">Premium WT (₹/Qtl)</label>
+                        <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
+                        <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
+                          <p className="text-yellow-300 font-bold">Premium Weight (Qtl)</p>
+                          <p>Sum of Premium Quantity (in MT) from Inspection Details table converted to Quintals (MT × 10).</p>
+                        </div>
+                      </div>
+                      <input  id="premium_wt_qtl_field" name="premium_wt_qtl_field" aria-label="Premium WT (₹/Qtl)"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
-                        value={masterData.summary_instl_rate || ''} 
-                        onChange={(e) => handleMasterChange('summary_instl_rate', parseFloat(e.target.value) || 0)}
+                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-amber-800"
+                        value={masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null ? masterData.summary_premium_wt : ''} 
+                        onChange={(e) => handleMasterChange('summary_premium_wt', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
                       />
                     </div>
 
@@ -2695,8 +2739,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-60 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                           <p className="text-yellow-300 font-bold">Premium Rate & Calculation</p>
                           <p>Premium Rate: <code className="text-cyan-300">₹{masterData.summary_premium_amount || 0} / Qtl</code></p>
-                          <p>Eligible Quantity: <code className="text-cyan-300">{masterData.summary_less_amount || 0} Qtl</code></p>
-                          <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">Total Premium Amt: ₹{((masterData.summary_premium_amount || 0) * (masterData.summary_less_amount || 0)).toFixed(2)}</p>
+                          <p>Premium Weight: <code className="text-cyan-300">{(masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0 ? masterData.summary_premium_wt : masterData.summary_less_amount) || 0} Qtl</code></p>
+                          <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">Total Premium Amt: ₹{((masterData.summary_premium_amount || 0) * Number(masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0 ? masterData.summary_premium_wt : (masterData.summary_less_amount || 0))).toFixed(2)}</p>
                         </div>
                       </div>
                       <input  id="masterdata_summary_premiu_2541" name="masterdata_summary_premiu" aria-label="masterdata summary premiu"
@@ -2841,8 +2885,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                           <p className="text-yellow-300 font-bold">Total Premium Amount</p>
-                          <p>Formula: Premium Rate × Eligible Qty</p>
-                          <p><code className="text-cyan-300">₹{masterData.summary_premium_amount || 0}/Qtl × {masterData.summary_less_amount || 0} Qtl</code></p>
+                          <p>Formula: Premium Rate × Premium WT (Qtl)</p>
+                          <p><code className="text-cyan-300">₹{masterData.summary_premium_amount || 0}/Qtl × {(masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0 ? masterData.summary_premium_wt : (masterData.summary_less_amount || 0))} Qtl</code></p>
                           <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">= ₹{(masterData.val_premium_amt || 0).toFixed(2)}</p>
                         </div>
                       </div>
@@ -2946,7 +2990,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-xl leading-relaxed font-normal text-left normal-case">
                           <p className="text-yellow-300 font-bold border-b border-slate-700 pb-1 mb-1">Payable Account Formula</p>
                           <p className="font-mono text-cyan-200">
-                            (Material Value - Moisture Amount - Deduction Amount (-) - Ded Claim Total (-) - Qty Claim - Val Less Amt - Ex/Short + Premium Amt (+) + Add Amt (+)) - Less Adv (-) - On/Ac Adv - APMC Fees + CST Tax
+                            (Material Value - Deduction Amount (-) - Ded Claim Total (-) - Qty Claim - Val Less Amt - Ex/Short + Premium Amt (+) + Add Amt (+)) - Less Adv (-) - On/Ac Adv - APMC Fees + CST Tax
                           </p>
                         </div>
                       </div>

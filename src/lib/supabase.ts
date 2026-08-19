@@ -299,6 +299,7 @@ if (supabase) {
                 summary_delivery_claim NUMERIC(15,2) DEFAULT 0.00,
                 summary_rate_wt_claim NUMERIC(15,2) DEFAULT 0.00,
                 summary_instl_rate NUMERIC(15,2) DEFAULT 0.00,
+                summary_premium_wt NUMERIC(15,2) DEFAULT 0.00,
                 summary_material_value NUMERIC(15,2) DEFAULT 0.00,
                 summary_misc_add NUMERIC(15,2) DEFAULT 0.00,
                 summary_misc_less NUMERIC(15,2) DEFAULT 0.00,
@@ -392,6 +393,7 @@ if (supabase) {
             );
 
             ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'Pending';
+            ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS summary_premium_wt NUMERIC(15,2) DEFAULT 0.00;
             ALTER TABLE IF EXISTS mr_settlement_master DISABLE ROW LEVEL SECURITY;
             ALTER TABLE IF EXISTS mr_settlement_detail DISABLE ROW LEVEL SECURITY;
             
