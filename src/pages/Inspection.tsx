@@ -925,6 +925,27 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (match) {
         populateFromFinalArrival(match);
       }
+    } else if (field === 'actual_moisture' || field === 'claim_moisture') {
+      const numVal = Number(value) || 0;
+      setDetailRows(prev => prev.map(r => ({
+        ...r,
+        moisture_act: r.moisture_act || numVal,
+        settlement_moisture: (r.settlement_moisture && r.settlement_moisture > 0) ? r.settlement_moisture : numVal
+      })));
+    } else if (field === 'actual_dust' || field === 'claim_dust') {
+      const numVal = Number(value) || 0;
+      setDetailRows(prev => prev.map(r => ({
+        ...r,
+        dust_act: r.dust_act || numVal,
+        settlement_dust: (r.settlement_dust && r.settlement_dust > 0) ? r.settlement_dust : numVal
+      })));
+    } else if (field === 'actual_ncv' || field === 'claim_ncv') {
+      const numVal = Number(value) || 0;
+      setDetailRows(prev => prev.map(r => ({
+        ...r,
+        ncv_act: r.ncv_act || numVal,
+        settlement_ncv: (r.settlement_ncv && r.settlement_ncv > 0) ? r.settlement_ncv : numVal
+      })));
     }
   };
 
@@ -978,23 +999,35 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
       }
 
-      // Auto-pull Moisture Act into Mill Settlement % Moisture
+      // Auto-pull Moisture Act / Claim into Mill Settlement % Moisture
       if (field === "moisture_act") {
         currentRow.settlement_moisture = Number(value) || 0;
       }
+      if (field === "moisture_claim" && (!currentRow.settlement_moisture || currentRow.settlement_moisture === 0)) {
+        currentRow.settlement_moisture = Number(value) || 0;
+      }
 
-      // Auto-pull Grade Down Act into Mill Settlement % Gr. Down
+      // Auto-pull Grade Down Act / Claim into Mill Settlement % Gr. Down
       if (field === "grade_down_act") {
         currentRow.settlement_grade_down = Number(value) || 0;
       }
+      if (field === "grade_down_claim" && (!currentRow.settlement_grade_down || currentRow.settlement_grade_down === 0)) {
+        currentRow.settlement_grade_down = Number(value) || 0;
+      }
 
-      // Auto-pull Dust Act into Mill Settlement % Dust
+      // Auto-pull Dust Act / Claim into Mill Settlement % Dust
       if (field === "dust_act") {
         currentRow.settlement_dust = Number(value) || 0;
       }
+      if (field === "dust_claim" && (!currentRow.settlement_dust || currentRow.settlement_dust === 0)) {
+        currentRow.settlement_dust = Number(value) || 0;
+      }
 
-      // Auto-pull NCV Act into Mill Settlement % NCV
+      // Auto-pull NCV Act / Claim into Mill Settlement % NCV
       if (field === "ncv_act") {
+        currentRow.settlement_ncv = Number(value) || 0;
+      }
+      if (field === "ncv_claim" && (!currentRow.settlement_ncv || currentRow.settlement_ncv === 0)) {
         currentRow.settlement_ncv = Number(value) || 0;
       }
 
@@ -1932,9 +1965,24 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Challan Gross Wt. MT.</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Receipt Gross Wt. MT.</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Gross Weight (Batch)</th>
-                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px]">Add Weight M.Ton</th>
-                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px]">Less Weight M.Ton</th>
-                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Reduced Weight M.Ton</th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px] bg-gradient-to-b from-[#065f46] to-[#047857] text-white font-extrabold shadow-inner">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span>Add Weight</span>
+                          <span className="text-[9px] font-semibold text-emerald-200">M.Ton</span>
+                        </div>
+                      </th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px] bg-gradient-to-b from-[#991b1b] to-[#b91c1c] text-white font-extrabold shadow-inner">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span>Less Weight</span>
+                          <span className="text-[9px] font-semibold text-rose-200">M.Ton</span>
+                        </div>
+                      </th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px] bg-gradient-to-b from-[#3730a3] to-[#4338ca] text-white font-extrabold shadow-inner">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span>Reduced Weight</span>
+                          <span className="text-[9px] font-semibold text-indigo-200">M.Ton</span>
+                        </div>
+                      </th>
                       <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Lorry Moisture</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Lorry Moisture Read (%)</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Insp. Moisture Read (%)</th>
@@ -2229,40 +2277,40 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 className={getFieldInputStyle(isGrossWeightBatchBlocked, "font-mono")}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isAddWeightBlocked}
                                 tabIndex={isAddWeightBlocked ? -1 : 0}
-                                title={isAddWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                title={isAddWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Add Weight M.Ton"}
                                 value={row.add_weight || 0}
                                 onChange={(e) => !isAddWeightBlocked && handleDetailChange(idx, "add_weight", Number(e.target.value))}
-                                className={getFieldInputStyle(isAddWeightBlocked, "font-mono")}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-emerald-50/80 text-emerald-950 focus:ring-2 focus:ring-emerald-500 ${isAddWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-rose-200 bg-rose-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isLessWeightBlocked}
                                 tabIndex={isLessWeightBlocked ? -1 : 0}
-                                title={isLessWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                title={isLessWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Less Weight M.Ton"}
                                 value={row.less_weight || 0}
                                 onChange={(e) => !isLessWeightBlocked && handleDetailChange(idx, "less_weight", Number(e.target.value))}
-                                className={getFieldInputStyle(isLessWeightBlocked, "font-mono")}
+                                className={`w-full border border-rose-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-rose-50/80 text-rose-950 focus:ring-2 focus:ring-rose-500 ${isLessWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-indigo-200 bg-indigo-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isReducedWeightBlocked}
                                 tabIndex={isReducedWeightBlocked ? -1 : 0}
-                                title={isReducedWeightBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
+                                title={isReducedWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Reduced Weight M.Ton"}
                                 value={row.reduced_weight || 0}
                                 onChange={(e) => !isReducedWeightBlocked && handleDetailChange(idx, "reduced_weight", Number(e.target.value))}
-                                className={getFieldInputStyle(isReducedWeightBlocked, "font-mono")}
+                                className={`w-full border border-indigo-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-indigo-50/80 text-indigo-950 focus:ring-2 focus:ring-indigo-500 ${isReducedWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
 
@@ -2492,7 +2540,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementMoistureBlocked}
                                 tabIndex={isSettlementMoistureBlocked ? -1 : 0}
                                 title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture (Auto-pulled from Act. Moisture)"}
-                                value={row.settlement_moisture ?? 0}
+                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.moisture_act || row.moisture_claim || row.insp_read_avg || row.lorry_read_avg || headerForm.actual_moisture || headerForm.claim_moisture || 0)}
                                 onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2504,7 +2552,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementGradeDownBlocked}
                                 tabIndex={isSettlementGradeDownBlocked ? -1 : 0}
                                 title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Gr. Down (Auto-pulled from Act. Grade Down)"}
-                                value={row.settlement_grade_down ?? 0}
+                                value={row.settlement_grade_down !== undefined && row.settlement_grade_down !== null && Number(row.settlement_grade_down) > 0 ? row.settlement_grade_down : (row.grade_down_act || row.grade_down_claim || 0)}
                                 onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementGradeDownBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2516,7 +2564,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementDustBlocked}
                                 tabIndex={isSettlementDustBlocked ? -1 : 0}
                                 title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Dust (Auto-pulled from Act. Dust)"}
-                                value={row.settlement_dust ?? 0}
+                                value={row.settlement_dust !== undefined && row.settlement_dust !== null && Number(row.settlement_dust) > 0 ? row.settlement_dust : (row.dust_act || row.dust_claim || headerForm.actual_dust || headerForm.claim_dust || 0)}
                                 onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementDustBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2528,7 +2576,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementNcvBlocked}
                                 tabIndex={isSettlementNcvBlocked ? -1 : 0}
                                 title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % NCV (Auto-pulled from Act. NCV)"}
-                                value={row.settlement_ncv ?? 0}
+                                value={row.settlement_ncv !== undefined && row.settlement_ncv !== null && Number(row.settlement_ncv) > 0 ? row.settlement_ncv : (row.ncv_act || row.ncv_claim || headerForm.actual_ncv || headerForm.claim_ncv || 0)}
                                 onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementNcvBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
