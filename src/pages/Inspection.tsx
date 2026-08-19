@@ -2212,6 +2212,22 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="border-t-2 border-slate-300 bg-slate-100/90">
+                    <tr className="font-extrabold text-slate-800">
+                      <td colSpan={3} className="py-2 px-2.5 text-right uppercase text-[11px] tracking-wide text-slate-700">
+                        Total Deductions &amp; Penalties:
+                      </td>
+                      <td className="py-2 px-2.5 text-right font-mono font-black text-xs text-slate-900">
+                        {deductionRows.reduce((sum, r) => sum + (Number(r.deduction_qty) || 0), 0)}
+                      </td>
+                      <td className="py-2 px-2.5 text-right">
+                        <span className="inline-block w-full bg-rose-100 text-rose-900 border border-rose-300 rounded px-2 py-1 font-mono font-black text-xs text-right shadow-2xs">
+                          -₹{deductionRows.reduce((sum, r) => sum + (Number(r.deduction_amount) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </section>
@@ -3148,6 +3164,55 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       );
                     })}
                   </tbody>
+                  <tfoot className="border-t-2 border-[#1e3a8a] bg-slate-100 font-bold sticky bottom-0 z-20 shadow-md">
+                    <tr className="text-[11px] text-slate-800 font-extrabold divide-x divide-slate-200">
+                      <td colSpan={9} className="p-2 text-right bg-slate-200 uppercase tracking-wide text-slate-900 sticky left-0 z-20">
+                        TOTALS ({detailRows.length} ROWS):
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-blue-900 bg-blue-50/60">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0)}
+                      </td>
+                      <td className="p-2 text-center text-[10px] text-slate-500 font-bold">
+                        -
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-slate-900">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.challan_gross_wt) || 0), 0).toFixed(3)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-slate-900">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0).toFixed(3)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-slate-900">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.gross_weight_batch) || 0), 0).toFixed(3)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-emerald-800 bg-emerald-50">
+                        +{detailRows.reduce((sum, r) => sum + (Number(r.add_weight) || 0), 0).toFixed(3)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-rose-800 bg-rose-50">
+                        -{detailRows.reduce((sum, r) => sum + (Number(r.less_weight) || 0), 0).toFixed(3)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-indigo-900 bg-indigo-50">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.reduced_weight) || 0), 0).toFixed(3)}
+                      </td>
+                      <td colSpan={16} className="p-2 text-center text-slate-400 font-normal">
+                        -
+                      </td>
+                      <td className="p-2 text-right font-mono font-black text-blue-900 bg-blue-50/80">
+                        {detailRows.reduce((sum, r) => sum + (Number(r.final_receipt_wt) || 0), 0).toFixed(3)}
+                      </td>
+                      <td colSpan={11} className="p-2 text-center text-slate-400 font-normal">
+                        -
+                      </td>
+                      <td className="p-2 text-center font-mono font-black text-amber-900 bg-amber-50">
+                        {detailRows.reduce((sum, r) => sum + calculateQtyInMt(r), 0).toFixed(3)} MT
+                      </td>
+                      <td colSpan={2} className="p-2 text-center text-slate-400 font-normal">
+                        -
+                      </td>
+                      <td className="p-2 sticky right-0 bg-slate-200 z-20 text-center font-bold text-slate-500">
+                        -
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
 
