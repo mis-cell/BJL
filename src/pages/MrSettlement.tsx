@@ -535,32 +535,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               deduction_amount: rowAmt || (idx === 0 ? dAmt : 0)
             };
           });
-        } else if (dType || dRate > 0 || dAmt > 0) {
+        } else if (dType && !dType.includes('-- SELECT') && (dRate > 0 || dAmt > 0)) {
           deductionsList = [{
-            deduction_type: dType || 'General Deduction',
+            deduction_type: dType,
             deduction_rate: dRate,
             deduction_qty: dQty || 1,
             deduction_amount: dAmt || (dRate * (dQty || 1))
           }];
         }
-      }
-
-      // If still empty, provide sample matching default format
-      if (deductionsList.length === 0) {
-        deductionsList = [
-          {
-            deduction_type: 'GODOWN DAMAGE FOR BALES',
-            deduction_rate: 400,
-            deduction_qty: 1,
-            deduction_amount: 400
-          },
-          {
-            deduction_type: 'IN CASE OF BALE IF WEIGHT IS LESS THAN 144',
-            deduction_rate: 200,
-            deduction_qty: 1,
-            deduction_amount: 200
-          }
-        ];
       }
 
       const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
@@ -1396,7 +1378,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       let deductionSummaryText = inspDeductionType;
       if (Array.isArray(rawDeductionsArray) && rawDeductionsArray.length > 0) {
         parsedDeductions = rawDeductionsArray
-          .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '') || (d.deduction && String(d.deduction).trim() !== '') || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
+          .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '' && !String(d.deduction_type).includes('-- SELECT')) || (d.deduction && String(d.deduction).trim() !== '') || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
           .map((d: any) => {
             const name = String(d.deduction_type || d.deduction || d.name || '').trim();
             const rate = Number(d.deduction_rate || d.rate) || 0;
@@ -1423,29 +1405,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      // Check quality claims if no specific deduction is set
-      if (!deductionSummaryText && parsedDeductions.length === 0) {
-        const claimParts: string[] = [];
-        if (Number(inspMaster?.claim_moisture) > 0) claimParts.push(`Moisture Claim (${inspMaster.claim_moisture}%)`);
-        if (Number(inspMaster?.claim_dust) > 0) claimParts.push(`Dust Claim (${inspMaster.claim_dust}%)`);
-        if (Number(inspMaster?.claim_ncv) > 0) claimParts.push(`NCV Claim (${inspMaster.claim_ncv}%)`);
-        if (Number(inspMaster?.claim_grade_down) > 0) claimParts.push(`Grade Down (${inspMaster.claim_grade_down}%)`);
-        if (claimParts.length > 0) {
-          deductionSummaryText = claimParts.join(', ');
-        }
-      }
-
-      if (!deductionSummaryText && Number(inspMaster?.delivery_claim) > 0) {
-        deductionSummaryText = `Delivery Claim (₹${inspMaster.delivery_claim})`;
-      }
-
-      if (parsedDeductions.length === 0 && (inspDeductionType || deductionSummaryText || inspDeductionAmount > 0)) {
+      if (parsedDeductions.length === 0 && inspDeductionType && !inspDeductionType.includes('-- SELECT') && (inspDeductionRate > 0 || inspDeductionAmount > 0)) {
         parsedDeductions = [{
-          deduction_type: deductionSummaryText || inspDeductionType || 'General Deduction',
+          deduction_type: inspDeductionType,
           deduction_rate: inspDeductionRate || inspDeductionAmount,
           deduction_qty: inspDeductionQty || 1,
           deduction_amount: inspDeductionAmount || Number(((inspDeductionRate || 0) * (inspDeductionQty || 1)).toFixed(2))
         }];
+      } else if (parsedDeductions.length === 0) {
+        deductionSummaryText = '';
+        inspDeductionRate = 0;
+        inspDeductionQty = 0;
+        inspDeductionAmount = 0;
       }
 
       // Check if settlement already exists for this MR. If yes, load for editing!
@@ -3223,36 +3194,29 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                                     const cleanType = part.replace(/\(.*\)/g, '').replace(/@.*/g, '').replace(/₹.*/g, '').trim() || part;
                                     return {
                                       deduction_type: cleanType,
-                                      deduction_rate: rowRate || (idx === 0 ? dRate : (cleanType.toUpperCase().includes('144') ? 200 : 400)),
+                                      deduction_rate: rowRate || (idx === 0 ? dRate : 0),
                                       deduction_qty: rowQty || (idx === 0 ? dQty : 1),
                                       deduction_amount: rowAmt || (idx === 0 ? dAmt : 0)
                                     };
                                   });
-                                } else if (dType) {
+                                } else if (dType && !dType.includes('-- SELECT') && (dRate > 0 || dAmt > 0)) {
                                   deds = [{
                                     deduction_type: dType,
-                                    deduction_rate: dRate || 400,
+                                    deduction_rate: dRate,
                                     deduction_qty: dQty || 1,
-                                    deduction_amount: dAmt || dRate
+                                    deduction_amount: dAmt || (dRate * (dQty || 1))
                                   }];
                                 }
                               }
 
                               if (deds.length === 0) {
-                                deds = [
-                                  {
-                                    deduction_type: 'GODOWN DAMAGE FOR BALES',
-                                    deduction_rate: 400,
-                                    deduction_qty: 1,
-                                    deduction_amount: 400
-                                  },
-                                  {
-                                    deduction_type: 'IN CASE OF BALE IF WEIGHT IS LESS THAN 144',
-                                    deduction_rate: 200,
-                                    deduction_qty: 1,
-                                    deduction_amount: 200
-                                  }
-                                ];
+                                return (
+                                  <tr>
+                                    <td colSpan={3} className="py-3.5 px-4 text-center text-xs font-semibold text-slate-400 italic bg-slate-50/40">
+                                      No Deductions or Penalties Applied (₹0.00)
+                                    </td>
+                                  </tr>
+                                );
                               }
 
                               return deds.map((dItem, dIdx) => {
@@ -4408,22 +4372,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   </thead>
                   <tbody className="divide-y divide-[#cbd5e1]">
                     {(() => {
-                      const deds = viewModalData.master.deductions && viewModalData.master.deductions.length > 0
-                        ? viewModalData.master.deductions
-                        : [
-                            {
-                              deduction_type: 'GODOWN DAMAGE FOR BALES',
-                              deduction_rate: 400,
-                              deduction_qty: 1,
-                              deduction_amount: 400
-                            },
-                            {
-                              deduction_type: 'IN CASE OF BALE IF WEIGHT IS LESS THAN 144',
-                              deduction_rate: 200,
-                              deduction_qty: 1,
-                              deduction_amount: 200
-                            }
-                          ];
+                      const deds = (viewModalData.master.deductions && Array.isArray(viewModalData.master.deductions))
+                        ? viewModalData.master.deductions.filter((d: any) => d && ((d.deduction_type && !String(d.deduction_type).includes('-- SELECT')) || Number(d.deduction_rate) > 0 || Number(d.deduction_amount) > 0))
+                        : [];
+
+                      if (deds.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={3} className="py-3.5 px-4 text-center text-xs font-semibold text-slate-400 italic bg-slate-50/40">
+                              No Deductions or Penalties Applied (₹0.00)
+                            </td>
+                          </tr>
+                        );
+                      }
 
                       return deds.map((dItem, dIdx) => {
                         const rate = Number(dItem.deduction_rate) || 0;
