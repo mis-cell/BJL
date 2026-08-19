@@ -521,11 +521,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             combinedMoistAvg = Number((lAvg || iAvg).toFixed(2));
           }
 
-          const moistAct = Number(item.moisture_act || combinedMoistAvg || item.actual_moisture || 0);
-          const moistClaim = Number(item.moisture_claim || combinedMoistAvg || item.claim_moisture || 0);
+          const moistAct = Number(item.moisture_act || combinedMoistAvg || 0);
+          const moistClaim = Number(item.moisture_claim || combinedMoistAvg || 0);
           const gdAct = Number(item.grade_down_act || item.grade_down || 0);
-          const dustAct = Number(item.dust_act || item.actual_dust || 0);
-          const ncvAct = Number(item.ncv_act || item.actual_ncv || 0);
+          const dustAct = Number(item.dust_act || 0);
+          const ncvAct = Number(item.ncv_act || 0);
 
           return {
             srl_no: item.srl_no || (i + 1),
@@ -593,12 +593,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       broker_name: fa.broker || prev.broker_name,
       supplier_name: fa.supplier || fa.challan_supplier || prev.supplier_name,
       lorry_number: fa.lorry_number || prev.lorry_number,
-      actual_moisture: Number(fa.actual_moisture) || prev.actual_moisture || 0,
-      actual_dust: Number(fa.actual_dust) || prev.actual_dust || 0,
-      actual_ncv: Number(fa.actual_ncv) || prev.actual_ncv || 0,
-      claim_moisture: Number(fa.claim_moisture) || prev.claim_moisture || 0,
-      claim_dust: Number(fa.claim_dust) || prev.claim_dust || 0,
-      claim_ncv: Number(fa.claim_ncv) || prev.claim_ncv || 0,
+      actual_moisture: 0,
+      actual_dust: 0,
+      actual_ncv: 0,
+      claim_moisture: 0,
+      claim_dust: 0,
+      claim_ncv: 0,
       remarks: fa.remarks || prev.remarks
     }));
 
@@ -691,11 +691,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lAvg || iAvg).toFixed(2));
         }
 
-        const moistAct = Number(item.moisture_act || combinedMoistAvg || item.actual_moisture || fa.actual_moisture || 0);
-        const moistClaim = Number(item.moisture_claim || combinedMoistAvg || item.claim_moisture || fa.claim_moisture || 0);
+        const moistAct = Number(item.moisture_act || combinedMoistAvg || 0);
+        const moistClaim = Number(item.moisture_claim || combinedMoistAvg || 0);
         const gdAct = Number(item.grade_down_act || item.grade_down || 0);
-        const dustAct = Number(item.dust_act || item.actual_dust || fa.actual_dust || 0);
-        const ncvAct = Number(item.ncv_act || item.actual_ncv || fa.actual_ncv || 0);
+        const dustAct = Number(item.dust_act || 0);
+        const ncvAct = Number(item.ncv_act || 0);
 
         return {
           srl_no: item.srl_no || (i + 1),
@@ -712,14 +712,22 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
           final_receipt_wt: nettoVal,
+          lorry_moisture_min: lMin,
+          lorry_moisture_max: lMax,
+          lorry_read_min: lMin,
+          lorry_read_max: lMax,
+          lorry_read_avg: lAvg,
+          insp_read_min: iMin,
+          insp_read_max: iMax,
+          insp_read_avg: iAvg,
           moisture_act: moistAct,
-          moisture_claim: Number(item.moisture_claim || item.claim_moisture || fa.claim_moisture || 0),
+          moisture_claim: moistClaim,
           grade_down_act: gdAct,
           grade_down_claim: Number(item.grade_down_claim || 0),
           dust_act: dustAct,
-          dust_claim: Number(item.dust_claim || item.claim_dust || fa.claim_dust || 0),
+          dust_claim: Number(item.dust_claim || 0),
           ncv_act: ncvAct,
-          ncv_claim: Number(item.ncv_claim || item.claim_ncv || fa.claim_ncv || 0),
+          ncv_claim: Number(item.ncv_claim || 0),
           settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
           settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
           settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
@@ -1102,12 +1110,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
       return {
         ...prev,
-        actual_moisture: avgActMoisture || prev.actual_moisture || 0,
-        claim_moisture: avgClaimMoisture || prev.claim_moisture || 0,
-        actual_dust: avgActDust || prev.actual_dust || 0,
-        claim_dust: avgClaimDust || prev.claim_dust || 0,
-        actual_ncv: avgActNcv || prev.actual_ncv || 0,
-        claim_ncv: avgClaimNcv || prev.claim_ncv || 0,
+        actual_moisture: avgActMoisture,
+        claim_moisture: avgClaimMoisture,
+        actual_dust: avgActDust,
+        claim_dust: avgClaimDust,
+        actual_ncv: avgActNcv,
+        claim_ncv: avgClaimNcv
       };
     });
   }, [detailRows]);
@@ -2437,7 +2445,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isMoistureActBlocked}
                                 tabIndex={isMoistureActBlocked ? -1 : 0}
                                 title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Act. (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
-                                value={row.moisture_act !== undefined && row.moisture_act !== null && Number(row.moisture_act) > 0 ? row.moisture_act : ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || headerForm.actual_moisture || 0))}
+                                value={row.moisture_act !== undefined && row.moisture_act !== null && Number(row.moisture_act) > 0 ? row.moisture_act : ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0))}
                                 onChange={(e) => !isMoistureActBlocked && handleDetailChange(idx, "moisture_act", Number(e.target.value))}
                                 className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-blue-950 font-black text-center ${isMoistureActBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2449,7 +2457,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isMoistureClaimBlocked}
                                 tabIndex={isMoistureClaimBlocked ? -1 : 0}
                                 title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
-                                value={row.moisture_claim !== undefined && row.moisture_claim !== null && Number(row.moisture_claim) > 0 ? row.moisture_claim : (row.moisture_act || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || headerForm.claim_moisture || 0)))}
+                                value={row.moisture_claim !== undefined && row.moisture_claim !== null && Number(row.moisture_claim) > 0 ? row.moisture_claim : (row.moisture_act || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0)))}
                                 onChange={(e) => !isMoistureClaimBlocked && handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
                                 className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-indigo-950 font-black text-center ${isMoistureClaimBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2555,7 +2563,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementMoistureBlocked}
                                 tabIndex={isSettlementMoistureBlocked ? -1 : 0}
                                 title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture (Auto-pulled from Act. Moisture)"}
-                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.moisture_act || row.moisture_claim || row.insp_read_avg || row.lorry_read_avg || headerForm.actual_moisture || headerForm.claim_moisture || 0)}
+                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.moisture_act || row.moisture_claim || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0)))}
                                 onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
