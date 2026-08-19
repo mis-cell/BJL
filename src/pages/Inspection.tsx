@@ -2104,148 +2104,115 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               </div>
             </section>
 
-            {/* DEDUCTIONS & PENALTIES CARD */}
-            <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
-              <div className="bg-gradient-to-r from-rose-50 via-slate-50 to-white px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 bg-rose-100 text-rose-700 rounded-lg border border-rose-200 shadow-xs">
-                    <Percent className="w-4 h-4" />
+            {/* DEDUCTIONS & PENALTIES CARD (Compact & Sleek Layout) */}
+            <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 bg-rose-100 text-rose-700 rounded-md border border-rose-200">
+                    <Percent className="w-3.5 h-3.5" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-extrabold text-slate-900">Deduction Details &amp; Penalties</h2>
-                      <span className="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200">
-                        {deductionRows.length} {deductionRows.length === 1 ? "Type" : "Types"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Configure godown damage, rain wet, CT habijabi, or penalty deduction claims for settlement
-                    </p>
-                  </div>
+                  <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Deduction Details &amp; Penalties</h2>
+                  <span className="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-rose-200">
+                    {deductionRows.length} {deductionRows.length === 1 ? "Option" : "Options"}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   {headerForm.deduction_amount ? (
-                    <div className="bg-rose-100/90 text-rose-900 border border-rose-300 px-3 py-1 rounded-lg text-xs font-black shadow-xs flex items-center gap-1.5">
-                      <span>Total Claim:</span>
-                      <span className="font-mono text-sm">-₹{Number(headerForm.deduction_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div className="bg-rose-50 text-rose-900 border border-rose-200 px-2.5 py-0.5 rounded-md text-xs font-black flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-rose-700 uppercase">Total Claim:</span>
+                      <span className="font-mono text-xs text-rose-900">-₹{Number(headerForm.deduction_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   ) : null}
                   <button
                     type="button"
                     onClick={handleAddDeductionRow}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                    className="flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    Add Deduction Option
+                    <span>Add Deduction</span>
                   </button>
                 </div>
               </div>
 
-              <div className="p-5 space-y-4">
-                {deductionRows.map((dRow, idx) => (
-                  <div
-                    key={dRow.id || idx}
-                    className="p-4 bg-slate-50/70 border border-slate-200 rounded-xl relative group hover:border-indigo-200 transition-colors shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between mb-3 border-b border-slate-200/80 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-indigo-100 text-indigo-800 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-indigo-200">
-                          Option #{idx + 1}
-                        </span>
-                        {dRow.deduction_type ? (
-                          <span className="text-xs font-bold text-slate-700">
-                            {dRow.deduction_type}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">
-                            Select deduction type below...
-                          </span>
-                        )}
-                      </div>
-
-                      {deductionRows.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDeductionRow(idx)}
-                          className="text-slate-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors flex items-center gap-1 text-xs font-bold"
-                          title="Remove deduction option"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Remove</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      {/* DEDUCTION TYPE DROPDOWN */}
-                      <div className="md:col-span-2 flex flex-col">
-                        <label className="text-rose-800 uppercase font-extrabold text-[10px] tracking-wide mb-1 flex items-center justify-between">
-                          <span>Deduction Type</span>
-                          <span className="text-[9px] font-normal text-slate-500 lowercase">(choose penalty category)</span>
-                        </label>
-                        <select
-                          value={dRow.deduction_type || ""}
-                          onChange={(e) => handleDeductionTypeChange(idx, e.target.value)}
-                          className="bg-white border-2 border-indigo-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-400 rounded-lg p-2 font-sans text-xs font-bold text-slate-800 w-full shadow-xs outline-none transition-all"
-                        >
-                          <option value="">-- SELECT DEDUCTION --</option>
-                          {deductionMasterList.map((d, dIdx) => (
-                            <option key={dIdx} value={d.deduction}>
-                              {d.deduction} {d.rate_per_unit ? `(₹${d.rate_per_unit}/Unit)` : d.rate_per_qntl ? `(₹${d.rate_per_qntl}/Qtl)` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* DEDUCTION RATE */}
-                      <div className="flex flex-col">
-                        <label className="text-slate-600 uppercase font-bold text-[10px] tracking-wide mb-1">
-                          Deduction Rate (₹)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={dRow.deduction_rate || ""}
-                          onChange={(e) => handleDeductionChange(idx, "deduction_rate", parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* DEDUCTION QTY / UNITS */}
-                      <div className="flex flex-col">
-                        <label className="text-slate-600 uppercase font-bold text-[10px] tracking-wide mb-1">
-                          Deduction Qty/Units
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={dRow.deduction_qty || ""}
-                          onChange={(e) => handleDeductionChange(idx, "deduction_qty", parseFloat(e.target.value) || 0)}
-                          placeholder="1"
-                          className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* DEDUCTION AMOUNT */}
-                      <div className="md:col-span-2 flex flex-col">
-                        <label className="text-rose-800 uppercase font-extrabold text-[10px] tracking-wide mb-1 flex items-center justify-between">
-                          <span>Deduction Amount (-)</span>
-                          <span className="text-[9px] font-normal text-rose-600 lowercase">(rate × qty)</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={dRow.deduction_amount || ""}
-                          onChange={(e) => handleDeductionChange(idx, "deduction_amount", parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          className="bg-rose-50/80 border border-rose-300 rounded-lg p-2 text-right font-mono font-black text-sm text-rose-800 shadow-xs focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-3 overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-600">
+                      <th className="py-1.5 px-2.5 w-10 text-center">#</th>
+                      <th className="py-1.5 px-2.5">Deduction Type</th>
+                      <th className="py-1.5 px-2.5 w-32 text-right">Deduction Rate (₹)</th>
+                      <th className="py-1.5 px-2.5 w-28 text-right">Qty / Units</th>
+                      <th className="py-1.5 px-2.5 w-36 text-right">Deduction Amount (-)</th>
+                      <th className="py-1.5 px-2 w-12 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {deductionRows.map((dRow, idx) => (
+                      <tr key={dRow.id || idx} className="hover:bg-rose-50/30 transition-colors">
+                        <td className="py-1.5 px-2.5 text-center font-bold text-slate-500">
+                          {idx + 1}
+                        </td>
+                        <td className="py-1.5 px-2.5">
+                          <select
+                            value={dRow.deduction_type || ""}
+                            onChange={(e) => handleDeductionTypeChange(idx, e.target.value)}
+                            className="bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 rounded-md px-2 py-1 font-sans text-xs font-bold text-slate-800 w-full shadow-2xs outline-none"
+                          >
+                            <option value="">-- SELECT DEDUCTION TYPE --</option>
+                            {deductionMasterList.map((d, dIdx) => (
+                              <option key={dIdx} value={d.deduction}>
+                                {d.deduction} {d.rate_per_unit ? `(₹${d.rate_per_unit}/Unit)` : d.rate_per_qntl ? `(₹${d.rate_per_qntl}/Qtl)` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-1.5 px-2.5 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={dRow.deduction_rate || ""}
+                            onChange={(e) => handleDeductionChange(idx, "deduction_rate", parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="bg-white border border-slate-300 rounded-md px-2 py-1 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                          />
+                        </td>
+                        <td className="py-1.5 px-2.5 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={dRow.deduction_qty || ""}
+                            onChange={(e) => handleDeductionChange(idx, "deduction_qty", parseFloat(e.target.value) || 0)}
+                            placeholder="1"
+                            className="bg-white border border-slate-300 rounded-md px-2 py-1 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                          />
+                        </td>
+                        <td className="py-1.5 px-2.5 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={dRow.deduction_amount || ""}
+                            onChange={(e) => handleDeductionChange(idx, "deduction_amount", parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="bg-rose-50 border border-rose-300 rounded-md px-2 py-1 text-right font-mono font-black text-xs text-rose-800 shadow-2xs focus:outline-none w-full"
+                          />
+                        </td>
+                        <td className="py-1.5 px-2 text-center">
+                          {deductionRows.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDeductionRow(idx)}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors inline-flex items-center justify-center cursor-pointer"
+                              title="Remove deduction"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </section>
 
