@@ -23,13 +23,23 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Grid,
-  Truck
+  Truck,
+  Eye
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
+import PrintModal from '../components/PrintModal';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
+
+export interface SettlementDeductionItem {
+  id?: string;
+  deduction_type: string;
+  deduction_rate: number;
+  deduction_qty: number;
+  deduction_amount: number;
+}
 
 // Detailed master interface
 interface SettlementMaster {
@@ -70,6 +80,7 @@ interface SettlementMaster {
   summary_deduction_rate: number;
   summary_deduction_qty: number;
   summary_deduction_amount: number;
+  deductions?: SettlementDeductionItem[];
 
   // valuation
   val_material_value: number;
@@ -251,6 +262,7 @@ const initialMaster = (): SettlementMaster => ({
   summary_deduction_rate: 0,
   summary_deduction_qty: 0,
   summary_deduction_amount: 0,
+  deductions: [],
   val_material_value: 0,
   val_add_amt: 0,
   val_less_amt: 0,
@@ -420,6 +432,116 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   const [detailCols, setDetailCols] = useState<SettlementDetailColumn[]>([
     emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)
   ]);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewModalData, setViewModalData] = useState<{
+    master: SettlementMaster;
+    details: SettlementDetailColumn[];
+  } | null>(null);
+
+  const handleOpenViewSettlement = async (targetMrNo: string) => {
+    try {
+      setLoading(true);
+      let foundMaster: any = null;
+      let foundDetails: any[] = [];
+
+      if (supabase) {
+        try {
+          const { data: mData } = await supabase
+            .from('mr_settlement_master')
+            .select('*')
+            .eq('mr_no', targetMrNo)
+            .maybeSingle();
+          if (mData) foundMaster = mData;
+
+          const { data: dData } = await supabase
+            .from('mr_settlement_detail')
+            .select('*')
+            .eq('mr_no', targetMrNo)
+            .order('col_index', { ascending: true });
+          if (dData && dData.length > 0) foundDetails = dData;
+        } catch (e) {}
+      }
+
+      if (!foundMaster) {
+        const localMasters = await dbModule.fetchAll('mr_settlement_master').catch(() => []);
+        foundMaster = localMasters.find((m: any) => m.mr_no === targetMrNo);
+      }
+
+      if (foundDetails.length === 0) {
+        const localDetails = await dbModule.fetchAll('mr_settlement_detail').catch(() => []);
+        foundDetails = localDetails.filter((d: any) => d.mr_no === targetMrNo);
+      }
+
+      const activeMaster = foundMaster || masterData;
+      
+      // Parse deductions if needed
+      let deductionsList: SettlementDeductionItem[] = [];
+      if (Array.isArray(activeMaster.deductions) && activeMaster.deductions.length > 0) {
+        deductionsList = activeMaster.deductions;
+      } else if (typeof activeMaster.deductions === 'string' && activeMaster.deductions.trim() !== '') {
+        try {
+          const parsed = JSON.parse(activeMaster.deductions);
+          if (Array.isArray(parsed)) deductionsList = parsed;
+        } catch (e) {}
+      }
+
+      if (deductionsList.length === 0) {
+        const dType = activeMaster.summary_deduction_type || '';
+        const dRate = Number(activeMaster.summary_deduction_rate) || 0;
+        const dQty = Number(activeMaster.summary_deduction_qty) || (dRate > 0 ? 1 : 0);
+        const dAmt = Number(activeMaster.summary_deduction_amount) || (dRate * dQty);
+
+        if (dType.includes(',')) {
+          const parts = dType.split(',').map((s: string) => s.trim()).filter(Boolean);
+          deductionsList = parts.map((part: string, idx: number) => {
+            let rowRate = 0;
+            let rowQty = 1;
+            let rowAmt = 0;
+            const amtMatch = part.match(/₹\s*([0-9.]+)/i);
+            const rateMatch = part.match(/@\s*₹?\s*([0-9.]+)/i);
+            const qtyMatch = part.match(/([0-9.]+)\s*@/i);
+            if (amtMatch) rowAmt = parseFloat(amtMatch[1]) || 0;
+            if (rateMatch) rowRate = parseFloat(rateMatch[1]) || 0;
+            if (qtyMatch) rowQty = parseFloat(qtyMatch[1]) || 1;
+            if (rowAmt === 0 && rowRate > 0) rowAmt = rowRate * rowQty;
+            const cleanType = part.replace(/\(.*\)/g, '').trim() || part;
+            return {
+              deduction_type: cleanType,
+              deduction_rate: rowRate || (idx === 0 ? dRate : 0),
+              deduction_qty: rowQty || (idx === 0 ? dQty : 1),
+              deduction_amount: rowAmt || (idx === 0 ? dAmt : 0)
+            };
+          });
+        } else if (dType || dRate > 0 || dAmt > 0) {
+          deductionsList = [{
+            deduction_type: dType || 'General Deduction',
+            deduction_rate: dRate,
+            deduction_qty: dQty || 1,
+            deduction_amount: dAmt || (dRate * (dQty || 1))
+          }];
+        }
+      }
+
+      const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
+        const existing = foundDetails.find((d: any) => Number(d.col_index) === idx);
+        return existing ? { ...emptyDetailColumn(idx), ...existing } : (detailCols[idx-1] || emptyDetailColumn(idx));
+      });
+
+      setViewModalData({
+        master: {
+          ...activeMaster,
+          deductions: deductionsList
+        },
+        details: activeDetails
+      });
+      setShowViewModal(true);
+    } catch (err: any) {
+      console.error("Failed to load view settlement:", err);
+      setErrorMessage("Unable to open settlement view: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const po = masterData.po_no || selectedPoNo;
@@ -1229,29 +1351,39 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Check if deductions or deduction_types array is stored in JSONB
       const rawDeductionsArray = inspMaster?.deduction_types || inspMaster?.deductions;
+      let parsedDeductions: SettlementDeductionItem[] = [];
       let deductionSummaryText = inspDeductionType;
       if (Array.isArray(rawDeductionsArray) && rawDeductionsArray.length > 0) {
-        const typeSummaries = rawDeductionsArray
-          .filter((d: any) => d && (d.deduction_type || d.deduction || d.name))
+        parsedDeductions = rawDeductionsArray
+          .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '') || (d.deduction && String(d.deduction).trim() !== '') || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
           .map((d: any) => {
-            const name = d.deduction_type || d.deduction || d.name;
-            const amt = Number(d.deduction_amount || d.amount) || 0;
+            const name = String(d.deduction_type || d.deduction || d.name || '').trim();
             const rate = Number(d.deduction_rate || d.rate) || 0;
-            const qty = Number(d.deduction_qty || d.qty) || 0;
-            if (amt > 0) return `${name} (₹${amt})`;
-            if (rate > 0 && qty > 0) return `${name} (${qty} @ ₹${rate})`;
-            return name;
+            const qty = Number(d.deduction_qty || d.qty) || 1;
+            const amt = Number(d.deduction_amount || d.amount) || Number((rate * qty).toFixed(2));
+            return { deduction_type: name, deduction_rate: rate, deduction_qty: qty, deduction_amount: amt };
           });
+
+        const typeSummaries = parsedDeductions.map(d => {
+          if (d.deduction_amount > 0) return `${d.deduction_type} (₹${d.deduction_amount})`;
+          if (d.deduction_rate > 0 && d.deduction_qty > 0) return `${d.deduction_type} (${d.deduction_qty} @ ₹${d.deduction_rate})`;
+          return d.deduction_type;
+        });
+
         if (typeSummaries.length > 0) {
           deductionSummaryText = typeSummaries.join(', ');
         }
         if (!inspDeductionAmount) {
-          inspDeductionAmount = rawDeductionsArray.reduce((s: number, d: any) => s + (Number(d.deduction_amount || d.amount) || 0), 0);
+          inspDeductionAmount = parsedDeductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+        }
+        if (parsedDeductions.length > 0) {
+          inspDeductionRate = parsedDeductions[0].deduction_rate;
+          inspDeductionQty = parsedDeductions[0].deduction_qty;
         }
       }
 
       // Check quality claims if no specific deduction is set
-      if (!deductionSummaryText) {
+      if (!deductionSummaryText && parsedDeductions.length === 0) {
         const claimParts: string[] = [];
         if (Number(inspMaster?.claim_moisture) > 0) claimParts.push(`Moisture Claim (${inspMaster.claim_moisture}%)`);
         if (Number(inspMaster?.claim_dust) > 0) claimParts.push(`Dust Claim (${inspMaster.claim_dust}%)`);
@@ -1264,6 +1396,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       if (!deductionSummaryText && Number(inspMaster?.delivery_claim) > 0) {
         deductionSummaryText = `Delivery Claim (₹${inspMaster.delivery_claim})`;
+      }
+
+      if (parsedDeductions.length === 0 && (inspDeductionType || deductionSummaryText || inspDeductionAmount > 0)) {
+        parsedDeductions = [{
+          deduction_type: deductionSummaryText || inspDeductionType || 'General Deduction',
+          deduction_rate: inspDeductionRate || inspDeductionAmount,
+          deduction_qty: inspDeductionQty || 1,
+          deduction_amount: inspDeductionAmount || Number(((inspDeductionRate || 0) * (inspDeductionQty || 1)).toFixed(2))
+        }];
       }
 
       // Check if settlement already exists for this MR. If yes, load for editing!
@@ -1282,6 +1423,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             summary_deduction_rate: (Number(existingMaster.summary_deduction_rate) > 0) ? existingMaster.summary_deduction_rate : inspDeductionRate,
             summary_deduction_qty: (Number(existingMaster.summary_deduction_qty) > 0) ? existingMaster.summary_deduction_qty : (inspDeductionQty || (deductionSummaryText ? 1 : 0)),
             summary_deduction_amount: (Number(existingMaster.summary_deduction_amount) > 0) ? existingMaster.summary_deduction_amount : inspDeductionAmount,
+            deductions: (existingMaster.deductions && Array.isArray(existingMaster.deductions) && existingMaster.deductions.length > 0)
+              ? existingMaster.deductions
+              : (parsedDeductions.length > 0 ? parsedDeductions : []),
             summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null && Number(existingMaster.summary_premium_wt) > 0) 
               ? existingMaster.summary_premium_wt 
               : (existingMaster.summary_instl_rate || calculatedPremWtQtl),
@@ -1380,6 +1524,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
           summary_deduction_amount: inspDeductionAmount,
+          deductions: parsedDeductions,
           summary_premium_wt: calculatedPremWtQtl,
           summary_instl_rate: calculatedPremWtQtl,
           summary_premium_amount: calculatedPremRatePerQtl,
@@ -1459,6 +1604,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_deduction_rate: inspDeductionRate,
         summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
         summary_deduction_amount: inspDeductionAmount,
+        deductions: parsedDeductions,
         summary_premium_wt: calculatedPremWtQtl,
         summary_instl_rate: calculatedPremWtQtl,
         summary_premium_amount: calculatedPremRatePerQtl,
@@ -1692,6 +1838,103 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     setMasterData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Handle multi-row deductions updates
+  const handleDeductionRowChange = (index: number, field: keyof SettlementDeductionItem, value: any) => {
+    setMasterData(prev => {
+      const currentDeductions: SettlementDeductionItem[] = (prev.deductions && prev.deductions.length > 0)
+        ? [...prev.deductions]
+        : [{
+            deduction_type: prev.summary_deduction_type || '',
+            deduction_rate: prev.summary_deduction_rate || 0,
+            deduction_qty: prev.summary_deduction_qty || 1,
+            deduction_amount: prev.summary_deduction_amount || 0
+          }];
+      
+      const updatedRow = { ...currentDeductions[index], [field]: value };
+      if (field === 'deduction_rate' || field === 'deduction_qty') {
+        const rate = field === 'deduction_rate' ? (Number(value) || 0) : (Number(updatedRow.deduction_rate) || 0);
+        const qty = field === 'deduction_qty' ? (Number(value) || 0) : (Number(updatedRow.deduction_qty) || 0);
+        updatedRow.deduction_amount = Number((rate * qty).toFixed(2));
+      }
+      currentDeductions[index] = updatedRow;
+
+      const totalDeductionAmt = Number(currentDeductions.reduce((s, r) => s + (Number(r.deduction_amount) || 0), 0).toFixed(2));
+      const summaryTypes = currentDeductions
+        .filter(r => r.deduction_type && r.deduction_type.trim() !== '')
+        .map(r => {
+          if (r.deduction_amount > 0) return `${r.deduction_type} (₹${r.deduction_amount})`;
+          if (r.deduction_rate > 0 && r.deduction_qty > 0) return `${r.deduction_type} (${r.deduction_qty} @ ₹${r.deduction_rate})`;
+          return r.deduction_type;
+        })
+        .join(', ');
+
+      return {
+        ...prev,
+        deductions: currentDeductions,
+        summary_deduction_amount: totalDeductionAmt,
+        summary_deduction_type: summaryTypes || currentDeductions[0]?.deduction_type || '',
+        summary_deduction_rate: currentDeductions[0]?.deduction_rate || 0,
+        summary_deduction_qty: currentDeductions[0]?.deduction_qty || 1
+      };
+    });
+  };
+
+  const handleAddDeductionRow = () => {
+    setMasterData(prev => {
+      const currentDeductions: SettlementDeductionItem[] = (prev.deductions && prev.deductions.length > 0)
+        ? [...prev.deductions]
+        : [{
+            deduction_type: prev.summary_deduction_type || '',
+            deduction_rate: prev.summary_deduction_rate || 0,
+            deduction_qty: prev.summary_deduction_qty || 1,
+            deduction_amount: prev.summary_deduction_amount || 0
+          }];
+      currentDeductions.push({
+        deduction_type: '',
+        deduction_rate: 0,
+        deduction_qty: 1,
+        deduction_amount: 0
+      });
+      return {
+        ...prev,
+        deductions: currentDeductions
+      };
+    });
+  };
+
+  const handleRemoveDeductionRow = (index: number) => {
+    setMasterData(prev => {
+      const currentDeductions: SettlementDeductionItem[] = (prev.deductions && prev.deductions.length > 0)
+        ? [...prev.deductions]
+        : [];
+      if (currentDeductions.length <= 1) {
+        return {
+          ...prev,
+          deductions: [{ deduction_type: '', deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }],
+          summary_deduction_type: '',
+          summary_deduction_rate: 0,
+          summary_deduction_qty: 0,
+          summary_deduction_amount: 0
+        };
+      }
+      currentDeductions.splice(index, 1);
+      const totalDeductionAmt = Number(currentDeductions.reduce((s, r) => s + (Number(r.deduction_amount) || 0), 0).toFixed(2));
+      const summaryTypes = currentDeductions
+        .filter(r => r.deduction_type && r.deduction_type.trim() !== '')
+        .map(r => r.deduction_type)
+        .join(', ');
+
+      return {
+        ...prev,
+        deductions: currentDeductions,
+        summary_deduction_amount: totalDeductionAmt,
+        summary_deduction_type: summaryTypes || currentDeductions[0]?.deduction_type || '',
+        summary_deduction_rate: currentDeductions[0]?.deduction_rate || 0,
+        summary_deduction_qty: currentDeductions[0]?.deduction_qty || 1
+      };
+    });
+  };
+
   // Handle columns grid updates
   const handleColChange = (idx: number, field: keyof SettlementDetailColumn, value: any) => {
     setDetailCols(prev => {
@@ -1842,6 +2085,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_deduction_rate: Number(masterData.summary_deduction_rate) || 0,
           summary_deduction_qty: Number(masterData.summary_deduction_qty) || 0,
           summary_deduction_amount: Number(masterData.summary_deduction_amount) || 0,
+          deductions: masterData.deductions || [],
           val_material_value: Number(masterData.val_material_value) || 0,
           val_add_amt: Number(masterData.val_add_amt) || 0,
           val_less_amt: Number(masterData.val_less_amt) || 0,
@@ -2431,6 +2675,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           </span>
                         </td>
                         <td className="px-3 py-2 text-center flex items-center justify-center gap-1.5">
+                          <button 
+                            onClick={() => handleOpenViewSettlement(row.mr_no)}
+                            className="bg-emerald-100 hover:bg-emerald-700 hover:text-white border border-emerald-400 text-emerald-800 px-2 py-1 font-bold text-[9px] uppercase transition-all tracking-tight cursor-pointer flex items-center gap-1"
+                            title="View full settlement details & deduction breakdown table"
+                          >
+                            <Eye className="w-3 h-3" /> View
+                          </button>
                           {canEditOrDelete() && (
                             <>
                               <button 
@@ -2588,6 +2839,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 >
                   Force Sync MR
                 </button>
+
+                {masterData.mr_no && (
+                  <button 
+                    type="button"
+                    onClick={() => handleOpenViewSettlement(masterData.mr_no)}
+                    className="bg-indigo-700 hover:bg-indigo-800 text-white text-[10px] font-extrabold uppercase px-3.5 py-1.5 border border-indigo-500 shadow-sm active:translate-y-px flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="View printable settlement statement with deduction breakdown table"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-indigo-200" />
+                    <span>View Settlement Statement</span>
+                  </button>
+                )}
 
                 {selectedPoNo && (
                   <button 
@@ -2878,7 +3141,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         name="deduction_type"
                         type="text"
                         placeholder="ENTER DEDUCTION TYPE / SUMMARY"
-                        className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-sans text-xs font-bold text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                        className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-sans text-xs font-bold text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full uppercase"
                         value={masterData.summary_deduction_type || ''}
                         onChange={(e) => handleMasterChange('summary_deduction_type', e.target.value)}
                       />
@@ -2894,7 +3157,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         value={masterData.summary_deduction_rate || ''} 
                         onChange={(e) => {
                           const rate = parseFloat(e.target.value) || 0;
-                          const qty = masterData.summary_deduction_qty || 0;
+                          const qty = masterData.summary_deduction_qty || (rate > 0 ? 1 : 0);
                           const amt = Number((rate * qty).toFixed(2));
                           setMasterData(prev => ({
                             ...prev,
@@ -3924,6 +4187,230 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
           </div>
         </LegacyLayout>
+      )}
+
+      {/* View Settlement Modal (Table Type Statement) */}
+      {showViewModal && viewModalData && (
+        <PrintModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setViewModalData(null);
+          }}
+          title={`SETTLEMENT STATEMENT - M.R. #${viewModalData.master.mr_no || 'N/A'}`}
+        >
+          <div id="print-modal-children-canvas" className="p-6 bg-white text-slate-900 font-sans space-y-4">
+            {/* Header */}
+            <div className="border-b-2 border-slate-900 pb-3 text-center">
+              <h2 className="text-xl font-black tracking-wide text-[#2a3088] uppercase">BALLY JUTE COMPANY LIMITED</h2>
+              <p className="text-[11px] text-slate-600 font-medium">P.O. BALLY, DIST: HOWRAH, WEST BENGAL - 711201</p>
+              <div className="inline-block mt-2 bg-slate-900 text-white text-xs font-black uppercase px-4 py-1 tracking-wider rounded-xs">
+                M.R. SETTLEMENT & QUALITY AUDIT STATEMENT
+              </div>
+            </div>
+
+            {/* Top Summary Info */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 border border-slate-300 p-3 text-xs">
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">M.R. Number</span>
+                <span className="font-mono font-black text-rose-700 text-sm">{viewModalData.master.mr_no || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Settlement Date</span>
+                <span className="font-bold">{viewModalData.master.sett_date || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Purchase Order No</span>
+                <span className="font-mono font-bold text-blue-800">{viewModalData.master.po_no || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Lorry / Vehicle No</span>
+                <span className="font-mono font-bold">{viewModalData.master.lorry_number || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Supplier Name</span>
+                <span className="font-bold text-slate-800 uppercase">{viewModalData.master.supplier || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Broker Name</span>
+                <span className="font-bold text-slate-700">{viewModalData.master.broker || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Bill No & Date</span>
+                <span className="font-mono">{viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no} (${viewModalData.master.payable_bill_date || '-'})` : '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Payment Status</span>
+                <span className="font-bold uppercase text-emerald-700">{viewModalData.master.payment_status || 'Settled'}</span>
+              </div>
+            </div>
+
+            {/* Quality & Grade Specification Table */}
+            <div className="space-y-1">
+              <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-1">
+                1. Material Quality & Specification Breakdown
+              </h4>
+              <div className="border border-slate-300 overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700">
+                      <th className="p-1.5 border-r border-slate-300">Col #</th>
+                      <th className="p-1.5 border-r border-slate-300">Grade</th>
+                      <th className="p-1.5 border-r border-slate-300">Area</th>
+                      <th className="p-1.5 border-r border-slate-300">Agency</th>
+                      <th className="p-1.5 border-r border-slate-300">Marka</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right">Quantity</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right">Weight (MT)</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right">Rate (₹/Qtl)</th>
+                      <th className="p-1.5 text-right">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0)).map((col, idx) => {
+                      const wtMt = getColWtMt(col);
+                      const amt = getColAmount(col);
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="p-1.5 border-r border-slate-200 font-bold">{col.col_index || idx + 1}</td>
+                          <td className="p-1.5 border-r border-slate-200 font-bold text-blue-900">{resolveGradeName(col.grade)}</td>
+                          <td className="p-1.5 border-r border-slate-200">{col.area || '-'}</td>
+                          <td className="p-1.5 border-r border-slate-200">{col.agency || '-'}</td>
+                          <td className="p-1.5 border-r border-slate-200">{col.marka_crop || '-'}</td>
+                          <td className="p-1.5 border-r border-slate-200 text-right font-mono">{col.quantity || 0}</td>
+                          <td className="p-1.5 border-r border-slate-200 text-right font-mono font-bold">{wtMt.toFixed(3)}</td>
+                          <td className="p-1.5 border-r border-slate-200 text-right font-mono">₹{Number(col.rate_value || 0).toFixed(2)}</td>
+                          <td className="p-1.5 text-right font-mono font-black text-slate-900">₹{amt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* DEDUCTION BREAKDOWN (TABLE TYPE) */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                <h4 className="text-[11px] font-black uppercase tracking-wider text-[#991b1b]">
+                  2. Deduction Breakdown (Table Type)
+                </h4>
+                <span className="text-[10px] font-bold text-slate-500 uppercase">
+                  Inspection Deductions & Penalties
+                </span>
+              </div>
+              
+              <div className="border border-slate-300 overflow-hidden shadow-xs">
+                <table className="w-full text-xs text-left border-collapse font-sans">
+                  <thead>
+                    <tr className="bg-red-50 border-b border-red-200 text-[10px] font-black uppercase text-[#991b1b]">
+                      <th className="p-2 border-r border-red-200 w-12 text-center">#</th>
+                      <th className="p-2 border-r border-red-200">Deduction Type / Description</th>
+                      <th className="p-2 border-r border-red-200 text-right w-36">Deduction Rate (₹)</th>
+                      <th className="p-2 border-r border-red-200 text-right w-24">Qty / Units</th>
+                      <th className="p-2 text-right w-40">Deduction Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {(() => {
+                      const deds = viewModalData.master.deductions && viewModalData.master.deductions.length > 0
+                        ? viewModalData.master.deductions
+                        : [{
+                            deduction_type: viewModalData.master.summary_deduction_type || 'General Inspection Deduction',
+                            deduction_rate: Number(viewModalData.master.summary_deduction_rate) || 0,
+                            deduction_qty: Number(viewModalData.master.summary_deduction_qty) || 1,
+                            deduction_amount: Number(viewModalData.master.summary_deduction_amount) || 0
+                          }];
+
+                      return deds.map((dItem, dIdx) => {
+                        const rate = Number(dItem.deduction_rate) || 0;
+                        const qty = Number(dItem.deduction_qty) || (rate > 0 ? 1 : 0);
+                        const amt = Number(dItem.deduction_amount) || (rate * qty);
+
+                        return (
+                          <tr key={dIdx} className="hover:bg-slate-50">
+                            <td className="p-2 border-r border-slate-200 text-center font-bold text-slate-500">{dIdx + 1}</td>
+                            <td className="p-2 border-r border-slate-200 font-bold uppercase text-slate-800">
+                              {dItem.deduction_type || '-'}
+                            </td>
+                            <td className="p-2 border-r border-slate-200 text-right font-mono font-bold text-slate-700">
+                              ₹ {rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="p-2 border-r border-slate-200 text-right font-mono font-bold text-slate-700">
+                              {qty}
+                            </td>
+                            <td className="p-2 text-right font-mono font-black text-[#991b1b]">
+                              ₹ {amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-red-100/70 border-t-2 border-red-300 font-black text-xs text-red-900">
+                      <td colSpan={4} className="p-2 text-right uppercase tracking-wider">
+                        Total Deduction Subtracted (-):
+                      </td>
+                      <td className="p-2 text-right font-mono text-sm text-[#991b1b]">
+                        ₹ {Number(viewModalData.master.summary_deduction_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Financial Summary & Payable Calculation */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-300 p-3 rounded-xs text-xs">
+              <div className="space-y-1.5">
+                <p className="font-black text-slate-700 uppercase text-[10px] border-b border-slate-200 pb-1">Valuation Calculations</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Material Value (+):</span>
+                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.val_material_value || viewModalData.master.summary_material_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Additional Charges (+):</span>
+                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.val_add_amt || viewModalData.master.summary_misc_add || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Premium Amount (+):</span>
+                  <span className="font-mono font-bold text-emerald-700">₹ {Number(viewModalData.master.val_premium_amt || viewModalData.master.summary_premium_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Quality Claims & Deductions (-):</span>
+                  <span className="font-mono font-bold text-rose-700">₹ {Number(viewModalData.master.summary_deduction_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 md:border-l md:border-slate-300 md:pl-4">
+                <p className="font-black text-slate-700 uppercase text-[10px] border-b border-slate-200 pb-1">Final Settlement Outflow</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Less Advance (-):</span>
+                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_less_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">On Account Advance (-):</span>
+                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_on_ac_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">APMC Fees (-):</span>
+                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_apmc_fees || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t border-slate-300 text-sm">
+                  <span className="font-black uppercase text-slate-900">Net Payable Amount:</span>
+                  <span className="font-mono font-black text-emerald-800">₹ {Number(viewModalData.master.payable_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Signature Area */}
+            <div className="pt-6 grid grid-cols-3 text-center text-xs font-bold text-slate-700">
+              <div className="border-t border-slate-400 pt-1">Prepared By</div>
+              <div className="border-t border-slate-400 pt-1">Quality Inspector</div>
+              <div className="border-t border-slate-400 pt-1">Accounts Authorized Signatory</div>
+            </div>
+          </div>
+        </PrintModal>
       )}
     </div>
   );

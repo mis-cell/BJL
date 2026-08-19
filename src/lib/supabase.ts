@@ -1794,6 +1794,7 @@ if (supabase) {
          
          -- Recreate any views if necessary, or just rely on the new column names
        END $;`,
+      `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS deductions JSONB;`,
       // Self-heal: if an earlier Temp/Final split left POs only in sauda_check_point,
       // pull them back into purchase_master so the single-table (status-based) split
       // has every row. Idempotent — inserts nothing once consolidated.
