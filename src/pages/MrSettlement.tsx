@@ -2870,81 +2870,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     {/* Row 5: Deduction Type */}
                     <div className="flex flex-col col-span-2">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <label htmlFor="deduction_type_input_2562" className="text-[9px] uppercase font-bold text-[#991b1b]">
-                          Deduction Type
-                        </label>
-                        {masterData.summary_deduction_type && (
-                          <span className="text-[8px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.2 border border-emerald-300 rounded">
-                            From Inspection
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <input
-                          id="deduction_type_input_2562"
-                          name="deduction_type"
-                          type="text"
-                          list="deduction_options_list"
-                          placeholder="-- SELECT / ENTER DEDUCTION --"
-                          className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-sans text-xs font-bold text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
-                          value={masterData.summary_deduction_type || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const deductionObj = deductionMasterList.find(d => 
-                              d.deduction === val || `${d.deduction} ${d.rate_per_qntl ? `(₹${d.rate_per_qntl}/Qtl)` : d.rate_per_unit ? `(₹${d.rate_per_unit}/Unit)` : ''}`.trim() === val.trim()
-                            );
-                            if (deductionObj) {
-                              const rate = deductionObj.rate_per_unit != null ? Number(deductionObj.rate_per_unit) : (deductionObj.rate_per_qntl != null ? Number(deductionObj.rate_per_qntl) : 0);
-                              const qty = masterData.summary_deduction_qty > 0 ? masterData.summary_deduction_qty : 1;
-                              const amt = Number((rate * qty).toFixed(2));
-                              setMasterData(prev => ({
-                                ...prev,
-                                summary_deduction_type: val,
-                                summary_deduction_rate: rate,
-                                summary_deduction_qty: qty,
-                                summary_deduction_amount: amt
-                              }));
-                            } else {
-                              handleMasterChange('summary_deduction_type', val);
-                            }
-                          }}
-                        />
-                        <select
-                          aria-label="Pick deduction master"
-                          className="bg-slate-100 border border-slate-300 rounded-md px-1 py-1 h-7 text-[10px] font-bold text-slate-700 w-24 shrink-0 cursor-pointer focus:outline-none"
-                          value=""
-                          onChange={(e) => {
-                            const selectedName = e.target.value;
-                            if (!selectedName) return;
-                            const deductionObj = deductionMasterList.find(d => d.deduction === selectedName);
-                            const rate = deductionObj ? (deductionObj.rate_per_unit != null ? Number(deductionObj.rate_per_unit) : (deductionObj.rate_per_qntl != null ? Number(deductionObj.rate_per_qntl) : 0)) : 0;
-                            const qty = masterData.summary_deduction_qty > 0 ? masterData.summary_deduction_qty : 1;
-                            const amt = Number((rate * qty).toFixed(2));
-                            setMasterData(prev => ({
-                              ...prev,
-                              summary_deduction_type: selectedName,
-                              summary_deduction_rate: rate,
-                              summary_deduction_qty: qty,
-                              summary_deduction_amount: amt
-                            }));
-                          }}
-                        >
-                          <option value="">Quick Pick ▼</option>
-                          {deductionMasterList.map((d, idx) => (
-                            <option key={idx} value={d.deduction}>
-                              {d.deduction}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <datalist id="deduction_options_list">
-                        {deductionMasterList.map((d, idx) => (
-                          <option key={idx} value={d.deduction}>
-                            {d.rate_per_qntl ? `₹${d.rate_per_qntl}/Qtl` : d.rate_per_unit ? `₹${d.rate_per_unit}/Unit` : ''}
-                          </option>
-                        ))}
-                      </datalist>
+                      <label htmlFor="deduction_type_input_2562" className="text-[9px] uppercase font-bold text-[#991b1b] mb-0.5">
+                        Deduction Type
+                      </label>
+                      <input
+                        id="deduction_type_input_2562"
+                        name="deduction_type"
+                        type="text"
+                        placeholder="ENTER DEDUCTION TYPE / SUMMARY"
+                        className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-sans text-xs font-bold text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                        value={masterData.summary_deduction_type || ''}
+                        onChange={(e) => handleMasterChange('summary_deduction_type', e.target.value)}
+                      />
                     </div>
 
                     {/* Row 6: Deduction Rate & Qty */}
