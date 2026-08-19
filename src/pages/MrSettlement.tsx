@@ -1171,37 +1171,55 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       await syncPaymentModuleData(targetMrNo, poNoForDet);
 
-      // Calculate total Premium Quantity (MT) from Inspection Details and convert to Quintals (MT * 10)
+      // Calculate total Premium Quantity (MT), Premium WT (Qtl), and Premium Amount (₹) from Inspection Details
       let totalPremMt = 0;
+      let calculatedPremTotalAmt = 0;
       if (inspDetails && inspDetails.length > 0) {
         inspDetails.forEach((row: any) => {
-          const isPrem = row.is_premium === true || 
-            row.premium === "Yes" || 
-            (row.premium != null && String(row.premium).trim() !== "" && String(row.premium).toLowerCase() !== "no");
-          if (isPrem) {
-            const explicitNum = Number(row.premium_mt || row.premium_quantity || (typeof row.premium === 'number' ? row.premium : NaN));
-            if (!isNaN(explicitNum) && explicitNum > 0) {
-              totalPremMt += explicitNum;
+          const rawPrem = row.premium !== undefined && row.premium !== null ? String(row.premium).trim() : "";
+          const parsedNum = parseFloat(rawPrem);
+          const isNumericPrem = !isNaN(parsedNum) && parsedNum > 0;
+          const isExplicitPrem = row.is_premium === true || 
+            rawPrem.toLowerCase() === "yes" || 
+            (rawPrem !== "" && rawPrem.toLowerCase() !== "no");
+
+          if (isNumericPrem || isExplicitPrem) {
+            let rowPremMt = 0;
+            if (isNumericPrem) {
+              rowPremMt = parsedNum;
+            } else if (row.premium_mt && Number(row.premium_mt) > 0) {
+              rowPremMt = Number(row.premium_mt);
+            } else if (row.premium_quantity && Number(row.premium_quantity) > 0) {
+              rowPremMt = Number(row.premium_quantity);
             } else {
               if (row.challan_gross_wt && Number(row.challan_gross_wt) > 0) {
-                totalPremMt += Number(row.challan_gross_wt);
+                rowPremMt = Number(row.challan_gross_wt);
               } else if (row.receipt_gross_wt && Number(row.receipt_gross_wt) > 0) {
-                totalPremMt += Number(row.receipt_gross_wt);
+                rowPremMt = Number(row.receipt_gross_wt);
               } else {
                 const q = Number(row.quantity) || 0;
                 const u = String(row.unit || "BALES").toUpperCase();
-                if (u.includes("BALE")) totalPremMt += q * 0.18;
-                else if (u.includes("KG")) totalPremMt += q * 0.001;
-                else if (u.includes("QTL") || u.includes("QUINTAL")) totalPremMt += q * 0.10;
-                else if (u.includes("DRUM")) totalPremMt += q * 0.20;
-                else if (u.includes("BAG")) totalPremMt += q * 0.05;
-                else totalPremMt += q;
+                if (u.includes("BALE")) rowPremMt = q * 0.18;
+                else if (u.includes("KG")) rowPremMt = q * 0.001;
+                else if (u.includes("QTL") || u.includes("QUINTAL")) rowPremMt = q * 0.10;
+                else if (u.includes("DRUM")) rowPremMt = q * 0.20;
+                else if (u.includes("BAG")) rowPremMt = q * 0.05;
+                else rowPremMt = q;
               }
+            }
+
+            if (rowPremMt > 0) {
+              totalPremMt += rowPremMt;
+              const rowRate = Number(row.amount) || Number(row.rate) || Number(row.rate_qntl) || 0;
+              const rowPremQtl = rowPremMt * 10;
+              calculatedPremTotalAmt += (rowPremQtl * rowRate);
             }
           }
         });
       }
       const calculatedPremWtQtl = Number((totalPremMt * 10).toFixed(2));
+      const calculatedPremRatePerQtl = calculatedPremWtQtl > 0 ? Number((calculatedPremTotalAmt / calculatedPremWtQtl).toFixed(2)) : 0;
+      calculatedPremTotalAmt = Number(calculatedPremTotalAmt.toFixed(2));
 
       // Check if settlement already exists for this MR. If yes, load for editing!
       if (!forceSync) {
@@ -1215,9 +1233,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           setIsEdit(true);
           const mergedMaster = {
             ...existingMaster,
-            summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null) 
+            summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null && Number(existingMaster.summary_premium_wt) > 0) 
               ? existingMaster.summary_premium_wt 
               : (existingMaster.summary_instl_rate || calculatedPremWtQtl),
+            summary_premium_amount: (existingMaster.summary_premium_amount !== undefined && existingMaster.summary_premium_amount !== null && Number(existingMaster.summary_premium_amount) > 0)
+              ? existingMaster.summary_premium_amount
+              : calculatedPremRatePerQtl,
+            val_premium_amt: (existingMaster.val_premium_amt !== undefined && existingMaster.val_premium_amt !== null && Number(existingMaster.val_premium_amt) > 0)
+              ? existingMaster.val_premium_amt
+              : calculatedPremTotalAmt,
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees
           };
           setMasterData(mergedMaster);
@@ -1305,6 +1329,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           electronic_scale_net: Number(faMaster.electronic_net_weight || faMaster.weight_qtl) || 0,
           summary_premium_wt: calculatedPremWtQtl,
           summary_instl_rate: calculatedPremWtQtl,
+          summary_premium_amount: calculatedPremRatePerQtl,
+          val_premium_amt: calculatedPremTotalAmt,
           arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0
         };
@@ -1378,6 +1404,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         remarks: inspMaster.remarks || '',
         summary_premium_wt: calculatedPremWtQtl,
         summary_instl_rate: calculatedPremWtQtl,
+        summary_premium_amount: calculatedPremRatePerQtl,
+        val_premium_amt: calculatedPremTotalAmt,
         arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0
       };
