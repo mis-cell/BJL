@@ -514,10 +514,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const iMax = Number(item.insp_read_max || 0);
           const iAvg = Number(item.insp_read_avg || (iMin > 0 && iMax > 0 ? (iMin + iMax) / 2 : (iMin || iMax)) || 0);
 
-          const highestAvg = Math.max(lAvg, iAvg);
+          let combinedMoistAvg = 0;
+          if (lAvg > 0 && iAvg > 0) {
+            combinedMoistAvg = Number(((lAvg + iAvg) / 2).toFixed(2));
+          } else if (lAvg > 0 || iAvg > 0) {
+            combinedMoistAvg = Number((lAvg || iAvg).toFixed(2));
+          }
 
-          const moistAct = Number(item.moisture_act || (highestAvg > 0 ? highestAvg : 0) || item.actual_moisture || 0);
-          const moistClaim = Number(item.moisture_claim || (highestAvg > 0 ? highestAvg : 0) || item.claim_moisture || 0);
+          const moistAct = Number(item.moisture_act || combinedMoistAvg || item.actual_moisture || 0);
+          const moistClaim = Number(item.moisture_claim || combinedMoistAvg || item.claim_moisture || 0);
           const gdAct = Number(item.grade_down_act || item.grade_down || 0);
           const dustAct = Number(item.dust_act || item.actual_dust || 0);
           const ncvAct = Number(item.ncv_act || item.actual_ncv || 0);
@@ -679,10 +684,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         const iMax = Number(item.insp_read_max || 0);
         const iAvg = Number(item.insp_read_avg || (iMin > 0 && iMax > 0 ? (iMin + iMax) / 2 : (iMin || iMax)) || 0);
 
-        const highestAvg = Math.max(lAvg, iAvg);
+        let combinedMoistAvg = 0;
+        if (lAvg > 0 && iAvg > 0) {
+          combinedMoistAvg = Number(((lAvg + iAvg) / 2).toFixed(2));
+        } else if (lAvg > 0 || iAvg > 0) {
+          combinedMoistAvg = Number((lAvg || iAvg).toFixed(2));
+        }
 
-        const moistAct = Number(item.moisture_act || (highestAvg > 0 ? highestAvg : 0) || item.actual_moisture || fa.actual_moisture || 0);
-        const moistClaim = Number(item.moisture_claim || (highestAvg > 0 ? highestAvg : 0) || item.claim_moisture || fa.claim_moisture || 0);
+        const moistAct = Number(item.moisture_act || combinedMoistAvg || item.actual_moisture || fa.actual_moisture || 0);
+        const moistClaim = Number(item.moisture_claim || combinedMoistAvg || item.claim_moisture || fa.claim_moisture || 0);
         const gdAct = Number(item.grade_down_act || item.grade_down || 0);
         const dustAct = Number(item.dust_act || item.actual_dust || fa.actual_dust || 0);
         const ncvAct = Number(item.ncv_act || item.actual_ncv || fa.actual_ncv || 0);
@@ -980,7 +990,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         currentRow.insp_read_avg = avg;
       }
 
-      // Auto-pull HIGHEST Value between Lorry Read Avg & Insp Read Avg into Moisture % Act., Claim, and Mill Settlement % Moisture
+      // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act., Claim, and Mill Settlement % Moisture
       if (
         field === "lorry_read_min" ||
         field === "lorry_read_max" ||
@@ -991,11 +1001,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ) {
         const lorryAvg = Number(currentRow.lorry_read_avg) || 0;
         const inspAvg = Number(currentRow.insp_read_avg) || 0;
-        const highestMoisture = Number(Math.max(lorryAvg, inspAvg).toFixed(2));
-        if (highestMoisture > 0) {
-          currentRow.moisture_act = highestMoisture;
-          currentRow.moisture_claim = highestMoisture;
-          currentRow.settlement_moisture = highestMoisture;
+        let combinedMoistAvg = 0;
+        if (lorryAvg > 0 && inspAvg > 0) {
+          combinedMoistAvg = Number(((lorryAvg + inspAvg) / 2).toFixed(2));
+        } else if (lorryAvg > 0 || inspAvg > 0) {
+          combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
+        }
+        if (combinedMoistAvg > 0) {
+          currentRow.moisture_act = combinedMoistAvg;
+          currentRow.moisture_claim = combinedMoistAvg;
+          currentRow.settlement_moisture = combinedMoistAvg;
         }
       }
 
@@ -2414,15 +2429,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               />
                             </td>
 
-                            {/* Moisture Act / Claim (Highlighted in Blue Theme with Auto Highest Value) */}
+                            {/* Moisture Act / Claim (Highlighted in Blue Theme with Auto Average Value) */}
                             <td className="p-1.5 border-r border-blue-200 bg-blue-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isMoistureActBlocked}
                                 tabIndex={isMoistureActBlocked ? -1 : 0}
-                                title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Act. (Auto-pulled highest value between Lorry Avg and Insp Avg)"}
-                                value={row.moisture_act ?? 0}
+                                title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Act. (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
+                                value={row.moisture_act !== undefined && row.moisture_act !== null && Number(row.moisture_act) > 0 ? row.moisture_act : ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || headerForm.actual_moisture || 0))}
                                 onChange={(e) => !isMoistureActBlocked && handleDetailChange(idx, "moisture_act", Number(e.target.value))}
                                 className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-blue-950 font-black text-center ${isMoistureActBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -2433,8 +2448,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 step="0.01"
                                 readOnly={isMoistureClaimBlocked}
                                 tabIndex={isMoistureClaimBlocked ? -1 : 0}
-                                title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim (Auto-pulled highest value between Lorry Avg and Insp Avg)"}
-                                value={row.moisture_claim ?? 0}
+                                title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
+                                value={row.moisture_claim !== undefined && row.moisture_claim !== null && Number(row.moisture_claim) > 0 ? row.moisture_claim : (row.moisture_act || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || headerForm.claim_moisture || 0)))}
                                 onChange={(e) => !isMoistureClaimBlocked && handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
                                 className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-indigo-950 font-black text-center ${isMoistureClaimBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
