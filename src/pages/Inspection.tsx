@@ -1803,6 +1803,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   const faPoNo = String(fa.po_no || "").trim().toLowerCase();
                   const faLorry = String(fa.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
+                  if (fa.status === "Completed" || fa.status === "Inspected" || fa.status === "INSPECTED") {
+                    const hasInsp = records.some(r => {
+                      const rMr = String(r.mr_no || "").trim().toLowerCase();
+                      const rPo = String(r.po_no || "").trim().toLowerCase();
+                      return (faPoNo && rPo === faPoNo) || (faMrNo && rMr === faMrNo) || (faNo && rMr === faNo);
+                    });
+                    if (hasInsp) return false;
+                  }
+
                   return !records.some(r => {
                     const rMr = String(r.mr_no || "").trim().toLowerCase();
                     const rArr = String(r.arrival_no || "").trim().toLowerCase();
@@ -1814,11 +1823,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     if (faMrNo && (rMr === faMrNo || rArr === faMrNo)) return true;
                     if (faId && (rMr === faId || rArr === faId || rMr === `fa-${faId}` || rArr === `fa-${faId}`)) return true;
 
-                    // 2. Both PO number and Arrival / Lorry match
+                    // 2. Direct PO number match
                     if (faPoNo && rPo && faPoNo === rPo) {
+                      if (!faLorry || !rLorry || faLorry === rLorry) return true;
                       if (faNo && (rArr === faNo || rMr === faNo)) return true;
-                      if (faLorry && rLorry && faLorry === rLorry) return true;
-                      if (!faLorry || !rLorry) return true;
                     }
 
                     return false;
