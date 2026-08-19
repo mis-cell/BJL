@@ -29,6 +29,25 @@ import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import LegacyLayout from "../components/LegacyLayout";
 
+export interface DeductionRow {
+  id: string;
+  deduction_type: string;
+  deduction_rate: number;
+  deduction_qty: number;
+  deduction_amount: number;
+}
+
+export const DEFAULT_DEDUCTION_TYPES = [
+  { deduction: "GODOWN DAMAGE FOR BALES", rate_per_unit: 400, rate_per_qntl: null },
+  { deduction: "RAIN WET FOR BALES", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "RTCH DAMAGE FOR BALES", rate_per_unit: 400, rate_per_qntl: null },
+  { deduction: "CT FOR HABIJABI / CHATTA / ROPE", rate_per_unit: null, rate_per_qntl: 1500 },
+  { deduction: "RAIN WET FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "GODOWN DAMAGE FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "GODOWN DAMAGE FOR HALF BALES", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "GODOWN DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 }
+];
+
 interface InspectionMasterRecord {
   mr_no: string;
   mr_date?: string;
@@ -56,6 +75,7 @@ interface InspectionMasterRecord {
   deduction_rate?: number;
   deduction_qty?: number;
   deduction_amount?: number;
+  deductions?: DeductionRow[];
   status?: string;
   created_at?: string;
   grid_details?: any;
@@ -295,9 +315,91 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
   ]);
 
+  // Deduction state for multiple deduction rows
+  const [deductionRows, setDeductionRows] = useState<DeductionRow[]>([
+    { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+  ]);
+  const [deductionMasterList, setDeductionMasterList] = useState<any[]>(DEFAULT_DEDUCTION_TYPES);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const syncHeaderDeductions = (rows: DeductionRow[]) => {
+    const activeRows = rows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || r.deduction_amount > 0);
+    const totalAmt = rows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
+    const primaryRow = activeRows[0] || rows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
+
+    setHeaderForm(prev => ({
+      ...prev,
+      deduction_type: activeRows.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryRow.deduction_type || "",
+      deduction_rate: primaryRow.deduction_rate || 0,
+      deduction_qty: primaryRow.deduction_qty || 0,
+      deduction_amount: totalAmt,
+      deductions: rows
+    }));
+  };
+
+  const handleDeductionTypeChange = (idx: number, selectedName: string) => {
+    const found = deductionMasterList.find(d => d.deduction === selectedName);
+    const rate = found ? (found.rate_per_unit != null ? Number(found.rate_per_unit) : (found.rate_per_qntl != null ? Number(found.rate_per_qntl) : 0)) : 0;
+
+    setDeductionRows(prev => {
+      const updated = [...prev];
+      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
+      current.deduction_type = selectedName;
+      current.deduction_rate = rate;
+      const qty = current.deduction_qty > 0 ? current.deduction_qty : 1;
+      current.deduction_qty = qty;
+      current.deduction_amount = Number((rate * qty).toFixed(2));
+      updated[idx] = current;
+      syncHeaderDeductions(updated);
+      return updated;
+    });
+  };
+
+  const handleDeductionChange = (idx: number, field: "deduction_rate" | "deduction_qty" | "deduction_amount", value: number) => {
+    setDeductionRows(prev => {
+      const updated = [...prev];
+      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
+      if (field === "deduction_rate") current.deduction_rate = value;
+      if (field === "deduction_qty") current.deduction_qty = value;
+      if (field === "deduction_amount") {
+        current.deduction_amount = value;
+      } else {
+        current.deduction_amount = Number(((current.deduction_rate || 0) * (current.deduction_qty || 0)).toFixed(2));
+      }
+      updated[idx] = current;
+      syncHeaderDeductions(updated);
+      return updated;
+    });
+  };
+
+  const handleAddDeductionRow = () => {
+    setDeductionRows(prev => {
+      const updated = [
+        ...prev,
+        { id: String(Date.now() + Math.random()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+      ];
+      syncHeaderDeductions(updated);
+      return updated;
+    });
+    showToast("Added new deduction entry row.");
+  };
+
+  const handleRemoveDeductionRow = (idx: number) => {
+    setDeductionRows(prev => {
+      if (prev.length <= 1) {
+        const reset = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
+        syncHeaderDeductions(reset);
+        return reset;
+      }
+      const updated = prev.filter((_, i) => i !== idx);
+      syncHeaderDeductions(updated);
+      return updated;
+    });
+    showToast("Deduction entry removed.");
   };
 
   async function fetchInspectionRecords(isManual: boolean = false) {
@@ -413,6 +515,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
   useEffect(() => {
     fetchInspectionRecords();
+    if (supabase) {
+      supabase.from("deduction_master").select("*").then(r => {
+        if (r.data && r.data.length > 0) {
+          setDeductionMasterList(r.data);
+        }
+      }, () => {});
+    }
   }, []);
 
   useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'mill_inspection_master', 'temporary_material_received'] });
@@ -744,6 +853,25 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     } else if (voucherArea) {
       setDetailRows(prev => prev.map(r => ({ ...r, area: r.area || voucherArea })));
     }
+
+    if (fa.deductions && Array.isArray(fa.deductions) && fa.deductions.length > 0) {
+      setDeductionRows(fa.deductions);
+    } else if (fa.deduction_type || (fa.deduction_amount && Number(fa.deduction_amount) > 0)) {
+      setDeductionRows([
+        {
+          id: "1",
+          deduction_type: fa.deduction_type || "",
+          deduction_rate: Number(fa.deduction_rate) || 0,
+          deduction_qty: Number(fa.deduction_qty) || 1,
+          deduction_amount: Number(fa.deduction_amount) || 0
+        }
+      ]);
+    } else {
+      setDeductionRows([
+        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+      ]);
+    }
+
     showToast(`Loaded Final Arrival ${fa.final_arrival_no || displayMrNo} into inspection form.`);
   };
 
@@ -770,7 +898,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       mr_spcl_print: "",
       remarks: "",
       lorry_number: "",
-      status: "Completed"
+      status: "Completed",
+      deduction_type: "",
+      deduction_rate: 0,
+      deduction_qty: 1,
+      deduction_amount: 0
     });
     setDetailRows([
       {
@@ -781,12 +913,34 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         expanded: false
       }
     ]);
+    setDeductionRows([
+      { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+    ]);
     setViewMode("form");
   };
 
   const handleEditRecord = async (rec: InspectionMasterRecord) => {
     setHeaderForm(rec);
     setDetailRows([]);
+
+    if (rec.deductions && Array.isArray(rec.deductions) && rec.deductions.length > 0) {
+      setDeductionRows(rec.deductions);
+    } else if (rec.deduction_type || (rec.deduction_amount && Number(rec.deduction_amount) > 0)) {
+      setDeductionRows([
+        {
+          id: "1",
+          deduction_type: rec.deduction_type || "",
+          deduction_rate: Number(rec.deduction_rate) || 0,
+          deduction_qty: Number(rec.deduction_qty) || 1,
+          deduction_amount: Number(rec.deduction_amount) || 0
+        }
+      ]);
+    } else {
+      setDeductionRows([
+        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+      ]);
+    }
+
     setViewMode("form");
 
     let loadedDetails: InspectionDetailRow[] = [];
@@ -1168,8 +1322,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
 
     try {
+      const activeDeductions = deductionRows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || r.deduction_amount > 0);
+      const totalDeductionAmt = deductionRows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
+      const primaryDeduction = activeDeductions[0] || deductionRows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
+
       const payload: any = {
         ...headerForm,
+        deduction_type: activeDeductions.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryDeduction.deduction_type || "",
+        deduction_rate: primaryDeduction.deduction_rate || 0,
+        deduction_qty: primaryDeduction.deduction_qty || 0,
+        deduction_amount: totalDeductionAmt,
+        deductions: deductionRows,
         date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
         broker: headerForm.broker_name || (headerForm as any).broker || "",
         supplier: headerForm.supplier_name || (headerForm as any).supplier || "",
@@ -1930,6 +2093,151 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium bg-white text-slate-900 focus:outline-none focus:border-blue-500"
                   />
                 </div>
+              </div>
+            </section>
+
+            {/* DEDUCTIONS & PENALTIES CARD */}
+            <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
+              <div className="bg-gradient-to-r from-rose-50 via-slate-50 to-white px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-rose-100 text-rose-700 rounded-lg border border-rose-200 shadow-xs">
+                    <Percent className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-extrabold text-slate-900">Deduction Details &amp; Penalties</h2>
+                      <span className="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200">
+                        {deductionRows.length} {deductionRows.length === 1 ? "Type" : "Types"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Configure godown damage, rain wet, CT habijabi, or penalty deduction claims for settlement
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  {headerForm.deduction_amount ? (
+                    <div className="bg-rose-100/90 text-rose-900 border border-rose-300 px-3 py-1 rounded-lg text-xs font-black shadow-xs flex items-center gap-1.5">
+                      <span>Total Claim:</span>
+                      <span className="font-mono text-sm">-₹{Number(headerForm.deduction_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleAddDeductionRow}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Deduction Option
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {deductionRows.map((dRow, idx) => (
+                  <div
+                    key={dRow.id || idx}
+                    className="p-4 bg-slate-50/70 border border-slate-200 rounded-xl relative group hover:border-indigo-200 transition-colors shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-200/80 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-indigo-100 text-indigo-800 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-indigo-200">
+                          Option #{idx + 1}
+                        </span>
+                        {dRow.deduction_type ? (
+                          <span className="text-xs font-bold text-slate-700">
+                            {dRow.deduction_type}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">
+                            Select deduction type below...
+                          </span>
+                        )}
+                      </div>
+
+                      {deductionRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDeductionRow(idx)}
+                          className="text-slate-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors flex items-center gap-1 text-xs font-bold"
+                          title="Remove deduction option"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {/* DEDUCTION TYPE DROPDOWN */}
+                      <div className="md:col-span-2 flex flex-col">
+                        <label className="text-rose-800 uppercase font-extrabold text-[10px] tracking-wide mb-1 flex items-center justify-between">
+                          <span>Deduction Type</span>
+                          <span className="text-[9px] font-normal text-slate-500 lowercase">(choose penalty category)</span>
+                        </label>
+                        <select
+                          value={dRow.deduction_type || ""}
+                          onChange={(e) => handleDeductionTypeChange(idx, e.target.value)}
+                          className="bg-white border-2 border-indigo-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-400 rounded-lg p-2 font-sans text-xs font-bold text-slate-800 w-full shadow-xs outline-none transition-all"
+                        >
+                          <option value="">-- SELECT DEDUCTION --</option>
+                          {deductionMasterList.map((d, dIdx) => (
+                            <option key={dIdx} value={d.deduction}>
+                              {d.deduction} {d.rate_per_unit ? `(₹${d.rate_per_unit}/Unit)` : d.rate_per_qntl ? `(₹${d.rate_per_qntl}/Qtl)` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* DEDUCTION RATE */}
+                      <div className="flex flex-col">
+                        <label className="text-slate-600 uppercase font-bold text-[10px] tracking-wide mb-1">
+                          Deduction Rate (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={dRow.deduction_rate || ""}
+                          onChange={(e) => handleDeductionChange(idx, "deduction_rate", parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                          className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* DEDUCTION QTY / UNITS */}
+                      <div className="flex flex-col">
+                        <label className="text-slate-600 uppercase font-bold text-[10px] tracking-wide mb-1">
+                          Deduction Qty/Units
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={dRow.deduction_qty || ""}
+                          onChange={(e) => handleDeductionChange(idx, "deduction_qty", parseFloat(e.target.value) || 0)}
+                          placeholder="1"
+                          className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* DEDUCTION AMOUNT */}
+                      <div className="md:col-span-2 flex flex-col">
+                        <label className="text-rose-800 uppercase font-extrabold text-[10px] tracking-wide mb-1 flex items-center justify-between">
+                          <span>Deduction Amount (-)</span>
+                          <span className="text-[9px] font-normal text-rose-600 lowercase">(rate × qty)</span>
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={dRow.deduction_amount || ""}
+                          onChange={(e) => handleDeductionChange(idx, "deduction_amount", parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                          className="bg-rose-50/80 border border-rose-300 rounded-lg p-2 text-right font-mono font-black text-sm text-rose-800 shadow-xs focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
 

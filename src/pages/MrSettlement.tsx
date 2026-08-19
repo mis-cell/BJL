@@ -2622,46 +2622,49 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             <div className="grid grid-cols-12 gap-3 items-start">
               
               {/* LEFT SIDE PANEL: Calculations & Valuation Cards */}
-              <div className="col-span-12 lg:col-span-4 space-y-3">
+              <div className="col-span-12 lg:col-span-4 space-y-4">
                 
-                {/* 1. Grade-Wise Summary */}
-                <LegacyFieldset legend="Grade-Wise Summary Panel">
-                  <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 p-1 text-[10px] font-bold">
-                    
+                {/* 1. Grade-Wise Summary Panel */}
+                <div className="bg-white border border-slate-300 rounded-xl p-4 shadow-sm relative">
+                  <div className="inline-block bg-[#f3ede2] border border-[#e2d8c3] text-[#334155] text-[11px] font-extrabold uppercase px-3 py-1 rounded-md shadow-2xs mb-3">
+                    GRADE-WISE SUMMARY PANEL
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs font-bold">
+                    {/* Row 1 */}
                     <div className="flex flex-col">
-                      <div className="group relative flex items-center gap-1.5 h-4">
-                        <label className="text-gray-500 uppercase font-bold text-[8.5px]">Rate / m.T</label>
-                        <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-700">i</span>
+                      <div className="group relative flex items-center gap-1 mb-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-600">Rate / M.T</label>
+                        <span className="text-[8px] font-black bg-indigo-950 text-white rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-800">i</span>
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                           DB Reference: <code className="text-yellow-400 font-mono">mr_settlement_master.summary_rate_qtel</code>
                           <p className="mt-1">Format: Numeric dec. Jute price per 1000 kg (Metric Ton) used to compute the value of the material received.</p>
                         </div>
                       </div>
-                      <input  id="masterdata_summary_rate_q_2435" name="masterdata_summary_rate_q" aria-label="masterdata summary rate q"
+                      <input id="masterdata_summary_rate_q_2435" name="masterdata_summary_rate_q" aria-label="masterdata summary rate q"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-900"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_rate_qtel || calculateWeightedRatePerMT(detailCols) || ''} 
                         onChange={(e) => handleMasterChange('summary_rate_qtel', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="rate_aff_cd_cl_2446" className="text-gray-500 uppercase font-semibold text-[8.5px]">Rate aff. Cd. Cl</label>
-                      <input  id="rate_aff_cd_cl_2446" name="rate_aff_cd_cl" aria-label="Rate aff. Cd. Cl"
+                      <label htmlFor="rate_aff_cd_cl_2446" className="text-[10px] uppercase font-bold text-slate-600 mb-1">Rate aff. Cd. Cl</label>
+                      <input id="rate_aff_cd_cl_2446" name="rate_aff_cd_cl" aria-label="Rate aff. Cd. Cl"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-red-700 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_rate_aff_cd_cl || ''} 
                         onChange={(e) => handleMasterChange('summary_rate_aff_cd_cl', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 2 */}
                     <div className="flex flex-col">
-                      <div className="group relative flex items-center gap-1">
-                        <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Delivery Claim</label>
-                        {selectedPoData?.delivery_to && (
-                          <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
-                        )}
+                      <div className="group relative flex items-center gap-1 mb-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-600">Delivery Claim</label>
+                        <span className="text-[8px] font-black bg-indigo-950 text-white rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-800">i</span>
                         {selectedPoData?.delivery_to && (
                           <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                             <p className="text-yellow-300 font-bold">Delivery Claim Calculation</p>
@@ -2691,39 +2694,40 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           </div>
                         )}
                       </div>
-                      <input  id="masterdata_summary_delive_2489" name="masterdata_summary_delive" aria-label="masterdata summary delive"
+                      <input id="masterdata_summary_delive_2489" name="masterdata_summary_delive" aria-label="masterdata summary delive"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-rose-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-rose-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_delivery_claim || ''} 
                         onChange={(e) => handleMasterChange('summary_delivery_claim', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="moisture_claim_kg_2500" className="text-gray-500 uppercase font-semibold text-[8.5px]">Moisture Claim (KG)</label>
-                      <input  id="moisture_claim_kg_2500" name="moisture_claim_kg" aria-label="Moisture Claim (KG)"
+                      <label htmlFor="moisture_claim_kg_2500" className="text-[10px] uppercase font-bold text-slate-600 mb-1">Moisture Claim (KG)</label>
+                      <input id="moisture_claim_kg_2500" name="moisture_claim_kg" aria-label="Moisture Claim (KG)"
                         type="number" 
                         step="0.001"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_rate_wt_claim || ''} 
                         onChange={(e) => handleMasterChange('summary_rate_wt_claim', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 3 */}
                     <div className="flex flex-col">
-                      <div className="group relative flex items-center gap-1">
-                        <label htmlFor="premium_wt_qtl_field" className="text-gray-500 uppercase font-semibold text-[8.5px]">Premium WT (₹/Qtl)</label>
-                        <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
+                      <div className="group relative flex items-center gap-1 mb-1">
+                        <label htmlFor="premium_wt_qtl_field" className="text-[10px] uppercase font-bold text-slate-600">Premium WT (₹/QTL)</label>
+                        <span className="text-[8px] font-black bg-indigo-950 text-white rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-800">i</span>
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                           <p className="text-yellow-300 font-bold">Premium Weight (Qtl)</p>
                           <p>Sum of Premium Quantity (in MT) from Inspection Details table converted to Quintals (MT × 10).</p>
                         </div>
                       </div>
-                      <input  id="premium_wt_qtl_field" name="premium_wt_qtl_field" aria-label="Premium WT (₹/Qtl)"
+                      <input id="premium_wt_qtl_field" name="premium_wt_qtl_field" aria-label="Premium WT (₹/QTL)"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-amber-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-amber-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null ? masterData.summary_premium_wt : ''} 
                         onChange={(e) => handleMasterChange('summary_premium_wt', parseFloat(e.target.value) || 0)}
                         placeholder="0.00"
@@ -2731,49 +2735,51 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="material_value_2522" className="text-gray-500 uppercase font-bold text-[8.5px] text-indigo-900">Material Value</label>
-                      <input  id="material_value_2522" name="material_value" aria-label="Material Value"
+                      <label htmlFor="material_value_2522" className="text-[10px] uppercase font-extrabold text-indigo-900 mb-1">Material Value</label>
+                      <input id="material_value_2522" name="material_value" aria-label="Material Value"
                         type="number" 
                         disabled
-                        className="bg-slate-150 border border-gray-400 p-1 text-right font-mono font-black text-indigo-950"
+                        className="bg-slate-100 border border-slate-300 rounded-lg p-2 text-right font-mono font-black text-xs text-indigo-950 shadow-2xs"
                         value={masterData.summary_material_value.toFixed(2)} 
                       />
                     </div>
 
+                    {/* Row 4 */}
                     <div className="flex flex-col">
-                      <div className="group relative flex items-center gap-1">
-                        <label className="text-gray-500 uppercase font-semibold text-[8.5px]">Premium Rate (₹/Qtl)</label>
-                        <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
+                      <div className="group relative flex items-center gap-1 mb-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-600">Premium Rate (₹/QTL)</label>
+                        <span className="text-[8px] font-black bg-indigo-950 text-white rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-800">i</span>
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-60 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
-                          <p className="text-yellow-300 font-bold">Premium Rate & Calculation</p>
+                          <p className="text-yellow-300 font-bold">Premium Rate &amp; Calculation</p>
                           <p>Premium Rate: <code className="text-cyan-300">₹{masterData.summary_premium_amount || 0} / Qtl</code></p>
                           <p>Premium Weight: <code className="text-cyan-300">{(masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0 ? masterData.summary_premium_wt : masterData.summary_less_amount) || 0} Qtl</code></p>
                           <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">Total Premium Amt: ₹{((masterData.summary_premium_amount || 0) * Number(masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0 ? masterData.summary_premium_wt : (masterData.summary_less_amount || 0))).toFixed(2)}</p>
                         </div>
                       </div>
-                      <input  id="masterdata_summary_premiu_2541" name="masterdata_summary_premiu" aria-label="masterdata summary premiu"
+                      <input id="masterdata_summary_premiu_2541" name="masterdata_summary_premiu" aria-label="masterdata summary premiu"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-emerald-700"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-emerald-700 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_premium_amount || ''} 
                         onChange={(e) => handleMasterChange('summary_premium_amount', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="addtl_quality_claims_in_q_2552" className="text-gray-500 uppercase font-bold text-[8.5px] text-red-800">Addtl Quality claims in Quntl</label>
-                      <input  id="addtl_quality_claims_in_q_2552" name="addtl_quality_claims_in_q" aria-label="Addtl Quality claims in Quntl"
+                      <label htmlFor="addtl_quality_claims_in_q_2552" className="text-[10px] uppercase font-bold text-red-800 mb-1">Addtl Quality Claims in Quntl</label>
+                      <input id="addtl_quality_claims_in_q_2552" name="addtl_quality_claims_in_q" aria-label="Addtl Quality claims in Quntl"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-red-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-red-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_less_amount || ''} 
                         onChange={(e) => handleMasterChange('summary_less_amount', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 5: Deduction Type */}
                     <div className="flex flex-col col-span-2">
-                      <label htmlFor="deduction_type_2562" className="text-red-800 uppercase font-bold text-[8.5px]">Deduction Type</label>
-                      <select  id="deduction_type_2562" name="deduction_type" aria-label="Deduction Type"
-                        className="bg-white border border-gray-400 p-1 font-sans text-[10px] font-bold text-slate-800"
+                      <label htmlFor="deduction_type_2562" className="text-[10px] uppercase font-bold text-red-800 mb-1">Deduction Type</label>
+                      <select id="deduction_type_2562" name="deduction_type" aria-label="Deduction Type"
+                        className="bg-white border border-slate-300 rounded-lg p-2 font-sans text-xs font-bold text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_deduction_type || ''}
                         onChange={(e) => {
                           const selectedName = e.target.value;
@@ -2799,12 +2805,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       </select>
                     </div>
 
+                    {/* Row 6: Deduction Rate & Qty */}
                     <div className="flex flex-col">
-                      <label htmlFor="deduction_rate_2591" className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Rate (₹)</label>
-                      <input  id="deduction_rate_2591" name="deduction_rate" aria-label="Deduction Rate (₹)"
+                      <label htmlFor="deduction_rate_2591" className="text-[10px] uppercase font-bold text-slate-600 mb-1">Deduction Rate (₹)</label>
+                      <input id="deduction_rate_2591" name="deduction_rate" aria-label="Deduction Rate (₹)"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_deduction_rate || ''} 
                         onChange={(e) => {
                           const rate = parseFloat(e.target.value) || 0;
@@ -2820,11 +2827,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="deduction_qty_units_2611" className="text-gray-500 uppercase font-semibold text-[8.5px]">Deduction Qty/Units</label>
-                      <input  id="deduction_qty_units_2611" name="deduction_qty_units" aria-label="Deduction Qty/Units"
+                      <label htmlFor="deduction_qty_units_2611" className="text-[10px] uppercase font-bold text-slate-600 mb-1">Deduction Qty/Units</label>
+                      <input id="deduction_qty_units_2611" name="deduction_qty_units" aria-label="Deduction Qty/Units"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-slate-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.summary_deduction_qty || ''} 
                         onChange={(e) => {
                           const qty = parseFloat(e.target.value) || 0;
@@ -2839,58 +2846,64 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       />
                     </div>
 
+                    {/* Row 7: Deduction Amount */}
                     <div className="flex flex-col col-span-2">
-                      <label htmlFor="deduction_amount_2631" className="text-red-700 uppercase font-bold text-[8.5px]">Deduction Amount (-)</label>
-                      <input  id="deduction_amount_2631" name="deduction_amount" aria-label="Deduction Amount (-)"
+                      <label htmlFor="deduction_amount_2631" className="text-[10px] uppercase font-extrabold text-red-800 mb-1">Deduction Amount (-)</label>
+                      <input id="deduction_amount_2631" name="deduction_amount" aria-label="Deduction Amount (-)"
                         type="number" 
                         step="0.01"
-                        className="bg-red-50 border border-gray-400 p-1 text-right font-mono font-black text-red-700"
+                        className="bg-rose-50 border border-slate-300 rounded-lg p-2 text-right font-mono font-black text-xs text-red-700 shadow-2xs focus:outline-none"
                         value={masterData.summary_deduction_amount || ''} 
                         onChange={(e) => handleMasterChange('summary_deduction_amount', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                   </div>
-                </LegacyFieldset>
+                </div>
 
-                {/* 2. M.R. Valuation */}
-                <LegacyFieldset legend="M.R. Valuation Matrix">
-                  <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 p-1 text-[10px] font-bold">
-                    
+                {/* 2. M.R. Valuation Matrix */}
+                <div className="bg-white border border-slate-300 rounded-xl p-4 shadow-sm relative">
+                  <div className="inline-block bg-[#f3ede2] border border-[#e2d8c3] text-[#334155] text-[11px] font-extrabold uppercase px-3 py-1 rounded-md shadow-2xs mb-3">
+                    M.R. VALUATION MATRIX
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs font-bold">
+                    {/* Row 1 */}
                     <div className="flex flex-col">
-                      <label htmlFor="material_value_2649" className="text-gray-500 text-[8.5px]">Material Value</label>
-                      <input  id="material_value_2649" name="material_value" aria-label="Material Value"
+                      <label htmlFor="material_value_2649" className="text-[10px] font-bold text-slate-600 mb-1">Material Value</label>
+                      <input id="material_value_2649" name="material_value" aria-label="Material Value"
                         type="number" 
                         disabled
-                        className="bg-slate-150 border border-gray-400 p-1 text-right font-mono text-indigo-900"
+                        className="bg-slate-100 border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-indigo-900 shadow-2xs"
                         value={masterData.val_material_value.toFixed(2)} 
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="add_amt_2659" className="text-green-700 text-[8.5px]">Add Amt(+)</label>
-                      <input  id="add_amt_2659" name="add_amt" aria-label="Add Amt(+)"
+                      <label htmlFor="add_amt_2659" className="text-[10px] font-bold text-emerald-700 mb-1">Add Amt(+)</label>
+                      <input id="add_amt_2659" name="add_amt" aria-label="Add Amt(+)"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono text-green-700"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-emerald-700 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.val_add_amt || ''} 
                         onChange={(e) => handleMasterChange('val_add_amt', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 2 */}
                     <div className="flex flex-col">
-                      <label htmlFor="val_less_amt_2669" className="text-slate-500 text-[8.5px]">Val Less Amt(-)</label>
-                      <input  id="val_less_amt_2669" name="val_less_amt" aria-label="Val Less Amt(-)"
+                      <label htmlFor="val_less_amt_2669" className="text-[10px] font-bold text-slate-600 mb-1">Val Less Amt(-)</label>
+                      <input id="val_less_amt_2669" name="val_less_amt" aria-label="Val Less Amt(-)"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.val_less_amt || ''} 
                         onChange={(e) => handleMasterChange('val_less_amt', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <div className="group relative flex items-center gap-1">
-                        <label className="text-slate-500 text-[8.5px]">Premium Amt (+)</label>
-                        <span className="text-[7.5px] font-black bg-indigo-950 border border-white text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
+                      <div className="group relative flex items-center gap-1 mb-1">
+                        <label className="text-[10px] font-bold text-slate-600">Premium Amt (+)</label>
+                        <span className="text-[8px] font-black bg-indigo-950 text-white rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-indigo-800">i</span>
                         <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                           <p className="text-yellow-300 font-bold">Total Premium Amount</p>
                           <p>Formula: Premium Rate × Premium WT (Qtl)</p>
@@ -2898,87 +2911,94 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">= ₹{(masterData.val_premium_amt || 0).toFixed(2)}</p>
                         </div>
                       </div>
-                      <input  id="masterdata_val_premium_am_2688" name="masterdata_val_premium_am" aria-label="masterdata val premium am"
+                      <input id="masterdata_val_premium_am_2688" name="masterdata_val_premium_am" aria-label="masterdata val premium am"
                         type="number" 
                         step="0.01"
-                        className="bg-white border border-gray-400 p-1 text-right font-mono font-bold text-emerald-700"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-emerald-700 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.val_premium_amt || ''} 
                         onChange={(e) => handleMasterChange('val_premium_amt', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 3 */}
                     <div className="flex flex-col">
-                      <label htmlFor="ded_claim_total_2699" className="text-red-700 text-[8.5px]">Ded Claim Total (-)</label>
-                      <input  id="ded_claim_total_2699" name="ded_claim_total" aria-label="Ded Claim Total (-)"
+                      <label htmlFor="ded_claim_total_2699" className="text-[10px] font-bold text-red-700 mb-1">Ded Claim Total (-)</label>
+                      <input id="ded_claim_total_2699" name="ded_claim_total" aria-label="Ded Claim Total (-)"
                         type="number" 
                         disabled 
-                        className="bg-red-50 border border-gray-400 p-1 text-right font-mono font-bold text-red-700"
+                        className="bg-rose-50 border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-red-700 shadow-2xs"
                         value={(0).toFixed(2)} 
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="qty_claim_2709" className="text-slate-500 text-[8.5px]">Qty Claim</label>
-                      <input  id="qty_claim_2709" name="qty_claim" aria-label="Qty Claim"
+                      <label htmlFor="qty_claim_2709" className="text-[10px] font-bold text-slate-600 mb-1">Qty Claim</label>
+                      <input id="qty_claim_2709" name="qty_claim" aria-label="Qty Claim"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.val_qty_claim || ''} 
                         onChange={(e) => handleMasterChange('val_qty_claim', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
-                    <div className="flex flex-col col-span-2">
-                      <label htmlFor="ex_short_2719" className="text-slate-500 text-[8.5px]">Ex/Short (-)</label>
-                      <input  id="ex_short_2719" name="ex_short" aria-label="Ex/Short (-)"
+                    {/* Row 4: Ex/Short */}
+                    <div className="flex flex-col">
+                      <label htmlFor="ex_short_2719" className="text-[10px] font-bold text-slate-600 mb-1">Ex/Short (-)</label>
+                      <input id="ex_short_2719" name="ex_short" aria-label="Ex/Short (-)"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.val_ex_short || ''} 
                         onChange={(e) => handleMasterChange('val_ex_short', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                   </div>
-                </LegacyFieldset>
+                </div>
 
-                {/* 3. Final MR Value */}
-                <LegacyFieldset legend="Final MR Net Value">
-                  <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5 p-1 text-[10px] font-bold">
-                    
+                {/* 3. Final MR Net Value */}
+                <div className="bg-white border border-slate-300 rounded-xl p-4 shadow-sm relative">
+                  <div className="inline-block bg-[#f3ede2] border border-[#e2d8c3] text-[#334155] text-[11px] font-extrabold uppercase px-3 py-1 rounded-md shadow-2xs mb-3">
+                    FINAL MR NET VALUE
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs font-bold">
+                    {/* Row 1 */}
                     <div className="flex flex-col">
-                      <label htmlFor="less_adv_2736" className="text-slate-500 text-[8.5px]">Less Adv (-)</label>
-                      <input  id="less_adv_2736" name="less_adv" aria-label="Less Adv (-)"
+                      <label htmlFor="less_adv_2736" className="text-[10px] font-bold text-slate-600 mb-1">Less Adv (-)</label>
+                      <input id="less_adv_2736" name="less_adv" aria-label="Less Adv (-)"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono text-red-800"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-red-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.final_less_adv || ''} 
                         onChange={(e) => handleMasterChange('final_less_adv', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="on_ac_adv_2746" className="text-slate-500 text-[8.5px]">On/Ac Adv</label>
-                      <input  id="on_ac_adv_2746" name="on_ac_adv" aria-label="On/Ac Adv"
+                      <label htmlFor="on_ac_adv_2746" className="text-[10px] font-bold text-slate-600 mb-1">On/Ac Adv</label>
+                      <input id="on_ac_adv_2746" name="on_ac_adv" aria-label="On/Ac Adv"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         value={masterData.final_on_ac_adv || ''} 
                         onChange={(e) => handleMasterChange('final_on_ac_adv', parseFloat(e.target.value) || 0)}
                       />
                     </div>
 
+                    {/* Row 2 */}
                     <div className="flex flex-col">
-                      <label htmlFor="apmc_fees_2756" className="text-slate-500 text-[8.5px]">APMC Fees</label>
-                      <input  id="apmc_fees_2756" name="apmc_fees" aria-label="APMC Fees"
+                      <label htmlFor="apmc_fees_2756" className="text-[10px] font-bold text-slate-600 mb-1">APMC Fees</label>
+                      <input id="apmc_fees_2756" name="apmc_fees" aria-label="APMC Fees"
                         type="number" 
                         disabled
-                        className="bg-slate-100 border border-gray-400 p-1 text-right font-mono font-bold text-slate-900"
+                        className="bg-slate-100 border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs"
                         value={((Number(masterData.arival_apmc_fees) || 0) - (Number(masterData.actual_apmc_fees) || 0)).toFixed(2)} 
                       />
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="c_s_t_tax_2766" className="text-slate-500 text-[8.5px]">C.S.T. (Tax) %</label>
-                      <input  id="c_s_t_tax_2766" name="c_s_t_tax" aria-label="C.S.T. (Tax) %"
+                      <label htmlFor="c_s_t_tax_2766" className="text-[10px] font-bold text-slate-600 mb-1">C.S.T. (Tax) %</label>
+                      <input id="c_s_t_tax_2766" name="c_s_t_tax" aria-label="C.S.T. (Tax) %"
                         type="number" 
-                        className="bg-white border border-gray-400 p-1 text-right font-mono text-blue-900"
+                        className="bg-white border border-slate-300 rounded-lg p-2 text-right font-mono font-bold text-xs text-blue-900 shadow-2xs focus:border-indigo-500 focus:outline-none"
                         placeholder="e.g. 5 for 5%"
                         value={masterData.final_cst_pct_amt || ''} 
                         onChange={(e) => handleMasterChange('final_cst_pct_amt', parseFloat(e.target.value) || 0)}
@@ -2986,15 +3006,20 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                   </div>
-                </LegacyFieldset>
+                </div>
 
-                {/* 4. Payable Amt */}
-                <LegacyFieldset legend="Net Settle Outflow Payable">
-                  <div className="p-1 space-y-2 font-bold text-[10px]">
-                    <div className="flex flex-col bg-slate-900 text-white p-2 border border-black rounded-sm shadow-inner text-center">
-                      <div className="group relative flex items-center justify-center gap-1">
-                        <label className="text-[8px] uppercase tracking-wider font-extrabold text-[#00ff00]">RESOLVED PAYABLE ACCOUNT</label>
-                        <span className="text-[7.5px] font-black bg-emerald-950 border border-emerald-400 text-emerald-300 rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
+                {/* 4. Net Settle Outflow Payable */}
+                <div className="bg-white border border-slate-300 rounded-xl p-4 shadow-sm relative">
+                  <div className="inline-block bg-[#f3ede2] border border-[#e2d8c3] text-[#334155] text-[11px] font-extrabold uppercase px-3 py-1 rounded-md shadow-2xs mb-3">
+                    NET SETTLE OUTFLOW PAYABLE
+                  </div>
+
+                  <div className="space-y-3 font-bold text-xs">
+                    {/* Big Dark Banner */}
+                    <div className="bg-[#0f172a] rounded-lg p-3.5 text-center border border-slate-800 shadow-inner">
+                      <div className="group relative flex items-center justify-center gap-1 mb-1">
+                        <label className="text-[9px] uppercase tracking-wider font-extrabold text-[#00ff00]">RESOLVED PAYABLE ACCOUNT</label>
+                        <span className="text-[8px] font-black bg-emerald-950 border border-emerald-400 text-emerald-300 rounded-full w-3.5 h-3.5 inline-flex items-center justify-center font-serif cursor-help hover:bg-slate-700">i</span>
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-xl leading-relaxed font-normal text-left normal-case">
                           <p className="text-yellow-300 font-bold border-b border-slate-700 pb-1 mb-1">Payable Account Formula</p>
                           <p className="font-mono text-cyan-200">
@@ -3002,45 +3027,49 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           </p>
                         </div>
                       </div>
-                      <span className="text-lg font-black font-mono text-[#00ff00]">₹ {masterData.payable_amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <div className="text-2xl font-black font-mono text-[#00ff00] tracking-wide">
+                        ₹ {masterData.payable_amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Bill No & Bill Date */}
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col">
-                        <label htmlFor="bill_no_2798" className="text-[8.5px]">Bill No.</label>
-                        <input  id="bill_no_2798" name="bill_no" aria-label="Bill No."
+                        <label htmlFor="bill_no_2798" className="text-[10px] font-bold text-slate-700 mb-1">Bill No.</label>
+                        <input id="bill_no_2798" name="bill_no" aria-label="Bill No."
                           type="text" 
-                          className="bg-white border border-gray-400 p-1 font-mono uppercase font-black"
+                          className="bg-white border border-slate-300 rounded-lg p-2 font-mono uppercase font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none"
                           value={masterData.payable_bill_no || ''} 
                           onChange={(e) => handleMasterChange('payable_bill_no', e.target.value)}
                         />
                       </div>
                       <div className="flex flex-col">
-                        <label htmlFor="bill_date_2807" className="text-[8.5px]">Bill Date</label>
-                        <input  id="bill_date_2807" name="bill_date" aria-label="Bill Date"
+                        <label htmlFor="bill_date_2807" className="text-[10px] font-bold text-slate-700 mb-1">Bill Date</label>
+                        <input id="bill_date_2807" name="bill_date" aria-label="Bill Date"
                           type="date" 
-                          className="bg-white border border-gray-400 p-1 font-mono text-center text-[10px]"
+                          className="bg-white border border-slate-300 rounded-lg p-2 font-mono font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none"
                           value={masterData.payable_bill_date || ''} 
                           onChange={(e) => handleMasterChange('payable_bill_date', e.target.value)}
                         />
                       </div>
                     </div>
                   </div>
-                </LegacyFieldset>
+                </div>
 
                 {/* Bottom Left Buttons */}
-                <div className="flex gap-2 p-1 pt-2">
+                <div className="grid grid-cols-2 gap-3 pt-1">
                   <button 
                     onClick={() => setViewMode('dashboard')}
-                    className="bg-white hover:bg-slate-100 border border-gray-500 shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] flex-1 py-2 text-[10px] font-black uppercase text-gray-700 tracking-tight flex items-center justify-center gap-1 cursor-pointer"
+                    className="bg-white hover:bg-slate-50 border-2 border-slate-800 rounded-lg py-2.5 text-xs font-bold uppercase text-slate-800 tracking-wider shadow-sm transition-all active:scale-[0.98] text-center"
                   >
-                    Exit Gate
+                    EXIT GATE
                   </button>
                   <button 
                     onClick={handleSaveSettlement}
-                    className="bg-[#000080] hover:bg-indigo-900 border border-black shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] flex-1 py-2 text-[10px] font-black uppercase text-white tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="bg-[#000080] hover:bg-blue-950 border-2 border-[#000080] rounded-lg py-2.5 text-xs font-bold uppercase text-white tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   >
-                    <Save className="h-3.5 w-3.5 text-green-300" /> Settle Account
+                    <Save className="h-4 w-4 text-green-300" />
+                    SETTLE ACCOUNT
                   </button>
                 </div>
 
