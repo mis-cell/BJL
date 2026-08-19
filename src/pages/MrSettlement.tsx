@@ -4279,7 +4279,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             </div>
 
             {/* Top Summary Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 border border-slate-300 p-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 bg-slate-50 border border-slate-300 p-3 text-xs">
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">M.R. Number</span>
                 <span className="font-mono font-black text-rose-700 text-sm">{viewModalData.master.mr_no || '-'}</span>
@@ -4295,6 +4295,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Lorry / Vehicle No</span>
                 <span className="font-mono font-bold">{viewModalData.master.lorry_number || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Moisture (%)</span>
+                <span className="font-mono font-black text-blue-900">{Number(viewModalData.master.summary_rate_wt_claim || 0) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Supplier Name</span>
@@ -4328,6 +4332,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       <th className="p-1.5 border-r border-slate-300">Area</th>
                       <th className="p-1.5 border-r border-slate-300">Agency</th>
                       <th className="p-1.5 border-r border-slate-300">Marka</th>
+                      <th className="p-1.5 border-r border-slate-300 text-center">Moisture (%)</th>
                       <th className="p-1.5 border-r border-slate-300 text-right">Quantity</th>
                       <th className="p-1.5 border-r border-slate-300 text-right">Weight (MT)</th>
                       <th className="p-1.5 border-r border-slate-300 text-right">Rate (₹/Qtl)</th>
@@ -4338,6 +4343,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0)).map((col, idx) => {
                       const wtMt = getColWtMt(col);
                       const amt = getColAmount(col);
+                      const moistVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
                       return (
                         <tr key={idx} className="hover:bg-slate-50">
                           <td className="p-1.5 border-r border-slate-200 font-bold">{col.col_index || idx + 1}</td>
@@ -4345,6 +4351,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="p-1.5 border-r border-slate-200">{col.area || '-'}</td>
                           <td className="p-1.5 border-r border-slate-200">{col.agency || '-'}</td>
                           <td className="p-1.5 border-r border-slate-200">{col.marka_crop || '-'}</td>
+                          <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
+                            {moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
+                          </td>
                           <td className="p-1.5 border-r border-slate-200 text-right font-mono">{col.quantity || 0}</td>
                           <td className="p-1.5 border-r border-slate-200 text-right font-mono font-bold">{wtMt.toFixed(3)}</td>
                           <td className="p-1.5 border-r border-slate-200 text-right font-mono">₹{Number(col.rate_value || 0).toFixed(2)}</td>
