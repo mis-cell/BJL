@@ -1342,6 +1342,74 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       const totalDeductionAmt = deductionRows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
       const primaryDeduction = activeDeductions[0] || deductionRows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
 
+      // Prepare detail rows
+      const validDetails = detailRows.map((row, idx) => ({
+        mr_no: headerForm.mr_no,
+        srl_no: row.srl_no || idx + 1,
+        arrival_grade: row.arrival_grade || row.stock_grade_name || "",
+        stock_grade_code: row.stock_grade_code || "",
+        stock_grade_name: row.stock_grade_name || row.arrival_grade || "",
+        area: row.area || "",
+        agency: row.agency || "",
+        agency_code: (row as any).agency_code || "",
+        marks: row.marks || (row as any).marka || "",
+        marka: row.marks || (row as any).marka || "",
+        crop_year: row.crop_year || "2026-27",
+        lot: row.lot || "",
+        quantity: Number(row.quantity) || 0,
+        unit: row.unit || "BALES",
+        rate: Number((row as any).rate || (row as any).rate_qntl || 0) || 0,
+        rate_qntl: Number((row as any).rate_qntl || (row as any).rate || 0) || 0,
+        challan_gross_wt: Number(row.challan_gross_wt) || 0,
+        receipt_gross_wt: Number(row.receipt_gross_wt) || 0,
+        gross_weight_batch: Number(row.gross_weight_batch) || 0,
+        add_weight: Number(row.add_weight) || 0,
+        less_weight: Number(row.less_weight) || 0,
+        reduced_weight: Number(row.reduced_weight) || 0,
+        lorry_moisture_min: Number(row.lorry_moisture_min) || 0,
+        lorry_moisture_max: Number(row.lorry_moisture_max) || 0,
+        lorry_read_min: Number(row.lorry_read_min) || 0,
+        lorry_read_max: Number(row.lorry_read_max) || 0,
+        lorry_read_avg: Number(row.lorry_read_avg) || 0,
+        insp_read_min: Number(row.insp_read_min) || 0,
+        insp_read_max: Number(row.insp_read_max) || 0,
+        insp_read_avg: Number(row.insp_read_avg) || 0,
+        moisture_act: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
+        moisture_claim: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
+        dust_act: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
+        dust_claim: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
+        ncv_act: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
+        ncv_claim: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
+        grade_down_act: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
+        grade_down_claim: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
+        actual_moisture: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
+        claim_moisture: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
+        actual_dust: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
+        claim_dust: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
+        actual_ncv: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
+        claim_ncv: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
+        actual_grade_down: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
+        claim_grade_down: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
+        final_receipt_wt: Number(row.final_receipt_wt) || 0,
+        settlement_moisture: Number(row.settlement_moisture) || 0,
+        settlement_grade_down: Number(row.settlement_grade_down) || 0,
+        settlement_dust: Number(row.settlement_dust) || 0,
+        settlement_ncv: Number(row.settlement_ncv) || 0,
+        ropes_weight: Number(row.ropes_weight) || 0,
+        ropes_tot_wt_grd: Number(row.ropes_tot_wt_grd) || 0,
+        ropes_grade: row.ropes_grade || "",
+        chotta_weight: Number(row.chotta_weight) || 0,
+        chotta_tot_wt_grd: Number(row.chotta_tot_wt_grd) || 0,
+        chotta_grade: row.chotta_grade || "",
+        tolerable: row.tolerable || "Yes",
+        premium: row.premium !== undefined && row.premium !== null ? String(row.premium) : (row.is_premium ? "Yes" : "No"),
+        is_premium: Boolean(row.is_premium || row.premium === "Yes" || (row.premium && String(row.premium).trim() !== "" && String(row.premium).toLowerCase() !== "no")),
+        amount: Number(row.amount !== undefined && row.amount !== null && !isNaN(Number(row.amount)) ? row.amount : calculateRowAmount(row)) || 0,
+        row_remarks: row.row_remarks || "",
+        jqi_remarks: row.jqi_remarks || "",
+        jci_remarks: row.jci_remarks || row.jqi_remarks || ""
+      }));
+
       const payload: any = {
         ...headerForm,
         deduction_type: activeDeductions.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryDeduction.deduction_type || "",
@@ -1349,103 +1417,49 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         deduction_qty: primaryDeduction.deduction_qty || 0,
         deduction_amount: totalDeductionAmt,
         deductions: deductionRows,
+        deduction_types: deductionRows,
         date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
         broker: headerForm.broker_name || (headerForm as any).broker || "",
         supplier: headerForm.supplier_name || (headerForm as any).supplier || "",
         status: headerForm.status || "Completed",
-        grid_details: detailRows,
-        details: detailRows,
+        grid_details: validDetails,
+        details: validDetails,
         created_at: headerForm.created_at || new Date().toISOString()
       };
 
       if (supabase) {
-        const { error: masterErr } = await supabase.from("material_inspection").upsert([payload]);
-        if (masterErr) {
-          console.warn("Error upserting to material_inspection:", masterErr);
+        try {
+          const { error: masterErr } = await supabase.from("material_inspection").upsert([payload]);
+          if (masterErr) {
+            console.warn("Error upserting to material_inspection:", masterErr);
+          }
+        } catch (mErr) {
+          console.warn("Exception upserting material_inspection:", mErr);
         }
-        await supabase.from("mill_inspection_master").upsert([payload]).then(() => {}, () => {});
-        await supabase.from("inspection_master").upsert([payload]).then(() => {}, () => {});
-        await supabase.from("inspection_checklist").upsert([payload]).then(() => {}, () => {});
+        try { await supabase.from("mill_inspection_master").upsert([payload]); } catch {}
+        try { await supabase.from("inspection_master").upsert([payload]); } catch {}
+        try { await supabase.from("inspection_checklist").upsert([payload]); } catch {}
         
         // Clean out old detail rows
-        await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
-        await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
-        await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
-        await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no).then(() => {}, () => {});
-
-        // Prepare detail rows
-        const validDetails = detailRows.map((row, idx) => ({
-          mr_no: headerForm.mr_no,
-          srl_no: row.srl_no || idx + 1,
-          arrival_grade: row.arrival_grade || "",
-          stock_grade_code: row.stock_grade_code || "",
-          stock_grade_name: row.stock_grade_name || "",
-          area: row.area || "",
-          agency: row.agency || "",
-          agency_code: (row as any).agency_code || "",
-          marks: row.marks || row.marka || "",
-          marka: row.marks || row.marka || "",
-          crop_year: row.crop_year || "2026-27",
-          lot: row.lot || "",
-          quantity: Number(row.quantity) || 0,
-          unit: row.unit || "BALES",
-          rate: Number((row as any).rate || (row as any).rate_qntl || 0) || 0,
-          rate_qntl: Number((row as any).rate_qntl || (row as any).rate || 0) || 0,
-          challan_gross_wt: Number(row.challan_gross_wt) || 0,
-          receipt_gross_wt: Number(row.receipt_gross_wt) || 0,
-          gross_weight_batch: Number(row.gross_weight_batch) || 0,
-          add_weight: Number(row.add_weight) || 0,
-          less_weight: Number(row.less_weight) || 0,
-          reduced_weight: Number(row.reduced_weight) || 0,
-          lorry_moisture_min: Number(row.lorry_moisture_min) || 0,
-          lorry_moisture_max: Number(row.lorry_moisture_max) || 0,
-          lorry_read_min: Number(row.lorry_read_min) || 0,
-          lorry_read_max: Number(row.lorry_read_max) || 0,
-          lorry_read_avg: Number(row.lorry_read_avg) || 0,
-          insp_read_min: Number(row.insp_read_min) || 0,
-          insp_read_max: Number(row.insp_read_max) || 0,
-          insp_read_avg: Number(row.insp_read_avg) || 0,
-          moisture_act: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
-          moisture_claim: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
-          dust_act: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
-          dust_claim: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
-          ncv_act: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
-          ncv_claim: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
-          grade_down_act: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
-          grade_down_claim: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
-          actual_moisture: Number(row.moisture_act || (row as any).actual_moisture || 0) || 0,
-          claim_moisture: Number(row.moisture_claim || (row as any).claim_moisture || 0) || 0,
-          actual_dust: Number(row.dust_act || (row as any).actual_dust || 0) || 0,
-          claim_dust: Number(row.dust_claim || (row as any).claim_dust || 0) || 0,
-          actual_ncv: Number(row.ncv_act || (row as any).actual_ncv || 0) || 0,
-          claim_ncv: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
-          actual_grade_down: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
-          claim_grade_down: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
-          final_receipt_wt: Number(row.final_receipt_wt) || 0,
-          settlement_moisture: Number(row.settlement_moisture) || 0,
-          settlement_grade_down: Number(row.settlement_grade_down) || 0,
-          settlement_dust: Number(row.settlement_dust) || 0,
-          settlement_ncv: Number(row.settlement_ncv) || 0,
-          ropes_weight: Number(row.ropes_weight) || 0,
-          ropes_tot_wt_grd: Number(row.ropes_tot_wt_grd) || 0,
-          ropes_grade: row.ropes_grade || "",
-          chotta_weight: Number(row.chotta_weight) || 0,
-          chotta_tot_wt_grd: Number(row.chotta_tot_wt_grd) || 0,
-          chotta_grade: row.chotta_grade || "",
-          tolerable: row.tolerable || "Yes",
-          premium: row.premium !== undefined && row.premium !== null ? String(row.premium) : (row.is_premium ? "Yes" : "No"),
-          is_premium: Boolean(row.is_premium || row.premium === "Yes"),
-          amount: Number(row.amount !== undefined && row.amount !== null ? row.amount : calculateRowAmount(row)) || 0,
-          row_remarks: row.row_remarks || "",
-          jqi_remarks: row.jqi_remarks || "",
-          jci_remarks: row.jci_remarks || row.jqi_remarks || ""
-        }));
+        try {
+          await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
+        } catch (e) {}
+        try { await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no); } catch {}
+        try { await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no); } catch {}
+        try { await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no); } catch {}
 
         if (validDetails.length > 0) {
-          await supabase.from("material_inspection_details").insert(validDetails);
-          await supabase.from("inspection_details").insert(validDetails).then(() => {}, () => {});
-          await supabase.from("inspection_checklist_details").insert(validDetails).then(() => {}, () => {});
-          await supabase.from("mill_inspection_detail").insert(validDetails).then(() => {}, () => {});
+          try {
+            const { error: insErr } = await supabase.from("material_inspection_details").insert(validDetails);
+            if (insErr) {
+              console.warn("material_inspection_details insert returned error:", insErr);
+            }
+          } catch (dErr) {
+            console.warn("Exception inserting material_inspection_details:", dErr);
+          }
+          try { await supabase.from("inspection_details").insert(validDetails); } catch {}
+          try { await supabase.from("inspection_checklist_details").insert(validDetails); } catch {}
+          try { await supabase.from("mill_inspection_detail").insert(validDetails); } catch {}
         }
 
         // Sync with final_arrival table
@@ -1461,6 +1475,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             broker: headerForm.broker_name,
             supplier: headerForm.supplier_name,
             lorry_number: headerForm.lorry_number,
+            grid_details: validDetails,
+            details: validDetails,
             status: 'Completed'
           });
         } catch (faErr) {}
