@@ -1725,28 +1725,34 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const calculatedRatePerMt = calculateWeightedRatePerMT(detailCols);
     const nextRatePerMt = calculatedRatePerMt > 0 ? calculatedRatePerMt : (masterData.summary_rate_qtel || 0);
 
-    // Calculate Moisture Claim (KG) from Moisture % and Weights
-    let totalMoistureClaimKg = 0;
-    detailCols.forEach(col => {
-      const isColActive = (Number(col.quantity) || 0) > 0 || (Number(col.arr_qty_wt) || 0) > 0 || (Number(col.wt_quantity) || 0) > 0;
-      if (isColActive) {
-        const colWtKg = ((Number(col.wt_quantity) || Number(col.arr_qty_wt) || 0) > 0)
-          ? (Number(col.wt_quantity) || Number(col.arr_qty_wt) || 0) * 1000
-          : 0;
-        const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
-        totalMoistureClaimKg += colWtKg * (mVal / 100);
-      }
+    // Calculate Moisture Claim % as the Average of "Final (%)" from Grade Spec Table (Moisture % row)
+    const activeMoistCols = detailCols.filter(col => {
+      const isColActive = (Number(col.quantity) || 0) > 0 || (Number(col.arr_qty_wt) || 0) > 0 || (Number(col.wt_quantity) || 0) > 0 || (col.grade && col.grade.trim() !== '');
+      return isColActive;
     });
 
-    const electronicScaleNetMT = Number(masterData.electronic_scale_net) || 0;
-    const totalScaleWeightKg = electronicScaleNetMT * 1000;
-    const defaultMoistPct = Number(detailCols[0]?.moist_sett) > 0 ? Number(detailCols[0]?.moist_sett) : Number(detailCols[0]?.moist_claim || 0);
+    let avgFinalMoisturePct = 0;
+    if (activeMoistCols.length > 0) {
+      const sumMoist = activeMoistCols.reduce((sum, col) => {
+        const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+        return sum + mVal;
+      }, 0);
+      avgFinalMoisturePct = Number((sumMoist / activeMoistCols.length).toFixed(2));
+    } else {
+      const colsWithMoist = detailCols.filter(col => {
+        const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+        return mVal > 0;
+      });
+      if (colsWithMoist.length > 0) {
+        const sumMoist = colsWithMoist.reduce((sum, col) => {
+          const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+          return sum + mVal;
+        }, 0);
+        avgFinalMoisturePct = Number((sumMoist / colsWithMoist.length).toFixed(2));
+      }
+    }
 
-    const calculatedRateWtClaim = totalMoistureClaimKg > 0
-      ? Number(totalMoistureClaimKg.toFixed(3))
-      : (totalScaleWeightKg > 0 && defaultMoistPct > 0
-          ? Number((totalScaleWeightKg * (defaultMoistPct / 100)).toFixed(3))
-          : 0);
+    const calculatedRateWtClaim = avgFinalMoisturePct;
 
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
@@ -1791,6 +1797,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // Calculate Delivery Claim based on Delivery To (from Final P.O) vs Receipt Date (Arrival Date from TEMPORARY M.R)
     const receiptDateObj = parseDateOnly(masterData.arrival_date || masterData.sett_date);
     const deliveryToObj = parseDateOnly(selectedPoData?.delivery_to);
+    const electronicScaleNetMT = Number(masterData.electronic_scale_net) || 0;
 
     let calculatedDeliveryClaim = 0;
     if (deliveryToObj && receiptDateObj) {
@@ -3072,13 +3079,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="moisture_claim_kg_2500" className="text-[9px] uppercase font-bold text-slate-600 mb-0.5">Moisture Claim (KG)</label>
-                      <input id="moisture_claim_kg_2500" name="moisture_claim_kg" aria-label="Moisture Claim (KG)"
+                      <label htmlFor="moisture_claim_pct_2500" className="text-[9px] uppercase font-bold text-slate-600 mb-0.5">Moisture Claim %</label>
+                      <input id="moisture_claim_pct_2500" name="moisture_claim_pct" aria-label="Moisture Claim %"
                         type="number" 
-                        step="0.001"
+                        step="0.01"
                         className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
                         value={masterData.summary_rate_wt_claim || ''} 
                         onChange={(e) => handleMasterChange('summary_rate_wt_claim', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00%"
                       />
                     </div>
 
