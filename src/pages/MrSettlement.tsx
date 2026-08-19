@@ -669,12 +669,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     if (rawPoGradeClaim != null) col.po_grade_claim = Number(rawPoGradeClaim);
     else if (inspMaster?.delivery_claim != null) col.po_grade_claim = Number(inspMaster.delivery_claim);
 
-    // Total Claim calculation
-    const mF = (Number(col.moist_claim || 0) - Number(col.moist_sett || 0));
-    const dF = (Number(col.dust_claim || 0) - Number(col.dust_sett || 0));
-    const nF = (Number(col.ncv_claim || 0) - Number(col.ncv_sett || 0));
-    const gdF = (Number(col.gd_claim || 0) - Number(col.gd_sett || 0));
-    col.claim_settlement = Number((mF + dF + nF + gdF).toFixed(2));
+    // Total Claim calculation: Grade Down (%) + Moisture (%) + Dust (%) + NCV (%)
+    const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
+    const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+    const dVal = Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0);
+    const nVal = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
+    col.claim_settlement = Number((gdVal + mVal + dVal + nVal).toFixed(2));
 
     return col;
   };
@@ -1455,11 +1455,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const calculatedValueCol = getColAmount(col);
       calculatedMaterialValue += calculatedValueCol;
 
-      // Moisture + Dust + NCV Total Claim calculation
-      const mF = (Number(col.moist_claim || 0) - Number(col.moist_sett || 0));
-      const dF = (Number(col.dust_claim || 0) - Number(col.dust_sett || 0));
-      const nF = (Number(col.ncv_claim || 0) - Number(col.ncv_sett || 0));
-      col.claim_settlement = Number((mF + dF + nF).toFixed(2));
+      // Total Claim calculation for column: Grade Down (%) + Moisture (%) + Dust (%) + NCV (%)
+      const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
+      const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+      const dVal = Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0);
+      const nVal = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
+      col.claim_settlement = Number((gdVal + mVal + dVal + nVal).toFixed(2));
 
       // Grade Claim calculation logic: Claim - Sett
       const claimTotal = (Number(col.gd_claim) + Number(col.moist_claim) + Number(col.dust_claim) + Number(col.ncv_claim));
@@ -1473,21 +1474,28 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const calculatedRatePerMt = calculateWeightedRatePerMT(detailCols);
     const nextRatePerMt = calculatedRatePerMt > 0 ? calculatedRatePerMt : (masterData.summary_rate_qtel || 0);
 
-    // Calculate Rate Wt. Claim (KG) / Moisture Claim from Total Deduction % and Electronic Scale Net (MT)
-    let totalClaimPct = 0;
+    // Calculate Moisture Claim (KG) from Moisture % and Weights
+    let totalMoistureClaimKg = 0;
     detailCols.forEach(col => {
       const isColActive = (Number(col.quantity) || 0) > 0 || (Number(col.arr_qty_wt) || 0) > 0 || (Number(col.wt_quantity) || 0) > 0;
       if (isColActive) {
-        const gdF = (Number(col.gd_claim || 0) - Number(col.gd_sett || 0));
-        const mF = (Number(col.moist_claim || 0) - Number(col.moist_sett || 0));
-        const dF = (Number(col.dust_claim || 0) - Number(col.dust_sett || 0));
-        const nF = (Number(col.ncv_claim || 0) - Number(col.ncv_sett || 0));
-        totalClaimPct += (gdF + mF + dF + nF);
+        const colWtKg = ((Number(col.wt_quantity) || Number(col.arr_qty_wt) || 0) > 0)
+          ? (Number(col.wt_quantity) || Number(col.arr_qty_wt) || 0) * 1000
+          : 0;
+        const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+        totalMoistureClaimKg += colWtKg * (mVal / 100);
       }
     });
+
     const electronicScaleNetMT = Number(masterData.electronic_scale_net) || 0;
-    const weightKg = electronicScaleNetMT * 1000;
-    const calculatedRateWtClaim = Number((weightKg * (totalClaimPct / 100)).toFixed(3));
+    const totalScaleWeightKg = electronicScaleNetMT * 1000;
+    const defaultMoistPct = Number(detailCols[0]?.moist_sett) > 0 ? Number(detailCols[0]?.moist_sett) : Number(detailCols[0]?.moist_claim || 0);
+
+    const calculatedRateWtClaim = totalMoistureClaimKg > 0
+      ? Number(totalMoistureClaimKg.toFixed(3))
+      : (totalScaleWeightKg > 0 && defaultMoistPct > 0
+          ? Number((totalScaleWeightKg * (defaultMoistPct / 100)).toFixed(3))
+          : 0);
 
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
@@ -3670,61 +3678,76 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         {/* Row 1: Grade Down */}
                         <tr className="hover:bg-slate-50">
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Grade Down (%)</td>
-                          {[1, 2, 3, 4].map(idx => (
-                            <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_gd_claim_3470" name="detailcols_idx_1_gd_claim" aria-label="detailcols idx 1 gd claim"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_claim || ''} onChange={(e) => handleColChange(idx, 'gd_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_gd_sett__3471" name="detailcols_idx_1_gd_sett_" aria-label="detailcols idx 1 gd sett "type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_sett ?? 0} onChange={(e) => handleColChange(idx, 'gd_sett', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.gd_claim || 0) - Number(detailCols[idx-1]?.gd_sett || 0)).toFixed(1)}%</td>
-                            </React.Fragment>
-                          ))}
+                          {[1, 2, 3, 4].map(idx => {
+                            const gdVal = Number(detailCols[idx-1]?.gd_sett) > 0 ? Number(detailCols[idx-1]?.gd_sett) : Number(detailCols[idx-1]?.gd_claim || 0);
+                            return (
+                              <React.Fragment key={idx}>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_gd_claim`} name={`detailcols_${idx}_gd_claim`} aria-label={`detailcols ${idx} gd claim`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_claim || ''} onChange={(e) => handleColChange(idx, 'gd_claim', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_gd_sett`} name={`detailcols_${idx}_gd_sett`} aria-label={`detailcols ${idx} gd sett`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.gd_sett ?? 0} onChange={(e) => handleColChange(idx, 'gd_sett', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{gdVal.toFixed(1)}%</td>
+                              </React.Fragment>
+                            );
+                          })}
                         </tr>
 
                         {/* Row 2: Moisture */}
                         <tr className="hover:bg-slate-50">
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Moisture (%)</td>
-                          {[1, 2, 3, 4].map(idx => (
-                            <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_moist_cl_3482" name="detailcols_idx_1_moist_cl" aria-label="detailcols idx 1 moist cl"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_claim || ''} onChange={(e) => handleColChange(idx, 'moist_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_moist_se_3483" name="detailcols_idx_1_moist_se" aria-label="detailcols idx 1 moist se"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_sett ?? 0} onChange={(e) => handleColChange(idx, 'moist_sett', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.moist_claim || 0) - Number(detailCols[idx-1]?.moist_sett || 0)).toFixed(1)}%</td>
-                            </React.Fragment>
-                          ))}
+                          {[1, 2, 3, 4].map(idx => {
+                            const mVal = Number(detailCols[idx-1]?.moist_sett) > 0 ? Number(detailCols[idx-1]?.moist_sett) : Number(detailCols[idx-1]?.moist_claim || 0);
+                            return (
+                              <React.Fragment key={idx}>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_moist_claim`} name={`detailcols_${idx}_moist_claim`} aria-label={`detailcols ${idx} moist claim`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_claim || ''} onChange={(e) => handleColChange(idx, 'moist_claim', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_moist_sett`} name={`detailcols_${idx}_moist_sett`} aria-label={`detailcols ${idx} moist sett`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.moist_sett ?? 0} onChange={(e) => handleColChange(idx, 'moist_sett', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{mVal.toFixed(2)}%</td>
+                              </React.Fragment>
+                            );
+                          })}
                         </tr>
 
                         {/* Row 3: Dust */}
                         <tr className="hover:bg-slate-50">
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Dust (%)</td>
-                          {[1, 2, 3, 4].map(idx => (
-                            <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_dust_cla_3494" name="detailcols_idx_1_dust_cla" aria-label="detailcols idx 1 dust cla"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_claim || ''} onChange={(e) => handleColChange(idx, 'dust_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_dust_set_3495" name="detailcols_idx_1_dust_set" aria-label="detailcols idx 1 dust set"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_sett ?? 0} onChange={(e) => handleColChange(idx, 'dust_sett', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.dust_claim || 0) - Number(detailCols[idx-1]?.dust_sett || 0)).toFixed(1)}%</td>
-                            </React.Fragment>
-                          ))}
+                          {[1, 2, 3, 4].map(idx => {
+                            const dVal = Number(detailCols[idx-1]?.dust_sett) > 0 ? Number(detailCols[idx-1]?.dust_sett) : Number(detailCols[idx-1]?.dust_claim || 0);
+                            return (
+                              <React.Fragment key={idx}>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_dust_claim`} name={`detailcols_${idx}_dust_claim`} aria-label={`detailcols ${idx} dust claim`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_claim || ''} onChange={(e) => handleColChange(idx, 'dust_claim', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_dust_sett`} name={`detailcols_${idx}_dust_sett`} aria-label={`detailcols ${idx} dust sett`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.dust_sett ?? 0} onChange={(e) => handleColChange(idx, 'dust_sett', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{dVal.toFixed(2)}%</td>
+                              </React.Fragment>
+                            );
+                          })}
                         </tr>
 
                         {/* Row 4: NCV */}
                         <tr className="hover:bg-slate-50">
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">NCV (%)</td>
-                          {[1, 2, 3, 4].map(idx => (
-                            <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_ncv_clai_3506" name="detailcols_idx_1_ncv_clai" aria-label="detailcols idx 1 ncv clai"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_claim || ''} onChange={(e) => handleColChange(idx, 'ncv_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_ncv_sett_3507" name="detailcols_idx_1_ncv_sett" aria-label="detailcols idx 1 ncv sett"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_sett ?? 0} onChange={(e) => handleColChange(idx, 'ncv_sett', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.ncv_claim || 0) - Number(detailCols[idx-1]?.ncv_sett || 0)).toFixed(1)}%</td>
-                            </React.Fragment>
-                          ))}
+                          {[1, 2, 3, 4].map(idx => {
+                            const nVal = Number(detailCols[idx-1]?.ncv_sett) > 0 ? Number(detailCols[idx-1]?.ncv_sett) : Number(detailCols[idx-1]?.ncv_claim || 0);
+                            return (
+                              <React.Fragment key={idx}>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_ncv_claim`} name={`detailcols_${idx}_ncv_claim`} aria-label={`detailcols ${idx} ncv claim`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_claim || ''} onChange={(e) => handleColChange(idx, 'ncv_claim', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_ncv_sett`} name={`detailcols_${idx}_ncv_sett`} aria-label={`detailcols ${idx} ncv sett`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.ncv_sett ?? 0} onChange={(e) => handleColChange(idx, 'ncv_sett', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{nVal.toFixed(2)}%</td>
+                              </React.Fragment>
+                            );
+                          })}
                         </tr>
 
                         {/* Row 5: Late dely */}
                         <tr className="hover:bg-slate-50">
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold leading-none">PO/Grade/A/L.Dely (Amt)</td>
-                          {[1, 2, 3, 4].map(idx => (
-                            <React.Fragment key={idx}>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_po_grade_3518" name="detailcols_idx_1_po_grade" aria-label="detailcols idx 1 po grade"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_claim || ''} onChange={(e) => handleColChange(idx, 'po_grade_claim', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-200"><input  id="detailcols_idx_1_po_grade_3519" name="detailcols_idx_1_po_grade" aria-label="detailcols idx 1 po grade"type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_sett ?? 0} onChange={(e) => handleColChange(idx, 'po_grade_sett', parseFloat(e.target.value) || 0)} /></td>
-                              <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{(Number(detailCols[idx-1]?.po_grade_claim || 0) - Number(detailCols[idx-1]?.po_grade_sett || 0)).toFixed(1)}</td>
-                            </React.Fragment>
-                          ))}
+                          {[1, 2, 3, 4].map(idx => {
+                            const poVal = Number(detailCols[idx-1]?.po_grade_sett) > 0 ? Number(detailCols[idx-1]?.po_grade_sett) : Number(detailCols[idx-1]?.po_grade_claim || 0);
+                            return (
+                              <React.Fragment key={idx}>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_po_grade_claim`} name={`detailcols_${idx}_po_grade_claim`} aria-label={`detailcols ${idx} po grade claim`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_claim || ''} onChange={(e) => handleColChange(idx, 'po_grade_claim', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-200"><input  id={`detailcols_${idx}_po_grade_sett`} name={`detailcols_${idx}_po_grade_sett`} aria-label={`detailcols ${idx} po grade sett`} type="number" step="0.1" className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={detailCols[idx-1]?.po_grade_sett ?? 0} onChange={(e) => handleColChange(idx, 'po_grade_sett', parseFloat(e.target.value) || 0)} /></td>
+                                <td className="p-1 border-r border-gray-300 text-emerald-800 bg-emerald-50/40 font-black text-[10.5px]">{poVal.toFixed(1)}</td>
+                              </React.Fragment>
+                            );
+                          })}
                         </tr>
 
                         {/* Text remarks input row */}
@@ -3732,7 +3755,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <td className="px-2 py-1.5 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-sans text-[9px] text-left font-bold">Remarks</td>
                           {[1, 2, 3, 4].map(idx => (
                             <td key={idx} colSpan={3} className="p-1 border-r border-gray-300">
-                              <input  id="audit_remarks_3530" name="audit_remarks" aria-label="Audit remarks..."
+                              <input  id={`audit_remarks_${idx}`} name={`audit_remarks_${idx}`} aria-label="Audit remarks..."
                                 type="text" 
                                 className="w-full bg-transparent p-0.5 outline-none font-sans font-medium text-left px-2 text-[9.5px]"
                                 placeholder="Audit remarks..."
@@ -3743,20 +3766,20 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           ))}
                         </tr>
 
-                        {/* Settled Claims sum row */}
+                        {/* Settled Claims sum row: Total Claim = Grade Down (%) + Moisture (%) + Dust (%) + NCV (%) */}
                         <tr className="bg-rose-50/70 hover:bg-rose-100">
                           <td className="px-2 py-1.5 border-r border-gray-200 text-red-900 uppercase font-sans text-[9px] text-left font-bold">Total Claim</td>
                           {[1, 2, 3, 4].map(idx => {
                             const col = detailCols[idx-1];
                             const isColActive = (Number(col?.quantity) || 0) > 0 || (Number(col?.arr_qty_wt) || 0) > 0 || (Number(col?.wt_quantity) || 0) > 0;
-                            const gdF = isColActive ? (Number(col?.gd_claim || 0) - Number(col?.gd_sett || 0)) : 0;
-                            const mF = isColActive ? (Number(col?.moist_claim || 0) - Number(col?.moist_sett || 0)) : 0;
-                            const dF = isColActive ? (Number(col?.dust_claim || 0) - Number(col?.dust_sett || 0)) : 0;
-                            const nF = isColActive ? (Number(col?.ncv_claim || 0) - Number(col?.ncv_sett || 0)) : 0;
-                            const totalClaimVal = gdF + mF + dF + nF;
+                            const gdVal = Number(col?.gd_sett) > 0 ? Number(col?.gd_sett) : Number(col?.gd_claim || 0);
+                            const mVal = Number(col?.moist_sett) > 0 ? Number(col?.moist_sett) : Number(col?.moist_claim || 0);
+                            const dVal = Number(col?.dust_sett) > 0 ? Number(col?.dust_sett) : Number(col?.dust_claim || 0);
+                            const nVal = Number(col?.ncv_sett) > 0 ? Number(col?.ncv_sett) : Number(col?.ncv_claim || 0);
+                            const totalClaimVal = gdVal + mVal + dVal + nVal;
                             return (
                               <td key={idx} colSpan={3} className="px-2 py-1.5 border-r border-gray-300 text-center font-black text-red-700 bg-red-100/50 text-[11px]">
-                                {isColActive ? `${totalClaimVal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%` : '0.0%'}
+                                {isColActive ? `${totalClaimVal.toFixed(2)}%` : '0.0%'}
                               </td>
                             );
                           })}
