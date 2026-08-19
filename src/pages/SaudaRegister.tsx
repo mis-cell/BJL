@@ -238,9 +238,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [statusTab, setStatusTab] = useState<'pending' | 'all'>('pending');
   const [saudaList, setSaudaList] = useState<Sauda[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [poList, setPoList] = useState<any[]>([]);
+  const [scpList, setScpList] = useState<any[]>([]);
   const [arrivalsList, setArrivalsList] = useState<any[]>([]);
   const [editingSauda, setEditingSauda] = useState<Sauda | null>(null);
   const [printingSauda, setPrintingSauda] = useState<Sauda | null>(null);
@@ -409,14 +411,16 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     setIsRefreshing(true);
     try {
       if (navigator.onLine) await flushOfflineQueue().catch(() => {});
-      const [saudasData, posData, arrivalsData] = await Promise.all([
+      const [saudasData, posData, arrivalsData, scpData] = await Promise.all([
         dbModule.fetchAll('sauda_master', 'created_at', false),
         dbModule.fetchAll('purchase_master').catch(() => []),
-        dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => [])
+        dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
+        dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
       setSaudaList(saudasData || []);
       setPoList(posData || []);
       setArrivalsList(arrivalsData || []);
+      setScpList(scpData || []);
     } catch(e) {
       console.error(e);
     } finally {
@@ -426,7 +430,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   useLiveAutoRefresh(() => {
     if (isActive) fetchSaudas();
-  }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received'] });
+  }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
 
   useEffect(() => {
     if (isActive) {
@@ -592,64 +596,57 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     );
   }
 
-  const filteredSaudas = saudaList.filter(s => {
-    const term = searchTerm.toLowerCase().trim();
-    const saudaDisplayNo = (formatPoNumber(s) || '').toLowerCase();
-    const matchesSearch = !term || 
-      (s.sauda_no || '').toLowerCase().includes(term) ||
-      (s.session || '').toLowerCase().includes(term) ||
-      saudaDisplayNo.includes(term) ||
-      (s.broker || '').toLowerCase().includes(term) || 
-      (s.supplier || '').toLowerCase().includes(term) ||
-      (s.challan_supplier || '').toLowerCase().includes(term) ||
-      (s.marks || '').toLowerCase().includes(term) ||
-      (s.area || '').toLowerCase().includes(term) ||
-      (s.agency || '').toLowerCase().includes(term) ||
-      (s.remarks || '').toLowerCase().includes(term);
-      
-    if (!matchesSearch) return false;
-
-    if (startDate && (!s.date || new Date(s.date) < new Date(startDate))) return false;
-    if (endDate && (!s.date || new Date(s.date) > new Date(endDate))) return false;
-
-    // Remove from Sauda Desk if corresponding P.O. is not present in P.O. Dashboard (purchase_master)
-    const saudaPoDisplayNo = formatPoNumber(s);
-    
-    const matchSaudaWithPo = (saudaNumStr: string, poNoStr: string, contractPoNoStr?: string) => {
-      if (!saudaNumStr || !poNoStr) return false;
-      const sNoClean = saudaNumStr.trim().toUpperCase().replace(/[^0-9]/g, '');
-      if (!sNoClean) return false;
-
-      const checkMatch = (p: string) => {
-        const pUpper = p.trim().toUpperCase();
-        if (pUpper === saudaNumStr.trim().toUpperCase()) return true;
-
-        const pNoClean = pUpper.replace(/[^0-9]/g, '');
-        let pNoDigits = pNoClean;
-        pNoDigits = pNoDigits.replace(/20\d{2}20\d{2}/g, ''); // strip "20262027"
-        pNoDigits = pNoDigits.replace(/\d{4}/g, ''); // strip remaining 4-digit blocks
-        
-        const cleanS = sNoClean.replace(/^0+/, '');
-        const cleanP = pNoDigits.replace(/^0+/, '');
-
-        if (cleanS && cleanP && cleanS === cleanP) {
-          return true;
-        }
-
-        const regex = new RegExp(`(^|[^0-9])${sNoClean}([^0-9]|$)`);
-        return regex.test(pUpper);
-      };
-
-      return checkMatch(poNoStr) || (contractPoNoStr ? checkMatch(contractPoNoStr) : false);
-    };
-
-    if (!canViewCompletedData()) {
-      const saudaStatus = getSaudaStatusAndWeight(s).status;
-      if (saudaStatus === 'completed') return false;
+  // Check if a Sauda contract has already been entered into Sauda Check Point or Final P.O.
+  function isSaudaInCheckPointOrPo(s: Sauda) {
+    if (!s) return false;
+    const statusVal = String((s as any).status || '').toLowerCase();
+    if (statusVal === 'completed' || statusVal === 'in_check_point' || statusVal === 'in_po' || statusVal === 'final') {
+      return true;
     }
 
-    return true;
-  });
+    const sId = String(s.sauda_id || (s as any).id || '').trim().toUpperCase();
+    const sNo = String(s.sauda_no || '').trim().toUpperCase();
+    const sSession = String(s.session || '').trim().toUpperCase();
+    const sDisplay = (formatPoNumber(s) || '').trim().toUpperCase();
+
+    const getCleanDigits = (str: string) => {
+      if (!str) return '';
+      const clean = str.replace(/[^0-9]/g, '');
+      const withoutYear = clean.replace(/20\d{2}20\d{2}/g, '');
+      return withoutYear ? withoutYear.replace(/^0+/, '') : clean.replace(/^0+/, '');
+    };
+
+    const sNoDigits = getCleanDigits(sNo);
+    const sDisplayDigits = getCleanDigits(sDisplay);
+    const sSessionDigits = getCleanDigits(sSession);
+
+    const allPoSources = [...(scpList || []), ...(poList || [])];
+
+    return allPoSources.some(p => {
+      if (!p) return false;
+      const pSaudaId = String(p.sauda_id || p.sauda_id_ref || '').trim().toUpperCase();
+      if (sId && pSaudaId && sId === pSaudaId) return true;
+
+      const pPo = String(p.po_no || '').trim().toUpperCase();
+      const pContract = String(p.contract_po_no || '').trim().toUpperCase();
+      const pSaudaNo = String(p.sauda_no || p.po_contract || p.contract_no || '').trim().toUpperCase();
+      const pPtf = String(p.ptf_no || '').trim().toUpperCase();
+
+      const pTokens = [pPo, pContract, pSaudaNo, pPtf].filter(Boolean);
+      if (pTokens.some(tok => tok === sNo || tok === sDisplay || tok === sSession)) {
+        return true;
+      }
+
+      for (const tok of pTokens) {
+        const tokDigits = getCleanDigits(tok);
+        if (sNoDigits && tokDigits && sNoDigits === tokDigits) return true;
+        if (sDisplayDigits && tokDigits && sDisplayDigits === tokDigits) return true;
+        if (sSessionDigits && tokDigits && sSessionDigits === tokDigits) return true;
+      }
+
+      return false;
+    });
+  }
 
   // Function declaration (hoisted) so getSaudaStatusAndWeight can use it even when
   // called from the filter above — avoids a "before initialization" crash.
@@ -676,6 +673,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   }
 
   function getSaudaStatusAndWeight(s: Sauda) {
+    const isMovedToCheckPoint = isSaudaInCheckPointOrPo(s);
+    if (isMovedToCheckPoint) {
+      return {
+        status: 'completed',
+        receivedWeight: 0,
+        contractWeight: Number(s.total_wt_in_ton) || 0
+      };
+    }
+
     const saudaPoDisplayNo = formatPoNumber(s);
     
     const matchSaudaWithPo = (saudaNumStr: string, poNoStr: string, contractPoNoStr?: string) => {
@@ -759,18 +765,47 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     };
   }
 
-  const saudaStatusList = saudaList.map(s => {
-    try {
-      return getSaudaStatusAndWeight(s);
-    } catch (e) {
-      return { status: 'pending', receivedWeight: 0, contractWeight: Number(s.total_wt_in_ton) || 0 };
+  const filteredSaudas = saudaList.filter(s => {
+    // When viewing Pending mode (default), hide Saudas that have moved into Sauda Check Point or P.O.
+    const isAlreadyMovedToCheckPoint = isSaudaInCheckPointOrPo(s);
+    if (statusTab === 'pending' && isAlreadyMovedToCheckPoint) {
+      return false;
     }
+
+    const term = searchTerm.toLowerCase().trim();
+    const saudaDisplayNo = (formatPoNumber(s) || '').toLowerCase();
+    const matchesSearch = !term || 
+      (s.sauda_no || '').toLowerCase().includes(term) ||
+      (s.session || '').toLowerCase().includes(term) ||
+      saudaDisplayNo.includes(term) ||
+      (s.broker || '').toLowerCase().includes(term) || 
+      (s.supplier || '').toLowerCase().includes(term) ||
+      (s.challan_supplier || '').toLowerCase().includes(term) ||
+      (s.marks || '').toLowerCase().includes(term) ||
+      (s.area || '').toLowerCase().includes(term) ||
+      (s.agency || '').toLowerCase().includes(term) ||
+      (s.remarks || '').toLowerCase().includes(term);
+      
+    if (!matchesSearch) return false;
+
+    if (startDate && (!s.date || new Date(s.date) < new Date(startDate))) return false;
+    if (endDate && (!s.date || new Date(s.date) > new Date(endDate))) return false;
+
+    if (!canViewCompletedData()) {
+      const saudaStatus = getSaudaStatusAndWeight(s).status;
+      if (saudaStatus === 'completed') return false;
+    }
+
+    return true;
   });
-  const pendingSaudasCount = saudaStatusList.filter(st => st.status === 'pending').length;
-  const partialSaudasCount = saudaStatusList.filter(st => st.status === 'partial').length;
-  const completedSaudasCount = saudaStatusList.filter(st => st.status === 'completed').length;
-  const totalWeightTons = saudaList.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
+
+  const pendingSaudas = saudaList.filter(s => !isSaudaInCheckPointOrPo(s));
+  const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
+  const pendingSaudasCount = pendingSaudas.length;
   const totalSaudas = saudaList.length;
+  const pendingWeightTons = pendingSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
+  const totalWeightTons = saudaList.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
+  const displayedWeightTons = filteredSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const bookTotalValue = filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate || 0) * Number(s.total_wt_in_ton || 0)), 0);
 
   return (
@@ -783,6 +818,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             <div>
               <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{pendingSaudasCount}</p>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
+              <p className="text-[9px] font-semibold text-rose-500 mt-0.5">Awaiting Check Point</p>
             </div>
             <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-2xl text-rose-600 shadow-2xs">
               <Clock className="h-6 w-6" />
@@ -794,6 +830,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             <div>
               <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{totalSaudas}</p>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
+              <p className="text-[9px] font-semibold text-slate-400 mt-0.5">{completedSaudas.length} in Check Point</p>
             </div>
             <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-2xl text-blue-600 shadow-2xs">
               <ClipboardList className="h-6 w-6" />
@@ -804,9 +841,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
             <div>
               <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
-                {totalWeightTons.toFixed(2)} <span className="text-sm font-semibold text-slate-500">Tons</span>
+                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-semibold text-slate-500">Tons</span>
               </p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Cumulative Sauda Weight</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                {statusTab === 'pending' ? "Pending Sauda Weight" : "Cumulative Sauda Weight"}
+              </p>
             </div>
             <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-emerald-700 shadow-2xs">
               <Scale className="h-6 w-6" />
@@ -819,7 +858,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
                 ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Book Total Value</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                {statusTab === 'pending' ? "Pending Book Value" : "Book Total Value"}
+              </p>
             </div>
             <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl text-amber-600 shadow-2xs">
               <IndianRupee className="h-6 w-6" />
@@ -829,8 +870,48 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
         {/* 2. Large Search & Date Filter Section */}
         <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
+          {/* Segmented View Switcher: Pending vs All */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+            <button
+              type="button"
+              onClick={() => setStatusTab('pending')}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                statusTab === 'pending'
+                  ? "bg-[#174C2C] text-white shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <span>Pending Saudas</span>
+              <span className={cn(
+                "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                statusTab === 'pending' ? "bg-emerald-700/80 text-white" : "bg-slate-200 text-slate-600"
+              )}>
+                {pendingSaudasCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('all')}
+              className={cn(
+                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                statusTab === 'all'
+                  ? "bg-[#174C2C] text-white shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <span>All Saudas History</span>
+              <span className={cn(
+                "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                statusTab === 'all' ? "bg-emerald-700/80 text-white" : "bg-slate-200 text-slate-600"
+              )}>
+                {totalSaudas}
+              </span>
+            </button>
+          </div>
+
           {/* Large Search Box */}
-          <div className="relative flex-1 min-w-[280px]">
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input  id="search_broker_or_supplier_830" name="search_broker_or_supplier" aria-label="Search Broker or Supplier..."
               type="text"
@@ -1055,8 +1136,31 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 })}
                 {filteredSaudas.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-500 font-bold uppercase text-xs">
-                      No Sauda Contracts Found
+                    <td colSpan={10} className="py-14 text-center text-slate-500 bg-slate-50/50">
+                      <div className="flex flex-col items-center justify-center space-y-2.5">
+                        <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                          <ClipboardList className="h-8 w-8 text-[#174C2C]" />
+                        </div>
+                        <p className="font-bold text-sm text-slate-700">
+                          {statusTab === 'pending'
+                            ? "No Active Pending Saudas"
+                            : "No Sauda Records Found"}
+                        </p>
+                        <p className="text-xs text-slate-500 max-w-md">
+                          {statusTab === 'pending'
+                            ? "All registered Saudas have been entered and moved to Sauda Check Point. Only uncompleted / pending Saudas will appear here."
+                            : "No Sauda contracts match the selected search or date criteria."}
+                        </p>
+                        {statusTab === 'pending' && totalSaudas > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setStatusTab('all')}
+                            className="mt-1 px-4 py-2 bg-white border border-slate-300 hover:border-[#174C2C] hover:bg-emerald-50/40 rounded-xl text-xs font-bold text-[#174C2C] transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+                          >
+                            <span>View All Saudas History ({totalSaudas})</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
