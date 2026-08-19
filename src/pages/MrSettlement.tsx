@@ -175,15 +175,12 @@ const emptyDetailColumn = (index: number): SettlementDetailColumn => ({
 
 export const getColWtMt = (col?: SettlementDetailColumn): number => {
   if (!col) return 0;
-  const qty = Number(col.quantity) || 0;
-  const wtQty = Number(col.wt_quantity) || 0;
-  const phota = Number(col.wt_phota) || 0;
   const arrWt = Number(col.arr_qty_wt) || 0;
-
-  if (wtQty > 0) return wtQty;
-  if (qty > 0) {
-    if (phota > 0) return qty * phota;
-    if (arrWt > 0) return arrWt;
+  if (arrWt > 0) return arrWt;
+  const qty = Number(col.quantity) || 0;
+  const wtPerQty = Number(col.wt_quantity) || Number(col.wt_phota) || 0;
+  if (qty > 0 && wtPerQty > 0) {
+    return Number(((qty * wtPerQty) / 1000).toFixed(3));
   }
   return 0;
 };
@@ -579,7 +576,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       pDet?.weight_mt || pDet?.weight_qtl || 0;
     
     col.arr_qty_wt = col.quantity > 0 || item?.weight || item?.arr_qty_wt || inspItem?.final_receipt_wt ? (Number(rawWt) || 0) : 0;
-    col.min_qty_wt = col.arr_qty_wt;
+    // Min.Qty/Wt is "Arr. Qty/Wt" with 3% acceptable (97% of Arr. Qty/Wt)
+    col.min_qty_wt = col.arr_qty_wt > 0 ? Number((col.arr_qty_wt * 0.97).toFixed(3)) : 0;
 
     // 7. Rate
     const rawRate = 
@@ -589,8 +587,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     
     col.rate_value = Number(rawRate) || 0;
 
-    // 8. Wt / Phota
-    col.wt_phota = col.quantity > 0 ? col.arr_qty_wt / col.quantity : (Number(item?.marks_phota || inspItem?.marks_phota) || 0);
+    // 8. Wt/Quantity calculation: Round "Arr. Qty/Wt" convert in kg / Quantity (B)
+    const rawWtKg = col.arr_qty_wt > 0 ? (col.arr_qty_wt <= 50 ? col.arr_qty_wt * 1000 : col.arr_qty_wt) : 0;
+    col.wt_quantity = col.quantity > 0 && rawWtKg > 0 ? Math.round(rawWtKg / col.quantity) : (Number(item?.marks_phota || inspItem?.marks_phota) || 0);
+    col.wt_phota = col.wt_quantity;
 
     // 9. Active Deductions / Claims Audit Sheet mappings from Inspection Details:
     // Grade Down (%)
@@ -1245,6 +1245,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (!merged.marka_crop && fallbackCol.marka_crop) merged.marka_crop = fallbackCol.marka_crop;
                 if (!merged.quantity && fallbackCol.quantity) merged.quantity = fallbackCol.quantity;
                 if (!merged.arr_qty_wt && fallbackCol.arr_qty_wt) merged.arr_qty_wt = fallbackCol.arr_qty_wt;
+                if (merged.arr_qty_wt > 0 && (!merged.min_qty_wt || Number(merged.min_qty_wt) === Number(merged.arr_qty_wt))) {
+                  merged.min_qty_wt = Number((merged.arr_qty_wt * 0.97).toFixed(3));
+                }
+                if (merged.arr_qty_wt > 0 && merged.quantity > 0 && (!merged.wt_quantity || merged.wt_quantity === 0)) {
+                  const arrWtKg = merged.arr_qty_wt <= 50 ? merged.arr_qty_wt * 1000 : merged.arr_qty_wt;
+                  merged.wt_quantity = Math.round(arrWtKg / merged.quantity);
+                  merged.wt_phota = merged.wt_quantity;
+                }
                 if (!merged.rate_value && fallbackCol.rate_value) merged.rate_value = fallbackCol.rate_value;
                 if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;
                 if (merged.gd_claim == null || merged.gd_claim === 0) merged.gd_claim = fallbackCol.gd_claim;
@@ -1626,10 +1634,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         if (c.col_index !== idx) return c;
         const updated = { ...c, [field]: value };
 
-        if (field === 'quantity' || field === 'arr_qty_wt' || field === 'wt_phota') {
+        if (field === 'quantity' || field === 'arr_qty_wt' || field === 'wt_phota' || field === 'min_qty_wt') {
           const qty = Number(updated.quantity) || 0;
           const arrWt = Number(updated.arr_qty_wt) || 0;
-          const phota = Number(updated.wt_phota) || 0;
           
           if (field === 'quantity' && qty === 0) {
             updated.wt_quantity = 0;
@@ -1647,18 +1654,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             updated.po_grade_claim = 0;
             updated.po_grade_sett = 0;
             updated.claim_settlement = 0;
-          } else if (field === 'arr_qty_wt' && qty > 0) {
-            updated.wt_phota = arrWt / qty;
-            updated.wt_quantity = arrWt;
-          } else if (field === 'quantity') {
-            if (phota > 0) {
-              updated.wt_quantity = qty * phota;
-            } else if (arrWt > 0 && qty > 0) {
-              updated.wt_phota = arrWt / qty;
-              updated.wt_quantity = arrWt;
+          } else {
+            // Auto update Min.Qty/Wt to 3% acceptable (97% of Arr. Qty/Wt) when Arr. Qty/Wt changes
+            if (field === 'arr_qty_wt') {
+              updated.min_qty_wt = arrWt > 0 ? Number((arrWt * 0.97).toFixed(3)) : 0;
             }
-          } else if (field === 'wt_phota' && qty > 0) {
-            updated.wt_quantity = qty * phota;
+            // Auto update Wt/Quantity calculation: Round "Arr. Qty/Wt" convert in kg / Quantity (B)
+            const arrWtKg = arrWt > 0 ? (arrWt <= 50 ? arrWt * 1000 : arrWt) : 0;
+            if (qty > 0 && arrWtKg > 0) {
+              updated.wt_quantity = Math.round(arrWtKg / qty);
+              updated.wt_phota = updated.wt_quantity;
+            } else if (qty > 0 && Number(updated.wt_phota) > 0) {
+              updated.wt_quantity = Number(updated.wt_phota);
+            }
           }
         }
         return updated;
@@ -3512,12 +3520,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       </tr>
 
                       <tr className="hover:bg-slate-50">
-                        <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Min.Qty/Wt</td>
+                        <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-bold">
+                          <div className="flex flex-col">
+                            <span>Min.Qty/Wt</span>
+                            <span className="text-[7.5px] text-gray-400 font-normal lowercase">(3% acceptable)</span>
+                          </div>
+                        </td>
                         {[1, 2, 3, 4].map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input  id="0_000_3276" name="0_000" aria-label="0.000"
+                            <input  id={`min_qty_wt_${idx}`} name={`min_qty_wt_${idx}`} aria-label={`Min.Qty/Wt Col ${idx}`}
                               type="number" 
-                              className="w-full bg-transparent p-1 outline-none text-center font-mono"
+                              step="0.001"
+                              className="w-full bg-transparent p-1 outline-none text-center font-mono font-bold text-slate-700"
                               placeholder="0.000"
                               value={detailCols[idx-1]?.min_qty_wt || ''}
                               onChange={(e) => handleColChange(idx, 'min_qty_wt', parseFloat(e.target.value) || 0)}
@@ -3528,12 +3542,25 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                       {/* Intermediate sub-bars */}
                       <tr className="bg-indigo-50/40 hover:bg-indigo-50 font-black">
-                        <td className="px-2 py-1 border-r border-gray-200 uppercase text-indigo-900">Wt/Quantity</td>
-                        {[1, 2, 3, 4].map(idx => (
-                          <td key={idx} className="p-1 border-r border-gray-200 text-center font-mono text-indigo-900">
-                            {getColWtMt(detailCols[idx-1]).toFixed(3)}
-                          </td>
-                        ))}
+                        <td className="px-2 py-1 border-r border-gray-200 uppercase text-indigo-900">
+                          <div className="flex flex-col">
+                            <span>Wt/Quantity</span>
+                            <span className="text-[7.5px] text-indigo-700 font-normal lowercase">(Round Kg / Qty)</span>
+                          </div>
+                        </td>
+                        {[1, 2, 3, 4].map(idx => {
+                          const col = detailCols[idx-1];
+                          const qty = Number(col?.quantity) || 0;
+                          const arrWt = Number(col?.arr_qty_wt) || 0;
+                          const wtPerQty = qty > 0 && arrWt > 0 
+                            ? Math.round((arrWt <= 50 ? arrWt * 1000 : arrWt) / qty) 
+                            : (Number(col?.wt_quantity) || Number(col?.wt_phota) || 0);
+                          return (
+                            <td key={idx} className="p-1 border-r border-gray-200 text-center font-mono font-black text-indigo-950 text-xs">
+                              {wtPerQty > 0 ? `${wtPerQty} kg` : '-'}
+                            </td>
+                          );
+                        })}
                       </tr>
 
                       <tr className="bg-indigo-50/40 hover:bg-slate-50 font-black">
