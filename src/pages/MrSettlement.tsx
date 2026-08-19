@@ -113,6 +113,10 @@ interface SettlementMaster {
   challan_weight: number;
   supplier_net_wt: number;
   electronic_scale_net: number;
+  electronic_scale_gross?: number;
+  electronic_scale_tare?: number;
+  electronic_scale_total_qty?: number;
+  final_cst_amt?: number;
   payment_status: string;
 }
 
@@ -4271,30 +4275,30 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           <div id="print-modal-children-canvas" className="p-6 bg-white text-slate-900 font-sans space-y-4">
             {/* Header */}
             <div className="border-b-2 border-slate-900 pb-3 text-center">
-              <h2 className="text-xl font-black tracking-wide text-[#2a3088] uppercase">BALLY JUTE COMPANY LIMITED</h2>
-              <p className="text-[11px] text-slate-600 font-medium">P.O. BALLY, DIST: HOWRAH, WEST BENGAL - 711201</p>
-              <div className="inline-block mt-2 bg-slate-900 text-white text-xs font-black uppercase px-4 py-1 tracking-wider rounded-xs">
+              <h2 className="text-2xl font-black tracking-wide text-[#2a3088] uppercase">BALLY JUTE COMPANY LIMITED</h2>
+              <p className="text-xs text-slate-600 font-medium tracking-wide">P.O. BALLY, DIST: HOWRAH, WEST BENGAL - 711201 | JUTE MILL RAW MATERIAL DIVISION</p>
+              <div className="inline-block mt-2 bg-slate-900 text-white text-xs font-black uppercase px-4 py-1 tracking-wider rounded-xs shadow-xs">
                 M.R. SETTLEMENT & QUALITY AUDIT STATEMENT
               </div>
             </div>
 
-            {/* Top Summary Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 border border-slate-300 p-3 text-xs">
+            {/* Top Summary Info Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 border border-slate-300 p-3 text-xs rounded-xs">
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">M.R. Number</span>
                 <span className="font-mono font-black text-rose-700 text-sm">{viewModalData.master.mr_no || '-'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Settlement Date</span>
-                <span className="font-bold">{viewModalData.master.sett_date || '-'}</span>
+                <span className="font-bold text-slate-900">{viewModalData.master.sett_date || '-'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Purchase Order No</span>
                 <span className="font-mono font-bold text-blue-800">{viewModalData.master.po_no || '-'}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Lorry / Vehicle No</span>
-                <span className="font-mono font-bold">{viewModalData.master.lorry_number || '-'}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">P.O. Date</span>
+                <span className="font-bold text-slate-700">{viewModalData.master.po_date || '-'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Supplier Name</span>
@@ -4305,63 +4309,368 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 <span className="font-bold text-slate-700">{viewModalData.master.broker || '-'}</span>
               </div>
               <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Lorry / Vehicle No</span>
+                <span className="font-mono font-bold text-slate-900 uppercase">{viewModalData.master.lorry_number || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Arrival / Receipt Date</span>
+                <span className="font-bold text-slate-700">{viewModalData.master.arrival_date || viewModalData.master.sett_date || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Electronic Scale Net</span>
+                <span className="font-mono font-bold text-indigo-900">
+                  {viewModalData.master.electronic_scale_net ? `${Number(viewModalData.master.electronic_scale_net).toFixed(3)} MT` : '-'}
+                  {viewModalData.master.electronic_scale_gross ? ` (Gross: ${Number(viewModalData.master.electronic_scale_gross).toFixed(3)})` : ''}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase block">Challan / Scale Weight</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {viewModalData.master.challan_weight ? `${Number(viewModalData.master.challan_weight).toFixed(3)} MT` : (viewModalData.master.supplier_net_wt ? `${Number(viewModalData.master.supplier_net_wt).toFixed(3)} MT` : '-')}
+                </span>
+              </div>
+              <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Bill No & Date</span>
-                <span className="font-mono">{viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no} (${viewModalData.master.payable_bill_date || '-'})` : '-'}</span>
+                <span className="font-mono text-slate-800">{viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no} (${viewModalData.master.payable_bill_date || '-'})` : '-'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">Payment Status</span>
-                <span className="font-bold uppercase text-emerald-700">{viewModalData.master.payment_status || 'Settled'}</span>
+                <span className="font-bold uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 inline-block text-[11px]">
+                  {viewModalData.master.payment_status || 'Settled'}
+                </span>
               </div>
             </div>
 
             {/* Quality & Grade Specification Table */}
-            <div className="space-y-1">
-              <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-1">
-                1. Material Quality & Specification Breakdown
-              </h4>
-              <div className="border border-slate-300 overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700">
-                      <th className="p-1.5 border-r border-slate-300">Col #</th>
-                      <th className="p-1.5 border-r border-slate-300">Grade</th>
-                      <th className="p-1.5 border-r border-slate-300">Area</th>
-                      <th className="p-1.5 border-r border-slate-300">Agency</th>
-                      <th className="p-1.5 border-r border-slate-300">Marka</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right">Quantity</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right">Weight (MT)</th>
-                      <th className="p-1.5 border-r border-slate-300 text-right">Rate (₹/Qtl)</th>
-                      <th className="p-1.5 text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0)).map((col, idx) => {
-                      const wtMt = getColWtMt(col);
-                      const amt = getColAmount(col);
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50">
-                          <td className="p-1.5 border-r border-slate-200 font-bold">{col.col_index || idx + 1}</td>
-                          <td className="p-1.5 border-r border-slate-200 font-bold text-blue-900">{resolveGradeName(col.grade)}</td>
-                          <td className="p-1.5 border-r border-slate-200">{col.area || '-'}</td>
-                          <td className="p-1.5 border-r border-slate-200">{col.agency || '-'}</td>
-                          <td className="p-1.5 border-r border-slate-200">{col.marka_crop || '-'}</td>
-                          <td className="p-1.5 border-r border-slate-200 text-right font-mono">{col.quantity || 0}</td>
-                          <td className="p-1.5 border-r border-slate-200 text-right font-mono font-bold">{wtMt.toFixed(3)}</td>
-                          <td className="p-1.5 border-r border-slate-200 text-right font-mono">₹{Number(col.rate_value || 0).toFixed(2)}</td>
-                          <td className="p-1.5 text-right font-mono font-black text-slate-900">₹{amt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {(() => {
+              const activeCols = viewModalData.details.filter(c => (
+                Number(c.quantity) > 0 || 
+                Number(c.arr_qty_wt) > 0 || 
+                Number(c.rate_value) > 0 || 
+                (c.grade && String(c.grade).trim() !== '')
+              ));
+              
+              const totalBales = activeCols.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+              const totalWeightMt = activeCols.reduce((sum, c) => sum + getColWtMt(c), 0);
+              const totalAmount = activeCols.reduce((sum, c) => sum + getColAmount(c), 0);
+              const avgMoisture = activeCols.length > 0 
+                ? (activeCols.reduce((sum, c) => sum + (Number(c.moist_final) > 0 ? Number(c.moist_final) : (Number(c.moist_sett) > 0 ? Number(c.moist_sett) : Number(c.moist_claim || 0))), 0) / activeCols.length) 
+                : 0;
+              const avgDust = activeCols.length > 0 
+                ? (activeCols.reduce((sum, c) => sum + (Number(c.dust_final) > 0 ? Number(c.dust_final) : (Number(c.dust_sett) > 0 ? Number(c.dust_sett) : Number(c.dust_claim || 0))), 0) / activeCols.length) 
+                : 0;
+              const avgClaim = activeCols.length > 0
+                ? (activeCols.reduce((sum, c) => {
+                    const gd = Number(c.gd_sett) > 0 ? Number(c.gd_sett) : Number(c.gd_claim || 0);
+                    const m = Number(c.moist_sett) > 0 ? Number(c.moist_sett) : Number(c.moist_claim || 0);
+                    const d = Number(c.dust_sett) > 0 ? Number(c.dust_sett) : Number(c.dust_claim || 0);
+                    const n = Number(c.ncv_sett) > 0 ? Number(c.ncv_sett) : Number(c.ncv_claim || 0);
+                    return sum + (gd + m + d + n);
+                  }, 0) / activeCols.length)
+                : 0;
+              const weightedRatePerMT = totalWeightMt > 0 ? (totalAmount / totalWeightMt) : (Number(viewModalData.master.summary_rate_qtel) || 0);
 
-            {/* DEDUCTION BREAKDOWN (TABLE TYPE - MATCHING USER SCREENSHOT) */}
+              return (
+                <div className="space-y-4">
+                  {/* 1. Material Quality & Specification Breakdown Table */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                        1. Material Quality & Specification Breakdown
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">
+                        Grade Weights, Rates & Quality Specs
+                      </span>
+                    </div>
+
+                    <div className="border border-slate-300 rounded-xs overflow-x-auto shadow-2xs">
+                      <table className="w-full text-xs text-left border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-[#eef3f9] border-b-2 border-[#2563eb] text-[10px] font-black uppercase text-slate-800 tracking-wider">
+                            <th className="p-2 border-r border-slate-300 text-center w-10">Col #</th>
+                            <th className="p-2 border-r border-slate-300">Grade</th>
+                            <th className="p-2 border-r border-slate-300">Area</th>
+                            <th className="p-2 border-r border-slate-300">Agency</th>
+                            <th className="p-2 border-r border-slate-300">Marka / Crop</th>
+                            <th className="p-2 border-r border-slate-300 text-right">Quantity (Bales)</th>
+                            <th className="p-2 border-r border-slate-300 text-right">Weight (MT)</th>
+                            <th className="p-2 border-r border-slate-300 text-center bg-cyan-50/70 text-cyan-950">Moisture (%)</th>
+                            <th className="p-2 border-r border-slate-300 text-center bg-amber-50/70 text-amber-950">Dust (%)</th>
+                            <th className="p-2 border-r border-slate-300 text-center bg-rose-50/70 text-rose-950">Total Claim (%)</th>
+                            <th className="p-2 border-r border-slate-300 text-right">Rate (₹/Qtl)</th>
+                            <th className="p-2 text-right">Amount (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {activeCols.map((col, idx) => {
+                            const wtMt = getColWtMt(col);
+                            const amt = getColAmount(col);
+                            const moistVal = Number(col.moist_final) > 0 ? Number(col.moist_final) : (Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0));
+                            const dustVal = Number(col.dust_final) > 0 ? Number(col.dust_final) : (Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0));
+                            const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
+                            const ncvVal = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
+                            const totalClaimVal = gdVal + moistVal + dustVal + ncvVal;
+
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="p-2 border-r border-slate-200 font-bold text-center text-slate-700">{col.col_index || idx + 1}</td>
+                                <td className="p-2 border-r border-slate-200 font-black text-blue-900">{resolveGradeName(col.grade)}</td>
+                                <td className="p-2 border-r border-slate-200 uppercase text-slate-700">{col.area || '-'}</td>
+                                <td className="p-2 border-r border-slate-200 uppercase text-slate-700">{col.agency || '-'}</td>
+                                <td className="p-2 border-r border-slate-200 font-mono text-[11px] text-slate-700">{col.marka_crop || '-'}</td>
+                                <td className="p-2 border-r border-slate-200 text-right font-mono font-bold text-slate-900">{col.quantity || 0}</td>
+                                <td className="p-2 border-r border-slate-200 text-right font-mono font-black text-slate-900">{wtMt.toFixed(3)}</td>
+                                <td className="p-2 border-r border-slate-200 text-center font-mono font-bold text-cyan-950 bg-cyan-50/30">
+                                  {moistVal > 0 ? `${moistVal.toFixed(2)}%` : '-'}
+                                  {Number(col.moist_claim) > 0 && Number(col.moist_claim) !== moistVal && (
+                                    <span className="block text-[8.5px] text-slate-400 font-sans">Claim: {Number(col.moist_claim).toFixed(1)}%</span>
+                                  )}
+                                </td>
+                                <td className="p-2 border-r border-slate-200 text-center font-mono font-bold text-amber-950 bg-amber-50/30">
+                                  {dustVal > 0 ? `${dustVal.toFixed(2)}%` : '-'}
+                                  {Number(col.dust_claim) > 0 && Number(col.dust_claim) !== dustVal && (
+                                    <span className="block text-[8.5px] text-slate-400 font-sans">Claim: {Number(col.dust_claim).toFixed(1)}%</span>
+                                  )}
+                                </td>
+                                <td className="p-2 border-r border-slate-200 text-center font-mono font-bold text-rose-800 bg-rose-50/30">
+                                  {totalClaimVal > 0 ? `${totalClaimVal.toFixed(2)}%` : '0.00%'}
+                                </td>
+                                <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-800 font-bold">
+                                  ₹{Number(col.rate_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-2 text-right font-mono font-black text-slate-950 bg-slate-50/40">
+                                  ₹{amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-[#f1f5f9] border-t-2 border-slate-400 font-bold text-xs text-slate-800">
+                            <td colSpan={5} className="p-2 border-r border-slate-300 text-right font-black uppercase text-[10.5px] text-slate-700">
+                              Total / Weighted Average:
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-right font-mono font-black text-indigo-950">
+                              {totalBales}
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-right font-mono font-black text-indigo-950">
+                              {totalWeightMt.toFixed(3)} MT
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-center font-mono font-black text-cyan-950 bg-cyan-100/40">
+                              {avgMoisture > 0 ? `${avgMoisture.toFixed(2)}%` : '-'}
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-center font-mono font-black text-amber-950 bg-amber-100/40">
+                              {avgDust > 0 ? `${avgDust.toFixed(2)}%` : '-'}
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-center font-mono font-black text-rose-900 bg-rose-100/40">
+                              {avgClaim > 0 ? `${avgClaim.toFixed(2)}%` : '0.00%'}
+                            </td>
+                            <td className="p-2 border-r border-slate-300 text-right font-mono font-black text-slate-800">
+                              ₹{(weightedRatePerMT / 10).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Qtl
+                            </td>
+                            <td className="p-2 text-right font-mono font-black text-slate-950 text-xs bg-slate-100">
+                              ₹{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 2. Quality Audit & Grade Specifications Matrix (Deductions / Claims Audit Sheet) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                        2. Quality Audit & Grade Specifications Matrix
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">
+                        Claim (%) • Settled (%) • Final (%) Audit Metrics
+                      </span>
+                    </div>
+
+                    <div className="border border-slate-300 rounded-xs overflow-x-auto shadow-2xs">
+                      <table className="w-full text-[10px] text-left border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-[#ffd2ce] border-b border-slate-400 font-extrabold uppercase text-[#dc2626] text-center">
+                            <th className="p-2 border-r border-slate-300 w-36 text-left">Audit Parameter</th>
+                            {activeCols.map((col, idx) => (
+                              <th key={idx} colSpan={3} className="p-2 border-r border-slate-300 text-center font-black">
+                                Col {col.col_index || idx + 1}: {resolveGradeName(col.grade)}
+                              </th>
+                            ))}
+                          </tr>
+                          <tr className="bg-[#fff1f0] border-b border-slate-300 font-black uppercase text-slate-700 text-[9px] text-center">
+                            <th className="p-1.5 border-r border-slate-300 text-left">Quality Metric</th>
+                            {activeCols.map((_, idx) => (
+                              <React.Fragment key={idx}>
+                                <th className="p-1 border-r border-slate-200 text-rose-800 font-bold">Claim (%)</th>
+                                <th className="p-1 border-r border-slate-200 text-blue-900 font-bold">Sett (%)</th>
+                                <th className="p-1 border-r border-slate-300 text-emerald-900 font-black bg-emerald-50/70">Final (%)</th>
+                              </React.Fragment>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 font-mono text-center font-bold">
+                          {/* Row: Grade Down (%) */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              Grade Down (%)
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const claimVal = Number(col.gd_claim) || 0;
+                              const settVal = Number(col.gd_sett) || 0;
+                              const finalVal = settVal > 0 ? settVal : claimVal;
+                              return (
+                                <React.Fragment key={idx}>
+                                  <td className="p-1 border-r border-slate-200 text-slate-700">{claimVal > 0 ? `${claimVal.toFixed(1)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-200 text-blue-900">{settVal > 0 ? `${settVal.toFixed(1)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-300 text-emerald-900 bg-emerald-50/40 font-black">{finalVal > 0 ? `${finalVal.toFixed(1)}%` : '0.0%'}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Row: Moisture (%) */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              Moisture (%)
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const claimVal = Number(col.moist_claim) || 0;
+                              const settVal = Number(col.moist_sett) || 0;
+                              const finalVal = Number(col.moist_final) > 0 ? Number(col.moist_final) : (settVal > 0 ? settVal : claimVal);
+                              return (
+                                <React.Fragment key={idx}>
+                                  <td className="p-1 border-r border-slate-200 text-slate-700">{claimVal > 0 ? `${claimVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-200 text-blue-900">{settVal > 0 ? `${settVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-300 text-emerald-900 bg-emerald-50/40 font-black">{finalVal > 0 ? `${finalVal.toFixed(2)}%` : '0.00%'}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Row: Dust (%) */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              Dust (%)
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const claimVal = Number(col.dust_claim) || 0;
+                              const settVal = Number(col.dust_sett) || 0;
+                              const finalVal = Number(col.dust_final) > 0 ? Number(col.dust_final) : (settVal > 0 ? settVal : claimVal);
+                              return (
+                                <React.Fragment key={idx}>
+                                  <td className="p-1 border-r border-slate-200 text-slate-700">{claimVal > 0 ? `${claimVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-200 text-blue-900">{settVal > 0 ? `${settVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-300 text-emerald-900 bg-emerald-50/40 font-black">{finalVal > 0 ? `${finalVal.toFixed(2)}%` : '0.00%'}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Row: NCV (%) */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              NCV (%)
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const claimVal = Number(col.ncv_claim) || 0;
+                              const settVal = Number(col.ncv_sett) || 0;
+                              const finalVal = Number(col.ncv_final) > 0 ? Number(col.ncv_final) : (settVal > 0 ? settVal : claimVal);
+                              return (
+                                <React.Fragment key={idx}>
+                                  <td className="p-1 border-r border-slate-200 text-slate-700">{claimVal > 0 ? `${claimVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-200 text-blue-900">{settVal > 0 ? `${settVal.toFixed(2)}%` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-300 text-emerald-900 bg-emerald-50/40 font-black">{finalVal > 0 ? `${finalVal.toFixed(2)}%` : '0.00%'}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Row: PO/Grade/L.Dely Claim */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              PO / Delivery Penalty
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const claimVal = Number(col.po_grade_claim) || 0;
+                              const settVal = Number(col.po_grade_sett) || 0;
+                              const finalVal = settVal > 0 ? settVal : claimVal;
+                              return (
+                                <React.Fragment key={idx}>
+                                  <td className="p-1 border-r border-slate-200 text-slate-700">{claimVal > 0 ? `${claimVal.toFixed(1)}` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-200 text-blue-900">{settVal > 0 ? `${settVal.toFixed(1)}` : '-'}</td>
+                                  <td className="p-1 border-r border-slate-300 text-emerald-900 bg-emerald-50/40 font-black">{finalVal > 0 ? `${finalVal.toFixed(1)}` : '-'}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          {/* Row: Audit Remarks */}
+                          <tr className="hover:bg-slate-50">
+                            <td className="p-1.5 border-r border-slate-200 bg-slate-50 uppercase text-slate-700 font-sans text-[9.5px] text-left font-bold">
+                              Audit Remarks
+                            </td>
+                            {activeCols.map((col, idx) => (
+                              <td key={idx} colSpan={3} className="p-1 border-r border-slate-300 font-sans font-normal text-slate-600 text-center italic text-[9.5px]">
+                                {col.remark || '-'}
+                              </td>
+                            ))}
+                          </tr>
+
+                          {/* Row: Total Quality Claim */}
+                          <tr className="bg-rose-50/70 hover:bg-rose-100 border-t-2 border-rose-300">
+                            <td className="p-1.5 border-r border-slate-200 text-red-900 uppercase font-sans text-[9.5px] text-left font-black">
+                              Total Quality Claim
+                            </td>
+                            {activeCols.map((col, idx) => {
+                              const gd = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
+                              const m = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+                              const d = Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0);
+                              const n = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
+                              const total = gd + m + d + n;
+                              return (
+                                <td key={idx} colSpan={3} className="p-1.5 border-r border-slate-300 text-center font-black text-rose-700 bg-rose-100/60 text-[11px]">
+                                  {total > 0 ? `${total.toFixed(2)}%` : '0.00%'}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Summary Badges underneath Audit Grid */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-xs text-[10px] font-bold text-slate-700">
+                      <div>
+                        <span>Moisture Claim % (Average): </span>
+                        <strong className="text-cyan-900 font-mono font-black text-[11px]">
+                          {viewModalData.master.summary_rate_wt_claim ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : `${avgMoisture.toFixed(2)}%`}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Rate / M.T (Weighted): </span>
+                        <strong className="text-slate-900 font-mono font-black text-[11px]">
+                          ₹{weightedRatePerMT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Delivery Claim(-): </span>
+                        <strong className="text-rose-700 font-mono font-black text-[11px]">
+                          ₹{Number(viewModalData.master.summary_delivery_claim || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 3. DEDUCTION BREAKDOWN (TABLE TYPE - MATCHING USER SCREENSHOT) */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between border-b border-slate-300 pb-1">
                 <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                  2. Deduction Breakdown
+                  3. Deduction Breakdown
                 </h4>
                 <span className="text-[10px] font-bold text-slate-500 uppercase">
                   Inspection Deductions & Penalties
@@ -4434,54 +4743,140 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               </div>
             </div>
 
-            {/* Financial Summary & Payable Calculation */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-300 p-3 rounded-xs text-xs">
-              <div className="space-y-1.5">
-                <p className="font-black text-slate-700 uppercase text-[10px] border-b border-slate-200 pb-1">Valuation Calculations</p>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Material Value (+):</span>
-                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.val_material_value || viewModalData.master.summary_material_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Additional Charges (+):</span>
-                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.val_add_amt || viewModalData.master.summary_misc_add || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Premium Amount (+):</span>
-                  <span className="font-mono font-bold text-emerald-700">₹ {Number(viewModalData.master.val_premium_amt || viewModalData.master.summary_premium_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Quality Claims & Deductions (-):</span>
-                  <span className="font-mono font-bold text-rose-700">₹ {Number(viewModalData.master.summary_deduction_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
+            {/* 4. Financial Valuation Matrix & Settlement Outflow */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between border-b border-slate-300 pb-1">
+                <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">
+                  4. Financial Valuation & Resolved Payable Outflow
+                </h4>
+                <span className="text-[10px] font-bold text-slate-500 uppercase">
+                  Comprehensive Ledger Account Reconciliation
+                </span>
               </div>
 
-              <div className="space-y-1.5 md:border-l md:border-slate-300 md:pl-4">
-                <p className="font-black text-slate-700 uppercase text-[10px] border-b border-slate-200 pb-1">Final Settlement Outflow</p>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Less Advance (-):</span>
-                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_less_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 border border-slate-300 p-3.5 rounded-xs text-xs">
+                {/* Left Side: Valuation Calculations */}
+                <div className="space-y-1.5">
+                  <p className="font-black text-slate-800 uppercase text-[10.5px] border-b border-slate-200 pb-1 flex items-center justify-between">
+                    <span>Valuation Calculations</span>
+                    <span className="text-[8.5px] text-slate-500 font-normal">Material & Claims Matrix</span>
+                  </p>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Material Value (+):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ₹ {Number(viewModalData.master.val_material_value || viewModalData.master.summary_material_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Additional Charges (+):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ₹ {Number(viewModalData.master.val_add_amt || viewModalData.master.summary_misc_add || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Premium Amount (+):</span>
+                    <span className="font-mono font-bold text-emerald-700">
+                      ₹ {Number(viewModalData.master.val_premium_amt || viewModalData.master.summary_premium_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Quality Claims & Deductions (-):</span>
+                    <span className="font-mono font-bold text-rose-700">
+                      ₹ {Number(viewModalData.master.summary_deduction_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  {Number(viewModalData.master.val_less_amt) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Val Less Amount (-):</span>
+                      <span className="font-mono font-bold text-rose-700">
+                        ₹ {Number(viewModalData.master.val_less_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  {Number(viewModalData.master.val_qty_claim) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Quantity Claim (-):</span>
+                      <span className="font-mono font-bold text-rose-700">
+                        ₹ {Number(viewModalData.master.val_qty_claim || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  {Number(viewModalData.master.val_ex_short) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Ex/Short Amount (-):</span>
+                      <span className="font-mono font-bold text-rose-700">
+                        ₹ {Number(viewModalData.master.val_ex_short || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  {Number(viewModalData.master.summary_delivery_claim) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Delivery Claim(-) :</span>
+                      <span className="font-mono font-bold text-rose-700">
+                        ₹ {Number(viewModalData.master.summary_delivery_claim || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">On Account Advance (-):</span>
-                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_on_ac_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">APMC Fees (-):</span>
-                  <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_apmc_fees || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between pt-1.5 border-t border-slate-300 text-sm">
-                  <span className="font-black uppercase text-slate-900">Net Payable Amount:</span>
-                  <span className="font-mono font-black text-emerald-800">₹ {Number(viewModalData.master.payable_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+
+                {/* Right Side: Final Settlement Outflow */}
+                <div className="space-y-1.5 md:border-l md:border-slate-300 md:pl-4">
+                  <p className="font-black text-slate-800 uppercase text-[10.5px] border-b border-slate-200 pb-1 flex items-center justify-between">
+                    <span>Final Settlement Outflow</span>
+                    <span className="text-[8.5px] text-slate-500 font-normal">Advance & Tax Adjustments</span>
+                  </p>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Less Advance (-):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ₹ {Number(viewModalData.master.final_less_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">On Account Advance (-):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ₹ {Number(viewModalData.master.final_on_ac_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">APMC Fees (-):</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      ₹ {Number(viewModalData.master.final_apmc_fees || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  {Number(viewModalData.master.final_cst_pct_amt) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">C.S.T. Tax ({viewModalData.master.final_cst_pct_amt}%):</span>
+                      <span className="font-mono font-bold text-emerald-800">
+                        ₹ {Number(viewModalData.master.final_cst_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Net Resolved Payable Banner */}
+                  <div className="mt-2 bg-[#0b1329] border border-slate-800 text-white rounded p-2.5 shadow-inner">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-black uppercase tracking-wider text-[#00e676] text-[11px]">
+                        RESOLVED NET PAYABLE AMOUNT:
+                      </span>
+                      <span className="font-mono font-black text-base text-[#00e676]">
+                        ₹ {Number(viewModalData.master.payable_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Signature Area */}
-            <div className="pt-6 grid grid-cols-3 text-center text-xs font-bold text-slate-700">
-              <div className="border-t border-slate-400 pt-1">Prepared By</div>
-              <div className="border-t border-slate-400 pt-1">Quality Inspector</div>
-              <div className="border-t border-slate-400 pt-1">Accounts Authorized Signatory</div>
+            <div className="pt-6 grid grid-cols-2 gap-16 text-center text-xs font-bold text-slate-700">
+              <div className="border-t-2 border-slate-500 pt-1.5">
+                <p className="uppercase tracking-wider font-black text-slate-800">Prepared By</p>
+                <p className="text-[9px] text-slate-400 font-sans mt-0.5">Commercial & Settlement Department</p>
+              </div>
+              <div className="border-t-2 border-slate-500 pt-1.5">
+                <p className="uppercase tracking-wider font-black text-slate-800">Quality Inspector</p>
+                <p className="text-[9px] text-slate-400 font-sans mt-0.5">Quality Audit & Mill Inspection Division</p>
+              </div>
             </div>
           </div>
         </PrintModal>
