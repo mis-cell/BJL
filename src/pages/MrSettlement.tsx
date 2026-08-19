@@ -1754,46 +1754,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     const calculatedRateWtClaim = avgFinalMoisturePct;
 
-    // Material valuation summaries
-    const finalExShort = Number(masterData.val_ex_short) || 0;
-    const finalLessAmount = 0;
-
-    // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
-    const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
-    const premiumWeightQtl = (masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0)
-      ? Number(masterData.summary_premium_wt)
-      : Number(masterData.summary_less_amount || 0);
-    const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
-    const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
-
-    // Valuation calculation = Material Value + Add Amt + Premium Amt - Deduction Amount - Ded Claim Total - Qty Claim - Val Less Amt - Ex/Short
-    const calculatedValuationVal = Number((
-      calculatedMaterialValue 
-      + Number(masterData.val_add_amt || 0) 
-      + calculatedPremiumAmount 
-      - calculatedDeductionAmount 
-      - finalLessAmount 
-      - Number(masterData.val_qty_claim || 0) 
-      - Number(masterData.val_less_amt || 0) 
-      - finalExShort
-    ).toFixed(2));
-
-    // APMC Fees = Arrival APMC Fees - Actual APMC Fees
-    const calculatedApmcFees = Number((calculatedMaterialValue * 0.01).toFixed(2));
-    const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
-    const actualApmcFees = Number(masterData.actual_apmc_fees) || (calculatedApmcFees > 0 ? calculatedApmcFees : 0);
-    const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
-    const cstAmt = (calculatedValuationVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
-
-    // RESOLVED PAYABLE ACCOUNT = Valuation - Less Adv - On/Ac Adv - APMC Fees + CST
-    const calculatedPayable = Number((
-      calculatedValuationVal 
-      - Number(masterData.final_less_adv || 0) 
-      - Number(masterData.final_on_ac_adv || 0) 
-      - finalApmcFees 
-      + cstAmt
-    ).toFixed(2));
-
     // Calculate Delivery Claim based on Delivery To (from Final P.O) vs Receipt Date (Arrival Date from TEMPORARY M.R)
     const receiptDateObj = parseDateOnly(masterData.arrival_date || masterData.sett_date);
     const deliveryToObj = parseDateOnly(selectedPoData?.delivery_to);
@@ -1811,10 +1771,56 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
     }
 
+    const deliveryClaimAmt = Number(masterData.summary_delivery_claim) > 0 ? Number(masterData.summary_delivery_claim) : calculatedDeliveryClaim;
+
+    // Material valuation summaries
+    const finalExShort = Number(masterData.val_ex_short) || 0;
+    const finalLessAmount = 0;
+
+    // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
+    const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
+    const premiumWeightQtl = (masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0)
+      ? Number(masterData.summary_premium_wt)
+      : Number(masterData.summary_less_amount || 0);
+    const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
+    const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
+
+    // Valuation calculation = Material Value + Add Amt + Premium Amt - Deduction Amount - Ded Claim Total - Qty Claim - Val Less Amt - Ex/Short - Delivery Claim(-)
+    const calculatedValuationVal = Number((
+      calculatedMaterialValue 
+      + Number(masterData.val_add_amt || 0) 
+      + calculatedPremiumAmount 
+      - calculatedDeductionAmount 
+      - finalLessAmount 
+      - Number(masterData.val_qty_claim || 0) 
+      - Number(masterData.val_less_amt || 0) 
+      - finalExShort
+      - deliveryClaimAmt
+    ).toFixed(2));
+
+    // APMC Fees = Arrival APMC Fees - Actual APMC Fees
+    // Negative APMC Fees (e.g. 0 - 1132.50 = -1132.50) is deducted from RESOLVED PAYABLE ACCOUNT
+    const calculatedApmcFees = Number((calculatedMaterialValue * 0.01).toFixed(2));
+    const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
+    const actualApmcFees = Number(masterData.actual_apmc_fees) || (calculatedApmcFees > 0 ? calculatedApmcFees : 0);
+    const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
+    const cstAmt = (calculatedValuationVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
+
+    // RESOLVED PAYABLE ACCOUNT = Valuation - Less Adv - On/Ac Adv + finalApmcFees (which deducts when negative e.g. -1132.50) + CST
+    const calculatedPayable = Number((
+      calculatedValuationVal 
+      - Number(masterData.final_less_adv || 0) 
+      - Number(masterData.final_on_ac_adv || 0) 
+      + finalApmcFees 
+      + cstAmt
+    ).toFixed(2));
+
     // Only update if changes to prevent cycling
     setMasterData(prev => {
       const nextActualApmcFees = prev.actual_apmc_fees || calculatedApmcFees;
       const targetRateAffCdCl = prev.summary_rate_aff_cd_cl > 0 ? prev.summary_rate_aff_cd_cl : nextRatePerMt;
+
+      const targetDeliveryClaim = (prev.summary_delivery_claim !== undefined && Number(prev.summary_delivery_claim) > 0) ? prev.summary_delivery_claim : calculatedDeliveryClaim;
 
       if (
         prev.summary_material_value !== calculatedMaterialValue ||
@@ -1825,7 +1831,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         prev.summary_rate_wt_claim !== calculatedRateWtClaim ||
         prev.summary_rate_aff_cd_cl !== targetRateAffCdCl ||
         prev.val_premium_amt !== calculatedPremiumAmount ||
-        prev.summary_delivery_claim !== calculatedDeliveryClaim ||
+        prev.summary_delivery_claim !== targetDeliveryClaim ||
         (!prev.actual_apmc_fees && calculatedApmcFees > 0 && prev.actual_apmc_fees !== nextActualApmcFees) ||
         (calculatedRatePerMt > 0 && (prev.summary_rate_qtel !== nextRatePerMt || prev.rate_qntl !== nextRatePerMt))
       ) {
@@ -1844,13 +1850,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_rate_aff_cd_cl: targetRateAffCdCl,
           summary_rate_wt_claim: calculatedRateWtClaim,
           val_premium_amt: calculatedPremiumAmount,
-          summary_delivery_claim: calculatedDeliveryClaim
+          summary_delivery_claim: targetDeliveryClaim
         };
       }
       return prev;
     });
 
-  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
+  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
 
   // Handle master updates
   const handleMasterChange = (field: keyof SettlementMaster, value: any) => {
@@ -3038,7 +3044,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     {/* Row 2 */}
                     <div className="flex flex-col">
                       <div className="group relative flex items-center gap-1 mb-0.5">
-                        <label className="text-[9px] uppercase font-bold text-slate-600">Delivery Claim</label>
+                        <label className="text-[9px] uppercase font-bold text-slate-600">Delivery Claim(-)</label>
                         <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
                         {selectedPoData?.delivery_to && (
                           <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
@@ -3428,7 +3434,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-xl leading-relaxed font-normal text-left normal-case">
                           <p className="text-yellow-300 font-bold border-b border-slate-700 pb-1 mb-1">Payable Account Formula</p>
                           <p className="font-mono text-cyan-200">
-                            (Material Value - Deduction Amount (-) - Ded Claim Total (-) - Qty Claim - Val Less Amt - Ex/Short + Premium Amt (+) + Add Amt (+)) - Less Adv (-) - On/Ac Adv - APMC Fees + CST Tax
+                            (Material Value - Deduction Amount (-) - Ded Claim Total (-) - Qty Claim - Val Less Amt - Ex/Short - Delivery Claim(-) + Premium Amt (+) + Add Amt (+)) - Less Adv (-) - On/Ac Adv + APMC Fees + CST Tax
                           </p>
                         </div>
                       </div>
