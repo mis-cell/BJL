@@ -143,6 +143,7 @@ interface InspectionDetailRow {
   tolerable?: string;
   premium?: string;
   is_premium?: boolean;
+  amount?: number;
   row_remarks?: string;
   jqi_remarks?: string;
   jci_remarks?: string;
@@ -150,6 +151,20 @@ interface InspectionDetailRow {
   is_auto?: boolean;
   auto_fields?: string[];
 }
+
+// Calculate Row Amount in ₹
+export const calculateRowAmount = (row: InspectionDetailRow): number => {
+  if (row.amount !== undefined && row.amount !== null && Number(row.amount) > 0) {
+    return Number(Number(row.amount).toFixed(2));
+  }
+  const rate = Number(row.rate) || Number(row.rate_qntl) || 0;
+  const wtMt = calculateQtyInMt(row);
+  if (rate > 0 && wtMt > 0) {
+    const ratePerMt = rate < 1000 ? rate * 1000 : rate * 10;
+    return Number((wtMt * ratePerMt).toFixed(2));
+  }
+  return 0;
+};
 
 export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionDetailRow): boolean => {
   if (row.is_auto === false) return false;
@@ -266,6 +281,7 @@ const detailFieldsConfig: { name: keyof InspectionDetailRow; label: string; type
   { name: "chotta_grade", label: "Chotta & Habi Jabi Grade", type: "text" },
   { name: "tolerable", label: "Tolerable", type: "select" },
   { name: "premium", label: "Premium (MT Mode)", type: "select" },
+  { name: "amount", label: "Amount (₹)", type: "number" },
   { name: "row_remarks", label: "Remarks", type: "text" },
   { name: "jqi_remarks", label: "JCI Remarks", type: "text" }
 ];
@@ -1419,6 +1435,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           tolerable: row.tolerable || "Yes",
           premium: row.premium !== undefined && row.premium !== null ? String(row.premium) : (row.is_premium ? "Yes" : "No"),
           is_premium: Boolean(row.is_premium || row.premium === "Yes"),
+          amount: Number(row.amount !== undefined && row.amount !== null ? row.amount : calculateRowAmount(row)) || 0,
           row_remarks: row.row_remarks || "",
           jqi_remarks: row.jqi_remarks || "",
           jci_remarks: row.jci_remarks || row.jqi_remarks || ""
@@ -2336,6 +2353,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           <span className="text-[9px] font-semibold text-blue-100 opacity-90">(Show Qty in MT)</span>
                         </div>
                       </th>
+                      <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[125px] bg-gradient-to-b from-[#1e40af] to-[#1e3a8a] text-white font-extrabold shadow-inner">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span>Amount</span>
+                          <span className="text-[9px] font-semibold text-amber-300 font-mono">₹ Total</span>
+                        </div>
+                      </th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">Remarks</th>
                       <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">JCI Remarks</th>
                       <th rowSpan={2} className="p-2 text-center sticky right-0 bg-[#1e3a8a] z-20 min-w-[190px]">Row Actions</th>
@@ -3034,6 +3057,29 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 {(row.is_premium || row.premium === "Yes" || (row.premium && row.premium.toString().toLowerCase() !== "no" && row.premium.toString().trim() !== "")) && (
                                   <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
                                     {calculateQtyInMt(row).toFixed(3)} MT
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Amount (₹) */}
+                            <td className="p-1.5 border-r border-slate-200 text-center min-w-[125px]">
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="relative w-full">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">₹</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={row.amount !== undefined && row.amount !== null ? row.amount : (calculateRowAmount(row) > 0 ? calculateRowAmount(row) : "")}
+                                    onChange={(e) => handleDetailChange(idx, "amount", parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                    className="w-full border border-slate-300 rounded pl-5 pr-2 py-1 text-xs bg-amber-50/20 font-mono font-bold text-slate-900 text-right focus:ring-1 focus:ring-blue-500"
+                                    title="Amount in ₹"
+                                  />
+                                </div>
+                                {calculateRowAmount(row) > 0 && (!row.amount || Number(row.amount) === calculateRowAmount(row)) && (
+                                  <span className="text-[9px] font-mono text-emerald-700 font-bold">
+                                    ₹{calculateRowAmount(row).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                   </span>
                                 )}
                               </div>
