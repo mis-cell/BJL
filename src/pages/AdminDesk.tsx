@@ -79,10 +79,6 @@ const TABLES: TableDef[] = [
   { name: "userlog_master", label: "User Log Master", icon: Terminal, pk: "id" },
 
   // Jute Mill ERP Tables
-  { name: "p.o_archive", label: "Final P.O Archive", icon: Archive, pk: "po_id" },
-  { name: "m.r_archive", label: "Final M.R Archive", icon: Archive, pk: "final_arrival_id" },
-  { name: "po_archive", label: "PO Archive (po_archive)", icon: Archive, pk: "po_id" },
-  { name: "mr_archive", label: "MR Archive (mr_archive)", icon: Archive, pk: "final_arrival_id" },
   { name: "batch_master", label: "Batch Master", icon: Layers, pk: "code" },
   { name: "sauda_master", label: "Sauda Master", icon: FileText, pk: "sauda_id" },
   { name: "satta_master", label: "Satta Master", icon: FileText, pk: "satta_id" },
@@ -519,26 +515,6 @@ export default function AdminDesk({
   const [sqlResult, setSqlResult] = useState<any>(null);
   const [sqlExecuting, setSqlExecuting] = useState(false);
   const [confirmDeleteTable, setConfirmDeleteTable] = useState<string | null>(null);
-
-  // Archive counts state
-  const [poArchiveCount, setPoArchiveCount] = useState<number>(0);
-  const [mrArchiveCount, setMrArchiveCount] = useState<number>(0);
-
-  useEffect(() => {
-    const fetchArchiveCounts = async () => {
-      if (!supabase) return;
-      try {
-        const { count: poC } = await supabase.from('p.o_archive').select('*', { count: 'exact', head: true });
-        if (poC !== null && poC !== undefined) setPoArchiveCount(poC);
-
-        const { count: mrC } = await supabase.from('m.r_archive').select('*', { count: 'exact', head: true });
-        if (mrC !== null && mrC !== undefined) setMrArchiveCount(mrC);
-      } catch (err) {
-        console.warn("Fetch archive counts error:", err);
-      }
-    };
-    fetchArchiveCounts();
-  }, [selectedTable, activeSchemaTab]);
 
   // Database Offline JSON Backup engine
   const [isExporting, setIsExporting] = useState(false);
@@ -2855,39 +2831,7 @@ export default function AdminDesk({
                    </div>
                  </button>
 
-                 {/* Final P.O Archive Card */}
-                 <button
-                   onClick={() => onNavigate?.("po_archive")}
-                   className="bg-indigo-50 border-2 border-indigo-300 hover:border-indigo-800 active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer group"
-                 >
-                   <div className="p-1 px-1.5 bg-indigo-900 text-white shrink-0 group-hover:bg-indigo-950">
-                     <Archive className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <div className="flex items-center gap-1">
-                       <p className="text-[10px] font-black uppercase tracking-wider text-indigo-950 truncate">Final P.O Archive</p>
-                       <span className="bg-indigo-200 text-indigo-950 text-[8px] font-black px-1 rounded font-mono">{poArchiveCount}</span>
-                     </div>
-                     <p className="text-[8px] text-indigo-700 font-bold uppercase tracking-tight truncate">Table: p.o_archive</p>
-                   </div>
-                 </button>
 
-                 {/* Final M.R Archive Card */}
-                 <button
-                   onClick={() => onNavigate?.("mr_archive")}
-                   className="bg-emerald-50 border-2 border-emerald-300 hover:border-emerald-800 active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer group"
-                 >
-                   <div className="p-1 px-1.5 bg-emerald-800 text-white shrink-0 group-hover:bg-emerald-900">
-                     <Archive className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <div className="flex items-center gap-1">
-                       <p className="text-[10px] font-black uppercase tracking-wider text-emerald-950 truncate">Final M.R Archive</p>
-                       <span className="bg-emerald-200 text-emerald-950 text-[8px] font-black px-1 rounded font-mono">{mrArchiveCount}</span>
-                     </div>
-                     <p className="text-[8px] text-emerald-700 font-bold uppercase tracking-tight truncate">Table: m.r_archive</p>
-                   </div>
-                 </button>
 
                  <button
                    onClick={() => onNavigate?.("settings")}

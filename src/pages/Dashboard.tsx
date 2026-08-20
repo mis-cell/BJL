@@ -1058,7 +1058,7 @@ export default function Dashboard({
   ];
 
   const isModuleAllowed = (id: string) => {
-    if (id === 'admindesk' || id === 'po_archive' || id === 'mr_archive' || id === 'sms_sauda') return true;
+    if (id === 'admindesk' || id === 'sms_sauda') return true;
     if (!allowedModules) return true;
     if (allowedModules.includes('*')) return true;
     if (isAdmin) return true;
@@ -1285,26 +1285,6 @@ export default function Dashboard({
           step: '5.1',
           start: '#121317',
           end: '#323B42'
-        },
-        {
-          id: 'po_archive',
-          mappedId: 'po_archive',
-          label: 'FINAL P.O ARCHIVE',
-          icon: Archive,
-          desc: 'TABLE: P.O_ARCHIVE',
-          step: '5.2',
-          start: '#4338ca',
-          end: '#3730a3'
-        },
-        {
-          id: 'mr_archive',
-          mappedId: 'mr_archive',
-          label: 'FINAL M.R ARCHIVE',
-          icon: Archive,
-          desc: 'TABLE: M.R_ARCHIVE',
-          step: '5.3',
-          start: '#059669',
-          end: '#047857'
         }
       ]
     }

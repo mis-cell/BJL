@@ -2300,81 +2300,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           .or(filterStr);
       }
 
-      // AUTOMATIC ARCHIVE SYNC: Move Final P.O Data to p.o_archive & po_archive
-      if (masterData.po_no) {
-        const { data: poRows, error: poFetchErr } = await supabase
-          .from('purchase_master')
-          .select('*')
-          .eq('po_no', masterData.po_no);
 
-        if (poFetchErr) throw poFetchErr;
-
-        if (poRows && poRows.length > 0) {
-          const poRecord = { ...poRows[0], status: 'settled', archived_at: new Date().toISOString() };
-          delete poRecord.po_id;
-          const { error: poArch1Err } = await supabase.from('p.o_archive').upsert(poRecord, { onConflict: 'po_no' });
-          if (poArch1Err) throw poArch1Err;
-          const { error: poArch2Err } = await supabase.from('po_archive').upsert(poRecord, { onConflict: 'po_no' });
-          if (poArch2Err) throw poArch2Err;
-        }
-      }
-
-      // AUTOMATIC ARCHIVE SYNC: Move Final M.R Data to m.r_archive & mr_archive
-      if (targetMrNo || masterData.po_no) {
-        let mrRows: any[] = [];
-        if (targetMrNo) {
-          const { data: res1 } = await supabase
-            .from('final_arrival')
-            .select('*')
-            .or(`final_arrival_no.eq.${targetMrNo},mr_no.eq.${targetMrNo}`);
-          if (res1 && res1.length > 0) mrRows = res1;
-        }
-        if (mrRows.length === 0 && masterData.po_no) {
-          const { data: res2 } = await supabase
-            .from('final_arrival')
-            .select('*')
-            .eq('po_no', masterData.po_no);
-          if (res2 && res2.length > 0) mrRows = res2;
-        }
-
-        if (mrRows.length > 0) {
-          for (const mrItem of mrRows) {
-            const mrRecord = {
-              ...mrItem,
-              mr_no: mrItem.mr_no || mrItem.final_arrival_no || targetMrNo,
-              status: 'settled',
-              archived_at: new Date().toISOString()
-            };
-            delete mrRecord.final_arrival_id;
-            const { error: mrArch1Err } = await supabase.from('m.r_archive').upsert(mrRecord, { onConflict: 'final_arrival_id' });
-            if (mrArch1Err) throw mrArch1Err;
-            const { error: mrArch2Err } = await supabase.from('mr_archive').upsert(mrRecord, { onConflict: 'final_arrival_id' });
-            if (mrArch2Err) throw mrArch2Err;
-          }
-        } else {
-          const synthMrRecord = {
-            final_arrival_no: targetMrNo || `MR-${Date.now().toString().slice(-6)}`,
-            mr_no: targetMrNo || `MR-${Date.now().toString().slice(-6)}`,
-            po_no: masterData.po_no || '',
-            arrival_date: masterData.sett_date || new Date().toISOString().split('T')[0],
-            date: masterData.sett_date || new Date().toISOString().split('T')[0],
-            supplier: masterData.supplier || '',
-            broker: masterData.broker || '',
-            lorry_number: masterData.lorry_number || '',
-            challan_supplier: masterData.chn_supplier || (masterData as any).challan_supplier || masterData.supplier || '',
-            electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
-            chalan_wt: Number(masterData.challan_weight) || 0,
-            net_weight: Number(masterData.electronic_scale_net) || Number(masterData.challan_weight) || 0,
-            quality: qualitySummary || (masterData as any).quality || (masterData as any).grade || '',
-            status: 'settled',
-            archived_at: new Date().toISOString()
-          };
-          const { error: synth1Err } = await supabase.from('m.r_archive').upsert(synthMrRecord, { onConflict: 'final_arrival_no' });
-          if (synth1Err) throw synth1Err;
-          const { error: synth2Err } = await supabase.from('mr_archive').upsert(synthMrRecord, { onConflict: 'final_arrival_no' });
-          if (synth2Err) throw synth2Err;
-        }
-      }
 
       if (onLogEvent) {
         onLogEvent('MR_SETTLEMENT', `Archived settlement for MR [MR: ${masterData.mr_no}] against PO [PO: ${masterData.po_no}] with Payment Status: ${masterData.payment_status || 'Pending'}. Settle Quantity: ${totalSettleQty} MT`);
@@ -2417,15 +2343,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       await supabase.from('mr_settlement_master').delete().eq('mr_no', targetMr);
       await supabase.from('m_r_settlement').delete().eq('mr_no', targetMr);
 
-      // Remove from archives on revert
-      if (targetPoNo) {
-        await supabase.from('p.o_archive').delete().eq('po_no', targetPoNo);
-        await supabase.from('po_archive').delete().eq('po_no', targetPoNo);
-      }
-      if (targetMr) {
-        await supabase.from('m.r_archive').delete().or(`mr_no.eq.${targetMr},final_arrival_no.eq.${targetMr}`);
-        await supabase.from('mr_archive').delete().or(`mr_no.eq.${targetMr},final_arrival_no.eq.${targetMr}`);
-      }
+
 
       // 2. Restore P.O status in purchase_master and sauda_master back to Final P.O (pending/final)
       if (targetPoNo) {

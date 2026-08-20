@@ -246,15 +246,6 @@ export default function LegacyLayout({
       ]
     },
     {
-      id: 'sys_admin',
-      label: 'System Administration',
-      icon: Lock,
-      subItems: [
-        { id: 'po_archive', label: 'FINAL P.O ARCHIVE', icon: Archive, pageId: 'po_archive' },
-        { id: 'mr_archive', label: 'FINAL ARRIVAL ARCHIVE', icon: Archive, pageId: 'mr_archive' },
-      ]
-    },
-    {
       id: 'reports',
       label: 'Reports',
       icon: BarChart3,

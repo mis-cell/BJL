@@ -694,8 +694,6 @@ type Page =
   | "final_arrival"
   | "satta_chart"
   | "sms_sauda"
-  | "po_archive"
-  | "mr_archive"
   | "weight_bridge"
   | "main_gate";
 
@@ -752,12 +750,6 @@ function getPageMeta(pageId: string) {
   }
   if (pageId === "admindesk") {
     return { label: "Admin Desk", icon: Settings };
-  }
-  if (pageId === "po_archive") {
-    return { label: "Final P.O Archive", icon: Archive };
-  }
-  if (pageId === "mr_archive") {
-    return { label: "Final M.R Archive", icon: Archive };
   }
   if (pageId === "payment") {
     return { label: "Payment Module", icon: FileText };
@@ -1531,24 +1523,7 @@ export default function App() {
                   }}
                 />
               </div>
-              <div
-                className={currentPage === "po_archive" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <PurchaseOrder
-                  onClose={() => closePage("po_archive", "dashboard")}
-                  selectedYear={selectedYear}
-                  isTempPo={false}
-                  isArchiveView={true}
-                />
-              </div>
-              <div
-                className={currentPage === "mr_archive" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <FinalArrival
-                  onClose={() => closePage("mr_archive", "dashboard")}
-                  isArchiveView={true}
-                />
-              </div>
+
               <div
                 className={currentPage === "requisition_desk" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
