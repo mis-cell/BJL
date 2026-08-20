@@ -322,7 +322,7 @@ export default function LorryDispatchSystem({
             id: String(row.id),
             gatePassNo: row.gate_pass || row.ticket_number || `GP-${String(row.id).slice(0, 8)}`,
             lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
-            driverPhone: row.driver_phone || "+91 98300 00000",
+            driverPhone: row.driver_number || row.driver_phone || "+91 98300 00000",
             department: dept,
             broker: row.party_name || row.broker || "N/A",
             quality: row.description || row.grade || row.quality || "WN4",
@@ -732,6 +732,7 @@ export default function LorryDispatchSystem({
         ticket_number: gatePassNo,
         gate_pass: gatePassNo,
         lorry_no: formData.lorryNo.toUpperCase(),
+        driver_number: formData.driverPhone,
         driver_phone: formData.driverPhone,
         department: formData.department,
         party_name: formData.broker,
@@ -973,13 +974,13 @@ export default function LorryDispatchSystem({
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.text(`Date/In-Time: ${new Date(lorry.inTime).toLocaleString("en-IN")}`, 4, 29);
-    doc.text(`Out-Time: ${lorry.outTime ? new Date(lorry.outTime).toLocaleString("en-IN") : "N/A"}`, 4, 33);
-    doc.text(`Driver Phone: ${lorry.driverPhone}`, 4, 37);
+    doc.text(`Date/In-Time: ${lorry.entryDate ? lorry.entryDate + " " : ""}${lorry.inTime || "N/A"}`, 4, 29);
+    doc.text(`Date/Out-Time: ${lorry.outDate ? lorry.outDate + " " : ""}${lorry.outTime || "Active"}`, 4, 33);
+    doc.text(`Driver Phone: ${lorry.driverPhone || "N/A"}`, 4, 37);
     doc.text(`Department: ${lorry.department}`, 4, 41);
-    doc.text(`Broker: ${lorry.broker}`, 4, 45);
-    doc.text(`Quality: ${lorry.quality}`, 4, 49);
-    doc.text(`Mokam: ${lorry.mokam} | Marka: ${lorry.marka}`, 4, 53);
+    doc.text(`Broker: ${lorry.broker || "N/A"}`, 4, 45);
+    doc.text(`Quality: ${lorry.quality || lorry.description || "N/A"}`, 4, 49);
+    doc.text(`Mokam: ${lorry.mokam || "N/A"} | Marka: ${lorry.marka || "N/A"}`, 4, 53);
 
     doc.line(4, 55, 72, 55);
 
@@ -2003,12 +2004,15 @@ export default function LorryDispatchSystem({
               </div>
 
               <div className="space-y-1 text-[11px]">
-                <p><strong>Gate Pass:</strong> {selectedLorryForReceipt.gatePassNo}</p>
-                <p><strong>Lorry No:</strong> {selectedLorryForReceipt.lorryNo}</p>
-                <p><strong>Broker:</strong> {selectedLorryForReceipt.broker}</p>
-                <p><strong>Quality:</strong> {selectedLorryForReceipt.quality}</p>
-                <p><strong>Dept:</strong> {selectedLorryForReceipt.department}</p>
-                <p><strong>In Time:</strong> {selectedLorryForReceipt.inTime && (selectedLorryForReceipt.inTime.includes("AM") || selectedLorryForReceipt.inTime.includes("PM") || selectedLorryForReceipt.inTime.length < 15) ? selectedLorryForReceipt.inTime : (isNaN(new Date(selectedLorryForReceipt.inTime).getTime()) ? selectedLorryForReceipt.inTime : new Date(selectedLorryForReceipt.inTime).toLocaleString("en-IN"))}</p>
+                <p><strong>GATE PASS:</strong> {selectedLorryForReceipt.gatePassNo}</p>
+                <p><strong>LORRY NO:</strong> {selectedLorryForReceipt.lorryNo}</p>
+                <p><strong>Date/In-Time:</strong> {selectedLorryForReceipt.entryDate || ""} {selectedLorryForReceipt.inTime || "N/A"}</p>
+                <p><strong>Date/Out-Time:</strong> {selectedLorryForReceipt.outDate || ""} {selectedLorryForReceipt.outTime || "Active"}</p>
+                <p><strong>Driver Phone:</strong> {selectedLorryForReceipt.driverPhone || "N/A"}</p>
+                <p><strong>Department:</strong> {selectedLorryForReceipt.department}</p>
+                <p><strong>Broker:</strong> {selectedLorryForReceipt.broker || "N/A"}</p>
+                <p><strong>Quality:</strong> {selectedLorryForReceipt.quality || selectedLorryForReceipt.description || "N/A"}</p>
+                <p><strong>Mokam:</strong> {selectedLorryForReceipt.mokam || "N/A"} | <strong>Marka:</strong> {selectedLorryForReceipt.marka || "N/A"}</p>
               </div>
 
               <div className="border-t border-[#C5BA9E] pt-2 space-y-1 text-[11px]">

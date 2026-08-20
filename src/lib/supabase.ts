@@ -137,6 +137,7 @@ if (supabase) {
                 variety TEXT,
                 grading TEXT,
                 marka TEXT,
+           driver_number TEXT,
                 bardana_type TEXT,
                 lorry_number TEXT,
                 total_packets INTEGER,

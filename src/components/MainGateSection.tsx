@@ -696,48 +696,68 @@ export default function MainGateSection({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
-                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Identification & Party</h4>
-                <p><strong>Lorry No:</strong> {inspectLorryModal.lorryNo}</p>
-                <p><strong>Gate Pass:</strong> {inspectLorryModal.gatePassNo}</p>
-                <p><strong>Department:</strong> {inspectLorryModal.department}</p>
-                <p><strong>Party / Broker:</strong> {inspectLorryModal.broker || inspectLorryModal.partyName || "N/A"}</p>
-                <p><strong>Chalan No:</strong> {inspectLorryModal.chalanNo || "N/A"}</p>
+            {inspectLorryModal.department === "Jute" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                  <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Identification & Party</h4>
+                  <p><strong>Lorry No:</strong> {inspectLorryModal.lorryNo}</p>
+                  <p><strong>Gate Pass:</strong> {inspectLorryModal.gatePassNo}</p>
+                  <p><strong>Department:</strong> {inspectLorryModal.department}</p>
+                  <p><strong>Party / Broker:</strong> {inspectLorryModal.broker || inspectLorryModal.partyName || "N/A"}</p>
+                  <p><strong>Chalan No:</strong> {inspectLorryModal.chalanNo || "N/A"}</p>
+                  <p><strong>Driver Phone:</strong> {inspectLorryModal.driverPhone || "N/A"}</p>
+                </div>
+
+                <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                  <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Timestamps & Status</h4>
+                  <p><strong>Entry Date:</strong> {inspectLorryModal.entryDate || "N/A"}</p>
+                  <p><strong>In Time:</strong> {inspectLorryModal.inTime || "N/A"}</p>
+                  <p><strong>Out Date:</strong> {inspectLorryModal.outDate || "N/A"}</p>
+                  <p><strong>Out Time:</strong> {inspectLorryModal.outTime || "Active / Inside Mill"}</p>
+                  <p><strong>Current Status:</strong> <span className="font-bold uppercase text-emerald-800">{inspectLorryModal.status.replace(/_/g, " ")}</span></p>
+                  <p><strong>Current Stage:</strong> {inspectLorryModal.currentStage || inspectLorryModal.department}</p>
+                </div>
+
+                <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                  <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Material & Quality Specs</h4>
+                  <p><strong>Description / Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
+                  <p><strong>Quantity & Unit:</strong> {inspectLorryModal.quantity ? `${inspectLorryModal.quantity} ${inspectLorryModal.unit || 'BALES'}` : "N/A"}</p>
+                  <p><strong>Mokam / Origin:</strong> {inspectLorryModal.mokam || "N/A"}</p>
+                  <p><strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
+                  <p><strong>Grade:</strong> {inspectLorryModal.grade || "N/A"}</p>
+                </div>
+
+                <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                  <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Weighments Summary</h4>
+                  <p><strong>Gate Net Weight:</strong> {inspectLorryModal.gateNetWeight ? `${inspectLorryModal.gateNetWeight.toLocaleString()} KG` : "0 KG"}</p>
+                  <p><strong>Mill Gross:</strong> {inspectLorryModal.millGrossWeight ? `${inspectLorryModal.millGrossWeight.toLocaleString()} KG` : "N/A"}</p>
+                  <p><strong>Mill Tare:</strong> {inspectLorryModal.millTareWeight ? `${inspectLorryModal.millTareWeight.toLocaleString()} KG` : "N/A"}</p>
+                  <p><strong>Electric Gross:</strong> {inspectLorryModal.electricGrossWeight ? `${inspectLorryModal.electricGrossWeight.toLocaleString()} KG` : "N/A"}</p>
+                  <p><strong>Electric Tare:</strong> {inspectLorryModal.electricTareWeight ? `${inspectLorryModal.electricTareWeight.toLocaleString()} KG` : "N/A"}</p>
+                  <p className="font-bold text-[#1E331B] pt-1 border-t border-[#C5BA9E]">
+                    Final Net Weight: {(inspectLorryModal.finalNetWeight || inspectLorryModal.gateNetWeight || 0).toLocaleString()} KG
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#FAF7F0] p-5 rounded-2xl border border-[#C5BA9E] space-y-3 text-xs font-mono">
+                <p><strong>GATE PASS:</strong> {inspectLorryModal.gatePassNo}</p>
+                <p><strong>LORRY NO:</strong> {inspectLorryModal.lorryNo}</p>
+                <p><strong>Date/In-Time:</strong> {inspectLorryModal.entryDate || ""} {inspectLorryModal.inTime || "N/A"}</p>
+                <p><strong>Date/Out-Time:</strong> {inspectLorryModal.outDate || ""} {inspectLorryModal.outTime || "Active"}</p>
                 <p><strong>Driver Phone:</strong> {inspectLorryModal.driverPhone || "N/A"}</p>
+                <p><strong>Department:</strong> {inspectLorryModal.department}</p>
+                <p><strong>Broker:</strong> {inspectLorryModal.broker || "N/A"}</p>
+                <p><strong>Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
+                <p><strong>Mokam:</strong> {inspectLorryModal.mokam || "N/A"} | <strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
+                <div className="border-t border-[#C5BA9E] pt-2 space-y-1">
+                  <p className="font-bold uppercase">WEIGHMENT BREAKDOWN (KG)</p>
+                  <p className="font-extrabold text-sm text-[#1E331B]">
+                    FINAL NET DISPATCH: {(inspectLorryModal.finalNetWeight || inspectLorryModal.gateNetWeight || 0).toLocaleString()} KG
+                  </p>
+                </div>
               </div>
-
-              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
-                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Timestamps & Status</h4>
-                <p><strong>Entry Date:</strong> {inspectLorryModal.entryDate || "N/A"}</p>
-                <p><strong>In Time:</strong> {inspectLorryModal.inTime || "N/A"}</p>
-                <p><strong>Out Date:</strong> {inspectLorryModal.outDate || "N/A"}</p>
-                <p><strong>Out Time:</strong> {inspectLorryModal.outTime || "Active / Inside Mill"}</p>
-                <p><strong>Current Status:</strong> <span className="font-bold uppercase text-emerald-800">{inspectLorryModal.status.replace(/_/g, " ")}</span></p>
-                <p><strong>Current Stage:</strong> {inspectLorryModal.currentStage || inspectLorryModal.department}</p>
-              </div>
-
-              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
-                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Material & Quality Specs</h4>
-                <p><strong>Description / Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
-                <p><strong>Quantity & Unit:</strong> {inspectLorryModal.quantity ? `${inspectLorryModal.quantity} ${inspectLorryModal.unit || 'BALES'}` : "N/A"}</p>
-                <p><strong>Mokam / Origin:</strong> {inspectLorryModal.mokam || "N/A"}</p>
-                <p><strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
-                <p><strong>Grade:</strong> {inspectLorryModal.grade || "N/A"}</p>
-              </div>
-
-              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
-                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Weighments Summary</h4>
-                <p><strong>Gate Net Weight:</strong> {inspectLorryModal.gateNetWeight ? `${inspectLorryModal.gateNetWeight.toLocaleString()} KG` : "0 KG"}</p>
-                <p><strong>Mill Gross:</strong> {inspectLorryModal.millGrossWeight ? `${inspectLorryModal.millGrossWeight.toLocaleString()} KG` : "N/A"}</p>
-                <p><strong>Mill Tare:</strong> {inspectLorryModal.millTareWeight ? `${inspectLorryModal.millTareWeight.toLocaleString()} KG` : "N/A"}</p>
-                <p><strong>Electric Gross:</strong> {inspectLorryModal.electricGrossWeight ? `${inspectLorryModal.electricGrossWeight.toLocaleString()} KG` : "N/A"}</p>
-                <p><strong>Electric Tare:</strong> {inspectLorryModal.electricTareWeight ? `${inspectLorryModal.electricTareWeight.toLocaleString()} KG` : "N/A"}</p>
-                <p className="font-bold text-[#1E331B] pt-1 border-t border-[#C5BA9E]">
-                  Final Net Weight: {(inspectLorryModal.finalNetWeight || inspectLorryModal.gateNetWeight || 0).toLocaleString()} KG
-                </p>
-              </div>
-            </div>
+            )}
 
             {inspectLorryModal.remarks && (
               <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] text-xs font-mono">
