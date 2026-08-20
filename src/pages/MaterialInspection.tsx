@@ -2719,7 +2719,7 @@ export default function MaterialInspection({
       >
         <div className="w-full px-2 space-y-3 font-sans max-w-full">
           {/* Dashboard Stats Panel */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm">
               <p className="text-[9px] font-black uppercase text-gray-500">
                 Quality Audits Completed
@@ -2768,13 +2768,119 @@ export default function MaterialInspection({
                 {totalPendingWeight.toFixed(3)} MT
               </p>
             </div>
+          </div> */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+  
+            {/* Quality Audits */}
+            <div className="relative overflow-hidden rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-blue-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-blue-600">
+                Quality Audits
+              </p>
+
+              <p className="mt-2 text-xl font-mono font-black text-blue-900">
+                {totalInspections}
+              </p>
+
+              <span className="text-[9px] font-semibold text-blue-500">
+                Reports Completed
+              </span>
+            </div>
+
+            {/* Moisture */}
+            <div className="relative overflow-hidden rounded-lg border border-emerald-200 bg-emerald-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-emerald-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+                Moisture Profile
+              </p>
+
+              <p className="mt-2 text-xl font-mono font-black text-emerald-800">
+                {avgMoisture.toFixed(2)}
+                <span className="ml-1 text-xs">%</span>
+              </p>
+
+              <span className="text-[9px] font-semibold text-emerald-600">
+                Avg Actual
+              </span>
+            </div>
+
+            {/* Dust */}
+            <div className="relative overflow-hidden rounded-lg border border-rose-200 bg-rose-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-rose-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-rose-700">
+                Dust Profiling
+              </p>
+
+              <p className="mt-2 text-xl font-mono font-black text-rose-800">
+                {avgDust.toFixed(2)}
+                <span className="ml-1 text-xs">%</span>
+              </p>
+
+              <span className="text-[9px] font-semibold text-rose-600">
+                Avg Actual
+              </span>
+            </div>
+
+            {/* Total Contract */}
+            <div className="relative overflow-hidden rounded-lg border border-sky-200 bg-sky-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-sky-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-sky-700">
+                P.O. Contract
+              </p>
+
+              <p className="mt-2 text-lg font-mono font-black text-sky-900">
+                {totalContractWeight.toFixed(3)}
+              </p>
+
+              <span className="text-[9px] font-semibold text-sky-600">
+                Total MT
+              </span>
+            </div>
+
+            {/* Received */}
+            <div className="relative overflow-hidden rounded-lg border border-green-200 bg-green-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-green-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-green-700">
+                P.O. Received
+              </p>
+
+              <p className="mt-2 text-lg font-mono font-black text-green-900">
+                {totalReceivedWeight.toFixed(3)}
+              </p>
+
+              <span className="text-[9px] font-semibold text-green-600">
+                Received MT
+              </span>
+            </div>
+
+            {/* Pending */}
+            <div className="relative overflow-hidden rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="absolute left-0 top-0 h-full w-1 bg-amber-600" />
+
+              <p className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                P.O. Pending
+              </p>
+
+              <p className="mt-2 text-lg font-mono font-black text-amber-900">
+                {totalPendingWeight.toFixed(3)}
+              </p>
+
+              <span className="text-[9px] font-semibold text-amber-600">
+                Outstanding MT
+              </span>
+            </div>
+
           </div>
 
           {/* Top Control Bar with search */}
-          <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2.5 items-center flex-wrap shadow-sm">
+          {/* <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2.5 items-center flex-wrap shadow-sm">
             <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[280px]">
-              <input
- id="search_m_r_no_supplier_na_2188" name="search_m_r_no_supplier_na" aria-label="Search M.R. No, Supplier name, Broker name, P.O. No..."                className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold"
+              <input id="search_m_r_no_supplier_na_2188" name="search_m_r_no_supplier_na" aria-label="Search M.R. No, Supplier name, Broker name, P.O. No..."                className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold"
                 placeholder="Search M.R. No, Supplier name, Broker name, P.O. No..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
@@ -2784,18 +2890,15 @@ export default function MaterialInspection({
               </button>
             </div>
 
-            {/* Arrival Date Range Picker */}
             <div className="flex items-center gap-1.5 bg-[#d4d0c8] px-2.5 py-1 border border-black/15 shadow-inner">
               <span className="text-[9px] font-black uppercase text-slate-800 ">Arrival From:</span>
-              <input
- id="arrivalstartdate_2202" name="arrivalstartdate" aria-label="arrivalstartdate"                type="date"
+              <input id="arrivalstartdate_2202" name="arrivalstartdate" aria-label="arrivalstartdate"                type="date"
                 value={arrivalStartDate}
                 onChange={(e) => setArrivalStartDate(e.target.value)}
                 className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
               />
               <span className="text-[9px] font-black uppercase text-slate-800 ">To:</span>
-              <input
- id="arrivalenddate_2209" name="arrivalenddate" aria-label="arrivalenddate"                type="date"
+              <input id="arrivalenddate_2209" name="arrivalenddate" aria-label="arrivalenddate"                type="date"
                 value={arrivalEndDate}
                 onChange={(e) => setArrivalEndDate(e.target.value)}
                 className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
@@ -2821,10 +2924,88 @@ export default function MaterialInspection({
                 <RefreshCcw className={`h-3.5 w-3.5 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
+          </div> */}
+          <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#174C2C] p-2 shadow-sm">
+  
+            <div className="flex flex-1 min-w-[280px] overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+              <input
+                id="search_m_r_no_supplier_na_2188"
+                name="search_m_r_no_supplier_na"
+                aria-label="Search M.R. No, Supplier name, Broker name, P.O. No..."
+                className="flex-1 px-3 py-2 text-xs font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                placeholder="Search M.R. No, Supplier name, Broker name, P.O. No..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+              />
+
+              <button className="border-l border-slate-200 bg-slate-50 px-3 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Arrival Date Range Picker */}
+            <div className="flex items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 shadow-sm">
+              <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
+                Arrival
+              </span>
+
+              <input
+                id="arrivalstartdate_2202"
+                name="arrivalstartdate"
+                aria-label="arrivalstartdate"
+                type="date"
+                value={arrivalStartDate}
+                onChange={(e) => setArrivalStartDate(e.target.value)}
+                className="cursor-pointer rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-[10.5px] font-mono font-bold text-slate-700 outline-none focus:border-blue-400"
+              />
+
+              <span className="text-[10px] font-bold text-slate-400">
+                →
+              </span>
+
+              <input
+                id="arrivalenddate_2209"
+                name="arrivalenddate"
+                aria-label="arrivalenddate"
+                type="date"
+                value={arrivalEndDate}
+                onChange={(e) => setArrivalEndDate(e.target.value)}
+                className="cursor-pointer rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-[10.5px] font-mono font-bold text-slate-700 outline-none focus:border-blue-400"
+              />
+            </div>
+
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => {
+                  setSearchFilter("");
+                  setArrivalStartDate("");
+                  setArrivalEndDate("");
+                }}
+                className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-700 active:scale-95 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
+
+              <button
+                onClick={handleRefreshDatabase}
+                title="Refresh database records"
+                disabled={loading}
+                className="flex items-center gap-1.5 rounded-md border border-emerald-800 bg-emerald-700 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white shadow-sm transition-all hover:bg-emerald-800 active:scale-95 cursor-pointer disabled:cursor-wait disabled:opacity-50"
+              >
+                <RefreshCcw
+                  className={`h-3.5 w-3.5 ${
+                    loading ? "animate-spin" : ""
+                  }`}
+                />
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+
           </div>
 
           {/* Action Toolbar */}
-          <div className="flex gap-1.5 flex-wrap items-center">
+          {/* <div className="flex gap-1.5 flex-wrap items-center">
             <button
               onClick={() => {
                 setMasterData(initialMasterState());
@@ -2848,9 +3029,6 @@ export default function MaterialInspection({
               Export to Excel
             </button>
 
-
-
-            {/* View Settings Dropdown */}
             <div className="relative inline-block text-left">
               <button
                 type="button"
@@ -2875,8 +3053,7 @@ export default function MaterialInspection({
                     {Object.keys(visibleColumns).map((colKey) => {
                       return (
                         <label key={colKey} className="flex items-center gap-2 hover:bg-slate-100 p-1 rounded cursor-pointer ">
-                          <input
- id="checkbox_2290" name="checkbox" aria-label="checkbox"                            type="checkbox"
+                          <input id="checkbox_2290" name="checkbox" aria-label="checkbox" type="checkbox"
                             checked={visibleColumns[colKey]}
                             onChange={(e) => {
                               setVisibleColumns(prev => ({
@@ -2895,7 +3072,6 @@ export default function MaterialInspection({
               )}
             </div>
 
-            {/* M.R Wise Pending List Button */}
             <button
               type="button"
               onClick={() => setCurrentTab(currentTab === "inspections" ? "pending_mr" : "inspections")}
@@ -2948,18 +3124,172 @@ export default function MaterialInspection({
                 )}
               </span>
             </div>
+          </div> */}
+          <div className="flex gap-2 flex-wrap items-center rounded-md border border-slate-300 bg-[#174C2C] p-2 shadow-sm">
+            <button
+              onClick={() => {
+                setMasterData(initialMasterState());
+                setDetailsList([1, 2, 3, 4, 5].map(createEmptyRow));
+                setIsEditMode(true);
+                setErrorMessage("");
+                setSuccessMessage("");
+                setViewMode("entry");
+              }}
+              className="bg-blue-700 hover:bg-blue-800 text-white border border-blue-900 font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-md active:scale-[0.98] flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              New Inspection
+            </button>
+
+            <button
+              onClick={handleExportToExcel}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-900 font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-md active:scale-[0.98] flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Export to Excel
+            </button>
+
+            {/* View Settings Dropdown */}
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setViewSettingsOpen(!viewSettingsOpen)}
+                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-sm font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-md active:scale-[0.98] flex items-center gap-1.5 cursor-pointer transition-all"
+              >
+                ⚙️ View Settings
+                <span className="text-[8px] text-slate-400">
+                  {viewSettingsOpen ? "▲" : "▼"}
+                </span>
+              </button>
+
+              {viewSettingsOpen && (
+                <div className="origin-top-left absolute left-0 md:left-auto md:right-0 mt-2 w-56 rounded-lg shadow-xl bg-white border border-slate-200 ring-1 ring-black/5 z-20 p-2 text-xs font-semibold">
+                  <div className="border-b border-slate-200 pb-2 mb-1.5 flex items-center justify-between">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-slate-500">
+                      Toggle Column View
+                    </span>
+
+                    <button
+                      onClick={() => setViewSettingsOpen(false)}
+                      className="flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600 font-extrabold font-mono text-sm cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-0.5">
+                    {Object.keys(visibleColumns).map((colKey) => {
+                      return (
+                        <label
+                          key={colKey}
+                          className="flex items-center gap-2 hover:bg-slate-100 p-1.5 rounded-md cursor-pointer transition-colors"
+                        >
+                          <input
+                            id="checkbox_2290"
+                            name="checkbox"
+                            aria-label="checkbox"
+                            type="checkbox"
+                            checked={visibleColumns[colKey]}
+                            onChange={(e) => {
+                              setVisibleColumns(prev => ({
+                                ...prev,
+                                [colKey]: e.target.checked
+                              }));
+                            }}
+                            className="cursor-pointer h-3.5 w-3.5 rounded border-slate-400 accent-blue-700"
+                          />
+
+                          <span className="text-[11px] text-slate-700 font-bold">
+                            {columnLabels[colKey] || colKey}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* M.R Wise Pending List Button */}
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentTab(
+                  currentTab === "inspections" ? "pending_mr" : "inspections"
+                )
+              }
+              className={`border font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-md active:scale-[0.98] flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${
+                currentTab === "pending_mr"
+                  ? "bg-amber-700 border-amber-800 text-white hover:bg-amber-800"
+                  : "bg-white border-slate-300 hover:bg-amber-50 hover:border-amber-300 text-slate-700"
+              }`}
+            >
+              ⏳ M.R Wise Pending List (
+              {(() => {
+                const pendingCount = arrivalVouchers.filter((v) => {
+                  const arrivalVal = (
+                    v.temporary_arrival_no ||
+                    v.amad_no ||
+                    ""
+                  )
+                    .trim()
+                    .toUpperCase();
+
+                  if (!arrivalVal) return false;
+
+                  return !savedInspections.some(
+                    (insp) =>
+                      (insp.arrival_no || "").trim().toUpperCase() === arrivalVal
+                  );
+                });
+
+                return pendingCount;
+              })()}
+              )
+            </button>
+
+            {selectedMrNos.length > 0 && currentTab === "inspections" && (
+              <button
+                onClick={handleBatchPrint}
+                className="bg-indigo-700 hover:bg-indigo-800 text-white border border-indigo-900 font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-md active:scale-[0.98] flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
+              >
+                <Printer className="h-4 w-4 text-cyan-200 animate-pulse" />
+                Batch Print Selected ({selectedMrNos.length})
+              </button>
+            )}
+
+            <div className="flex-1" />
+
+            <div className="flex items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-[10.5px] font-bold text-slate-600 uppercase shadow-sm">
+              <span>
+                {currentTab === "inspections" ? (
+                  <>
+                    Total Inspections Logged:
+                    <b className="ml-1 text-blue-700 text-xs font-black">
+                      {filteredSavedInspections.length}
+                    </b>
+                  </>
+                ) : (
+                  <>
+                    Total Pending Inspections:
+                    <b className="ml-1 text-amber-700 text-xs font-black">
+                      {filteredPendingMrList.length}
+                    </b>
+                  </>
+                )}
+              </span>
+            </div>
           </div>
 
           {/* Grid Table */}
-          <div className="border border-gray-400 bg-white overflow-x-auto min-h-[440px]">
+          <div className="border border-slate-300 bg-white overflow-x-auto rounded-md shadow-sm">
             <table className="w-full border-collapse text-[10px] whitespace-nowrap">
-              <thead className="bg-[#c0c0c0] sticky top-0 z-10 ">
+              <thead className="bg-[#174C2C] sticky top-0 z-10 text-white">
                 {currentTab === "inspections" ? (
-                  <tr className="border-b border-gray-400 text-slate-800 h-8 font-black uppercase text-center">
+                  <tr className="border-b border-gray-400 text-white h-8 font-black uppercase text-center">
                     {visibleColumns.select && (
                       <th className="px-2 text-center border-r border-gray-300 w-10">
-                        <input
- id="checkbox_2373" name="checkbox" aria-label="checkbox"                          type="checkbox"
+                        <input id="checkbox_2373" name="checkbox" aria-label="checkbox" type="checkbox"
                           checked={
                             filteredSavedInspections.length > 0 &&
                             filteredSavedInspections.every((item) =>
@@ -3097,8 +3427,7 @@ export default function MaterialInspection({
                             className="px-2 text-center border-r border-slate-200 w-10"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <input
- id="checkbox_2512" name="checkbox" aria-label="checkbox"                              type="checkbox"
+                            <input id="checkbox_2512" name="checkbox" aria-label="checkbox" type="checkbox"
                               checked={selectedMrNos.includes(row.mr_no)}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -3535,7 +3864,7 @@ export default function MaterialInspection({
                 ),
               }).map((_, i) => (
                 <tr key={`spacer-${i}`} className="h-9 border-b border-gray-100 opacity-25">
-                  <td colSpan={currentTab === "inspections" ? Object.values(visibleColumns).filter(Boolean).length : 9}></td>
+                  <td colSpan={currentTab === "inspections" ? Object.values(visibleColumns).filter(Boolean).length : 8}></td>
                 </tr>
               ))}
             </tbody>
@@ -3543,7 +3872,7 @@ export default function MaterialInspection({
           </div>
 
           {/* Status Bar */}
-          <div className="bg-[#cbd5e1] border border-slate-400 p-2 text-slate-800 font-mono text-[9.5px] flex justify-between items-center  uppercase">
+          {/* <div className="bg-[#cbd5e1] border border-slate-400 p-2 text-slate-800 font-mono text-[9.5px] flex justify-between items-center  uppercase">
             <span>
               * Click on any Record Row above to view parameters details. Double
               click to customize reports *
@@ -3551,7 +3880,7 @@ export default function MaterialInspection({
             <span className="font-extrabold italic text-[#0d47a1]">
               System Connected Secure Core node BJCL-95
             </span>
-          </div>
+          </div> */}
         </div>
 
         <PrintModal
