@@ -1206,7 +1206,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Temporary M.R No. */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="arrival_no_1077" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Temporary M.R No.
+                    Temporary M.R No. <span className="text-red-600 font-bold">*</span>
                   </label>
                   <input
                     id="arrival_no_1077" aria-label="Temporary M.R No."
@@ -1214,7 +1214,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="arrival_no"
                     value={formData.arrival_no}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
+                   // className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
+                    className={`flex-1 border rounded bg-white px-2 h-7 text-xs font-bold ${!formData.lorry_date ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-400'}`}
                   />
                 </div>
 
@@ -1854,7 +1855,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* APMC */}
                 <div>
                   <label htmlFor="apmc_fees_1622" className="block text-[10px] font-bold text-gray-700 mb-0.5">
-                    A.P.M.C Fees (Rs.) <span className="text-red-600 font-bold">*</span>
+                    A.P.M.C Fees (Rs.) 
                   </label>
 
                   <input
