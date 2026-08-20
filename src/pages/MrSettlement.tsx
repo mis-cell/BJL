@@ -2032,6 +2032,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     if (isEdit && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
+
+    // Mandatory Validation for Bill No. and Bill Date
+    const trimmedBillNo = (masterData.payable_bill_no || '').trim();
+    const trimmedBillDate = (masterData.payable_bill_date || '').trim();
+
+    if (!trimmedBillNo || !trimmedBillDate) {
+      const missingFields = [];
+      if (!trimmedBillNo) missingFields.push("Bill No.");
+      if (!trimmedBillDate) missingFields.push("Bill Date");
+      setErrorMessage(`Mandatory Field Error: Please enter ${missingFields.join(' and ')} before settling the account.`);
+      return;
+    }
+
     let targetMrNo = masterData.mr_no ? masterData.mr_no.trim() : '';
     if (!targetMrNo) {
       if (masterData.lorry_number) {
@@ -3431,10 +3444,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       <div className="group relative flex items-center justify-center gap-1 mb-0.5">
                         <label className="text-[8.5px] uppercase tracking-wider font-extrabold text-[#00e676]">RESOLVED PAYABLE ACCOUNT</label>
                         <span className="text-[7px] font-black bg-emerald-950 border border-emerald-400 text-emerald-300 rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-xl leading-relaxed font-normal text-left normal-case">
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block z-50 w-80 bg-slate-900 text-white p-2.5 text-[8px] rounded-lg border border-slate-700 shadow-xl leading-relaxed font-normal text-left normal-case">
                           <p className="text-yellow-300 font-bold border-b border-slate-700 pb-1 mb-1">Payable Account Formula</p>
-                          <p className="font-mono text-cyan-200">
-                            (Material Value - Deduction Amount (-) - Ded Claim Total (-) - Qty Claim - Val Less Amt - Ex/Short - Delivery Claim(-) + Premium Amt (+) + Add Amt (+)) - Less Adv (-) - On/Ac Adv + APMC Fees + CST Tax
+                          <p className="font-mono text-cyan-200 leading-tight">
+                            RESOLVED PAYABLE ACCOUNT = Material Value + Add Amt(+) + Premium Amt(+) - Deduction Amount(-) - Delivery Claim(-) - Val Less Amt(-) - Ded Claim Total(-) - APMC Fees - Less Adv(-) - On/Ac Adv + CST Tax
                           </p>
                         </div>
                       </div>
@@ -3443,22 +3456,37 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       </div>
                     </div>
 
-                    {/* Bill No & Bill Date */}
+                    {/* Bill No & Bill Date - Mandatory Fields */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col">
-                        <label htmlFor="bill_no_2798" className="text-[9px] font-bold text-slate-700 mb-0.5">Bill No.</label>
+                        <label htmlFor="bill_no_2798" className="text-[9px] font-bold text-slate-700 mb-0.5 flex items-center justify-between">
+                          <span>Bill No. <span className="text-rose-600">*</span></span>
+                          <span className="text-rose-500 font-bold text-[8px]">Mandatory</span>
+                        </label>
                         <input id="bill_no_2798" name="bill_no" aria-label="Bill No."
                           type="text" 
-                          className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-mono uppercase font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                          required
+                          placeholder="e.g. BILL-101"
+                          className={cn(
+                            "bg-white border rounded-md px-2 py-1 h-7 font-mono uppercase font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none w-full",
+                            !masterData.payable_bill_no && errorMessage.includes("Bill No.") ? "border-rose-500 bg-rose-50/50 ring-1 ring-rose-500" : "border-slate-300"
+                          )}
                           value={masterData.payable_bill_no || ''} 
                           onChange={(e) => handleMasterChange('payable_bill_no', e.target.value)}
                         />
                       </div>
                       <div className="flex flex-col">
-                        <label htmlFor="bill_date_2807" className="text-[9px] font-bold text-slate-700 mb-0.5">Bill Date</label>
+                        <label htmlFor="bill_date_2807" className="text-[9px] font-bold text-slate-700 mb-0.5 flex items-center justify-between">
+                          <span>Bill Date <span className="text-rose-600">*</span></span>
+                          <span className="text-rose-500 font-bold text-[8px]">Mandatory</span>
+                        </label>
                         <input id="bill_date_2807" name="bill_date" aria-label="Bill Date"
                           type="date" 
-                          className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 font-mono font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+                          required
+                          className={cn(
+                            "bg-white border rounded-md px-2 py-1 h-7 font-mono font-bold text-xs text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none w-full",
+                            !masterData.payable_bill_date && errorMessage.includes("Bill Date") ? "border-rose-500 bg-rose-50/50 ring-1 ring-rose-500" : "border-slate-300"
+                          )}
                           value={masterData.payable_bill_date || ''} 
                           onChange={(e) => handleMasterChange('payable_bill_date', e.target.value)}
                         />
