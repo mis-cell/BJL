@@ -231,6 +231,24 @@ export const calculateQtyInMt = (row: InspectionDetailRow): number => {
   return Number(qty.toFixed(3));
 };
 
+// Calculate Premium Quantity in Metric Tons (MT)
+export const getPremiumMt = (row: InspectionDetailRow): number => {
+  const available = calculateQtyInMt(row);
+  if (!row.premium && !row.is_premium) return 0;
+  const pStr = String(row.premium || "").trim();
+  if (pStr.toLowerCase() === "yes" || pStr === "true") {
+    return available;
+  }
+  const num = parseFloat(pStr);
+  if (!isNaN(num) && num > 0) {
+    return Math.min(num, available);
+  }
+  if (row.is_premium) {
+    return available;
+  }
+  return 0;
+};
+
 interface InspectionProps {
   onNavigate?: (page: string) => void;
 }
@@ -3045,34 +3063,39 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                         handleDetailChange(idx, "is_premium", false);
                                       }
                                     }}
-                                    placeholder="Type premium..."
+                                    placeholder={`e.g. 1.000 (Max ${calculateQtyInMt(row).toFixed(3)})`}
                                     className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs bg-amber-50/40 font-bold text-amber-950 text-center"
-                                    title="Enter premium manually or type Yes"
+                                    title="Enter numeric MT premium value or Yes (defaults to max available)"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const isCurrentlyPremium = row.is_premium || row.premium === "Yes";
-                                      const nextVal = !isCurrentlyPremium;
-                                      handleDetailChange(idx, "is_premium", nextVal);
-                                      handleDetailChange(idx, "premium", nextVal ? "Yes" : "No");
-                                      if (nextVal) {
+                                      const maxMt = calculateQtyInMt(row).toFixed(3);
+                                      const currentPrem = getPremiumMt(row);
+                                      const isFull = currentPrem >= Number(maxMt);
+                                      if (isFull) {
+                                        handleDetailChange(idx, "premium", "");
+                                        handleDetailChange(idx, "is_premium", false);
+                                      } else {
+                                        handleDetailChange(idx, "premium", maxMt);
+                                        handleDetailChange(idx, "is_premium", true);
                                         handleDetailChange(idx, "unit", "M.T.");
                                       }
                                     }}
                                     className={`p-1 rounded text-xs transition-all cursor-pointer shrink-0 ${
-                                      row.is_premium || row.premium === "Yes"
+                                      getPremiumMt(row) > 0
                                         ? "bg-amber-400 text-slate-950 font-bold shadow-sm"
                                         : "bg-slate-100 hover:bg-amber-100 text-slate-600"
                                     }`}
-                                    title="Toggle Premium status / MT mode"
+                                    title="Click to fill Max Available MT Premium"
                                   >
                                     <Sparkles className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-                                {(row.is_premium || row.premium === "Yes" || (row.premium && row.premium.toString().toLowerCase() !== "no" && row.premium.toString().trim() !== "")) && (
-                                  <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded shadow-inner whitespace-nowrap">
-                                    {calculateQtyInMt(row).toFixed(3)} MT
+                                {getPremiumMt(row) > 0 && (
+                                  <span className="text-[10px] font-mono font-black text-amber-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shadow-inner whitespace-nowrap flex items-center gap-1">
+                                    <span>{getPremiumMt(row).toFixed(3)} MT</span>
+                                    <span className="text-[8px] text-slate-500 font-normal">/ {calculateQtyInMt(row).toFixed(3)} max</span>
                                   </span>
                                 )}
                               </div>
