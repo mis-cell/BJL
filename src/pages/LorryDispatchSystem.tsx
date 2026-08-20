@@ -322,7 +322,7 @@ export default function LorryDispatchSystem({
             id: String(row.id),
             gatePassNo: row.gate_pass || row.ticket_number || `GP-${String(row.id).slice(0, 8)}`,
             lorryNo: row.lorry_no || row.lorry_number || "UNKNOWN",
-            driverPhone: row.driver_number || row.driver_phone || "+91 98300 00000",
+            driverPhone: row.driver_number || row.driver_name || row.driver_phone || "+91 98300 00000",
             department: dept,
             broker: row.party_name || row.broker || "N/A",
             quality: row.description || row.grade || row.quality || "WN4",

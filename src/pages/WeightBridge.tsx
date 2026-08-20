@@ -164,6 +164,8 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                   date DATE NOT NULL,
                   lorry_number TEXT NOT NULL,
                   party_name TEXT,
+                  driver_number TEXT,
+                  driver_name TEXT,
                   stage1_gross_weight NUMERIC(15,3),
                   stage1_tare_weight NUMERIC(15,3),
                   stage1_net_weight NUMERIC(15,3),
@@ -194,6 +196,8 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
               ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS unit TEXT;
               ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS mokam TEXT;
               ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS marka TEXT;
+              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS driver_number TEXT;
+              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS driver_name TEXT;
               NOTIFY pgrst, 'reload schema';
             `
           });

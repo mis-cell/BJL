@@ -1840,6 +1840,8 @@ if (supabase) {
           date DATE NOT NULL,
           lorry_number TEXT NOT NULL,
           party_name TEXT,
+          driver_number TEXT,
+          driver_name TEXT,
           stage1_gross_weight NUMERIC(15,3),
           stage1_tare_weight NUMERIC(15,3),
           stage1_net_weight NUMERIC(15,3),
@@ -1868,6 +1870,8 @@ if (supabase) {
           status TEXT DEFAULT 'IN',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
+      `ALTER TABLE IF EXISTS lorry_weighments ADD COLUMN IF NOT EXISTS driver_number TEXT;`,
+      `ALTER TABLE IF EXISTS lorry_weighments ADD COLUMN IF NOT EXISTS driver_name TEXT;`,
       `ALTER TABLE IF EXISTS lorry_weighments DISABLE ROW LEVEL SECURITY;`,
       // Create Final P.O Archive (p.o_archive & po_archive) and Final M.R Archive (m.r_archive & mr_archive)
       `CREATE TABLE IF NOT EXISTS "p.o_archive" (
