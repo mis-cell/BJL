@@ -824,7 +824,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     return col;
   };
 
-  useLiveAutoRefresh(initPage, [], { tables: ['m_r_settlement', 'final_arrival', 'mill_inspection_master', 'purchase_master'] });
+  useLiveAutoRefresh(initPage, [], { 
+    tables: [
+      'mr_settlement_master', 
+      'm_r_settlement', 
+      'final_arrival', 
+      'mill_inspection_master', 
+      'purchase_master', 
+      'payment_master', 
+      'temporary_material_received', 
+      'sauda_check_point', 
+      'sauda_master'
+    ] 
+  });
 
   // Load dashboards & dropdowns
   async function initPage() {
@@ -981,6 +993,28 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      await initPage();
+      const currentPo = masterData.po_no || selectedPoNo;
+      if (currentPo) {
+        await handlePoNoSelection(currentPo);
+      }
+      if (masterData.mr_no) {
+        syncPaymentModuleData(masterData.mr_no, currentPo);
+      }
+      setSuccessMessage('Settlement database, P.O. dropdowns & arrival records refreshed successfully!');
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err: any) {
+      console.error("Refresh failed:", err);
+      setErrorMessage("Refresh failed: " + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -2648,7 +2682,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   <X className="h-3.5 w-3.5 text-red-800" /> Clear
                 </button>
                 <button 
-                  onClick={initPage}
+                  onClick={handleManualRefresh}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1.5 text-[10px] uppercase font-black flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors disabled:opacity-50 disabled:cursor-wait"
                   disabled={loading}
                 >
@@ -2876,6 +2910,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   className="bg-[#d4d0c8] hover:bg-white text-[10px] uppercase font-black px-4 py-1.5 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px"
                 >
                   Force Sync MR
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleManualRefresh}
+                  disabled={loading}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold uppercase px-3.5 py-1.5 border border-emerald-500 shadow-sm active:translate-y-px flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Refresh all database records, Final P.O. dropdown, Final M.R. list & payment vouchers without hard browser reloading"
+                >
+                  <RefreshCcw className={`h-3.5 w-3.5 text-emerald-200 ${loading ? 'animate-spin' : ''}`} />
+                  <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
                 </button>
 
                 {masterData.mr_no && (
