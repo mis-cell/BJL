@@ -2791,25 +2791,37 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   </select>
                 </div>
 
-                {/* MR No dropdown */}
+                {/* MR No dropdown & direct input */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
                   <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight">Final M.R:</span>
+                  <input
+                    type="text"
+                    placeholder="Enter MR No (e.g. 502)"
+                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[110px]"
+                    value={masterData.mr_no}
+                    onChange={(e) => handleMasterChange('mr_no', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleProceedWithMrNo(masterData.mr_no, true);
+                      }
+                    }}
+                  />
                   <select  id="masterdata_mr_no_2258" name="masterdata_mr_no" aria-label="masterdata mr no"
-                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[190px]"
+                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[130px]"
                     value={masterData.mr_no}
                     onChange={(e) => {
                       handleMasterChange('mr_no', e.target.value);
                       handleProceedWithMrNo(e.target.value);
                     }}
                   >
-                    <option value="">-- CHOOSE FINAL M.R --</option>
+                    <option value="">-- CHOOSE M.R --</option>
                     {inspections
                       .filter(insp => {
                         const mrVal = insp.mr_no || insp.final_arrival_no;
                         if (!mrVal) return false;
                         const isAlreadySettled = settledList.some(s => s.mr_no === mrVal) || insp.status === 'settled';
-                        return (!selectedPoNo || insp.po_no === selectedPoNo) && 
-                               (!isAlreadySettled || (isEdit && masterData.mr_no === mrVal));
+                        return !isAlreadySettled || (isEdit && masterData.mr_no === mrVal) || mrVal === masterData.mr_no;
                       })
                       .map(insp => {
                         const mrVal = insp.mr_no || insp.final_arrival_no;
