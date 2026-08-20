@@ -65,6 +65,8 @@ export default function MainGateSection({
   const [activeSubTab, setActiveSubTab] = useState<"map" | "live_board" | "kanban">("map");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNodeFilter, setSelectedNodeFilter] = useState<string | null>(null);
+  const [dashboardViewMode, setDashboardViewMode] = useState<"queue" | "master_table">("queue");
+  const [inspectLorryModal, setInspectLorryModal] = useState<LorryRecord | null>(null);
 
   // FAB Speed Dial State
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -495,92 +497,275 @@ export default function MainGateSection({
         )}
       </div>
 
-      {/* 3. REAL-TIME DISPATCH QUEUE LIST */}
+      {/* 3. MAIN GATE DASHBOARD (ACTIVE QUEUE & MASTER RECORDS TABLE) */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#C5BA9E] pb-3">
           <div className="flex items-center gap-2">
             <Truck className="w-5 h-5 text-[#1E331B]" />
             <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
-              Real-Time Lorries Queue ({filteredLorries.filter((l) => l.status !== "COMPLETED").length})
+              {dashboardViewMode === "queue" ? `Real-Time Lorries Queue (${filteredLorries.filter((l) => l.status !== "COMPLETED").length})` : `All Gate Records Master Table (${filteredLorries.length})`}
             </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDashboardViewMode("queue")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all font-mono",
+                dashboardViewMode === "queue"
+                  ? "bg-[#1E331B] text-[#FAF7F0] shadow-sm"
+                  : "bg-[#FAF7F0] text-[#1E331B] border border-[#C5BA9E] hover:bg-[#EAE2D2]"
+              )}
+            >
+              📋 Active Queue
+            </button>
+            <button
+              onClick={() => setDashboardViewMode("master_table")}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all font-mono",
+                dashboardViewMode === "master_table"
+                  ? "bg-[#1E331B] text-[#FAF7F0] shadow-sm"
+                  : "bg-[#FAF7F0] text-[#1E331B] border border-[#C5BA9E] hover:bg-[#EAE2D2]"
+              )}
+            >
+              📊 Master Records Table
+            </button>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {filteredLorries.filter((l) => l.status !== "COMPLETED").length === 0 ? (
-            <div className="bg-[#FAF7F0] border-2 border-dashed border-[#C5BA9E] rounded-2xl p-8 text-center space-y-2 text-[#5A6E54]">
-              <div className="p-3 bg-[#EAE2D2] rounded-full w-12 h-12 flex items-center justify-center mx-auto text-[#1E331B]">
-                <Truck className="w-6 h-6" />
+        {dashboardViewMode === "queue" ? (
+          <div className="space-y-3">
+            {filteredLorries.filter((l) => l.status !== "COMPLETED").length === 0 ? (
+              <div className="bg-[#FAF7F0] border-2 border-dashed border-[#C5BA9E] rounded-2xl p-8 text-center space-y-2 text-[#5A6E54]">
+                <div className="p-3 bg-[#EAE2D2] rounded-full w-12 h-12 flex items-center justify-center mx-auto text-[#1E331B]">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-black uppercase text-[#1E331B] font-mono">
+                  🎉 No Queue Bottleneck - All lorries are progressing smoothly.
+                </h4>
+                <p className="text-xs">New registered lorries will instantly appear in this queue list.</p>
               </div>
-              <h4 className="text-sm font-black uppercase text-[#1E331B] font-mono">
-                🎉 No Queue Bottleneck - All lorries are progressing smoothly.
-              </h4>
-              <p className="text-xs">New registered lorries will instantly appear in this queue list.</p>
-            </div>
-          ) : (
-            filteredLorries
-              .filter((l) => l.status !== "COMPLETED")
-              .map((l) => {
-                const overdue = isOverdue(l.inTime);
-                return (
-                  <div
-                    key={l.id}
-                    className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#1E331B] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-xs"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
-                        <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-xs font-mono font-bold rounded">
-                          {l.gatePassNo}
-                        </span>
-                        
-                        {/* Department Badge */}
-                        <span
-                          className={cn(
-                            "px-2.5 py-0.5 text-xs font-bold uppercase rounded-full text-white",
-                            l.department === "Jute"
-                              ? "bg-[#1E331B]"
-                              : l.department === "Store"
-                              ? "bg-amber-600"
-                              : l.department === "Finish Good"
-                              ? "bg-purple-700"
-                              : "bg-blue-600"
-                          )}
-                        >
-                          {l.department}
-                        </span>
+            ) : (
+              filteredLorries
+                .filter((l) => l.status !== "COMPLETED")
+                .map((l) => {
+                  const overdue = isOverdue(l.inTime);
+                  return (
+                    <div
+                      key={l.id}
+                      onClick={() => setInspectLorryModal(l)}
+                      className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#1E331B] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-xs cursor-pointer"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
+                          <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-xs font-mono font-bold rounded">
+                            {l.gatePassNo}
+                          </span>
+                          
+                          <span
+                            className={cn(
+                              "px-2.5 py-0.5 text-xs font-bold uppercase rounded-full text-white",
+                              l.department === "Jute"
+                                ? "bg-[#1E331B]"
+                                : l.department === "Store"
+                                ? "bg-amber-600"
+                                : l.department === "Finish Good"
+                                ? "bg-purple-700"
+                                : "bg-blue-600"
+                            )}
+                          >
+                            {l.department}
+                          </span>
 
-                        {/* Overdue Tag */}
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 text-[10px] font-mono font-bold rounded-full uppercase border",
-                            overdue
-                              ? "bg-rose-100 border-rose-400 text-rose-900"
-                              : "bg-amber-100 border-amber-300 text-amber-900"
-                          )}
-                        >
-                          {getElapsedTimeText(l.inTime)}
-                        </span>
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 text-[10px] font-mono font-bold rounded-full uppercase border",
+                              overdue
+                                ? "bg-rose-100 border-rose-400 text-rose-900"
+                                : "bg-amber-100 border-amber-300 text-amber-900"
+                            )}
+                          >
+                            {getElapsedTimeText(l.inTime)}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-[#5A6E54]">
+                          Broker/Party: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong> | Stage: <span className="font-bold uppercase text-[#1E331B]">{l.status.replace(/_/g, " ")}</span>
+                        </p>
                       </div>
 
-                      <p className="text-xs text-[#5A6E54]">
-                        Broker: <strong className="text-[#1E331B]">{l.broker}</strong> | Quality: <strong className="text-[#1E331B]">{l.quality}</strong> | Stage: <span className="font-bold uppercase text-[#1E331B]">{l.status.replace(/_/g, " ")}</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setInspectLorryModal(l); }}
+                          className="px-3 py-2 bg-[#EAE2D2] hover:bg-[#D4CBB5] text-[#1E331B] font-bold text-xs uppercase rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>View Details</span>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onSelectLorry(l); }}
+                          className="px-4 py-2 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Manage</span>
+                        </button>
+                      </div>
                     </div>
-
-                    <button
-                      onClick={() => onSelectLorry(l)}
-                      className="px-4 py-2 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Manage / View Details</span>
-                    </button>
-                  </div>
-                );
-              })
-          )}
-        </div>
+                  );
+                })
+            )}
+          </div>
+        ) : (
+          /* Master Table View */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="bg-[#EAE2D2] text-[#1E331B] border-b border-[#C5BA9E] uppercase text-[10px]">
+                  <th className="p-3 font-black">Gate Pass</th>
+                  <th className="p-3 font-black">Lorry No</th>
+                  <th className="p-3 font-black">Dept</th>
+                  <th className="p-3 font-black">Party / Broker</th>
+                  <th className="p-3 font-black">Entry Date & Time</th>
+                  <th className="p-3 font-black">Out Date & Time</th>
+                  <th className="p-3 font-black">Status</th>
+                  <th className="p-3 font-black text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#C5BA9E]/40 bg-[#FAF7F0]">
+                {filteredLorries.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-6 text-center text-[#5A6E54]">No matching lorry records found.</td>
+                  </tr>
+                ) : (
+                  filteredLorries.map((l) => (
+                    <tr key={l.id} onClick={() => setInspectLorryModal(l)} className="hover:bg-[#EAE2D2]/50 cursor-pointer transition-colors">
+                      <td className="p-3 font-bold text-[#1E331B]">{l.gatePassNo}</td>
+                      <td className="p-3 font-bold text-[#1E331B]">{l.lorryNo}</td>
+                      <td className="p-3">
+                        <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded uppercase text-white", l.department === "Jute" ? "bg-[#1E331B]" : l.department === "Store" ? "bg-amber-600" : "bg-purple-700")}>
+                          {l.department}
+                        </span>
+                      </td>
+                      <td className="p-3 text-[#5A6E54]">{l.broker || "N/A"}</td>
+                      <td className="p-3 text-[#1E331B]">
+                        {l.entryDate ? `${l.entryDate} ` : ""}
+                        <span className="font-semibold">{l.inTime || "N/A"}</span>
+                      </td>
+                      <td className="p-3 text-[#1E331B]">
+                        {l.outDate ? `${l.outDate} ` : ""}
+                        <span className="font-semibold">{l.outTime || "Active"}</span>
+                      </td>
+                      <td className="p-3">
+                        <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded uppercase", l.status === "COMPLETED" ? "bg-emerald-100 text-emerald-900 border border-emerald-300" : "bg-amber-100 text-amber-900 border border-amber-300")}>
+                          {l.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setInspectLorryModal(l); }}
+                          className="px-2.5 py-1 bg-[#1E331B] text-[#FAF7F0] font-bold text-[10px] rounded-lg hover:bg-[#2D4D28]"
+                        >
+                          View All Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {/* COMPREHENSIVE LORRY DETAILS POPUP MODAL */}
+      {inspectLorryModal && (
+        <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-2xl p-6 rounded-2xl shadow-2xl space-y-5 text-[#1E331B] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-[#1E331B]" />
+                <div>
+                  <h3 className="text-sm font-black uppercase font-mono">
+                    Lorry Complete Gate & Weighment Dossier
+                  </h3>
+                  <p className="text-[10px] text-[#5A6E54] font-mono">Gate Pass: {inspectLorryModal.gatePassNo}</p>
+                </div>
+              </div>
+              <button onClick={() => setInspectLorryModal(null)} className="p-1.5 hover:bg-[#EAE2D2] rounded-xl text-[#5A6E54] hover:text-[#1E331B]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Identification & Party</h4>
+                <p><strong>Lorry No:</strong> {inspectLorryModal.lorryNo}</p>
+                <p><strong>Gate Pass:</strong> {inspectLorryModal.gatePassNo}</p>
+                <p><strong>Department:</strong> {inspectLorryModal.department}</p>
+                <p><strong>Party / Broker:</strong> {inspectLorryModal.broker || inspectLorryModal.partyName || "N/A"}</p>
+                <p><strong>Chalan No:</strong> {inspectLorryModal.chalanNo || "N/A"}</p>
+                <p><strong>Driver Phone:</strong> {inspectLorryModal.driverPhone || "N/A"}</p>
+              </div>
+
+              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Timestamps & Status</h4>
+                <p><strong>Entry Date:</strong> {inspectLorryModal.entryDate || "N/A"}</p>
+                <p><strong>In Time:</strong> {inspectLorryModal.inTime || "N/A"}</p>
+                <p><strong>Out Date:</strong> {inspectLorryModal.outDate || "N/A"}</p>
+                <p><strong>Out Time:</strong> {inspectLorryModal.outTime || "Active / Inside Mill"}</p>
+                <p><strong>Current Status:</strong> <span className="font-bold uppercase text-emerald-800">{inspectLorryModal.status.replace(/_/g, " ")}</span></p>
+                <p><strong>Current Stage:</strong> {inspectLorryModal.currentStage || inspectLorryModal.department}</p>
+              </div>
+
+              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Material & Quality Specs</h4>
+                <p><strong>Description / Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
+                <p><strong>Quantity & Unit:</strong> {inspectLorryModal.quantity ? `${inspectLorryModal.quantity} ${inspectLorryModal.unit || 'BALES'}` : "N/A"}</p>
+                <p><strong>Mokam / Origin:</strong> {inspectLorryModal.mokam || "N/A"}</p>
+                <p><strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
+                <p><strong>Grade:</strong> {inspectLorryModal.grade || "N/A"}</p>
+              </div>
+
+              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
+                <h4 className="font-black text-[#1E331B] uppercase text-[11px] border-b border-[#C5BA9E] pb-1">Weighments Summary</h4>
+                <p><strong>Gate Net Weight:</strong> {inspectLorryModal.gateNetWeight ? `${inspectLorryModal.gateNetWeight.toLocaleString()} KG` : "0 KG"}</p>
+                <p><strong>Mill Gross:</strong> {inspectLorryModal.millGrossWeight ? `${inspectLorryModal.millGrossWeight.toLocaleString()} KG` : "N/A"}</p>
+                <p><strong>Mill Tare:</strong> {inspectLorryModal.millTareWeight ? `${inspectLorryModal.millTareWeight.toLocaleString()} KG` : "N/A"}</p>
+                <p><strong>Electric Gross:</strong> {inspectLorryModal.electricGrossWeight ? `${inspectLorryModal.electricGrossWeight.toLocaleString()} KG` : "N/A"}</p>
+                <p><strong>Electric Tare:</strong> {inspectLorryModal.electricTareWeight ? `${inspectLorryModal.electricTareWeight.toLocaleString()} KG` : "N/A"}</p>
+                <p className="font-bold text-[#1E331B] pt-1 border-t border-[#C5BA9E]">
+                  Final Net Weight: {(inspectLorryModal.finalNetWeight || inspectLorryModal.gateNetWeight || 0).toLocaleString()} KG
+                </p>
+              </div>
+            </div>
+
+            {inspectLorryModal.remarks && (
+              <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] text-xs font-mono">
+                <strong>Remarks / Notes:</strong> {inspectLorryModal.remarks}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => {
+                  onSelectLorry(inspectLorryModal);
+                  setInspectLorryModal(null);
+                }}
+                className="flex-1 py-2.5 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Open in Workflow Manager</span>
+              </button>
+              <button
+                onClick={() => setInspectLorryModal(null)}
+                className="px-5 py-2.5 bg-[#EAE2D2] hover:bg-[#D4CBB5] text-[#1E331B] font-extrabold text-xs uppercase rounded-xl transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4. FLOATING ACTION PANEL & MODALS (FAB SPEED DIAL) */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">

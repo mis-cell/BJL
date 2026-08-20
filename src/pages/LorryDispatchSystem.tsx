@@ -98,10 +98,23 @@ export interface LorryRecord {
   marka: string;
   status: LorryStatus;
   
-  // Timestamps
+  // Timestamps & Dates
   inTime: string;
   outTime?: string;
-  
+  entryDate?: string;
+  outDate?: string;
+  chalanNo?: string;
+  partyName?: string;
+  description?: string;
+  quantity?: number;
+  unit?: string;
+  gateGrossWeight?: number;
+  gateTareWeight?: number;
+  gateNetWeight?: number;
+  outRemarks?: string;
+  grade?: string;
+  currentStage?: string;
+
   // Weights (in KG)
   millGrossWeight?: number;
   millGrossTime?: string;
@@ -317,7 +330,20 @@ export default function LorryDispatchSystem({
             marka: row.marka || "MJ",
             status: statusVal,
             inTime: row.in_time || row.created_at || new Date().toISOString(),
-            outTime: row.out_time || row.out_date,
+            outTime: row.out_time || row.out_date || "",
+            entryDate: row.entry_date || row.created_at?.split('T')[0] || "",
+            outDate: row.out_date || "",
+            chalanNo: row.chalan_no || "",
+            partyName: row.party_name || row.broker || "",
+            description: row.description || "",
+            quantity: Number(row.quantity || 0),
+            unit: row.unit || "BALES",
+            gateGrossWeight: Number(row.gate_gross_weight || 0),
+            gateTareWeight: Number(row.gate_tare_weight || 0),
+            gateNetWeight: Number(row.gate_net_weight || 0),
+            outRemarks: row.out_remarks || "",
+            grade: row.grade || "",
+            currentStage: row.current_stage || "",
             millGrossWeight: millGross || undefined,
             millTareWeight: millTare || undefined,
             electricGrossWeight: elecGross || undefined,
@@ -1982,7 +2008,7 @@ export default function LorryDispatchSystem({
                 <p><strong>Broker:</strong> {selectedLorryForReceipt.broker}</p>
                 <p><strong>Quality:</strong> {selectedLorryForReceipt.quality}</p>
                 <p><strong>Dept:</strong> {selectedLorryForReceipt.department}</p>
-                <p><strong>In Time:</strong> {new Date(selectedLorryForReceipt.inTime).toLocaleString("en-IN")}</p>
+                <p><strong>In Time:</strong> {selectedLorryForReceipt.inTime && (selectedLorryForReceipt.inTime.includes("AM") || selectedLorryForReceipt.inTime.includes("PM") || selectedLorryForReceipt.inTime.length < 15) ? selectedLorryForReceipt.inTime : (isNaN(new Date(selectedLorryForReceipt.inTime).getTime()) ? selectedLorryForReceipt.inTime : new Date(selectedLorryForReceipt.inTime).toLocaleString("en-IN"))}</p>
               </div>
 
               <div className="border-t border-[#C5BA9E] pt-2 space-y-1 text-[11px]">
