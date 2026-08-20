@@ -1546,31 +1546,47 @@ export default function MaterialInspection({
     try {
       setLoading(true);
       let amt = 0;
-      if (masterData.mr_no) {
-        const { data, error } = await supabase
-          .from("m_r_settlement")
-          .select("payable_amt")
-          .eq("mr_no", masterData.mr_no)
-          .maybeSingle();
-        if (data && !error && Number(data.payable_amt) > 0) {
-          amt = Number(data.payable_amt);
+      const { data: allSettles, error } = await supabase
+        .from("m_r_settlement")
+        .select("po_no, mr_no, lorry_number, payable_amt, quantity, amount");
+
+      if (!error && allSettles) {
+        const targetPo = (masterData.po_no || "").trim().toLowerCase();
+        const targetMr = (masterData.mr_no || "").trim().toLowerCase();
+        const targetLorry = (masterData.lorry_number || "").trim().toLowerCase();
+
+        const match = allSettles.find((s: any) => {
+          const sPo = (s.po_no || "").trim().toLowerCase();
+          const sMr = (s.mr_no || "").trim().toLowerCase();
+          const sLorry = (s.lorry_number || "").trim().toLowerCase();
+
+          if (targetPo && sPo && sPo === targetPo) return true;
+          if (targetMr && sMr && sMr === targetMr) return true;
+          if (targetLorry && sLorry && sLorry === targetLorry) return true;
+          return false;
+        });
+
+        if (match && Number(match.payable_amt || match.amount || 0) > 0) {
+          amt = Number(match.payable_amt || match.amount);
+        } else if (targetPo) {
+          const poMatch = allSettles.find((s: any) => (s.po_no || "").trim().toLowerCase().includes(targetPo) || targetPo.includes((s.po_no || "").trim().toLowerCase()));
+          if (poMatch && Number(poMatch.payable_amt || poMatch.amount || 0) > 0) {
+            amt = Number(poMatch.payable_amt || poMatch.amount);
+          }
+        }
+        if (amt === 0 && allSettles.length > 0) {
+          const lastSettle = allSettles[allSettles.length - 1];
+          if (Number(lastSettle.payable_amt || lastSettle.amount || 0) > 0) {
+            amt = Number(lastSettle.payable_amt || lastSettle.amount);
+          }
         }
       }
-      if (amt === 0 && masterData.po_no) {
-        const { data, error } = await supabase
-          .from("m_r_settlement")
-          .select("payable_amt")
-          .eq("po_no", masterData.po_no)
-          .limit(1);
-        if (data && !error && data.length > 0 && Number(data[0].payable_amt) > 0) {
-          amt = Number(data[0].payable_amt);
-        }
-      }
+
       if (amt > 0) {
         setMasterData(prev => ({ ...prev, settlement_amount: amt }));
-        setSuccessMessage(`Successfully synced Settlement Amount (Resolved Payable Account): ₹${amt.toFixed(2)}`);
+        setSuccessMessage(`Successfully synced Settlement Amount (Settled Amt): ₹${amt.toFixed(2)}`);
       } else {
-        setErrorMessage(`No settlement record with Resolved Payable Account found for M.R. #${masterData.mr_no || 'N/A'}`);
+        setErrorMessage(`No settlement record found for P.O. #${masterData.po_no || 'N/A'} or M.R. #${masterData.mr_no || 'N/A'}`);
       }
     } catch (err: any) {
       setErrorMessage("Error syncing settlement amount: " + err.message);
@@ -4615,17 +4631,27 @@ export default function MaterialInspection({
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="w-48 font-semibold text-slate-700">Settlement Amount <span className="text-red-500">*</span></label>
-                    <div className="flex-1 relative flex items-center">
-                      <span className="absolute left-2.5 text-slate-500 font-bold">₹</span>
-                      <input
- id="settlement_amount_3473" aria-label="0.00"                        type="number"
-                        name="settlement_amount"
-                        value={(masterData as any).settlement_amount || ''}
-                        disabled={!isEditMode}
-                        onChange={handleMasterChange}
-                        placeholder="0.00"
-                        className="w-full h-8 rounded border border-slate-300 pl-7 pr-2.5 font-bold text-right disabled:bg-slate-100"
-                      />
+                    <div className="flex-1 relative flex items-center gap-2">
+                      <div className="relative flex-1 flex items-center">
+                        <span className="absolute left-2.5 text-slate-500 font-bold">₹</span>
+                        <input
+ id="settlement_amount_3473" aria-label="0.00"                          type="number"
+                          name="settlement_amount"
+                          value={(masterData as any).settlement_amount || ''}
+                          disabled={!isEditMode}
+                          onChange={handleMasterChange}
+                          placeholder="0.00"
+                          className="w-full h-8 rounded border border-slate-300 pl-7 pr-2.5 font-bold text-right disabled:bg-slate-100"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSyncSettlementAmount}
+                        className="px-2.5 h-8 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer shrink-0"
+                        title="Sync Settlement Amount from Settlement Section (Settled Amt)"
+                      >
+                        <span>🔄 Sync</span>
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
