@@ -1541,6 +1541,44 @@ export default function MaterialInspection({
     setShowSearchModal(true);
   };
 
+  const handleSyncSettlementAmount = async () => {
+    if (!supabase) return;
+    try {
+      setLoading(true);
+      let amt = 0;
+      if (masterData.mr_no) {
+        const { data, error } = await supabase
+          .from("m_r_settlement")
+          .select("payable_amt")
+          .eq("mr_no", masterData.mr_no)
+          .maybeSingle();
+        if (data && !error && Number(data.payable_amt) > 0) {
+          amt = Number(data.payable_amt);
+        }
+      }
+      if (amt === 0 && masterData.po_no) {
+        const { data, error } = await supabase
+          .from("m_r_settlement")
+          .select("payable_amt")
+          .eq("po_no", masterData.po_no)
+          .limit(1);
+        if (data && !error && data.length > 0 && Number(data[0].payable_amt) > 0) {
+          amt = Number(data[0].payable_amt);
+        }
+      }
+      if (amt > 0) {
+        setMasterData(prev => ({ ...prev, settlement_amount: amt }));
+        setSuccessMessage(`Successfully synced Settlement Amount (Resolved Payable Account): ₹${amt.toFixed(2)}`);
+      } else {
+        setErrorMessage(`No settlement record with Resolved Payable Account found for M.R. #${masterData.mr_no || 'N/A'}`);
+      }
+    } catch (err: any) {
+      setErrorMessage("Error syncing settlement amount: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load a historical inspection directly into the active workbench
   const loadInspectionIntoForm = async (insp: InspectionMaster) => {
     if (!supabase) return;
@@ -1550,10 +1588,38 @@ export default function MaterialInspection({
     try {
       // Set Master fields in uppercase
       const voucher = getVoucherForInspection(insp);
+      let resolvedPayableAmt = Number((insp as any).settlement_amount) || 0;
+      if (!resolvedPayableAmt && insp.mr_no) {
+        try {
+          const { data: settData } = await supabase
+            .from("m_r_settlement")
+            .select("payable_amt")
+            .eq("mr_no", insp.mr_no)
+            .maybeSingle();
+          if (settData && Number(settData.payable_amt) > 0) {
+            resolvedPayableAmt = Number(settData.payable_amt);
+          }
+        } catch (e) {}
+      }
+      const poNo = insp.po_no || (insp as any).mill_po_no || "";
+      if (!resolvedPayableAmt && poNo) {
+        try {
+          const { data: settPoData } = await supabase
+            .from("m_r_settlement")
+            .select("payable_amt")
+            .eq("po_no", poNo)
+            .limit(1);
+          if (settPoData && settPoData.length > 0 && Number(settPoData[0].payable_amt) > 0) {
+            resolvedPayableAmt = Number(settPoData[0].payable_amt);
+          }
+        } catch (e) {}
+      }
+
       const mappedInsp = {
         ...insp,
+        settlement_amount: resolvedPayableAmt > 0 ? resolvedPayableAmt : (Number((insp as any).settlement_amount) || 0),
         unloading_date: insp.unloading_date || (insp as any).date || (insp as any).mr_date || (voucher as any)?.unloading_date || (voucher as any)?.date || insp.arrival_date || "",
-        po_no: insp.po_no || (insp as any).mill_po_no || "",
+        po_no: poNo,
         broker_name: (insp.broker_name || "").toUpperCase(),
         supplier_name: (insp.supplier_name || "").toUpperCase(),
         lorry_number: insp.lorry_number || (voucher as any)?.lorry_number || (voucher as any)?.lorry_no || (voucher as any)?.vehicle_no || "",
