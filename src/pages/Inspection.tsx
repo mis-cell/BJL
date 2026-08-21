@@ -1633,13 +1633,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     <span>Back</span>
                   </button>
                 </div>
-                <button
+                {/* <button
                   onClick={handleSaveForm}
                   className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save Inspection</span>
-                </button>
+                </button> */}
               </>
             ) : (
               <>

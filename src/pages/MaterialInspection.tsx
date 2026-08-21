@@ -4093,22 +4093,32 @@ export default function MaterialInspection({
             {/* Left Badge */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
-                <Scale className="w-5 h-5" />
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider">
-                  BJL 2026 - 2027
-                </span>
+                <h1 className="text-base font-bold text-white tracking-wide">
+                  INSPECTION CHECKLIST
+                </h1>
               </div>
             </div>
 
             {/* Center Title */}
-            <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow text-center">
-              INSPECTION CHECKLIST
-            </h1>
+            {/* <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow text-center">
+              INSPECTION CHECKLIST1
+            </h1> */}
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                title="Back to Sauda Desk (Esc)"
+                onClick={() => setViewMode("dashboard")}
+              >
+                <ArrowLeft className="h-4 w-4 text-amber-300" />
+                <span>Back</span>
+              </button>
+              
               <button
                 type="button"
                 onClick={() => handlePreparePrintInspection(masterData)}
@@ -4118,7 +4128,7 @@ export default function MaterialInspection({
                 <span>Print</span>
               </button>
               
-              <div className="relative">
+              {/* <div className="relative">
                 <select
                   id="masterdata_mr_no_3135" name="masterdata_mr_no" aria-label="masterdata mr no"
                   value={masterData.mr_no}
@@ -4138,7 +4148,7 @@ export default function MaterialInspection({
                   ))}
                 </select>
                 <ChevronDown className="w-4 h-4 text-amber-300 absolute right-2.5 top-2.5 pointer-events-none" />
-              </div>
+              </div> */}
             </div>
           </div>
 

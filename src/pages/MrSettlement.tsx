@@ -24,7 +24,8 @@ import {
   FileSpreadsheet,
   Grid,
   Truck,
-  Eye
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import PrintModal from '../components/PrintModal';
@@ -3133,6 +3134,29 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* HEADER BAR */}
+          <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+            {/* Left Badge */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <h1 className="text-base font-bold text-white tracking-wide">
+                  SETTLEMENT
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                title="Back to Sauda Desk (Esc)"
+                onClick={() => setViewMode("dashboard")}
+              >
+                <ArrowLeft className="h-4 w-4 text-amber-300" />
+                <span>Back</span>
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-3 font-sans relative">
             
