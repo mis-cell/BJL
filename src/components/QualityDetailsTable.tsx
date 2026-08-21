@@ -53,12 +53,11 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-[#E0DBCF] shadow-2xs">
         <table className="w-full text-left border-collapse">
-          <thead>
+           <thead>
             <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-              <th className="px-3.5 py-2.5 w-1/4">Quality</th>
-              <th className="px-3.5 py-2.5 w-1/6 text-right">Qty</th>
+              <th className="px-3.5 py-2.5 w-1/3">Quality</th>
               <th className="px-3.5 py-2.5 w-1/4">Agency</th>
-              <th className="px-3.5 py-2.5 w-1/5">Marka</th>
+              <th className="px-3.5 py-2.5 w-1/4">Marka</th>
               <th className="px-3.5 py-2.5 w-1/6 text-right">Rs.</th>
               <th className="px-2 py-2.5 w-12 text-center"></th>
             </tr>
@@ -69,7 +68,10 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Quality */}
                 <td className="p-2">
                   <select
- id="qd_quality_71" name="qd_quality" aria-label="qd quality"                    value={qd.quality || ''}
+                    id={`qd_quality_${i}`}
+                    name="qd_quality"
+                    aria-label="qd quality"
+                    value={qd.quality || ''}
                     onChange={(e) => onQualityChange(i, 'quality', e.target.value)}
                     className="w-full bg-white border border-[#D5D0C5] focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C] rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none transition-all cursor-pointer"
                   >
@@ -91,21 +93,13 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                   </select>
                 </td>
 
-                {/* Qty */}
-                <td className="p-2">
-                  <input
- id="qty_90" name="qty" aria-label="Qty"                    type="number"
-                    value={qd.qty ?? ''}
-                    onChange={(e) => onQualityChange(i, 'qty', e.target.value)}
-                    placeholder="Qty"
-                    className="w-full bg-white border border-[#D5D0C5] focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C] rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 text-right outline-none transition-all"
-                  />
-                </td>
-
                 {/* Agency */}
                 <td className="p-2">
                   <input
- id="agency_101" name="agency" aria-label="Agency"                    type="text"
+                    id={`agency_${i}`}
+                    name="agency"
+                    aria-label="Agency"
+                    type="text"
                     value={qd.agency || ''}
                     onChange={(e) => onQualityChange(i, 'agency', e.target.value.toUpperCase())}
                     list={`agency_options_${i}`}
@@ -122,7 +116,10 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Marka */}
                 <td className="p-2">
                   <input
- id="marka_118" name="marka" aria-label="Marka"                    type="text"
+                    id={`marka_${i}`}
+                    name="marka"
+                    aria-label="Marka"
+                    type="text"
                     value={qd.marka || ''}
                     onChange={(e) => onQualityChange(i, 'marka', e.target.value.toUpperCase())}
                     list={`marka_options_${i}`}
@@ -139,7 +136,10 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 {/* Rs. */}
                 <td className="p-2">
                   <input
- id="rs_135" name="rs" aria-label="Rs."                    type="number"
+                    id={`rs_${i}`}
+                    name="rs"
+                    aria-label="Rs."
+                    type="number"
                     step="0.01"
                     value={qd.rs ?? ''}
                     onChange={(e) => onQualityChange(i, 'rs', e.target.value)}

@@ -626,6 +626,104 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         });
       });
 
+      // --- Same-Date B. Rate Mismatch Detection (Sauda Desk & PTF Entry) ---
+      // 1. Sauda Desk (sauda_master): Group by b_date (or date), verify b_rate is identical across same b_date
+      const saudaByDate = new Map<string, any[]>();
+      saudaMasterRows.forEach((sm: any) => {
+        const bDate = String(sm.b_date || sm.date || '').trim();
+        if (!bDate) return;
+        if (!saudaByDate.has(bDate)) saudaByDate.set(bDate, []);
+        saudaByDate.get(bDate)!.push(sm);
+      });
+
+      saudaByDate.forEach((entries, bDate) => {
+        if (entries.length < 2) return;
+        const refRate = Number(entries[0].b_rate || entries[0].rate || 0);
+        for (let i = 1; i < entries.length; i++) {
+          const entry = entries[i];
+          const entryRate = Number(entry.b_rate || entry.rate || 0);
+          if (refRate > 0 && Math.abs(entryRate - refRate) > 0.01) {
+            const formattedNo = getFormattedOrderNo(entry);
+            const itemId = `SD-RATEDIFF-${entry.sauda_id || formattedNo}`;
+            if (!sattaItems.some(i => i.id === itemId)) {
+              sattaItems.push({
+                id: itemId,
+                poNo: formattedNo,
+                saudaNo: entry.sauda_no || formattedNo,
+                poDate: bDate,
+                supplierName: entry.supplier || 'UNKNOWN SUPPLIER',
+                brokerName: entry.broker || 'UNKNOWN BROKER',
+                area: entry.area || 'NORTHERN',
+                grade: entry.grade || 'TD6',
+                poRateMt: entryRate * 10,
+                poRateQtl: entryRate,
+                sattaBaseRateQtl: refRate,
+                differentialQtl: entryRate - refRate,
+                sattaFinalRateMt: refRate * 10,
+                sattaFinalRateQtl: refRate,
+                status: 'dispute',
+                issueDescription: `Same-Date B. Rate Mismatch on date ${bDate}: Reference rate for date ${bDate} is ₹${refRate.toLocaleString()}/Qtl, but contract specifies ₹${entryRate.toLocaleString()}/Qtl.`,
+                differenceMt: (entryRate - refRate) * 10,
+                differenceQtl: entryRate - refRate,
+                weightMt: Number(entry.total_wt_in_ton || 0),
+                sourceType: 'sauda_master',
+                sourceLabel: 'Sauda Desk Module (Same-Date Rate Mismatch)'
+              });
+            }
+          }
+        }
+      });
+
+      // 2. PTF Entries in Sauda Check Point / Purchase Master (where is_ptf or po_identification === 'PTF' or po_type === 'PTF')
+      const ptfRows = [...scpRows, ...purchaseMasterRows].filter((p: any) => 
+        p.is_ptf || p.po_identification === 'PTF' || p.po_type === 'PTF' || p.ptf_no
+      );
+      const ptfByDate = new Map<string, any[]>();
+      ptfRows.forEach((p: any) => {
+        const sDate = String(p.s_date || p.po_date || p.date || '').trim();
+        if (!sDate) return;
+        if (!ptfByDate.has(sDate)) ptfByDate.set(sDate, []);
+        ptfByDate.get(sDate)!.push(p);
+      });
+
+      ptfByDate.forEach((entries, sDate) => {
+        if (entries.length < 2) return;
+        const refRate = Number(entries[0].b_rate || entries[0].rate_qntl || 0);
+        for (let i = 1; i < entries.length; i++) {
+          const entry = entries[i];
+          const entryRate = Number(entry.b_rate || entry.rate_qntl || 0);
+          if (refRate > 0 && Math.abs(entryRate - refRate) > 0.01) {
+            const poNo = String(entry.po_no || entry.purchase_order || '').trim();
+            const itemId = `PTF-RATEDIFF-${poNo || i}`;
+            if (!sattaItems.some(item => item.id === itemId)) {
+              sattaItems.push({
+                id: itemId,
+                poNo: poNo || 'N/A',
+                saudaNo: entry.contract_po_no || poNo || 'N/A',
+                poDate: sDate,
+                supplierName: entry.supplier || 'UNKNOWN SUPPLIER',
+                brokerName: entry.broker || 'UNKNOWN BROKER',
+                area: entry.area || 'NORTHERN',
+                grade: entry.grade || 'TD6',
+                poRateMt: entryRate * 10,
+                poRateQtl: entryRate,
+                sattaBaseRateQtl: refRate,
+                differentialQtl: entryRate - refRate,
+                sattaFinalRateMt: refRate * 10,
+                sattaFinalRateQtl: refRate,
+                status: 'dispute',
+                issueDescription: `Same-Date PTF B. Rate Mismatch on S Date ${sDate}: Reference rate for date ${sDate} is ₹${refRate.toLocaleString()}/Qtl, but PTF entry specifies ₹${entryRate.toLocaleString()}/Qtl.`,
+                differenceMt: (entryRate - refRate) * 10,
+                differenceQtl: entryRate - refRate,
+                weightMt: Number(entry.total_contract_mt || entry.total_wt_in_ton || 0),
+                sourceType: 'sauda_check_point',
+                sourceLabel: 'Sauda Check Point PTF Module (Same-Date Rate Mismatch)'
+              });
+            }
+          }
+        }
+      });
+
       setSattaMismatchList(sattaItems);
     } catch (err) {
       console.error('Error loading mismatches from DB:', err);

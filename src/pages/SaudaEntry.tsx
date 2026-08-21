@@ -387,6 +387,16 @@ export default function SaudaEntry({
       return;
     }
 
+    if (!formData.b_rate || Number(formData.b_rate) <= 0) {
+      alert("B. Rate (Rs.) is required.");
+      return;
+    }
+
+    if (!formData.b_date) {
+      alert("B. Date is required.");
+      return;
+    }
+
     setLoading(true);
     try {
       const saudaData = { ...formData };
