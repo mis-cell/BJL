@@ -3806,15 +3806,45 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 )}
                 
                 {/* ROW 1 */}
-                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                {/* <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
                   <label className="whitespace-nowrap min-w-[70px]">Purchase Order</label>
                   <SingleComboBox value={formData.purchase_order} onChange={(val) => setFormData({...formData, purchase_order: val})} options={[{text: 'FINAL PO', value: 'FINAL PO'}]} textField="text" valueField="value" />
-                </div>
+                </div> */}
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                  <label className="whitespace-nowrap shrink-0 text-[10px] font-bold">
+                    Purchase Order
+                  </label>
+
+                    <SingleComboBox
+                      value={formData.purchase_order}
+                      onChange={(val) =>
+                        setFormData({...formData, purchase_order: val})
+                      }
+                      options={[{text: 'FINAL PO', value: 'FINAL PO'}]}
+                      textField="text"
+                      valueField="value"
+                    />
+
+                </div>
+                {/* Type */}
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 lg:pl-6">
+                  <label className="ml-0 sm:ml-2 min-w-[30px]">Type</label>
+                  <SingleComboBox
+                    value={formData.po_type}
+                    onChange={(val) => setFormData({...formData, po_type: val})}
+                    options={[
+                      {text: 'Normal', value: 'Normal'},
+                      {text: 'Special', value: 'Special'}
+                    ]}
+                    textField="text"
+                    valueField="value"
+                  />
+                </div>
+               {/*  <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
                   <label className="ml-0 sm:ml-2 min-w-[30px]">Type</label>
                   <SingleComboBox value={formData.po_type} onChange={(val) => setFormData({...formData, po_type: val})} options={[{text: 'Normal', value: 'Normal'}, {text: 'Special', value: 'Special'}]} textField="text" valueField="value" />
-                </div>
-                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                </div> */}
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 lg:pl-7">
                   <label className="whitespace-nowrap flex items-center cursor-pointer gap-1 text-[11px] font-extrabold text-[#7c2d12]">
                     <input  id="checkbox_3401" name="checkbox" aria-label="checkbox"
                       type="checkbox" 
@@ -3856,7 +3886,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                     readOnly={!formData.is_ptf}
                   />
                 </div>
-                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 justify-center sm:justify-start whitespace-nowrap">
+                <div className=" lg:pl-12 col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 justify-center sm:justify-start whitespace-nowrap">
                   <label htmlFor="pending_radio_3443" className="mr-1 min-w-[50px] text-center sm:text-left">Pending</label>
                   <input  id="pending_radio_3443" aria-label="Pending"type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
                   <input  id="pending_radio_3444" aria-label="Pending"type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
