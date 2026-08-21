@@ -1615,13 +1615,24 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           <div className="flex items-center gap-2.5">
             {viewMode === "form" ? (
               <>
-                <button
+                {/* <button
                   onClick={() => setViewMode("dashboard")}
                   className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Register</span>
-                </button>
+                  <span>Back </span>
+                </button> */}
+                <div className="relative z-10 flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                    title="Back to Sauda Desk (Esc)"
+                    onClick={() => setViewMode("dashboard")}
+                  >
+                    <ArrowLeft className="h-4 w-4 text-amber-300" />
+                    <span>Back</span>
+                  </button>
+                </div>
                 <button
                   onClick={handleSaveForm}
                   className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"

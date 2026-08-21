@@ -534,7 +534,7 @@ export default function SaudaEntry({
               title="Back to Sauda Desk (Esc)"
             >
               <ArrowLeft className="h-4 w-4 text-amber-300" />
-              <span>Back (Esc)</span>
+              <span>Back</span>
             </button>
           </div>
         </div>

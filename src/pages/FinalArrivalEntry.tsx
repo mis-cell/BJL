@@ -11,7 +11,8 @@ import {
   ClipboardCheck,
   Calendar,
   Filter,
-  Leaf
+  Leaf,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
@@ -943,6 +944,22 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
                 Enter final M.R details and receipt grid items
               </p>
+            </div>
+          </div>
+          {/* Action Controls & Session Badge */}
+          <div className="relative z-10 flex items-center gap-3">
+            <button
+              type="button"
+              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              title="Back to Sauda Desk (Esc)"
+              onClick={onCancel}
+            >
+              <ArrowLeft className="h-4 w-4 text-amber-300" />
+              <span>Back</span>
+            </button>
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-emerald-200/80 font-medium">Session:</span>
+              <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
             </div>
           </div>
         </div>

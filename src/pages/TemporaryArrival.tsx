@@ -1177,9 +1177,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               type="button"
               className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
+              onClick={onCancel}
             >
               <ArrowLeft className="h-4 w-4 text-amber-300" />
-              <span>Back </span>
+              <span>Back</span>
             </button>
             <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
               <span className="text-emerald-200/80 font-medium">Session:</span>

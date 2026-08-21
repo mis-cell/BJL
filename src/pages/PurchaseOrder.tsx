@@ -3676,7 +3676,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   title="Close P.O Form & Return to Register (Esc)"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Back to Register</span>
+                  <span>Back</span>
                 </button>
               </div>
             </div>

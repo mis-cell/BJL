@@ -1531,7 +1531,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               variant="secondary"
               icon={ArrowLeft}
             >
-              Back to Dashboard
+              Back
             </LegacyButton>
           ) : (
             <LegacyButton
