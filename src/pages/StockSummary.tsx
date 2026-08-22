@@ -139,6 +139,8 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
   const [metricCalculationMode, setMetricCalculationMode] = useState<'cumulative' | 'period'>('cumulative');
   const [loading, setLoading] = useState(false);
   const [OpenStock, setOpenStock] = useState(false);
+  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
+  const [expandedGrades, setExpandedGrades] = useState<Record<string, boolean>>({});
 
   // Form input states for Opening Stock
   const [formState, setFormState] = useState({
@@ -1771,1069 +1773,205 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
               </div>
             </>
 
-            {/* 15.1 Opening Stocks Ledger Grid layout */}
-            {stockSubTab === 'opening' ? (() => {
-              const gwtTotalQty = filteredSavedStocks.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-              const gwtTotalWeight = filteredSavedStocks.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
-              const distinctGodowns = Array.from(new Set(filteredSavedStocks.map(r => String(r.godown || '').trim().toUpperCase()).filter(Boolean)));
-              const gwtDistinctGodownsCount = distinctGodowns.length;
-              const gwtOverallAvgWt = gwtTotalQty > 0 ? Number((gwtTotalWeight / gwtTotalQty).toFixed(4)) : 0;
-
-              const activeGdnCapacityMT = distinctGodowns.reduce((acc, name) => {
-                const info = getGodownCapacityAndName(name);
-                return acc + info.capacity;
-              }, 0);
-
-              const activeGodownData = distinctGodowns.map(name => {
-                const info = getGodownCapacityAndName(name);
-                const records = filteredSavedStocks.filter(r => String(r.godown || '').trim().toUpperCase() === name);
-                const weight = records.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
-                const qty = records.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-                const utilPercent = info.capacity > 0 ? (weight / info.capacity) * 100 : 0;
-                return {
-                  name,
-                  capacity: info.capacity,
-                  storedWeight: weight,
-                  storedQty: qty,
-                  utilPercent: Math.min(100, utilPercent),
-                  rawUtil: utilPercent
-                };
-              });
-
-              return (
-                
-                <div className="space-y-4">
-                  
-                  {/* METRICS ROW */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-100">
-
-                    {/* Total Quantity */}
-                    <div className="group bg-white border border-indigo-100 hover:border-indigo-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-950/60 block leading-none mb-1">
-                          Total Bales Entry
-                        </span>
-
-                        <p className="text-xl font-black font-mono text-indigo-950 tracking-tight leading-none">
-                          {gwtTotalQty.toLocaleString(undefined, {
-                            maximumFractionDigits: 3
-                          })}
-                        </p>
-
-                        <span className="text-[7px] font-bold text-slate-400 uppercase block mt-1">
-                          Across active openings
-                        </span>
-                      </div>
-
-                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100 transition-colors">
-                        <Box className="h-4 w-4" />
-                      </div>
+            {/* Area-Wise -> Grade-Wise -> Godown-Wise Simple Stock Display Tree */}
+            {stockSubTab === 'opening' ? (
+              <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden p-4 space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded bg-[#174C2C] text-white flex items-center justify-center font-black text-xs">
+                      📍
+                    </span>
+                    <div>
+                      <h3 className="text-xs font-black uppercase text-indigo-950">Area Wise & Grade Wise Stock Inventory (Godown Breakdown)</h3>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">Click on [+] to expand Area, then Grade to view Godowns</p>
                     </div>
-
-
-                    {/* Total Weight */}
-                    <div className="group bg-white border border-teal-100 hover:border-teal-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-teal-950/60 block leading-none mb-1">
-                          Total Book Weight
-                        </span>
-
-                        <p className="text-xl font-black font-mono text-teal-800 tracking-tight leading-none">
-                          {(gwtTotalWeight / 10).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 3
-                          })}
-                        </p>
-
-                        <span className="text-[7px] font-bold text-teal-600 uppercase block mt-1">
-                          MT
-                        </span>
-                      </div>
-
-                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-teal-50 text-teal-700 group-hover:bg-teal-100 transition-colors">
-                        <Layers className="h-4 w-4" />
-                      </div>
-                    </div>
-
-
-                    {/* Active Godowns */}
-                    <div className="group bg-white border border-amber-100 hover:border-amber-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-950/60 block leading-none mb-1">
-                          Active Godowns
-                        </span>
-
-                        <p className="text-xl font-black font-mono text-amber-900 tracking-tight leading-none">
-                          {gwtDistinctGodownsCount}
-                        </p>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowCapacityPopup(true)}
-                          className="text-[7px] font-extrabold text-sky-700 hover:text-sky-900 hover:underline uppercase text-left mt-1 cursor-pointer"
-                        >
-                          Verify Capacity ↗
-                        </button>
-                      </div>
-
-                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-amber-50 text-amber-700 group-hover:bg-amber-100 transition-colors">
-                        <MapPin className="h-4 w-4" />
-                      </div>
-                    </div>
-
-
-                    {/* Average Weight */}
-                    <div className="group bg-white border border-emerald-100 hover:border-emerald-300 rounded-lg px-3 py-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                      <div className="min-w-0">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-950/60 block leading-none mb-1">
-                          Avg Wt / Bale
-                        </span>
-
-                        <p className="text-xl font-black font-mono text-emerald-800 tracking-tight leading-none">
-                          {(gwtOverallAvgWt / 10).toFixed(4)}
-                        </p>
-
-                        <span className="text-[7px] font-bold text-emerald-600 uppercase block mt-1">
-                          MT / Unit Ratio
-                        </span>
-                      </div>
-
-                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-emerald-50 text-emerald-700 group-hover:bg-emerald-100 transition-colors">
-                        <Percent className="h-4 w-4" />
-                      </div>
-                    </div>
-
                   </div>
-
-                  {/* CHARTS ROW */}
-                  {filteredSavedStocks.length > 0 ? (
-                  <>
-                    <div className="lg:col-span-8 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                      {/* Header */}
-                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-md bg-emerald-50 flex items-center justify-center">
-                            <Layers className="h-4 w-4 text-emerald-700" />
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-wide text-indigo-950 leading-none">
-                              Grade-Wise Stock Distribution
-                            </p>
-                            <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                              Current stock by grade
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className="text-[8px] font-black uppercase text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded">
-                          {Object.keys(
-                            filteredSavedStocks.reduce((acc: any, r) => {
-                              const g = r.grade || "Unknown";
-                              if (!acc[g]) acc[g] = true;
-                              return acc;
-                            }, {})
-                          ).length} Grades
-                        </span>
-
-                      </div>
-
-                      {/* Grade List */}
-                      <div className="px-3 py-2">
-
-                        <div className="flex flex-wrap gap-1.5">
-
-                          {Object.values(
-                            filteredSavedStocks.reduce(
-                              (
-                                acc: {
-                                  [key: string]: {
-                                    grade: string;
-                                    qty: number;
-                                  };
-                                },
-                                r
-                              ) => {
-
-                                const g = r.grade || "Unknown";
-
-                                if (!acc[g]) {
-                                  acc[g] = {
-                                    grade: g,
-                                    qty: 0
-                                  };
-                                }
-
-                                acc[g].qty += Number(r.quantity || 0);
-
-                                return acc;
-
-                              },
-                              {}
-                            )
-                          ).map((itm: any) => (
-
-                            <div
-                              key={itm.grade}
-                              className="
-                                flex
-                                items-center
-                                gap-2
-                                px-2.5
-                                py-1.5
-                                bg-slate-50
-                                border
-                                border-slate-200
-                                rounded-md
-                                hover:bg-emerald-50
-                                hover:border-emerald-300
-                                transition-all
-                              "
-                            >
-
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-
-                              <span className="text-[9px] font-black uppercase text-slate-700">
-                                {itm.grade}
-                              </span>
-
-                              <span className="h-3 border-l border-slate-300" />
-
-                              <span className="text-[9px] font-black font-mono text-indigo-950">
-                                {Number(itm.qty).toLocaleString()}
-                              </span>
-
-                              <span className="text-[7px] font-bold uppercase text-slate-400">
-                                Bales
-                              </span>
-
-                            </div>
-
-                          ))}
-
-                          {filteredSavedStocks.length === 0 && (
-                            <div className="w-full text-center py-3 text-[9px] font-bold uppercase text-slate-400">
-                              No grade-wise stock available
-                            </div>
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 animate-in fade-in duration-150">
-                      
-                      {/* Left Column: Grade-Wise Stock Distribution */}
-                      <div className="lg:col-span-8 bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
-                        {/* Godown Wise Capacity Share (Donut Chart - only if entries present) */}
-                        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-4">
-                          <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase text-indigo-950 flex items-center gap-1.5">
-                              <Sparkles className="h-4 w-4 text-emerald-800" />
-                              Godown Capacity Share
-                            </span>
-                          </div>
-
-                          {gwtTotalWeight > 0 ? (
-                            <div className="space-y-3 pt-0.5 animate-in fade-in duration-200">
-                              <div className="flex items-center gap-2">
-                                <div className="h-[105px] w-[105px] shrink-0 relative">
-                                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                                    <PieChart>
-                                      <Pie
-                                        data={[
-                                          { name: 'Used', value: gwtTotalWeight / 10 },
-                                          { name: 'Free', value: Math.max(0, activeGdnCapacityMT - gwtTotalWeight / 10) }
-                                        ]}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={32}
-                                        outerRadius={45}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                      >
-                                        <Cell fill="#008080" />
-                                        <Cell fill="#e2e8f0" />
-                                      </Pie>
-                                    </PieChart>
-                                  </ResponsiveContainer>
-                                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[10px] font-extrabold text-teal-800">
-                                      {activeGdnCapacityMT > 0 ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%
-                                    </span>
-                                    <span className="text-[7px] text-gray-400 font-extrabold uppercase tracking-tighter">used</span>
-                                  </div>
-                                </div>
-
-                                <div className="flex-1 space-y-1.5 text-[9px] font-extrabold text-[#1e293b] leading-tight">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="inline-block w-2.5 h-2.5 bg-[#008080] rounded-full" />
-                                    <span>Used: {(gwtTotalWeight / 10).toFixed(2)} MT ({activeGdnCapacityMT > 0 ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%)</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="inline-block w-2.5 h-2.5 bg-slate-200 rounded-full" />
-                                    <span>Free: {Math.max(0, activeGdnCapacityMT - gwtTotalWeight / 10).toFixed(2)} MT ({activeGdnCapacityMT > 0 ? ((Math.max(0, activeGdnCapacityMT - gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%)</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Active godown capacity breakdowns */}
-                              <div className="pt-2 border-t border-slate-100 space-y-2 text-[8.5px] uppercase text-slate-500 font-sans">
-                                <span className="font-extrabold block text-slate-400 mb-0.5 text-left">Active godown allocation:</span>
-                                <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-1">
-                                  {activeGodownData.map((g, idx) => (
-                                    <div key={idx} className="flex flex-col pl-1.5 border-l-2 border-teal-600 py-1 font-sans text-[9px] text-slate-700 space-y-0.5">
-                                      <div className="flex justify-between items-center">
-                                        <span className="font-extrabold uppercase text-slate-800 truncate max-w-[125px]">Godown {g.name}</span>
-                                        <span className="font-mono text-indigo-950 font-black">{g.storedWeight.toFixed(2)} MT</span>
-                                      </div>
-                                      <div className="flex justify-between text-[8px] text-slate-400">
-                                        <span>Master Capacity: {g.capacity} MT</span>
-                                        <span className="text-teal-700 font-extrabold">({g.utilPercent.toFixed(1)}% Utilized)</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="py-6 text-center text-slate-400 italic">
-                              No stored weight logged to show Godown capacity sharing.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {/* Right Column: Calculations & Capacity Share */}
-                      <div className="lg:col-span-4 space-y-4 text-left">
-                        {/* <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs space-y-3">
-                          <div className="border-b border-slate-100 pb-2 flex items-center gap-1">
-                            <ClipboardList className="h-4 w-4 text-[#008080]" />
-                            <span className="text-[10px] font-black uppercase text-indigo-950">Weighted Summary</span>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>Storage Utilisation (Active GDNs)</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {activeGdnCapacityMT > 0 ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1) : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-105 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#008080] h-full rounded-full transition-all duration-500"
-                                  style={{ width: `${Math.min(100, activeGdnCapacityMT > 0 ? ((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100 : 0)}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>Tossa & TD Grade Ratio</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {gwtTotalQty > 0 
-                                    ? ((filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100).toFixed(1)
-                                    : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#4f46e5] h-full rounded-full transition-all duration-500"
-                                  style={{ 
-                                    width: `${gwtTotalQty > 0 
-                                      ? (filteredSavedStocks.filter(r => (r.grade || '').toUpperCase().includes('TD')).reduce((acc, c) => acc + Number(c.quantity), 0) / gwtTotalQty) * 100
-                                      : 0}%` 
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex justify-between text-[8px] text-slate-500 uppercase font-black mb-1">
-                                <span>JCI block entries</span>
-                                <span className="font-mono text-indigo-950 font-black">
-                                  {filteredSavedStocks.length > 0 
-                                    ? ((filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100).toFixed(1)
-                                    : "0.0"}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-101 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-[#64748b] h-full rounded-full transition-all duration-500"
-                                  style={{ 
-                                    width: `${filteredSavedStocks.length > 0 
-                                      ? (filteredSavedStocks.filter(r => (r.jci || '').toUpperCase().trim() === 'YES' || (r.jci || '').toLowerCase().trim() === 'yes').length / filteredSavedStocks.length) * 100
-                                      : 0}%` 
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div> */}
-
-                        
-
-                        {/* Date Wise Total Opening Stock Report (Global Summary) */}
-                        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-
-                          {/* Header */}
-                          <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-md bg-teal-50 border border-teal-100 flex items-center justify-center">
-                                <Sparkles className="h-3.5 w-3.5 text-teal-700" />
-                              </div>
-
-                              <div>
-                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-800 leading-none">
-                                  Godown Capacity Share
-                                </p>
-                                <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                                  Storage Utilisation
-                                </p>
-                              </div>
-                            </div>
-
-                            {gwtTotalWeight > 0 && (
-                              <div className="text-right">
-                                <p className="text-[15px] font-black font-mono text-teal-700 leading-none">
-                                  {activeGdnCapacityMT > 0
-                                    ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
-                                    : "0.0"}%
-                                </p>
-                                <p className="text-[7px] font-black uppercase text-slate-400">
-                                  Used
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {gwtTotalWeight > 0 ? (
-                            <div className="p-3">
-
-                              {/* Summary Row */}
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-
-                                {/* Used */}
-                                <div className="bg-teal-50 border border-teal-100 rounded-md px-2.5 py-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[8px] font-black uppercase text-teal-700">
-                                      Used
-                                    </span>
-                                    <span className="w-2 h-2 rounded-full bg-teal-600" />
-                                  </div>
-
-                                  <p className="text-[14px] font-black font-mono text-teal-900 leading-none mt-1">
-                                    {(gwtTotalWeight / 10).toFixed(2)}
-                                    <span className="text-[8px] ml-1 font-bold">MT</span>
-                                  </p>
-
-                                  <p className="text-[7px] text-teal-600 font-bold uppercase mt-1">
-                                    {activeGdnCapacityMT > 0
-                                      ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
-                                      : "0.0"}%
-                                    Capacity
-                                  </p>
-                                </div>
-
-                                {/* Free */}
-                                <div className="bg-slate-50 border border-slate-200 rounded-md px-2.5 py-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[8px] font-black uppercase text-slate-500">
-                                      Free
-                                    </span>
-                                    <span className="w-2 h-2 rounded-full bg-slate-300" />
-                                  </div>
-
-                                  <p className="text-[14px] font-black font-mono text-slate-800 leading-none mt-1">
-                                    {Math.max(
-                                      0,
-                                      activeGdnCapacityMT - gwtTotalWeight / 10
-                                    ).toFixed(2)}
-                                    <span className="text-[8px] ml-1 font-bold">MT</span>
-                                  </p>
-
-                                  <p className="text-[7px] text-slate-400 font-bold uppercase mt-1">
-                                    {activeGdnCapacityMT > 0
-                                      ? (
-                                          (Math.max(
-                                            0,
-                                            activeGdnCapacityMT - gwtTotalWeight / 10
-                                          ) /
-                                            activeGdnCapacityMT) *
-                                          100
-                                        ).toFixed(1)
-                                      : "0.0"}%
-                                    Available
-                                  </p>
-                                </div>
-
-                                {/* Total Capacity */}
-                                <div className="bg-indigo-50 border border-indigo-100 rounded-md px-2.5 py-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[8px] font-black uppercase text-indigo-700">
-                                      Capacity
-                                    </span>
-                                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                                  </div>
-
-                                  <p className="text-[14px] font-black font-mono text-indigo-900 leading-none mt-1">
-                                    {activeGdnCapacityMT.toFixed(2)}
-                                    <span className="text-[8px] ml-1 font-bold">MT</span>
-                                  </p>
-
-                                  <p className="text-[7px] text-indigo-500 font-bold uppercase mt-1">
-                                    Active Godowns
-                                  </p>
-                                </div>
-
-                              </div>
-
-                              {/* Capacity Progress */}
-                              <div className="mb-3">
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className="text-[8px] font-black uppercase text-slate-500">
-                                    Overall Capacity
-                                  </span>
-
-                                  <span className="text-[8px] font-black font-mono text-teal-700">
-                                    {activeGdnCapacityMT > 0
-                                      ? (((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100).toFixed(1)
-                                      : "0.0"}%
-                                  </span>
-                                </div>
-
-                                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                  <div
-                                    className="h-full bg-teal-600 rounded-full transition-all duration-500"
-                                    style={{
-                                      width: `${Math.min(
-                                        100,
-                                        activeGdnCapacityMT > 0
-                                          ? ((gwtTotalWeight / 10) / activeGdnCapacityMT) * 100
-                                          : 0
-                                      )}%`
-                                    }}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Active Godown Allocation */}
-                              <div className="border-t border-slate-100 pt-2">
-
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-[8px] font-black uppercase text-slate-500">
-                                    Active Godown Allocation
-                                  </span>
-
-                                  <span className="text-[7px] font-bold uppercase text-slate-400">
-                                    {activeGodownData.length} Godown
-                                    {activeGodownData.length !== 1 ? "s" : ""}
-                                  </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto pr-1">
-
-                                  {activeGodownData.map((g, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="group border border-slate-200 bg-slate-50 hover:bg-white hover:border-teal-200 rounded-md px-2 py-1.5 transition-all"
-                                    >
-                                      <div className="flex items-center justify-between gap-2">
-
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                          <span className="w-1.5 h-5 bg-teal-600 rounded-full shrink-0" />
-
-                                          <div className="min-w-0">
-                                            <p className="text-[8px] font-black uppercase text-slate-800 truncate">
-                                              Godown {g.name}
-                                            </p>
-
-                                            <p className="text-[7px] text-slate-400 font-bold uppercase">
-                                              Capacity {g.capacity} MT
-                                            </p>
-                                          </div>
-                                        </div>
-
-                                        <div className="text-right shrink-0">
-                                          <p className="text-[9px] font-black font-mono text-indigo-900">
-                                            {g.storedWeight.toFixed(2)} MT
-                                          </p>
-
-                                          <p className="text-[7px] font-black text-teal-600">
-                                            {g.utilPercent.toFixed(1)}% Used
-                                          </p>
-                                        </div>
-
-                                      </div>
-
-                                      {/* Individual Godown Progress */}
-                                      <div className="mt-1.5 h-1 bg-slate-200 rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full bg-teal-500 rounded-full transition-all duration-500"
-                                          style={{
-                                            width: `${Math.min(100, g.utilPercent)}%`
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                  ))}
-
-                                </div>
-                              </div>
-
-                            </div>
-                          ) : (
-                            <div className="px-4 py-5 flex items-center justify-center">
-                              <div className="text-center">
-                                <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center">
-                                  <Sparkles className="h-4 w-4 text-slate-400" />
-                                </div>
-
-                                <p className="text-[9px] font-bold uppercase text-slate-400">
-                                  No stored weight logged
-                                </p>
-
-                                <p className="text-[8px] text-slate-300 mt-0.5">
-                                  Godown capacity sharing will appear here.
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                        </div>
-                        <div className="lg:col-span-4">
-                          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-2 flex items-center justify-center h-full min-h-[60px]">
-                            {OpenStock === false && (
-                                <button
-                                  type="button"
-                                  onClick={() => setOpenStock(true)}
-                                  className="h-9 w-full max-w-[260px] px-6 bg-teal-700 hover:bg-teal-800 text-white rounded-md text-[12px] font-black uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
-                                >
-                                  Opening Stock Ledger
-                                </button>
-                            )}
-                            {OpenStock === true && (
-                                <button
-                                  type="button"
-                                  onClick={() => setOpenStock(false)}
-                                  className="h-9 w-full max-w-[260px] px-6 bg-teal-700 hover:bg-teal-800 text-white rounded-md text-[12px] font-black uppercase tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
-                                >
-                                  Close Stock Ledger
-                                </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                  ) : null}
-
-                  {/* OPENING STOCK TABLE + SUMMARY — SINGLE BLOCK */}
-                  {OpenStock === true && (
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-
-                      {/* Table Header / Section Bar */}
-                      <div className="flex items-center justify-between px-4 py-1.2 bg-[#174C2C] border-b-2 border-[#0F351F] shadow-sm">
-                        <div className="flex items-center gap-3 bg-[#174C2C] px-3 py-2 rounded-md border border-[#174C2C] shadow-sm">
-                          <div className="w-8 h-8 rounded-md bg-white/10 border border-white/20 flex items-center justify-center">
-                            <ClipboardList className="h-4.5 w-4.5 text-white" />
-                          </div>
-
-                          <div>
-                            <span className="text-[13px] font-black uppercase tracking-wide text-white">
-                              Opening Stock Ledger
-                            </span>
-                            <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-100/80 mt-0.5">
-                              Verified opening store baseline
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="text-[8px] font-black uppercase text-slate-400">
-                          {filteredSavedStocks.length} Records
-                        </div>
-                      </div>
-
-                      {/* TABLE */}
-                      <div className="overflow-x-auto min-h-[300px]">
-                        <table className="w-full border-collapse text-[10px]">
-
-                          <thead>
-                            <tr className="bg-slate-100 border-b border-slate-200 h-8 text-slate-600 uppercase text-[8px] tracking-wide font-black text-left">
-
-                              <th className="px-3 border-r border-slate-200 w-24">
-                                Date
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200 min-w-[150px]">
-                                Godown / Warehouse
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200">
-                                Area Station
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200">
-                                Grade Component
-                              </th>
-
-                              <th className="px-2 border-r border-slate-200 text-center">
-                                JCI
-                              </th>
-
-                              <th className="px-2 border-r border-slate-200 text-center">
-                                Unit
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200 text-right">
-                                Quantity
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200 text-right">
-                                Weight (MT)
-                              </th>
-
-                              <th className="px-3 border-r border-slate-200 text-right">
-                                Avg Wt
-                              </th>
-
-                              <th className="px-2 text-center w-20">
-                                Actions
-                              </th>
-
-                            </tr>
-                          </thead>
-
-                          <tbody className="font-bold text-slate-900">
-
-                            {filteredSavedStocks.length > 0 ? (
-
-                              filteredSavedStocks.map((row, i) => {
-
-                                const isSelected = selectedStockId === row.id;
-
-                                return (
-                                  <tr
-                                    key={row.id || i}
-                                    onClick={() => setSelectedStockId(row.id || null)}
-                                    onDoubleClick={() => handleEdit(row)}
-                                    className={cn(
-                                      "h-9 border-b border-slate-100 cursor-pointer transition-all",
-                                      isSelected
-                                        ? "bg-indigo-950 text-white"
-                                        : "hover:bg-indigo-50/60",
-                                      !isSelected && i % 2 !== 0
-                                        ? "bg-slate-50/40"
-                                        : ""
-                                    )}
-                                  >
-
-                                    {/* DATE */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 font-mono",
-                                        isSelected
-                                          ? "text-slate-200"
-                                          : "text-slate-500"
-                                      )}
-                                    >
-                                      {row.opening_date}
-                                    </td>
-
-                                    {/* GODOWN */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 font-black uppercase truncate max-w-[180px]",
-                                        isSelected
-                                          ? "text-yellow-300"
-                                          : "text-indigo-900"
-                                      )}
-                                      title={row.godown}
-                                    >
-                                      {row.godown || "-"}
-                                    </td>
-
-                                    {/* AREA */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 uppercase",
-                                        isSelected
-                                          ? "text-indigo-100"
-                                          : "text-slate-600"
-                                      )}
-                                    >
-                                      {row.area || "-"}
-                                    </td>
-
-                                    {/* GRADE */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 uppercase font-black",
-                                        isSelected
-                                          ? "text-yellow-200"
-                                          : "text-slate-800"
-                                      )}
-                                    >
-                                      {row.grade || "-"}
-                                    </td>
-
-                                    {/* JCI */}
-                                    <td className="px-2 border-r border-slate-100 text-center">
-
-                                      {row.jci === 'Yes' ? (
-
-                                        <span
-                                          className={cn(
-                                            "inline-flex items-center px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-wide border",
-                                            isSelected
-                                              ? "bg-teal-900 text-teal-100 border-teal-500"
-                                              : "bg-teal-50 text-teal-700 border-teal-200"
-                                          )}
-                                        >
-                                          Govt
-                                        </span>
-
-                                      ) : (
-
-                                        <span
-                                          className={cn(
-                                            "inline-flex items-center px-1.5 py-0.5 rounded text-[7px] uppercase font-bold border",
-                                            isSelected
-                                              ? "bg-slate-700 text-slate-300 border-slate-600"
-                                              : "bg-slate-50 text-slate-400 border-slate-200"
-                                          )}
-                                        >
-                                          No
-                                        </span>
-
-                                      )}
-
-                                    </td>
-
-                                    {/* UNIT */}
-                                    <td
-                                      className={cn(
-                                        "px-2 border-r border-slate-100 text-center font-black",
-                                        isSelected
-                                          ? "text-teal-200"
-                                          : "text-slate-600"
-                                      )}
-                                    >
-                                      {row.unit || "BALES"}
-                                    </td>
-
-                                    {/* QUANTITY */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-black",
-                                        isSelected
-                                          ? "text-white"
-                                          : "text-indigo-950"
-                                      )}
-                                    >
-                                      {Number(row.quantity).toLocaleString(undefined, {
-                                        minimumFractionDigits: 0,
-                                        maximumFractionDigits: 3
-                                      })}
-                                    </td>
-
-                                    {/* WEIGHT */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-black",
-                                        isSelected
-                                          ? "text-green-300"
-                                          : "text-emerald-700"
-                                      )}
-                                    >
-                                      {(Number(row.weight) / 10).toLocaleString(undefined, {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 3
-                                      })}
-                                    </td>
-
-                                    {/* AVG WEIGHT */}
-                                    <td
-                                      className={cn(
-                                        "px-3 border-r border-slate-100 text-right font-mono text-[11px] font-bold",
-                                        isSelected
-                                          ? "text-yellow-200"
-                                          : "text-indigo-700"
-                                      )}
-                                    >
-                                      {row.avg_weight
-                                        ? (Number(row.avg_weight) / 10).toFixed(4)
-                                        : (
-                                            Number(row.quantity) > 0
-                                              ? (
-                                                  (Number(row.weight) /
-                                                    Number(row.quantity)) /
-                                                  10
-                                                ).toFixed(4)
-                                              : "0.0000"
-                                          )}
-                                    </td>
-
-                                    {/* ACTIONS */}
-                                    <td
-                                      className="px-2 text-center"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-
-                                      <div className="flex justify-center items-center gap-1">
-
-                                        <button
-                                          onClick={() => handleEdit(row)}
-                                          title="Edit Opening Record"
-                                          className={cn(
-                                            "w-6 h-6 rounded flex items-center justify-center transition-all cursor-pointer",
-                                            isSelected
-                                              ? "text-blue-200 hover:bg-white/10 hover:text-white"
-                                              : "text-blue-700 hover:bg-blue-50"
-                                          )}
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </button>
-
-                                        <button
-                                          onClick={() =>
-                                            handleDelete(
-                                              row.id,
-                                              `${row.grade} @ ${row.godown}`
-                                            )
-                                          }
-                                          title="Delete Opening Record"
-                                          className={cn(
-                                            "w-6 h-6 rounded flex items-center justify-center transition-all cursor-pointer",
-                                            isSelected
-                                              ? "text-red-300 hover:bg-white/10 hover:text-white"
-                                              : "text-rose-700 hover:bg-rose-50"
-                                          )}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
-
-                                      </div>
-
-                                    </td>
-
-                                  </tr>
-                                );
-
-                              })
-
-                            ) : (
-
-                              <tr>
-                                <td
-                                  colSpan={10}
-                                  className="py-16 text-center text-slate-400"
-                                >
-                                  <div className="flex flex-col items-center gap-1">
-
-                                    <ClipboardList className="h-7 w-7 text-slate-300" />
-
-                                    <span className="font-black uppercase text-[9px] tracking-wide">
-                                      {loading
-                                        ? "Synchronizing ledger node databases..."
-                                        : "No Opening Stock master rows reported."
-                                      }
-                                    </span>
-
-                                  </div>
-                                </td>
-                              </tr>
-
-                            )}
-
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* SUMMARY — SAME BLOCK */}
-                      <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-
-                          {/* RECORD COUNT */}
-                          <div className="bg-white border border-slate-200 rounded-md px-3 py-1.5 flex items-center justify-between">
-                            <div>
-                              <span className="block text-[7px] font-black uppercase text-slate-400">
-                                Count Nodes
-                              </span>
-
-                              <span className="text-[11px] font-black text-slate-800">
-                                {filteredSavedStocks.length}
-                              </span>
-
-                              <span className="text-[7px] font-bold text-slate-400 ml-1 uppercase">
-                                Record Entries
-                              </span>
-                            </div>
-
-                            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
-                              <ClipboardList className="h-3 w-3 text-slate-500" />
-                            </div>
-                          </div>
-
-                          {/* TOTAL QUANTITY */}
-                          <div className="bg-indigo-50 border border-indigo-100 rounded-md px-3 py-1.5 flex items-center justify-between">
-                            <div>
-                              <span className="block text-[7px] font-black uppercase text-indigo-500">
-                                Sum Total Qty
-                              </span>
-
-                              <span className="text-[13px] font-black font-mono text-indigo-950">
-                                {totalOpeningQty.toLocaleString(undefined, {
-                                  maximumFractionDigits: 3
-                                })}
-                              </span>
-
-                              <span className="text-[7px] font-bold text-indigo-400 ml-1 uppercase">
-                                Units
-                              </span>
-                            </div>
-
-                            <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
-                              <Box className="h-3 w-3 text-indigo-600" />
-                            </div>
-                          </div>
-
-                          {/* TOTAL WEIGHT */}
-                          <div className="bg-emerald-50 border border-emerald-100 rounded-md px-3 py-1.5 flex items-center justify-between">
-                            <div>
-                              <span className="block text-[7px] font-black uppercase text-emerald-600">
-                                Sum Total Weight
-                              </span>
-
-                              <span className="text-[13px] font-black font-mono text-emerald-900">
-                                {(totalOpeningWt / 10).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 3
-                                })}
-                              </span>
-
-                              <span className="text-[7px] font-bold text-emerald-500 ml-1 uppercase">
-                                MT
-                              </span>
-                            </div>
-
-                            <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
-                              <Layers className="h-3 w-3 text-emerald-600" />
-                            </div>
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        const allAreas: Record<string, boolean> = {};
+                        const allGrades: Record<string, boolean> = {};
+                        filteredSavedStocks.forEach(r => {
+                          const area = (r.area || 'UNASSIGNED').toUpperCase();
+                          const grade = (r.grade || 'UNASSIGNED').toUpperCase();
+                          allAreas[area] = true;
+                          allGrades[`${area}__${grade}`] = true;
+                        });
+                        setExpandedAreas(allAreas);
+                        setExpandedGrades(allGrades);
+                      }}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase cursor-pointer transition-colors"
+                    >
+                      Expand All
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setExpandedAreas({});
+                        setExpandedGrades({});
+                      }}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase cursor-pointer transition-colors"
+                    >
+                      Collapse All
+                    </button>
+                  </div>
                 </div>
-              );
-            })() : (
+
+                {filteredSavedStocks.length === 0 ? (
+                  <div className="py-16 text-center text-slate-400 text-xs font-bold uppercase">
+                    No stock inventory records found. Click "New Opening Record" above to add stock.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const tree: Record<string, Record<string, any[]>> = {};
+                      filteredSavedStocks.forEach(r => {
+                        const area = (r.area || 'GENERAL AREA').toUpperCase();
+                        const grade = (r.grade || 'GENERAL GRADE').toUpperCase();
+                        if (!tree[area]) tree[area] = {};
+                        if (!tree[area][grade]) tree[area][grade] = [];
+                        tree[area][grade].push(r);
+                      });
+
+                      return Object.entries(tree).map(([area, gradesMap]) => {
+                        const isAreaExpanded = !!expandedAreas[area];
+                        const areaTotalQty = Object.values(gradesMap).reduce((sum, records) => sum + records.reduce((s, r) => s + (Number(r.quantity) || 0), 0), 0);
+                        const areaTotalWt = Object.values(gradesMap).reduce((sum, records) => sum + records.reduce((s, r) => s + (Number(r.weight) || 0), 0), 0);
+
+                        return (
+                          <div key={area} className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                            {/* Area Header Row */}
+                            <div 
+                              onClick={() => setExpandedAreas(prev => ({ ...prev, [area]: !prev[area] }))}
+                              className="flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-slate-100 cursor-pointer select-none transition-colors border-b border-slate-200"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-5 h-5 rounded bg-[#174C2C] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                                  {isAreaExpanded ? '-' : '+'}
+                                </span>
+                                <span className="text-xs font-black uppercase text-indigo-950 tracking-wide">
+                                  📍 Area: {area}
+                                </span>
+                                <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                  {Object.keys(gradesMap).length} Grades
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs font-mono font-black text-slate-800">
+                                <span>Total Qty: <span className="text-indigo-950">{areaTotalQty.toLocaleString()} Bales</span></span>
+                                <span>Total Wt: <span className="text-teal-700">{(areaTotalWt / 10).toFixed(2)} MT</span></span>
+                              </div>
+                            </div>
+
+                            {/* Grades under Area */}
+                            {isAreaExpanded && (
+                              <div className="p-3 space-y-2 bg-slate-50/60">
+                                {Object.entries(gradesMap).map(([grade, records]) => {
+                                  const gradeKey = `${area}__${grade}`;
+                                  const isGradeExpanded = !!expandedGrades[gradeKey];
+                                  const gradeTotalQty = records.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+                                  const gradeTotalWt = records.reduce((s, r) => s + (Number(r.weight) || 0), 0);
+
+                                  return (
+                                    <div key={grade} className="border border-indigo-100 rounded-md overflow-hidden bg-white ml-4 shadow-xs">
+                                      {/* Grade Header Row */}
+                                      <div 
+                                        onClick={() => setExpandedGrades(prev => ({ ...prev, [gradeKey]: !prev[gradeKey] }))}
+                                        className="flex items-center justify-between px-3 py-2 bg-indigo-50/60 hover:bg-indigo-100/60 cursor-pointer select-none transition-colors border-b border-indigo-100"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-4 h-4 rounded bg-indigo-700 text-white flex items-center justify-center font-black text-[10px] shrink-0">
+                                            {isGradeExpanded ? '-' : '+'}
+                                          </span>
+                                          <span className="text-[11px] font-black uppercase text-indigo-950 tracking-wide">
+                                            🏷️ Grade: {grade}
+                                          </span>
+                                          <span className="text-[8px] font-bold text-indigo-700 bg-white border border-indigo-200 px-1.5 py-0.5 rounded">
+                                            {records.length} Godowns
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-[11px] font-mono font-black text-slate-800">
+                                          <span>Qty: <span className="text-indigo-950">{gradeTotalQty.toLocaleString()}</span></span>
+                                          <span>Wt: <span className="text-teal-700">{(gradeTotalWt / 10).toFixed(2)} MT</span></span>
+                                        </div>
+                                      </div>
+
+                                      {/* Godowns & Stock Records under Grade */}
+                                      {isGradeExpanded && (
+                                        <div className="p-2 space-y-1.5 bg-white ml-4">
+                                          <div className="text-[9px] font-black uppercase text-slate-400 px-2 pb-1 border-b border-slate-100 grid grid-cols-12 gap-2">
+                                            <span className="col-span-3">Godown / Warehouse</span>
+                                            <span className="col-span-2">Date</span>
+                                            <span className="col-span-2 text-center">JCI</span>
+                                            <span className="col-span-2 text-right">Quantity</span>
+                                            <span className="col-span-2 text-right">Weight (MT)</span>
+                                            <span className="col-span-1 text-center">Action</span>
+                                          </div>
+                                          {records.map((r, ri) => (
+                                            <div 
+                                              key={r.id || ri}
+                                              onClick={() => setSelectedStockId(r.id || null)}
+                                              className={cn(
+                                                "grid grid-cols-12 gap-2 items-center px-2 py-1.5 rounded text-[10px] font-bold transition-all cursor-pointer",
+                                                selectedStockId === r.id ? "bg-indigo-950 text-white" : "hover:bg-slate-100 text-slate-800"
+                                              )}
+                                            >
+                                              <span className="col-span-3 font-black uppercase truncate flex items-center gap-1.5">
+                                                <span>📦</span> {r.godown || '-'}
+                                              </span>
+                                              <span className="col-span-2 font-mono text-slate-500">
+                                                {r.opening_date || '-'}
+                                              </span>
+                                              <span className="col-span-2 text-center">
+                                                <span className={cn(
+                                                  "px-1.5 py-0.5 rounded text-[8px] font-black uppercase",
+                                                  (r.jci || '').toUpperCase() === 'YES' ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+                                                )}>
+                                                  {r.jci || 'No'}
+                                                </span>
+                                              </span>
+                                              <span className="col-span-2 text-right font-mono font-black text-indigo-900">
+                                                {r.quantity || 0} Bales
+                                              </span>
+                                              <span className="col-span-2 text-right font-mono font-black text-teal-700">
+                                                {Number(r.weight || 0).toFixed(2)} MT
+                                              </span>
+                                              <span className="col-span-1 flex items-center justify-center gap-1">
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
+                                                  className="p-1 hover:bg-blue-100 rounded text-blue-700 cursor-pointer"
+                                                  title="Edit Record"
+                                                >
+                                                  <Edit className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                  onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if (canDeleteData() && confirm("Are you sure you want to delete this opening stock record?")) {
+                                                      handleDelete(r.id, `${r.grade} @ ${r.godown}`);
+                                                    }
+                                                  }}
+                                                  className="p-1 hover:bg-red-100 rounded text-red-600 cursor-pointer"
+                                                  title="Delete Record"
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </button>
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </div>
+            ) : (
               /* 15.2 Monthly Closing Stocks Ledger Grid layout */
               <div className="space-y-5 animate-in fade-in duration-100">
 
