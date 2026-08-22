@@ -1378,6 +1378,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [calcData, setCalcData] = useState({
      total_lorries: '2',
      units_per_lorry: '200',
+     total_units: '400',
      weight_per_lorry: '10'
   });
 
@@ -2092,19 +2093,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const handleCalculateOk = () => {
     const lorries = parseFloat(calcData.total_lorries) || 0;
     const unitsPerLorry = parseFloat(calcData.units_per_lorry) || 0;
-    const isBales = formData.purchase_unit_name === 'BALES';
-    
-    // For Bales, derive the true weight per lorry from the units to avoid the "total weight" input confusion
+    const totalUnits = parseFloat(calcData.total_units) || (lorries * unitsPerLorry);
     const trueWtPerLorry = parseFloat(calcData.weight_per_lorry) || 0;
-    
-    const totalUnits = lorries * unitsPerLorry;
     const totalContractMt = lorries * trueWtPerLorry;
+    const isBales = formData.purchase_unit_name === 'BALES';
     const weightUnitKgs = isBales ? '147.5' : (unitsPerLorry > 0 ? ((trueWtPerLorry * 1000) / unitsPerLorry).toFixed(2) : '50');
     const unitWtVal = parseFloat(weightUnitKgs);
     
     let updatedItems = recalculateItemWeights(formData.items, unitWtVal);
     
-    // Auto-fill quantity if there's exactly one item row
     if (updatedItems.length === 1) {
       updatedItems[0].qty = totalUnits;
       updatedItems[0].weight = parseFloat(((totalUnits * unitWtVal) / 1000).toFixed(3));
@@ -2114,8 +2111,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       ...prev,
       total_no_of_lorries: calcData.total_lorries,
       units_per_lorry: calcData.units_per_lorry,
+      total_units: calcData.total_units.toString(),
       weight_per_lorry: calcData.weight_per_lorry,
-      total_units: totalUnits.toString(),
       total_contract_mt: totalContractMt.toFixed(3),
       weight_unit_kgs: weightUnitKgs.toString(),
       items: updatedItems
@@ -3714,19 +3711,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             type="number"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.total_lorries}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCalcData(prev => {
-                                const next = { ...prev, total_lorries: val };
-                                if (formData.purchase_unit_name === 'BALES') {
-                                  const totalWt = parseFloat(prev.weight_per_lorry) || 0;
-                                  const lorries = parseFloat(val) || 1;
-                                  const totalUnits = Math.round((totalWt * 1000) / 147.5);
-                                  next.units_per_lorry = Math.round(totalUnits / lorries).toString();
-                                }
-                                return next;
-                              });
-                            }}
+                            onChange={(e) => setCalcData(prev => ({ ...prev, total_lorries: e.target.value }))}
                           />
                         </div>
                         
@@ -3734,20 +3719,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Units / Lorry</span>
                           <input  id="calcdata_units_per_lorry_3317" name="calcdata_units_per_lorry" aria-label="calcdata units per lorry"
                             type="number"
-                            className="w-32 bg-[#404040] text-gray-100 border-none p-0.5 shadow-inner"
+                            className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.units_per_lorry}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCalcData(prev => {
-                                const next = { ...prev, units_per_lorry: val };
-                                if (formData.purchase_unit_name === 'BALES') {
-                                  const units = parseFloat(val) || 0;
-                                  const expectedWt = (units * 147.5) / 1000;
-                                  next.weight_per_lorry = expectedWt > 0 ? expectedWt.toFixed(3) : '0';
-                                }
-                                return next;
-                              });
-                            }}
+                            onChange={(e) => setCalcData(prev => ({ ...prev, units_per_lorry: e.target.value }))}
                           />
                         </div>
 
@@ -3755,9 +3729,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Total Units</span>
                           <input  id="parsefloat_calcdata_total_3338" name="parsefloat_calcdata_total" aria-label="parsefloat calcdata total"
                             type="number"
-                            readOnly
-                            className="w-32 bg-[#404040] text-gray-100 border-none p-0.5 shadow-inner font-mono"
-                            value={parseFloat(calcData.total_lorries || '0') * parseFloat(calcData.units_per_lorry || '0') || ''}
+                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
+                            value={calcData.total_units}
+                            onChange={(e) => setCalcData(prev => ({ ...prev, total_units: e.target.value }))}
                           />
                         </div>
 
@@ -3767,19 +3741,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             type="number"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.weight_per_lorry}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCalcData(prev => {
-                                const next = { ...prev, weight_per_lorry: val };
-                                if (formData.purchase_unit_name === 'BALES') {
-                                  const totalWt = parseFloat(val) || 0;
-                                  const lorries = parseFloat(prev.total_lorries) || 1;
-                                  const totalUnits = Math.round((totalWt * 1000) / 147.5);
-                                  next.units_per_lorry = Math.round(totalUnits / lorries).toString();
-                                }
-                                return next;
-                              });
-                            }}
+                            onChange={(e) => setCalcData(prev => ({ ...prev, weight_per_lorry: e.target.value }))}
                           />
                         </div>
                      </div>
@@ -3979,10 +3941,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                       <button onClick={(e) => { 
                           e.preventDefault(); 
                           setCalcData({
-                             total_lorries: formData.total_no_of_lorries || '0',
-                             units_per_lorry: formData.units_per_lorry || '0',
-                             weight_per_lorry: formData.weight_per_lorry || '0'
-                          });
+                              total_lorries: formData.total_no_of_lorries || '0',
+                              units_per_lorry: formData.units_per_lorry || '0',
+                              total_units: formData.total_units || '0',
+                              weight_per_lorry: formData.weight_per_lorry || '0'
+                           } as any);
                           setIsCalcOpen(true); 
                       }} className="bg-slate-200 border border-slate-400 px-3.5 py-0.5 hover:bg-slate-300 ml-2 shadow-sm font-bold text-black">Calculate Helper</button>
                    </div>
@@ -4696,4 +4659,5 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       )}
     </div>
   );
+
 }
