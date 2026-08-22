@@ -493,13 +493,41 @@ if (supabase) {
             );
             ALTER TABLE IF EXISTS godown_master DISABLE ROW LEVEL SECURITY;
 
-            -- Seed godowns if empty
+            -- Seed godowns with exact genuine list and remove any non-genuine godowns
             INSERT INTO godown_master (gdn_code, gdn_name, gdn_capacity, gdn_short_name)
             VALUES 
-            ('GDN-01', 'MAIN GODOWN', 10000.00, 'MAIN'),
-            ('GDN-02', 'GODOWN-B', 5000.00, 'GDW-B'),
-            ('GDN-03', 'GDW-A (RAW MAIN)', 15000.00, 'GD-A')
-            ON CONFLICT DO NOTHING;
+            ('1', '1', 600.00, '1'),
+            ('2', '3', 450.00, '3'),
+            ('3', '3A', 450.00, '3A'),
+            ('4', '4', 450.00, '4'),
+            ('5', '4A', 450.00, '4A'),
+            ('6', '4B', 600.00, '4B'),
+            ('7', '4C', 600.00, '4C'),
+            ('8', '5', 450.00, '5'),
+            ('9', '6', 450.00, '6'),
+            ('10', '6A', 450.00, '6A'),
+            ('11', '7', 450.00, '7'),
+            ('12', '7A', 450.00, '7A'),
+            ('13', '8', 450.00, '8'),
+            ('14', '8A', 450.00, '8A'),
+            ('15', '9', 450.00, '9'),
+            ('16', '9A', 450.00, '9A'),
+            ('17', '10', 450.00, '10'),
+            ('18', '2', 450.00, '2'),
+            ('19', '1A', 450.00, '1A'),
+            ('20', 'OUTSIDE', 500.00, 'OS'),
+            ('21', '2A', 450.00, '2A'),
+            ('22', 'INSP. MILL', 450.00, 'IM'),
+            ('23', 'KATARI', 450.00, 'KATA'),
+            ('24', 'MILL', 450.00, 'MILL'),
+            ('26', 'STB', 450.00, 'STB'),
+            ('27', 'INSP. STB', 450.00, 'ISTB'),
+            ('29', 'INSP. KATARI', 450.00, 'IKAT'),
+            ('30', 'SELECTION SHED', 450.00, 'SHED'),
+            ('31', '8B', 450.00, '8B')
+            ON CONFLICT (gdn_code) DO UPDATE SET gdn_name = EXCLUDED.gdn_name, gdn_capacity = EXCLUDED.gdn_capacity;
+
+            DELETE FROM godown_master WHERE gdn_code NOT IN ('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '26', '27', '29', '30', '31');
 
             CREATE TABLE IF NOT EXISTS godown_entry (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
