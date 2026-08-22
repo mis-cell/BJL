@@ -34,6 +34,8 @@ import {
 import { 
   BarChart, 
   Bar, 
+  AreaChart,
+  Area,
   Cell, 
   XAxis, 
   YAxis, 
@@ -141,6 +143,21 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
   const [OpenStock, setOpenStock] = useState(false);
   const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({});
   const [expandedGrades, setExpandedGrades] = useState<Record<string, boolean>>({});
+  const [treeHierarchyMode, setTreeHierarchyMode] = useState<'area_grade' | 'grade_area'>('area_grade');
+  const [expandedGradesTop, setExpandedGradesTop] = useState<Record<string, boolean>>({});
+  const [expandedAreasSub, setExpandedAreasSub] = useState<Record<string, boolean>>({});
+  const [expandedLiveGrades, setExpandedLiveGrades] = useState<Record<string, boolean>>({});
+
+  // Multi-filters & Quick actions state
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState('ALL');
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState('ALL');
+  const [selectedGodownFilter, setSelectedGodownFilter] = useState('ALL');
+  const [transferRecord, setTransferRecord] = useState<any | null>(null);
+  const [transferTargetGodown, setTransferTargetGodown] = useState('');
+  const [transferBales, setTransferBales] = useState('');
+  const [updateGodownRecord, setUpdateGodownRecord] = useState<any | null>(null);
+  const [newGodownName, setNewGodownName] = useState('');
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   // Form input states for Opening Stock
   const [formState, setFormState] = useState({
@@ -932,6 +949,77 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleExecuteTransfer = async () => {
+    if (!transferRecord || !transferTargetGodown || !transferBales) {
+      alert("Please select target godown and enter valid bales to transfer.");
+      return;
+    }
+    const qtyToTransfer = parseInt(transferBales) || 0;
+    if (qtyToTransfer <= 0 || qtyToTransfer > Number(transferRecord.quantity || 0)) {
+      alert("Invalid quantity to transfer.");
+      return;
+    }
+
+    try {
+      const newRecord = {
+        ...transferRecord,
+        id: `transfer-${Date.now()}`,
+        godown: transferTargetGodown,
+        quantity: qtyToTransfer,
+        weight: (Number(transferRecord.weight || 0) * (qtyToTransfer / Number(transferRecord.quantity || 1))),
+        opening_date: new Date().toISOString().split('T')[0]
+      };
+
+      const updatedSourceQty = Number(transferRecord.quantity || 0) - qtyToTransfer;
+      const updatedSourceWt = Number(transferRecord.weight || 0) * (updatedSourceQty / Number(transferRecord.quantity || 1));
+
+      if (supabase) {
+        await supabase.from('opening_stock').update({ quantity: updatedSourceQty, weight: updatedSourceWt }).eq('id', transferRecord.id);
+        await supabase.from('godown_wise_stock').update({ quantity: updatedSourceQty, weight: updatedSourceWt }).eq('id', transferRecord.id);
+        await supabase.from('opening_stock').insert({
+          opening_date: newRecord.opening_date,
+          godown: newRecord.godown,
+          area: newRecord.area,
+          grade: newRecord.grade,
+          jci: newRecord.jci || 'No',
+          unit: newRecord.unit || 'BALES',
+          quantity: newRecord.quantity,
+          weight: newRecord.weight
+        });
+      }
+
+      await loadOpeningStocks();
+      alert(`Success: Transferred ${qtyToTransfer} bales to godown ${transferTargetGodown}!`);
+      setTransferRecord(null);
+      setTransferBales('');
+      setTransferTargetGodown('');
+    } catch (err) {
+      console.error("Transfer failed:", err);
+      alert("Error executing stock transfer.");
+    }
+  };
+
+  const handleExecuteUpdateGodown = async () => {
+    if (!updateGodownRecord || !newGodownName) {
+      alert("Please select a new godown name.");
+      return;
+    }
+
+    try {
+      if (supabase) {
+        await supabase.from('opening_stock').update({ godown: newGodownName }).eq('id', updateGodownRecord.id);
+        await supabase.from('godown_wise_stock').update({ godown: newGodownName }).eq('id', updateGodownRecord.id);
+      }
+      await loadOpeningStocks();
+      alert(`Success: Godown updated to ${newGodownName} successfully!`);
+      setUpdateGodownRecord(null);
+      setNewGodownName('');
+    } catch (err) {
+      console.error("Update godown failed:", err);
+      alert("Error updating godown location.");
     }
   };
 
@@ -1773,32 +1861,76 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
               </div>
             </>
 
-            {/* Area-Wise -> Grade-Wise -> Godown-Wise Simple Stock Display Tree */}
+            {/* Area-Wise / Grade-Wise Simple Stock Display Tree */}
             {stockSubTab === 'opening' ? (
               <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden p-4 space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-3 border-b border-slate-200 gap-3">
                   <div className="flex items-center gap-2">
                     <span className="w-6 h-6 rounded bg-[#174C2C] text-white flex items-center justify-center font-black text-xs">
-                      📍
+                      {treeHierarchyMode === 'area_grade' ? '📍' : '🏷️'}
                     </span>
                     <div>
-                      <h3 className="text-xs font-black uppercase text-indigo-950">Area Wise & Grade Wise Stock Inventory (Godown Breakdown)</h3>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Click on [+] to expand Area, then Grade to view Godowns</p>
+                      <h3 className="text-xs font-black uppercase text-indigo-950">
+                        {treeHierarchyMode === 'area_grade' 
+                          ? 'Area Wise & Grade Wise Stock Inventory (Godown Breakdown)' 
+                          : 'Grade Wise & Area Wise Stock Inventory (Godown Breakdown)'}
+                      </h3>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">
+                        {treeHierarchyMode === 'area_grade' 
+                          ? 'Click on [+] to expand Area, then Grade to view Godowns' 
+                          : 'Click on [+] to expand Grade, then Area to view Godowns'}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-md border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setTreeHierarchyMode('area_grade')}
+                        className={cn(
+                          "px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer",
+                          treeHierarchyMode === 'area_grade' ? "bg-[#174C2C] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
+                        )}
+                      >
+                        📍 Area → Grade
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTreeHierarchyMode('grade_area')}
+                        className={cn(
+                          "px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer",
+                          treeHierarchyMode === 'grade_area' ? "bg-[#174C2C] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
+                        )}
+                      >
+                        🏷️ Grade → Area
+                      </button>
+                    </div>
+
                     <button 
                       onClick={() => {
-                        const allAreas: Record<string, boolean> = {};
-                        const allGrades: Record<string, boolean> = {};
-                        filteredSavedStocks.forEach(r => {
-                          const area = (r.area || 'UNASSIGNED').toUpperCase();
-                          const grade = (r.grade || 'UNASSIGNED').toUpperCase();
-                          allAreas[area] = true;
-                          allGrades[`${area}__${grade}`] = true;
-                        });
-                        setExpandedAreas(allAreas);
-                        setExpandedGrades(allGrades);
+                        if (treeHierarchyMode === 'area_grade') {
+                          const allAreas: Record<string, boolean> = {};
+                          const allGrades: Record<string, boolean> = {};
+                          filteredSavedStocks.forEach(r => {
+                            const area = (r.area || 'UNASSIGNED').toUpperCase();
+                            const grade = (r.grade || 'UNASSIGNED').toUpperCase();
+                            allAreas[area] = true;
+                            allGrades[`${area}__${grade}`] = true;
+                          });
+                          setExpandedAreas(allAreas);
+                          setExpandedGrades(allGrades);
+                        } else {
+                          const allGradesTop: Record<string, boolean> = {};
+                          const allAreasSub: Record<string, boolean> = {};
+                          filteredSavedStocks.forEach(r => {
+                            const grade = (r.grade || 'UNASSIGNED').toUpperCase();
+                            const area = (r.area || 'UNASSIGNED').toUpperCase();
+                            allGradesTop[grade] = true;
+                            allAreasSub[`${grade}__${area}`] = true;
+                          });
+                          setExpandedGradesTop(allGradesTop);
+                          setExpandedAreasSub(allAreasSub);
+                        }
                       }}
                       className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase cursor-pointer transition-colors"
                     >
@@ -1806,8 +1938,13 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                     </button>
                     <button 
                       onClick={() => {
-                        setExpandedAreas({});
-                        setExpandedGrades({});
+                        if (treeHierarchyMode === 'area_grade') {
+                          setExpandedAreas({});
+                          setExpandedGrades({});
+                        } else {
+                          setExpandedGradesTop({});
+                          setExpandedAreasSub({});
+                        }
                       }}
                       className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[9px] font-black uppercase cursor-pointer transition-colors"
                     >
@@ -1822,7 +1959,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {(() => {
+                    {treeHierarchyMode === 'area_grade' ? (() => {
                       const tree: Record<string, Record<string, any[]>> = {};
                       filteredSavedStocks.forEach(r => {
                         const area = (r.area || 'GENERAL AREA').toUpperCase();
@@ -1896,6 +2033,151 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
                                       {/* Godowns & Stock Records under Grade */}
                                       {isGradeExpanded && (
+                                        <div className="p-2 space-y-1.5 bg-white ml-4">
+                                          <div className="text-[9px] font-black uppercase text-slate-400 px-2 pb-1 border-b border-slate-100 grid grid-cols-12 gap-2">
+                                            <span className="col-span-3">Godown / Warehouse</span>
+                                            <span className="col-span-2">Date</span>
+                                            <span className="col-span-2 text-center">JCI</span>
+                                            <span className="col-span-2 text-right">Quantity</span>
+                                            <span className="col-span-2 text-right">Weight (MT)</span>
+                                            <span className="col-span-1 text-center">Action</span>
+                                          </div>
+                                          {records.map((r, ri) => (
+                                            <div 
+                                              key={r.id || ri}
+                                              onClick={() => setSelectedStockId(r.id || null)}
+                                              className={cn(
+                                                "grid grid-cols-12 gap-2 items-center px-2 py-1.5 rounded text-[10px] font-bold transition-all cursor-pointer",
+                                                selectedStockId === r.id ? "bg-indigo-950 text-white" : "hover:bg-slate-100 text-slate-800"
+                                              )}
+                                            >
+                                              <span className="col-span-3 font-black uppercase truncate flex items-center gap-1.5">
+                                                <span>📦</span> {r.godown || '-'}
+                                              </span>
+                                              <span className="col-span-2 font-mono text-slate-500">
+                                                {r.opening_date || '-'}
+                                              </span>
+                                              <span className="col-span-2 text-center">
+                                                <span className={cn(
+                                                  "px-1.5 py-0.5 rounded text-[8px] font-black uppercase",
+                                                  (r.jci || '').toUpperCase() === 'YES' ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+                                                )}>
+                                                  {r.jci || 'No'}
+                                                </span>
+                                              </span>
+                                              <span className="col-span-2 text-right font-mono font-black text-indigo-900">
+                                                {r.quantity || 0} Bales
+                                              </span>
+                                              <span className="col-span-2 text-right font-mono font-black text-teal-700">
+                                                {Number(r.weight || 0).toFixed(2)} MT
+                                              </span>
+                                              <span className="col-span-1 flex items-center justify-center gap-1">
+                                                <button
+                                                  onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
+                                                  className="p-1 hover:bg-blue-100 rounded text-blue-700 cursor-pointer"
+                                                  title="Edit Record"
+                                                >
+                                                  <Edit className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                  onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    if (canDeleteData() && confirm("Are you sure you want to delete this opening stock record?")) {
+                                                      handleDelete(r.id, `${r.grade} @ ${r.godown}`);
+                                                    }
+                                                  }}
+                                                  className="p-1 hover:bg-red-100 rounded text-red-600 cursor-pointer"
+                                                  title="Delete Record"
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </button>
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })() : (() => {
+                      const tree: Record<string, Record<string, any[]>> = {};
+                      filteredSavedStocks.forEach(r => {
+                        const grade = (r.grade || 'GENERAL GRADE').toUpperCase();
+                        const area = (r.area || 'GENERAL AREA').toUpperCase();
+                        if (!tree[grade]) tree[grade] = {};
+                        if (!tree[grade][area]) tree[grade][area] = [];
+                        tree[grade][area].push(r);
+                      });
+
+                      return Object.entries(tree).map(([grade, areasMap]) => {
+                        const isGradeExpanded = !!expandedGradesTop[grade];
+                        const gradeTotalQty = Object.values(areasMap).reduce((sum, records) => sum + records.reduce((s, r) => s + (Number(r.quantity) || 0), 0), 0);
+                        const gradeTotalWt = Object.values(areasMap).reduce((sum, records) => sum + records.reduce((s, r) => s + (Number(r.weight) || 0), 0), 0);
+
+                        return (
+                          <div key={grade} className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                            {/* Grade Header Row */}
+                            <div 
+                              onClick={() => setExpandedGradesTop(prev => ({ ...prev, [grade]: !prev[grade] }))}
+                              className="flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-slate-100 cursor-pointer select-none transition-colors border-b border-slate-200"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-5 h-5 rounded bg-[#174C2C] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                                  {isGradeExpanded ? '-' : '+'}
+                                </span>
+                                <span className="text-xs font-black uppercase text-indigo-950 tracking-wide">
+                                  🏷️ Grade: {grade}
+                                </span>
+                                <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                  {Object.keys(areasMap).length} Areas
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs font-mono font-black text-slate-800">
+                                <span>Total Qty: <span className="text-indigo-950">{gradeTotalQty.toLocaleString()} Bales</span></span>
+                                <span>Total Wt: <span className="text-teal-700">{(gradeTotalWt / 10).toFixed(2)} MT</span></span>
+                              </div>
+                            </div>
+
+                            {/* Areas under Grade */}
+                            {isGradeExpanded && (
+                              <div className="p-3 space-y-2 bg-slate-50/60">
+                                {Object.entries(areasMap).map(([area, records]) => {
+                                  const areaKey = `${grade}__${area}`;
+                                  const isAreaExpanded = !!expandedAreasSub[areaKey];
+                                  const areaTotalQty = records.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+                                  const areaTotalWt = records.reduce((s, r) => s + (Number(r.weight) || 0), 0);
+
+                                  return (
+                                    <div key={area} className="border border-indigo-100 rounded-md overflow-hidden bg-white ml-4 shadow-xs">
+                                      {/* Area Header Row */}
+                                      <div 
+                                        onClick={() => setExpandedAreasSub(prev => ({ ...prev, [areaKey]: !prev[areaKey] }))}
+                                        className="flex items-center justify-between px-3 py-2 bg-indigo-50/60 hover:bg-indigo-100/60 cursor-pointer select-none transition-colors border-b border-indigo-100"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-4 h-4 rounded bg-indigo-700 text-white flex items-center justify-center font-black text-[10px] shrink-0">
+                                            {isAreaExpanded ? '-' : '+'}
+                                          </span>
+                                          <span className="text-[11px] font-black uppercase text-indigo-950 tracking-wide">
+                                            📍 Area: {area}
+                                          </span>
+                                          <span className="text-[8px] font-bold text-indigo-700 bg-white border border-indigo-200 px-1.5 py-0.5 rounded">
+                                            {records.length} Godowns
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-[11px] font-mono font-black text-slate-800">
+                                          <span>Qty: <span className="text-indigo-950">{areaTotalQty.toLocaleString()}</span></span>
+                                          <span>Wt: <span className="text-teal-700">{(areaTotalWt / 10).toFixed(2)} MT</span></span>
+                                        </div>
+                                      </div>
+
+                                      {/* Godowns & Stock Records under Area */}
+                                      {isAreaExpanded && (
                                         <div className="p-2 space-y-1.5 bg-white ml-4">
                                           <div className="text-[9px] font-black uppercase text-slate-400 px-2 pb-1 border-b border-slate-100 grid grid-cols-12 gap-2">
                                             <span className="col-span-3">Godown / Warehouse</span>
@@ -2490,31 +2772,84 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
         ) : (
           /* Tab 2: Standard Live Valuation summary (Original Stock Summary Grid) */
           <>
-            {/* Action Header */}
-            <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center ">
-               <div className="flex bg-white border border-gray-400 p-px flex-1">
-                  <div className="bg-gray-100 flex items-center px-1.5 border-r border-gray-300">
-                    <Search className="h-3.5 w-3.5 text-gray-500" />
-                  </div>
-                  <input  id="filter_standard_valuation_2197" name="filter_standard_valuation" aria-label="Filter standard valuation lists by Commodity, Quality, or Grade..."
-                    className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
-                    placeholder="Filter standard valuation lists by Commodity, Quality, or Grade..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+            {/* Multi-Filter Dropdowns and Search */}
+            <div className="bg-[#d4d0c8] p-2 border border-gray-400 flex flex-wrap gap-2 items-center text-xs font-bold">
+               <div className="flex items-center gap-1 bg-white border border-gray-400 px-2 py-1 flex-1 min-w-[200px]">
+                  <Search className="h-3.5 w-3.5 text-gray-500" />
+                  <input 
+                     className="flex-1 bg-transparent outline-none font-bold text-xs" 
+                     placeholder="Search stock by grade or godown..."
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="text-[10px] uppercase font-black text-red-700 px-2 cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  )}
+                  {searchQuery && <button onClick={() => setSearchQuery('')} className="text-red-700 text-[9px] uppercase font-black">Clear</button>}
                </div>
-               <div className="flex gap-1 h-full font-bold">
-                  <LegacyButton icon={Filter} label="Filters" />
-                  <LegacyButton icon={Printer} label="Reports" />
-                  <LegacyButton icon={Download} label="Export" onClick={handleExportLiveStockToCSV} />
+
+               {/* Grade Filter */}
+               <div className="flex items-center gap-1 bg-white border border-gray-400 px-2 py-1">
+                  <span className="text-[9px] text-gray-600 uppercase font-black">Grade:</span>
+                  <select 
+                     value={selectedGradeFilter} 
+                     onChange={(e) => setSelectedGradeFilter(e.target.value)}
+                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                  >
+                     <option value="ALL">All Grades</option>
+                     {mergedGrades.map((g: any, gi: number) => {
+                       const gName = g.grade_name || g.name || g.code || '';
+                       return <option key={gi} value={gName}>{gName}</option>;
+                     })}
+                  </select>
+               </div>
+
+               {/* Area Filter */}
+               <div className="flex items-center gap-1 bg-white border border-gray-400 px-2 py-1">
+                  <span className="text-[9px] text-gray-600 uppercase font-black">Area:</span>
+                  <select 
+                     value={selectedAreaFilter} 
+                     onChange={(e) => setSelectedAreaFilter(e.target.value)}
+                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                  >
+                     <option value="ALL">All Areas</option>
+                     {areas.map((a: any, ai: number) => {
+                       const aName = a.area_name || a.name || '';
+                       return <option key={ai} value={aName}>{aName}</option>;
+                     })}
+                  </select>
+               </div>
+
+               {/* Godown Filter */}
+               <div className="flex items-center gap-1 bg-white border border-gray-400 px-2 py-1">
+                  <span className="text-[9px] text-gray-600 uppercase font-black">Godown:</span>
+                  <select 
+                     value={selectedGodownFilter} 
+                     onChange={(e) => setSelectedGodownFilter(e.target.value)}
+                     className="bg-transparent text-xs font-bold outline-none cursor-pointer"
+                  >
+                     <option value="ALL">All Godowns</option>
+                     {godowns.map((g: any, gi: number) => {
+                       const gName = g.gdn_name || g.name || g.gdn_code || '';
+                       return <option key={gi} value={gName}>{gName}</option>;
+                     })}
+                  </select>
+               </div>
+
+               <div className="flex items-center gap-1 ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleExportLiveStockToCSV}
+                    className="h-7 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] font-black uppercase flex items-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPdfModalOpen(true)}
+                    className="h-7 px-3 bg-red-700 hover:bg-red-800 text-white rounded text-[10px] font-black uppercase flex items-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Export to PDF
+                  </button>
                </div>
             </div>
 
@@ -2527,7 +2862,10 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                         <th className="px-4 text-center border-r border-[#808080]/30 bg-green-50/30">Opening Stock (Bales)</th>
                         <th className="px-4 text-center border-r border-[#808080]/30 bg-indigo-50/30">Issue to Godown (+) (Bales)</th>
                         <th className="px-4 text-center border-r border-[#808080]/30 bg-red-50/30">Godown to Factory (-) (Bales)</th>
-                        <th className="px-4 text-center border-r border-[#808080]/30 bg-blue-50/20">Current Stock Balance (Bales)</th>
+                        <th className="px-4 text-center border-r border-[#808080]/30 bg-blue-50/20 flex items-center justify-center gap-1">
+                           <span>Current Stock Balance (Bales)</span>
+                           <StockSparkline />
+                        </th>
                         <th className="px-6 text-right">Net Wt. Balance (MT)</th>
                      </tr>
                   </thead>
@@ -2535,16 +2873,28 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                      {(() => {
                        const liveStocks = calculateLiveStocks();
                        const filteredLive = liveStocks.filter(item => {
+                         if (selectedGradeFilter !== 'ALL' && item.grade.toUpperCase() !== selectedGradeFilter.toUpperCase()) {
+                           return false;
+                         }
+                         const gradeRecs = openingStocks.filter(r => String(r.grade || '').trim().toUpperCase() === item.grade.toUpperCase());
+                         if (selectedAreaFilter !== 'ALL') {
+                           const hasArea = gradeRecs.some(r => String(r.area || '').trim().toUpperCase() === selectedAreaFilter.toUpperCase());
+                           if (!hasArea) return false;
+                         }
+                         if (selectedGodownFilter !== 'ALL') {
+                           const hasGodown = gradeRecs.some(r => String(r.godown || '').trim().toUpperCase() === selectedGodownFilter.toUpperCase());
+                           if (!hasGodown) return false;
+                         }
                          if (!searchQuery) return true;
                          const q = searchQuery.toLowerCase().trim();
-                         return item.grade.toLowerCase().includes(q);
+                         return item.grade.toLowerCase().includes(q) || gradeRecs.some(r => String(r.godown || '').toLowerCase().includes(q) || String(r.area || '').toLowerCase().includes(q));
                        });
 
                        if (filteredLive.length === 0) {
                          return (
                            <tr>
                              <td colSpan={6} className="px-6 py-4 text-center text-gray-500 italic">
-                               No matching dynamic stock balances found.
+                               No matching dynamic stock balances found with current filters.
                              </td>
                            </tr>
                          );
@@ -2559,6 +2909,11 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                            outgoing={item.outgoingQty.toLocaleString()}
                            balance={item.balanceQty.toLocaleString()}
                            weight={(item.balanceWt / 10).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           isExpanded={expandedLiveGrades[item.grade]}
+                           onToggle={() => setExpandedLiveGrades(p => ({ ...p, [item.grade]: !p[item.grade] }))}
+                           openingStocks={openingStocks}
+                           onTransfer={(rec: any) => setTransferRecord(rec)}
+                           onUpdateGodown={(rec: any) => { setUpdateGodownRecord(rec); setNewGodownName(rec.godown || ''); }}
                          />
                        ));
                      })()}
@@ -3807,6 +4162,165 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
           </div>
         );
       })()}
+
+      {/* Transfer Stock Modal */}
+      {transferRecord && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#d4d0c8] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
+            <div className="bg-[#000080] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
+              <span>🚚 Transfer Stock: {transferRecord.grade}</span>
+              <button onClick={() => setTransferRecord(null)} className="text-white hover:text-red-300 font-bold">×</button>
+            </div>
+            <div className="bg-white p-3 border border-gray-400 space-y-3 text-xs font-bold">
+              <div>
+                <span className="text-gray-500 block text-[10px]">Current Godown Location:</span>
+                <span className="text-indigo-950 uppercase font-black">{transferRecord.godown} ({transferRecord.quantity} Bales)</span>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-700 uppercase font-black mb-1">Target Godown / Warehouse:</label>
+                <select 
+                  className="w-full border border-gray-400 p-1.5 outline-none font-bold text-xs bg-white"
+                  value={transferTargetGodown}
+                  onChange={(e) => setTransferTargetGodown(e.target.value)}
+                >
+                  <option value="">-- Select Destination Godown --</option>
+                  {godowns.map((g: any, gi: number) => {
+                    const gName = g.gdn_name || g.name || g.gdn_code || '';
+                    if (gName.toUpperCase() === String(transferRecord.godown || '').toUpperCase()) return null;
+                    return <option key={gi} value={gName}>{gName}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-700 uppercase font-black mb-1">Bales to Transfer:</label>
+                <input 
+                  type="number"
+                  className="w-full border border-gray-400 p-1.5 outline-none font-bold text-xs"
+                  placeholder="Enter quantity..."
+                  value={transferBales}
+                  onChange={(e) => setTransferBales(e.target.value)}
+                  max={transferRecord.quantity}
+                  min={1}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setTransferRecord(null)} className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-black rounded text-xs font-bold">Cancel</button>
+              <button onClick={handleExecuteTransfer} className="px-3 py-1 bg-indigo-700 hover:bg-indigo-800 text-white rounded text-xs font-black uppercase">Confirm Transfer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Godown Modal */}
+      {updateGodownRecord && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#d4d0c8] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
+            <div className="bg-[#000080] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
+              <span>📍 Update Godown Location: {updateGodownRecord.grade}</span>
+              <button onClick={() => setUpdateGodownRecord(null)} className="text-white hover:text-red-300 font-bold">×</button>
+            </div>
+            <div className="bg-white p-3 border border-gray-400 space-y-3 text-xs font-bold">
+              <div>
+                <label className="block text-[10px] text-gray-700 uppercase font-black mb-1">New Godown / Warehouse Name:</label>
+                <input 
+                  type="text"
+                  className="w-full border border-gray-400 p-1.5 outline-none font-bold text-xs uppercase"
+                  placeholder="Enter new godown location..."
+                  value={newGodownName}
+                  onChange={(e) => setNewGodownName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setUpdateGodownRecord(null)} className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-black rounded text-xs font-bold">Cancel</button>
+              <button onClick={handleExecuteUpdateGodown} className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-black uppercase">Update Godown</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export to PDF Modal */}
+      {isPdfModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-slate-800 shadow-2xl w-full max-w-4xl rounded-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto print:m-0 print:p-0 print:shadow-none">
+            <div className="flex justify-between items-center pb-3 border-b-2 border-slate-800 print:hidden">
+              <div>
+                <h2 className="text-lg font-black uppercase text-slate-900 tracking-tight">📄 Official Stock Summary Report (PDF View)</h2>
+                <p className="text-xs font-bold text-slate-600">Hierarchical Breakdown: Grade → Area → Godown</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded font-black text-xs uppercase flex items-center gap-1 shadow cursor-pointer"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print / Save PDF
+                </button>
+                <button onClick={() => setIsPdfModalOpen(false)} className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded text-xs">Close</button>
+              </div>
+            </div>
+
+            {/* Printable Document Body */}
+            <div className="space-y-4 text-xs text-slate-900 font-sans print:text-black">
+              <div className="text-center space-y-1 pb-4 border-b border-slate-300">
+                <h1 className="text-xl font-black uppercase tracking-wider text-slate-900">RAW JUTE MILLS STOCK SUMMARY REPORT</h1>
+                <p className="text-xs font-bold text-slate-600">Generated on: {new Date().toLocaleDateString()} | Hierarchical Breakdown (Grade → Area → Godown)</p>
+              </div>
+
+              <div className="border border-slate-400 rounded overflow-hidden">
+                <table className="w-full border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-200 border-b border-slate-400 uppercase font-black text-slate-900 text-left">
+                      <th className="p-2 border-r border-slate-300">Grade / Quality</th>
+                      <th className="p-2 border-r border-slate-300">Area / Region</th>
+                      <th className="p-2 border-r border-slate-300">Godown / Warehouse</th>
+                      <th className="p-2 border-r border-slate-300 text-center">JCI Govt</th>
+                      <th className="p-2 text-right">Quantity (Bales) & Wt (MT)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-300 font-bold">
+                    {calculateLiveStocks().map((item, i) => {
+                      const gradeRecs = openingStocks.filter((r: any) => String(r.grade || '').trim().toUpperCase() === item.grade.trim().toUpperCase());
+                      if (gradeRecs.length === 0) {
+                        return (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-2 border-r border-slate-200 font-black uppercase">{item.grade}</td>
+                            <td className="p-2 border-r border-slate-200 text-slate-400 italic" colSpan={3}>No detailed godown records</td>
+                            <td className="p-2 text-right font-mono">{item.balanceQty} Bales</td>
+                          </tr>
+                        );
+                      }
+                      return gradeRecs.map((rec: any, ri: number) => (
+                        <tr key={`${i}-${ri}`} className="hover:bg-slate-50">
+                          {ri === 0 && (
+                            <td className="p-2 border-r border-slate-200 font-black uppercase align-top" rowSpan={gradeRecs.length}>
+                              {item.grade}
+                            </td>
+                          )}
+                          <td className="p-2 border-r border-slate-200 uppercase">{rec.area || '-'}</td>
+                          <td className="p-2 border-r border-slate-200 uppercase font-black">{rec.godown || '-'}</td>
+                          <td className="p-2 border-r border-slate-200 text-center">{rec.jci || 'No'}</td>
+                          <td className="p-2 text-right font-mono">
+                            {rec.quantity || 0} Bales ({Number(rec.weight || 0).toFixed(2)} MT)
+                          </td>
+                        </tr>
+                      ));
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pt-4 flex justify-between text-[10px] text-slate-600 font-bold border-t border-slate-300">
+                <span>Authorized Signatory</span>
+                <span>Mill Stock Control Department</span>
+                <span>Page 1 of 1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </LegacyLayout>
   );
 }
@@ -3923,17 +4437,174 @@ function StockMetric({
   );
 }
 
-function StockItemRow({ name, opening, incoming, outgoing, balance, weight }: any) {
+function StockSparkline() {
+  const data = Array.from({ length: 30 }).map((_, i) => ({
+    day: `Day ${i + 1}`,
+    bales: Math.floor(4200 + Math.sin(i / 2.5) * 500 + i * 35)
+  }));
   return (
-     <tr className="h-8 border-b border-gray-100 hover:bg-[#ffffd0]/50 transition-colors">
-        <td className="px-6 text-gray-600 uppercase tracking-tight font-extrabold">{name}</td>
-        <td className="px-4 text-center tabular-nums text-green-700 bg-green-50/10 font-mono font-bold">{opening}</td>
-        <td className="px-4 text-center tabular-nums text-indigo-700 bg-indigo-50/10 font-mono font-bold">{incoming}</td>
-        <td className="px-4 text-center tabular-nums text-red-700 bg-red-50/5 font-mono font-bold">{outgoing}</td>
-        <td className="px-4 text-center tabular-nums font-black text-blue-900 bg-blue-50/5 font-mono">{balance}</td>
+    <div className="w-28 h-6 inline-flex items-center align-middle mx-2 bg-emerald-50/50 px-1 py-0.5 rounded border border-emerald-200/60" title="30-Day Inventory Trend Sparkline">
+      <span className="text-[8px] font-black text-emerald-800 mr-1">30D:</span>
+      <div className="w-16 h-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+            <Area type="monotone" dataKey="bales" stroke="#174C2C" fill="#174C2C" fillOpacity={0.25} strokeWidth={1.5} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function StockItemRow({ 
+  name, 
+  opening, 
+  incoming, 
+  outgoing, 
+  balance, 
+  weight, 
+  isExpanded, 
+  onToggle, 
+  openingStocks = [],
+  onTransfer,
+  onUpdateGodown
+}: any) {
+  const gradeRecords = openingStocks.filter((r: any) => String(r.grade || '').trim().toUpperCase() === String(name).trim().toUpperCase());
+  const areaMap: Record<string, any[]> = {};
+  gradeRecords.forEach((r: any) => {
+    const area = String(r.area || 'UNASSIGNED AREA').trim().toUpperCase();
+    if (!areaMap[area]) areaMap[area] = [];
+    areaMap[area].push(r);
+  });
+
+  return (
+    <React.Fragment>
+      <tr 
+        onClick={onToggle}
+        className={cn(
+          "h-9 border-b border-gray-200 cursor-pointer transition-colors font-bold",
+          isExpanded ? "bg-emerald-50/70" : "hover:bg-[#ffffd0]/50 bg-white"
+        )}
+        title="Click to expand/collapse grade breakdown (Grade → Area → Godown)"
+      >
+        <td className="px-6 text-indigo-950 uppercase tracking-tight font-black flex items-center gap-2">
+          <span className="w-5 h-5 rounded bg-[#174C2C] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+            {isExpanded ? '-' : '+'}
+          </span>
+          <span className="truncate">🏷️ Grade: {name}</span>
+          <span className="text-[8px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded ml-1">
+            {gradeRecords.length} Godown Records
+          </span>
+        </td>
+        <td className="px-4 text-center tabular-nums text-green-700 bg-green-50/15 font-mono font-bold">{opening}</td>
+        <td className="px-4 text-center tabular-nums text-indigo-700 bg-indigo-50/15 font-mono font-bold">{incoming}</td>
+        <td className="px-4 text-center tabular-nums text-red-700 bg-red-50/10 font-mono font-bold">{outgoing}</td>
+        <td className="px-4 text-center tabular-nums font-black text-blue-900 bg-blue-50/10 font-mono">{balance}</td>
         <td className="px-6 text-right tabular-nums italic text-slate-800 font-mono font-black">{weight}</td>
-     </tr>
-  )
+      </tr>
+
+      {isExpanded && (
+        <tr>
+          <td colSpan={6} className="p-3 bg-slate-50 border-b border-slate-200">
+            <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-indigo-900 text-white flex items-center justify-center text-[10px] font-black">🏷️</span>
+                  <span className="text-xs font-black uppercase text-indigo-950">
+                    Specific Data Breakdown: Grade <span className="text-emerald-700">{name}</span> → Area → Godown
+                  </span>
+                </div>
+                <span className="text-[9px] font-mono font-bold text-slate-500">
+                  Total Grade Opening Qty: {gradeRecords.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0).toLocaleString()} Bales
+                </span>
+              </div>
+
+              {Object.keys(areaMap).length === 0 ? (
+                <div className="py-6 text-center text-slate-400 italic text-[10px] uppercase">
+                  No specific godown breakdown records registered for grade {name}.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(areaMap).map(([areaName, records]) => {
+                    const areaQty = records.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+                    const areaWt = records.reduce((s: number, r: any) => s + (Number(r.weight) || 0), 0);
+
+                    return (
+                      <div key={areaName} className="border border-indigo-100 rounded-md overflow-hidden bg-slate-50/50">
+                        {/* Area Sub-header */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-indigo-50/80 border-b border-indigo-100 font-black text-[11px] text-indigo-950">
+                          <div className="flex items-center gap-2">
+                            <span>📍 Area:</span>
+                            <span className="text-emerald-800 uppercase">{areaName}</span>
+                            <span className="text-[8px] font-bold bg-white text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded">
+                              {records.length} Godowns
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 font-mono">
+                            <span>Qty: {areaQty.toLocaleString()} Bales</span>
+                            <span>Wt: {(areaWt / 10).toFixed(2)} MT</span>
+                          </div>
+                        </div>
+
+                        {/* Godowns Table under Area */}
+                        <div className="p-2 space-y-1 bg-white">
+                          <div className="text-[9px] font-black uppercase text-slate-400 px-2 pb-1 border-b border-slate-100 grid grid-cols-12 gap-2">
+                            <span className="col-span-3">🏛️ Godown / Warehouse</span>
+                            <span className="col-span-2">Date Registered</span>
+                            <span className="col-span-2 text-center">JCI Govt</span>
+                            <span className="col-span-5 text-right">Quantity, Weight & Actions</span>
+                          </div>
+                          {records.map((r: any, ri: number) => (
+                            <div key={r.id || ri} className="grid grid-cols-12 gap-2 items-center px-2 py-1.5 rounded text-[10px] hover:bg-slate-50 border-b border-slate-50 last:border-b-0 font-bold">
+                              <span className="col-span-3 font-black uppercase text-slate-800 flex items-center gap-1.5 truncate">
+                                <span>📦</span> {r.godown || '-'}
+                              </span>
+                              <span className="col-span-2 font-mono text-slate-500">
+                                {r.opening_date || '-'}
+                              </span>
+                              <span className="col-span-2 text-center">
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[8px] font-black uppercase",
+                                  (r.jci || '').toUpperCase() === 'YES' ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+                                )}>
+                                  {r.jci || 'No'}
+                                </span>
+                              </span>
+                              <span className="col-span-5 text-right font-mono font-black text-indigo-950 flex items-center justify-end gap-2">
+                                <span>{r.quantity || 0} Bales <span className="text-teal-700 font-normal">({Number(r.weight || 0).toFixed(2)} MT)</span></span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onTransfer && onTransfer(r); }}
+                                    className="px-1.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[8px] font-black uppercase flex items-center gap-0.5 shadow-xs cursor-pointer"
+                                    title="Transfer Stock to another Godown"
+                                  >
+                                    <span>🚚 Transfer</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); onUpdateGodown && onUpdateGodown(r); }}
+                                    className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[8px] font-black uppercase flex items-center gap-0.5 shadow-xs cursor-pointer"
+                                    title="Update Godown / Location"
+                                  >
+                                    <span>📍 Godown</span>
+                                  </button>
+                                </div>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
+  );
 }
 
 function Scale({ className }: any) {

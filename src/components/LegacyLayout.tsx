@@ -39,6 +39,7 @@ import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
 import NotificationCenter from './NotificationCenter';
 import { getCurrentUserContext } from '../lib/permissions';
+import { supabase } from '../lib/supabase';
 
 interface LegacyLayoutProps {
   title: string;
@@ -71,6 +72,48 @@ export default function LegacyLayout({
   const [activeMenuDropdown, setActiveMenuDropdown] = React.useState<string | null>(null);
 
   const currentUser = getCurrentUserContext().username || "Admin User";
+
+  const [disputeSummary, setDisputeSummary] = React.useState({
+    materialMismatchCount: 0,
+    sattaDisputeCount: 0,
+    recentCases: [] as any[]
+  });
+  const [isDisputeTrayOpen, setIsDisputeTrayOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchDisputes = async () => {
+      try {
+        if (!supabase) return;
+        const [mmRes, smRes] = await Promise.all([
+          supabase.from('material_mismatch').select('*').order('created_at', { ascending: false }).limit(10),
+          supabase.from('satta_mismatch').select('*').order('created_at', { ascending: false }).limit(10)
+        ]);
+
+        const mmList = mmRes.data || [];
+        const smList = smRes.data || [];
+        
+        const pendingMM = mmList.filter((m: any) => (m.status || 'pending').toLowerCase() !== 'approved' && (m.status || 'pending').toLowerCase() !== 'cleared');
+        const pendingSM = smList.filter((s: any) => (s.status || 'dispute').toLowerCase() !== 'approved' && (s.status || 'dispute').toLowerCase() !== 'cleared');
+
+        const combined = [
+          ...pendingMM.map((m: any) => ({ ...m, caseType: 'Material Mismatch', id: m.mismatch_id || m.id, date: m.created_at || new Date().toISOString() })),
+          ...pendingSM.map((s: any) => ({ ...s, caseType: 'Satta Dispute', id: s.mismatch_id || s.id, date: s.created_at || new Date().toISOString() }))
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setDisputeSummary({
+          materialMismatchCount: pendingMM.length,
+          sattaDisputeCount: pendingSM.length,
+          recentCases: combined
+        });
+      } catch (err) {
+        console.warn("Error fetching dispute cases for header tray:", err);
+      }
+    };
+
+    fetchDisputes();
+    const interval = setInterval(fetchDisputes, 20000);
+    return () => clearInterval(interval);
+  }, []);
   
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -430,6 +473,71 @@ export default function LegacyLayout({
                 </>
               )}
             </div>
+
+            {/* Subtle Notification Tray for New Material Mismatch or Satta Dispute Cases */}
+            {(disputeSummary.materialMismatchCount > 0 || disputeSummary.sattaDisputeCount > 0) && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsDisputeTrayOpen(!isDisputeTrayOpen)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-black shadow-xs transition-all cursor-pointer animate-pulse"
+                  title="New Material Mismatch or Satta Dispute Cases Opened"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 animate-bounce" />
+                  <span className="hidden md:inline">Cases:</span>
+                  <span className="bg-amber-700 text-white px-1.5 py-0.2 rounded-full text-[10px]">
+                    {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount}
+                  </span>
+                </button>
+
+                {isDisputeTrayOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-amber-500/40 rounded-xl shadow-2xl py-3 z-[9999] text-xs text-white">
+                    <div className="px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                        <span className="font-black text-amber-200 uppercase tracking-wider text-[11px]">Active Disputed Cases</span>
+                      </div>
+                      <span className="text-[10px] bg-red-600 px-2 py-0.5 rounded-full font-bold">
+                        {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount} New
+                      </span>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-800">
+                      {disputeSummary.recentCases.length === 0 ? (
+                        <div className="p-4 text-center text-slate-400 text-xs">No active dispute cases.</div>
+                      ) : (
+                        disputeSummary.recentCases.slice(0, 6).map((c: any, i: number) => (
+                          <div key={i} className="p-3 hover:bg-slate-800/85 transition-colors flex flex-col gap-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-black text-amber-300 text-[11px] uppercase">{c.caseType}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {new Date(c.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-200 font-bold truncate">
+                              MR / PO: {c.mr_no || c.po_no || c.sauda_no || 'N/A'} {c.grade ? `(${c.grade})` : ''}
+                            </p>
+                            <p className="text-[10px] text-slate-400 line-clamp-1">
+                              {c.remarks || c.issue_description || c.field || 'Discrepancy flagged between expected and actual values.'}
+                            </p>
+                            <div className="flex gap-2 mt-1">
+                              <button
+                                onClick={() => {
+                                  setIsDisputeTrayOpen(false);
+                                  handleNavNavigation(c.caseType === 'Material Mismatch' ? 'material_mismatch' : 'mismatch');
+                                }}
+                                className="text-[10px] bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold px-2 py-0.5 rounded transition-colors"
+                              >
+                                Review Case →
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Notification Badge Bell */}
             <button
