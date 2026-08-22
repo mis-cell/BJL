@@ -3992,23 +3992,23 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="total_no_of_lorries_3547" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
-                      <input  id="total_no_of_lorries_3547" name="total_no_of_lorries" aria-label="Total No of Lorries"className="w-12 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} readOnly />
+                      <input  id="total_no_of_lorries_3547" name="total_no_of_lorries" aria-label="Total No of Lorries"className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} onChange={(e) => setFormData({...formData, total_no_of_lorries: e.target.value})} />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="units_lorry_3551" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
-                      <input  id="units_lorry_3551" name="units_lorry" aria-label="Units / Lorry"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} readOnly />
+                      <input  id="units_lorry_3551" name="units_lorry" aria-label="Units / Lorry"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} onChange={(e) => setFormData({...formData, units_per_lorry: e.target.value})} />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="total_units_3555" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
-                      <input  id="total_units_3555" name="total_units" aria-label="Total Units"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} readOnly />
+                      <input  id="total_units_3555" name="total_units" aria-label="Total Units"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} onChange={(e) => setFormData({...formData, total_units: e.target.value})} />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="weight_lorry_m_ton_3559" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
-                      <input  id="weight_lorry_m_ton_3559" name="weight_lorry_m_ton" aria-label="Weight/Lorry (M.Ton)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} readOnly />
+                      <input  id="weight_lorry_m_ton_3559" name="weight_lorry_m_ton" aria-label="Weight/Lorry (M.Ton)"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} onChange={(e) => setFormData({...formData, weight_per_lorry: e.target.value})} />
                    </div>
                    <div className="flex items-center gap-1 justify-between col-span-2 sm:col-span-1">
                       <label htmlFor="total_contract_m_ton_3563" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
-                      <input  id="total_contract_m_ton_3563" name="total_contract_m_ton" aria-label="Total Contract (M.Ton)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} readOnly />
+                      <input  id="total_contract_m_ton_3563" name="total_contract_m_ton" aria-label="Total Contract (M.Ton)"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} onChange={(e) => setFormData({...formData, total_contract_mt: e.target.value})} />
                    </div>
                 </div>
 
