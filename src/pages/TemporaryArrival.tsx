@@ -959,6 +959,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
             ...row,
             agency_code: row.agency_code || '',
             agency_name: row.agency_name || '',
+            netto_pnto: Number(row.netto_pnto) || 0,
             quantity_chln: Math.round(Number(row.quantity_chln) || 0),
             quantity_rcpt: Math.round(Number(row.quantity_rcpt) || 0)
           };
@@ -2074,7 +2075,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="0.001"
                       placeholder="0.000"
-                      value={detail.netto_pnto ? detail.netto_pnto : ''} 
+                      value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
@@ -2961,7 +2962,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="0.001"
                       placeholder="0.000"
-                      value={detail.netto_pnto ? detail.netto_pnto : ''} 
+                      value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
