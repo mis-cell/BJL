@@ -1299,7 +1299,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         total_no_of_lorries: String(poHeader.total_lorries || '0'),
         units_per_lorry: String(poHeader.units_per_lorry || '0'),
         total_units: isBales ? sumQty.toString() : String(poHeader.total_units || '0'),
-        weight_per_lorry: String(poHeader.weight_per_lorry || '0'),
+        weight_per_lorry: poHeader.weight_per_lorry !== undefined && poHeader.weight_per_lorry !== null && !isNaN(Number(poHeader.weight_per_lorry)) && Number(poHeader.weight_per_lorry) > 0
+          ? Number(poHeader.weight_per_lorry).toFixed(3)
+          : String(poHeader.weight_per_lorry || '0.000'),
         total_contract_mt: isBales ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || '0'),
         marka_type: poHeader.marka_type || 'Normal',
         marka_penalty: String(poHeader.marka_penalty || '0'),
@@ -1654,7 +1656,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
      total_lorries: '2',
      units_per_lorry: '200',
      total_units: '400',
-     weight_per_lorry: '10'
+     weight_per_lorry: '10.000'
   });
 
   // Fetch all registered records and masters
@@ -2006,10 +2008,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
     const totalLorries = sauda.no_of_lorries ? sauda.no_of_lorries.toString() : '';
     const totalUnits = sauda.total_unit ? sauda.total_unit.toString() : '';
-    const totalContractMt = sauda.total_wt_in_ton ? sauda.total_wt_in_ton.toString() : '';
+    const totalContractMt = sauda.total_wt_in_ton ? Number(sauda.total_wt_in_ton).toFixed(3) : '';
     const unitsPerLorry = sauda.no_of_lorries && sauda.total_unit ? Math.round(sauda.total_unit / sauda.no_of_lorries).toString() : '';
-    const weightPerLorry = sauda.no_of_lorries && sauda.total_wt_in_ton ? (sauda.total_wt_in_ton / sauda.no_of_lorries).toFixed(2) : '';
-    const weightUnitKgs = isBales ? '147.5' : (sauda.total_unit && sauda.total_wt_in_ton ? ((sauda.total_wt_in_ton * 1000) / sauda.total_unit).toFixed(2) : '50');
+    const weightPerLorry = sauda.no_of_lorries && sauda.total_wt_in_ton ? (Number(sauda.total_wt_in_ton) / Number(sauda.no_of_lorries)).toFixed(3) : '';
+    const weightUnitKgs = isBales ? '147.5' : (sauda.total_unit && sauda.total_wt_in_ton ? ((Number(sauda.total_wt_in_ton) * 1000) / Number(sauda.total_unit)).toFixed(2) : '50');
 
     const purchaseUnitCode = sauda.purchase_unit_code || '1';
 
@@ -2131,7 +2133,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       total_no_of_lorries: '1',
       units_per_lorry: '200',
       total_units: '200',
-      weight_per_lorry: '29.5',
+      weight_per_lorry: '29.500',
       total_contract_mt: '29.500',
       marka_type: 'Normal',
       marka_penalty: '0',
@@ -2289,7 +2291,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         total_no_of_lorries: String(poHeader.total_lorries || ''),
         units_per_lorry: String(poHeader.units_per_lorry || ''),
         total_units: totalUnits,
-        weight_per_lorry: String(poHeader.weight_per_lorry || ''),
+        weight_per_lorry: poHeader.weight_per_lorry !== undefined && poHeader.weight_per_lorry !== null && !isNaN(Number(poHeader.weight_per_lorry)) && Number(poHeader.weight_per_lorry) > 0
+          ? Number(poHeader.weight_per_lorry).toFixed(3)
+          : String(poHeader.weight_per_lorry || ''),
         total_contract_mt: totalContractMt,
         marka_type: poHeader.marka_type || 'Normal',
         marka_penalty: String(poHeader.marka_penalty || '0'),
@@ -2382,12 +2386,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       updatedItems[0].weight = parseFloat(((totalUnits * unitWtVal) / 1000).toFixed(3));
     }
 
+    const wtPerLorryFormatted = trueWtPerLorry > 0 
+      ? trueWtPerLorry.toFixed(3) 
+      : (calcData.weight_per_lorry && !isNaN(Number(calcData.weight_per_lorry)) 
+          ? Number(calcData.weight_per_lorry).toFixed(3) 
+          : calcData.weight_per_lorry);
+
     setFormData(prev => ({
       ...prev,
       total_no_of_lorries: calcData.total_lorries,
       units_per_lorry: calcData.units_per_lorry,
       total_units: calcData.total_units.toString(),
-      weight_per_lorry: calcData.weight_per_lorry,
+      weight_per_lorry: wtPerLorryFormatted,
       total_contract_mt: totalContractMt.toFixed(3),
       weight_unit_kgs: weightUnitKgs.toString(),
       items: updatedItems
@@ -2766,7 +2776,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         total_units: (poHeader.total_units !== undefined && poHeader.total_units !== null && Number(poHeader.total_units) > 0)
           ? String(poHeader.total_units)
           : (isBales && sumQty > 0 ? sumQty.toString() : String(poHeader.total_units || '0')),
-        weight_per_lorry: String(poHeader.weight_per_lorry || '0'),
+        weight_per_lorry: poHeader.weight_per_lorry !== undefined && poHeader.weight_per_lorry !== null && !isNaN(Number(poHeader.weight_per_lorry)) && Number(poHeader.weight_per_lorry) > 0
+          ? Number(poHeader.weight_per_lorry).toFixed(3)
+          : String(poHeader.weight_per_lorry || '0.000'),
         total_contract_mt: (poHeader.total_contract_mt !== undefined && poHeader.total_contract_mt !== null && Number(poHeader.total_contract_mt) > 0)
           ? Number(poHeader.total_contract_mt).toFixed(3)
           : (isBales && sumWt > 0 ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || '0')),
@@ -3095,7 +3107,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         total_units: (poHeader.total_units !== undefined && poHeader.total_units !== null && Number(poHeader.total_units) > 0)
           ? String(poHeader.total_units)
           : (isBales && sumQty > 0 ? sumQty.toString() : String(poHeader.total_units || '0')),
-        weight_per_lorry: String(poHeader.weight_per_lorry || '0'),
+        weight_per_lorry: poHeader.weight_per_lorry !== undefined && poHeader.weight_per_lorry !== null && !isNaN(Number(poHeader.weight_per_lorry)) && Number(poHeader.weight_per_lorry) > 0
+          ? Number(poHeader.weight_per_lorry).toFixed(3)
+          : String(poHeader.weight_per_lorry || '0.000'),
         total_contract_mt: (poHeader.total_contract_mt !== undefined && poHeader.total_contract_mt !== null && Number(poHeader.total_contract_mt) > 0)
           ? Number(poHeader.total_contract_mt).toFixed(3)
           : (isBales && sumWt > 0 ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || '0')),
@@ -3984,9 +3998,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Total No of Lorries</span>
                           <input  id="calcdata_total_lorries_3295" name="calcdata_total_lorries" aria-label="calcdata total lorries"
                             type="number"
+                            step="any"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.total_lorries}
-                            onChange={(e) => setCalcData(prev => ({ ...prev, total_lorries: e.target.value }))}
+                            onChange={(e) => {
+                              const lorries = parseFloat(e.target.value) || 0;
+                              const unitsPerLorry = parseFloat(calcData.units_per_lorry) || 0;
+                              const unitWt = parseFloat(formData.weight_unit_kgs) || 147.5;
+                              const totUnits = lorries * unitsPerLorry;
+                              const wtPerLorry = ((unitsPerLorry * unitWt) / 1000).toFixed(3);
+                              setCalcData(prev => ({ 
+                                ...prev, 
+                                total_lorries: e.target.value,
+                                total_units: totUnits > 0 ? totUnits.toString() : prev.total_units,
+                                weight_per_lorry: unitsPerLorry > 0 ? wtPerLorry : prev.weight_per_lorry
+                              }));
+                            }}
                           />
                         </div>
                         
@@ -3994,9 +4021,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Units / Lorry</span>
                           <input  id="calcdata_units_per_lorry_3317" name="calcdata_units_per_lorry" aria-label="calcdata units per lorry"
                             type="number"
+                            step="any"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black"
                             value={calcData.units_per_lorry}
-                            onChange={(e) => setCalcData(prev => ({ ...prev, units_per_lorry: e.target.value }))}
+                            onChange={(e) => {
+                              const unitsPerLorry = parseFloat(e.target.value) || 0;
+                              const lorries = parseFloat(calcData.total_lorries) || 0;
+                              const unitWt = parseFloat(formData.weight_unit_kgs) || 147.5;
+                              const totUnits = lorries * unitsPerLorry;
+                              const wtPerLorry = ((unitsPerLorry * unitWt) / 1000).toFixed(3);
+                              setCalcData(prev => ({ 
+                                ...prev, 
+                                units_per_lorry: e.target.value,
+                                total_units: totUnits > 0 ? totUnits.toString() : (unitsPerLorry > 0 ? unitsPerLorry.toString() : prev.total_units),
+                                weight_per_lorry: unitsPerLorry > 0 ? wtPerLorry : prev.weight_per_lorry
+                              }));
+                            }}
                           />
                         </div>
 
@@ -4004,6 +4044,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Total Units</span>
                           <input  id="parsefloat_calcdata_total_3338" name="parsefloat_calcdata_total" aria-label="parsefloat calcdata total"
                             type="number"
+                            step="any"
                             className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
                             value={calcData.total_units}
                             onChange={(e) => setCalcData(prev => ({ ...prev, total_units: e.target.value }))}
@@ -4014,9 +4055,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <span className="text-right pr-2">Weight/Lorry (M.Ton)</span>
                           <input  id="calcdata_weight_per_lorry_3348" name="calcdata_weight_per_lorry" aria-label="calcdata weight per lorry"
                             type="number"
-                            className="w-32 bg-white border border-gray-400 p-0.5 text-black"
+                            step="any"
+                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
                             value={calcData.weight_per_lorry}
                             onChange={(e) => setCalcData(prev => ({ ...prev, weight_per_lorry: e.target.value }))}
+                            onBlur={() => {
+                              if (calcData.weight_per_lorry && !isNaN(Number(calcData.weight_per_lorry))) {
+                                setCalcData(prev => ({ ...prev, weight_per_lorry: Number(prev.weight_per_lorry).toFixed(3) }));
+                              }
+                            }}
                           />
                         </div>
                      </div>
@@ -4225,7 +4272,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                               total_lorries: formData.total_no_of_lorries || '0',
                               units_per_lorry: formData.units_per_lorry || '0',
                               total_units: formData.total_units || '0',
-                              weight_per_lorry: formData.weight_per_lorry || '0'
+                              weight_per_lorry: formData.weight_per_lorry && !isNaN(Number(formData.weight_per_lorry)) 
+                                ? Number(formData.weight_per_lorry).toFixed(3) 
+                                : (formData.weight_per_lorry || '0.000')
                            } as any);
                           setIsCalcOpen(true); 
                       }} className="bg-slate-200 border border-slate-400 px-3.5 py-0.5 hover:bg-slate-300 ml-2 shadow-sm font-bold text-black">Calculate Helper</button>
@@ -4236,23 +4285,124 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-1 border border-slate-400 p-1 bg-gray-50/50">
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="total_no_of_lorries_3547" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total No of Lorries</label>
-                      <input  id="total_no_of_lorries_3547" name="total_no_of_lorries" aria-label="Total No of Lorries"className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_no_of_lorries} onChange={(e) => setFormData({...formData, total_no_of_lorries: e.target.value})} />
+                      <input  
+                        id="total_no_of_lorries_3547" 
+                        name="total_no_of_lorries" 
+                        aria-label="Total No of Lorries"
+                        className="w-12 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" 
+                        value={formData.total_no_of_lorries} 
+                        onChange={(e) => {
+                          const lorriesVal = e.target.value;
+                          const lorries = parseFloat(lorriesVal) || 0;
+                          const unitsPerLorry = parseFloat(formData.units_per_lorry) || 0;
+                          const unitWt = parseFloat(formData.weight_unit_kgs) || 147.5;
+                          const totUnits = lorries > 0 && unitsPerLorry > 0 ? (lorries * unitsPerLorry).toString() : formData.total_units;
+                          const wtPerLorryNum = unitsPerLorry > 0 ? (unitsPerLorry * unitWt) / 1000 : (parseFloat(formData.weight_per_lorry) || 0);
+                          const totContract = lorries > 0 && wtPerLorryNum > 0 ? (lorries * wtPerLorryNum).toFixed(3) : formData.total_contract_mt;
+                          setFormData(prev => ({
+                            ...prev,
+                            total_no_of_lorries: lorriesVal,
+                            total_units: totUnits,
+                            weight_per_lorry: wtPerLorryNum > 0 ? wtPerLorryNum.toFixed(3) : prev.weight_per_lorry,
+                            total_contract_mt: totContract
+                          }));
+                        }} 
+                      />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="units_lorry_3551" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Units / Lorry</label>
-                      <input  id="units_lorry_3551" name="units_lorry" aria-label="Units / Lorry"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.units_per_lorry} onChange={(e) => setFormData({...formData, units_per_lorry: e.target.value})} />
+                      <input  
+                        id="units_lorry_3551" 
+                        name="units_lorry" 
+                        aria-label="Units / Lorry"
+                        className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" 
+                        value={formData.units_per_lorry} 
+                        onChange={(e) => {
+                          const unitsVal = e.target.value;
+                          const unitsPerLorry = parseFloat(unitsVal) || 0;
+                          const lorries = parseFloat(formData.total_no_of_lorries) || 0;
+                          const unitWt = parseFloat(formData.weight_unit_kgs) || 147.5;
+                          const totUnits = lorries > 0 && unitsPerLorry > 0 ? (lorries * unitsPerLorry).toString() : (unitsPerLorry > 0 ? unitsPerLorry.toString() : formData.total_units);
+                          const wtPerLorryNum = (unitsPerLorry * unitWt) / 1000;
+                          const totContract = lorries > 0 && wtPerLorryNum > 0 ? (lorries * wtPerLorryNum).toFixed(3) : (wtPerLorryNum > 0 ? wtPerLorryNum.toFixed(3) : formData.total_contract_mt);
+                          setFormData(prev => ({
+                            ...prev,
+                            units_per_lorry: unitsVal,
+                            total_units: totUnits,
+                            weight_per_lorry: unitsPerLorry > 0 ? wtPerLorryNum.toFixed(3) : prev.weight_per_lorry,
+                            total_contract_mt: totContract
+                          }));
+                        }} 
+                      />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="total_units_3555" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Units</label>
-                      <input  id="total_units_3555" name="total_units" aria-label="Total Units"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.total_units} onChange={(e) => setFormData({...formData, total_units: e.target.value})} />
+                      <input  
+                        id="total_units_3555" 
+                        name="total_units" 
+                        aria-label="Total Units"
+                        className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" 
+                        value={formData.total_units} 
+                        onChange={(e) => {
+                          const totUnitsVal = e.target.value;
+                          const totUnits = parseFloat(totUnitsVal) || 0;
+                          const unitWt = parseFloat(formData.weight_unit_kgs) || 147.5;
+                          const totContract = totUnits > 0 ? ((totUnits * unitWt) / 1000).toFixed(3) : formData.total_contract_mt;
+                          setFormData(prev => ({
+                            ...prev,
+                            total_units: totUnitsVal,
+                            total_contract_mt: totContract
+                          }));
+                        }} 
+                      />
                    </div>
                    <div className="flex items-center gap-1 justify-between">
                       <label htmlFor="weight_lorry_m_ton_3559" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Weight/Lorry (M.Ton)</label>
-                      <input  id="weight_lorry_m_ton_3559" name="weight_lorry_m_ton" aria-label="Weight/Lorry (M.Ton)"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" value={formData.weight_per_lorry} onChange={(e) => setFormData({...formData, weight_per_lorry: e.target.value})} />
+                      <input  
+                        id="weight_lorry_m_ton_3559" 
+                        name="weight_lorry_m_ton" 
+                        aria-label="Weight/Lorry (M.Ton)"
+                        className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-[#7c2d12]" 
+                        value={formData.weight_per_lorry} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const lorries = parseFloat(formData.total_no_of_lorries) || 0;
+                          const wtVal = parseFloat(val) || 0;
+                          const totContract = lorries > 0 && wtVal > 0 ? (lorries * wtVal).toFixed(3) : formData.total_contract_mt;
+                          setFormData(prev => ({
+                            ...prev,
+                            weight_per_lorry: val,
+                            total_contract_mt: totContract
+                          }));
+                        }} 
+                        onBlur={() => {
+                          if (formData.weight_per_lorry && !isNaN(Number(formData.weight_per_lorry))) {
+                            setFormData(prev => ({
+                              ...prev,
+                              weight_per_lorry: Number(prev.weight_per_lorry).toFixed(3)
+                            }));
+                          }
+                        }}
+                      />
                    </div>
                    <div className="flex items-center gap-1 justify-between col-span-2 sm:col-span-1">
                       <label htmlFor="total_contract_m_ton_3563" className="whitespace-nowrap pr-1 text-right w-full text-indigo-900 font-bold text-[10px]">Total Contract (M.Ton)</label>
-                      <input  id="total_contract_m_ton_3563" name="total_contract_m_ton" aria-label="Total Contract (M.Ton)"className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" value={formData.total_contract_mt} onChange={(e) => setFormData({...formData, total_contract_mt: e.target.value})} />
+                      <input  
+                        id="total_contract_m_ton_3563" 
+                        name="total_contract_m_ton" 
+                        aria-label="Total Contract (M.Ton)"
+                        className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-extrabold text-blue-900" 
+                        value={formData.total_contract_mt} 
+                        onChange={(e) => setFormData({...formData, total_contract_mt: e.target.value})} 
+                        onBlur={() => {
+                          if (formData.total_contract_mt && !isNaN(Number(formData.total_contract_mt))) {
+                            setFormData(prev => ({
+                              ...prev,
+                              total_contract_mt: Number(prev.total_contract_mt).toFixed(3)
+                            }));
+                          }
+                        }}
+                      />
                    </div>
                 </div>
 
