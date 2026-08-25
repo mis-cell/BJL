@@ -229,6 +229,281 @@ const SingleComboBox = ({
   );
 }
 
+const SearchablePoContractDropdown = ({
+  value,
+  onChange,
+  options,
+  disabled = false,
+  hasSaudaHighlight = false,
+  placeholder = "SEARCH P.O CONTRACT...",
+  id = "p_o_contract_searchable"
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: any[];
+  disabled?: boolean;
+  hasSaudaHighlight?: boolean;
+  placeholder?: string;
+  id?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep display synchronized when dropdown is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm(value || '');
+      setHighlightIndex(-1);
+    }
+  }, [value, isOpen]);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!isOpen) return options;
+    const term = (searchTerm || '').trim().toLowerCase();
+    if (!term) return options;
+
+    return options.filter((opt: any) => {
+      const poDisplay = String(opt.po_display_no || '').toLowerCase();
+      const saudaNo = String(opt.sauda_no || '').toLowerCase();
+      const session = String(opt.session || '').toLowerCase();
+      const supplier = String(opt.supplier || '').toLowerCase();
+      const broker = String(opt.broker || '').toLowerCase();
+      const area = String(opt.area || '').toLowerCase();
+      const date = String(opt.date || '').toLowerCase();
+      return (
+        poDisplay.includes(term) ||
+        saudaNo.includes(term) ||
+        session.includes(term) ||
+        supplier.includes(term) ||
+        broker.includes(term) ||
+        area.includes(term) ||
+        date.includes(term)
+      );
+    });
+  }, [options, searchTerm, isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm(value || '');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [value]);
+
+  const handleSelect = (item: any) => {
+    const selectedVal = item.po_display_no || item.sauda_no || item.session || '';
+    onChange(selectedVal);
+    setSearchTerm(selectedVal);
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        setHighlightIndex(0);
+      } else {
+        setHighlightIndex(prev => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (isOpen) {
+        setHighlightIndex(prev => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOpen && highlightIndex >= 0 && filteredOptions[highlightIndex]) {
+        handleSelect(filteredOptions[highlightIndex]);
+      } else if (isOpen && filteredOptions.length > 0) {
+        handleSelect(filteredOptions[0]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm(value || '');
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="flex-1 relative text-black min-w-[130px]">
+      <div className={`flex items-center border transition-colors duration-150 ${
+        disabled
+          ? 'bg-slate-100 border-slate-300'
+          : hasSaudaHighlight
+            ? 'border-amber-400 bg-[#fffdf5]'
+            : isOpen
+              ? 'border-blue-600 bg-white ring-1 ring-blue-400/30'
+              : 'border-slate-400 bg-white'
+      }`}>
+        <input
+          id={id}
+          ref={inputRef}
+          name="p_o_contract_search"
+          aria-label="P.O Contract Searchable Dropdown"
+          type="text"
+          disabled={disabled}
+          className={`flex-1 p-0.5 px-1 outline-none font-bold text-[11px] bg-transparent ${
+            disabled ? 'text-slate-400' : 'text-black'
+          }`}
+          value={isOpen ? searchTerm : value}
+          onChange={(e) => {
+            const val = e.target.value;
+            setSearchTerm(val);
+            setHighlightIndex(0);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => {
+            if (!disabled) {
+              setIsOpen(true);
+              setSearchTerm('');
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={value || placeholder}
+        />
+
+        {value && !disabled && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+              setSearchTerm('');
+              inputRef.current?.focus();
+            }}
+            className="p-0.5 text-slate-400 hover:text-red-600 cursor-pointer"
+            title="Clear Selection"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={() => {
+            if (!disabled) {
+              if (isOpen) {
+                setIsOpen(false);
+                setSearchTerm(value || '');
+              } else {
+                setIsOpen(true);
+                setSearchTerm('');
+                inputRef.current?.focus();
+              }
+            }
+          }}
+          className={`px-1 py-1 border-l text-slate-600 hover:text-black cursor-pointer transition-colors ${
+            hasSaudaHighlight
+              ? 'bg-amber-100/70 border-amber-400 hover:bg-amber-200'
+              : 'bg-slate-100 border-slate-400 hover:bg-slate-200'
+          }`}
+        >
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? 'rotate-180 text-blue-600' : ''}`} />
+        </button>
+      </div>
+
+      {isOpen && !disabled && (
+        <div className="absolute top-full left-0 sm:right-auto right-0 min-w-[280px] sm:min-w-[360px] max-w-[460px] bg-white border border-slate-400 shadow-2xl z-[9999] mt-0.5 overflow-hidden text-black text-left rounded-none">
+          <div className="bg-slate-100 border-b border-slate-300 px-2 py-1 flex items-center justify-between text-[10px] text-slate-700">
+            <span className="font-bold flex items-center gap-1">
+              <Search className="w-3 h-3 text-slate-500" />
+              {searchTerm ? `Filtering: "${searchTerm}"` : 'Select Contract / Sauda'}
+            </span>
+            <span className="bg-slate-200 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold text-slate-800">
+              {filteredOptions.length} Found
+            </span>
+          </div>
+
+          <div className="overflow-y-auto max-h-56 divide-y divide-slate-200">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt: any, idx: number) => {
+                const poNo = opt.po_display_no || opt.sauda_no || opt.session;
+                const isSelected = value && (value === poNo || value === opt.sauda_no || value === opt.session);
+                const isHighlighted = highlightIndex === idx;
+
+                return (
+                  <div
+                    key={idx}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(opt);
+                    }}
+                    onMouseEnter={() => setHighlightIndex(idx)}
+                    className={`p-1.5 px-2 cursor-pointer transition-colors text-[10px] ${
+                      isSelected
+                        ? 'bg-emerald-50 text-emerald-950 border-l-4 border-emerald-600 font-semibold'
+                        : isHighlighted
+                          ? 'bg-blue-600 text-white font-medium'
+                          : 'hover:bg-blue-50 hover:text-blue-900 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-mono font-bold text-[11px]">
+                        {poNo}
+                      </span>
+                      {opt.date && (
+                        <span className={`text-[9px] font-mono ${isHighlighted && !isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                          {opt.date}
+                        </span>
+                      )}
+                    </div>
+
+                    {(opt.supplier || opt.broker || opt.area) && (
+                      <div className={`flex flex-wrap items-center gap-1.5 mt-0.5 text-[9px] ${
+                        isHighlighted && !isSelected ? 'text-blue-100' : 'text-slate-600'
+                      }`}>
+                        {opt.supplier && (
+                          <span className={`font-semibold ${isHighlighted && !isSelected ? 'text-white' : 'text-slate-900'}`}>
+                            Supp: {opt.supplier}
+                          </span>
+                        )}
+                        {opt.broker && (
+                          <span className={`${isHighlighted && !isSelected ? 'bg-blue-700/60 text-white' : 'bg-slate-100 text-slate-600'} px-1 py-0.2 rounded`}>
+                            Brk: {opt.broker}
+                          </span>
+                        )}
+                        {opt.area && (
+                          <span className={`${isHighlighted && !isSelected ? 'bg-blue-800/80 text-amber-200' : 'bg-amber-50 text-amber-900'} px-1 py-0.2 rounded font-semibold`}>
+                            {opt.area}
+                          </span>
+                        )}
+                        {opt.total_wt_in_ton && (
+                          <span className={`ml-auto font-mono font-bold ${isHighlighted && !isSelected ? 'text-white' : 'text-blue-900'}`}>
+                            {opt.total_wt_in_ton} MT
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-3 text-center text-slate-500 text-[10px]">
+                <p className="font-bold">No matching P.O contracts</p>
+                <p className="text-[9px] text-slate-400 mt-0.5">
+                  Check the sauda number or supplier name.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TableComboBox = ({
   value,
   onChange,
@@ -3858,7 +4133,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   {formData.is_ptf ? (
                     <input  id="p_o_contract_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
                   ) : (
-                    <SingleComboBox value={formData.no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
+                    <SearchablePoContractDropdown 
+                      id="p_o_contract_3449" 
+                      value={formData.no} 
+                      onChange={handleSaudaSelect} 
+                      options={displaySaudas} 
+                      hasSaudaHighlight={isSaudaActive} 
+                    />
                   )}
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
@@ -4020,7 +4301,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <div className="col-span-12 lg:col-span-6 flex items-center gap-2">
                     <label className="w-24 sm:w-32 text-right shrink-0">Contract / P.O No</label>
                     <div className="flex-1">
-                      <SingleComboBox value={formData.contract_po_no} onChange={handleSaudaSelect} options={displaySaudas} textField="po_display_no" valueField="po_display_no" />
+                      <SearchablePoContractDropdown 
+                        value={formData.contract_po_no} 
+                        onChange={handleSaudaSelect} 
+                        options={displaySaudas} 
+                        hasSaudaHighlight={isSaudaActive} 
+                      />
                     </div>
                   </div>
                   <div className="col-span-12 lg:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-2">
