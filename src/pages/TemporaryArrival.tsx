@@ -52,17 +52,17 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       }
     }
     
-    // Backfill quantity_chln and quantity_rcpt from netto_pnto if missing & normalize agency
+    // Backfill quantity_chln and quantity_rcpt from netto_pnto only if strictly undefined or null & normalize agency
     pDetails = pDetails.map(d => {
       const agencyName = d.agency_name || (d as any).agency || '';
       const agencyCode = d.agency_code || '';
       const updatedD = { ...d, agency_name: agencyName, agency_code: agencyCode };
-      if (Number(d.netto_pnto) > 0 && (!d.quantity_chln || !d.quantity_rcpt)) {
+      if (Number(d.netto_pnto) > 0 && (d.quantity_chln === undefined || d.quantity_chln === null || d.quantity_rcpt === undefined || d.quantity_rcpt === null)) {
         const roundedNetto = Math.round(Number(d.netto_pnto));
         return {
           ...updatedD,
-          quantity_chln: d.quantity_chln || roundedNetto,
-          quantity_rcpt: d.quantity_rcpt || roundedNetto
+          quantity_chln: (d.quantity_chln !== undefined && d.quantity_chln !== null) ? d.quantity_chln : roundedNetto,
+          quantity_rcpt: (d.quantity_rcpt !== undefined && d.quantity_rcpt !== null) ? d.quantity_rcpt : roundedNetto
         };
       }
       return updatedD;
@@ -839,11 +839,12 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       const activeRows = details.filter(row => 
         row.receipt_grade_code || 
         row.receipt_grade_name ||
-        Number(row.quantity_rcpt) > 0 || 
-        Number(row.quantity_chln) > 0 ||
-        Number(row.netto_pnto) > 0 || 
         row.challan_grade_name || 
-        row.challan_marka_name
+        row.challan_marka_name ||
+        row.agency_name ||
+        Number(row.netto_pnto) > 0 || 
+        Number(row.quantity_rcpt) > 0 || 
+        Number(row.quantity_chln) > 0
       );
 
       if (activeRows.length === 0) {
@@ -862,8 +863,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           if (!row.challan_marka_code && !row.challan_marka_name) {
             missingFields.push(`Challan Marka (Code/Name) is mandatory for grid row ${row.srl_no}`);
           }
-          if (!row.quantity_chln || Number(row.quantity_chln) <= 0) {
-            missingFields.push(`Quantity (Chln) is mandatory for grid row ${row.srl_no}`);
+          if (row.quantity_chln === undefined || row.quantity_chln === null || String(row.quantity_chln).trim() === '' || isNaN(Number(row.quantity_chln)) || Number(row.quantity_chln) < 0) {
+            missingFields.push(`Quantity (Chln) is invalid for grid row ${row.srl_no}`);
+          }
+          if (row.quantity_rcpt === undefined || row.quantity_rcpt === null || String(row.quantity_rcpt).trim() === '' || isNaN(Number(row.quantity_rcpt)) || Number(row.quantity_rcpt) < 0) {
+            missingFields.push(`Quantity (Rcpt) is invalid for grid row ${row.srl_no}`);
           }
         });
       }
@@ -2085,7 +2089,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="1"
                       placeholder="0"
-                      value={detail.quantity_chln ? detail.quantity_chln : ''} 
+                      value={detail.quantity_chln !== undefined && detail.quantity_chln !== null ? detail.quantity_chln : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'quantity_chln', val === '' ? 0 : Number(val));
@@ -2100,7 +2104,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="1"
                       placeholder="0"
-                      value={detail.quantity_rcpt ? detail.quantity_rcpt : ''} 
+                      value={detail.quantity_rcpt !== undefined && detail.quantity_rcpt !== null ? detail.quantity_rcpt : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'quantity_rcpt', val === '' ? 0 : Number(val));
@@ -2972,7 +2976,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="1"
                       placeholder="0"
-                      value={detail.quantity_chln ? detail.quantity_chln : ''} 
+                      value={detail.quantity_chln !== undefined && detail.quantity_chln !== null ? detail.quantity_chln : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'quantity_chln', val === '' ? 0 : Number(val));
@@ -2987,7 +2991,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       type="number" 
                       step="1"
                       placeholder="0"
-                      value={detail.quantity_rcpt ? detail.quantity_rcpt : ''} 
+                      value={detail.quantity_rcpt !== undefined && detail.quantity_rcpt !== null ? detail.quantity_rcpt : 0} 
                       onChange={(e) => {
                         const val = e.target.value;
                         handleDetailChange(idx, 'quantity_rcpt', val === '' ? 0 : Number(val));
