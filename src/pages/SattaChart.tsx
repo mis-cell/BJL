@@ -1168,7 +1168,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1E331B]">Base Rate</span>
             <DollarSign className="h-4 w-4 text-[#D4AF37]" />
           </div>
-          <div className="text-xl font-serif font-black text-[#1E331B] font-mono">
+          <div className="text-xl font-numeric font-extrabold text-[#1E331B]">
             ₹{baseRate.toLocaleString()}
           </div>
           <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-emerald-700">
@@ -1186,7 +1186,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">Highest Rate</span>
             <TrendingUp className="h-4 w-4 text-emerald-600" />
           </div>
-          <div className="text-xl font-serif font-black text-emerald-950 font-mono">
+          <div className="text-xl font-numeric font-extrabold text-emerald-950">
             ₹{metrics.maxRate.toLocaleString()}
           </div>
           <div className="text-[9px] font-extrabold text-emerald-700 truncate mt-1">
@@ -1203,7 +1203,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800">Lowest Rate</span>
             <ArrowDownRight className="h-4 w-4 text-rose-600" />
           </div>
-          <div className="text-xl font-serif font-black text-rose-950 font-mono">
+          <div className="text-xl font-numeric font-extrabold text-rose-950">
             ₹{metrics.minRate.toLocaleString()}
           </div>
           <div className="text-[9px] font-extrabold text-rose-700 truncate mt-1">
@@ -1220,7 +1220,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-900">Avg Market Rate</span>
             <Calculator className="h-4 w-4 text-indigo-600" />
           </div>
-          <div className="text-xl font-serif font-black text-indigo-950 font-mono">
+          <div className="text-xl font-numeric font-extrabold text-indigo-950">
             ₹{metrics.avgRate.toLocaleString()}
           </div>
           <div className="text-[9px] font-bold text-slate-500 mt-1">
@@ -1237,7 +1237,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1E331B]">Active Areas</span>
             <Layers className="h-4 w-4 text-[#D4AF37]" />
           </div>
-          <div className="text-xl font-serif font-black text-[#1E331B]">
+          <div className="text-xl font-numeric font-extrabold text-[#1E331B]">
             {metrics.totalAreas}
           </div>
           <div className="text-[9px] font-bold text-emerald-700 mt-1">
@@ -1254,7 +1254,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">Updated Today</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
-          <div className="text-xl font-serif font-black text-emerald-950">
+          <div className="text-xl font-numeric font-extrabold text-emerald-950">
             {metrics.totalAreas} / {metrics.totalAreas}
           </div>
           <div className="text-[9px] font-bold text-emerald-600 mt-1">
@@ -1271,7 +1271,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">Pending Updates</span>
             <ShieldCheck className="h-4 w-4 text-amber-600" />
           </div>
-          <div className="text-xl font-serif font-black text-amber-950">
+          <div className="text-xl font-numeric font-extrabold text-amber-950">
             0 Pending
           </div>
           <div className="text-[9px] font-bold text-amber-700 mt-1">
@@ -1288,7 +1288,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-900">Historic Logs</span>
             <History className="h-4 w-4 text-purple-600" />
           </div>
-          <div className="text-xl font-serif font-black text-purple-950">
+          <div className="text-xl font-numeric font-extrabold text-purple-950">
             {rateHistory.length} Runs
           </div>
           <div className="text-[9px] font-bold text-purple-700 mt-1">

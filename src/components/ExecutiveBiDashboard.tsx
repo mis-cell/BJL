@@ -907,7 +907,7 @@ export default function ExecutiveBiDashboard({
           title="Click to open Sauda Module"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-[#1E331B] tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
               <span>📦</span> Total Sauda
             </span>
             <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
@@ -916,24 +916,24 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans text-[#556952]">MT</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
             </div>
-            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
+            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
               ₹ {metrics.totalSaudaValueLakhs.toLocaleString('en-IN')} Lakhs
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
-              <span className="text-[#1E331B] font-bold">{metrics.totalSaudaRecordsCount} Total Contracts</span>
-              <span className="text-[#2E6B3E] font-extrabold">{metrics.saudaSuppliersCount} Vendors</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[#1E331B] font-bold font-numeric">{metrics.totalSaudaRecordsCount} Total Contracts</span>
+              <span className="text-[#2E6B3E] font-extrabold font-numeric">{metrics.saudaSuppliersCount} Vendors</span>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>Open Sauda Module</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
@@ -944,7 +944,7 @@ export default function ExecutiveBiDashboard({
           title="Click to view Pending Saudas"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-amber-900 tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
               <span>⏳</span> Pending Sauda
             </span>
             <div className="p-2 rounded-xl bg-amber-100/80 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
@@ -953,24 +953,24 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans text-[#556952]">MT</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
             </div>
-            <div className="text-[11px] text-amber-800 font-bold mt-0.5">
+            <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric">
               {metrics.pendingSaudaCount} Pending Contracts
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
+            <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Outstanding Val.</span>
-              <span className="text-amber-800 font-bold">₹ {metrics.pendingSaudaValueLakhs.toLocaleString('en-IN')} L</span>
+              <span className="text-amber-800 font-bold font-numeric">₹ {metrics.pendingSaudaValueLakhs.toLocaleString('en-IN')} L</span>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-amber-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Pending Sauda</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
@@ -981,7 +981,7 @@ export default function ExecutiveBiDashboard({
           title="Click to open Payment Module"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-blue-900 tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
               <span>💳</span> Total Payment
             </span>
             <div className="p-2 rounded-xl bg-blue-100/80 text-blue-900 border border-blue-300 group-hover:bg-blue-200 transition-colors">
@@ -990,8 +990,8 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-blue-800 font-bold mt-0.5">
               Gross Payable Amount
@@ -999,15 +999,15 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
+            <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Payment Records</span>
-              <span className="text-blue-800 font-bold">{paymentRecords.length || 0} Vouchers</span>
+              <span className="text-blue-800 font-bold font-numeric">{paymentRecords.length || 0} Vouchers</span>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-blue-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>Open Payment Module</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
@@ -1018,7 +1018,7 @@ export default function ExecutiveBiDashboard({
           title="Click to view Advance Payments"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-purple-900 tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-purple-900 tracking-wider flex items-center gap-1.5">
               <span>💸</span> Advance Payment
             </span>
             <div className="p-2 rounded-xl bg-purple-100/80 text-purple-900 border border-purple-300 group-hover:bg-purple-200 transition-colors">
@@ -1027,8 +1027,8 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-purple-800 font-bold mt-0.5">
               Total Advance Disbursed
@@ -1036,7 +1036,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
+            <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
               <span className="text-purple-800 font-bold">In Advance</span>
             </div>
@@ -1044,7 +1044,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-purple-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Advance Vouchers</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
@@ -1055,7 +1055,7 @@ export default function ExecutiveBiDashboard({
           title="Click to view Rest Payment Balance"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-rose-900 tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-rose-900 tracking-wider flex items-center gap-1.5">
               <span>⚖️</span> Rest Payment
             </span>
             <div className="p-2 rounded-xl bg-rose-100/80 text-rose-900 border border-rose-300 group-hover:bg-rose-200 transition-colors">
@@ -1064,8 +1064,8 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">Lakhs</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-rose-800 font-bold mt-0.5">
               Remaining Balance Due
@@ -1073,7 +1073,7 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
+            <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Net Due Payment</span>
               <span className="text-rose-800 font-bold">Outstanding</span>
             </div>
@@ -1081,7 +1081,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-rose-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Outstanding Dues</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
@@ -1092,7 +1092,7 @@ export default function ExecutiveBiDashboard({
           title="Click to open Godown Stock Register"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-extrabold uppercase text-teal-900 tracking-wider font-mono flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
               <span>🏢</span> Godown Stock
             </span>
             <div className="p-2 rounded-xl bg-teal-100/80 text-teal-900 border border-teal-300 group-hover:bg-teal-200 transition-colors">
@@ -1101,24 +1101,24 @@ export default function ExecutiveBiDashboard({
           </div>
 
           <div className="my-2.5">
-            <div className="text-2xl font-serif font-black text-[#1E331B] tracking-tight">
-              {metrics.totalStockMt.toLocaleString('en-IN')} <span className="text-xs font-sans text-[#556952]">MT</span>
+            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+              {metrics.totalStockMt.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
             </div>
-            <div className="text-[11px] text-teal-800 font-bold mt-0.5">
+            <div className="text-[11px] text-teal-800 font-bold mt-0.5 font-numeric">
               {metrics.godownStockBales.toLocaleString('en-IN')} Bales Stacked
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between font-mono">
+            <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Capacity Utilized</span>
-              <span className="text-teal-800 font-bold">{metrics.godownUtilPct}%</span>
+              <span className="text-teal-800 font-bold font-numeric">{metrics.godownUtilPct}%</span>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-teal-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>Open Godown Stock</span>
-            <span className="text-xs font-serif font-black">→</span>
+            <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
