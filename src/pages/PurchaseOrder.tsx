@@ -3142,12 +3142,23 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
   const isSaudaActive = !formData.is_ptf && !!formData.no;
 
-  const getPoSuffix = (str: string) => {
+  const getCleanSaudaDigits = (str: string) => {
     if (!str) return '';
-    const clean = String(str).trim();
-    const parts = clean.split('/');
-    const last = parts[parts.length - 1];
-    return last ? last.trim().toUpperCase() : '';
+    const clean = String(str).trim().toUpperCase();
+    const withoutPrefix = clean
+      .replace(/^BJCL\//i, '')
+      .replace(/^BJC\//i, '')
+      .replace(/^BJC/i, '')
+      .replace(/^PO[-/]/i, '')
+      .replace(/^PTF[-/]/i, '');
+    const withoutYear = withoutPrefix
+      .replace(/20\d{2}-20\d{2}/g, '')
+      .replace(/20\d{2}\/20\d{2}/g, '')
+      .replace(/20\d{2}20\d{2}/g, '')
+      .replace(/\/\d{2}-\d{2}$/g, '')
+      .replace(/^\d{2}-\d{2}\//g, '')
+      .replace(/[^0-9]/g, '');
+    return withoutYear.replace(/^0+/, '');
   };
 
   // Filter out those Saudas that are already used in saved purchase orders
@@ -3156,15 +3167,16 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const saudaPoDisplayNo = (formatPoNumber(s) || '').trim().toUpperCase();
     const saudaNo = String(s.sauda_no || '').trim().toUpperCase();
     const saudaSession = String(s.session || '').trim().toUpperCase();
-    const saudaSuffix = getPoSuffix(saudaPoDisplayNo) || saudaNo;
+    const sDigits = getCleanSaudaDigits(saudaNo) || getCleanSaudaDigits(saudaPoDisplayNo) || getCleanSaudaDigits(saudaSession);
 
     // If currently selected in the active form, keep it in displaySaudas so it remains visible while editing
     const currentFormNo = (formData.no || formData.contract_po_no || '').trim().toUpperCase();
+    const currentFormDigits = getCleanSaudaDigits(currentFormNo);
     const isCurrentlySelectedInForm = currentFormNo && (
       currentFormNo === saudaPoDisplayNo ||
       currentFormNo === saudaSession ||
       currentFormNo === saudaNo ||
-      (saudaSuffix && getPoSuffix(currentFormNo) === saudaSuffix)
+      (sDigits && currentFormDigits === sDigits)
     );
 
     if (isCurrentlySelectedInForm) {
@@ -3181,30 +3193,26 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
       const pPo = String(p.po_no || '').trim().toUpperCase();
       const pContract = String(p.contract_po_no || '').trim().toUpperCase();
+      const pSaudaNo = String(p.sauda_no || p.po_contract || p.contract_no || '').trim().toUpperCase();
       const pPtf = String(p.ptf_no || '').trim().toUpperCase();
 
-      if (
-        (pPo && (pPo === saudaPoDisplayNo || pPo === saudaSession || pPo === saudaNo)) ||
-        (pContract && (pContract === saudaPoDisplayNo || pContract === saudaSession || pContract === saudaNo)) ||
-        (pPtf && (pPtf === saudaPoDisplayNo || pPtf === saudaSession || pPtf === saudaNo))
-      ) {
+      // Exact text match on any matching reference field
+      const pContractRefs = [pContract, pSaudaNo, pPo, pPtf].filter(Boolean);
+      if (pContractRefs.some(ref => 
+        ref === saudaPoDisplayNo || 
+        ref === saudaSession || 
+        ref === saudaNo ||
+        (s.sauda_no && ref === String(s.sauda_no).trim().toUpperCase())
+      )) {
         return true;
       }
 
-      const pPoSuffix = getPoSuffix(pPo);
-      const pContractSuffix = getPoSuffix(pContract);
-      const pPtfSuffix = getPoSuffix(pPtf);
-
-      if (saudaSuffix) {
-        if (pPoSuffix === saudaSuffix || pContractSuffix === saudaSuffix || pPtfSuffix === saudaSuffix) {
-          return true;
-        }
-        const saudaInt = parseInt(saudaSuffix, 10);
-        if (!isNaN(saudaInt) && saudaInt > 0) {
-          if (pPoSuffix && parseInt(pPoSuffix, 10) === saudaInt) return true;
-          if (pContractSuffix && parseInt(pContractSuffix, 10) === saudaInt) return true;
-          if (pPtfSuffix && parseInt(pPtfSuffix, 10) === saudaInt) return true;
-        }
+      // Check linked contract digits specifically (on contract_po_no, sauda_no, or exact PO token)
+      if (sDigits) {
+        const pContractDigits = getCleanSaudaDigits(pContract);
+        const pSaudaDigits = getCleanSaudaDigits(pSaudaNo);
+        if (pContractDigits && pContractDigits === sDigits) return true;
+        if (pSaudaDigits && pSaudaDigits === sDigits) return true;
       }
 
       return false;

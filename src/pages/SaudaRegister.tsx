@@ -611,9 +611,21 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const getCleanDigits = (str: string) => {
       if (!str) return '';
-      const clean = str.replace(/[^0-9]/g, '');
-      const withoutYear = clean.replace(/20\d{2}20\d{2}/g, '');
-      return withoutYear ? withoutYear.replace(/^0+/, '') : clean.replace(/^0+/, '');
+      const clean = String(str).trim().toUpperCase();
+      const withoutPrefix = clean
+        .replace(/^BJCL\//i, '')
+        .replace(/^BJC\//i, '')
+        .replace(/^BJC/i, '')
+        .replace(/^PO[-/]/i, '')
+        .replace(/^PTF[-/]/i, '');
+      const withoutYear = withoutPrefix
+        .replace(/20\d{2}-20\d{2}/g, '')
+        .replace(/20\d{2}\/20\d{2}/g, '')
+        .replace(/20\d{2}20\d{2}/g, '')
+        .replace(/\/\d{2}-\d{2}$/g, '')
+        .replace(/^\d{2}-\d{2}\//g, '')
+        .replace(/[^0-9]/g, '');
+      return withoutYear.replace(/^0+/, '');
     };
 
     const sNoDigits = getCleanDigits(sNo);
