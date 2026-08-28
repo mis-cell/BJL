@@ -1266,8 +1266,8 @@ export default function ExecutiveBiDashboard({
                 <span className="text-[#1E331B]">Arrival vs Dispatch (MT)</span>
                 <span className="text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-[10px]">Tonnage Trend</span>
               </div>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-44 w-full min-h-[176px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <AreaChart data={arrivalVsDispatch7Days}>
                     <defs>
                       <linearGradient id="colorArrival" x1="0" y1="0" x2="0" y2="1">
@@ -1296,8 +1296,8 @@ export default function ExecutiveBiDashboard({
                 <span className="text-[#1E331B]">Bales Volumetric Comparison</span>
                 <span className="text-blue-800 bg-blue-100 px-2 py-0.5 rounded text-[10px]">Bales Count</span>
               </div>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-44 w-full min-h-[176px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <BarChart data={arrivalVsDispatch7Days}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                     <XAxis dataKey="day" stroke="#556952" fontSize={10} />
@@ -1316,8 +1316,8 @@ export default function ExecutiveBiDashboard({
                 <span className="text-[#1E331B]">Net Stock Surplus Delta (MT)</span>
                 <span className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded text-[10px]">Inflow Delta</span>
               </div>
-              <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-44 w-full min-h-[176px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <LineChart data={arrivalVsDispatch7Days}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE0" />
                     <XAxis dataKey="day" stroke="#556952" fontSize={10} />

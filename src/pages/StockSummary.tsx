@@ -4445,8 +4445,8 @@ function StockSparkline() {
   return (
     <div className="w-28 h-6 inline-flex items-center align-middle mx-2 bg-emerald-50/50 px-1 py-0.5 rounded border border-emerald-200/60" title="30-Day Inventory Trend Sparkline">
       <span className="text-[8px] font-black text-emerald-800 mr-1">30D:</span>
-      <div className="w-16 h-4">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-16 h-4 min-w-[64px] min-h-[16px]">
+        <ResponsiveContainer width="100%" height="100%" minWidth={10} minHeight={10}>
           <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
             <Area type="monotone" dataKey="bales" stroke="#174C2C" fill="#174C2C" fillOpacity={0.25} strokeWidth={1.5} />
           </AreaChart>
