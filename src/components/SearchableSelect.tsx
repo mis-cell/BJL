@@ -11,6 +11,8 @@ interface SearchableSelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  isAutoPopulated?: boolean;
+  isRequired?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -22,7 +24,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   options,
   placeholder = "SELECT OR TYPE...",
   className = "",
-  disabled = false
+  disabled = false,
+  isAutoPopulated = false,
+  isRequired = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
@@ -65,8 +69,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div className={`flex flex-col gap-1.5 ${className}`} ref={containerRef}>
       {label && (
-        <label htmlFor={inputId} className="text-xs font-semibold text-slate-700 tracking-wide">
-          {label}
+        <label htmlFor={inputId} className="text-xs font-semibold text-slate-700 tracking-wide flex items-center gap-1">
+          <span>{label}</span>
+          {isRequired && <span className="text-rose-600 font-black text-sm">*</span>}
+          {isAutoPopulated && (
+            <span className="ml-auto text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase tracking-wider">
+              Auto
+            </span>
+          )}
         </label>
       )}
       <div className="relative">
@@ -80,7 +90,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full bg-white border border-[#D5D0C5] focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 rounded-xl px-3.5 py-2 text-xs font-semibold uppercase text-slate-800 placeholder:text-slate-400 placeholder:normal-case outline-none transition-all pr-8 shadow-2xs"
+          className={`w-full rounded-xl px-3.5 py-2 text-xs font-semibold uppercase placeholder:normal-case outline-none transition-all pr-8 shadow-2xs ${
+            isAutoPopulated
+              ? "bg-sky-50 border border-sky-300 text-sky-950 font-bold focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
+              : isRequired
+              ? "bg-white border-2 border-amber-400 text-slate-900 focus:border-amber-600 focus:ring-2 focus:ring-amber-200 placeholder:text-slate-400"
+              : "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 placeholder:text-slate-400"
+          }`}
         />
         <button
           type="button"

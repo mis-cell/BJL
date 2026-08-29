@@ -27,38 +27,58 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Session */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="session_31" className="text-xs font-semibold text-slate-700">Session</label>
+          <label htmlFor="session_31" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+            <span>Session</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto</span>
+          </label>
           <input
- id="session_31" aria-label="Session"            type="text"
+            id="session_31"
+            aria-label="Session"
+            type="text"
             name="session"
             value={formData.session || 'BJCL/2026-2027/'}
             onChange={onChange}
-            className="bg-[#F8F7F2] border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs"
+            className="bg-sky-50 border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
           />
         </div>
 
         {/* Order No. */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="sauda_no_43" className="text-xs font-semibold text-slate-700">Order No.</label>
+          <label htmlFor="sauda_no_43" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+            <span>Order No.</span>
+            <span className="text-rose-600 font-black text-sm">*</span>
+            {formData.sauda_no && (
+              <span className="ml-auto text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">
+                Auto
+              </span>
+            )}
+          </label>
           <input
- id="sauda_no_43" aria-label="Order No."            type="text"
+            id="sauda_no_43"
+            aria-label="Order No."
+            type="text"
             name="sauda_no"
             value={formData.sauda_no || ''}
             onChange={onChange}
             placeholder="e.g. 0153"
             required
-            className="bg-[#FFFFE8] border border-amber-300 rounded-xl px-3.5 py-2 text-xs font-black text-[#174C2C] outline-none focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs"
+            className="bg-sky-50 border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-black text-sky-950 outline-none focus:ring-2 focus:ring-amber-300 transition-all shadow-2xs font-mono"
           />
         </div>
 
         {/* P.O. Type */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="po_type_57" className="text-xs font-semibold text-slate-700">P.O. Type</label>
+          <label htmlFor="po_type_57" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+            <span>P.O. Type</span>
+            <span className="text-rose-600 font-black text-sm">*</span>
+          </label>
           <select
- id="po_type_57" aria-label="P.O. Type"            name="po_type"
+            id="po_type_57"
+            aria-label="P.O. Type"
+            name="po_type"
             value={formData.po_type || 'Normal'}
             onChange={onChange}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs cursor-pointer"
+            className="bg-white border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-200 transition-all shadow-2xs cursor-pointer"
           >
             <option value="Normal">Normal</option>
             <option value="PTF">PTF</option>
@@ -68,14 +88,24 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
 
         {/* Contract Date */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="date_73" className="text-xs font-semibold text-slate-700">Date</label>
+          <label htmlFor="date_73" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+            <span>Date</span>
+            <span className="text-rose-600 font-black text-sm">*</span>
+            {formData.date && (
+              <span className="ml-auto text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">
+                Auto
+              </span>
+            )}
+          </label>
           <div className="relative">
             <input
- id="date_73" aria-label="Date"              type="date"
+              id="date_73"
+              aria-label="Date"
+              type="date"
               name="date"
               value={formData.date || ''}
               onChange={onChange}
-              className="w-full bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs cursor-pointer"
+              className="w-full bg-sky-50/70 border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-200 transition-all shadow-2xs cursor-pointer"
             />
           </div>
         </div>
@@ -87,6 +117,8 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
           onChange={(val) => onSelectChange('broker', val)}
           options={brokers}
           placeholder="SELECT OR TYPE BROKER..."
+          isRequired={true}
+          isAutoPopulated={Boolean(formData.broker && (formData.sauda_no || formData.is_auto_filled))}
         />
 
         {/* Supplier */}
@@ -96,6 +128,8 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
           onChange={(val) => onSelectChange('supplier', val)}
           options={suppliers}
           placeholder="SELECT OR TYPE SUPPLIER..."
+          isRequired={true}
+          isAutoPopulated={Boolean(formData.supplier && (formData.sauda_no || formData.is_auto_filled))}
         />
 
         {/* Challan Supplier */}
@@ -105,6 +139,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
           onChange={(val) => onSelectChange('challan_supplier', val)}
           options={suppliers}
           placeholder="SELECT OR TYPE CHALLAN SUPPLIER..."
+          isAutoPopulated={Boolean(formData.challan_supplier && (formData.challan_supplier === formData.supplier || formData.is_auto_filled))}
         />
 
         {/* Area */}
@@ -114,6 +149,8 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
           onChange={(val) => onSelectChange('area', val)}
           options={areas}
           placeholder="SELECT OR TYPE AREA..."
+          isRequired={true}
+          isAutoPopulated={Boolean(formData.area && (formData.sauda_no || formData.is_auto_filled))}
         />
       </div>
     </div>

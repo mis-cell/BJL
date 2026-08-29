@@ -28,6 +28,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
+import FormLegend from '../components/FormLegend';
 import PrintModal from '../components/PrintModal';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
@@ -3160,6 +3161,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
           <div className="space-y-3 font-sans relative">
             
+            {/* Visual Color Legend */}
+            <FormLegend />
+
             {/* Proceed Control Center */}
             <div className="bg-[#d4d0c8] p-3 border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] space-y-3">
               <div className="flex items-center gap-4 flex-wrap text-xs">

@@ -17,6 +17,7 @@ import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { comparePoInspection, PoMismatchDetail } from '../lib/poMatch';
 import LegacyLayout from '../components/LegacyLayout';
+import FormLegend from '../components/FormLegend';
 import { getCurrentUserContext } from '../lib/permissions';
 
 const inMemorySattaResolutions: Record<string, any> = {};
@@ -1116,6 +1117,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     <LegacyLayout title={variant === 'material' ? "Material Mismatch Board" : "Satta Mismatch"} subtitle="">
       <div className="space-y-5 max-w-full px-1 sm:px-2">
         
+        {/* Color Coding Legend */}
+        <FormLegend />
+
         {/* Header Stats & Quick Action Bar */}
         <div className="bg-white border border-slate-300 rounded-lg p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

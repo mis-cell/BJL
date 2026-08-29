@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
 import { dbModule } from '../services/dbModule';
 import LegacyLayout from '../components/LegacyLayout';
+import FormLegend from '../components/FormLegend';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { supabase } from '../lib/supabase';
@@ -963,6 +964,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             </div>
           </div>
         </div>
+
+        {/* Visual Color Legend */}
+        <FormLegend />
 
         {/* 2. MASTER FORM FIELDS CARD */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">

@@ -29,6 +29,7 @@ import {
   Filter
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
+import FormLegend from '../components/FormLegend';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
@@ -2036,6 +2037,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       {/* PAYMENT ENTRY FORM VIEW */}
       {viewMode === 'entry' && (
         <div className="space-y-4">
+          {/* Visual Color Legend */}
+          <FormLegend />
+
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">

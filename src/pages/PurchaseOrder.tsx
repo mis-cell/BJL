@@ -33,6 +33,7 @@ import {
   Users
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
+import FormLegend from '../components/FormLegend';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
@@ -339,7 +340,7 @@ const SearchablePoContractDropdown = ({
         disabled
           ? 'bg-slate-100 border-slate-300'
           : hasSaudaHighlight
-            ? 'border-amber-400 bg-[#fffdf5]'
+            ? 'border-sky-400 bg-sky-50 text-sky-950 font-bold'
             : isOpen
               ? 'border-blue-600 bg-white ring-1 ring-blue-400/30'
               : 'border-slate-400 bg-white'
@@ -352,7 +353,7 @@ const SearchablePoContractDropdown = ({
           type="text"
           disabled={disabled}
           className={`flex-1 p-0.5 px-1 outline-none font-bold text-[11px] bg-transparent ${
-            disabled ? 'text-slate-400' : 'text-black'
+            disabled ? 'text-slate-400' : hasSaudaHighlight ? 'text-sky-950 font-extrabold' : 'text-black'
           }`}
           value={isOpen ? searchTerm : value}
           onChange={(e) => {
@@ -406,7 +407,7 @@ const SearchablePoContractDropdown = ({
           }}
           className={`px-1 py-1 border-l text-slate-600 hover:text-black cursor-pointer transition-colors ${
             hasSaudaHighlight
-              ? 'bg-amber-100/70 border-amber-400 hover:bg-amber-200'
+              ? 'bg-sky-100/80 border-sky-300 text-sky-800 hover:bg-sky-200'
               : 'bg-slate-100 border-slate-400 hover:bg-slate-200'
           }`}
         >
@@ -652,7 +653,7 @@ const DualComboBox = ({
         <input  id="code_375" name="code" aria-label="code"
           className={`w-16 p-0.5 outline-none border transition-colors duration-150 ${
             hasSaudaHighlight 
-              ? "bg-[#fffbeb] border-amber-400 text-amber-950 font-medium font-mono" 
+              ? "bg-sky-50 border-sky-400 text-sky-950 font-bold font-mono" 
               : "bg-white border-slate-400 text-slate-800"
           }`} 
           value={code} 
@@ -664,11 +665,13 @@ const DualComboBox = ({
       )}
       <div className={`flex-1 flex border transition-colors duration-200 ${
         hasSaudaHighlight 
-          ? "border-amber-400 bg-[#fffdf5]" 
+          ? "border-sky-400 bg-sky-50" 
           : "border-slate-400 bg-white"
       }`}>
         <input  id="filter_393" name="filter" aria-label="filter"
-          className="flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold" 
+          className={`flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold ${
+            hasSaudaHighlight ? "text-sky-950 font-bold" : "text-slate-800"
+          }`} 
           value={filter} 
           onChange={(e) => {
             const upperVal = e.target.value.toUpperCase();
@@ -692,7 +695,7 @@ const DualComboBox = ({
           }} 
           className={`border-l transition-colors duration-150 px-1 ${
             hasSaudaHighlight 
-              ? "bg-amber-100/60 border-amber-400 text-amber-700 hover:bg-amber-200/60" 
+              ? "bg-sky-100/80 border-sky-300 text-sky-800 hover:bg-sky-200" 
               : "bg-slate-100 border-slate-400 hover:bg-slate-200"
           }`}
           tabIndex={-1}
@@ -4118,6 +4121,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 </div>
               </div>
             )}
+
+            <div className="mb-2">
+              <FormLegend />
+            </div>
 
             <LegacyFieldset legend="Purchase Order Information Header">
               <div className="grid grid-cols-12 gap-x-2 gap-y-1">
