@@ -481,52 +481,110 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     };
   }, [formData.lorry_date, formData.lorry_prefix, formData.lorry_suffix, formData.po_no]);
 
-  // Sync and dynamically calculate net weights based on grid and scale inputs (supporting manual overwrites)
-  useEffect(() => {
-    let totalNetto = 0;
-    details.forEach(d => {
-      totalNetto += Number(d.netto_pnto) || 0;
+  // Helper function to calculate allocated Netto (M.T) based on Final Weight and Chln
+  const calculateProportionalNetto = (finalWeightVal: number, rows: ArrivalDetailRow[]): ArrivalDetailRow[] => {
+    const sumChln = rows.reduce((sum, d) => sum + (Number(d.quantity_chln) || 0), 0);
+    if (sumChln <= 0 || finalWeightVal <= 0) {
+      return rows.map(d => ({
+        ...d,
+        netto_pnto: Number(d.quantity_chln) === 0 ? 0 : d.netto_pnto
+      }));
+    }
+
+    const nonZeroIndices = rows.map((r, i) => (Number(r.quantity_chln) > 0 ? i : -1)).filter(i => i !== -1);
+    if (nonZeroIndices.length === 0) {
+      return rows.map(d => ({ ...d, netto_pnto: 0 }));
+    }
+
+    const updated = [...rows];
+    let allocated = 0;
+
+    nonZeroIndices.forEach((idx, k) => {
+      const chln = Number(updated[idx].quantity_chln) || 0;
+      if (k === nonZeroIndices.length - 1) {
+        // Last non-zero item absorbs any remaining rounding difference to match exact Final Weight
+        const lastVal = Number((finalWeightVal - allocated).toFixed(3));
+        updated[idx] = { ...updated[idx], netto_pnto: Math.max(0, lastVal) };
+      } else {
+        const val = Number(((finalWeightVal / sumChln) * chln).toFixed(3));
+        updated[idx] = { ...updated[idx], netto_pnto: val };
+        allocated += val;
+      }
     });
 
+    // Zero out any rows with quantity_chln <= 0
+    rows.forEach((r, i) => {
+      if ((Number(r.quantity_chln) || 0) <= 0) {
+        updated[i] = { ...updated[i], netto_pnto: 0 };
+      }
+    });
+
+    return updated;
+  };
+
+  // Sync and dynamically calculate net weights based on scale inputs and determine Final Weight (lowest Net Weight)
+  useEffect(() => {
     setFormData(prev => {
-      const calculatedNetWeight = totalNetto;
-      const calculatedSupplierNet = (Number(prev.supplier_challan_gross) || 0) - (Number(prev.supplier_tare_weight) || 0);
-      const calculatedElectronicNet = (Number(prev.electronic_gross_weight) || 0) - (Number(prev.electronic_tare_weight) || 0);
+      const grossChln = Number(prev.actual_gross_weight) || 0;
+      const tareChln = Number(prev.actual_tare_weight) || 0;
+      const grossMill = Number(prev.supplier_challan_gross) || 0;
+      const tareMill = Number(prev.supplier_tare_weight) || 0;
+      const grossElec = Number(prev.electronic_gross_weight) || 0;
+      const tareElec = Number(prev.electronic_tare_weight) || 0;
 
-      const updatedChallanWeight = calculatedNetWeight > 0 ? Number(calculatedNetWeight.toFixed(3)) : (prev.challan_material_weight || 0);
+      const calculatedChallanNet = grossChln > 0 ? Number(Math.max(0, grossChln - tareChln).toFixed(3)) : (Number(prev.challan_material_weight) || 0);
+      const calculatedSupplierNet = grossMill > 0 ? Number(Math.max(0, grossMill - tareMill).toFixed(3)) : (Number(prev.supplier_net_weight) || 0);
+      const calculatedElectronicNet = grossElec > 0 ? Number(Math.max(0, grossElec - tareElec).toFixed(3)) : (Number(prev.electronic_net_weight) || 0);
 
-      const updatedSupplierWeight = Number(calculatedSupplierNet.toFixed(3)) > 0 
-        ? Number(calculatedSupplierNet.toFixed(3)) 
-        : (prev.supplier_net_weight || 0);
-
-      const updatedElectronicWeight = Number(calculatedElectronicNet.toFixed(3)) > 0 
-        ? Number(calculatedElectronicNet.toFixed(3)) 
-        : (prev.electronic_net_weight || 0);
-
-      // Calculate Final Weight as minimum positive value from Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
+      // Final Weight is lowest value among the Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
       const validNetWeights = [
-        Number(updatedChallanWeight) || 0,
-        Number(updatedSupplierWeight) || 0,
-        Number(updatedElectronicWeight) || 0
+        calculatedChallanNet,
+        calculatedSupplierNet,
+        calculatedElectronicNet
       ].filter(v => v > 0);
 
-      const minNetWeight = validNetWeights.length > 0 ? Math.min(...validNetWeights) : 0;
-      const finalWeight = Number(minNetWeight.toFixed(3));
+      const minNetWeight = validNetWeights.length > 0 ? Number(Math.min(...validNetWeights).toFixed(3)) : (Number(prev.weight_reduced) || 0);
+
+      if (
+        calculatedChallanNet === prev.challan_material_weight &&
+        calculatedSupplierNet === prev.supplier_net_weight &&
+        calculatedElectronicNet === prev.electronic_net_weight &&
+        minNetWeight === prev.weight_reduced
+      ) {
+        return prev;
+      }
 
       return {
         ...prev,
-        challan_material_weight: updatedChallanWeight,
-        supplier_net_weight: updatedSupplierWeight,
-        electronic_net_weight: updatedElectronicWeight,
-        weight_reduced: finalWeight
+        challan_material_weight: calculatedChallanNet,
+        supplier_net_weight: calculatedSupplierNet,
+        electronic_net_weight: calculatedElectronicNet,
+        weight_reduced: minNetWeight
       };
     });
   }, [
-    details, 
-    formData.supplier_challan_gross, 
-    formData.supplier_tare_weight, 
-    formData.electronic_gross_weight, 
-    formData.electronic_tare_weight
+    formData.actual_gross_weight,
+    formData.actual_tare_weight,
+    formData.supplier_challan_gross,
+    formData.supplier_tare_weight,
+    formData.electronic_gross_weight,
+    formData.electronic_tare_weight,
+    formData.challan_material_weight,
+    formData.supplier_net_weight,
+    formData.electronic_net_weight
+  ]);
+
+  // Recalculate Receipt Grade Details Netto (M.T) whenever Final Weight or quantity_chln changes
+  useEffect(() => {
+    const finalWeight = Number(formData.weight_reduced) || 0;
+    setDetails(prev => {
+      const recalculated = calculateProportionalNetto(finalWeight, prev);
+      const isDifferent = recalculated.some((r, i) => r.netto_pnto !== prev[i]?.netto_pnto);
+      return isDifferent ? recalculated : prev;
+    });
+  }, [
+    formData.weight_reduced,
+    details.map(d => d.quantity_chln).join(',')
   ]);
 
   const loadDetailsFromPo = async (poNo: string) => {
@@ -644,12 +702,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         ...prev,
         [name]: name.includes('weight') || name.includes('fees') ? (finalValue === '' ? '' : Number(finalValue)) : finalValue
       };
-
-      if (name === 'challan_material_weight') {
-        const numVal = Number(finalValue) || 0;
-        updated.supplier_net_weight = numVal;
-        updated.electronic_net_weight = numVal;
-      }
 
       if (name === 'po_no' && finalValue) {
         const matched = purchaseOrders.find((po: any) => String(po.po_no).trim().toUpperCase() === String(finalValue).trim().toUpperCase());
@@ -2144,50 +2196,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           {/* Body */}
           <div className="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-300">
 
-            {/* Net Weight */}
-            <div className="p-3 space-y-2">
-              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
-                Net Weight
-              </h4>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">CHALLAN WT</span>
-                <input
- id="challan_material_weight_1905" aria-label="challan material weight"                  type="number"
-                  step="0.001"
-                  name="challan_material_weight"
-                  value={formData.challan_material_weight || 0}
-                  onChange={handleChange}
-                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">MILL NET</span>
-                <input
- id="supplier_net_weight_1917" aria-label="supplier net weight"                  type="number"
-                  step="0.001"
-                  name="supplier_net_weight"
-                  value={formData.supplier_net_weight || 0}
-                  onChange={handleChange}
-                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold">ELECTRONIC NET</span>
-                <input
- id="electronic_net_weight_1929" aria-label="electronic net weight"                  type="number"
-                  step="0.001"
-                  name="electronic_net_weight"
-                  value={formData.electronic_net_weight || 0}
-                  onChange={handleChange}
-                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Gross Weight */}
+            {/* 1st: Gross Weight */}
             <div className="p-3 space-y-2">
               <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
                 Gross Weight
@@ -2196,7 +2205,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">CHALLAN GROSS</span>
                 <input
- id="actual_gross_weight_1948" aria-label="actual gross weight"                  type="number"
+                  id="actual_gross_weight_1948"
+                  aria-label="actual gross weight"
+                  type="number"
                   step="0.001"
                   name="actual_gross_weight"
                   value={formData.actual_gross_weight || ""}
@@ -2208,7 +2219,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">MILL GROSS</span>
                 <input
- id="supplier_challan_gross_1960" aria-label="supplier challan gross"                  type="number"
+                  id="supplier_challan_gross_1960"
+                  aria-label="supplier challan gross"
+                  type="number"
                   step="0.001"
                   name="supplier_challan_gross"
                   value={formData.supplier_challan_gross || ""}
@@ -2220,7 +2233,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ELECTRONIC GROSS</span>
                 <input
- id="electronic_gross_weight_1972" aria-label="electronic gross weight"                  type="number"
+                  id="electronic_gross_weight_1972"
+                  aria-label="electronic gross weight"
+                  type="number"
                   step="0.001"
                   name="electronic_gross_weight"
                   value={formData.electronic_gross_weight || ""}
@@ -2230,7 +2245,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               </div>
             </div>
 
-            {/* Tare Weight */}
+            {/* 2nd: Tare Weight */}
             <div className="p-3 space-y-2">
               <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
                 Tare Weight
@@ -2239,7 +2254,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">CHALLAN TARE</span>
                 <input
- id="actual_tare_weight_1991" aria-label="actual tare weight"                  type="number"
+                  id="actual_tare_weight_1991"
+                  aria-label="actual tare weight"
+                  type="number"
                   step="0.001"
                   name="actual_tare_weight"
                   value={formData.actual_tare_weight || ""}
@@ -2251,7 +2268,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">MILL TARE</span>
                 <input
- id="supplier_tare_weight_2003" aria-label="supplier tare weight"                  type="number"
+                  id="supplier_tare_weight_2003"
+                  aria-label="supplier tare weight"
+                  type="number"
                   step="0.001"
                   name="supplier_tare_weight"
                   value={formData.supplier_tare_weight || ""}
@@ -2263,10 +2282,61 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold">ELECTRONIC TARE</span>
                 <input
- id="electronic_tare_weight_2015" aria-label="electronic tare weight"                  type="number"
+                  id="electronic_tare_weight_2015"
+                  aria-label="electronic tare weight"
+                  type="number"
                   step="0.001"
                   name="electronic_tare_weight"
                   value={formData.electronic_tare_weight || ""}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+            </div>
+
+            {/* 3rd: Net Weight */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                Net Weight
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">CHALLAN WT</span>
+                <input
+                  id="challan_material_weight_1905"
+                  aria-label="challan material weight"
+                  type="number"
+                  step="0.001"
+                  name="challan_material_weight"
+                  value={formData.challan_material_weight || 0}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">MILL NET</span>
+                <input
+                  id="supplier_net_weight_1917"
+                  aria-label="supplier net weight"
+                  type="number"
+                  step="0.001"
+                  name="supplier_net_weight"
+                  value={formData.supplier_net_weight || 0}
+                  onChange={handleChange}
+                  className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold">ELECTRONIC NET</span>
+                <input
+                  id="electronic_net_weight_1929"
+                  aria-label="electronic net weight"
+                  type="number"
+                  step="0.001"
+                  name="electronic_net_weight"
+                  value={formData.electronic_net_weight || 0}
                   onChange={handleChange}
                   className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
                 />
