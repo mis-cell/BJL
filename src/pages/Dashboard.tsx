@@ -526,6 +526,7 @@ export default function Dashboard({
       setRawArrivals(arrivals || []);
       setRawPos(pos || []);
       setRawSaudas(saudas || []);
+      setPayments(pmList || []);
 
       // Direct queries to custom Views / Tables: amad_register, material_inspection, and sauda_master in Supabase
       let amadRegisterData: any[] = [];

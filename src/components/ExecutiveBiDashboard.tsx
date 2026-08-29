@@ -328,30 +328,42 @@ export default function ExecutiveBiDashboard({
     }
 
     // 8. Payment Module Analytics (Total Payment, Advance Payment, Rest Payment)
+    // Sourced directly from Payment Module (`payment_master`):
+    // - "Total Payment": sum of "Payable Net Amount (₹)" -> `p.payable_amt` (or `p.total_amount`)
+    // - "Advance Payment": sum of "Paid Amount (₹)" -> `p.paid_amount`
+    // - "Rest Payment": sum of "Pending Amount" -> Math.max(0, p.payable_amt - p.paid_amount)
     let totalPaymentAmt = 0;
     let advancePaymentAmt = 0;
-    let paidPaymentAmt = 0;
+    let restPaymentAmt = 0;
+    let totalPaymentCount = 0;
+    let paidVouchersCount = 0;
+    let pendingVouchersCount = 0;
 
-    if (paymentRecords && paymentRecords.length > 0) {
-      paymentRecords.forEach((p: any) => {
-        const payVal = Number(p.payable_amt) || Number(p.total_amount) || Number(p.net_amt) || Number(p.value_amt) || 0;
-        totalPaymentAmt += payVal;
+    const activePayments = paymentRecords || [];
+    totalPaymentCount = activePayments.length;
 
-        const advVal = Number(p.final_less_adv || 0) + Number(p.final_on_ac_adv || 0) + Number(p.summary_less_amount || 0);
-        const advDoneVal = (String(p.advance_payment_done || '').toLowerCase() === 'yes' ? Number(p.paid_amount || 0) : 0);
-        advancePaymentAmt += (advVal > 0 ? advVal : advDoneVal);
+    if (activePayments.length > 0) {
+      activePayments.forEach((p: any) => {
+        // Payable Net Amount (₹)
+        const payableVal = Number(p.payable_amt) || Number(p.total_amount) || Number(p.net_amt) || Number(p.value_amt) || 0;
+        totalPaymentAmt += payableVal;
 
-        paidPaymentAmt += Number(p.paid_amount || 0);
+        // Paid Amount (₹)
+        const paidVal = Number(p.paid_amount || 0);
+        advancePaymentAmt += paidVal;
+
+        // Pending Amount (₹)
+        const pendingVal = payableVal - paidVal;
+        if (pendingVal > 0) {
+          restPaymentAmt += pendingVal;
+          pendingVouchersCount++;
+        }
+
+        if (paidVal > 0) {
+          paidVouchersCount++;
+        }
       });
     }
-
-    if (totalPaymentAmt === 0 && rawSaudaVal > 0) {
-      totalPaymentAmt = rawSaudaVal;
-      advancePaymentAmt = Number((rawSaudaVal * 0.25).toFixed(2));
-      paidPaymentAmt = Number((rawSaudaVal * 0.50).toFixed(2));
-    }
-
-    const restPaymentAmt = Math.max(0, totalPaymentAmt - advancePaymentAmt - paidPaymentAmt);
 
     const totalPaymentLakhs = Number((totalPaymentAmt / 100000).toFixed(2));
     const advancePaymentLakhs = Number((advancePaymentAmt / 100000).toFixed(2));
@@ -390,7 +402,10 @@ export default function ExecutiveBiDashboard({
       restPaymentLakhs,
       totalPaymentAmt,
       advancePaymentAmt,
-      restPaymentAmt
+      restPaymentAmt,
+      totalPaymentCount,
+      paidVouchersCount,
+      pendingVouchersCount
     };
   }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, paymentRecords, uniqueSuppliers, uniqueBrokers]);
 
@@ -978,7 +993,7 @@ export default function ExecutiveBiDashboard({
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
           className="bg-white border-2 border-blue-800/30 hover:border-blue-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Payment Module"
+          title="Click to open Payment Module (Payable Net Amount)"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
@@ -991,17 +1006,17 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-blue-800 font-bold mt-0.5">
-              Gross Payable Amount
+              Payable Net Amount (₹)
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Payment Records</span>
-              <span className="text-blue-800 font-bold font-numeric">{paymentRecords.length || 0} Vouchers</span>
+              <span className="text-blue-800 font-bold font-numeric">{metrics.totalPaymentCount} Vouchers</span>
             </div>
           </div>
 
@@ -1011,11 +1026,11 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* CARD 4: ADVANCE PAYMENT */}
+        {/* CARD 4: ADVANCE PAYMENT (PAID AMOUNT) */}
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
           className="bg-white border-2 border-purple-800/30 hover:border-purple-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Advance Payments"
+          title="Click to view Paid Amount (Advance / Disbursed)"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-purple-900 tracking-wider flex items-center gap-1.5">
@@ -1028,17 +1043,17 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-purple-800 font-bold mt-0.5">
-              Total Advance Disbursed
+              Paid Amount (₹)
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
-              <span className="text-purple-800 font-bold">In Advance</span>
+              <span className="text-purple-800 font-bold font-numeric">{metrics.paidVouchersCount} Vouchers</span>
             </div>
           </div>
 
@@ -1048,11 +1063,11 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* CARD 5: REST PAYMENT */}
+        {/* CARD 5: REST PAYMENT (PENDING AMOUNT) */}
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
           className="bg-white border-2 border-rose-800/30 hover:border-rose-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Rest Payment Balance"
+          title="Click to view Pending Amount Balance"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-rose-900 tracking-wider flex items-center gap-1.5">
@@ -1065,17 +1080,17 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
             <div className="text-[11px] text-rose-800 font-bold mt-0.5">
-              Remaining Balance Due
+              Pending Amount (₹)
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Net Due Payment</span>
-              <span className="text-rose-800 font-bold">Outstanding</span>
+              <span className="text-rose-800 font-bold font-numeric">{metrics.pendingVouchersCount} Pending</span>
             </div>
           </div>
 
