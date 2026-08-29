@@ -266,13 +266,29 @@ export default function Dashboard({
   const [inspectionMasters, setInspectionMasters] = React.useState<any[]>([]);
   const [inspectionDetails, setInspectionDetails] = React.useState<any[]>([]);
   const [stockNodeStocks, setStockNodeStocks] = React.useState<any[]>([]);
+  const [millIssueMasters, setMillIssueMasters] = React.useState<any[]>([]);
+  const [millIssueDetails, setMillIssueDetails] = React.useState<any[]>([]);
+  const [allOpeningStocks, setAllOpeningStocks] = React.useState<any[]>([]);
   const [activeChartTab, setActiveChartTab] = React.useState<'general' | 'grades'>('general');
 
   const loadStats = React.useCallback(async () => {
     setLoading(true);
     setQuickReportData(prev => ({ ...prev, loading: true }));
     try {
-      const [arrivals, saudas, traders, pos, settlements, godownsRes, openingStocksRes, finalArrivals, paymentRecords] = await Promise.all([
+      const [
+        arrivals, 
+        saudas, 
+        traders, 
+        pos, 
+        settlements, 
+        godownsRes, 
+        openingStocksRes, 
+        finalArrivals, 
+        paymentRecords,
+        gwsRes,
+        mimRes,
+        midRes
+      ] = await Promise.all([
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_master', 'created_at', false).catch(() => []),
         dbModule.fetchAll('user_master').catch(() => []),
@@ -311,8 +327,59 @@ export default function Dashboard({
           } catch (e) {
             return [];
           }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('godown_wise_stock').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('godown_wise_stock').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('mill_issue_master').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('mill_issue_master').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('mill_issue_detail').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('mill_issue_detail').catch(() => []);
+          } catch (e) {
+            return [];
+          }
         })()
       ]);
+
+      // Combine opening stocks from opening_stock, godown_wise_stock and local storage
+      const localStoredOp = (function() {
+        try {
+          const stored = localStorage.getItem('po_auto_opening_stock');
+          if (stored && stored !== 'undefined' && stored !== 'null') {
+            const parsed = JSON.parse(stored === "undefined" ? "null" : stored);
+            return Array.isArray(parsed) ? parsed : [];
+          }
+        } catch (_) {}
+        return [];
+      })();
+
+      const combinedOpening = [...(gwsRes || []), ...(openingStocksRes || []), ...localStoredOp];
+      const uniqueOpening = combinedOpening.filter((v, i, a) => a.findIndex(t => (t.id && t.id === v.id) || (t.grade === v.grade && t.godown === v.godown)) === i);
+      setAllOpeningStocks(uniqueOpening.length > 0 ? uniqueOpening : (openingStocksRes || []));
+      setMillIssueMasters(mimRes || []);
+      setMillIssueDetails(midRes || []);
 
       const FALLBACK_GODOWNS_WITH_CAPACITY = [
         { gdn_code: "1", gdn_name: "1", gdn_capacity: 600, gdn_short_name: "1" },
@@ -718,7 +785,11 @@ export default function Dashboard({
       'payment_master', 
       'm_r_settlement', 
       'material_mismatch', 
-      'satta_mismatch'
+      'satta_mismatch',
+      'opening_stock',
+      'godown_wise_stock',
+      'mill_issue_master',
+      'mill_issue_detail'
     ] 
   });
 
@@ -1376,7 +1447,9 @@ export default function Dashboard({
             pos={rawPos}
             settlements={[]}
             godowns={godowns}
-            openingStocks={stockNodeStocks}
+            openingStocks={allOpeningStocks.length > 0 ? allOpeningStocks : stockNodeStocks}
+            millIssueMasters={millIssueMasters}
+            millIssueDetails={millIssueDetails}
             finalArrivals={[]}
             paymentRecords={payments}
             loading={loading}

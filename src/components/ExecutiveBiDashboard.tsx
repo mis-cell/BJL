@@ -65,6 +65,8 @@ interface ExecutiveBiDashboardProps {
   settlements: any[];
   godowns: any[];
   openingStocks: any[];
+  millIssueMasters?: any[];
+  millIssueDetails?: any[];
   finalArrivals: any[];
   paymentRecords: any[];
   loading: boolean;
@@ -82,6 +84,8 @@ export default function ExecutiveBiDashboard({
   settlements = [],
   godowns = [],
   openingStocks = [],
+  millIssueMasters = [],
+  millIssueDetails = [],
   finalArrivals = [],
   paymentRecords = [],
   loading = false,
@@ -209,7 +213,45 @@ export default function ExecutiveBiDashboard({
       }, 0);
     }
 
-    // 3. Godown Stock MT & Capacity Utilization
+    // 3. Godown Stock / Stock Inventory Module Analytics (Current Stock Balance & Weight)
+    // Sourced directly from Stock Inventory formula (`StockSummary.tsx`):
+    // 1. Total Opening Stock:
+    const totalOpeningQty = (openingStocks || []).reduce((sum: number, r: any) => sum + (Number(r.quantity || r.opening_balance || r.bales || 0) || 0), 0);
+    const totalOpeningWt = (openingStocks || []).reduce((sum: number, r: any) => sum + (Number(r.weight || r.weight_qtl || 0) || 0), 0);
+
+    // 2. Inwards to Godown (issue_type === 'GODOWN')
+    const godownIssueNosSet = new Set(
+      (millIssueMasters || [])
+        .filter((m: any) => String(m.issue_type || '').trim().toUpperCase() === 'GODOWN')
+        .map((m: any) => String(m.issue_no).trim().toUpperCase())
+    );
+    const totalIssuedToGodownBales = (millIssueDetails || [])
+      .filter((d: any) => godownIssueNosSet.has(String(d.issue_no).trim().toUpperCase()))
+      .reduce((sum: number, d: any) => sum + (Number(d.qty) || 0), 0);
+    const totalIssuedToGodownWeight = (millIssueDetails || [])
+      .filter((d: any) => godownIssueNosSet.has(String(d.issue_no).trim().toUpperCase()))
+      .reduce((sum: number, d: any) => sum + ((Number(d.weight_kgs) || 0) / 100), 0);
+
+    // 3. Outwards to Factory / Consumption (issue_type in ['FACTORY', 'FACTORY ISSUE', 'SELL'])
+    const factoryIssueNosSet = new Set(
+      (millIssueMasters || [])
+        .filter((m: any) => {
+          const type = String(m.issue_type || '').trim().toUpperCase();
+          return type === 'FACTORY' || type === 'FACTORY ISSUE' || type === 'SELL';
+        })
+        .map((m: any) => String(m.issue_no).trim().toUpperCase())
+    );
+    const totalIssuedToFactoryBales = (millIssueDetails || [])
+      .filter((d: any) => factoryIssueNosSet.has(String(d.issue_no).trim().toUpperCase()))
+      .reduce((sum: number, d: any) => sum + (Number(d.qty) || 0), 0);
+    const totalIssuedToFactoryWeight = (millIssueDetails || [])
+      .filter((d: any) => factoryIssueNosSet.has(String(d.issue_no).trim().toUpperCase()))
+      .reduce((sum: number, d: any) => sum + ((Number(d.weight_kgs) || 0) / 100), 0);
+
+    // Current Stock Balance = Opening + In - Out
+    let godownStockBales = totalOpeningQty + totalIssuedToGodownBales - totalIssuedToFactoryBales;
+    let totalStockMt = Number((totalOpeningWt + totalIssuedToGodownWeight - totalIssuedToFactoryWeight).toFixed(3));
+
     let totalCapacity = 0;
     if (godowns && godowns.length > 0) {
       godowns.forEach((g: any) => {
@@ -218,14 +260,12 @@ export default function ExecutiveBiDashboard({
     }
     if (totalCapacity === 0) totalCapacity = 13200;
 
-    let totalStockMt = 0;
-    if (openingStocks && openingStocks.length > 0) {
-      const totalOpQtl = openingStocks.reduce((sum: number, s: any) => sum + (Number(s.weight || s.wt_qtl || s.opening_balance || s.quantity || 0) || 0), 0);
-      if (totalOpQtl > 0) totalStockMt = totalOpQtl / 10;
-    }
-
-    if (totalStockMt === 0) {
-      totalStockMt = totalWeightMT > 0 ? Number((totalWeightMT * 1.5).toFixed(2)) : 3420;
+    // Fallback if no records exist in Stock Inventory yet
+    if (godownStockBales <= 0 && openingStocks.length === 0 && totalStockMt <= 0) {
+      if (totalWeightMT > 0) {
+        totalStockMt = Number((totalWeightMT * 1.5).toFixed(2));
+        godownStockBales = Math.round(totalStockMt * 10 * 0.55);
+      }
     }
 
     const godownUtilPct = totalCapacity > 0 ? Number(((totalStockMt / totalCapacity) * 100).toFixed(1)) : 0;
@@ -368,7 +408,6 @@ export default function ExecutiveBiDashboard({
     const totalPaymentLakhs = Number((totalPaymentAmt / 100000).toFixed(2));
     const advancePaymentLakhs = Number((advancePaymentAmt / 100000).toFixed(2));
     const restPaymentLakhs = Number((restPaymentAmt / 100000).toFixed(2));
-    const godownStockBales = Math.round(totalStockMt * 10 * 0.55);
 
     return {
       totalArrivalsCount,
@@ -407,7 +446,7 @@ export default function ExecutiveBiDashboard({
       paidVouchersCount,
       pendingVouchersCount
     };
-  }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, paymentRecords, uniqueSuppliers, uniqueBrokers]);
+  }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, millIssueMasters, millIssueDetails, paymentRecords, uniqueSuppliers, uniqueBrokers]);
 
   // Chart Data 1: Purchase Tonnage & Cost Trend (Daily/Monthly)
   const purchaseTrendData = useMemo(() => {
@@ -1100,11 +1139,11 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* CARD 6: GODOWN STOCK */}
+        {/* CARD 6: GODOWN STOCK (FROM STOCK INVENTORY: CURRENT STOCK BALANCE & WEIGHT) */}
         <div 
-          onClick={() => onNavigate && onNavigate('closing_stock')}
+          onClick={() => onNavigate && onNavigate('stock')}
           className="bg-white border-2 border-teal-800/30 hover:border-teal-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Godown Stock Register"
+          title="Click to open Stock Inventory (Current Stock Balance & Weight)"
         >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
@@ -1117,22 +1156,22 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalStockMt.toLocaleString('en-IN')} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
+              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
             </div>
             <div className="text-[11px] text-teal-800 font-bold mt-0.5 font-numeric">
-              {metrics.godownStockBales.toLocaleString('en-IN')} Bales Stacked
+              {metrics.godownStockBales.toLocaleString('en-IN')} Bales
             </div>
           </div>
 
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Capacity Utilized</span>
-              <span className="text-teal-800 font-bold font-numeric">{metrics.godownUtilPct}%</span>
+              <span className="text-[#1E331B] font-bold">Current Stock Balance</span>
+              <span className="text-teal-800 font-bold font-numeric">{metrics.godownStockBales.toLocaleString('en-IN')} Bales</span>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-teal-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Open Godown Stock</span>
+            <span>Open Stock Inventory</span>
             <span className="text-xs font-bold">→</span>
           </div>
         </div>
