@@ -53,20 +53,18 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       }
     }
     
-    // Backfill quantity_chln and quantity_rcpt from netto_pnto only if strictly undefined or null & normalize agency
+    // Ensure agency and string fields are cleanly mapped
     pDetails = pDetails.map(d => {
       const agencyName = d.agency_name || (d as any).agency || '';
       const agencyCode = d.agency_code || '';
-      const updatedD = { ...d, agency_name: agencyName, agency_code: agencyCode };
-      if (Number(d.netto_pnto) > 0 && (d.quantity_chln === undefined || d.quantity_chln === null || d.quantity_rcpt === undefined || d.quantity_rcpt === null)) {
-        const roundedNetto = Math.round(Number(d.netto_pnto));
-        return {
-          ...updatedD,
-          quantity_chln: (d.quantity_chln !== undefined && d.quantity_chln !== null) ? d.quantity_chln : roundedNetto,
-          quantity_rcpt: (d.quantity_rcpt !== undefined && d.quantity_rcpt !== null) ? d.quantity_rcpt : roundedNetto
-        };
-      }
-      return updatedD;
+      return { 
+        ...d, 
+        agency_name: agencyName, 
+        agency_code: agencyCode,
+        quantity_chln: d.quantity_chln !== undefined && d.quantity_chln !== null ? Number(d.quantity_chln) : 0,
+        quantity_rcpt: d.quantity_rcpt !== undefined && d.quantity_rcpt !== null ? Number(d.quantity_rcpt) : 0,
+        netto_pnto: d.netto_pnto !== undefined && d.netto_pnto !== null ? Number(d.netto_pnto) : 0
+      };
     });
 
     const padded = [...pDetails];
@@ -483,18 +481,22 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   }, [formData.lorry_date, formData.lorry_prefix, formData.lorry_suffix, formData.po_no]);
 
   // Helper function to calculate allocated Netto (M.T) based on Final Weight and Chln
+  // Formula: (Final Weight / Sum(Chln)) * Chln.
+  // Note: This calculation is strictly NOT APPLICABLE for "LOOSE" unit.
   const calculateProportionalNetto = (finalWeightVal: number, rows: ArrivalDetailRow[]): ArrivalDetailRow[] => {
+    const isLoose = (formData.unit_name || '').toUpperCase().includes('LOOSE');
+    if (isLoose) {
+      return rows; // Pro-rata calculation is NOT applicable for "LOOSE"
+    }
+
     const sumChln = rows.reduce((sum, d) => sum + (Number(d.quantity_chln) || 0), 0);
     if (sumChln <= 0 || finalWeightVal <= 0) {
-      return rows.map(d => ({
-        ...d,
-        netto_pnto: Number(d.quantity_chln) === 0 ? 0 : d.netto_pnto
-      }));
+      return rows; // Do NOT zero out when sumChln is 0
     }
 
     const nonZeroIndices = rows.map((r, i) => (Number(r.quantity_chln) > 0 ? i : -1)).filter(i => i !== -1);
     if (nonZeroIndices.length === 0) {
-      return rows.map(d => ({ ...d, netto_pnto: 0 }));
+      return rows;
     }
 
     const updated = [...rows];
@@ -513,7 +515,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       }
     });
 
-    // Zero out any rows with quantity_chln <= 0
+    // Zero out any rows with quantity_chln <= 0 for non-LOOSE items
     rows.forEach((r, i) => {
       if ((Number(r.quantity_chln) || 0) <= 0) {
         updated[i] = { ...updated[i], netto_pnto: 0 };
@@ -575,8 +577,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     formData.electronic_net_weight
   ]);
 
-  // Recalculate Receipt Grade Details Netto (M.T) whenever Final Weight or quantity_chln changes
+  // Recalculate Receipt Grade Details Netto (M.T) whenever Final Weight or quantity_chln changes (non-LOOSE only)
   useEffect(() => {
+    const isLoose = (formData.unit_name || '').toUpperCase().includes('LOOSE');
+    if (isLoose) return; // Strictly not applicable for LOOSE
+
     const finalWeight = Number(formData.weight_reduced) || 0;
     setDetails(prev => {
       const recalculated = calculateProportionalNetto(finalWeight, prev);
@@ -585,6 +590,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     });
   }, [
     formData.weight_reduced,
+    formData.unit_name,
     details.map(d => d.quantity_chln).join(',')
   ]);
 
@@ -666,7 +672,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           const agencyName = matchingAgency ? matchingAgency.agency_name : rawAgency;
           const agencyCode = matchingAgency ? matchingAgency.agency_code : rawAgency;
 
-          const weightVal = parseFloat(fd.weight_mt || fd.netto_pnto || fd.weight || 0) || 0;
+          const weightVal = parseFloat(fd.weight_mt || fd.netto_pnto || fd.weight || fd.weight_reduced || (fd.weight_qtl ? (parseFloat(fd.weight_qtl) / 10) : 0) || 0) || 0;
           const qtyVal = parseInt(fd.quantity || fd.quantity_rcpt || fd.quantity_chln || 0, 10) || 0;
 
           return {
@@ -715,8 +721,16 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           if (matchedArea) {
             updated.arrival_area_code = matchedArea.area_code;
           }
-          updated.unit_code = matched.purchase_unit_code || prev.unit_code || 'I';
-          updated.unit_name = matched.purchase_unit_name || prev.unit_name || 'BALES';
+          const matchedUnit = matched.purchase_unit_name || matched.unit_name || matched.unit || prev.unit_name || 'BALES';
+          updated.unit_name = matchedUnit;
+          const codeMap: Record<string, string> = {
+            BALES: 'I',
+            LOOSE: 'II',
+            DRUMS: '2',
+            'P.BALES': '4',
+            'H.BALES': '5',
+          };
+          updated.unit_code = matched.purchase_unit_code || matched.unit_code || codeMap[matchedUnit] || prev.unit_code || 'I';
           updated.ptf = (matched.ptf_no || matched.is_ptf) ? 'Yes' : 'No';
         }
         
@@ -1009,12 +1023,19 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         weight_qtl: totalWeightSum * 10,
         grid_details: activeRows.map(row => {
           return {
-            ...row,
+            srl_no: Number(row.srl_no) || 1,
+            remarks: row.remarks || '',
+            crop_year: row.crop_year || '2026-27',
+            netto_pnto: Number(row.netto_pnto) || 0,
             agency_code: row.agency_code || '',
             agency_name: row.agency_name || '',
-            netto_pnto: Number(row.netto_pnto) || 0,
             quantity_chln: Math.round(Number(row.quantity_chln) || 0),
-            quantity_rcpt: Math.round(Number(row.quantity_rcpt) || 0)
+            quantity_rcpt: Math.round(Number(row.quantity_rcpt) || 0),
+            challan_grade_name: row.challan_grade_name || row.receipt_grade_name || '',
+            challan_marka_code: row.challan_marka_code || '',
+            challan_marka_name: row.challan_marka_name || '',
+            receipt_grade_code: row.receipt_grade_code || '',
+            receipt_grade_name: row.receipt_grade_name || ''
           };
         }),
 
