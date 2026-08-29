@@ -363,7 +363,19 @@ export default function Dashboard({
         })()
       ]);
 
-      // Combine opening stocks from opening_stock, godown_wise_stock and local storage
+      // Synchronize exact opening stock loader with StockSummary.tsx
+      const opData = (openingStocksRes || []).map((r: any) => ({
+        ...r,
+        stock_date: r.opening_date || r.stock_date || new Date().toISOString().split('T')[0],
+        opening_date: r.opening_date || r.stock_date || new Date().toISOString().split('T')[0]
+      }));
+      
+      const gdnData = (gwsRes || []).map((r: any) => ({
+        ...r,
+        opening_date: r.stock_date || r.opening_date || new Date().toISOString().split('T')[0],
+        stock_date: r.stock_date || r.opening_date || new Date().toISOString().split('T')[0]
+      }));
+
       const localStoredOp = (function() {
         try {
           const stored = localStorage.getItem('po_auto_opening_stock');
@@ -375,9 +387,11 @@ export default function Dashboard({
         return [];
       })();
 
-      const combinedOpening = [...(gwsRes || []), ...(openingStocksRes || []), ...localStoredOp];
-      const uniqueOpening = combinedOpening.filter((v, i, a) => a.findIndex(t => (t.id && t.id === v.id) || (t.grade === v.grade && t.godown === v.godown)) === i);
-      setAllOpeningStocks(uniqueOpening.length > 0 ? uniqueOpening : (openingStocksRes || []));
+      const combined = [...gdnData, ...opData];
+      const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      const finalOpList = unique.length > 0 ? unique : localStoredOp;
+
+      setAllOpeningStocks(finalOpList);
       setMillIssueMasters(mimRes || []);
       setMillIssueDetails(midRes || []);
 

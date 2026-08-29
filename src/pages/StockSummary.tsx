@@ -1994,7 +1994,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                               </div>
                               <div className="flex items-center gap-4 text-xs font-mono font-black text-slate-800">
                                 <span>Total Qty: <span className="text-indigo-950">{areaTotalQty.toLocaleString()} Bales</span></span>
-                                <span>Total Wt: <span className="text-teal-700">{(areaTotalWt / 10).toFixed(2)} MT</span></span>
+                                <span>Total Wt: <span className="text-teal-700">{(areaTotalWt * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG</span></span>
                               </div>
                             </div>
 
@@ -2027,7 +2027,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                         </div>
                                         <div className="flex items-center gap-4 text-[11px] font-mono font-black text-slate-800">
                                           <span>Qty: <span className="text-indigo-950">{gradeTotalQty.toLocaleString()}</span></span>
-                                          <span>Wt: <span className="text-teal-700">{(gradeTotalWt / 10).toFixed(2)} MT</span></span>
+                                          <span>Wt: <span className="text-teal-700">{(gradeTotalWt * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG</span></span>
                                         </div>
                                       </div>
 
@@ -2039,7 +2039,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                             <span className="col-span-2">Date</span>
                                             <span className="col-span-2 text-center">JCI</span>
                                             <span className="col-span-2 text-right">Quantity</span>
-                                            <span className="col-span-2 text-right">Weight (MT)</span>
+                                            <span className="col-span-2 text-right">Weight (KG)</span>
                                             <span className="col-span-1 text-center">Action</span>
                                           </div>
                                           {records.map((r, ri) => (
@@ -2069,7 +2069,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                                 {r.quantity || 0} Bales
                                               </span>
                                               <span className="col-span-2 text-right font-mono font-black text-teal-700">
-                                                {Number(r.weight || 0).toFixed(2)} MT
+                                                {(Number(r.weight || 0) * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG
                                               </span>
                                               <span className="col-span-1 flex items-center justify-center gap-1">
                                                 <button
@@ -2139,7 +2139,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                               </div>
                               <div className="flex items-center gap-4 text-xs font-mono font-black text-slate-800">
                                 <span>Total Qty: <span className="text-indigo-950">{gradeTotalQty.toLocaleString()} Bales</span></span>
-                                <span>Total Wt: <span className="text-teal-700">{(gradeTotalWt / 10).toFixed(2)} MT</span></span>
+                                <span>Total Wt: <span className="text-teal-700">{(gradeTotalWt * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG</span></span>
                               </div>
                             </div>
 
@@ -2172,7 +2172,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                         </div>
                                         <div className="flex items-center gap-4 text-[11px] font-mono font-black text-slate-800">
                                           <span>Qty: <span className="text-indigo-950">{areaTotalQty.toLocaleString()}</span></span>
-                                          <span>Wt: <span className="text-teal-700">{(areaTotalWt / 10).toFixed(2)} MT</span></span>
+                                          <span>Wt: <span className="text-teal-700">{(areaTotalWt * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG</span></span>
                                         </div>
                                       </div>
 
@@ -2184,7 +2184,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                             <span className="col-span-2">Date</span>
                                             <span className="col-span-2 text-center">JCI</span>
                                             <span className="col-span-2 text-right">Quantity</span>
-                                            <span className="col-span-2 text-right">Weight (MT)</span>
+                                            <span className="col-span-2 text-right">Weight (KG)</span>
                                             <span className="col-span-1 text-center">Action</span>
                                           </div>
                                           {records.map((r, ri) => (
@@ -2214,7 +2214,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                                                 {r.quantity || 0} Bales
                                               </span>
                                               <span className="col-span-2 text-right font-mono font-black text-teal-700">
-                                                {Number(r.weight || 0).toFixed(2)} MT
+                                                {(Number(r.weight || 0) * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG
                                               </span>
                                               <span className="col-span-1 flex items-center justify-center gap-1">
                                                 <button
@@ -4276,7 +4276,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                       <th className="p-2 border-r border-slate-300">Area / Region</th>
                       <th className="p-2 border-r border-slate-300">Godown / Warehouse</th>
                       <th className="p-2 border-r border-slate-300 text-center">JCI Govt</th>
-                      <th className="p-2 text-right">Quantity (Bales) & Wt (MT)</th>
+                      <th className="p-2 text-right">Quantity (Bales) & Wt (KG)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-300 font-bold">
@@ -4302,7 +4302,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                           <td className="p-2 border-r border-slate-200 uppercase font-black">{rec.godown || '-'}</td>
                           <td className="p-2 border-r border-slate-200 text-center">{rec.jci || 'No'}</td>
                           <td className="p-2 text-right font-mono">
-                            {rec.quantity || 0} Bales ({Number(rec.weight || 0).toFixed(2)} MT)
+                            {rec.quantity || 0} Bales ({(Number(rec.weight || 0) * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG)
                           </td>
                         </tr>
                       ));
@@ -4542,7 +4542,7 @@ function StockItemRow({
                           </div>
                           <div className="flex items-center gap-4 font-mono">
                             <span>Qty: {areaQty.toLocaleString()} Bales</span>
-                            <span>Wt: {(areaWt / 10).toFixed(2)} MT</span>
+                            <span>Wt: {(areaWt * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG</span>
                           </div>
                         </div>
 
@@ -4571,7 +4571,7 @@ function StockItemRow({
                                 </span>
                               </span>
                               <span className="col-span-5 text-right font-mono font-black text-indigo-950 flex items-center justify-end gap-2">
-                                <span>{r.quantity || 0} Bales <span className="text-teal-700 font-normal">({Number(r.weight || 0).toFixed(2)} MT)</span></span>
+                                <span>{r.quantity || 0} Bales <span className="text-teal-700 font-normal">({(Number(r.weight || 0) * 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })} KG)</span></span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
                                     type="button"
