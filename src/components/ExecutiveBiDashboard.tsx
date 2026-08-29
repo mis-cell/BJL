@@ -416,7 +416,7 @@ export default function ExecutiveBiDashboard({
       totalSaudaValueLakhs,
       activeContractsCount,
       totalSaudaMT: Number(totalSaudaMT.toFixed(2)),
-      totalStockMt: Number(totalStockMt.toFixed(2)),
+      totalStockMt: Number(totalStockMt.toFixed(3)),
       godownStockBales,
       godownUtilPct,
       stockValuationCr,
@@ -592,7 +592,7 @@ export default function ExecutiveBiDashboard({
       { stage: 'Gate Entry', val: 100, label: `${metrics.totalWeightMT} MT Gate Received` },
       { stage: 'Quality Check', val: 98.2, label: `${Number((metrics.totalWeightMT * 0.98).toFixed(1))} MT Passed` },
       { stage: 'Weighbridge', val: 97.8, label: `${metrics.totalWeightMT} MT Net Weight` },
-      { stage: 'Godown Storage', val: 97.8, label: `${metrics.totalStockMt} MT Stacked` },
+      { stage: 'Godown Storage', val: 97.8, label: `${metrics.totalStockMt} M.T. Stacked` },
       { stage: 'Batching & Carding', val: 46.0, label: `${metrics.dailyProdMT} MT Issued` },
       { stage: 'Spinning & Loom', val: 36.5, label: `${Number((metrics.dailyProdMT * 0.9).toFixed(1))} MT Yarns` },
       { stage: 'Dispatch Finished', val: 19.6, label: `${metrics.dailyDispatchMT} MT Shipped` }
@@ -1156,7 +1156,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
+              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} <span className="text-xs font-sans font-semibold text-[#556952]">M.T.</span>
             </div>
             <div className="text-[11px] text-teal-800 font-bold mt-0.5 font-numeric">
               {metrics.godownStockBales.toLocaleString('en-IN')} Bales

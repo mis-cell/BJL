@@ -429,7 +429,7 @@ export default function Dashboard({
       const mergedGdns = (godownsRes && godownsRes.length > 0) ? godownsRes : FALLBACK_GODOWNS_WITH_CAPACITY;
       setGodowns(mergedGdns);
 
-      const stocks = openingStocksRes || [];
+      const stocks = finalOpList || [];
       
       let totalCapacity = 0;
       let totalStockMt = 0;
