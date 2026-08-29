@@ -971,7 +971,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
+              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
               ₹ {metrics.totalSaudaValueLakhs.toLocaleString('en-IN')} Lakhs
@@ -1008,7 +1008,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">MT</span>
+              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric">
               {metrics.pendingSaudaCount} Pending Contracts
@@ -1156,7 +1156,7 @@ export default function ExecutiveBiDashboard({
 
           <div className="my-2.5">
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} <span className="text-xs font-sans font-semibold text-[#556952]">M.T.</span>
+              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
             </div>
             <div className="text-[11px] text-teal-800 font-bold mt-0.5 font-numeric">
               {metrics.godownStockBales.toLocaleString('en-IN')} Bales
