@@ -33,7 +33,6 @@ import {
   Users
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
-import FormLegend from '../components/FormLegend';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
@@ -4121,10 +4120,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 </div>
               </div>
             )}
-
-            <div className="mb-2">
-              <FormLegend />
-            </div>
 
             <LegacyFieldset legend="Purchase Order Information Header">
               <div className="grid grid-cols-12 gap-x-2 gap-y-1">

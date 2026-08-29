@@ -15,7 +15,6 @@ import ShipmentClaimsCard from '../components/ShipmentClaimsCard';
 import RemarksCard from '../components/RemarksCard';
 import FooterActions from '../components/FooterActions';
 import SaudaPrintSlip from '../components/SaudaPrintSlip';
-import FormLegend from '../components/FormLegend';
 
 const UNIT_OPTIONS = ["BALES", "DRUMS", "LOOSE", "P.BALES", "H.BALES"];
 
@@ -542,9 +541,6 @@ export default function SaudaEntry({
 
         {/* 2. Main Form Content */}
         <main ref={formContainerRef} className="flex-1 space-y-5 w-full">
-          {/* Visual Color Legend for Auto-Populated and Mandatory Fields */}
-          <FormLegend />
-
           {/* Section 1: Basic Details */}
           <BasicDetailsCard
             formData={formData}

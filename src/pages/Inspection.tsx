@@ -28,7 +28,6 @@ import {
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import LegacyLayout from "../components/LegacyLayout";
-import FormLegend from "../components/FormLegend";
 
 export interface DeductionRow {
   id: string;
@@ -1844,9 +1843,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         ) : (
           /* FULL MODERN FORM VIEW BASED ON SPECIFICATION */
           <div className="space-y-6">
-            {/* Visual Field Legend */}
-            <FormLegend />
-
             {/* HEADER / MILL INFORMATION SECTION */}
             <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
               <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center justify-between">

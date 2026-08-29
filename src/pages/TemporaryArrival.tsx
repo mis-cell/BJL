@@ -14,7 +14,6 @@ import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
 import { dbModule } from '../services/dbModule';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
-import FormLegend from '../components/FormLegend';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
@@ -1266,11 +1265,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
             </div>
           </div>
-        </div>
-
-        {/* Color Legend */}
-        <div className="mt-3 mb-1">
-          <FormLegend />
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}

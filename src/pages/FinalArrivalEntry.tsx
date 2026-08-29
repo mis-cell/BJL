@@ -18,7 +18,6 @@ import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
 import { dbModule } from '../services/dbModule';
 import LegacyLayout from '../components/LegacyLayout';
-import FormLegend from '../components/FormLegend';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { supabase } from '../lib/supabase';
@@ -965,9 +964,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           </div>
         </div>
 
-        {/* Visual Color Legend */}
-        <FormLegend />
-
         {/* 2. MASTER FORM FIELDS CARD */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">
           
@@ -985,7 +981,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                     if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
                   }}
                   placeholder="Enter Temporary M.R No"
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono font-semibold focus:border-[#103A20] focus:ring-1 focus:ring-[#103A20]"
+                  className={cn(
+                    "w-full h-8 rounded px-2 outline-none text-xs font-mono focus:ring-1 focus:ring-sky-600 transition-colors",
+                    formData.temporary_arrival_no 
+                      ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                      : "bg-white border border-slate-300 font-semibold"
+                  )}
                 />
                 <button
                   type="button"
@@ -1004,7 +1005,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 type="date"
                 value={formData.temporary_arrival_date || ''}
                 onChange={(e) => handleInputChange('temporary_arrival_date', e.target.value)}
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.temporary_arrival_date 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300 text-slate-800"
+                )}
               />
             </div>
 
@@ -1041,7 +1047,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   onFocus={() => setShowPoDropdown(true)}
                   onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
                   placeholder="-- SELECT MR / P.O --"
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20] pr-6"
+                  className={cn(
+                    "w-full h-8 rounded px-2 outline-none text-xs font-mono uppercase pr-6 transition-colors",
+                    formData.po_no 
+                      ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                      : "bg-white border border-slate-300"
+                  )}
                 />
                 <div
                   className="absolute right-1 top-0 bottom-0 w-6 flex items-center justify-center cursor-pointer text-slate-500"
@@ -1100,7 +1111,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 type="date"
                 value={formData.po_date || ''}
                 onChange={(e) => handleInputChange('po_date', e.target.value)}
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.po_date 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300 text-slate-800"
+                )}
               />
             </div>
 
@@ -1128,7 +1144,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.challan_supplier || ''}
                 onChange={(e) => handleInputChange('challan_supplier', e.target.value.toUpperCase())}
                 placeholder="Enter Challan Supplier"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.challan_supplier 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1140,7 +1161,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.supplier || ''}
                 onChange={(e) => handleInputChange('supplier', e.target.value.toUpperCase())}
                 placeholder="Enter Supplier"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.supplier 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1151,7 +1177,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.lorry_number || ''}
                 onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
                 placeholder="WB-12K-9901"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs font-mono transition-colors",
+                  formData.lorry_number 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1162,7 +1193,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.pan_no || ''}
                 onChange={(e) => handleInputChange('pan_no', e.target.value.toUpperCase())}
                 placeholder="Enter Part No"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.pan_no 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1187,7 +1223,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.broker || ''}
                 onChange={(e) => handleInputChange('broker', e.target.value.toUpperCase())}
                 placeholder="Enter Broker"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.broker 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1198,7 +1239,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.transporter_name || ''}
                 onChange={(e) => handleInputChange('transporter_name', e.target.value)}
                 placeholder="Enter Transporter Name"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.transporter_name 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
 
@@ -1234,7 +1280,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   value={formData.challan_rr_no || ''}
                   onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
                   placeholder="Enter Challan / Railway Receipt No."
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  className={cn(
+                    "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                    formData.challan_rr_no 
+                      ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                      : "bg-white border border-slate-300"
+                  )}
                 />
               </div>
               <div>
@@ -1243,7 +1294,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   type="date"
                   value={formData.challan_rr_date || ''}
                   onChange={(e) => handleInputChange('challan_rr_date', e.target.value)}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  className={cn(
+                    "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                    formData.challan_rr_date 
+                      ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                      : "bg-white border border-slate-300"
+                  )}
                 />
               </div>
             </div>
@@ -1303,7 +1359,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.arrival_area_name || ''}
                 onChange={(e) => handleAreaChange(e.target.value)}
                 placeholder="Search / Choose Transit Area"
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                className={cn(
+                  "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
+                  formData.arrival_area_name 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300"
+                )}
               />
             </div>
           </div>

@@ -33,7 +33,6 @@ import {
   User
 } from "lucide-react";
 import LegacyLayout from "../components/LegacyLayout";
-import FormLegend from "../components/FormLegend";
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from "../lib/permissions";
@@ -4008,9 +4007,6 @@ export default function MaterialInspection({
       onClose={() => setViewMode("dashboard")}
     >
       <div className="w-full px-2 space-y-4 font-bold text-[11px] text-slate-800">
-        {/* Visual Color Legend */}
-        <FormLegend />
-
         {/* State Alerts display ribbon */}
         {errorMessage && (
           <div className="bg-red-50 border border-red-300 p-2 text-red-800 font-extrabold rounded-sm flex items-center gap-2">
