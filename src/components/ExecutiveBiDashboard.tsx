@@ -60,6 +60,8 @@ import { cn } from '../lib/utils';
 interface ExecutiveBiDashboardProps {
   arrivals: any[];
   saudas: any[];
+  saudaCheckPoints?: any[];
+  saudaCheckPointDetails?: any[];
   traders: any[];
   pos: any[];
   settlements: any[];
@@ -79,6 +81,8 @@ interface ExecutiveBiDashboardProps {
 export default function ExecutiveBiDashboard({
   arrivals = [],
   saudas = [],
+  saudaCheckPoints = [],
+  saudaCheckPointDetails = [],
   traders = [],
   pos = [],
   settlements = [],
@@ -103,6 +107,10 @@ export default function ExecutiveBiDashboard({
   const [godownFilter, setGodownFilter] = useState<string>('all');
   const [gradeFilter, setGradeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Card Sub-Toggles (Total / Sauda / P.T.F)
+  const [saudaViewMode, setSaudaViewMode] = useState<'all' | 'sauda' | 'ptf'>('all');
+  const [pendingSaudaViewMode, setPendingSaudaViewMode] = useState<'all' | 'sauda' | 'ptf'>('all');
   
   // Matrix Search & Pagination
   const [matrixSearch, setMatrixSearch] = useState('');
@@ -286,71 +294,154 @@ export default function ExecutiveBiDashboard({
     const activeSuppliersCount = uniqueSuppliers.length || (list.length > 0 ? new Set(list.map(l => l.supplier_name || l.supplier)).size : 24);
     const activeBrokersCount = uniqueBrokers.length || (list.length > 0 ? new Set(list.map(l => l.broker_name || l.broker)).size : 18);
 
-    // 7. Sauda Master Analytics
-    const totalSaudaWeightRaw = saudas.reduce((acc, curr) => {
-      const wt = Number(curr.total_wt_in_ton) || Number(curr.weight_mt) || Number(curr.total_wt) || 0;
-      return acc + wt;
-    }, 0);
+    // 7. Sauda Check Point & PTF Breakdown Analytics
+    // Sourced directly from Sauda Check Point (`sauda_check_point` & `sauda_check_point_details`)
+    // Categorized into:
+    // 1. P.T.F Entries (is_ptf === true || ptf_no is present || po_type === 'PTF')
+    // 2. Sauda Linked Entries (regular Saudas entered in Check Point)
+    // 3. Total Combined Sum
+    const scpSourceList = (saudaCheckPoints && saudaCheckPoints.length > 0)
+      ? saudaCheckPoints
+      : ((pos && pos.length > 0) ? pos : saudas);
 
-    const totalSaudaWeight = Number(totalSaudaWeightRaw.toFixed(2));
-    const totalSaudaRecordsCount = saudas.length;
-
-    const saudaBrokersSet = new Set<string>();
-    saudas.forEach(s => {
-      const b = s.broker || s.broker_name;
-      if (b && String(b).trim()) saudaBrokersSet.add(String(b).trim());
+    const scpDetailsList = saudaCheckPointDetails || [];
+    const detailsByPo: Record<string, any[]> = {};
+    scpDetailsList.forEach((d: any) => {
+      const k = String(d.po_no || '').trim().toUpperCase();
+      if (!k) return;
+      if (!detailsByPo[k]) detailsByPo[k] = [];
+      detailsByPo[k].push(d);
     });
-    const saudaBrokersCount = saudaBrokersSet.size;
 
-    const saudaSuppliersSet = new Set<string>();
-    saudas.forEach(s => {
-      const sup = s.supplier || s.supplier_name;
-      if (sup && String(sup).trim()) saudaSuppliersSet.add(String(sup).trim());
-    });
-    const saudaSuppliersCount = saudaSuppliersSet.size;
+    let ptfCount = 0;
+    let ptfWeight = 0;
+    let ptfValue = 0;
+    let ptfBales = 0;
+    let ptfPendingCount = 0;
+    let ptfPendingWeight = 0;
+    let ptfPendingValue = 0;
+    const ptfSuppliers = new Set<string>();
+    const ptfBrokers = new Set<string>();
 
-    // Detailed Pending Sauda Metrics
-    let pendingSaudaCount = 0;
-    let pendingSaudaWeightRaw = 0;
-    let pendingSaudaValRaw = 0;
+    let scpSaudaCount = 0;
+    let scpSaudaWeight = 0;
+    let scpSaudaValue = 0;
+    let scpSaudaBales = 0;
+    let scpSaudaPendingCount = 0;
+    let scpSaudaPendingWeight = 0;
+    let scpSaudaPendingValue = 0;
+    const scpSaudaSuppliers = new Set<string>();
+    const scpSaudaBrokers = new Set<string>();
 
-    if (saudas && saudas.length > 0) {
-      saudas.forEach((s: any) => {
-        const st = String(s.status || '').toLowerCase().trim();
-        const pendWt = Number(s.pending_wt_in_ton || s.pending_mt || 0);
-        const pendUnits = Number(s.pending_units || s.pending_bales || 0);
-        const totalWt = Number(s.total_wt_in_ton || s.contract_mt || 0);
-        const rate = Number(s.b_rate || s.rate || 5800);
+    scpSourceList.forEach((r: any) => {
+      const isPtf = Boolean(
+        r.is_ptf ||
+        (r.ptf_no && String(r.ptf_no).trim() && String(r.ptf_no).trim().toUpperCase() !== 'N/A') ||
+        String(r.po_type || '').toUpperCase() === 'PTF' ||
+        String(r.po_identification || '').toUpperCase() === 'PTF' ||
+        String(r.po_no || '').trim().toUpperCase().startsWith('PTF') ||
+        String(r.po_no || '').trim().toUpperCase().includes('(PTF)') ||
+        String(r.ptf_no || '').trim().toUpperCase().includes('(PTF)')
+      );
 
-        if (st === 'pending' || st === 'open' || st === 'partial' || pendWt > 0 || pendUnits > 0) {
-          pendingSaudaCount++;
-          const effWt = pendWt > 0 ? pendWt : (pendUnits > 0 ? (pendUnits * 50 / 1000) : totalWt);
-          pendingSaudaWeightRaw += effWt;
-          pendingSaudaValRaw += (effWt * 10 * rate);
+      const poKey = String(r.po_no || r.ptf_no || '').trim().toUpperCase();
+      const poDetails = detailsByPo[poKey] || [];
+
+      let detWt = 0;
+      let detQty = 0;
+      let detVal = 0;
+      poDetails.forEach((d: any) => {
+        const w = Number(d.weight_mt || 0);
+        const q = Number(d.quantity || 0);
+        const rate = Number(d.rate_qntl || 0);
+        detWt += w;
+        detQty += q;
+        detVal += (w * 10 * rate);
+      });
+
+      const wt = detWt > 0 ? detWt : (Number(r.total_contract_mt || r.contract_mt || r.total_wt_in_ton || r.weight || 0) || 0);
+      const qty = detQty > 0 ? detQty : (Number(r.total_units || r.units_per_lorry || r.packets || r.bales || 0) || 0);
+      const baseRate = Number(r.b_rate || r.rate || 5800);
+      const val = detVal > 0 ? detVal : (Number(r.total_contract_value || r.total_value || r.amount || 0) || (wt * 10 * (baseRate > 0 ? baseRate : 5800)));
+
+      const sup = r.supplier || r.supplier_name || r.challan_supplier;
+      const brk = r.broker || r.broker_name;
+
+      const isPending = r.pending !== false && String(r.status || '').toLowerCase() !== 'final' && String(r.status || '').toLowerCase() !== 'completed';
+
+      if (isPtf) {
+        ptfCount++;
+        ptfWeight += wt;
+        ptfValue += val;
+        ptfBales += qty;
+        if (sup) ptfSuppliers.add(String(sup).trim());
+        if (brk) ptfBrokers.add(String(brk).trim());
+
+        if (isPending) {
+          ptfPendingCount++;
+          ptfPendingWeight += wt;
+          ptfPendingValue += val;
         }
+      } else {
+        scpSaudaCount++;
+        scpSaudaWeight += wt;
+        scpSaudaValue += val;
+        scpSaudaBales += qty;
+        if (sup) scpSaudaSuppliers.add(String(sup).trim());
+        if (brk) scpSaudaBrokers.add(String(brk).trim());
+
+        if (isPending) {
+          scpSaudaPendingCount++;
+          scpSaudaPendingWeight += wt;
+          scpSaudaPendingValue += val;
+        }
+      }
+    });
+
+    // Fallback if scpSourceList has no records
+    if (ptfCount === 0 && scpSaudaCount === 0 && saudas.length > 0) {
+      saudas.forEach((s: any) => {
+        const wt = Number(s.total_wt_in_ton || s.contract_mt || 0);
+        const rate = Number(s.b_rate || s.rate || 5800);
+        const val = Number(s.total_value || 0) || (wt * 10 * rate);
+        const qty = Number(s.total_units || s.bales || Math.round(wt * 10 * 0.55));
+        scpSaudaCount++;
+        scpSaudaWeight += wt;
+        scpSaudaValue += val;
+        scpSaudaBales += qty;
+        scpSaudaPendingCount++;
+        scpSaudaPendingWeight += wt;
+        scpSaudaPendingValue += val;
       });
     }
 
-    if (pendingSaudaCount === 0 && saudas.length > 0) {
-      pendingSaudaCount = Math.ceil(saudas.length * 0.35);
-      pendingSaudaWeightRaw = Number((totalSaudaWeightRaw * 0.35).toFixed(2));
-      pendingSaudaValRaw = Number((rawSaudaVal * 0.35).toFixed(2));
-    }
+    const totalScpCount = ptfCount + scpSaudaCount;
+    const totalScpWeight = Number((ptfWeight + scpSaudaWeight).toFixed(2));
+    const totalScpValueLakhs = Number(((ptfValue + scpSaudaValue) / 100000).toFixed(2));
+    const totalScpBales = ptfBales + scpSaudaBales;
 
-    const pendingSaudaWeight = Number(pendingSaudaWeightRaw.toFixed(2));
-    const pendingSaudaValueLakhs = Number((pendingSaudaValRaw / 100000).toFixed(2));
+    const totalScpPendingCount = ptfPendingCount + scpSaudaPendingCount;
+    const totalScpPendingWeight = Number((ptfPendingWeight + scpSaudaPendingWeight).toFixed(2));
+    const totalScpPendingValueLakhs = Number(((ptfPendingValue + scpSaudaPendingValue) / 100000).toFixed(2));
 
-    const pendingShipmentsCount = pendingSaudaCount;
+    const ptfWeightMT = Number(ptfWeight.toFixed(2));
+    const ptfValueLakhs = Number((ptfValue / 100000).toFixed(2));
+    const ptfPendingWeightMT = Number(ptfPendingWeight.toFixed(2));
+    const ptfPendingValueLakhs = Number((ptfPendingValue / 100000).toFixed(2));
 
-    const activeSaudaCount = saudas.filter(s => {
-      const st = String(s.status || '').toLowerCase();
-      return !st || st === 'active' || st === 'completed';
-    }).length;
+    const scpSaudaWeightMT = Number(scpSaudaWeight.toFixed(2));
+    const scpSaudaValueLakhs = Number((scpSaudaValue / 100000).toFixed(2));
+    const scpSaudaPendingWeightMT = Number(scpSaudaPendingWeight.toFixed(2));
+    const scpSaudaPendingValueLakhs = Number((scpSaudaPendingValue / 100000).toFixed(2));
+
+    const totalScpSuppliersCount = new Set([...ptfSuppliers, ...scpSaudaSuppliers]).size;
+    const totalScpBrokersCount = new Set([...ptfBrokers, ...scpSaudaBrokers]).size;
 
     let latestSaudaDate = "N/A";
-    if (saudas.length > 0) {
-      const sortedDates = saudas
-        .map(s => s.date || s.b_date || s.created_at)
+    const allDateSources = [...scpSourceList, ...saudas];
+    if (allDateSources.length > 0) {
+      const sortedDates = allDateSources
+        .map(s => s.date || s.b_date || s.po_date || s.created_at)
         .filter(Boolean)
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
       if (sortedDates.length > 0) {
@@ -413,9 +504,9 @@ export default function ExecutiveBiDashboard({
       totalArrivalsCount,
       totalWeightQtl,
       totalWeightMT,
-      totalSaudaValueLakhs,
-      activeContractsCount,
-      totalSaudaMT: Number(totalSaudaMT.toFixed(2)),
+      totalSaudaValueLakhs: totalScpValueLakhs,
+      activeContractsCount: totalScpCount,
+      totalSaudaMT: totalScpWeight,
       totalStockMt: Number(totalStockMt.toFixed(3)),
       godownStockBales,
       godownUtilPct,
@@ -426,16 +517,52 @@ export default function ExecutiveBiDashboard({
       dailyDispatchMT,
       activeSuppliersCount,
       activeBrokersCount,
-      totalSaudaWeight,
-      totalSaudaRecordsCount,
-      saudaBrokersCount,
-      saudaSuppliersCount,
-      pendingSaudaCount,
-      pendingSaudaWeight,
-      pendingSaudaValueLakhs,
-      pendingShipmentsCount,
-      activeSaudaCount,
+      totalSaudaWeight: totalScpWeight,
+      totalSaudaRecordsCount: totalScpCount,
+      saudaBrokersCount: totalScpBrokersCount,
+      saudaSuppliersCount: totalScpSuppliersCount,
+      pendingSaudaCount: totalScpPendingCount,
+      pendingSaudaWeight: totalScpPendingWeight,
+      pendingSaudaValueLakhs: totalScpPendingValueLakhs,
+      pendingShipmentsCount: totalScpPendingCount,
+      activeSaudaCount: totalScpCount,
       latestSaudaDate,
+      // Sauda Check Point & PTF detailed breakup object
+      scpBreakup: {
+        ptf: {
+          count: ptfCount,
+          weightMT: ptfWeightMT,
+          valueLakhs: ptfValueLakhs,
+          bales: ptfBales,
+          pendingCount: ptfPendingCount,
+          pendingWeightMT: ptfPendingWeightMT,
+          pendingValueLakhs: ptfPendingValueLakhs,
+          suppliersCount: ptfSuppliers.size,
+          brokersCount: ptfBrokers.size,
+        },
+        sauda: {
+          count: scpSaudaCount,
+          weightMT: scpSaudaWeightMT,
+          valueLakhs: scpSaudaValueLakhs,
+          bales: scpSaudaBales,
+          pendingCount: scpSaudaPendingCount,
+          pendingWeightMT: scpSaudaPendingWeightMT,
+          pendingValueLakhs: scpSaudaPendingValueLakhs,
+          suppliersCount: scpSaudaSuppliers.size,
+          brokersCount: scpSaudaBrokers.size,
+        },
+        total: {
+          count: totalScpCount,
+          weightMT: totalScpWeight,
+          valueLakhs: totalScpValueLakhs,
+          bales: totalScpBales,
+          pendingCount: totalScpPendingCount,
+          pendingWeightMT: totalScpPendingWeight,
+          pendingValueLakhs: totalScpPendingValueLakhs,
+          suppliersCount: totalScpSuppliersCount,
+          brokersCount: totalScpBrokersCount,
+        }
+      },
       totalPaymentLakhs,
       advancePaymentLakhs,
       restPaymentLakhs,
@@ -446,7 +573,7 @@ export default function ExecutiveBiDashboard({
       paidVouchersCount,
       pendingVouchersCount
     };
-  }, [filteredArrivals, arrivals, saudas, pos, godowns, openingStocks, millIssueMasters, millIssueDetails, paymentRecords, uniqueSuppliers, uniqueBrokers]);
+  }, [filteredArrivals, arrivals, saudas, pos, saudaCheckPoints, saudaCheckPointDetails, godowns, openingStocks, millIssueMasters, millIssueDetails, paymentRecords, uniqueSuppliers, uniqueBrokers]);
 
   // Chart Data 1: Purchase Tonnage & Cost Trend (Daily/Monthly)
   const purchaseTrendData = useMemo(() => {
@@ -954,71 +1081,225 @@ export default function ExecutiveBiDashboard({
       {/* 4. TOP EXECUTIVE KPI SCORECARDS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full min-w-0">
         
-        {/* CARD 1: TOTAL SAUDA */}
+        {/* CARD 1: TOTAL SAUDA (SAUDA CHECK POINT) */}
         <div 
-          onClick={() => onNavigate && onNavigate('sauda')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Sauda Module"
+          onClick={() => onNavigate && onNavigate('po')}
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to open Sauda Check Point / Purchase Order"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
-              <span>📦</span> Total Sauda
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-              <Package className="w-4 h-4 text-emerald-800" />
+          <div>
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span>📦</span> Sauda Check Point
+              </span>
+              <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Package className="w-3.5 h-3.5 text-emerald-800" />
+              </div>
             </div>
-          </div>
 
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
+            <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setSaudaViewMode('all')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  saudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                TOTAL
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaudaViewMode('sauda')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  saudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                SAUDA
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaudaViewMode('ptf')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  saudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                P.T.F
+              </button>
             </div>
-            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
-              ₹ {metrics.totalSaudaValueLakhs.toLocaleString('en-IN')} Lakhs
-            </div>
-          </div>
 
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold font-numeric">{metrics.totalSaudaRecordsCount} Total Contracts</span>
-              <span className="text-[#2E6B3E] font-extrabold font-numeric">{metrics.saudaSuppliersCount} Vendors</span>
+            <div className="my-1.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                {(saudaViewMode === 'ptf' 
+                  ? metrics.scpBreakup.ptf.weightMT 
+                  : saudaViewMode === 'sauda' 
+                    ? metrics.scpBreakup.sauda.weightMT 
+                    : metrics.scpBreakup.total.weightMT
+                ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric flex items-center justify-between">
+                <span>
+                  ₹ {(saudaViewMode === 'ptf' 
+                    ? metrics.scpBreakup.ptf.valueLakhs 
+                    : saudaViewMode === 'sauda' 
+                      ? metrics.scpBreakup.sauda.valueLakhs 
+                      : metrics.scpBreakup.total.valueLakhs
+                  ).toLocaleString('en-IN')} Lakhs
+                </span>
+                <span className="text-[10px] text-[#556952]">
+                  {(saudaViewMode === 'ptf' 
+                    ? metrics.scpBreakup.ptf.count 
+                    : saudaViewMode === 'sauda' 
+                      ? metrics.scpBreakup.sauda.count 
+                      : metrics.scpBreakup.total.count
+                  )} Contracts
+                </span>
+              </div>
+            </div>
+
+            {/* Sum Breakup: P.T.F & Sauda & Total */}
+            <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between text-[#1E331B]">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                  P.T.F:
+                </span>
+                <span className="font-extrabold font-numeric text-amber-900">
+                  {metrics.scpBreakup.ptf.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.count} Cont.)</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#1E331B]">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                  Sauda:
+                </span>
+                <span className="font-extrabold font-numeric text-[#2E6B3E]">
+                  {metrics.scpBreakup.sauda.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.count} Cont.)</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
+                <span className="font-extrabold">Total:</span>
+                <span className="font-extrabold font-numeric text-[#1E331B]">
+                  {metrics.scpBreakup.total.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.count} Total)</span>
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Open Sauda Module</span>
+            <span>Open Sauda Check Point</span>
             <span className="text-xs font-bold">→</span>
           </div>
         </div>
 
         {/* CARD 2: PENDING SAUDA */}
         <div 
-          onClick={() => onNavigate && onNavigate('sauda')}
-          className="bg-white border-2 border-amber-800/30 hover:border-amber-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Pending Saudas"
+          onClick={() => onNavigate && onNavigate('po')}
+          className="bg-white border-2 border-amber-800/30 hover:border-amber-600 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          title="Click to view Pending Saudas in Check Point"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
-              <span>⏳</span> Pending Sauda
-            </span>
-            <div className="p-2 rounded-xl bg-amber-100/80 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
-              <Clock className="w-4 h-4 text-amber-800" />
+          <div>
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <span className="text-[11px] font-bold uppercase text-amber-900 tracking-wider flex items-center gap-1">
+                <span>⏳</span> Pending Sauda
+              </span>
+              <div className="p-1.5 rounded-xl bg-amber-100/80 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
+                <Clock className="w-3.5 h-3.5 text-amber-800" />
+              </div>
             </div>
-          </div>
 
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.pendingSaudaWeight.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
+            <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setPendingSaudaViewMode('all')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  pendingSaudaViewMode === 'all' ? "bg-amber-900 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                TOTAL
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingSaudaViewMode('sauda')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  pendingSaudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                SAUDA
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingSaudaViewMode('ptf')}
+                className={cn(
+                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                  pendingSaudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                )}
+              >
+                P.T.F
+              </button>
             </div>
-            <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric">
-              {metrics.pendingSaudaCount} Pending Contracts
-            </div>
-          </div>
 
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Outstanding Val.</span>
-              <span className="text-amber-800 font-bold font-numeric">₹ {metrics.pendingSaudaValueLakhs.toLocaleString('en-IN')} L</span>
+            <div className="my-1.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                {(pendingSaudaViewMode === 'ptf' 
+                  ? metrics.scpBreakup.ptf.pendingWeightMT 
+                  : pendingSaudaViewMode === 'sauda' 
+                    ? metrics.scpBreakup.sauda.pendingWeightMT 
+                    : metrics.scpBreakup.total.pendingWeightMT
+                ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric flex items-center justify-between">
+                <span>
+                  ₹ {(pendingSaudaViewMode === 'ptf' 
+                    ? metrics.scpBreakup.ptf.pendingValueLakhs 
+                    : pendingSaudaViewMode === 'sauda' 
+                      ? metrics.scpBreakup.sauda.pendingValueLakhs 
+                      : metrics.scpBreakup.total.pendingValueLakhs
+                  ).toLocaleString('en-IN')} L
+                </span>
+                <span className="text-[10px] text-[#556952]">
+                  {(pendingSaudaViewMode === 'ptf' 
+                    ? metrics.scpBreakup.ptf.pendingCount 
+                    : pendingSaudaViewMode === 'sauda' 
+                      ? metrics.scpBreakup.sauda.pendingCount 
+                      : metrics.scpBreakup.total.pendingCount
+                  )} Pending
+                </span>
+              </div>
+            </div>
+
+            {/* Sum Breakup: P.T.F & Sauda & Total */}
+            <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between text-[#1E331B]">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                  P.T.F:
+                </span>
+                <span className="font-extrabold font-numeric text-amber-900">
+                  {metrics.scpBreakup.ptf.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.pendingCount} Pend.)</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#1E331B]">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                  Sauda:
+                </span>
+                <span className="font-extrabold font-numeric text-[#2E6B3E]">
+                  {metrics.scpBreakup.sauda.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.pendingCount} Pend.)</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
+                <span className="font-extrabold">Total:</span>
+                <span className="font-extrabold font-numeric text-[#1E331B]">
+                  {metrics.scpBreakup.total.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.pendingCount} Total)</span>
+                </span>
+              </div>
             </div>
           </div>
 

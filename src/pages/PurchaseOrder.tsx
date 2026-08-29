@@ -2105,6 +2105,36 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     setSelectedItemSrl(null);
   };
 
+  const generateNextPtfNo = (list: any[] = poList) => {
+    const finYear = '2026-2027';
+    let maxNum = 0;
+    list.forEach(item => {
+      const ptfStr = String(item.ptf_no || item.po_no || '').trim();
+      if (!ptfStr) return;
+      const m1 = ptfStr.match(/BJCL\/\d{4}-\d{4}\/(\d+)\(PTF\)/i);
+      if (m1) {
+        const num = parseInt(m1[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+        return;
+      }
+      const m2 = ptfStr.match(/PTF\/(\d+)\/\d+/i);
+      if (m2) {
+        const num = parseInt(m2[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+        return;
+      }
+      const m3 = ptfStr.match(/(\d+)\(PTF\)/i);
+      if (m3) {
+        const num = parseInt(m3[1], 10);
+        if (!isNaN(num) && num > maxNum) maxNum = num;
+        return;
+      }
+    });
+
+    const nextNum = maxNum > 0 ? maxNum + 1 : 67;
+    return `BJCL/${finYear}/${String(nextNum).padStart(4, '0')}(PTF)`;
+  };
+
   const handleGlobalAdd = () => {
     const defaultSDate = todayStr;
     const defaultBRate = lookupSattaBaseRate(defaultSDate, sattaBaseRates);
@@ -2113,7 +2143,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       is_ptf: true,
       purchase_order: 'FINAL PO',
       po_type: 'Normal',
-      ptf_no: `PTF/${Math.floor(Math.random()*1000)}/26`,
+      ptf_no: generateNextPtfNo(poList),
       pending: 'Yes',
       no: '',
       date: todayStr,
@@ -4163,7 +4193,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           ...formData, 
                           is_ptf: isChecked, 
                           no: isChecked ? '' : formData.no,
-                          ptf_no: isChecked ? (formData.ptf_no || `PTF/${Math.floor(Math.random()*1000)}/26`) : '',
+                          ptf_no: isChecked ? (formData.ptf_no || generateNextPtfNo(poList)) : '',
                           items: defaultItems
                         });
                       }} 

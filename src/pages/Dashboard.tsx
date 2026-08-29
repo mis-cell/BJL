@@ -269,6 +269,8 @@ export default function Dashboard({
   const [millIssueMasters, setMillIssueMasters] = React.useState<any[]>([]);
   const [millIssueDetails, setMillIssueDetails] = React.useState<any[]>([]);
   const [allOpeningStocks, setAllOpeningStocks] = React.useState<any[]>([]);
+  const [rawScp, setRawScp] = React.useState<any[]>([]);
+  const [rawScpDetails, setRawScpDetails] = React.useState<any[]>([]);
   const [activeChartTab, setActiveChartTab] = React.useState<'general' | 'grades'>('general');
 
   const loadStats = React.useCallback(async () => {
@@ -287,7 +289,9 @@ export default function Dashboard({
         paymentRecords,
         gwsRes,
         mimRes,
-        midRes
+        midRes,
+        scpRes,
+        scpDetRes
       ] = await Promise.all([
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_master', 'created_at', false).catch(() => []),
@@ -357,6 +361,28 @@ export default function Dashboard({
               if (r.data) return r.data;
             }
             return await dbModule.fetchAll('mill_issue_detail').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('sauda_check_point').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('sauda_check_point').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('sauda_check_point_details').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
           } catch (e) {
             return [];
           }
@@ -607,6 +633,8 @@ export default function Dashboard({
       setRawArrivals(arrivals || []);
       setRawPos(pos || []);
       setRawSaudas(saudas || []);
+      setRawScp(scpRes || []);
+      setRawScpDetails(scpDetRes || []);
       setPayments(pmList || []);
 
       // Direct queries to custom Views / Tables: amad_register, material_inspection, and sauda_master in Supabase
@@ -1457,6 +1485,8 @@ export default function Dashboard({
           <ExecutiveBiDashboard
             arrivals={rawArrivals}
             saudas={rawSaudas}
+            saudaCheckPoints={rawScp}
+            saudaCheckPointDetails={rawScpDetails}
             traders={[]}
             pos={rawPos}
             settlements={[]}
