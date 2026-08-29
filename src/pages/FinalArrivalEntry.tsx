@@ -119,7 +119,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         netto_pnto: 0,
         quantity_chln: 0,
         quantity_rcpt: 0,
-        unit: 'BALES',
+        unit: formData.unit_name || 'BALES',
         remarks: '',
         marks_phota: ''
       }
@@ -434,6 +434,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         }));
 
         const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
+        const amadUnit = (matchedAmad.unit_name || matchedAmad.unit || formData.unit_name || 'BALES').toUpperCase();
         if (rawGrid) {
           let parsedGrid: any[] = [];
           if (typeof rawGrid === 'string') {
@@ -442,7 +443,11 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             parsedGrid = rawGrid;
           }
           if (parsedGrid && parsedGrid.length > 0) {
-            setDetails(parsedGrid.map((row: any, idx: number) => ({ ...row, srl_no: idx + 1 })));
+            setDetails(parsedGrid.map((row: any, idx: number) => ({ 
+              ...row, 
+              srl_no: idx + 1,
+              unit: row.unit || amadUnit
+            })));
           }
         }
       } else {
@@ -1680,16 +1685,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                         className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-right font-bold outline-none"
                       />
                     </td>
-                    <td className="p-1.5">
-                      <select
-                        value={row.unit || 'BALES'}
-                        onChange={(e) => handleRowChange(index, 'unit', e.target.value)}
-                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs outline-none font-semibold"
-                      >
-                        {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                    <td className="p-1.5 w-24">
+                      <input
+                        type="text"
+                        readOnly
+                        value={row.unit || formData.unit_name || 'BALES'}
+                        className="w-full h-7 bg-slate-100 border border-slate-300 rounded px-1.5 text-xs text-center font-bold text-slate-700 outline-none cursor-default uppercase"
+                      />
                     </td>
                     <td className="p-1.5">
                       <input
