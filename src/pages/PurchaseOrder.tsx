@@ -1354,6 +1354,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   // DB Mismatch tables cache for cross-checking approval statuses
   const [dbMaterialMismatches, setDbMaterialMismatches] = useState<any[]>([]);
   const [dbSattaMismatches, setDbSattaMismatches] = useState<any[]>([]);
+  // Settled Excess/Short Deductions Map
+  const [settledDeductions, setSettledDeductions] = useState<Record<string, any>>({});
 
   // PTF creation mode: 'fresh' or 'reference' (against a cancelled P.O).
   const [ptfMode, setPtfMode] = useState<'fresh' | 'reference'>('fresh');
@@ -1504,10 +1506,82 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   }, [poList, isTempPo]);
   const [printingPo, setPrintingPo] = useState<any | null>(null);
   const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'idle' | 'sending' | 'success' | 'error'>>({});
+  const [emailNotification, setEmailNotification] = useState<{
+    type: 'success' | 'error' | 'warning';
+    title: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (emailNotification) {
+      const timer = setTimeout(() => {
+        setEmailNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailNotification]);
 
   const handleSendMailPo = async (poHeader: any) => {
     const poNo = poHeader.po_no;
     if (!poNo) return;
+
+    const brokerName = String(poHeader.broker || '').trim();
+
+    // 1. Lookup Broker Email from customer_master and brokerList
+    let brokerEmail = '';
+    if (supabase && brokerName) {
+      try {
+        const { data: custData } = await supabase
+          .from('customer_master')
+          .select('email, firm_name, proprietor_name');
+
+        if (custData && custData.length > 0) {
+          const exactMatch = custData.find((c: any) => 
+            (c.firm_name && c.firm_name.trim().toUpperCase() === brokerName.toUpperCase()) ||
+            (c.proprietor_name && c.proprietor_name.trim().toUpperCase() === brokerName.toUpperCase())
+          );
+          if (exactMatch?.email && exactMatch.email.trim()) {
+            brokerEmail = exactMatch.email.trim();
+          } else {
+            const partialMatch = custData.find((c: any) => 
+              (c.firm_name && (c.firm_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.firm_name.toUpperCase()))) ||
+              (c.proprietor_name && (c.proprietor_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.proprietor_name.toUpperCase())))
+            );
+            if (partialMatch?.email && partialMatch.email.trim()) {
+              brokerEmail = partialMatch.email.trim();
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to query customer_master for broker email:", err);
+      }
+    }
+
+    if (!brokerEmail && brokerList && brokerList.length > 0 && brokerName) {
+      const bMatch = brokerList.find((b: any) => 
+        (b.brok_name && b.brok_name.toUpperCase() === brokerName.toUpperCase()) ||
+        (b.brok_code && b.brok_code.toUpperCase() === String(poHeader.broker_code || '').toUpperCase())
+      );
+      if (bMatch?.email && bMatch.email.trim()) {
+        brokerEmail = bMatch.email.trim();
+      }
+    }
+
+    // If broker email is not found or not added
+    if (!brokerEmail) {
+      setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'error' }));
+      const msg = `Email address Not Found for Broker "${brokerName || 'N/A'}". Please add an email address in Customer Master.`;
+      setEmailNotification({
+        type: 'error',
+        title: 'Email address Not Found',
+        message: msg
+      });
+      alert(`Email address Not Found!\n\nNo email address found for Broker "${brokerName || 'N/A'}".\nPlease add an email address in Customer Master.`);
+      setTimeout(() => {
+        setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
+      }, 3000);
+      return;
+    }
 
     setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'sending' }));
 
@@ -1597,40 +1671,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         console.error("Failed to generate PO PDF for email:", pdfErr);
       }
 
-      let recipientEmails = "";
-      if (supabase) {
-        const addedEmails = new Set<string>();
-        
-        // Lookup Broker in customer_master
-        if (poHeader.broker) {
-          const { data: custBroker } = await supabase
-            .from('customer_master')
-            .select('email')
-            .eq('firm_name', poHeader.broker)
-            .maybeSingle();
-          if (custBroker?.email) {
-            const email = custBroker.email.trim();
-            if (email && !addedEmails.has(email.toLowerCase())) {
-              recipientEmails += `, ${email}`;
-              addedEmails.add(email.toLowerCase());
-            }
-          }
-        }
-        
-        // Lookup Supplier in customer_master
-        if (poHeader.supplier) {
-          const { data: custSupplier } = await supabase
-            .from('customer_master')
-            .select('email')
-            .eq('firm_name', poHeader.supplier)
-            .maybeSingle();
-          if (custSupplier?.email) {
-            const email = custSupplier.email.trim();
-            if (email && !addedEmails.has(email.toLowerCase())) {
-              recipientEmails += `, ${email}`;
-              addedEmails.add(email.toLowerCase());
-            }
-          }
+      let recipientEmails = brokerEmail;
+      if (supabase && poHeader.supplier) {
+        const { data: custSupplier } = await supabase
+          .from('customer_master')
+          .select('email')
+          .eq('firm_name', poHeader.supplier)
+          .maybeSingle();
+        if (custSupplier?.email && custSupplier.email.trim() && !recipientEmails.includes(custSupplier.email.trim())) {
+          recipientEmails += `, ${custSupplier.email.trim()}`;
         }
       }
 
@@ -1639,7 +1688,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: `📋 PURCHASE ORDER SLIP: #${poHeader.po_no} - [${poHeader.broker || 'N/A'}]`,
-          to: recipientEmails.split(',').map(e => e.trim()).filter(Boolean).join(', ') || 'rawjute@ballyjute.com',
+          to: recipientEmails.split(',').map(e => e.trim()).filter(Boolean).join(', ') || brokerEmail,
           html: emailHtml,
           filename: `Purchase_Order_${poHeader.po_no || 'Draft'}.pdf`,
           pdfData: poPdfBase64 || undefined
@@ -1656,7 +1705,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       
       if (res.ok && resData.success) {
         setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'success' }));
-        alert(`Email for Purchase Order #${poHeader.po_no} sent successfully to ${recipientEmails}!`);
+        setEmailNotification({
+          type: 'success',
+          title: 'Email Send Successfully',
+          message: `Email Send Successfully to ${recipientEmails} for PO #${poHeader.po_no}`
+        });
+        alert(`Email Send Successfully to ${recipientEmails}!`);
         setTimeout(() => {
           setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
         }, 3000);
@@ -1666,6 +1720,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     } catch (err: any) {
       console.error(err);
       setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'error' }));
+      setEmailNotification({
+        type: 'error',
+        title: 'Email Dispatch Failed',
+        message: `Failed to send email: ${err.message || String(err)}`
+      });
       alert(`Failed to send email: ${err.message || String(err)}`);
       setTimeout(() => {
         setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
@@ -2000,6 +2059,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         safeSupabaseSelect('satta_mismatch'),
         safeFetch('material_mismatch'),
         safeFetch('satta_mismatch'),
+        safeFetch('sauda_check_point_deductions'),
       ]);
 
       const combinedMatMismatches = [...((matMismatchesRes as any)?.data || []), ...(dbMatMismatches || [])];
@@ -2009,6 +2069,25 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       setSattaBases((sattaBasesRes as any)?.data || sattaBasesRes || []);
       setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
       if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
+
+      const dedMap: Record<string, any> = {};
+      (arguments[arguments.length - 1] || []).forEach?.((d: any) => {
+        if (d?.po_no) dedMap[String(d.po_no).trim().toUpperCase()] = d;
+        if (d?.sauda_no) dedMap[String(d.sauda_no).trim().toUpperCase()] = d;
+      });
+      // Also fetch direct if needed
+      if (supabase) {
+        supabase.from('sauda_check_point_deductions').select('*').then(({ data }) => {
+          if (data && data.length > 0) {
+            const map: Record<string, any> = {};
+            data.forEach((d: any) => {
+              if (d.po_no) map[String(d.po_no).trim().toUpperCase()] = d;
+              if (d.sauda_no) map[String(d.sauda_no).trim().toUpperCase()] = d;
+            });
+            setSettledDeductions(map);
+          }
+        });
+      }
 
       const pos = initialPos;
       setAllTempArrivals(arrivals || []);
@@ -2145,7 +2224,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'p.o_archive', 'po_archive'] });
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive'] });
 
   useEffect(() => {
     fetchPosAndMasters();
@@ -2164,6 +2243,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         .channel('po-realtime-sub')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point_deductions' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'final_po' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point_details' }, handleDataUpdate)
@@ -3657,7 +3737,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
             const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
             if (isCompletedPo) return 'COMPLETED';
-            if (tol.isOverDelivery) return 'EXCESS WT';
+            if (tol.isOverDelivery) {
+              const poKey = String(item.po_no || '').trim().toUpperCase();
+              const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
+              const isSettledDeduction = Boolean(
+                settledDeductions[poKey] || 
+                settledDeductions[saudaKey] || 
+                item.excess_short_deduction != null || 
+                (item.excess_short_status && item.excess_short_status !== 'pending')
+              );
+              return isSettledDeduction ? 'EXCESS WT (SETTLED)' : 'EXCESS WT';
+            }
             return 'PENDING';
           };
           comparison = getStatusText(a).localeCompare(getStatusText(b));
@@ -4304,9 +4394,52 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     <div className="flex flex-col items-center gap-0.5">
                                        {isCompletedPo ? (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
-                                       ) : tol.isOverDelivery ? (
-                                         <button type="button" onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", isSelected ? "bg-amber-500 text-white border-amber-400" : "text-amber-900 bg-amber-100 hover:bg-amber-200 border-amber-300")} title="Click to open Excess / Short Settlement"><Scale className="w-3 h-3 text-amber-700" /><span>EXCESS WT</span></button>
-                                       ) : (
+                                       ) : tol.isOverDelivery ? (() => {
+                                         const poKey = String(item.po_no || '').trim().toUpperCase();
+                                         const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
+                                         const isSettledDeduction = Boolean(
+                                           settledDeductions[poKey] || 
+                                           settledDeductions[saudaKey] || 
+                                           item.excess_short_deduction != null || 
+                                           (item.excess_short_status && item.excess_short_status !== 'pending')
+                                         );
+
+                                         if (isSettledDeduction) {
+                                           return (
+                                             <button 
+                                               type="button" 
+                                               onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
+                                               className={cn(
+                                                 "text-[9.5px] font-black px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
+                                                 isSelected 
+                                                   ? "bg-emerald-600 text-white border-emerald-500" 
+                                                   : "text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border-emerald-300"
+                                               )} 
+                                               title="Excess Weight Settled & Recorded (Click to view Read-Only settlement slip)"
+                                             >
+                                               <Scale className="w-3 h-3 text-emerald-700" />
+                                               <span>EXCESS WT ✓</span>
+                                             </button>
+                                           );
+                                         }
+
+                                         return (
+                                           <button 
+                                             type="button" 
+                                             onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
+                                             className={cn(
+                                               "text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
+                                               isSelected 
+                                                 ? "bg-amber-500 text-white border-amber-400" 
+                                                 : "text-amber-900 bg-amber-100 hover:bg-amber-200 border-amber-300"
+                                             )} 
+                                             title="Click to open Excess / Short Settlement"
+                                           >
+                                             <Scale className="w-3 h-3 text-amber-700" />
+                                             <span>EXCESS WT</span>
+                                           </button>
+                                         );
+                                       })() : (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
                                        )}
                                        {isOverdue && (
@@ -5415,14 +5548,26 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         <>
           <div className="fixed inset-0 z-[999]" onClick={() => setActionMenu(null)} />
           <div
-            className="fixed z-[1000] bg-white rounded-lg shadow-2xl border border-slate-200 py-1 text-xs w-48"
-            style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 192) }}
+            className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1 text-xs w-40 animate-in fade-in zoom-in-95 duration-100"
+            style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 160) }}
           >
             {isTempPo ? (
               <>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} className="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 text-indigo-700 font-bold"><Mail className="w-3.5 h-3.5" />Email</button>
-                <div className="border-t border-slate-200 my-1" />
-                <button onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-700 font-bold"><Trash2 className="w-3.5 h-3.5" />Delete</button>
+                <button 
+                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} 
+                  className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-xl flex items-center gap-2.5 text-indigo-600 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>Email</span>
+                </button>
+                <div className="border-t border-slate-100 my-0.5" />
+                <button 
+                  onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} 
+                  className="w-full text-left px-3 py-2 hover:bg-rose-50/70 rounded-xl flex items-center gap-2.5 text-rose-600 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Delete</span>
+                </button>
               </>
             ) : (
               <>
@@ -5442,6 +5587,39 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             )}
           </div>
         </>,
+        document.body
+      )}
+
+      {/* Floating Email & Action Notification Toast */}
+      {emailNotification && createPortal(
+        <div className="fixed top-6 right-6 z-[2000] flex items-start gap-3 p-4 bg-white border border-slate-200/90 rounded-2xl shadow-2xl max-w-sm animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className={cn(
+            "p-2 rounded-xl shrink-0 mt-0.5",
+            emailNotification.type === 'success' ? "bg-emerald-100 text-emerald-700" :
+            emailNotification.type === 'warning' ? "bg-amber-100 text-amber-800" :
+            "bg-rose-100 text-rose-700"
+          )}>
+            {emailNotification.type === 'success' ? (
+              <Check className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+          </div>
+          <div className="flex-1 pr-2">
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+              {emailNotification.title}
+            </h4>
+            <p className="text-[11px] font-medium text-slate-600 mt-0.5 leading-relaxed">
+              {emailNotification.message}
+            </p>
+          </div>
+          <button 
+            onClick={() => setEmailNotification(null)}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>,
         document.body
       )}
 

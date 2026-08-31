@@ -22,6 +22,7 @@ import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import { getCurrentUserContext } from '../lib/permissions';
+import { cn } from '../lib/utils';
 
 interface ExcessShortSettlementModalProps {
   po: any;
@@ -430,6 +431,8 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     loadSaved();
   }, [poNo]);
 
+  const isReadOnly = Boolean(existingRecordId);
+
   // Applicable Policy Rate (Rate Difference: A - B)
   const applicableRateDiffQtl = useMemo(() => {
     if (rateBasis === 'manual') return manualRateQtl;
@@ -818,18 +821,22 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     return (
                       <tr 
                         key={idx} 
-                        onClick={() => setSelectedGrade(g.grade)}
-                        className={`cursor-pointer transition-colors ${
+                        onClick={() => { if (!isReadOnly) setSelectedGrade(g.grade); }}
+                        className={`transition-colors ${
                           isSelected ? 'bg-amber-50/70 border-l-4 border-l-amber-500' : 'hover:bg-slate-50'
-                        }`}
+                        } ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
                       >
                         <td className="p-2 border-r text-center">
                           <input 
                             type="radio" 
                             name="selectedDeductionGrade" 
                             checked={isSelected}
-                            onChange={() => setSelectedGrade(g.grade)}
-                            className="text-amber-600 focus:ring-amber-500 cursor-pointer"
+                            disabled={isReadOnly}
+                            onChange={() => { if (!isReadOnly) setSelectedGrade(g.grade); }}
+                            className={cn(
+                              "text-amber-600 focus:ring-amber-500",
+                              isReadOnly ? "cursor-not-allowed opacity-75" : "cursor-pointer"
+                            )}
                           />
                         </td>
                         <td className="p-2 border-r font-bold text-slate-900 font-sans">
@@ -883,10 +890,39 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   4. Excess / Short Settlement & Deduction Calculator
                 </h3>
               </div>
-              <span className="text-[10px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
-                Target Grade: <strong className="font-mono">{selectedGrade}</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                {isReadOnly && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase flex items-center gap-1 shadow-2xs">
+                    <Lock className="w-3 h-3 text-emerald-700" /> Read Only (Locked)
+                  </span>
+                )}
+                <span className="text-[10px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
+                  Target Grade: <strong className="font-mono">{selectedGrade}</strong>
+                </span>
+              </div>
             </div>
+
+            {/* Read-Only Notice Banner if finalized */}
+            {isReadOnly && (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/90 border border-emerald-300 text-emerald-950 animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-emerald-200/70 text-emerald-900 shrink-0">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-950">
+                      Settlement Finalized & Locked (Read Only)
+                    </p>
+                    <p className="text-[10.5px] text-emerald-800 font-medium">
+                      This excess/short settlement has been recorded and finalized. Values are locked and cannot be changed or deleted.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-700 text-white uppercase shadow-xs shrink-0">
+                  Committed ✓
+                </span>
+              </div>
+            )}
 
             {/* Rate Comparison Box: A - B Formula */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-amber-200 shadow-2xs">
@@ -901,8 +937,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <input 
                     type="number"
                     value={saudaRateQtl || ''}
+                    disabled={isReadOnly}
+                    readOnly={isReadOnly}
                     onChange={(e) => setSaudaRateQtl(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 text-sm font-black font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className={cn(
+                      "w-full px-2.5 py-1.5 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-amber-500",
+                      isReadOnly 
+                        ? "bg-slate-100 text-slate-700 border-slate-200 cursor-not-allowed select-none" 
+                        : "bg-slate-50 border-slate-300"
+                    )}
                     placeholder="e.g. 19300"
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
@@ -921,8 +964,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <input 
                     type="number"
                     value={sattaRateQtl || ''}
+                    disabled={isReadOnly}
+                    readOnly={isReadOnly}
                     onChange={(e) => setSattaRateQtl(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 text-sm font-black font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-slate-50"
+                    className={cn(
+                      "w-full px-2.5 py-1.5 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-amber-500",
+                      isReadOnly 
+                        ? "bg-slate-100 text-slate-700 border-slate-200 cursor-not-allowed select-none" 
+                        : "bg-slate-50 border-slate-300"
+                    )}
                     placeholder="e.g. 17300"
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
@@ -959,37 +1009,48 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setDeductionQtyMode('over_tolerance')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                    disabled={isReadOnly}
+                    onClick={() => { if (!isReadOnly) setDeductionQtyMode('over_tolerance'); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-1.5",
+                      isReadOnly ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                       deductionQtyMode === 'over_tolerance' 
                         ? 'bg-amber-500 text-white border-amber-600 shadow-xs' 
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-700'
-                    }`}
+                    )}
                   >
                     <span>Excess Over Tolerance (+{tolerance.excessOverToleranceMt.toFixed(3)} MT / {(tolerance.excessOverToleranceMt * 10).toFixed(2)} Qtl)</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDeductionQtyMode('over_contract')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                    disabled={isReadOnly}
+                    onClick={() => { if (!isReadOnly) setDeductionQtyMode('over_contract'); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-1.5",
+                      isReadOnly ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                       deductionQtyMode === 'over_contract' 
                         ? 'bg-amber-500 text-white border-amber-600 shadow-xs' 
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-700'
-                    }`}
+                    )}
                   >
                     <span>Excess Over Contract (+{tolerance.excessOverContractMt.toFixed(3)} MT / {(tolerance.excessOverContractMt * 10).toFixed(2)} Qtl)</span>
                   </button>
                   <button
                     type="button"
+                    disabled={isReadOnly}
                     onClick={() => {
-                      setDeductionQtyMode('custom');
-                      if (!customQtyMt) setCustomQtyMt(tolerance.excessOverToleranceMt);
+                      if (!isReadOnly) {
+                        setDeductionQtyMode('custom');
+                        if (!customQtyMt) setCustomQtyMt(tolerance.excessOverToleranceMt);
+                      }
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold border transition",
+                      isReadOnly ? "cursor-not-allowed opacity-90" : "cursor-pointer",
                       deductionQtyMode === 'custom' 
                         ? 'bg-amber-500 text-white border-amber-600 shadow-xs' 
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-700'
-                    }`}
+                    )}
                   >
                     Custom MT
                   </button>
@@ -1002,8 +1063,13 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                       type="number" 
                       step="0.001"
                       value={customQtyMt || ''}
+                      disabled={isReadOnly}
+                      readOnly={isReadOnly}
                       onChange={(e) => setCustomQtyMt(Number(e.target.value))}
-                      className="w-32 px-2.5 py-1 text-sm font-black font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                      className={cn(
+                        "w-32 px-2.5 py-1 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-amber-500",
+                        isReadOnly ? "bg-slate-100 text-slate-700 border-slate-200 cursor-not-allowed" : "border-slate-300"
+                      )}
                     />
                     <span className="text-xs font-bold text-slate-500">MT ({(customQtyMt * 10).toFixed(2)} Qtl)</span>
                   </div>
@@ -1040,9 +1106,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <input 
                   type="text"
                   value={remarks}
+                  disabled={isReadOnly}
+                  readOnly={isReadOnly}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder={`e.g. Excess weight ${deductionQtyMt.toFixed(3)} MT (${deductionQtyQtl.toFixed(2)} Qtl) deducted at ₹${applicableRateDiffQtl}/Qtl rate difference for ${selectedGrade}.`}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                  className={cn(
+                    "w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-amber-500",
+                    isReadOnly ? "bg-slate-100 text-slate-700 border-slate-200 cursor-not-allowed" : "bg-white border-slate-300"
+                  )}
                 />
               </div>
 
@@ -1052,8 +1123,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 </label>
                 <select
                   value={settlementStatus}
+                  disabled={isReadOnly}
                   onChange={(e: any) => setSettlementStatus(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                  className={cn(
+                    "w-full px-3 py-2 text-xs font-bold border rounded-lg focus:ring-2 focus:ring-amber-500",
+                    isReadOnly ? "bg-slate-100 text-slate-700 border-slate-200 cursor-not-allowed" : "bg-white border-slate-300"
+                  )}
                 >
                   <option value="calculated">Calculated (Pending Review)</option>
                   <option value="approved">Approved by Manager (L4)</option>
@@ -1067,7 +1142,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         {/* Modal Footer with Authorization Banner & Controls */}
         <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
           <div className="text-[11px] flex items-center gap-2">
-            {isAuthorizedToSave ? (
+            {isReadOnly ? (
+              <span className="text-emerald-900 font-black flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-emerald-700" />
+                Settlement Status: <strong>Finalized & Locked (Read Only)</strong> — No edits or deletions permitted.
+              </span>
+            ) : isAuthorizedToSave ? (
               <span className="text-emerald-800 font-bold flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 Authorized: <strong>{userCtx?.userName || 'User'} ({userLevel || userRole || 'L4/Admin'})</strong> — Eligible to commit settlements.
@@ -1087,20 +1167,30 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             >
               Cancel / Close
             </button>
-            <button
-              type="button"
-              onClick={handleSaveDeduction}
-              disabled={isSaving || !isAuthorizedToSave}
-              title={!isAuthorizedToSave ? "Requires Level 4 or Admin privileges to commit to database" : "Save & record deduction"}
-              className={`px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95 ${
-                isAuthorizedToSave 
-                  ? 'bg-amber-600 hover:bg-amber-700 disabled:opacity-50' 
-                  : 'bg-slate-400 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? 'Saving Settlement...' : (existingRecordId ? 'Update Settlement' : 'Save & Record Deduction')}
-            </button>
+            {isReadOnly ? (
+              <div 
+                className="px-5 py-2 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black shadow-xs flex items-center gap-2 select-none"
+                title="Settlement has already been committed and is locked against changes or deletion."
+              >
+                <Lock className="w-4 h-4 text-emerald-700" />
+                <span>Settlement Finalized & Locked</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSaveDeduction}
+                disabled={isSaving || !isAuthorizedToSave}
+                title={!isAuthorizedToSave ? "Requires Level 4 or Admin privileges to commit to database" : "Save & record deduction"}
+                className={`px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95 ${
+                  isAuthorizedToSave 
+                    ? 'bg-amber-600 hover:bg-amber-700 disabled:opacity-50' 
+                    : 'bg-slate-400 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving Settlement...' : (existingRecordId ? 'Update Settlement' : 'Save & Record Deduction')}
+              </button>
+            )}
           </div>
         </div>
 
