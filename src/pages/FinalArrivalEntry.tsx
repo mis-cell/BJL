@@ -149,11 +149,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       supplier: (initialData?.supplier || '').toUpperCase(),
       broker: (initialData?.broker || '').toUpperCase(),
       transporter_name: initialData?.transporter_name || '',
-      challan_rr_no: initialData?.challan_rr_no || '',
+      challan_rr_no: initialData?.challan_rr_no || initialData?.challan_railway_receipt_no || '',
+      challan_railway_receipt_no: initialData?.challan_railway_receipt_no || initialData?.challan_rr_no || '',
       challan_rr_date: initialData?.challan_rr_date || today,
       lorry_number: initialData?.lorry_number || (initialData as any)?.lorry_no || (initialData as any)?.vehicle_no || '',
       pan_no: initialData?.pan_no || '',
-      consignment_note_no: initialData?.consignment_note_no || '',
+      consignment_note: initialData?.consignment_note || initialData?.consignment_note_no || (initialData as any)?.consignment_notice_no || '',
+      consignment_note_no: initialData?.consignment_note || initialData?.consignment_note_no || (initialData as any)?.consignment_notice_no || '',
       consignment_note_date: initialData?.consignment_note_date || today,
       di_no: initialData?.di_no || '',
       di_date: initialData?.di_date || today,
@@ -402,10 +404,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           date: matchedAmad.date || prev.date,
           lorry_number: matchedAmad.lorry_number || matchedAmad.lorry_no || matchedAmad.vehicle_no || prev.lorry_number,
           transporter_name: matchedAmad.transporter_name || prev.transporter_name,
-          challan_rr_no: matchedAmad.challan_rr_no || prev.challan_rr_no,
+          challan_rr_no: matchedAmad.challan_rr_no || matchedAmad.challan_railway_receipt_no || prev.challan_rr_no,
+          challan_railway_receipt_no: matchedAmad.challan_railway_receipt_no || matchedAmad.challan_rr_no || prev.challan_railway_receipt_no,
           challan_rr_date: matchedAmad.challan_rr_date || matchedAmad.date || prev.challan_rr_date,
           pan_no: matchedAmad.pan_no || prev.pan_no,
-          consignment_note_no: matchedAmad.consignment_note_no || prev.consignment_note_no,
+          consignment_note: matchedAmad.consignment_note || matchedAmad.consignment_note_no || prev.consignment_note,
+          consignment_note_no: matchedAmad.consignment_note || matchedAmad.consignment_note_no || prev.consignment_note_no,
+          consignment_note_date: matchedAmad.consignment_note_date || prev.consignment_note_date,
           di_no: matchedAmad.di_no || prev.di_no,
           di_date: matchedAmad.di_date || prev.di_date,
           invoice_no: matchedAmad.invoice_no || prev.invoice_no,
@@ -509,10 +514,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           date: matchedInspection.arrival_date || amadData?.date || prev.date,
           lorry_number: (matchedInspection as any).lorry_number || (matchedInspection as any).lorry_no || (matchedInspection as any).vehicle_no || (amadData as any)?.lorry_number || (amadData as any)?.lorry_no || (amadData as any)?.vehicle_no || prev.lorry_number,
           transporter_name: matchedInspection.transporter_name || amadData?.transporter_name || prev.transporter_name,
-          challan_rr_no: matchedInspection.challan_rr_no || amadData?.challan_rr_no || prev.challan_rr_no,
+          challan_rr_no: matchedInspection.challan_rr_no || (matchedInspection as any).challan_railway_receipt_no || amadData?.challan_rr_no || amadData?.challan_railway_receipt_no || prev.challan_rr_no,
+          challan_railway_receipt_no: (matchedInspection as any).challan_railway_receipt_no || matchedInspection.challan_rr_no || amadData?.challan_railway_receipt_no || amadData?.challan_rr_no || prev.challan_railway_receipt_no,
           challan_rr_date: matchedInspection.challan_rr_date || amadData?.lorry_date || prev.challan_rr_date,
           pan_no: matchedInspection.pan_no || amadData?.pan_no || prev.pan_no,
-          consignment_note_no: matchedInspection.consignment_note_no || amadData?.consignment_note_no || prev.consignment_note_no,
+          consignment_note: (matchedInspection as any).consignment_note || matchedInspection.consignment_note_no || (matchedInspection as any).consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note,
+          consignment_note_no: (matchedInspection as any).consignment_note || matchedInspection.consignment_note_no || (matchedInspection as any).consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note_no,
+          consignment_note_date: (matchedInspection as any).consignment_note_date || (matchedInspection as any).consignment_date || amadData?.consignment_note_date || prev.consignment_note_date,
           di_no: matchedInspection.di_no || amadData?.di_no || prev.di_no,
           di_date: matchedInspection.di_date || amadData?.di_date || prev.di_date,
           invoice_no: matchedInspection.invoice_no || amadData?.invoice_no || prev.invoice_no,
@@ -669,6 +677,16 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const handleInputChange = (field: string, val: any) => {
     setFormData(prev => {
       const next = { ...prev, [field]: val };
+      if (field === 'consignment_note') {
+        next.consignment_note_no = val;
+      } else if (field === 'consignment_note_no') {
+        next.consignment_note = val;
+      } else if (field === 'challan_rr_no') {
+        next.challan_railway_receipt_no = val;
+      } else if (field === 'challan_railway_receipt_no') {
+        next.challan_rr_no = val;
+      }
+
       if (field === 'po_no' && val) {
         const valUpper = String(val).trim().toUpperCase();
         const matched = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === valUpper);
@@ -771,11 +789,13 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         supplier: formData.supplier,
         broker: formData.broker,
         transporter_name: formData.transporter_name,
-        challan_rr_no: formData.challan_rr_no,
+        challan_rr_no: formData.challan_rr_no || formData.challan_railway_receipt_no || '',
+        challan_railway_receipt_no: formData.challan_railway_receipt_no || formData.challan_rr_no || '',
         challan_rr_date: formData.challan_rr_date || null,
         lorry_number: formData.lorry_number,
         pan_no: formData.pan_no,
-        consignment_note_no: formData.consignment_note_no,
+        consignment_note: formData.consignment_note || formData.consignment_note_no || '',
+        consignment_note_no: formData.consignment_note || formData.consignment_note_no || '',
         consignment_note_date: formData.consignment_note_date || null,
         di_no: formData.di_no,
         di_date: formData.di_date || null,
@@ -896,9 +916,11 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       broker: '',
       transporter_name: '',
       challan_rr_no: '',
+      challan_railway_receipt_no: '',
       challan_rr_date: today,
       lorry_number: '',
       pan_no: '',
+      consignment_note: '',
       consignment_note_no: '',
       consignment_note_date: today,
       di_no: '',
@@ -1336,12 +1358,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div className="md:col-span-2 grid grid-cols-3 gap-2">
               <div className="col-span-2">
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Consignment Notice No.</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Consignment Note</label>
                 <input
                   type="text"
-                  value={formData.consignment_note_no || ''}
-                  onChange={(e) => handleInputChange('consignment_note_no', e.target.value)}
-                  placeholder="Enter Consignment Note No."
+                  value={formData.consignment_note || formData.consignment_note_no || ''}
+                  onChange={(e) => handleInputChange('consignment_note', e.target.value)}
+                  placeholder="Enter Consignment Note"
                   className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
                 />
               </div>

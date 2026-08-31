@@ -50,10 +50,13 @@ export interface Amad {
   broker?: string;
   transporter_name?: string;
   challan_rr_no?: string;
+  challan_railway_receipt_no?: string;
   lorry_number?: string;
   pan_no?: string;
   lorry_date?: string;
+  consignment_note?: string;
   consignment_note_no?: string;
+  consignment_note_date?: string;
   di_no?: string;
   di_date?: string;
   invoice_no?: string;

@@ -105,6 +105,28 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_date DATE;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned TEXT DEFAULT 'No';
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned_other_mill TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_railway_receipt_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_rr_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_rr_date DATE;
+
+          -- Migrate data safely
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='final_arrival' AND column_name='consignment_notice_no') THEN
+            UPDATE final_arrival SET consignment_note = consignment_notice_no WHERE consignment_note IS NULL AND consignment_notice_no IS NOT NULL;
+          END IF;
+          UPDATE final_arrival SET consignment_note = consignment_note_no WHERE consignment_note IS NULL AND consignment_note_no IS NOT NULL;
+          UPDATE final_arrival SET consignment_note_no = consignment_note WHERE consignment_note_no IS NULL AND consignment_note IS NOT NULL;
+          UPDATE final_arrival SET challan_railway_receipt_no = challan_rr_no WHERE challan_railway_receipt_no IS NULL AND challan_rr_no IS NOT NULL;
+          UPDATE final_arrival SET challan_rr_no = challan_railway_receipt_no WHERE challan_rr_no IS NULL AND challan_railway_receipt_no IS NOT NULL;
+
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS consignment_note TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS consignment_note_no TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS challan_railway_receipt_no TEXT;
+          ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS challan_rr_no TEXT;
+          UPDATE temporary_material_received SET consignment_note = consignment_note_no WHERE consignment_note IS NULL AND consignment_note_no IS NOT NULL;
+          UPDATE temporary_material_received SET challan_railway_receipt_no = challan_rr_no WHERE challan_railway_receipt_no IS NULL AND challan_rr_no IS NOT NULL;
           
           IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='final_arrival' AND column_name='lorry_no') THEN 
             ALTER TABLE final_arrival RENAME COLUMN lorry_no TO lorry_number; 

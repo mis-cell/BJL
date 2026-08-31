@@ -68,10 +68,13 @@ interface FinalArrivalRecord {
   broker: string | null;
   transporter_name: string | null;
   challan_rr_no: string | null;
+  challan_railway_receipt_no?: string | null;
   challan_rr_date: string | null;
   lorry_number: string | null;
   pan_no: string | null;
+  consignment_note?: string | null;
   consignment_note_no: string | null;
+  consignment_note_date?: string | null;
   di_no: string | null;
   di_date: string | null;
   invoice_no: string | null;
@@ -832,8 +835,9 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       "Ledger Supplier": r.supplier || '',
       "Broker Name": r.broker || '',
       "Lorry Number": r.lorry_number || (r as any).lorry_no || (r as any).vehicle_no || '',
-      "Challan RR No": r.challan_rr_no || '',
-      "Lorry Date": r.challan_rr_date ? new Date(r.challan_rr_date).toLocaleDateString('en-GB') : '',
+      "Consignment Note": r.consignment_note || r.consignment_note_no || (r as any).consignment_notice_no || '',
+      "Challan / Railway Receipt No.": r.challan_railway_receipt_no || r.challan_rr_no || '',
+      "Challan RR Date": r.challan_rr_date ? new Date(r.challan_rr_date).toLocaleDateString('en-GB') : '',
       "Total Packets (Bags)": r.total_packets ?? 0,
       "Weight (QTL)": r.weight_qtl ?? 0,
       "Weight (MT)": r.weight_qtl ? (r.weight_qtl / 10).toFixed(3) : '0.000',
@@ -1623,6 +1627,18 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                       <span className="col-span-5 font-bold text-gray-600">Financial Year:</span>
                       <span className="col-span-7 font-mono font-extrabold text-slate-700 bg-white p-1 border border-gray-300 text-center">
                         {selectedRecord.financial_year}
+                      </span>
+
+                      <span className="col-span-12 my-0.5 border-b border-dashed border-gray-300"></span>
+
+                      <span className="col-span-5 font-bold text-gray-600">Consignment Note:</span>
+                      <span className="col-span-7 font-mono font-bold text-slate-900 bg-white p-1 border border-gray-300 text-center">
+                        {selectedRecord.consignment_note || selectedRecord.consignment_note_no || (selectedRecord as any).consignment_notice_no || 'N/A'}
+                      </span>
+
+                      <span className="col-span-5 font-bold text-gray-600">Challan / RR No:</span>
+                      <span className="col-span-7 font-mono font-bold text-slate-900 bg-white p-1 border border-gray-300 text-center">
+                        {selectedRecord.challan_railway_receipt_no || selectedRecord.challan_rr_no || 'N/A'}
                       </span>
                     </div>
                   </LegacyFieldset>
