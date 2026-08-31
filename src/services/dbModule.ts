@@ -15,6 +15,7 @@ export type EntityType =
   | 'purchase_master' 
   | 'sauda_check_point'
   | 'sauda_check_point_details'
+  | 'sauda_check_point_deductions'
   | 'temporary_po'
   | 'temporary_po_details'
   | 'godown_master'

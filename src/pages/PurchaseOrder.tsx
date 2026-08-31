@@ -32,7 +32,8 @@ import {
   Truck,
   Users,
   Check,
-  AlertCircle
+  AlertCircle,
+  Scale
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -41,6 +42,7 @@ import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
 import { comparePoInspection, PoMatchResult } from '../lib/poMatch';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import PoPrintSlip from '../components/PoPrintSlip';
+import ExcessShortSettlementModal from '../components/ExcessShortSettlementModal';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from '../lib/permissions';
 import { 
@@ -1325,6 +1327,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [poList, setPoList] = useState<any[]>([]);
   // 1-to-N Consignment Ledger Modal State
   const [consignmentLedgerPo, setConsignmentLedgerPo] = useState<any>(null);
+  const [excessShortModalPo, setExcessShortModalPo] = useState<any>(null);
+  const [allScpDetails, setAllScpDetails] = useState<any[]>([]);
+  const [sattaCalcs, setSattaCalcs] = useState<any[]>([]);
+  const [sattaBases, setSattaBases] = useState<any[]>([]);
   const [allTempArrivals, setAllTempArrivals] = useState<any[]>([]);
   const [allFinalArrivals, setAllFinalArrivals] = useState<any[]>([]);
   const [allInspections, setAllInspections] = useState<any[]>([]);
@@ -1986,6 +1992,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const combinedSatMismatches = [...((satMismatchesRes as any)?.data || []), ...(dbSatMismatches || [])];
       setDbMaterialMismatches(combinedMatMismatches);
       setDbSattaMismatches(combinedSatMismatches);
+      setSattaBases((sattaBasesRes as any)?.data || sattaBasesRes || []);
+      setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
+      if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
 
       const pos = initialPos;
       setAllTempArrivals(arrivals || []);
@@ -4089,7 +4098,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                        {isCompletedPo ? (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
                                        ) : tol.isOverDelivery ? (
-                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-amber-500 text-white border-amber-400" : "text-amber-800 bg-amber-50 border-amber-300")}>EXCESS WT</span>
+                                         <button type="button" onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", isSelected ? "bg-amber-500 text-white border-amber-400" : "text-amber-900 bg-amber-100 hover:bg-amber-200 border-amber-300")} title="Click to open Excess / Short Settlement"><Scale className="w-3 h-3 text-amber-700" /><span>EXCESS WT</span></button>
                                        ) : (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
                                        )}
@@ -5203,6 +5212,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 192) }}
           >
             <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-blue-700 font-bold"><Edit className="w-3.5 h-3.5" />Edit / View</button>
+            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setExcessShortModalPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-amber-50 flex items-center gap-2 text-amber-900 font-bold"><Scale className="w-3.5 h-3.5 text-amber-600" />Excess / Short</button>
             <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setConsignmentLedgerPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-cyan-700 font-bold"><Truck className="w-3.5 h-3.5" />Consignment Ledger (1-to-N)</button>
             <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePrintPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-slate-700 font-bold"><Printer className="w-3.5 h-3.5" />Print Slip</button>
             <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleDownloadPoPdf(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-emerald-700 font-bold"><Download className="w-3.5 h-3.5" />Download PDF</button>
@@ -5258,6 +5268,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       )}
 
       {/* 1-to-N Consignment Ledger Modal */}
+      {excessShortModalPo && (
+        <ExcessShortSettlementModal
+          po={excessShortModalPo}
+          onClose={() => setExcessShortModalPo(null)}
+          onSaveSuccess={() => { fetchPosAndMasters(); }}
+          allFinalArrivals={allFinalArrivals}
+          allScpDetails={allScpDetails}
+          sattaCalculatedRates={sattaCalcs}
+          sattaBaseRates={sattaBases}
+        />
+      )}
+
       {consignmentLedgerPo && (
         <div className="fixed inset-0 z-[1100] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl border-2 border-slate-700 w-full max-w-4xl max-h-[90vh] overflow-y-auto font-sans text-slate-900 p-5 space-y-4">

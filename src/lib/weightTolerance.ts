@@ -3,8 +3,8 @@
  * 
  * Business Rules:
  * 1. BALE-SPECIFIC TOLERANCE (Unit / Lorry = 'BALES' - case-insensitive):
- *    - 3% of Sauda Quantity (in MT) OR 1500 KG (1.500 MT), whichever tolerance is HIGHER.
- *      Allowed Tolerance = MAX(3% of Sauda Quantity, 1.500 MT)
+ *    - 3% of Sauda Quantity (in MT) OR 1500 KG (1.500 MT), whichever tolerance is LOWER.
+ *      Allowed Tolerance = MIN(3% of Sauda Quantity, 1.500 MT)
  *    - Minimum Acceptable Weight = Sauda Quantity - Allowed Tolerance
  *    - Maximum Acceptable Weight = Sauda Quantity + Allowed Tolerance
  *    - Within range [Minimum Acceptable, Maximum Acceptable] => Status = 'completed' (COMPLETED)
@@ -20,18 +20,24 @@ export interface WeightToleranceResult {
   receivedMt: number;
   unit: string;
   isBales: boolean;
+  pct3Mt: number;
+  fixedToleranceMt: number;
   toleranceMt: number;
   tolerancePct: number;
+  toleranceBasis: '3% (Lower)' | '1500 KG (Lower)' | 'Standard';
   minAcceptableMt: number;
   maxAcceptableMt: number;
+  excessOverToleranceMt: number;
+  excessOverContractMt: number;
+  shortUnderToleranceMt: number;
   isAcceptable: boolean;
   isCompleted: boolean;
   isUnderDelivery: boolean;
   isOverDelivery: boolean;
   status: 'completed' | 'partial' | 'pending' | 'mismatch';
   statusLabel: 'COMPLETED' | 'PARTIAL' | 'PENDING' | 'WEIGHT MISMATCH';
-  formattedTolerance: string; // e.g. "±1.500 MT" or "Standard"
-  formattedRange: string;     // e.g. "8.500 – 11.500 MT" or "≥ 10.000 MT"
+  formattedTolerance: string; // e.g. "±1.261 MT (3%)" or "±1.500 MT"
+  formattedRange: string;     // e.g. "40.778 – 43.300 MT"
 }
 
 export function isBaleUnit(unit: string | null | undefined): boolean {
@@ -53,11 +59,14 @@ export function calculateWeightTolerance(
   if (isBales) {
     // 3% of contract quantity in MT
     const pct3Mt = contractMt * 0.03;
-    const minFixedToleranceMt = 1.5; // 1500 KG = 1.500 MT
+    const fixedToleranceMt = 1.5; // 1500 KG = 1.500 MT
 
-    // Allowed Tolerance = MAX(3% of Sauda Quantity, 1500 KG / 1.500 MT)
-    const toleranceMt = contractMt > 0 ? Math.max(pct3Mt, minFixedToleranceMt) : 0;
+    // Allowed Tolerance = MIN(3% of Sauda Quantity, 1500 KG / 1.500 MT) - whichever is LOWER
+    const toleranceMt = contractMt > 0 ? Math.min(pct3Mt, fixedToleranceMt) : 0;
     const tolerancePct = contractMt > 0 ? (toleranceMt / contractMt) * 100 : 0;
+    const toleranceBasis = contractMt > 0 
+      ? (pct3Mt <= fixedToleranceMt ? '3% (Lower)' : '1500 KG (Lower)')
+      : 'Standard';
 
     const minAcceptableMt = Math.max(0, contractMt - toleranceMt);
     const maxAcceptableMt = contractMt + toleranceMt;
@@ -65,6 +74,10 @@ export function calculateWeightTolerance(
     const isWithinTolerance = contractMt > 0 && receivedMt >= (minAcceptableMt - 0.0001) && receivedMt <= (maxAcceptableMt + 0.0001);
     const isOverDelivery = contractMt > 0 && receivedMt > (maxAcceptableMt + 0.0001);
     const isUnderDelivery = contractMt > 0 && receivedMt > 0 && receivedMt < (minAcceptableMt - 0.0001);
+
+    const excessOverToleranceMt = isOverDelivery ? Math.max(0, receivedMt - maxAcceptableMt) : 0;
+    const excessOverContractMt = receivedMt > contractMt ? Math.max(0, receivedMt - contractMt) : 0;
+    const shortUnderToleranceMt = isUnderDelivery ? Math.max(0, minAcceptableMt - receivedMt) : 0;
 
     let status: 'completed' | 'partial' | 'pending' | 'mismatch' = 'pending';
     let statusLabel: 'COMPLETED' | 'PARTIAL' | 'PENDING' | 'WEIGHT MISMATCH' = 'PENDING';
@@ -90,17 +103,23 @@ export function calculateWeightTolerance(
       receivedMt,
       unit: unitStr,
       isBales: true,
+      pct3Mt,
+      fixedToleranceMt,
       toleranceMt,
       tolerancePct,
+      toleranceBasis,
       minAcceptableMt,
       maxAcceptableMt,
+      excessOverToleranceMt,
+      excessOverContractMt,
+      shortUnderToleranceMt,
       isAcceptable: isWithinTolerance,
       isCompleted: isWithinTolerance,
       isUnderDelivery,
       isOverDelivery,
       status,
       statusLabel,
-      formattedTolerance: `±${toleranceMt.toFixed(3)} MT`,
+      formattedTolerance: `±${toleranceMt.toFixed(3)} MT (${tolerancePct.toFixed(1)}%)`,
       formattedRange: `${minAcceptableMt.toFixed(3)} – ${maxAcceptableMt.toFixed(3)} MT`
     };
   }
@@ -110,6 +129,10 @@ export function calculateWeightTolerance(
   const isCompleted = contractMt > 0 && receivedMt >= (contractMt - 0.05);
   const isOverDelivery = contractMt > 0 && receivedMt > (contractMt + 0.05);
   const isUnderDelivery = contractMt > 0 && receivedMt > 0 && receivedMt < (contractMt - 0.05);
+
+  const excessOverToleranceMt = isOverDelivery ? Math.max(0, receivedMt - contractMt) : 0;
+  const excessOverContractMt = receivedMt > contractMt ? Math.max(0, receivedMt - contractMt) : 0;
+  const shortUnderToleranceMt = isUnderDelivery ? Math.max(0, contractMt - receivedMt) : 0;
 
   let status: 'completed' | 'partial' | 'pending' | 'mismatch' = 'pending';
   let statusLabel: 'COMPLETED' | 'PARTIAL' | 'PENDING' | 'WEIGHT MISMATCH' = 'PENDING';
@@ -132,10 +155,16 @@ export function calculateWeightTolerance(
     receivedMt,
     unit: unitStr,
     isBales: false,
+    pct3Mt: 0,
+    fixedToleranceMt: 0,
     toleranceMt: 0,
     tolerancePct: 0,
+    toleranceBasis: 'Standard',
     minAcceptableMt: contractMt,
     maxAcceptableMt: contractMt,
+    excessOverToleranceMt,
+    excessOverContractMt,
+    shortUnderToleranceMt,
     isAcceptable: isCompleted,
     isCompleted,
     isUnderDelivery,
