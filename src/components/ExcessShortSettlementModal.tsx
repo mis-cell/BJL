@@ -653,7 +653,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <span className="text-xs font-black text-slate-800 font-mono block mt-1">
                   {tolerance.minAcceptableMt.toFixed(3)} – {tolerance.maxAcceptableMt.toFixed(3)}
                 </span>
-                <p className="text-[9px] text-slate-500 mt-1 font-medium">Upper limit: {tolerance.maxAcceptableMt.toFixed(3)} MT</p>
+                <p className="text-[9px] text-slate-500 mt-1 font-medium">
+                  {tolerance.isUnderDelivery ? `Lower limit: ${tolerance.minAcceptableMt.toFixed(3)} MT` : `Upper limit: ${tolerance.maxAcceptableMt.toFixed(3)} MT`}
+                </p>
               </div>
 
               {/* Card 4: Total Received Weight */}
@@ -694,7 +696,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <p className="text-[9px] font-semibold mt-0.5 opacity-90">
                   {tolerance.isOverDelivery 
                     ? `Over Upper Limit (+${tolerance.excessOverContractMt.toFixed(3)} MT over Sauda)` 
-                    : (tolerance.isUnderDelivery ? 'Below Lower Limit' : 'Passes Sauda Specs')}
+                    : (tolerance.isUnderDelivery ? `Below Lower Limit (-${Math.max(0, contractMt - totalReceivedMt).toFixed(3)} MT under Sauda)` : 'Passes Sauda Specs')}
                 </p>
               </div>
             </div>

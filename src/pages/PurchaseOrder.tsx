@@ -4378,8 +4378,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                              <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${tol.isCompleted ? 100 : pct}%` }} />
                                           </div>
                                           <div className={cn("flex items-center justify-between text-[8px] font-mono leading-none pt-0.5", isSelected ? "text-slate-200/80" : "text-slate-500")}>
-                                             <span title={tol.isBales ? `Bale Tolerance Rule: MAX(3% of ${contract.toFixed(3)} MT, 1.500 MT) = ${tol.formattedTolerance}` : 'Standard Unit: Exact completion validation'}>Tol: {tol.formattedTolerance}</span>
-                                             <span className={cn("font-bold", tol.isCompleted ? (isSelected ? "text-emerald-300" : "text-emerald-700 font-extrabold") : "")} title={tol.isBales ? "Acceptable Weight Range (Bale Tolerance)" : "Contract Weight Target"}>
+                                             <span title={`Sauda Tolerance Rule: MIN(3% of ${contract.toFixed(3)} MT, 1.500 MT) = ${tol.formattedTolerance}`}>Tol: {tol.formattedTolerance}</span>
+                                             <span className={cn("font-bold", tol.isCompleted ? (isSelected ? "text-emerald-300" : "text-emerald-700 font-extrabold") : "")} title="Acceptable Weight Range (Sauda Tolerance Rule)">
                                                 {tol.formattedRange}
                                              </span>
                                           </div>
