@@ -349,31 +349,35 @@
 .touch-overflow-container,
 .overflow-x-auto,
 .overflow-y-auto,
-div:has(> table) {
+.table-scroll-container {
   overflow: auto !important;
   -webkit-overflow-scrolling: touch !important; /* Momentum kinetic scrolling for iOS/WebKit */
   scroll-behavior: smooth !important;
   overscroll-behavior-x: contain !important;
 }
 
+.overflow-visible {
+  overflow: visible !important;
+}
+
 /* Elegant, non-intrusive scrollbar design optimized for mobile interaction */
 .touch-overflow-container::-webkit-scrollbar,
 .overflow-x-auto::-webkit-scrollbar,
 .overflow-y-auto::-webkit-scrollbar,
-div:has(> table)::-webkit-scrollbar {
+.table-scroll-container::-webkit-scrollbar {
   height: 5px;
   width: 5px;
 }
 .touch-overflow-container::-webkit-scrollbar-track,
 .overflow-x-auto::-webkit-scrollbar-track,
 .overflow-y-auto::-webkit-scrollbar-track,
-div:has(> table)::-webkit-scrollbar-track {
+.table-scroll-container::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.03);
 }
 .touch-overflow-container::-webkit-scrollbar-thumb,
 .overflow-x-auto::-webkit-scrollbar-thumb,
 .overflow-y-auto::-webkit-scrollbar-thumb,
-div:has(> table)::-webkit-scrollbar-thumb {
+.table-scroll-container::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
 }
