@@ -872,36 +872,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     }
     setLoading(true);
     try {
-      const missingFields: string[] = [];
-      if (!formData.arrival_no || !formData.arrival_no.trim()) missingFields.push("Temporary M.R No.");
-      if (!formData.po_no || !formData.po_no.trim()) missingFields.push("P.O. Number");
-      if (!formData.date || !formData.date.trim()) missingFields.push("Receipt Date");
-      if (!formData.challan_supplier || !formData.challan_supplier.trim()) missingFields.push("Challan Supplier");
-      if (!formData.supplier || !formData.supplier.trim()) missingFields.push("Supplier");
-      if (!formData.broker || !formData.broker.trim()) missingFields.push("Broker");
-
-      const fullLorry = ((formData.lorry_prefix || '') + (formData.lorry_suffix || '')).trim();
-      if (!fullLorry) missingFields.push("Lorry Number");
-
-      if (!formData.lorry_date || !formData.lorry_date.trim()) missingFields.push("Lorry Arrival Date");
-      if (!formData.ptf || !formData.ptf.trim()) missingFields.push("P.T.F");
-      if (!formData.arrival_area_name || !formData.arrival_area_name.trim()) missingFields.push("Arrival Area");
-      if (!formData.unit_name || !formData.unit_name.trim()) missingFields.push("Unit");
-
-      if (formData.apmc_fees === undefined || formData.apmc_fees === null || String(formData.apmc_fees).trim() === '' || isNaN(Number(formData.apmc_fees)) || Number(formData.apmc_fees) < 0) {
-        missingFields.push("A.P.M.C Fees (Rs.) (Mandatory field, enter at least 0)");
-      }
-
-      if ((Number(formData.challan_material_weight) || 0) <= 0) {
-        missingFields.push("CHALLAN WEIGHT (M.T)");
-      }
-      if ((Number(formData.supplier_net_weight) || 0) <= 0) {
-        missingFields.push("SUPPLIER NET WT (M.T)");
-      }
-      if ((Number(formData.electronic_net_weight) || 0) <= 0) {
-        missingFields.push("ELECTRONIC SCALE NET (M.T)");
-      }
-
       const activeRows = details.filter(row => 
         row.receipt_grade_code || 
         row.receipt_grade_name ||
@@ -912,37 +882,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         Number(row.quantity_rcpt) > 0 || 
         Number(row.quantity_chln) > 0
       );
-
-      if (activeRows.length === 0) {
-        missingFields.push("At least one grade row in Receipt Grid with Grade");
-      } else {
-        activeRows.forEach(row => {
-          if (!row.receipt_grade_code && !row.receipt_grade_name) {
-            missingFields.push(`Receipt Grade (Code/Name) is mandatory for grid row ${row.srl_no}`);
-          }
-          if (!row.crop_year || !row.crop_year.trim()) {
-            missingFields.push(`Crop Year is mandatory for grid row ${row.srl_no}`);
-          }
-          if (!row.challan_grade_name || !row.challan_grade_name.trim()) {
-            missingFields.push(`Challan Grade is mandatory for grid row ${row.srl_no}`);
-          }
-          if (!row.challan_marka_code && !row.challan_marka_name) {
-            missingFields.push(`Challan Marka (Code/Name) is mandatory for grid row ${row.srl_no}`);
-          }
-          if (row.quantity_chln === undefined || row.quantity_chln === null || String(row.quantity_chln).trim() === '' || isNaN(Number(row.quantity_chln)) || Number(row.quantity_chln) < 0) {
-            missingFields.push(`Quantity (Chln) is invalid for grid row ${row.srl_no}`);
-          }
-          if (row.quantity_rcpt === undefined || row.quantity_rcpt === null || String(row.quantity_rcpt).trim() === '' || isNaN(Number(row.quantity_rcpt)) || Number(row.quantity_rcpt) < 0) {
-            missingFields.push(`Quantity (Rcpt) is invalid for grid row ${row.srl_no}`);
-          }
-        });
-      }
-
-      if (missingFields.length > 0) {
-        alert("Please complete the required fields for Temporary M.R:\n\n• " + missingFields.join("\n• "));
-        setLoading(false);
-        return;
-      }
 
       // Check if there are any new manual marks to insert into the database
       const uniqueNewMarkas: string[] = [];
@@ -1285,7 +1224,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Temporary M.R No. */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="arrival_no_1077" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Temporary M.R No. <span className="text-red-600 font-bold">*</span>
+                    Temporary M.R No.
                   </label>
                   <input
                     id="arrival_no_1077" aria-label="Temporary M.R No."
@@ -1293,8 +1232,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="arrival_no"
                     value={formData.arrival_no}
                     onChange={handleChange}
-                   // className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
-                    className={`flex-1 border rounded bg-white px-2 h-7 text-xs font-bold ${!formData.lorry_date ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-400'}`}
+                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
                   />
                 </div>
 
@@ -1625,7 +1563,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Arrival Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="lorry_date_1329" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Lorry Arrival Date <span className="text-red-600 font-bold">*</span>
+                    Lorry Arrival Date
                   </label>
 
                   <input
@@ -1634,8 +1572,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
-                    required
-                    className={`flex-1 border rounded bg-white px-2 h-7 text-xs font-bold ${!formData.lorry_date ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-400'}`}
+                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
                   />
                 </div>
 
@@ -1943,11 +1880,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     step="0.01"
                     min="0"
                     name="apmc_fees"
-                    required
                     placeholder="0.00"
                     value={formData.apmc_fees !== undefined && formData.apmc_fees !== null ? formData.apmc_fees : ""}
                     onChange={handleChange}
-                    className={`w-full h-7 rounded border px-2 text-right text-xs font-bold ${String(formData.apmc_fees ?? '').trim() === '' || Number(formData.apmc_fees) < 0 ? 'border-red-400 focus:ring-1 focus:ring-red-500' : 'border-gray-300 focus:border-[#174C2C]'}`}
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-bold focus:border-[#174C2C]"
                   />
                 </div>
 

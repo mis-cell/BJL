@@ -2951,7 +2951,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     doc.text("Marka", 87, 83);
     doc.text("Quality / Grade", 122, 83);
     doc.text("Qty", 162, 83, { align: 'right' });
-    doc.text("Rate / m.T", 192, 83, { align: 'right' });
+    doc.text("Rate / QUNTL", 192, 83, { align: 'right' });
 
     // Items Table Rows
     let currentY = 86;
@@ -2992,7 +2992,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       doc.text(`${item.qty ? Number(item.qty).toLocaleString() : ''}`, 162, currentY + 5, { align: 'right' });
       
       doc.setFont('helvetica', 'bold');
-      const displayRate = item.rate ? (Number(item.rate) * 10).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '';
+      const displayRate = item.rate ? Number(item.rate).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '';
       doc.text(displayRate ? `Rs ${displayRate}` : '', 192, currentY + 5, { align: 'right' });
       
       currentY += 7;

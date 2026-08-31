@@ -231,7 +231,7 @@ export default function PoPrintSlip({ po }: Props) {
                     <th className="w-[20%] px-2 py-1.5 text-left font-bold">Marka</th>
                     <th className="w-[16%] px-2 py-1.5 text-left font-bold">Quality</th>
                     <th className="w-[11%] px-2 py-1.5 text-right font-bold">Grade/Qty</th>
-                    <th className="w-[13%] px-2 py-1.5 text-right font-bold">Rate/m.T</th>
+                    <th className="w-[13%] px-2 py-1.5 text-right font-bold">Rate/QUNTL</th>
                   </tr>
                 </thead>
 
@@ -273,7 +273,7 @@ export default function PoPrintSlip({ po }: Props) {
                         <td className="px-2 py-1 text-right font-extrabold">
                           {item.rate
                             ? (
-                                Number(item.rate) * 10
+                                Number(item.rate)
                               ).toLocaleString(undefined, {
                                 minimumFractionDigits: 2
                               })

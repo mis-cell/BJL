@@ -48,12 +48,30 @@ export function getApiUrl(apiPath: string): string {
   return `/${cleanPath}`;
 }
 
-export function formatDate(date: string | Date) {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+export function formatDate(date?: string | Date | null): string {
+  if (!date || String(date).trim() === '' || String(date).trim() === 'null' || String(date).trim() === 'undefined' || String(date).trim() === '-') {
+    return 'DD-MM-YYYY';
+  }
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      const parts = String(date).trim().split(/[-/]/);
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD -> DD-MM-YYYY
+          return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+        }
+        return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+      }
+      return 'DD-MM-YYYY';
+    }
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch {
+    return 'DD-MM-YYYY';
+  }
 }
 
 /**
