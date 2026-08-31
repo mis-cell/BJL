@@ -142,8 +142,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       arrival_no: initialData?.final_arrival_no || '',
       mr_no: initialData?.mr_no || '',
       po_no: initialData?.po_no || '',
-      po_date: initialData?.po_date || today,
-      date: initialData?.date || today,
+      po_date: initialData?.po_date || '',
+      date: initialData?.date || '',
       jci: initialData?.jci || 'No',
       challan_supplier: (initialData?.challan_supplier || '').toUpperCase(),
       supplier: (initialData?.supplier || '').toUpperCase(),
@@ -151,16 +151,17 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       transporter_name: initialData?.transporter_name || '',
       challan_rr_no: initialData?.challan_rr_no || initialData?.challan_railway_receipt_no || '',
       challan_railway_receipt_no: initialData?.challan_railway_receipt_no || initialData?.challan_rr_no || '',
-      challan_rr_date: initialData?.challan_rr_date || today,
+      challan_rr_date: initialData?.challan_rr_date || '',
       lorry_number: initialData?.lorry_number || (initialData as any)?.lorry_no || (initialData as any)?.vehicle_no || '',
       pan_no: initialData?.pan_no || '',
       consignment_note: initialData?.consignment_note || initialData?.consignment_note_no || (initialData as any)?.consignment_notice_no || '',
       consignment_note_no: initialData?.consignment_note || initialData?.consignment_note_no || (initialData as any)?.consignment_notice_no || '',
-      consignment_note_date: initialData?.consignment_note_date || today,
+      consignment_note_date: initialData?.consignment_note_date || '',
       di_no: initialData?.di_no || '',
-      di_date: initialData?.di_date || today,
+      di_date: initialData?.di_date || '',
+      part_date: initialData?.part_date || '',
       invoice_no: initialData?.invoice_no || '',
-      invoice_date: initialData?.invoice_date || today,
+      invoice_date: initialData?.invoice_date || '',
       ptf: initialData?.ptf || 'No',
       lorry_returned: initialData?.lorry_returned || 'No',
       lorry_returned_other_mill: initialData?.lorry_returned_other_mill || 'No',
@@ -169,11 +170,11 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       unit_code: initialData?.unit_code || 'I',
       unit_name: initialData?.unit_name || 'BALES',
       way_bill_no: initialData?.way_bill_no || '',
-      way_bill_date: initialData?.way_bill_date || today,
+      way_bill_date: initialData?.way_bill_date || '',
       apmc_fees: initialData?.apmc_fees || 0,
       remarks: initialData?.remarks || '',
       temporary_arrival_no: initialData?.temporary_arrival_no || '',
-      temporary_arrival_date: initialData?.temporary_arrival_date || today,
+      temporary_arrival_date: initialData?.temporary_arrival_date || '',
 
       // Weighments
       challan_material_weight: initialData?.challan_material_weight || 0,
@@ -413,6 +414,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           consignment_note_date: matchedAmad.consignment_note_date || prev.consignment_note_date,
           di_no: matchedAmad.di_no || prev.di_no,
           di_date: matchedAmad.di_date || prev.di_date,
+          part_date: matchedAmad.di_date || prev.part_date,
           invoice_no: matchedAmad.invoice_no || prev.invoice_no,
           invoice_date: matchedAmad.invoice_date || prev.invoice_date,
           ptf: matchedAmad.ptf || prev.ptf,
@@ -523,6 +525,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           consignment_note_date: (matchedInspection as any).consignment_note_date || (matchedInspection as any).consignment_date || amadData?.consignment_note_date || prev.consignment_note_date,
           di_no: matchedInspection.di_no || amadData?.di_no || prev.di_no,
           di_date: matchedInspection.di_date || amadData?.di_date || prev.di_date,
+          part_date: matchedInspection.part_date || amadData?.part_date || prev.part_date,
           invoice_no: matchedInspection.invoice_no || amadData?.invoice_no || prev.invoice_no,
           invoice_date: matchedInspection.invoice_date || amadData?.invoice_date || prev.invoice_date,
           ptf: matchedInspection.ptf || amadData?.ptf || prev.ptf,
@@ -799,6 +802,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         consignment_note_date: formData.consignment_note_date || null,
         di_no: formData.di_no,
         di_date: formData.di_date || null,
+        part_date: formData.part_date || null,
         invoice_no: formData.invoice_no,
         invoice_date: formData.invoice_date || null,
         ptf: formData.ptf,
@@ -925,6 +929,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       consignment_note_date: today,
       di_no: '',
       di_date: today,
+      part_date: today,
       invoice_no: '',
       invoice_date: today,
       ptf: 'No',
@@ -1002,7 +1007,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <div className="flex items-center gap-1">
                 <input
                   type="text"
-                  value={formData.temporary_arrival_no || ''}
+                  value={formData.temporary_arrival_no || 'MR'}
                   onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
                   onBlur={() => {
                     if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
@@ -1201,7 +1206,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry No.</label>
               <input
                 type="text"
-                value={formData.lorry_number || ''}
+                value={formData.lorry_number.toUpperCase() || ''}
                 onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
                 placeholder="WB-12K-9901"
                 className={cn(
@@ -1220,22 +1225,26 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.pan_no || ''}
                 onChange={(e) => handleInputChange('pan_no', e.target.value.toUpperCase())}
                 placeholder="Enter Part No"
-                className={cn(
+                /* className={cn(
                   "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
                   formData.pan_no 
                     ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
                     : "bg-white border border-slate-300"
-                )}
+                )} */
+                readOnly={formData.jci === 'No'}
+                className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Part Date</label>
               <input
                 type="date"
-                value={formData.di_date || ''}
-                onChange={(e) => handleInputChange('di_date', e.target.value)}
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                value={formData.part_date || ''}
+                onChange={(e) => handleInputChange('part_date', e.target.value)}
+                readOnly={formData.jci === 'No'}
+                className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
           </div>
@@ -1282,17 +1291,21 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                 value={formData.di_no || ''}
                 onChange={(e) => handleInputChange('di_no', e.target.value)}
                 placeholder="Enter D.I. No."
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                readOnly={formData.jci === 'No'}
+                className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">D.I. Date</label>
               <input
                 type="date"
                 value={formData.di_date || ''}
                 onChange={(e) => handleInputChange('di_date', e.target.value)}
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                readOnly={formData.jci === 'No'}
+                className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
           </div>
@@ -1301,12 +1314,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <div className="md:col-span-2 grid grid-cols-3 gap-2">
               <div className="col-span-2">
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan / Railway Receipt No.</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan / Receipt No.</label>
                 <input
                   type="text"
                   value={formData.challan_rr_no || ''}
                   onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
-                  placeholder="Enter Challan / Railway Receipt No."
+                  placeholder="Challan / Receipt No "
                   className={cn(
                     "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
                     formData.challan_rr_no 
@@ -1339,16 +1352,20 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   value={formData.invoice_no || ''}
                   onChange={(e) => handleInputChange('invoice_no', e.target.value)}
                   placeholder="Enter Invoice No."
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Invoice Date</label>
                 <input
                   type="date"
                   value={formData.invoice_date || ''}
                   onChange={(e) => handleInputChange('invoice_date', e.target.value)}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
                 />
               </div>
             </div>
@@ -1364,7 +1381,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   value={formData.consignment_note || formData.consignment_note_no || ''}
                   onChange={(e) => handleInputChange('consignment_note', e.target.value)}
                   placeholder="Enter Consignment Note"
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
                 />
               </div>
               <div>
@@ -1373,7 +1392,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   type="date"
                   value={formData.consignment_note_date || ''}
                   onChange={(e) => handleInputChange('consignment_note_date', e.target.value)}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
                 />
               </div>
             </div>
@@ -1424,34 +1445,41 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
             <div className="md:col-span-2 grid grid-cols-3 gap-2">
               <div className="col-span-2">
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">R.R / G.R No.</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Way Bill No.</label>
                 <input
                   type="text"
                   value={formData.way_bill_no || ''}
                   onChange={(e) => handleInputChange('way_bill_no', e.target.value)}
-                  placeholder="Enter R.R / G.R No."
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  placeholder="Enter Way Bill No."
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1"> Way Bill Date</label>
                 <input
                   type="date"
                   value={formData.way_bill_date || ''}
                   onChange={(e) => handleInputChange('way_bill_date', e.target.value)}
-                  className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                  readOnly={formData.jci === 'No'}
+                  className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Way Bill No.</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">R.R / G.R No.</label>
               <input
                 type="text"
                 value={formData.way_bill_no || ''}
                 onChange={(e) => handleInputChange('way_bill_no', e.target.value)}
-                placeholder="Enter Way Bill No."
-                className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+                placeholder="Enter R.R / G.R No."
+                readOnly={formData.jci === 'No'}
+                className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                //className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
               />
             </div>
           </div>
@@ -1773,46 +1801,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           {/* Body: 3 Columns (NET WEIGHT | GROSS WEIGHT | TARE WEIGHT) */}
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-300">
 
-            {/* NET WEIGHT */}
-            <div className="p-3 space-y-2">
-              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
-                NET WEIGHT
-              </h4>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-800">CHALLAN WT</span>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={formData.challan_material_weight ?? ''}
-                  onChange={(e) => handleInputChange('challan_material_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-800">MILL NET</span>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={formData.supplier_net_weight ?? ''}
-                  onChange={(e) => handleInputChange('supplier_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-800">ELECTRONIC NET</span>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={formData.electronic_net_weight ?? ''}
-                  onChange={(e) => handleInputChange('electronic_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
-                />
-              </div>
-            </div>
-
             {/* GROSS WEIGHT */}
             <div className="p-3 space-y-2">
               <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
@@ -1888,6 +1876,46 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                   step="0.001"
                   value={formData.electronic_tare_weight || ''}
                   onChange={(e) => handleInputChange('electronic_tare_weight', e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
+                />
+              </div>
+            </div>
+
+            {/* NET WEIGHT */}
+            <div className="p-3 space-y-2">
+              <h4 className="text-[11px] font-bold text-[#174C2C] border-b border-gray-300 pb-1 uppercase">
+                NET WEIGHT
+              </h4>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">CHALLAN WT</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={formData.challan_material_weight ?? ''}
+                  onChange={(e) => handleInputChange('challan_material_weight', e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">MILL NET</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={formData.supplier_net_weight ?? ''}
+                  onChange={(e) => handleInputChange('supplier_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-800">ELECTRONIC NET</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={formData.electronic_net_weight ?? ''}
+                  onChange={(e) => handleInputChange('electronic_net_weight', e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-28 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono text-xs focus:border-[#174C2C] outline-none"
                 />
               </div>
