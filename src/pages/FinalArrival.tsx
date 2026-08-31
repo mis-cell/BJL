@@ -277,16 +277,15 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       let { data, error } = await supabase
         .from(targetTable)
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(300);
+        .order('created_at', { ascending: false });
 
       if (isArchiveView && (error || !data || data.length === 0)) {
-        const altRes = await supabase.from('mr_archive').select('*').order('created_at', { ascending: false }).limit(300);
+        const altRes = await supabase.from('mr_archive').select('*').order('created_at', { ascending: false });
         if (altRes.data && altRes.data.length > 0) {
           data = altRes.data;
           error = null;
         } else {
-          const rawRes = await supabase.from('final_arrival').select('*').eq('status', 'settled').order('created_at', { ascending: false }).limit(300);
+          const rawRes = await supabase.from('final_arrival').select('*').eq('status', 'settled').order('created_at', { ascending: false });
           data = rawRes.data || [];
           error = null;
         }
@@ -1017,7 +1016,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white p-2 md:p-4 space-y-5 max-w-[1700px] w-full mx-auto">
 
         {/* KPI CARDS GRID */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {/* KPI 1 */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
@@ -1056,19 +1055,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             <p className="text-[10px] font-medium text-slate-500 mt-1">Net Metric Tons</p>
           </div>
 
-          {/* KPI 4 */}
-          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Pending MR / Unlinked</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl font-bold font-mono text-amber-800">{pendingFilteredCount}</p>
-            <p className="text-[10px] font-medium text-amber-600 mt-1">Awaiting Quality Link</p>
-          </div>
-
-          {/* KPI 5 */}
+          {/* KPI 4: Linked & Certified */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Linked & Certified</span>
@@ -1080,7 +1067,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             <p className="text-[10px] font-medium text-emerald-600 mt-1">Fully Audited</p>
           </div>
 
-          {/* KPI 6 */}
+          {/* KPI 5: Sync Daemon */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Sync Daemon</span>
