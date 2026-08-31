@@ -1633,13 +1633,6 @@ export default function App() {
 
             {/* JCI Software Process Workflow Arrow Guide */}
             <div className="flex items-center gap-1.5 shrink-0 bg-[#0E351D] px-2 py-0.5 rounded-lg border border-[#235E39]/80 shadow-inner">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#174C2C] rounded border border-[#2E7A4A] text-amber-300 shrink-0">
-                <Compass className="w-3.5 h-3.5 text-amber-300 shrink-0 animate-spin-slow" />
-                <span className="text-[10px] font-black tracking-wider uppercase font-mono whitespace-nowrap">
-                  JCI WORKFLOW GUIDE:
-                </span>
-              </div>
-
               {/* Sequential Arrow-Wise Steps */}
               <div className="flex items-center gap-1 shrink-0">
                 {(() => {
