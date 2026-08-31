@@ -9,6 +9,8 @@ import {
   FileText,
   Settings,
   ChevronRight,
+  ArrowRight,
+  Compass,
   Menu,
   X,
   PackageCheck,
@@ -766,6 +768,88 @@ function getPageMeta(pageId: string) {
   };
 }
 
+const JCI_WORKFLOW_STEPS: {
+  stepNumber: number;
+  title: string;
+  pageId: Page;
+  matchPages: Page[];
+  icon: React.ComponentType<{ className?: string }>;
+  desc: string;
+}[] = [
+  {
+    stepNumber: 1,
+    title: "Sauda Entry",
+    pageId: "sauda",
+    matchPages: ["sauda", "sauda_entry", "sms_sauda"],
+    icon: HandCoins,
+    desc: "Contract & Rate Booking",
+  },
+  {
+    stepNumber: 2,
+    title: "Sauda Check Point",
+    pageId: "po",
+    matchPages: ["po"],
+    icon: FileText,
+    desc: "Sauda Check Point & Verification",
+  },
+  {
+    stepNumber: 3,
+    title: "Temporary Arrival",
+    pageId: "amad",
+    matchPages: ["amad", "amad_entry", "main_gate"],
+    icon: Archive,
+    desc: "Gate Inward & Temporary MR",
+  },
+  {
+    stepNumber: 4,
+    title: "Mismatch Section",
+    pageId: "material_mismatch",
+    matchPages: ["material_mismatch", "mismatch"],
+    icon: AlertTriangle,
+    desc: "Material & Quality Discrepancies",
+  },
+  {
+    stepNumber: 5,
+    title: "Final Arrival",
+    pageId: "final_arrival",
+    matchPages: ["final_arrival"],
+    icon: CheckCircle2,
+    desc: "Final Weighbridge Arrival & MR",
+  },
+  {
+    stepNumber: 6,
+    title: "Inspection",
+    pageId: "inspection",
+    matchPages: ["inspection", "material_inspection"],
+    icon: ClipboardCheck,
+    desc: "Quality Audit & Lab Inspection",
+  },
+  {
+    stepNumber: 7,
+    title: "Final P.O.",
+    pageId: "final_po",
+    matchPages: ["final_po"],
+    icon: FileText,
+    desc: "Approved Final Purchase Order",
+  },
+  {
+    stepNumber: 8,
+    title: "Payment",
+    pageId: "payment",
+    matchPages: ["payment"],
+    icon: Wallet,
+    desc: "Payment & Accounts Voucher",
+  },
+  {
+    stepNumber: 9,
+    title: "Settlement",
+    pageId: "mr_settlement",
+    matchPages: ["mr_settlement"],
+    icon: FileCheck,
+    desc: "Final Accounts & Rate Settlement",
+  },
+];
+
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1122,15 +1206,6 @@ export default function App() {
         setIsLoggedIn(false);
       }
     };
-    const handleMinimize = () => {
-      if (currentPage !== "dashboard") {
-        logEvent(
-          "MINIMIZE",
-          `Event dynamic Minimize: hiding "${currentPage}" to taskbar`,
-        );
-        globalNavigate("dashboard");
-      }
-    };
     const handleClose = () => {
       if (currentPage !== "dashboard") {
         const pageToClose = currentPage;
@@ -1156,13 +1231,11 @@ export default function App() {
     };
 
     window.addEventListener("app-back", handleBack);
-    window.addEventListener("app-minimize", handleMinimize);
     window.addEventListener("app-close", handleClose);
     window.addEventListener("app-navigate", handleAppNavigate);
 
     return () => {
       window.removeEventListener("app-back", handleBack);
-      window.removeEventListener("app-minimize", handleMinimize);
       window.removeEventListener("app-close", handleClose);
       window.removeEventListener("app-navigate", handleAppNavigate);
     };
@@ -1546,8 +1619,8 @@ export default function App() {
 
         {/* Single Unified Dark Green Footer */}
         <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 overflow-x-auto scrollbar-none">
-          {/* Left Section: Online status & Navigation tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0">
+          {/* Left Section: Online status & JCI Arrow-Wise Workflow Guide */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 min-w-0">
             {/* System Online Status Badge */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-[#E2EDDE] shrink-0">
               <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-400 shadow-xs" : "bg-rose-500")} />
@@ -1558,95 +1631,81 @@ export default function App() {
 
             <div className="h-5 w-px bg-[#235E39] shrink-0" />
 
-            {/* Admin Desk Taskbar Item */}
-            {(runningPages.includes("admindesk") || currentPage === "admindesk") && (
-              <div className="relative flex items-center group/item shrink-0">
-                <button
-                  onClick={() => {
-                    if (currentPage === "admindesk") {
-                      logEvent("MINIMIZE", 'Minimized "admindesk" to dashboard');
-                      globalNavigate("dashboard");
-                    } else {
-                      logEvent("RESTORE", 'Restored "admindesk" from taskbar');
-                      globalNavigate("admindesk");
-                    }
-                  }}
-                  className={cn(
-                    "pl-3 pr-7 h-7 border rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs",
-                    currentPage === "admindesk"
-                      ? "bg-[#215E38] border-[#3A8A57] text-amber-300 font-extrabold shadow-xs"
-                      : "bg-[#103A20] border-[#235E39] text-emerald-200 hover:bg-[#1C5130] hover:text-white"
-                  )}
-                >
-                  <LayoutDashboard className="h-3.5 w-3.5 text-amber-300" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                    Admin Desk
-                  </span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closePage("admindesk", "dashboard");
-                  }}
-                  className="absolute right-1.5 p-0.5 rounded-full flex items-center justify-center h-4 w-4 text-emerald-300 hover:text-rose-300 hover:bg-rose-900/60 transition-colors cursor-pointer"
-                  title="Terminate Admin Desk"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
+            {/* JCI Software Process Workflow Arrow Guide */}
+            <div className="flex items-center gap-1.5 shrink-0 bg-[#0E351D] px-2 py-0.5 rounded-lg border border-[#235E39]/80 shadow-inner">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#174C2C] rounded border border-[#2E7A4A] text-amber-300 shrink-0">
+                <Compass className="w-3.5 h-3.5 text-amber-300 shrink-0 animate-spin-slow" />
+                <span className="text-[10px] font-black tracking-wider uppercase font-mono whitespace-nowrap">
+                  JCI WORKFLOW GUIDE:
+                </span>
               </div>
-            )}
 
-            {/* RUNNING_PROCS: Dynamic page instances in current session */}
-            {runningPages
-              .filter((p) => p !== "admindesk" && p !== "dashboard")
-              .map((pageId) => {
-                const { label, icon: Icon } = getPageMeta(pageId);
-                const isActive = currentPage === pageId;
-                return (
-                  <div
-                    key={pageId}
-                    className="relative flex items-center group/item shrink-0"
-                  >
-                    <button
-                      onClick={() => {
-                        if (isActive) {
-                          logEvent("MINIMIZE", `Minimized page "${pageId}" to dashboard`);
-                          globalNavigate("dashboard");
-                        } else {
-                          logEvent("RESTORE", `Restored page "${pageId}" from taskbar`);
-                          globalNavigate(pageId);
-                        }
-                      }}
-                      className={cn(
-                        "pl-3 pr-7 h-7 border rounded-md flex items-center gap-1.5 transition-all cursor-pointer shrink-0 text-xs",
-                        isActive
-                          ? "bg-[#215E38] border-[#3A8A57] text-amber-300 font-extrabold shadow-xs"
-                          : "bg-[#103A20] border-[#235E39] text-emerald-200 hover:bg-[#1C5130] hover:text-white"
-                      )}
-                      title={isActive ? "Minimize" : "Restore"}
-                    >
-                      <Icon className={cn("h-3.5 w-3.5", isActive ? "text-amber-300" : "text-emerald-300")} />
-                      <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                        {label}
-                      </span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closePage(pageId, "dashboard");
-                      }}
-                      className="absolute right-1.5 p-0.5 rounded-full flex items-center justify-center h-4 w-4 text-emerald-300 hover:text-rose-300 hover:bg-rose-900/60 transition-colors cursor-pointer"
-                      title="Terminate Page"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
-                );
-              })}
+              {/* Sequential Arrow-Wise Steps */}
+              <div className="flex items-center gap-1 shrink-0">
+                {(() => {
+                  const activeStepIdx = JCI_WORKFLOW_STEPS.findIndex((step) =>
+                    step.matchPages.includes(currentPage)
+                  );
+
+                  return JCI_WORKFLOW_STEPS.map((step, idx) => {
+                    const isCurrent = step.matchPages.includes(currentPage);
+                    const isPast = activeStepIdx !== -1 && idx < activeStepIdx;
+                    const IconComp = step.icon;
+
+                    return (
+                      <React.Fragment key={step.stepNumber}>
+                        <button
+                          type="button"
+                          onClick={() => globalNavigate(step.pageId)}
+                          title={`Step ${step.stepNumber}: ${step.title} — ${step.desc} (Click to Navigate)`}
+                          className={cn(
+                            "group/step flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all duration-150 cursor-pointer shrink-0 border select-none",
+                            isCurrent
+                              ? "bg-[#256B3E] border-amber-300 text-amber-300 font-black shadow-md ring-2 ring-amber-400/50 scale-[1.02]"
+                              : isPast
+                              ? "bg-[#124225] border-[#2E7A4A] text-emerald-300 hover:bg-[#1A5732] hover:text-white font-bold"
+                              : "bg-[#0E331B] border-[#1C5130] text-emerald-200/90 hover:bg-[#164927] hover:text-white font-medium"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-black shrink-0",
+                              isCurrent
+                                ? "bg-amber-400 text-[#0E351D]"
+                                : isPast
+                                ? "bg-emerald-600 text-white"
+                                : "bg-[#184F2B] text-emerald-300 border border-[#2E7A4A]"
+                            )}
+                          >
+                            {step.stepNumber}
+                          </span>
+                          <IconComp
+                            className={cn(
+                              "w-3 h-3 shrink-0",
+                              isCurrent ? "text-amber-300" : isPast ? "text-emerald-400" : "text-emerald-400/70"
+                            )}
+                          />
+                          <span className="text-[11px] whitespace-nowrap tracking-tight font-bold">
+                            {step.title}
+                          </span>
+                        </button>
+
+                        {/* Arrow separator */}
+                        {idx < JCI_WORKFLOW_STEPS.length - 1 && (
+                          <div className="flex items-center text-amber-400 px-0.5 shrink-0">
+                            <span className="text-[12px] font-black text-amber-400/90">➔</span>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
           </div>
 
           {/* Center Section: Company Branding */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-[#103A20] rounded-md border border-[#235E39] shrink-0">
+          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 bg-[#103A20] rounded-md border border-[#235E39] shrink-0">
             <span className="text-[11px] font-extrabold text-amber-300 font-serif tracking-wider uppercase">
               BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE
             </span>

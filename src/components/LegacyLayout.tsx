@@ -325,13 +325,6 @@ export default function LegacyLayout({
 
           <div className="flex gap-1 sm:gap-1.5 shrink-0 z-10 items-center">
              <button 
-               onClick={handleMinimizeClick}
-               title="Minimize"
-               className="h-5 w-5 bg-[#274024] hover:bg-[#345230] text-[#E2EDDE] border border-[#486343] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer pb-0.5"
-             >
-               <Minus className="h-3 w-3" />
-             </button>
-             <button 
                onClick={handleMaximizeClick}
                title="Maximize / Restore"
                className="h-5 w-5 bg-[#274024] hover:bg-[#345230] text-[#E2EDDE] border border-[#486343] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"

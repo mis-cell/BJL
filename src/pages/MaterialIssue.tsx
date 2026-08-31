@@ -3083,13 +3083,6 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
             title="Issue"
             subtitle=""
             onClose={handleFormCancel}
-            onMinimize={() => {
-              if (setCurrentPage) {
-                setCurrentPage("dashboard");
-              } else {
-                window.dispatchEvent(new CustomEvent('app-minimize'));
-              }
-            }}
             onMaximize={() => {
               if (document.fullscreenElement) {
                 document.exitFullscreen().catch(() => {});

@@ -194,13 +194,6 @@ function EntryContainer({
       subtitle={issueRoute ? undefined : 'Choose a Route'} 
       onBack={handleFormCancel}
       onClose={handleFormCancel}
-      onMinimize={() => {
-        if (setCurrentPage) {
-          setCurrentPage("dashboard");
-        } else {
-          window.dispatchEvent(new CustomEvent('app-minimize'));
-        }
-      }}
       onMaximize={() => {
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
