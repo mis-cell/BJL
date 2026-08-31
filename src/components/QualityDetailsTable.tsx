@@ -86,24 +86,24 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
       />
 
       {/* Table */}
-      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs">
+      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs overflow-visible bg-white">
         <table className="w-full text-left border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-20 shadow-2xs">
             <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-              <th className="px-3.5 py-2.5 w-1/3">
+              <th className="px-3.5 py-2.5 w-1/3 bg-[#EDF4EF] rounded-tl-xl">
                 Quality <span className="text-rose-600 font-black">*</span>
               </th>
-              <th className="px-3.5 py-2.5 w-1/4">Agency</th>
-              <th className="px-3.5 py-2.5 w-1/4">Marka</th>
-              <th className="px-3.5 py-2.5 w-1/6 text-right">
+              <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Agency</th>
+              <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Marka</th>
+              <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
                 Rs. <span className="text-rose-600 font-black">*</span>
               </th>
-              <th className="px-2 py-2.5 w-12 text-center"></th>
+              <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EAE6DD] text-xs">
             {qualityDetails.map((qd, i) => (
-              <tr key={i} className="hover:bg-[#F9F8F5] transition-colors">
+              <tr key={i} className="hover:bg-[#F9F8F5] transition-colors relative z-0 focus-within:z-30 hover:z-20">
                 {/* Quality - SEARCHABLE SELECT */}
                 <td className="p-2">
                   <SearchableSelect

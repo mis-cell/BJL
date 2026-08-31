@@ -40,6 +40,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   errorMessage
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const [queryText, setQueryText] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [hasBlurredInvalid, setHasBlurredInvalid] = useState(false);
@@ -47,6 +48,19 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const updateDropdownDirection = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      if (spaceBelow < 230 && spaceAbove > spaceBelow) {
+        setOpenUpward(true);
+      } else {
+        setOpenUpward(false);
+      }
+    }
+  };
 
   const generatedId = useRef(`searchable_${label ? label.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'select'}_${Math.random().toString(36).substring(2, 7)}`).current;
   const inputId = id || generatedId;
@@ -176,6 +190,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value.toUpperCase();
     setQueryText(text);
+    updateDropdownDirection();
     setIsOpen(true);
     setHighlightedIndex(0);
     setHasBlurredInvalid(false);
@@ -208,6 +223,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (!isOpen) {
+        updateDropdownDirection();
         setIsOpen(true);
         setHighlightedIndex(0);
       } else {
@@ -216,6 +232,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (!isOpen) {
+        updateDropdownDirection();
         setIsOpen(true);
         setHighlightedIndex(filteredOptions.length - 1);
       } else {
@@ -238,12 +255,22 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     }
   };
 
-  // Scroll active option into view
+  // Scroll active option strictly inside dropdown list without scrolling window or parent table
   useEffect(() => {
     if (isOpen && listRef.current && highlightedIndex >= 0) {
-      const activeEl = listRef.current.children[highlightedIndex] as HTMLElement;
+      const list = listRef.current;
+      const activeEl = list.children[highlightedIndex] as HTMLElement;
       if (activeEl) {
-        activeEl.scrollIntoView({ block: 'nearest' });
+        const listTop = list.scrollTop;
+        const listBottom = listTop + list.clientHeight;
+        const elTop = activeEl.offsetTop;
+        const elBottom = elTop + activeEl.offsetHeight;
+
+        if (elTop < listTop) {
+          list.scrollTop = elTop;
+        } else if (elBottom > listBottom) {
+          list.scrollTop = elBottom - list.clientHeight;
+        }
       }
     }
   }, [highlightedIndex, isOpen]);
@@ -275,6 +302,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           value={queryText}
           onChange={handleInputChange}
           onFocus={() => {
+            updateDropdownDirection();
             setIsOpen(true);
             setHighlightedIndex(-1);
           }}
@@ -320,6 +348,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             tabIndex={-1}
             onClick={() => {
               if (!disabled) {
+                if (!isOpen) updateDropdownDirection();
                 setIsOpen(!isOpen);
                 setHighlightedIndex(-1);
               }
@@ -333,7 +362,10 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         {isOpen && (
           <div
             ref={listRef}
-            className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D8D3C5] rounded-xl shadow-2xl py-1 text-xs min-w-[200px]"
+            onWheel={(e) => e.stopPropagation()}
+            className={`absolute z-50 left-0 right-0 ${
+              openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+            } max-h-56 overflow-y-auto overscroll-contain bg-white border border-[#D8D3C5] rounded-xl shadow-2xl py-1 text-xs min-w-[200px]`}
             style={{ filter: 'drop-shadow(0 10px 15px rgba(0, 0, 0, 0.15))' }}
           >
             {filteredOptions.length > 0 ? (
