@@ -115,7 +115,6 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     placeholder="--Select Quality *--"
                     isRequired={true}
                     compact={true}
-                    inputClassName="border-2 border-amber-400 focus:border-amber-600 font-bold text-slate-800"
                   />
                 </td>
 
@@ -129,7 +128,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     options={agencyOptions}
                     placeholder="Search / Select Agency"
                     compact={true}
-                    inputClassName={qd.agency ? 'bg-sky-50 border-sky-300 text-sky-950 font-bold' : ''}
+                    isAutoPopulated={Boolean(qd.agency)}
                   />
                 </td>
 
@@ -143,7 +142,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     options={markaOptions}
                     placeholder="Search / Select Marka"
                     compact={true}
-                    inputClassName={qd.marka ? 'bg-sky-50 border-sky-300 text-sky-950 font-bold' : ''}
+                    isAutoPopulated={Boolean(qd.marka)}
                   />
                 </td>
 
@@ -155,10 +154,11 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     aria-label="Rs."
                     type="number"
                     step="0.01"
+                    required
                     value={qd.rs ?? ''}
                     onChange={(e) => onQualityChange(i, 'rs', e.target.value)}
                     placeholder="Rs. *"
-                    className="w-full bg-white border-2 border-amber-400 focus:border-amber-600 focus:ring-1 focus:ring-amber-400 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-900 text-right outline-none transition-all font-mono"
+                    className="w-full bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-900 text-right outline-none transition-all font-mono"
                   />
                 </td>
 

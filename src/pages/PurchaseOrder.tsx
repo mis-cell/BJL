@@ -4472,19 +4472,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <div className="col-span-12 flex flex-wrap items-center gap-2 mt-1">
                     <label htmlFor="delivery_gt_from_3592" className="w-24 font-bold italic shrink-0">Delivery --&gt;From</label>
                     <input  id="delivery_gt_from_3592" name="delivery_gt_from" aria-label="Delivery --&gt;From"type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
-                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                      isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                     }`} value={formData.delivery_from} onChange={(e) => setFormData({...formData, delivery_from: e.target.value})} />
                     <label htmlFor="to_3596" className="mx-2 shrink-0">To</label>
                     <input  id="to_3596" name="to" aria-label="To"type="date" className={`w-28 p-0.5 outline-none font-normal border transition-colors duration-150 text-black ${
-                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                      isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                     }`} value={formData.delivery_to} onChange={(e) => setFormData({...formData, delivery_to: e.target.value})} />
                     <label htmlFor="grace_days_3600" className="ml-2 shrink-0">Grace Days</label>
                     <input  id="grace_days_3600" name="grace_days" aria-label="Grace Days"className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                      isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold font-mono" : "bg-white border-slate-400"
                     }`} value={formData.grace_days} onChange={(e) => setFormData({...formData, grace_days: e.target.value})} />
                     <label htmlFor="delivery_penalty_3604" className="ml-2 shrink-0">Delivery Penalty</label>
                     <input  id="delivery_penalty_3604" name="delivery_penalty" aria-label="Delivery Penalty"className={`w-12 p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                      isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                      isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold font-mono" : "bg-white border-slate-400"
                     }`} value={formData.delivery_penalty} onChange={(e) => setFormData({...formData, delivery_penalty: e.target.value})} />
                   </div>
 
@@ -4502,7 +4502,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <div className="col-span-12 lg:col-span-6 flex flex-wrap sm:flex-nowrap items-center gap-2">
                      <label htmlFor="date_3617" className="w-24 text-right shrink-0">Date</label>
                      <input  id="date_3617" name="date" aria-label="Date"type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                       isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.contract_date} onChange={(e) => setFormData({...formData, contract_date: e.target.value})} />
                      <label htmlFor="rate_detail_3621" className="w-24 text-right shrink-0">Rate Detail</label>
                      <input  id="rate_detail_3621" name="rate_detail" aria-label="Rate Detail"className="flex-1 min-w-[120px] bg-white border border-slate-400 p-0.5 outline-none font-normal text-black" value={formData.rate_detail} onChange={(e) => setFormData({...formData, rate_detail: e.target.value})} />
@@ -4516,14 +4516,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <div className="col-span-12 flex items-start gap-2">
                      <label htmlFor="terms_condition_3631" className="w-24 sm:w-32 text-right leading-none mt-1 shrink-0">Terms & Condition</label>
                      <textarea  id="terms_condition_3631" name="terms_condition" aria-label="Terms & Condition"className={`flex-1 p-0.5 outline-none h-12 text-[10px] font-normal border text-black transition-colors duration-150 ${
-                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                       isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.terms_condition} onChange={(e) => setFormData({...formData, terms_condition: e.target.value})} />
                   </div>
 
                   <div className="col-span-12 flex items-center gap-2 mt-1">
                      <label htmlFor="remarks_3638" className="w-24 sm:w-32 text-right shrink-0">Remarks</label>
                      <input  id="remarks_3638" name="remarks" aria-label="Remarks"className={`flex-1 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                       isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.remarks} onChange={(e) => setFormData({...formData, remarks: e.target.value})} />
                   </div>
 
@@ -4534,7 +4534,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      </select>
                      <label className="ml-0 sm:ml-4 shrink-0">S Date</label>
                      <input  id="po_identification_3649" name="po_identification" aria-label="PO Identification"type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
-                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold" : "bg-white border-slate-400"
+                       isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.s_date} onChange={(e) => {
                         const val = e.target.value;
                         const autoBRate = lookupSattaBaseRate(val, sattaBaseRates);
@@ -4556,7 +4556,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                         </div>
                      </label>
                      <input  id="formdata_b_rate_3668" name="formdata_b_rate" aria-label="formdata b rate"className={`flex-1 min-w-[60px] p-0.5 outline-none text-right font-normal border text-black transition-colors duration-150 ${
-                       isSaudaActive ? "bg-[#fffdf5] border-amber-400 text-[#7c2d12] font-semibold font-mono" : "bg-white border-slate-400"
+                       isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold font-mono" : "bg-white border-slate-400"
                      }`} value={formData.b_rate} onChange={(e) => {
                         const val = e.target.value;
                         const updatedItems = recalculateAllRates(formData.items, formData.s_date, val);

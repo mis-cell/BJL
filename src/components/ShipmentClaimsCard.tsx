@@ -27,13 +27,17 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
 
         {/* Shipment Days */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="shipment_days_31" className="text-xs font-semibold text-slate-700">Days</label>
+          <label htmlFor="shipment_days_31" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+            <span>Days</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto</span>
+          </label>
           <input
- id="shipment_days_31" aria-label="Days"            type="number"
+            id="shipment_days_31" aria-label="Days"
+            type="number"
             name="shipment_days"
             value={formData.shipment_days ?? 0}
             onChange={onChange}
-            className="bg-[#F8F7F2] border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs"
+            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
           />
         </div>
 

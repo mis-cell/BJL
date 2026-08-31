@@ -37,7 +37,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             name="no_of_lorries"
             value={formData.no_of_lorries ?? 1}
             onChange={onChange}
-            className="bg-white border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-200 transition-all shadow-2xs font-mono"
+            className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -73,7 +73,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             name="total_unit"
             value={formData.total_unit ?? 0}
             onChange={onChange}
-            className="bg-sky-50 border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono font-bold"
+            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -125,7 +125,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             name="total_wt_in_ton"
             value={formData.total_wt_in_ton ?? 0}
             onChange={onChange}
-            className="bg-sky-50 border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
+            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
         </div>
 

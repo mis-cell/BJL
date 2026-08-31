@@ -319,13 +319,17 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           autoComplete="off"
           className={`w-full uppercase placeholder:normal-case outline-none transition-all pr-12 shadow-2xs ${
             isInvalid
-              ? "border-2 border-rose-500 ring-2 ring-rose-200 bg-rose-50/40 text-slate-900"
+              ? "border-2 border-rose-500 ring-2 ring-rose-200 bg-[#FFECEC] text-slate-900"
+              : isRequired
+              ? compact
+                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#FFECEC] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
+                : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-[#FFECEC] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
+              : isAutoPopulated
+              ? compact
+                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
+                : "rounded-xl px-3.5 py-2 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
               : compact
               ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
-              : isAutoPopulated
-              ? "rounded-xl px-3.5 py-2 text-xs font-bold bg-sky-50 border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
-              : isRequired
-              ? "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border-2 border-amber-400 text-slate-900 focus:border-amber-600 focus:ring-2 focus:ring-amber-200 placeholder:text-slate-400"
               : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 placeholder:text-slate-400"
           } ${inputClassName}`}
         />

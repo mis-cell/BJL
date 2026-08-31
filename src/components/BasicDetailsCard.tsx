@@ -38,7 +38,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
             name="session"
             value={formData.session || 'BJCL/2026-2027/'}
             onChange={onChange}
-            className="bg-sky-50 border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
+            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
           />
         </div>
 
@@ -62,7 +62,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
             onChange={onChange}
             placeholder="e.g. 0153"
             required
-            className="bg-sky-50 border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-black text-sky-950 outline-none focus:ring-2 focus:ring-amber-300 transition-all shadow-2xs font-mono"
+            className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-black text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -78,7 +78,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
             name="po_type"
             value={formData.po_type || 'Normal'}
             onChange={onChange}
-            className="bg-white border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-200 transition-all shadow-2xs cursor-pointer"
+            className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
           >
             <option value="Normal">Normal</option>
             <option value="PTF">PTF</option>
@@ -105,7 +105,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               name="date"
               value={formData.date || ''}
               onChange={onChange}
-              className="w-full bg-sky-50/70 border-2 border-amber-400 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-200 transition-all shadow-2xs cursor-pointer"
+              className="w-full bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
             />
           </div>
         </div>

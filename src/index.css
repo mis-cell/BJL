@@ -121,48 +121,113 @@
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
   }
 
-  /* Distinct Form Field Styles for Auto-Populated & Mandatory Data */
+  /* Distinct Form Field Styles for Auto-Populated, Mandatory & Normal Input Data */
+  :root {
+    --field-auto-bg: #EAF4FF;
+    --field-auto-border: #BFDBFE;
+    --field-auto-text: #1E3A8A;
+    --field-mandatory-bg: #FFECEC;
+    --field-mandatory-border: #FCA5A5;
+    --field-mandatory-text: #1F2937;
+    --field-manual-bg: #FFFFFF;
+    --field-manual-border: #D1D5DB;
+    --field-manual-text: #111827;
+  }
+
+  /* 1. Auto-populated / system-filled fields -> Light Blue (#EAF4FF) */
   .field-auto-populated,
+  .field-auto,
+  [data-field-type="auto"],
+  [data-auto="true"],
+  [data-auto-populated="true"],
   input.field-auto-populated,
   select.field-auto-populated,
   textarea.field-auto-populated {
-    background-color: #f0f9ff !important;
-    border-color: #7dd3fc !important;
-    color: #0c4a6e !important;
+    background-color: #EAF4FF !important;
+    border-color: #BFDBFE !important;
+    color: #1E3A8A !important;
     font-weight: 600 !important;
   }
 
   .field-auto-populated:focus,
   input.field-auto-populated:focus,
-  select.field-auto-populated:focus {
-    border-color: #0284c7 !important;
-    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25) !important;
+  select.field-auto-populated:focus,
+  textarea.field-auto-populated:focus {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
     outline: none !important;
   }
 
+  /* 2. Mandatory / required fields -> Light Red (#FFECEC) */
   .field-mandatory,
+  .field-required,
+  [data-field-type="mandatory"],
+  [data-mandatory="true"],
+  [aria-required="true"],
+  input[required]:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
+  select[required],
+  textarea[required],
   input.field-mandatory,
   select.field-mandatory,
   textarea.field-mandatory {
-    border-color: #f59e0b !important;
-    background-color: #fffdf5 !important;
+    background-color: #FFECEC !important;
+    border-color: #FCA5A5 !important;
+    color: #1F2937 !important;
   }
 
   .field-mandatory:focus,
+  .field-required:focus,
+  input[required]:focus,
+  select[required]:focus,
+  textarea[required]:focus,
   input.field-mandatory:focus,
-  select.field-mandatory:focus {
-    border-color: #d97706 !important;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+  select.field-mandatory:focus,
+  textarea.field-mandatory:focus {
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22) !important;
     outline: none !important;
   }
 
+  /* Priority rule: Mandatory (Light Red) takes precedence over Auto-populated if both apply */
   .field-mandatory.field-auto-populated,
-  input.field-mandatory.field-auto-populated,
-  select.field-mandatory.field-auto-populated {
-    background-color: #f0f9ff !important;
-    border-color: #38bdf8 !important;
-    color: #0369a1 !important;
-    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.3) !important;
+  input[required].field-auto-populated,
+  select[required].field-auto-populated,
+  textarea[required].field-auto-populated,
+  [data-field-type="mandatory"][data-field-type="auto"],
+  [data-mandatory="true"][data-auto="true"] {
+    background-color: #FFECEC !important;
+    border-color: #F87171 !important;
+    color: #1F2937 !important;
+  }
+
+  /* 3. Normal manual input fields -> White (#FFFFFF) */
+  .field-manual,
+  .field-normal,
+  [data-field-type="manual"],
+  input.field-manual,
+  select.field-manual,
+  textarea.field-manual {
+    background-color: #FFFFFF !important;
+    border-color: #D1D5DB !important;
+    color: #111827 !important;
+  }
+
+  /* Read-only / disabled state clarity */
+  input:read-only.field-auto-populated,
+  input:disabled.field-auto-populated,
+  select:disabled.field-auto-populated,
+  textarea:disabled.field-auto-populated {
+    background-color: #EAF4FF !important;
+    color: #1E3A8A !important;
+    border-color: #BFDBFE !important;
+    cursor: default;
+  }
+
+  input:read-only.field-mandatory,
+  input:disabled.field-mandatory {
+    background-color: #FFECEC !important;
+    color: #1F2937 !important;
+    border-color: #FCA5A5 !important;
   }
 
   /* Modern modal overlays */
