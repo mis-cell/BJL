@@ -468,6 +468,45 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
     return null;
   };
+
+  // Helper to determine if a given MR number is the LAST / LATEST Final M.R. for a P.O.
+  const isLastMrForPo = (targetMrNo: string, poNo: string) => {
+    if (!targetMrNo || !poNo) return true;
+    const cleanTargetPo = poNo.trim().replace(/^#/, '').toUpperCase();
+
+    // Collect all inspection / final arrival items for this PO
+    const matched = inspections.filter((insp: any) => {
+      const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no;
+      if (!mrVal) return false;
+      const inspPo = (insp.po_no || '').trim().replace(/^#/, '').toUpperCase();
+      return inspPo === cleanTargetPo ||
+        (selectedPoData?.id && insp.po_id === selectedPoData.id) ||
+        (selectedPoData?.purchase_order_id && (insp.po_id === selectedPoData.purchase_order_id || insp.purchase_order_id === selectedPoData.purchase_order_id));
+    });
+
+    const mrKeys = Array.from(new Set(matched.map((insp: any) => String(insp.mr_no || insp.final_arrival_no || insp.arrival_no || '').trim()).filter(Boolean)));
+
+    if (targetMrNo && !mrKeys.some(k => k.toUpperCase() === targetMrNo.trim().toUpperCase())) {
+      mrKeys.push(targetMrNo.trim());
+    }
+
+    if (mrKeys.length <= 1) return true;
+
+    // Sort descending by numeric suffix / alphanumeric so highest/latest FA number is first
+    mrKeys.sort((a, b) => {
+      const getSuffix = (val: string) => {
+        const m = val.match(/\d+/g);
+        return m ? Number(m[m.length - 1]) : 0;
+      };
+      const suffA = getSuffix(a);
+      const suffB = getSuffix(b);
+      if (suffA !== suffB) return suffB - suffA;
+      return b.localeCompare(a);
+    });
+
+    const lastMr = mrKeys[0];
+    return targetMrNo.trim().toUpperCase() === lastMr.trim().toUpperCase();
+  };
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewModalData, setViewModalData] = useState<{
     master: SettlementMaster;
@@ -658,6 +697,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         value: mrVal,
         label: `${mrVal} (Lorry: ${lorryVal})`
       });
+    });
+
+    optionsList.sort((a, b) => {
+      const getSuffix = (val: string) => {
+        const m = val.match(/\d+/g);
+        return m ? Number(m[m.length - 1]) : 0;
+      };
+      const suffA = getSuffix(a.value);
+      const suffB = getSuffix(b.value);
+      if (suffA !== suffB) return suffB - suffA;
+      return b.value.localeCompare(a.value);
     });
 
     if (masterData.mr_no && !seen.has(masterData.mr_no.toUpperCase())) {
@@ -1149,13 +1199,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Fetch Sauda Checkpoint deduction recorded for this PO from sauda_check_point_deductions table
       const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
-      setSaudaDeductionRecord(saudaDed);
+      const isLastMr = masterData.mr_no ? isLastMrForPo(masterData.mr_no, cleanPoNo) : true;
 
-      if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
-        setMasterData(prev => ({
-          ...prev,
-          val_less_amt: Number(saudaDed.deduction_amount)
-        }));
+      if (isLastMr && saudaDed) {
+        setSaudaDeductionRecord(saudaDed);
+        if (Number(saudaDed.deduction_amount) > 0) {
+          setMasterData(prev => ({
+            ...prev,
+            val_less_amt: Number(saudaDed.deduction_amount)
+          }));
+        }
+      } else {
+        setSaudaDeductionRecord(null);
       }
 
       // 1. Fetch matching PO master (check purchase_master and po_archive fallback)
@@ -1453,6 +1508,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       const poNoForDet = faMaster?.po_no || inspMaster?.po_no || '';
+      const cleanTargetPo = (poNoForDet || selectedPoNo || masterData.po_no || '').trim().replace(/^#/, '');
+      const isLastMr = isLastMrForPo(targetMrNo, cleanTargetPo);
+
+      let saudaDedRecord: any = null;
+      if (isLastMr && cleanTargetPo) {
+        saudaDedRecord = await fetchSaudaCheckpointDeduction(cleanTargetPo);
+        setSaudaDeductionRecord(saudaDedRecord);
+      } else {
+        setSaudaDeductionRecord(null);
+      }
+
       let poDetails: any[] = [];
       if (poNoForDet) {
         const { data: pDetData } = await supabase
@@ -1635,6 +1701,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_premium_amt: (existingMaster.val_premium_amt !== undefined && existingMaster.val_premium_amt !== null && Number(existingMaster.val_premium_amt) > 0)
               ? existingMaster.val_premium_amt
               : calculatedPremTotalAmt,
+            val_less_amt: isLastMr
+              ? (Number(existingMaster.val_less_amt) > 0 ? existingMaster.val_less_amt : Number(saudaDedRecord?.deduction_amount || 0))
+              : Number(existingMaster.val_less_amt || 0),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees
           };
           setMasterData(mergedMaster);
@@ -1732,6 +1801,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_instl_rate: calculatedPremWtQtl,
           summary_premium_amount: calculatedPremRatePerQtl,
           val_premium_amt: calculatedPremTotalAmt,
+          val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
           arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0
         };
@@ -1815,6 +1885,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_instl_rate: calculatedPremWtQtl,
         summary_premium_amount: calculatedPremRatePerQtl,
         val_premium_amt: calculatedPremTotalAmt,
+        val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
         arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0
       };
@@ -3836,9 +3907,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                                 <p>Deduction Amount: <span className="text-emerald-300 font-bold font-mono">₹{Number(saudaDeductionRecord.deduction_amount || 0).toFixed(2)}</span></p>
                                 <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT / {saudaDeductionRecord.deduction_qty_qtl} Qtl</span></p>
                                 <p>Selected Grade: <span className="text-cyan-200">{saudaDeductionRecord.selected_grade || 'Auto'}</span></p>
+                                <p className="text-amber-200 text-[7.5px] mt-1 border-t border-slate-700 pt-1 italic">* Applied on Last Final M.R. for this P.O.</p>
                               </>
                             ) : (
-                              <p className="text-slate-400 italic">No checkpoint deduction recorded for this P.O.</p>
+                              <p className="text-slate-400 italic">No checkpoint deduction for this M.R. (Sauda deductions apply exclusively to the Last Final M.R.).</p>
                             )}
                           </div>
                         </div>
