@@ -157,9 +157,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     const lorryInfo = parseLorry(initialData?.lorry_number || (initialData as any)?.lorry_no || (initialData as any)?.vehicle_no);
     return {
       financial_year: initialData?.financial_year || '2026-2027',
-      arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || '',
+      arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'MR',
       po_no: initialData?.po_no || '',
-      date: initialData?.date || today,
+      date: initialData?.date || '',
       jci: initialData?.jci || 'No',
       challan_supplier: (initialData?.challan_supplier || '').toUpperCase(),
       supplier: (initialData?.supplier || '').toUpperCase(),
@@ -321,7 +321,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           
           setFormData(prev => ({
             ...prev,
-            arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || '',
+            arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'MR',
             challan_supplier: '',
             supplier: '',
             agency_name: '',
@@ -1502,7 +1502,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Challan */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="challan_rr_no_1272" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Challan / R.R. No.
+                    Challan No & Date / R.R. No.
                   </label>
 
                   <input
@@ -1612,7 +1612,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="consignment_note_no"
                     value={formData.consignment_note_no}
                     onChange={handleChange}
-                    className="w-full h-7 rounded border border-gray-300 px-2 text-xs font-semibold outline-none focus:border-[#174C2C]"
+                    readOnly={formData.jci === 'No'}
+                    className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
                   />
                 </div>
 
@@ -1631,7 +1632,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       placeholder="DI Number"
                       value={formData.di_no}
                       onChange={handleChange}
-                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
                     <input
@@ -1640,7 +1643,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       name="di_date"
                       value={formData.di_date}
                       onChange={handleChange}
-                      className="h-7 rounded border border-gray-300 px-2 text-xs"
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
                     />
 
                   </div>
@@ -1661,7 +1666,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       placeholder="Invoice Number"
                       value={formData.invoice_no}
                       onChange={handleChange}
-                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
                     <input
@@ -1670,7 +1677,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       name="invoice_date"
                       value={formData.invoice_date}
                       onChange={handleChange}
-                      className="h-7 rounded border border-gray-300 px-2 text-xs"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
                   </div>
@@ -1853,7 +1862,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.way_bill_no}
                       onChange={handleChange}
                       placeholder="Way Bill No."
-                      className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
                     />
 
                     <input
@@ -1862,7 +1873,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       name="way_bill_date"
                       value={formData.way_bill_date}
                       onChange={handleChange}
-                      className="h-7 rounded border border-gray-300 px-2 text-xs"
+                      //className="h-7 rounded border border-gray-300 px-2 text-xs"
+                      readOnly={formData.jci === 'No'}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
                     />
 
                   </div>
