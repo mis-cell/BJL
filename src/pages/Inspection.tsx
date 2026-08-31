@@ -1170,7 +1170,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        currentRow.lorry_read_avg = avg;
+        //currentRow.lorry_read_avg = avg;
       }
 
       // Auto Calculate Insp. Moisture Read Avg from Min & Max
@@ -1183,7 +1183,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        currentRow.insp_read_avg = avg;
+        //currentRow.insp_read_avg = avg;
       }
 
       // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act., Claim, and Mill Settlement % Moisture
@@ -1976,7 +1976,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   />
                 </div>
 
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1" style={{ display: "none" }}>
                   <label className="text-xs font-extrabold text-slate-700">Arrival No.</label>
                   <input
                     type="text"
@@ -1986,7 +1986,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   />
                 </div>
 
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1" style={{ display: "none" }}>
                   <label className="text-xs font-extrabold text-slate-700">Arrival Date</label>
                   <input
                     type="date"
@@ -2379,7 +2379,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           <span className="text-[9px] font-semibold text-indigo-200">M.Ton</span>
                         </div>
                       </th>
-                      <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Lorry Moisture</th>
+                      {/* <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Lorry Moisture</th> */}
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Lorry Moisture Read (%)</th>
                       <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Insp. Moisture Read (%)</th>
                       <th colSpan={2} className="p-2 border-r border-blue-400 text-center bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white font-black shadow-inner">
@@ -2423,8 +2423,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     <tr className="bg-[#243b68] text-white text-[11px]">
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Code</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[120px]">Name</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Min</th>
-                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Max</th>
+                      {/* <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Min</th>
+                      <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Max</th> */}
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Min</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Max</th>
                       <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Avg</th>
@@ -2717,7 +2717,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             </td>
 
                             {/* Lorry Moisture Min / Max */}
-                            <td className="p-1.5 border-r border-slate-200">
+                           {/*  <td className="p-1.5 border-r border-slate-200">
                               <input
                                 type="number"
                                 step="0.01"
@@ -2740,7 +2740,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 onChange={(e) => !isLorryMoistureMaxBlocked && handleDetailChange(idx, "lorry_moisture_max", Number(e.target.value))}
                                 className={getFieldInputStyle(isLorryMoistureMaxBlocked)}
                               />
-                            </td>
+                            </td> */}
 
                             {/* Lorry Read Min / Max / Avg */}
                             <td className="p-1.5 border-r border-slate-200">
@@ -2771,11 +2771,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               <input
                                 type="number"
                                 step="0.01"
-                                readOnly={true}
+                                readOnly={false}
                                 tabIndex={-1}
                                 title="Auto-calculated average (Locked)"
                                 value={row.lorry_read_avg || 0}
-                                className={getFieldInputStyle(true, "text-blue-900 font-black")}
+                                onChange={(e) => handleDetailChange(idx, "lorry_read_avg", Number(e.target.value))}
+                                className={getFieldInputStyle(false, "text-blue-900 font-black")}
                               />
                             </td>
 
@@ -2808,11 +2809,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               <input
                                 type="number"
                                 step="0.01"
-                                readOnly={true}
+                                readOnly={false}
                                 tabIndex={-1}
                                 title="Auto-calculated average (Locked)"
                                 value={row.insp_read_avg || 0}
-                                className={getFieldInputStyle(true, "text-blue-900 font-black")}
+                                onChange={(e) => handleDetailChange(idx, "insp_read_avg", Number(e.target.value))}
+                                className={getFieldInputStyle(false, "text-blue-900 font-black")}
                               />
                             </td>
 
