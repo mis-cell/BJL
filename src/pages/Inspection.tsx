@@ -2344,7 +2344,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 </div>
               </div>
 
-              <div className="overflow-x-auto max-h-[680px] border-t border-slate-200">
+              <div className="overflow-auto max-h-[calc(100vh-180px)] border-t border-slate-200">
                 <table className="min-w-[4300px] w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#1e3a8a] text-white text-[12px] font-bold">
