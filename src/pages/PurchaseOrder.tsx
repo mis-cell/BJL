@@ -30,7 +30,9 @@ import {
   Clock,
   Mail,
   Truck,
-  Users
+  Users,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -600,131 +602,371 @@ const DualComboBox = ({
   codeField,
   nameField,
   showCode = true,
-  hasSaudaHighlight = false
+  hasSaudaHighlight = false,
+  isRequired = false,
+  placeholder = "-- TYPE TO SEARCH --",
+  label = ""
 }: {
-  code: string,
-  name: string,
-  onCodeChange: (val: string) => void,
-  onNameChange: (val: string) => void,
+  code: string;
+  name: string;
+  onCodeChange: (val: string) => void;
+  onNameChange: (val: string) => void;
   options: any[];
   codeField: string;
   nameField: string;
   showCode?: boolean;
   hasSaudaHighlight?: boolean;
+  isRequired?: boolean;
+  placeholder?: string;
+  label?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [filter, setFilter] = useState(name ? name.toUpperCase() : '');
-  const [hasModified, setHasModified] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [showInvalidError, setShowInvalidError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Find currently selected option based on name or code
+  const selectedOption = React.useMemo(() => {
+    if (!name && !code) return null;
+    const n = (name || '').trim().toUpperCase();
+    const c = (code || '').trim().toUpperCase();
+    return options.find(opt => {
+      const optName = String(opt[nameField] || '').trim().toUpperCase();
+      const optCode = String(opt[codeField] || '').trim().toUpperCase();
+      return (n && optName === n) || (c && optCode === c);
+    }) || null;
+  }, [name, code, options, nameField, codeField]);
+
+  // Sync display text when value changes or when not actively typing
   useEffect(() => {
-    const upperName = (name || '').toUpperCase();
-    const upperFilter = (filter || '').toUpperCase();
-    if (upperName !== upperFilter) {
-      setFilter(upperName);
-      setHasModified(false);
+    if (!isTyping) {
+      if (selectedOption) {
+        setSearchQuery(String(selectedOption[nameField] || '').toUpperCase());
+      } else if (name) {
+        setSearchQuery(name.toUpperCase());
+      } else {
+        setSearchQuery('');
+      }
+      setShowInvalidError(false);
     }
-  }, [name]);
+  }, [name, selectedOption, isTyping, nameField]);
 
-  const filtered = options.filter(opt => {
-     if (!hasModified || !filter) return true;
-     return (
-       String(opt[nameField] || '').toLowerCase().includes(filter.toLowerCase()) ||
-       String(opt[codeField] || '').toLowerCase().includes(filter.toLowerCase())
-     );
-  });
+  // Filter options based on typed search query (search only!)
+  const filtered = React.useMemo(() => {
+    if (!isTyping || !searchQuery.trim()) {
+      return options;
+    }
+    const q = searchQuery.trim().toLowerCase();
+    return options.filter(opt => {
+      const n = String(opt[nameField] || '').toLowerCase();
+      const c = String(opt[codeField] || '').toLowerCase();
+      return n.includes(q) || c.includes(q);
+    });
+  }, [options, isTyping, searchQuery, nameField, codeField]);
+
+  // When dropdown is closed / blurred / tab / escape / outside click:
+  // Strictly enforce: unselected typed text MUST NEVER be treated as a valid value!
+  const handleCloseAndRevert = () => {
+    setIsOpen(false);
+    setIsTyping(false);
+    setHighlightedIndex(-1);
+
+    const trimmed = searchQuery.trim().toUpperCase();
+
+    // If completely cleared
+    if (!trimmed) {
+      if (name || code) {
+        onNameChange('');
+        onCodeChange('');
+      }
+      setSearchQuery('');
+      if (isRequired) {
+        setShowInvalidError(true);
+      }
+      return;
+    }
+
+    // Check if what the user typed matches an option exactly
+    const exactMatch = options.find(opt => 
+      String(opt[nameField] || '').trim().toUpperCase() === trimmed ||
+      String(opt[codeField] || '').trim().toUpperCase() === trimmed
+    );
+
+    if (exactMatch) {
+      const validName = String(exactMatch[nameField] || '').toUpperCase();
+      const validCode = String(exactMatch[codeField] || '');
+      onNameChange(validName);
+      onCodeChange(validCode);
+      setSearchQuery(validName);
+      setShowInvalidError(false);
+    } else if (selectedOption) {
+      // Revert back to the previously selected valid option without changing saved state
+      setSearchQuery(String(selectedOption[nameField] || '').toUpperCase());
+      setShowInvalidError(false);
+    } else {
+      // No previously selected option and typed text is invalid
+      setSearchQuery('');
+      setShowInvalidError(true);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        handleCloseAndRevert();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [selectedOption, searchQuery, options, nameField, codeField, isRequired]);
+
+  // When user explicitly selects an option
+  const handleSelectOption = (opt: any) => {
+    const validName = String(opt[nameField] || '').toUpperCase();
+    const validCode = String(opt[codeField] || '');
+    onNameChange(validName);
+    onCodeChange(validCode);
+    setSearchQuery(validName);
+    setIsTyping(false);
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+    setShowInvalidError(false);
+  };
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        setHighlightedIndex(0);
+      } else {
+        setHighlightedIndex(prev => (prev < filtered.length - 1 ? prev + 1 : 0));
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        setHighlightedIndex(filtered.length - 1);
+      } else {
+        setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filtered.length - 1));
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOpen && highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+        handleSelectOption(filtered[highlightedIndex]);
+      } else {
+        handleCloseAndRevert();
+      }
+    } else if (e.key === 'Tab' || e.key === 'Escape') {
+      handleCloseAndRevert();
+    }
+  };
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (isOpen && listRef.current && highlightedIndex >= 0) {
+      const list = listRef.current;
+      const activeEl = list.children[highlightedIndex] as HTMLElement;
+      if (activeEl) {
+        const listTop = list.scrollTop;
+        const listBottom = listTop + list.clientHeight;
+        const elTop = activeEl.offsetTop;
+        const elBottom = elTop + activeEl.offsetHeight;
+
+        if (elTop < listTop) {
+          list.scrollTop = elTop;
+        } else if (elBottom > listBottom) {
+          list.scrollTop = elBottom - list.clientHeight;
+        }
+      }
+    }
+  }, [highlightedIndex, isOpen]);
+
+  const hasSelectedValue = Boolean(selectedOption || (name && options.some(o => String(o[nameField]).toUpperCase() === name.toUpperCase())));
+  const isInvalid = (isRequired && !hasSelectedValue && showInvalidError);
+
+  // Background and border styling consistent with standard field color rules
+  const getContainerBg = () => {
+    if (isInvalid) return "bg-[#FFECEC] border-rose-500 ring-1 ring-rose-300";
+    if (isRequired) return "bg-[#FFECEC] border-rose-300";
+    if (hasSaudaHighlight) return "bg-[#EAF4FF] border-sky-300";
+    return "bg-white border-slate-400";
+  };
+
+  const getTextColor = () => {
+    if (isInvalid || isRequired) return "text-slate-900";
+    if (hasSaudaHighlight) return "text-sky-950 font-bold";
+    return "text-slate-800";
+  };
 
   return (
-    <div ref={containerRef} className="flex-1 flex gap-1 relative text-black">
-      {showCode && (
-        <input  id="code_375" name="code" aria-label="code"
-          className={`w-16 p-0.5 outline-none border transition-colors duration-150 ${
-            hasSaudaHighlight 
-              ? "bg-sky-50 border-sky-400 text-sky-950 font-bold font-mono" 
-              : "bg-white border-slate-400 text-slate-800"
-          }`} 
-          value={code} 
-          onChange={(e) => {
-            const upperCode = e.target.value.toUpperCase();
-            onCodeChange(upperCode);
-          }}
-        />
-      )}
-      <div className={`flex-1 flex border transition-colors duration-200 ${
-        hasSaudaHighlight 
-          ? "border-sky-400 bg-sky-50" 
-          : "border-slate-400 bg-white"
-      }`}>
-        <input  id="filter_393" name="filter" aria-label="filter"
-          className={`flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold ${
-            hasSaudaHighlight ? "text-sky-950 font-bold" : "text-slate-800"
-          }`} 
-          value={filter} 
-          onChange={(e) => {
-            const upperVal = e.target.value.toUpperCase();
-            setFilter(upperVal);
-            setHasModified(true);
-            onNameChange(upperVal);
-            const exact = options.find(o => String(o[nameField]).toLowerCase() === upperVal.toLowerCase());
-            if (exact) onCodeChange(exact[codeField]);
-            else onCodeChange('');
-          }}
-          onFocus={() => {
-            setIsOpen(true);
-            setHasModified(false);
-          }}
-        />
-        <button 
-          type="button" 
-          onClick={() => {
-            setIsOpen(!isOpen);
-            setHasModified(false);
-          }} 
-          className={`border-l transition-colors duration-150 px-1 ${
-            hasSaudaHighlight 
-              ? "bg-sky-100/80 border-sky-300 text-sky-800 hover:bg-sky-200" 
-              : "bg-slate-100 border-slate-400 hover:bg-slate-200"
-          }`}
-          tabIndex={-1}
-        >
-          <ChevronDown className="h-4 w-4" />
-        </button>
-      </div>
-      {isOpen && (
-        <div className={`absolute top-full ${showCode ? 'left-16' : 'left-0'} right-0 bg-white border border-slate-400 shadow-xl z-[100] max-h-48 overflow-y-auto mt-0.5`}>
-          {filtered.length > 0 ? filtered.map((opt, i) => (
-             <div 
-               key={i} 
-               className="p-1 px-2 hover:bg-blue-600 hover:text-white cursor-pointer text-[10px] uppercase font-semibold"
-               onMouseDown={(e) => {
-                 e.preventDefault(); // prevent input blur
-                 const clickedValue = String(opt[nameField] || '').toUpperCase();
-                 onNameChange(clickedValue);
-                 onCodeChange(opt[codeField]);
-                 setHasModified(false);
-                 setIsOpen(false);
-               }}
-             >
-               {String(opt[nameField]).toUpperCase()}
-             </div>
-          )) : <div className="p-1 px-2 text-slate-500 italic text-[10px]">No results found</div>}
+    <div ref={containerRef} className="flex-1 flex flex-col relative text-black">
+      <div className="flex gap-1 w-full relative">
+        {showCode && (
+          <input
+            id={`code_${(nameField || 'field')}_${Math.random().toString(36).substring(2, 6)}`}
+            aria-label={`${label || 'Field'} Code`}
+            type="text"
+            readOnly
+            placeholder="CODE"
+            className={`w-16 p-0.5 outline-none border text-center font-bold font-mono text-xs transition-colors duration-150 cursor-pointer ${
+              hasSaudaHighlight
+                ? "bg-[#EAF4FF] border-sky-300 text-sky-950"
+                : isRequired
+                ? "bg-[#FFECEC] border-rose-300 text-slate-900"
+                : "bg-slate-100 border-slate-400 text-slate-800"
+            }`}
+            value={code || (selectedOption ? selectedOption[codeField] : '')}
+            onClick={() => {
+              setIsOpen(true);
+              inputRef.current?.focus();
+            }}
+            title="Auto-filled Code from selection"
+          />
+        )}
+        <div className={`flex-1 flex items-center border transition-colors duration-200 rounded-xs ${getContainerBg()}`}>
+          <input
+            ref={inputRef}
+            id={`search_${(nameField || 'field')}_${Math.random().toString(36).substring(2, 6)}`}
+            aria-label={label || placeholder}
+            type="text"
+            className={`flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold text-xs pr-1 ${getTextColor()}`}
+            value={searchQuery}
+            placeholder={placeholder}
+            autoComplete="off"
+            onChange={(e) => {
+              const upperVal = e.target.value.toUpperCase();
+              setSearchQuery(upperVal);
+              setIsTyping(true);
+              setIsOpen(true);
+              setHighlightedIndex(0);
+              setShowInvalidError(false);
+              // Note: strictly do NOT call onNameChange here, as manual typing is for search only!
+            }}
+            onFocus={() => {
+              setIsOpen(true);
+              setHighlightedIndex(-1);
+            }}
+            onKeyDown={handleKeyDown}
+          />
+
+          {/* Action buttons inside input */}
+          <div className="flex items-center gap-0.5 pr-1">
+            {name && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNameChange('');
+                  onCodeChange('');
+                  setSearchQuery('');
+                  setIsTyping(false);
+                  setIsOpen(false);
+                  if (isRequired) setShowInvalidError(true);
+                  inputRef.current?.focus();
+                }}
+                className="text-slate-400 hover:text-rose-600 p-0.5 rounded cursor-pointer transition-colors"
+                title="Clear selection"
+                tabIndex={-1}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(!isOpen);
+                if (!isOpen) {
+                  setHighlightedIndex(-1);
+                  inputRef.current?.focus();
+                }
+              }}
+              className={`p-0.5 rounded cursor-pointer transition-colors ${
+                hasSaudaHighlight
+                  ? "text-sky-800 hover:text-sky-950"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              tabIndex={-1}
+              title="Toggle dropdown"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isOpen ? 'rotate-180 text-blue-600' : ''}`} />
+            </button>
+          </div>
         </div>
+
+        {isOpen && (
+          <div
+            ref={listRef}
+            className={`absolute top-full ${showCode ? 'left-17' : 'left-0'} right-0 bg-white border border-slate-400 shadow-2xl z-[150] max-h-52 overflow-y-auto mt-0.5 rounded-sm`}
+          >
+            {filtered.length > 0 ? (
+              filtered.map((opt, i) => {
+                const optName = String(opt[nameField] || '').toUpperCase();
+                const optCode = String(opt[codeField] || '').toUpperCase();
+                const isSelected = selectedOption
+                  ? String(selectedOption[nameField] || '').toUpperCase() === optName
+                  : (name && name.toUpperCase() === optName);
+                const isHighlighted = i === highlightedIndex;
+
+                return (
+                  <div
+                    key={i}
+                    className={`p-1.5 px-2.5 cursor-pointer text-[11px] uppercase font-semibold flex items-center justify-between transition-colors ${
+                      isSelected
+                        ? "bg-emerald-50 text-emerald-800 font-bold border-l-2 border-emerald-600"
+                        : isHighlighted
+                        ? "bg-blue-600 text-white"
+                        : "hover:bg-blue-50 hover:text-blue-900 text-slate-800"
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // prevent input blur before selection
+                      handleSelectOption(opt);
+                    }}
+                    onMouseEnter={() => setHighlightedIndex(i)}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      {optCode && (
+                        <span className={`text-[9.5px] px-1 py-0.2 rounded font-mono font-bold ${
+                          isHighlighted ? "bg-blue-700 text-blue-100" : "bg-slate-100 text-slate-600 border border-slate-200"
+                        }`}>
+                          {optCode}
+                        </span>
+                      )}
+                      <span className="truncate">{optName}</span>
+                    </div>
+                    {isSelected && (
+                      <Check className={`h-3.5 w-3.5 shrink-0 ${isHighlighted ? 'text-white' : 'text-emerald-600'}`} />
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-2.5 text-center text-rose-600 font-bold text-xs flex items-center justify-center gap-1.5 bg-rose-50/70 italic">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <span>No record found</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isInvalid && (
+        <p className="text-[9.5px] font-bold text-rose-600 flex items-center gap-1 mt-0.5 animate-fadeIn">
+          <AlertCircle className="h-3 w-3 shrink-0 text-rose-500" />
+          <span>Please select a valid option.</span>
+        </p>
       )}
     </div>
   );
-}
+};
 
 const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
@@ -2438,6 +2680,49 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleSave = async () => {
+    // Validate select-only fields: Broker, Supplier, Challan Supplier, Area
+    const upperBroker = (formData.broker || '').trim().toUpperCase();
+    const isValidBroker = brokerList.length > 0
+      ? brokerList.some(b => (b.brok_name && b.brok_name.toUpperCase() === upperBroker) || (b.brok_code && b.brok_code.toUpperCase() === (formData.broker_code || '').trim().toUpperCase()))
+      : Boolean(upperBroker);
+
+    if (!upperBroker || !isValidBroker) {
+      alert("Please select a valid option for Broker.");
+      return;
+    }
+
+    const upperSupplier = (formData.supplier || '').trim().toUpperCase();
+    const isValidSupplier = supplierList.length > 0
+      ? supplierList.some(s => (s.supp_name && s.supp_name.toUpperCase() === upperSupplier) || (s.supp_code && s.supp_code.toUpperCase() === (formData.supplier_code || '').trim().toUpperCase()))
+      : Boolean(upperSupplier);
+
+    if (!upperSupplier || !isValidSupplier) {
+      alert("Please select a valid option for Supplier.");
+      return;
+    }
+
+    const upperChallanSupplier = (formData.challan_supplier || '').trim().toUpperCase();
+    if (upperChallanSupplier && supplierList.length > 0) {
+      const isValidChallan = supplierList.some(s => 
+        (s.supp_name && s.supp_name.toUpperCase() === upperChallanSupplier) || 
+        (s.supp_code && s.supp_code.toUpperCase() === (formData.challan_supplier_code || '').trim().toUpperCase())
+      );
+      if (!isValidChallan) {
+        alert("Please select a valid option for Challan Supplier.");
+        return;
+      }
+    }
+
+    const upperArea = (formData.area || '').trim().toUpperCase();
+    const isValidArea = areaList.length > 0
+      ? areaList.some(a => (a.area_name && a.area_name.toUpperCase() === upperArea) || (a.area_code && a.area_code.toUpperCase() === (formData.area_code || '').trim().toUpperCase()))
+      : Boolean(upperArea);
+
+    if (!upperArea || !isValidArea) {
+      alert("Please select a valid option for Area.");
+      return;
+    }
+
     setLoading(true);
     try {
       let finalPoNo = formData.is_ptf ? formData.ptf_no : formData.no;
@@ -4237,17 +4522,56 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 {/* ROW 2 */}
                 <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
                   <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Broker</label>
-                  <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.broker_code} name={formData.broker} onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))} options={brokerList} codeField="brok_code" nameField="brok_name" />
+                  <DualComboBox 
+                    hasSaudaHighlight={isSaudaActive} 
+                    showCode={false} 
+                    isRequired={true}
+                    label="Broker"
+                    placeholder="-- SEARCH OR SELECT BROKER * --"
+                    code={formData.broker_code} 
+                    name={formData.broker} 
+                    onCodeChange={(val) => setFormData(prev => ({...prev, broker_code: val}))} 
+                    onNameChange={(val) => setFormData(prev => ({...prev, broker: val}))} 
+                    options={brokerList} 
+                    codeField="brok_code" 
+                    nameField="brok_name" 
+                  />
                 </div>
                 <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
                   <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Supplier</label>
-                  <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.supplier_code} name={formData.supplier} onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
+                  <DualComboBox 
+                    hasSaudaHighlight={isSaudaActive} 
+                    showCode={false} 
+                    isRequired={true}
+                    label="Supplier"
+                    placeholder="-- SEARCH OR SELECT SUPPLIER * --"
+                    code={formData.supplier_code} 
+                    name={formData.supplier} 
+                    onCodeChange={(val) => setFormData(prev => ({...prev, supplier_code: val}))} 
+                    onNameChange={(val) => setFormData(prev => ({...prev, supplier: val}))} 
+                    options={supplierList} 
+                    codeField="supp_code" 
+                    nameField="supp_name" 
+                  />
                 </div>
 
                 {/* ROW 3 */}
                 <div className="col-span-12 md:col-span-6 lg:col-span-4 flex items-center gap-2">
                    <label className="w-24 sm:w-32 md:w-40 whitespace-nowrap text-right shrink-0">Challan Supplier</label>
-                   <DualComboBox hasSaudaHighlight={isSaudaActive} showCode={false} code={formData.challan_supplier_code} name={formData.challan_supplier} onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))} onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))} options={supplierList} codeField="supp_code" nameField="supp_name" />
+                   <DualComboBox 
+                     hasSaudaHighlight={isSaudaActive} 
+                     showCode={false} 
+                     isRequired={false}
+                     label="Challan Supplier"
+                     placeholder="-- SEARCH OR SELECT CHALLAN SUPPLIER --"
+                     code={formData.challan_supplier_code} 
+                     name={formData.challan_supplier} 
+                     onCodeChange={(val) => setFormData(prev => ({...prev, challan_supplier_code: val}))} 
+                     onNameChange={(val) => setFormData(prev => ({...prev, challan_supplier: val}))} 
+                     options={supplierList} 
+                     codeField="supp_code" 
+                     nameField="supp_name" 
+                   />
                 </div>
 
                 {/* ROW 4 */}
@@ -4255,6 +4579,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <label className="w-24 sm:w-32 md:w-40 text-right shrink-0">Area</label>
                   <DualComboBox 
                     hasSaudaHighlight={isSaudaActive} 
+                    showCode={true}
+                    isRequired={true}
+                    label="Area"
+                    placeholder="-- SEARCH OR SELECT AREA * --"
                     code={formData.area_code} 
                     name={formData.area} 
                     onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))} 
