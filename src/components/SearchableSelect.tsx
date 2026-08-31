@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, X } from 'lucide-react';
+import { ChevronDown, Check, X, AlertCircle } from 'lucide-react';
 
 export interface OptionItem {
   label: string;
@@ -20,28 +20,34 @@ interface SearchableSelectProps {
   isAutoPopulated?: boolean;
   isRequired?: boolean;
   compact?: boolean;
+  errorMessage?: string;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   label,
   name,
   id,
-  value,
+  value = '',
   onChange,
   options = [],
-  placeholder = "SELECT OR TYPE...",
+  placeholder = "SELECT OR TYPE TO SEARCH...",
   className = "",
   inputClassName = "",
   disabled = false,
   isAutoPopulated = false,
   isRequired = false,
-  compact = false
+  compact = false,
+  errorMessage
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(value || '');
+  const [queryText, setQueryText] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [hasBlurredInvalid, setHasBlurredInvalid] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const generatedId = useRef(`searchable_${label ? label.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'select'}_${Math.random().toString(36).substring(2, 7)}`).current;
   const inputId = id || generatedId;
   const inputName = name || (label ? label.toLowerCase().replace(/[^a-z0-9]/g, '_') : 'searchable_select');
@@ -57,58 +63,145 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       let valStr = '';
 
       if (typeof opt === 'string') {
-        labelStr = opt;
-        valStr = opt;
+        labelStr = opt.trim();
+        valStr = opt.trim();
       } else if (typeof opt === 'object') {
-        labelStr = opt.label || opt.name || opt.grade_name || opt.agency_name || opt.marka_name || opt.brok_name || opt.supp_name || opt.area_name || opt.value || opt.code || '';
-        valStr = opt.value || opt.grade_name || opt.agency_name || opt.marka_name || opt.brok_name || opt.supp_name || opt.area_name || opt.name || opt.code || '';
+        labelStr = (
+          opt.label ||
+          opt.name ||
+          opt.grade_name ||
+          opt.agency_name ||
+          opt.marka_name ||
+          opt.brok_name ||
+          opt.supp_name ||
+          opt.area_name ||
+          opt.unit_name ||
+          opt.value ||
+          opt.code ||
+          ''
+        ).toString().trim();
+        valStr = (
+          opt.value ||
+          opt.grade_name ||
+          opt.agency_name ||
+          opt.marka_name ||
+          opt.brok_name ||
+          opt.supp_name ||
+          opt.area_name ||
+          opt.unit_name ||
+          opt.name ||
+          opt.code ||
+          ''
+        ).toString().trim();
       }
 
       const key = valStr.toUpperCase();
       if (key && !seen.has(key)) {
         seen.add(key);
-        list.push({ label: labelStr, value: valStr });
+        list.push({ label: labelStr || valStr, value: valStr });
       }
     });
 
     return list;
   }, [options]);
 
-  useEffect(() => {
-    setSearchTerm(value || '');
-  }, [value]);
+  // Find the selected option object from normalizedOptions based on `value`
+  const selectedOption = React.useMemo(() => {
+    if (!value) return null;
+    const valUpper = value.toString().trim().toUpperCase();
+    return normalizedOptions.find(opt => opt.value.toUpperCase() === valUpper || opt.label.toUpperCase() === valUpper) || null;
+  }, [value, normalizedOptions]);
 
+  // When value prop updates, sync queryText to the selected label/value
+  useEffect(() => {
+    if (selectedOption) {
+      setQueryText(selectedOption.label || selectedOption.value);
+      setHasBlurredInvalid(false);
+    } else if (!value) {
+      setQueryText('');
+    } else {
+      // If value is provided (e.g. before master list finishes loading), keep it in queryText
+      setQueryText(value);
+    }
+  }, [value, selectedOption]);
+
+  // Handle clicking outside: MUST NOT convert unselected typed text into selected value
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setHighlightedIndex(-1);
+        handleCloseAndReset();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [selectedOption, value, normalizedOptions, queryText]);
 
-  const filteredOptions = normalizedOptions.filter(opt =>
-    (opt.label || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
-    (opt.value || '').toLowerCase().includes((searchTerm || '').toLowerCase())
-  );
+  // Reset/restore valid state on blur, Tab, Escape, or clicking outside
+  const handleCloseAndReset = () => {
+    setIsOpen(false);
+    setHighlightedIndex(-1);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value.toUpperCase();
-    setSearchTerm(newVal);
-    onChange(newVal);
-    setIsOpen(true);
-    setHighlightedIndex(0);
+    // If input is empty, user cleared it
+    if (!queryText.trim()) {
+      if (value) {
+        onChange('');
+      }
+      setQueryText('');
+      setHasBlurredInvalid(isRequired);
+      return;
+    }
+
+    // If queryText does not match a selected option, do NOT save typed free text! Revert back!
+    if (selectedOption) {
+      setQueryText(selectedOption.label || selectedOption.value);
+      setHasBlurredInvalid(false);
+    } else {
+      // No valid option was selected previously and user typed unselected text
+      setQueryText('');
+      setHasBlurredInvalid(true);
+    }
   };
 
+  // Filter options based on typed search query
+  const filteredOptions = React.useMemo(() => {
+    const q = queryText.trim().toLowerCase();
+    if (!q) return normalizedOptions;
+    return normalizedOptions.filter(opt =>
+      (opt.label || '').toLowerCase().includes(q) ||
+      (opt.value || '').toLowerCase().includes(q)
+    );
+  }, [normalizedOptions, queryText]);
+
+  // When user types in input - only updates local filter query, does NOT call onChange
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value.toUpperCase();
+    setQueryText(text);
+    setIsOpen(true);
+    setHighlightedIndex(0);
+    setHasBlurredInvalid(false);
+  };
+
+  // When an option is explicitly selected
   const handleSelectOption = (opt: OptionItem) => {
-    setSearchTerm(opt.value);
+    setQueryText(opt.label || opt.value);
     onChange(opt.value);
     setIsOpen(false);
     setHighlightedIndex(-1);
+    setHasBlurredInvalid(false);
   };
 
+  // Clear selection
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setQueryText('');
+    onChange('');
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+    setHasBlurredInvalid(isRequired);
+    inputRef.current?.focus();
+  };
+
+  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
@@ -129,16 +222,23 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
       }
     } else if (e.key === 'Enter') {
+      // Enter selects ONLY if dropdown is open and a valid option is highlighted
+      e.preventDefault();
       if (isOpen && highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
-        e.preventDefault();
         handleSelectOption(filteredOptions[highlightedIndex]);
+      } else {
+        handleCloseAndReset();
       }
+    } else if (e.key === 'Tab') {
+      // Tab MUST NOT automatically convert typed text into a selected value
+      handleCloseAndReset();
     } else if (e.key === 'Escape') {
-      setIsOpen(false);
-      setHighlightedIndex(-1);
+      e.preventDefault();
+      handleCloseAndReset();
     }
   };
 
+  // Scroll active option into view
   useEffect(() => {
     if (isOpen && listRef.current && highlightedIndex >= 0) {
       const activeEl = listRef.current.children[highlightedIndex] as HTMLElement;
@@ -147,6 +247,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       }
     }
   }, [highlightedIndex, isOpen]);
+
+  // Determine if error should be shown
+  const isInvalid = (isRequired && !value && hasBlurredInvalid) || Boolean(errorMessage);
 
   return (
     <div className={`flex flex-col ${compact ? 'gap-0' : 'gap-1.5'} relative ${className}`} ref={containerRef}>
@@ -161,24 +264,35 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           )}
         </label>
       )}
+
       <div className="relative w-full">
         <input
+          ref={inputRef}
           id={inputId}
           name={inputName}
           aria-label={label || placeholder || "Select option"}
           type="text"
-          value={searchTerm}
+          value={queryText}
           onChange={handleInputChange}
           onFocus={() => {
             setIsOpen(true);
             setHighlightedIndex(-1);
           }}
+          onBlur={() => {
+            setTimeout(() => {
+              if (containerRef.current && !containerRef.current.contains(document.activeElement)) {
+                handleCloseAndReset();
+              }
+            }, 150);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
-          className={`w-full uppercase placeholder:normal-case outline-none transition-all pr-7 shadow-2xs ${
-            compact
+          className={`w-full uppercase placeholder:normal-case outline-none transition-all pr-12 shadow-2xs ${
+            isInvalid
+              ? "border-2 border-rose-500 ring-2 ring-rose-200 bg-rose-50/40 text-slate-900"
+              : compact
               ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
               : isAutoPopulated
               ? "rounded-xl px-3.5 py-2 text-xs font-bold bg-sky-50 border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
@@ -187,24 +301,39 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 placeholder:text-slate-400"
           } ${inputClassName}`}
         />
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => {
-            if (!disabled) {
-              setIsOpen(!isOpen);
-              setHighlightedIndex(-1);
-            }
-          }}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#174C2C] p-1 rounded cursor-pointer transition-colors"
-        >
-          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#174C2C]' : ''}`} />
-        </button>
+
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          {value && !disabled && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={handleClear}
+              className="text-slate-400 hover:text-rose-600 p-1 rounded cursor-pointer transition-colors"
+              title="Clear selection"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => {
+              if (!disabled) {
+                setIsOpen(!isOpen);
+                setHighlightedIndex(-1);
+              }
+            }}
+            className="text-slate-400 hover:text-[#174C2C] p-1 rounded cursor-pointer transition-colors"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#174C2C]' : ''}`} />
+          </button>
+        </div>
 
         {isOpen && (
           <div
             ref={listRef}
-            className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D8D3C5] rounded-xl shadow-2xl py-1 text-xs min-w-[180px]"
+            className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-[#D8D3C5] rounded-xl shadow-2xl py-1 text-xs min-w-[200px]"
             style={{ filter: 'drop-shadow(0 10px 15px rgba(0, 0, 0, 0.15))' }}
           >
             {filteredOptions.length > 0 ? (
@@ -215,12 +344,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   <div
                     key={idx}
                     onMouseDown={(e) => {
-                      // prevent input blur before select
                       e.preventDefault();
                       handleSelectOption(opt);
                     }}
                     onMouseEnter={() => setHighlightedIndex(idx)}
-                    className={`px-3 py-1.5 cursor-pointer flex items-center justify-between font-medium transition-colors ${
+                    className={`px-3.5 py-2 cursor-pointer flex items-center justify-between font-medium transition-colors ${
                       isSelected
                         ? 'bg-[#174C2C]/10 text-[#174C2C] font-bold'
                         : isHighlighted
@@ -234,13 +362,21 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 );
               })
             ) : (
-              <div className="px-3.5 py-2 text-slate-400 italic text-center">
-                No matching options
+              <div className="px-3.5 py-3 text-rose-500 font-bold italic text-center flex items-center justify-center gap-1.5 text-xs">
+                <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                <span>No record found</span>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {isInvalid && (
+        <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 mt-0.5 animate-fadeIn">
+          <AlertCircle className="h-3 w-3 shrink-0" />
+          <span>{errorMessage || "Please select a valid option."}</span>
+        </p>
+      )}
     </div>
   );
 };

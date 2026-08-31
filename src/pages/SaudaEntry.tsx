@@ -419,9 +419,107 @@ export default function SaudaEntry({
       return;
     }
 
-    if (!formData.sauda_no || !formData.broker || !formData.supplier || !formData.area) {
-      alert("Please fill in required fields: Order No., Broker, Supplier, and Area.");
+    if (!formData.sauda_no) {
+      alert("Please fill in the Order No.");
       return;
+    }
+
+    if (!formData.broker) {
+      alert("Please select a valid option for Broker.");
+      return;
+    }
+    if (brokers.length > 0) {
+      const isBrokerValid = brokers.some((b: any) => {
+        const name = (typeof b === 'object' && b !== null ? (b.brok_name || b.name || b.value || '') : String(b || '')).toString().trim().toUpperCase();
+        return name === formData.broker.trim().toUpperCase();
+      });
+      if (!isBrokerValid) {
+        alert("Please select a valid option for Broker.");
+        return;
+      }
+    }
+
+    if (!formData.supplier) {
+      alert("Please select a valid option for Supplier.");
+      return;
+    }
+    if (suppliers.length > 0) {
+      const isSupplierValid = suppliers.some((s: any) => {
+        const name = (typeof s === 'object' && s !== null ? (s.supp_name || s.name || s.value || '') : String(s || '')).toString().trim().toUpperCase();
+        return name === formData.supplier.trim().toUpperCase();
+      });
+      if (!isSupplierValid) {
+        alert("Please select a valid option for Supplier.");
+        return;
+      }
+    }
+
+    if (formData.challan_supplier && suppliers.length > 0) {
+      const isChallanValid = suppliers.some((s: any) => {
+        const name = (typeof s === 'object' && s !== null ? (s.supp_name || s.name || s.value || '') : String(s || '')).toString().trim().toUpperCase();
+        return name === formData.challan_supplier.trim().toUpperCase();
+      });
+      if (!isChallanValid) {
+        alert("Please select a valid option for Challan Supplier.");
+        return;
+      }
+    }
+
+    if (!formData.area) {
+      alert("Please select a valid option for Area.");
+      return;
+    }
+    if (areas.length > 0) {
+      const isAreaValid = areas.some((a: any) => {
+        const name = (typeof a === 'object' && a !== null ? (a.area_name || a.name || a.value || '') : String(a || '')).toString().trim().toUpperCase();
+        return name === formData.area.trim().toUpperCase();
+      });
+      if (!isAreaValid) {
+        alert("Please select a valid option for Area.");
+        return;
+      }
+    }
+
+    // Validate Quality Details rows
+    const qdRows = formData.quality_details || [];
+    for (let i = 0; i < qdRows.length; i++) {
+      const row = qdRows[i];
+      if (row.quality || row.qty || row.rs || row.agency || row.marka) {
+        if (!row.quality) {
+          alert(`Please select a valid option for Quality in Row ${i + 1}.`);
+          return;
+        }
+        if (grades.length > 0) {
+          const isQualityValid = grades.some((g: any) => {
+            const name = (typeof g === 'object' && g !== null ? (g.grade_name || g.grade_code || g.name || g.value || '') : String(g || '')).toString().trim().toUpperCase();
+            return name === row.quality.trim().toUpperCase();
+          });
+          if (!isQualityValid) {
+            alert(`Please select a valid option for Quality "${row.quality}" in Row ${i + 1}.`);
+            return;
+          }
+        }
+        if (row.agency && agencies.length > 0) {
+          const isAgencyValid = agencies.some((a: any) => {
+            const name = (typeof a === 'object' && a !== null ? (a.agency_name || a.name || a.value || '') : String(a || '')).toString().trim().toUpperCase();
+            return name === row.agency.trim().toUpperCase();
+          });
+          if (!isAgencyValid) {
+            alert(`Please select a valid option for Agency "${row.agency}" in Row ${i + 1}.`);
+            return;
+          }
+        }
+        if (row.marka && markas.length > 0) {
+          const isMarkaValid = markas.some((m: any) => {
+            const name = (typeof m === 'object' && m !== null ? (m.marka_name || m.name || m.value || '') : String(m || '')).toString().trim().toUpperCase();
+            return name === row.marka.trim().toUpperCase();
+          });
+          if (!isMarkaValid) {
+            alert(`Please select a valid option for Marka "${row.marka}" in Row ${i + 1}.`);
+            return;
+          }
+        }
+      }
     }
 
     if (!formData.b_rate || Number(formData.b_rate) <= 0) {
@@ -488,6 +586,13 @@ export default function SaudaEntry({
           saudaPayload[field] = (saudaData as any)[field];
         }
       });
+
+      // Ensure units_per_lorry is stored strictly as numeric
+      const numericUnitsPerLorry = (formData.units_per_lorry !== undefined && formData.units_per_lorry !== null && String(formData.units_per_lorry) !== '' && !isNaN(Number(formData.units_per_lorry)))
+        ? Number(formData.units_per_lorry)
+        : (formData.units_per_lorry_type && !isNaN(Number(formData.units_per_lorry_type)) ? Number(formData.units_per_lorry_type) : null);
+      saudaPayload.units_per_lorry = numericUnitsPerLorry;
+      saudaPayload.units_per_lorry_type = numericUnitsPerLorry !== null ? String(numericUnitsPerLorry) : (formData.units_per_lorry_type || formData.unit_type || 'BALES');
 
       let inserted;
       let isEditMode = !!saudaPayload.sauda_id;

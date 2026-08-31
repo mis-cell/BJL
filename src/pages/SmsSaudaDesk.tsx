@@ -58,7 +58,7 @@ interface SmsSaudaContract {
   challan_supplier: string; // Challan Supplier Name
   area: string; // Area Name
   no_of_lorries: number;
-  units_per_lorry: string; // e.g. "BALES"
+  units_per_lorry: number;
   total_unit: number; // calculated sum of quality details qty
   wt_per_lorry: number;
   unit_type: string; // "BALES", "LORRY", "LOOSE"
@@ -603,7 +603,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const [formChallanSupplier, setFormChallanSupplier] = useState('');
   const [formArea, setFormArea] = useState('');
   const [formNoOfLorries, setFormNoOfLorries] = useState(1);
-  const [formUnitsPerLorry, setFormUnitsPerLorry] = useState('BALES');
+  const [formUnitsPerLorry, setFormUnitsPerLorry] = useState<number | string>(150);
   const [formTotalUnit, setFormTotalUnit] = useState(0);
   const [formWtPerLorry, setFormWtPerLorry] = useState(10.28);
   const [formUnitType, setFormUnitType] = useState('BALES');
@@ -674,7 +674,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
             challan_supplier: d.challan_supplier || '',
             area: d.area || '',
             no_of_lorries: d.no_of_lorries || 1,
-            units_per_lorry: d.units_per_lorry || 'BALES',
+            units_per_lorry: typeof d.units_per_lorry === 'number' ? d.units_per_lorry : (!isNaN(Number(d.units_per_lorry)) && d.units_per_lorry !== null && d.units_per_lorry !== '' ? Number(d.units_per_lorry) : 150),
             total_unit: d.total_unit || 0,
             wt_per_lorry: d.wt_per_lorry || 10.28,
             unit_type: d.unit_type || 'BALES',
@@ -895,7 +895,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
       setFormChallanSupplier(contract.challan_supplier || '');
       setFormArea(contract.area || '');
       setFormNoOfLorries(contract.no_of_lorries || 1);
-      setFormUnitsPerLorry(contract.units_per_lorry || 'BALES');
+      setFormUnitsPerLorry(typeof contract.units_per_lorry === 'number' ? contract.units_per_lorry : (!isNaN(Number(contract.units_per_lorry)) ? Number(contract.units_per_lorry) : 150));
       setFormTotalUnit(contract.total_unit || 0);
       setFormWtPerLorry(contract.wt_per_lorry || 10.28);
       setFormUnitType(contract.unit_type || 'BALES');
@@ -926,7 +926,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
       setFormChallanSupplier('');
       setFormArea('');
       setFormNoOfLorries(1);
-      setFormUnitsPerLorry('BALES');
+      setFormUnitsPerLorry(150);
       setFormTotalUnit(0);
       setFormWtPerLorry(10.28);
       setFormUnitType('BALES');
@@ -1101,7 +1101,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
       challan_supplier: formChallanSupplier || formSupplier || formBroker,
       area: formArea,
       no_of_lorries: Number(formNoOfLorries) || 1,
-      units_per_lorry: formUnitsPerLorry,
+      units_per_lorry: Number(formUnitsPerLorry) || 0,
       total_unit: Number(formTotalUnit) || 0,
       wt_per_lorry: Number(formWtPerLorry) || 10.28,
       unit_type: formUnitType,
@@ -1960,7 +1960,8 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                                         challan_supplier: (s.challan_supplier || '').toUpperCase(),
                                         area: (s.area || '').toUpperCase(),
                                         no_of_lorries: Number(s.no_of_lorries) || 1,
-                                        units_per_lorry_type: s.units_per_lorry || 'BALES',
+                                        units_per_lorry: Number(s.units_per_lorry) || 0,
+                                        units_per_lorry_type: String(Number(s.units_per_lorry) || s.unit_type || 'BALES'),
                                         total_unit: Number(s.total_unit) || 0,
                                         wt_per_lorry: Number(s.wt_per_lorry) || 10.28,
                                         unit_type: s.unit_type || 'BALES',

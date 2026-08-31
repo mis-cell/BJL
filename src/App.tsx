@@ -363,6 +363,69 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
 
+          DO $$
+          BEGIN
+            -- sauda_master units_per_lorry
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'sauda_master' AND column_name = 'units_per_lorry'
+            ) THEN
+              IF (SELECT data_type FROM information_schema.columns 
+                  WHERE table_schema = 'public' AND table_name = 'sauda_master' AND column_name = 'units_per_lorry') IN ('text', 'character varying', 'varchar') THEN
+                ALTER TABLE sauda_master 
+                ALTER COLUMN units_per_lorry TYPE NUMERIC(15,2) 
+                USING (
+                  CASE 
+                    WHEN trim(units_per_lorry::text) ~ '^[0-9]+(\.[0-9]+)?$' THEN trim(units_per_lorry::text)::numeric 
+                    ELSE NULL 
+                  END
+                );
+              END IF;
+            ELSE
+              ALTER TABLE sauda_master ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC(15,2);
+            END IF;
+
+            -- sms_sauda units_per_lorry
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'sms_sauda' AND column_name = 'units_per_lorry'
+            ) THEN
+              IF (SELECT data_type FROM information_schema.columns 
+                  WHERE table_schema = 'public' AND table_name = 'sms_sauda' AND column_name = 'units_per_lorry') IN ('text', 'character varying', 'varchar') THEN
+                ALTER TABLE sms_sauda 
+                ALTER COLUMN units_per_lorry TYPE NUMERIC(15,2) 
+                USING (
+                  CASE 
+                    WHEN trim(units_per_lorry::text) ~ '^[0-9]+(\.[0-9]+)?$' THEN trim(units_per_lorry::text)::numeric 
+                    ELSE NULL 
+                  END
+                );
+              END IF;
+            ELSE
+              ALTER TABLE sms_sauda ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC(15,2);
+            END IF;
+
+            -- satta_master units_per_lorry
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'satta_master' AND column_name = 'units_per_lorry'
+            ) THEN
+              IF (SELECT data_type FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'satta_master' AND column_name = 'units_per_lorry') IN ('text', 'character varying', 'varchar') THEN
+                ALTER TABLE satta_master 
+                ALTER COLUMN units_per_lorry TYPE NUMERIC(15,2) 
+                USING (
+                  CASE 
+                    WHEN trim(units_per_lorry::text) ~ '^[0-9]+(\.[0-9]+)?$' THEN trim(units_per_lorry::text)::numeric 
+                    ELSE NULL 
+                  END
+                );
+              END IF;
+            ELSE
+              ALTER TABLE satta_master ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC(15,2);
+            END IF;
+          END $$;
+
           DROP VIEW IF EXISTS material_inspection CASCADE;
           DROP TABLE IF EXISTS inspection_master, inspection_details, inspection_checklist, inspection_checklist_details, mill_inspection_master, mill_inspection_detail CASCADE;
 
