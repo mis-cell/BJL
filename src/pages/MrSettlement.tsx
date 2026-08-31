@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import PrintModal from '../components/PrintModal';
+import SearchableSelect from '../components/SearchableSelect';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
@@ -575,6 +576,67 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
   }, [masterData.po_no, masterData.mr_no, selectedPoNo]);
 
+  // Derived options for P.O. and P.O.-filtered FA (Final Arrival / MR) searchable dropdowns
+  const poOptions = React.useMemo(() => {
+    return purchaseOrders.map((po: any) => {
+      const isDone = po.isCompleted || po.status === 'completed' || po.status === 'settled';
+      return {
+        value: po.po_no,
+        label: `#${po.po_no} (${po.supplier || 'PO'})${isDone ? ' - [COMPLETED]' : ''}`
+      };
+    });
+  }, [purchaseOrders]);
+
+  const faOptionsForSelectedPo = React.useMemo(() => {
+    if (!selectedPoNo) return [];
+
+    const cleanTargetPo = selectedPoNo.trim().replace(/^#/, '').toUpperCase();
+
+    const matched = inspections.filter((insp: any) => {
+      const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no;
+      if (!mrVal) return false;
+
+      const inspPo = (insp.po_no || '').trim().replace(/^#/, '').toUpperCase();
+      const isPoMatch = inspPo === cleanTargetPo ||
+        (selectedPoData?.id && insp.po_id === selectedPoData.id) ||
+        (selectedPoData?.purchase_order_id && (insp.po_id === selectedPoData.purchase_order_id || insp.purchase_order_id === selectedPoData.purchase_order_id));
+
+      if (!isPoMatch) return false;
+
+      const isAlreadySettled = settledList.some(s => String(s.mr_no).trim().toUpperCase() === String(mrVal).trim().toUpperCase()) || insp.status === 'settled';
+      const isCurrentMr = masterData.mr_no && String(masterData.mr_no).trim().toUpperCase() === String(mrVal).trim().toUpperCase();
+
+      return !isAlreadySettled || isCurrentMr || (isEdit && isCurrentMr);
+    });
+
+    const seen = new Set<string>();
+    const optionsList: { label: string; value: string }[] = [];
+
+    matched.forEach((insp: any) => {
+      const mrVal = String(insp.mr_no || insp.final_arrival_no || insp.arrival_no || '').trim();
+      if (!mrVal) return;
+      const key = mrVal.toUpperCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const lorryVal = insp.lorry_number || insp.lorry_no || insp.vehicle_no || insp.final_arrival_no || insp.arrival_no || mrVal;
+      optionsList.push({
+        value: mrVal,
+        label: `${mrVal} (Lorry: ${lorryVal})`
+      });
+    });
+
+    if (masterData.mr_no && !seen.has(masterData.mr_no.toUpperCase())) {
+      const lorryVal = masterData.lorry_number || masterData.mr_no;
+      optionsList.unshift({
+        value: masterData.mr_no,
+        label: `${masterData.mr_no} (Lorry: ${lorryVal})`
+      });
+    }
+
+    return optionsList;
+  }, [selectedPoNo, selectedPoData, inspections, settledList, isEdit, masterData.mr_no, masterData.lorry_number]);
+
   const [gradeMasterList, setGradeMasterList] = useState<any[]>([]);
   const [agencyMasterList, setAgencyMasterList] = useState<any[]>([]);
   const [markaMasterList, setMarkaMasterList] = useState<any[]>([]);
@@ -1006,7 +1068,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       await initPage();
       const currentPo = masterData.po_no || selectedPoNo;
       if (currentPo) {
-        await handlePoNoSelection(currentPo);
+        await handlePoNoSelection(currentPo, Boolean(masterData.mr_no));
       }
       if (masterData.mr_no) {
         syncPaymentModuleData(masterData.mr_no, currentPo);
@@ -1021,12 +1083,26 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
   };
 
-  const handlePoNoSelection = async (poNo: string) => {
+  const handlePoNoSelection = async (poNo: string, preserveMrNo: boolean = false) => {
     setSelectedPoNo(poNo);
     if (!poNo) {
       setSelectedPoData(null);
       setPoStats(null);
       setCustomSettlementRecords([]);
+      if (!preserveMrNo) {
+        setMasterData(prev => ({
+          ...prev,
+          po_no: '',
+          po_date: '',
+          broker: '',
+          supplier: '',
+          chn_supplier: '',
+          mr_no: '',
+          lorry_number: '',
+          arrival_no: '',
+          arrival_date: ''
+        }));
+      }
       return;
     }
     setLoading(true);
@@ -1035,12 +1111,34 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     try {
       if (!supabase) return;
       
-      // 1. Fetch matching PO master
-      const { data: poData } = await supabase
+      const cleanPoNo = poNo.trim().replace(/^#/, '');
+
+      // 1. Fetch matching PO master (check purchase_master and po_archive fallback)
+      let { data: poData } = await supabase
         .from('purchase_master')
         .select('*')
-        .eq('po_no', poNo)
+        .eq('po_no', cleanPoNo)
         .maybeSingle();
+
+      if (!poData) {
+        const { data: archPo } = await supabase
+          .from('po_archive')
+          .select('*')
+          .eq('po_no', cleanPoNo)
+          .maybeSingle();
+        if (archPo) poData = archPo;
+      }
+
+      if (!poData) {
+        const { data: poMatches } = await supabase
+          .from('purchase_master')
+          .select('*')
+          .ilike('po_no', cleanPoNo)
+          .limit(1);
+        if (poMatches && poMatches.length > 0) {
+          poData = poMatches[0];
+        }
+      }
 
       if (!poData) {
         setSelectedPoData(null);
@@ -1050,18 +1148,35 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       setSelectedPoData(poData);
-      await syncPaymentModuleData(masterData.mr_no, poNo);
+      if (preserveMrNo && masterData.mr_no) {
+        await syncPaymentModuleData(masterData.mr_no, poNo);
+      }
 
       // 2. Fetch all mill inspections & final arrivals for this P.O to sum total received quantity in Metric Tons (MT)
       const { data: inspectionsForPo } = await supabase
         .from('mill_inspection_master')
-        .select('mr_no, weight_qtl, electronic_net_weight, challan_material_weight')
-        .eq('po_no', poNo);
+        .select('*')
+        .eq('po_no', poData.po_no || cleanPoNo);
 
       const { data: finalArrivalsForPo } = await supabase
         .from('final_arrival')
-        .select('final_arrival_no, mr_no, weight_qtl, electronic_net_weight, challan_material_weight, grid_details')
-        .eq('po_no', poNo);
+        .select('*')
+        .eq('po_no', poData.po_no || cleanPoNo);
+
+      // Merge newly fetched arrivals into state so FA dropdown is always complete
+      const incomingList: any[] = [...(finalArrivalsForPo || []), ...(inspectionsForPo || [])];
+      if (incomingList.length > 0) {
+        setInspections(prev => {
+          const existingMap = new Map(prev.map(i => [(i.mr_no || i.final_arrival_no || i.arrival_no), i]));
+          incomingList.forEach(item => {
+            const key = item.mr_no || item.final_arrival_no || item.arrival_no;
+            if (key && !existingMap.has(key)) {
+              existingMap.set(key, item);
+            }
+          });
+          return Array.from(existingMap.values());
+        });
+      }
 
       let totalInspectedMt = 0;
       const processedMrNos = new Set<string>();
@@ -1137,7 +1252,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const { data: settlementsForPo } = await supabase
         .from('mr_settlement_master')
         .select('mr_no, electronic_scale_net')
-        .eq('po_no', poNo);
+        .eq('po_no', poData.po_no || cleanPoNo);
       
       let totalSettledMt = 0;
       if (settlementsForPo && settlementsForPo.length > 0) {
@@ -1158,7 +1273,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const { data: customSettlements, error: customErr } = await supabase
         .from('m_r_settlement')
         .select('*')
-        .eq('po_no', poNo)
+        .eq('po_no', poData.po_no || cleanPoNo)
         .order('created_at', { ascending: false });
 
       let totalCustomReceivedMt = 0;
@@ -1185,23 +1300,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       setLastSyncTime(new Date().toLocaleTimeString());
 
-      // Filter and locate MR to load
-      if (inspectionsForPo && inspectionsForPo.length > 0) {
-        const poMrNos = inspectionsForPo.map(i => i.mr_no);
-        // Look for unresolved inspection
-        const settledMrNos = settledList.map(s => s.mr_no);
-        const unresolvedMr = poMrNos.find(mr => !settledMrNos.includes(mr));
-        if (unresolvedMr) {
-          await handleProceedWithMrNo(unresolvedMr);
-        } else {
-          await handleProceedWithMrNo(poMrNos[0]);
-        }
-      } else {
-        // Fetch purchase details for grade details when no MR inspection yet
+      // If preserveMrNo is false, clear MR and prepare base PO columns so user can select from the filtered FA dropdown
+      if (!preserveMrNo) {
         const { data: poDetails } = await supabase
           .from('purchase_detail_master')
           .select('*')
-          .eq('po_no', poNo)
+          .eq('po_no', poData.po_no || cleanPoNo)
           .order('srl_no', { ascending: true });
 
         const newCols = [1, 2, 3, 4].map(idx => {
@@ -1211,13 +1315,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         setMasterData(prev => ({
           ...initialMaster(),
-          po_no: poNo,
+          po_no: poData.po_no || cleanPoNo,
           po_date: poData.po_date || '',
           broker: poData.broker || '',
           supplier: poData.supplier || '',
           chn_supplier: poData.supplier || '',
           po_type: poData.po_type || 'MILL_PO',
-          sett_date: new Date().toISOString().split('T')[0]
+          sett_date: prev.sett_date || new Date().toISOString().split('T')[0],
+          mr_no: '',
+          lorry_number: '',
+          arrival_no: '',
+          arrival_date: ''
         }));
         setDetailCols(newCols);
       }
@@ -1540,7 +1648,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             });
             setDetailCols(newCols);
           }
-          if (existingMaster.po_no) setSelectedPoNo(existingMaster.po_no);
+          if (existingMaster.po_no) {
+          setSelectedPoNo(existingMaster.po_no);
+          handlePoNoSelection(existingMaster.po_no, true);
+        }
           setSuccessMessage(`Loaded existing Settlement Report for M.R. No. ${targetMrNo}`);
           return;
         }
@@ -1620,7 +1731,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         setMasterData(prefilledMaster);
         setDetailCols(populatedCols);
-        if (prefilledMaster.po_no) setSelectedPoNo(prefilledMaster.po_no);
+        if (prefilledMaster.po_no) {
+          setSelectedPoNo(prefilledMaster.po_no);
+          handlePoNoSelection(prefilledMaster.po_no, true);
+        }
         setSuccessMessage(`Prepopulated settlement data successfully from Final M.R. [${resolvedMrNo}]`);
         return;
       }
@@ -3163,73 +3277,54 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             <div className="bg-[#d4d0c8] p-3 border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] space-y-3">
               <div className="flex items-center gap-4 flex-wrap text-xs">
                 
-                {/* PO Number Select */}
+                {/* PO Number Searchable Dropdown */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
-                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight">Final P.O:</span>
-                  <select  id="selectedpono_2238" name="selectedpono" aria-label="selectedpono"
-                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-blue-800 border-l border-gray-300 w-[240px]"
-                    value={selectedPoNo}
-                    onChange={(e) => handlePoNoSelection(e.target.value)}
-                  >
-                    <option value="">-- SELECT FINAL P.O --</option>
-                    {purchaseOrders.map(po => {
-                      const isDone = po.isCompleted || po.status === 'completed' || po.status === 'settled';
-                      return (
-                        <option key={po.po_no} value={po.po_no}>
-                          #{po.po_no} ({po.supplier || 'PO'}){isDone ? ' - [COMPLETED]' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight shrink-0">Final P.O:</span>
+                  <div className="w-[260px] sm:w-[320px]">
+                    <SearchableSelect
+                      id="selectedpono_2238"
+                      name="selectedpono"
+                      value={selectedPoNo}
+                      onChange={(newPo) => handlePoNoSelection(newPo, false)}
+                      options={poOptions}
+                      placeholder="-- SEARCH / SELECT FINAL P.O --"
+                      compact={true}
+                      inputClassName="font-mono text-xs font-bold text-blue-800 bg-white border-0 py-0.5"
+                    />
+                  </div>
                 </div>
 
-                {/* MR No dropdown & direct input */}
+                {/* FA (Final Arrival / MR) Searchable Dropdown - Filtered strictly by selected P.O */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
-                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight">Final M.R:</span>
-                  <input
-                    type="text"
-                    placeholder="Enter MR No (e.g. 502)"
-                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[110px]"
-                    value={masterData.mr_no}
-                    onChange={(e) => handleMasterChange('mr_no', e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleProceedWithMrNo(masterData.mr_no, true);
-                      }
-                    }}
-                  />
-                  <select  id="masterdata_mr_no_2258" name="masterdata_mr_no" aria-label="masterdata mr no"
-                    className="bg-white text-xs font-bold px-1.5 py-0.5 outline-none font-mono text-rose-800 border-l border-gray-300 w-[130px]"
-                    value={masterData.mr_no}
-                    onChange={(e) => {
-                      handleMasterChange('mr_no', e.target.value);
-                      handleProceedWithMrNo(e.target.value);
-                    }}
-                  >
-                    <option value="">-- CHOOSE M.R --</option>
-                    {inspections
-                      .filter(insp => {
-                        const mrVal = insp.mr_no || insp.final_arrival_no;
-                        if (!mrVal) return false;
-                        const isAlreadySettled = settledList.some(s => s.mr_no === mrVal) || insp.status === 'settled';
-                        return !isAlreadySettled || (isEdit && masterData.mr_no === mrVal) || mrVal === masterData.mr_no;
-                      })
-                      .map(insp => {
-                        const mrVal = insp.mr_no || insp.final_arrival_no;
-                        const lorryVal = insp.lorry_number || (insp as any).lorry_no || (insp as any).vehicle_no || insp.final_arrival_no || insp.arrival_no || mrVal;
-                        return (
-                          <option key={insp.final_arrival_id || mrVal} value={mrVal}>
-                            {mrVal} (Lorry: {lorryVal})
-                          </option>
-                        );
-                      })}
-                  </select>
+                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight shrink-0">Final M.R:</span>
+                  <div className="w-[220px] sm:w-[280px]">
+                    <SearchableSelect
+                      id="masterdata_mr_no_2258"
+                      name="masterdata_mr_no"
+                      value={masterData.mr_no}
+                      onChange={(mrVal) => {
+                        handleMasterChange('mr_no', mrVal);
+                        handleProceedWithMrNo(mrVal);
+                      }}
+                      options={faOptionsForSelectedPo}
+                      placeholder={selectedPoNo ? "-- CHOOSE M.R --" : "-- SELECT P.O FIRST --"}
+                      disabled={!selectedPoNo}
+                      compact={true}
+                      inputClassName="font-mono text-xs font-bold text-rose-800 bg-white border-0 py-0.5"
+                    />
+                  </div>
                 </div>
 
                 <button 
-                  onClick={() => handleProceedWithMrNo(masterData.mr_no, true)}
-                  className="bg-[#d4d0c8] hover:bg-white text-[10px] uppercase font-black px-4 py-1.5 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px"
+                  type="button"
+                  onClick={() => {
+                    if (masterData.mr_no) {
+                      handleProceedWithMrNo(masterData.mr_no, true);
+                    } else {
+                      setErrorMessage("Please select a Final Arrival (M.R) first to sync.");
+                    }
+                  }}
+                  className="bg-[#d4d0c8] hover:bg-white text-[10px] uppercase font-black px-4 py-2 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px rounded"
                 >
                   Force Sync MR
                 </button>
@@ -3238,7 +3333,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   type="button"
                   onClick={handleManualRefresh}
                   disabled={loading}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold uppercase px-3.5 py-1.5 border border-emerald-500 shadow-sm active:translate-y-px flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold uppercase px-3.5 py-2 border border-emerald-500 shadow-sm active:translate-y-px flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 rounded"
                   title="Refresh all database records, Final P.O. dropdown, Final M.R. list & payment vouchers without hard browser reloading"
                 >
                   <RefreshCcw className={`h-3.5 w-3.5 text-emerald-200 ${loading ? 'animate-spin' : ''}`} />
@@ -3900,29 +3995,20 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     
                     <div className="flex flex-col">
                       <label htmlFor="m_r_no_from_final_m_r_2855" className="text-gray-500 text-[8px] uppercase font-black text-rose-900">M.R. No (From Final M.R)</label>
-                      <select  id="m_r_no_from_final_m_r_2855" name="m_r_no_from_final_m_r" aria-label="M.R. No (From Final M.R)"
-                        className="bg-white border border-gray-400 p-1 font-mono font-bold text-rose-800 outline-none text-[11px] cursor-pointer"
-                        value={masterData.mr_no} 
-                        onChange={(e) => handleProceedWithMrNo(e.target.value)}
-                      >
-                        <option value="">{masterData.mr_no ? masterData.mr_no : '-- Select Final M.R --'}</option>
-                        {inspections
-                          .filter((insp: any) => {
-                            const mrVal = insp.mr_no || insp.final_arrival_no;
-                            if (!mrVal) return false;
-                            const isAlreadySettled = settledList.some(s => s.mr_no === mrVal) || insp.status === 'settled';
-                            return (!selectedPoNo || insp.po_no === selectedPoNo) && 
-                                   (!isAlreadySettled || (isEdit && masterData.mr_no === mrVal));
-                          })
-                          .map((insp: any, i: number) => {
-                            const mrVal = insp.mr_no || insp.final_arrival_no;
-                            return (
-                              <option key={i} value={mrVal}>
-                                MR #{mrVal} ({insp.supplier || insp.supplier_name || 'Final Arrival'})
-                              </option>
-                            );
-                          })}
-                      </select>
+                      <SearchableSelect
+                        id="m_r_no_from_final_m_r_2855"
+                        name="m_r_no_from_final_m_r"
+                        value={masterData.mr_no}
+                        onChange={(mrVal) => {
+                          handleMasterChange('mr_no', mrVal);
+                          handleProceedWithMrNo(mrVal);
+                        }}
+                        options={faOptionsForSelectedPo}
+                        placeholder={selectedPoNo ? "-- Select Final M.R --" : "-- Select P.O First --"}
+                        disabled={!selectedPoNo}
+                        compact={true}
+                        inputClassName="font-mono font-bold text-rose-800 text-[11px] py-1"
+                      />
                     </div>
 
                     <div className="flex flex-col">
@@ -3978,21 +4064,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     <div className="flex flex-col">
                       <label htmlFor="p_o_no_from_final_p_o_2933" className="text-gray-500 text-[8px] uppercase font-black text-indigo-900">P.O. No. (From Final P.O)</label>
-                      <select  id="p_o_no_from_final_p_o_2933" name="p_o_no_from_final_p_o" aria-label="P.O. No. (From Final P.O)"
-                        className="bg-white border border-gray-400 p-1 font-mono font-bold text-indigo-900 outline-none text-[11px] cursor-pointer"
-                        value={masterData.po_no} 
-                        onChange={(e) => handlePoNoSelection(e.target.value)}
-                      >
-                        <option value="">{masterData.po_no ? masterData.po_no : '-- Select Final P.O --'}</option>
-                        {purchaseOrders.map((po: any) => {
-                          const isDone = po.isCompleted || po.status === 'completed' || po.status === 'settled';
-                          return (
-                            <option key={po.po_no} value={po.po_no}>
-                              #{po.po_no} ({po.supplier || 'PO'}){isDone ? ' - [COMPLETED]' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
+                      <SearchableSelect
+                        id="p_o_no_from_final_p_o_2933"
+                        name="p_o_no_from_final_p_o"
+                        value={selectedPoNo || masterData.po_no}
+                        onChange={(newPo) => handlePoNoSelection(newPo, false)}
+                        options={poOptions}
+                        placeholder="-- Select Final P.O --"
+                        compact={true}
+                        inputClassName="font-mono font-bold text-indigo-900 text-[11px] py-1"
+                      />
                     </div>
 
                     <div className="flex flex-col">

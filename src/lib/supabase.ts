@@ -1774,6 +1774,10 @@ if (supabase) {
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );`,
        `ALTER TABLE IF EXISTS sauda_check_point_deductions DISABLE ROW LEVEL SECURITY;`,
+       `ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS rate_difference NUMERIC(15,2);`,
+       `ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS deduction_qty_qtl NUMERIC(15,2);`,
+       `ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS approved_by TEXT;`,
+       `ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS approval_level TEXT;`,
        `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS excess_short_deduction NUMERIC(15,2);`,
        `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS excess_short_status TEXT;`,
        `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS excess_short_deduction NUMERIC(15,2);`,
