@@ -431,9 +431,43 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   // Form State
   const [isEdit, setIsEdit] = useState(false);
   const [masterData, setMasterData] = useState<SettlementMaster>(initialMaster());
+  const [saudaDeductionRecord, setSaudaDeductionRecord] = useState<any>(null);
   const [detailCols, setDetailCols] = useState<SettlementDetailColumn[]>([
     emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)
   ]);
+
+  // Helper to fetch Sauda Checkpoint deduction for a PO from sauda_check_point_deductions table
+  const fetchSaudaCheckpointDeduction = async (cleanPoNo: string) => {
+    if (!cleanPoNo) return null;
+    try {
+      const rawPoNo = cleanPoNo.trim().replace(/^#/, '');
+      const poWithHash = '#' + rawPoNo;
+
+      if (supabase) {
+        const { data } = await supabase
+          .from('sauda_check_point_deductions')
+          .select('*')
+          .or(`po_no.eq.${rawPoNo},po_no.eq.${poWithHash}`)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data) return data;
+      }
+
+      const localRecords = await dbModule.fetchAll('sauda_check_point_deductions').catch(() => []);
+      if (Array.isArray(localRecords) && localRecords.length > 0) {
+        const found = localRecords.find((r: any) => {
+          const rPo = String(r.po_no || '').trim().replace(/^#/, '').toUpperCase();
+          return rPo === rawPoNo.toUpperCase();
+        });
+        if (found) return found;
+      }
+    } catch (err) {
+      console.warn("Could not fetch sauda checkpoint deduction:", err);
+    }
+    return null;
+  };
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewModalData, setViewModalData] = useState<{
     master: SettlementMaster;
@@ -1112,6 +1146,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       if (!supabase) return;
       
       const cleanPoNo = poNo.trim().replace(/^#/, '');
+
+      // Fetch Sauda Checkpoint deduction recorded for this PO from sauda_check_point_deductions table
+      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
+      setSaudaDeductionRecord(saudaDed);
+
+      if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
+        setMasterData(prev => ({
+          ...prev,
+          val_less_amt: Number(saudaDed.deduction_amount)
+        }));
+      }
 
       // 1. Fetch matching PO master (check purchase_master and po_archive fallback)
       let { data: poData } = await supabase
@@ -3775,15 +3820,75 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       />
                     </div>
 
-                    {/* Row 2 */}
-                    <div className="flex flex-col">
-                      <label htmlFor="val_less_amt_2669" className="text-[9px] font-bold text-slate-600 mb-0.5">Val Less Amt(-)</label>
+                    {/* Row 2: Val Less Amt(-) with Sauda Checkpoint Deduction details & Why Deduct */}
+                    <div className="flex flex-col col-span-1">
+                      <div className="group relative flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-1">
+                          <label htmlFor="val_less_amt_2669" className="text-[9px] font-bold text-slate-600">Val Less Amt(-)</label>
+                          <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+                          <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8.5px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
+                            <p className="text-amber-300 font-bold">Sauda Checkpoint Deduction</p>
+                            <p>Table: <code className="text-cyan-300">sauda_check_point_deductions</code></p>
+                            <p>PO Lookup: <code className="text-white">{selectedPoNo || masterData.po_no || 'N/A'}</code></p>
+                            {saudaDeductionRecord ? (
+                              <>
+                                <p>Reason (variation_type): <span className="text-amber-300 font-bold uppercase">{saudaDeductionRecord.variation_type || 'N/A'}</span></p>
+                                <p>Deduction Amount: <span className="text-emerald-300 font-bold font-mono">₹{Number(saudaDeductionRecord.deduction_amount || 0).toFixed(2)}</span></p>
+                                <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT / {saudaDeductionRecord.deduction_qty_qtl} Qtl</span></p>
+                                <p>Selected Grade: <span className="text-cyan-200">{saudaDeductionRecord.selected_grade || 'Auto'}</span></p>
+                              </>
+                            ) : (
+                              <p className="text-slate-400 italic">No checkpoint deduction recorded for this P.O.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {saudaDeductionRecord && (
+                          <span className={cn(
+                            "text-[7.5px] font-black px-1.5 py-0.2 rounded uppercase border shrink-0",
+                            saudaDeductionRecord.variation_type === 'excess' 
+                              ? "bg-amber-100 text-amber-900 border-amber-300" 
+                              : saudaDeductionRecord.variation_type === 'short'
+                              ? "bg-rose-100 text-rose-900 border-rose-300"
+                              : "bg-blue-100 text-blue-900 border-blue-300"
+                          )}>
+                            {saudaDeductionRecord.variation_type === 'excess' ? 'Excess Wt' : saudaDeductionRecord.variation_type === 'short' ? 'Short Wt' : 'Sauda Checkpoint'}
+                          </span>
+                        )}
+                      </div>
+
                       <input id="val_less_amt_2669" name="val_less_amt" aria-label="Val Less Amt(-)"
                         type="number" 
+                        step="0.01"
                         className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
                         value={masterData.val_less_amt || ''} 
                         onChange={(e) => handleMasterChange('val_less_amt', parseFloat(e.target.value) || 0)}
                       />
+
+                      {saudaDeductionRecord && (
+                        <div className="mt-1 p-1.5 rounded bg-amber-50 border border-amber-200 text-[8.5px] text-amber-950 space-y-0.5">
+                          <div className="font-extrabold flex items-center justify-between text-amber-900">
+                            <span>Why Deduct:</span>
+                            <span className="font-mono text-amber-950 font-black text-[9px]">
+                              ₹{Number(saudaDeductionRecord.deduction_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="text-[8px] text-amber-800 font-semibold leading-tight">
+                            {saudaDeductionRecord.variation_type === 'excess' 
+                              ? 'Excess Weight Settlement Deduction' 
+                              : saudaDeductionRecord.variation_type === 'short' 
+                              ? 'Short Weight Settlement Deduction' 
+                              : 'Sauda Checkpoint Settlement'} 
+                            {saudaDeductionRecord.deduction_qty_mt ? ` (${saudaDeductionRecord.deduction_qty_mt} MT / ${(saudaDeductionRecord.deduction_qty_mt * 10).toFixed(2)} Qtl)` : ''}
+                            {saudaDeductionRecord.selected_grade ? ` [Grade: ${saudaDeductionRecord.selected_grade}]` : ''}
+                          </div>
+                          {saudaDeductionRecord.remarks && (
+                            <div className="text-[7.5px] italic text-amber-700 truncate">
+                              Note: {saudaDeductionRecord.remarks}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col">
