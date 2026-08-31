@@ -33,7 +33,10 @@ import {
   Users,
   Check,
   AlertCircle,
-  Scale
+  Scale,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -1318,6 +1321,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'partial' | 'cancelled'>('all');
   const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'pass_mismatch';
+    direction: 'asc' | 'desc';
+  }>({ key: 'date', direction: 'desc' });
+
+  const handleSort = (key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'pass_mismatch') => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
   
   // Modal toggle state for calculation helper overlay
   const [isCalcOpen, setIsCalcOpen] = useState(false);
@@ -3612,6 +3626,107 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     return true;
   });
 
+  // Sorted POs for Table View
+  const sortedPos = React.useMemo(() => {
+    return [...filteredPos].sort((a, b) => {
+      let comparison = 0;
+      switch (sortConfig.key) {
+        case 'date': {
+          const dateA = a.po_date || a.date || (a.created_at ? a.created_at.slice(0, 10) : '') || '';
+          const dateB = b.po_date || b.date || (b.created_at ? b.created_at.slice(0, 10) : '') || '';
+          comparison = dateA.localeCompare(dateB);
+          break;
+        }
+        case 'type': {
+          const typeA = a.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED';
+          const typeB = b.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED';
+          comparison = typeA.localeCompare(typeB);
+          break;
+        }
+        case 'unit': {
+          const unitA = String(a.purchase_unit_name || a.unit_type || a.unit || 'BALES').toUpperCase();
+          const unitB = String(b.purchase_unit_name || b.unit_type || b.unit || 'BALES').toUpperCase();
+          comparison = unitA.localeCompare(unitB);
+          break;
+        }
+        case 'status': {
+          const getStatusText = (item: any) => {
+            const contract = parseFloat(item.total_contract_mt || 0) || 0;
+            const rcvd = Number(item.received_weight_mt || 0);
+            const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
+            const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+            const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+            if (isCompletedPo) return 'COMPLETED';
+            if (tol.isOverDelivery) return 'EXCESS WT';
+            return 'PENDING';
+          };
+          comparison = getStatusText(a).localeCompare(getStatusText(b));
+          break;
+        }
+        case 'pass_mismatch': {
+          const getPassMismatchText = (item: any) => {
+            const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
+            if (isFinalized) return 'PASS';
+            if (item.ptf_no && String(item.ptf_no).trim()) return 'PASS';
+            const mr = matchResults[item.po_no];
+            if (!mr || !mr.hasInspection) return 'AWAITING';
+            if (mr.status === 'match') return 'PASS';
+            if (isPoMismatchResolved(item)) return 'PASS';
+            return 'MISMATCH';
+          };
+          comparison = getPassMismatchText(a).localeCompare(getPassMismatchText(b));
+          break;
+        }
+        case 'po_no': {
+          const poA = String(a.po_no || a.ptf_no || '');
+          const poB = String(b.po_no || b.ptf_no || '');
+          comparison = poA.localeCompare(poB, undefined, { numeric: true, sensitivity: 'base' });
+          break;
+        }
+        case 'supplier': {
+          const sA = String(a.supplier || '');
+          const sB = String(b.supplier || '');
+          comparison = sA.localeCompare(sB);
+          break;
+        }
+        case 'broker': {
+          const bA = String(a.broker || '');
+          const bB = String(b.broker || '');
+          comparison = bA.localeCompare(bB);
+          break;
+        }
+        case 'total_units': {
+          comparison = (Number(a.total_units || 0)) - (Number(b.total_units || 0));
+          break;
+        }
+        case 'weight': {
+          const wA = parseFloat(a.received_weight_mt || a.total_contract_mt || 0) || 0;
+          const wB = parseFloat(b.received_weight_mt || b.total_contract_mt || 0) || 0;
+          comparison = wA - wB;
+          break;
+        }
+        default:
+          comparison = 0;
+      }
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredPos, sortConfig, matchResults, dbMaterialMismatches]);
+
+  // Helper to render sort indicators
+  const renderSortIndicator = (colKey: typeof sortConfig.key) => {
+    const isActive = sortConfig.key === colKey;
+    if (isActive) {
+      return sortConfig.direction === 'asc' ? (
+        <ArrowUp className="w-3 h-3 text-emerald-800 shrink-0 inline ml-1 font-bold" />
+      ) : (
+        <ArrowDown className="w-3 h-3 text-emerald-800 shrink-0 inline ml-1 font-bold" />
+      );
+    }
+    return (
+      <ArrowUpDown className="w-2.5 h-2.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 inline ml-1 transition-opacity" />
+    );
+  };
+
   // POs belonging to the current section (Sauda Check Point / Temporary P.O vs Final P.O)
   const sectionPos = poList.filter(p => {
     if (isArchiveView) {
@@ -4005,21 +4120,113 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                <table className="w-full border-collapse text-xs text-black">
                   <thead className="bg-slate-100/90 sticky top-0 z-10 font-bold border-b border-slate-200">
                      <tr className="h-10 text-slate-700">
-                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">PO / PTF No</th>
-                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Date</th>
-                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Type</th>
-                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Supplier</th>
-                        <th className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Broker</th>
-                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Unit / Lorry</th>
-                        <th className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Total Units</th>
-                        <th className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Weight (MT)<br/><span className="text-[8px] font-medium opacity-70 normal-case">Rcvd / Contract</span></th>
-                        <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Status</th>
-                        {isTempPo && <th className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Pass / Mismatch</th>}
+                        <th 
+                          onClick={() => handleSort('po_no')}
+                          className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by PO / PTF No"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>PO / PTF No</span>
+                            {renderSortIndicator('po_no')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('date')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Date"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Date</span>
+                            {renderSortIndicator('date')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('type')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Type"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Type</span>
+                            {renderSortIndicator('type')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('supplier')}
+                          className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Supplier"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Supplier</span>
+                            {renderSortIndicator('supplier')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('broker')}
+                          className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Broker"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Broker</span>
+                            {renderSortIndicator('broker')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('unit')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Unit / Lorry"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Unit / Lorry</span>
+                            {renderSortIndicator('unit')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('total_units')}
+                          className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Total Units"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>Total Units</span>
+                            {renderSortIndicator('total_units')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('weight')}
+                          className="px-3 text-right border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Weight (MT)"
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>Weight (MT)<br/><span className="text-[8px] font-medium opacity-70 normal-case">Rcvd / Contract</span></span>
+                            {renderSortIndicator('weight')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('status')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          title="Sort by Status"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Status</span>
+                            {renderSortIndicator('status')}
+                          </div>
+                        </th>
+                        {isTempPo && (
+                          <th 
+                            onClick={() => handleSort('pass_mismatch')}
+                            className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                            title="Sort by Pass / Mismatch"
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              <span>Pass / Mismatch</span>
+                              {renderSortIndicator('pass_mismatch')}
+                            </div>
+                          </th>
+                        )}
                         <th className="px-3 text-center whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Actions</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-normal">
-                     {filteredPos.map((item, idx) => {
+                     {sortedPos.map((item, idx) => {
                         const isSelected = selectedPoNo === item.po_no;
                         const isPoPending = item.pending === true || item.pending === 'Yes' || item.pending === 1 || String(item.pending).toLowerCase() === 'true';
                         const isVoid = item.status === 'cancelled';
@@ -5211,16 +5418,26 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             className="fixed z-[1000] bg-white rounded-lg shadow-2xl border border-slate-200 py-1 text-xs w-48"
             style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 192) }}
           >
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-blue-700 font-bold"><Edit className="w-3.5 h-3.5" />Edit / View</button>
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setExcessShortModalPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-amber-50 flex items-center gap-2 text-amber-900 font-bold"><Scale className="w-3.5 h-3.5 text-amber-600" />Excess / Short</button>
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setConsignmentLedgerPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-cyan-700 font-bold"><Truck className="w-3.5 h-3.5" />Consignment Ledger (1-to-N)</button>
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePrintPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-slate-700 font-bold"><Printer className="w-3.5 h-3.5" />Print Slip</button>
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleDownloadPoPdf(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-emerald-700 font-bold"><Download className="w-3.5 h-3.5" />Download PDF</button>
-            <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700 font-bold"><Mail className="w-3.5 h-3.5" />Email Slip</button>
-            {canEditOrDelete() && (
+            {isTempPo ? (
               <>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} className="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 text-indigo-700 font-bold"><Mail className="w-3.5 h-3.5" />Email</button>
                 <div className="border-t border-slate-200 my-1" />
-                <button onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} className="w-full text-left px-3 py-1.5 hover:bg-rose-50 flex items-center gap-2 text-rose-700 font-bold"><Trash2 className="w-3.5 h-3.5" />Cancel / Delete</button>
+                <button onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-700 font-bold"><Trash2 className="w-3.5 h-3.5" />Delete</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-blue-700 font-bold"><Edit className="w-3.5 h-3.5" />Edit / View</button>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setExcessShortModalPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-amber-50 flex items-center gap-2 text-amber-900 font-bold"><Scale className="w-3.5 h-3.5 text-amber-600" />Excess / Short</button>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setConsignmentLedgerPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-cyan-700 font-bold"><Truck className="w-3.5 h-3.5" />Consignment Ledger (1-to-N)</button>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePrintPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-slate-700 font-bold"><Printer className="w-3.5 h-3.5" />Print Slip</button>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleDownloadPoPdf(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-emerald-700 font-bold"><Download className="w-3.5 h-3.5" />Download PDF</button>
+                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700 font-bold"><Mail className="w-3.5 h-3.5" />Email Slip</button>
+                {canEditOrDelete() && (
+                  <>
+                    <div className="border-t border-slate-200 my-1" />
+                    <button onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} className="w-full text-left px-3 py-1.5 hover:bg-rose-50 flex items-center gap-2 text-rose-700 font-bold"><Trash2 className="w-3.5 h-3.5" />Cancel / Delete</button>
+                  </>
+                )}
               </>
             )}
           </div>
