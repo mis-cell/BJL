@@ -3736,17 +3736,24 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
             const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+
+            if (contract > 0 && rcvd > 0 && rcvd < 5.0) return 'CANCELLED';
             if (isCompletedPo) return 'COMPLETED';
+
+            const poKey = String(item.po_no || '').trim().toUpperCase();
+            const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
+            const isSettledDeduction = Boolean(
+              settledDeductions[poKey] || 
+              settledDeductions[saudaKey] || 
+              item.excess_short_deduction != null || 
+              (item.excess_short_status && item.excess_short_status !== 'pending')
+            );
+
             if (tol.isOverDelivery) {
-              const poKey = String(item.po_no || '').trim().toUpperCase();
-              const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
-              const isSettledDeduction = Boolean(
-                settledDeductions[poKey] || 
-                settledDeductions[saudaKey] || 
-                item.excess_short_deduction != null || 
-                (item.excess_short_status && item.excess_short_status !== 'pending')
-              );
               return isSettledDeduction ? 'EXCESS WT (SETTLED)' : 'EXCESS WT';
+            }
+            if (tol.isUnderDelivery) {
+              return isSettledDeduction ? 'SHORT WT (SETTLED)' : 'SHORT WT';
             }
             return 'PENDING';
           };
@@ -4392,9 +4399,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     new Date(item.delivery_to) < new Date(new Date().toDateString());
                                  return (
                                     <div className="flex flex-col items-center gap-0.5">
-                                       {isCompletedPo ? (
+                                       {contract > 0 && rcvd > 0 && rcvd < 5.0 ? (
+                                         <span 
+                                           className={cn(
+                                             "text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-help flex items-center gap-1", 
+                                             isSelected ? "bg-rose-600 text-white border-rose-500" : "text-rose-800 bg-rose-100 border-rose-300"
+                                           )}
+                                           title="Below 5 MT: Sauda automatically cancelled. Please create a fresh PTF."
+                                         >
+                                           <span>CANCELLED</span>
+                                         </span>
+                                       ) : isCompletedPo ? (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
-                                       ) : tol.isOverDelivery ? (() => {
+                                       ) : (tol.isOverDelivery || tol.isUnderDelivery) ? (() => {
                                          const poKey = String(item.po_no || '').trim().toUpperCase();
                                          const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
                                          const isSettledDeduction = Boolean(
@@ -4403,6 +4420,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                            item.excess_short_deduction != null || 
                                            (item.excess_short_status && item.excess_short_status !== 'pending')
                                          );
+                                         const badgeLabel = tol.isOverDelivery 
+                                           ? (isSettledDeduction ? 'EXCESS WT ✓' : 'EXCESS WT') 
+                                           : (isSettledDeduction ? 'SHORT WT ✓' : 'SHORT WT');
 
                                          if (isSettledDeduction) {
                                            return (
@@ -4415,10 +4435,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                                    ? "bg-emerald-600 text-white border-emerald-500" 
                                                    : "text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border-emerald-300"
                                                )} 
-                                               title="Excess Weight Settled & Recorded (Click to view Read-Only settlement slip)"
+                                               title={`${tol.isOverDelivery ? 'Excess Weight' : 'Short Weight'} Settled & Recorded (Click to view Read-Only settlement slip)`}
                                              >
                                                <Scale className="w-3 h-3 text-emerald-700" />
-                                               <span>EXCESS WT ✓</span>
+                                               <span>{badgeLabel}</span>
                                              </button>
                                            );
                                          }
@@ -4436,7 +4456,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                              title="Click to open Excess / Short Settlement"
                                            >
                                              <Scale className="w-3 h-3 text-amber-700" />
-                                             <span>EXCESS WT</span>
+                                             <span>{badgeLabel}</span>
                                            </button>
                                          );
                                        })() : (

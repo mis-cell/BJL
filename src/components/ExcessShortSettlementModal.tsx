@@ -445,10 +445,16 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   // Determine Deduction Quantity (in MT & Quintals)
   const deductionQtyMt = useMemo(() => {
     if (deductionQtyMode === 'custom') return Math.max(0, customQtyMt);
-    if (deductionQtyMode === 'over_contract') return tolerance.excessOverContractMt;
-    // Standard: Excess beyond allowable upper tolerance limit (e.g. 5.610 MT)
-    return tolerance.excessOverToleranceMt;
-  }, [deductionQtyMode, customQtyMt, tolerance]);
+    if (deductionQtyMode === 'over_contract') {
+      return tolerance.isUnderDelivery 
+        ? Math.max(0, contractMt - totalReceivedMt) 
+        : tolerance.excessOverContractMt;
+    }
+    // Standard: Excess or Short beyond allowable lower/upper tolerance limit
+    return tolerance.isUnderDelivery 
+      ? tolerance.shortUnderToleranceMt 
+      : tolerance.excessOverToleranceMt;
+  }, [deductionQtyMode, customQtyMt, tolerance, contractMt, totalReceivedMt]);
 
   const deductionQtyQtl = deductionQtyMt * 10;
 
@@ -1004,7 +1010,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-amber-200 shadow-2xs">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-slate-600 block">
-                  Excess Delivery Deduction Basis:
+                  {tolerance.isUnderDelivery ? 'Short Weight Deduction Basis:' : 'Excess Delivery Deduction Basis:'}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1019,7 +1025,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-700'
                     )}
                   >
-                    <span>Excess Over Tolerance (+{tolerance.excessOverToleranceMt.toFixed(3)} MT / {(tolerance.excessOverToleranceMt * 10).toFixed(2)} Qtl)</span>
+                    <span>
+                      {tolerance.isUnderDelivery 
+                        ? `Short Under Tolerance (-${tolerance.shortUnderToleranceMt.toFixed(3)} MT / ${(tolerance.shortUnderToleranceMt * 10).toFixed(2)} Qtl)` 
+                        : `Excess Over Tolerance (+${tolerance.excessOverToleranceMt.toFixed(3)} MT / ${(tolerance.excessOverToleranceMt * 10).toFixed(2)} Qtl)`}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1033,7 +1043,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                         : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-700'
                     )}
                   >
-                    <span>Excess Over Contract (+{tolerance.excessOverContractMt.toFixed(3)} MT / {(tolerance.excessOverContractMt * 10).toFixed(2)} Qtl)</span>
+                    <span>
+                      {tolerance.isUnderDelivery 
+                        ? `Short Under Contract (-${Math.max(0, contractMt - totalReceivedMt).toFixed(3)} MT / ${(Math.max(0, contractMt - totalReceivedMt) * 10).toFixed(2)} Qtl)` 
+                        : `Excess Over Contract (+${tolerance.excessOverContractMt.toFixed(3)} MT / ${(tolerance.excessOverContractMt * 10).toFixed(2)} Qtl)`}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1041,7 +1055,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     onClick={() => {
                       if (!isReadOnly) {
                         setDeductionQtyMode('custom');
-                        if (!customQtyMt) setCustomQtyMt(tolerance.excessOverToleranceMt);
+                        if (!customQtyMt) setCustomQtyMt(tolerance.isUnderDelivery ? tolerance.shortUnderToleranceMt : tolerance.excessOverToleranceMt);
                       }
                     }}
                     className={cn(
