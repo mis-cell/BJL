@@ -291,7 +291,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           crop_year: p.crop_year || '2026-27',
           marka: p.challan_marka_name || '',
           quality: p.receipt_grade_name || '',
-          quantity_rcpt: p.quantity_rcpt || p.quantity_chln || p.quantity || 0,
+          quantity_rcpt: Number(p.quantity_chln) || Number(p.quantity_rcpt) || Number(p.quantity) || 0,
           gross_wt: p.netto_pnto || p.weight || '',
           moisture_pct: '',
           dust_pct: '',
@@ -475,7 +475,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
     const dataToExport = filteredAmads.map((amad) => {
       const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '';
-      const bales = Number(amad.total_packets || amad.packets || 0);
+      const bales = getChlnQty(amad);
       const weightMt = (Number(amad.weight_qtl || amad.weight || 0) / 10);
 
       return {
@@ -517,6 +517,40 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     }
   };
 
+  // Helper to extract Challan Quantity ("Chln") from Receipt Grade Details (grid_details)
+  const getChlnQty = (item: any): number => {
+    if (!item) return 0;
+    if (item.grid_details) {
+      let grid: any[] = [];
+      if (typeof item.grid_details === 'string') {
+        try {
+          const parsed = item.grid_details === 'undefined' || item.grid_details === 'null' ? [] : JSON.parse(item.grid_details === "undefined" ? "null" : item.grid_details);
+          if (Array.isArray(parsed)) grid = parsed;
+        } catch (e) {}
+      } else if (Array.isArray(item.grid_details)) {
+        grid = item.grid_details;
+      }
+      if (grid.length > 0) {
+        let hasChln = false;
+        let sumChln = 0;
+        grid.forEach((row: any) => {
+          const val = row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== ''
+            ? Number(row.quantity_chln)
+            : (row.chln !== undefined && row.chln !== null && row.chln !== '' ? Number(row.chln) : NaN);
+          if (!isNaN(val)) {
+            hasChln = true;
+            sumChln += val;
+          }
+        });
+        if (hasChln) return sumChln;
+
+        const fallback = grid.reduce((acc: number, row: any) => acc + (Number(row.quantity_chln) || Number(row.chln) || Number(row.quantity) || Number(row.qty) || 0), 0);
+        if (fallback > 0) return fallback;
+      }
+    }
+    return Number(item.total_packets || item.packets || 0);
+  };
+
   // Helper to extract lowest net weight (Final Weight in M.Ton)
   const getLowestNetWeight = (item: any): number => {
     if (!item) return 0;
@@ -533,7 +567,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   };
 
   // Metrics
-  const totalBales = filteredAmads.reduce((acc, a) => acc + (Number(a.total_packets || a.packets || 0)), 0);
+  const totalBales = filteredAmads.reduce((acc, a) => acc + getChlnQty(a), 0);
   const totalWeightMt = filteredAmads.reduce((acc, a) => acc + getLowestNetWeight(a), 0);
 
   // Inspection status counts
@@ -549,7 +583,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
       dateWiseArrivalsMap[d] = { count: 0, packets: 0, weight: 0 };
     }
     dateWiseArrivalsMap[d].count += 1;
-    dateWiseArrivalsMap[d].packets += Number(a.total_packets || a.packets || 0);
+    dateWiseArrivalsMap[d].packets += getChlnQty(a);
     dateWiseArrivalsMap[d].weight += getLowestNetWeight(a);
   });
 
@@ -794,7 +828,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                 {filteredAmads.map((amad, idx) => {
                   const isSelected = selectedAmadId === amad.amad_id;
                   const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '--';
-                  const bales = Number(amad.total_packets || amad.packets || 0);
+                  const bales = getChlnQty(amad);
                   const weightMt = getLowestNetWeight(amad);
                   const isVoid = amad.status === 'cancelled';
                   const isInspected = inspectedSet.has(String(amad.amad_no || amad.temporary_arrival_no || '').trim().toUpperCase());

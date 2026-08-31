@@ -306,7 +306,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
 
       loadedRecords.forEach(r => {
         weightSumQtl += Number(r.weight_qtl) || 0;
-        packetsSum += Number(r.total_packets) || 0;
+        packetsSum += getRcptQty(r);
         if (r.lorry_number || (r as any).lorry_no || (r as any).vehicle_no) {
           uniqueVehicles.add(String(r.lorry_number || (r as any).lorry_no || (r as any).vehicle_no).trim().toUpperCase());
         }
@@ -837,7 +837,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       "Consignment Note": r.consignment_note || r.consignment_note_no || (r as any).consignment_notice_no || '',
       "Challan / Railway Receipt No.": r.challan_railway_receipt_no || r.challan_rr_no || '',
       "Challan RR Date": r.challan_rr_date ? new Date(r.challan_rr_date).toLocaleDateString('en-GB') : '',
-      "Total Packets (Bags)": r.total_packets ?? 0,
+      "Total Packets (Bags)": getRcptQty(r),
       "Weight (QTL)": r.weight_qtl ?? 0,
       "Weight (MT)": r.weight_qtl ? (r.weight_qtl / 10).toFixed(3) : '0.000',
       "Transit Area": r.arrival_area_name || '',
@@ -909,6 +909,40 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     return matchSearch && matchDateRange;
   });
 
+  // Helper to extract Receipt Quantity ("RCPT") from Receipt Grade Details (grid_details)
+  const getRcptQty = (item: any): number => {
+    if (!item) return 0;
+    if (item.grid_details) {
+      let grid: any[] = [];
+      if (typeof item.grid_details === 'string') {
+        try {
+          const parsed = item.grid_details === 'undefined' || item.grid_details === 'null' ? [] : JSON.parse(item.grid_details === "undefined" ? "null" : item.grid_details);
+          if (Array.isArray(parsed)) grid = parsed;
+        } catch (e) {}
+      } else if (Array.isArray(item.grid_details)) {
+        grid = item.grid_details;
+      }
+      if (grid.length > 0) {
+        let hasRcpt = false;
+        let sumRcpt = 0;
+        grid.forEach((row: any) => {
+          const val = row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== ''
+            ? Number(row.quantity_rcpt)
+            : (row.rcpt !== undefined && row.rcpt !== null && row.rcpt !== '' ? Number(row.rcpt) : NaN);
+          if (!isNaN(val)) {
+            hasRcpt = true;
+            sumRcpt += val;
+          }
+        });
+        if (hasRcpt) return sumRcpt;
+
+        const fallback = grid.reduce((acc: number, row: any) => acc + (Number(row.quantity_rcpt) || Number(row.rcpt) || Number(row.quantity) || Number(row.qty) || 0), 0);
+        if (fallback > 0) return fallback;
+      }
+    }
+    return Number(item.total_packets || item.packets || 0);
+  };
+
   const getLowestNetWeight = (item: any): number => {
     if (!item) return 0;
     const nets = [
@@ -924,7 +958,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   };
 
   // Calculate dynamic summaries based on filtered list
-  const totalBales = filteredRecords.reduce((acc, r) => acc + (Number(r.total_packets) || 0), 0);
+  const totalBales = filteredRecords.reduce((acc, r) => acc + getRcptQty(r), 0);
   const totalWeightMt = filteredRecords.reduce((acc, r) => acc + getLowestNetWeight(r), 0);
   const filteredVehiclesCount = filteredRecords.length;
 
@@ -940,7 +974,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       dateWiseArrivalsMap[d] = { count: 0, packets: 0, weight: 0 };
     }
     dateWiseArrivalsMap[d].count += 1;
-    dateWiseArrivalsMap[d].packets += Number(r.total_packets || 0);
+    dateWiseArrivalsMap[d].packets += getRcptQty(r);
     dateWiseArrivalsMap[d].weight += getLowestNetWeight(r);
   });
 
@@ -1275,7 +1309,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                 {filteredRecords.map((r, idx) => {
                     const isSelected = selectedRecordId === r.final_arrival_id;
                     const formattedDate = r.date ? new Date(r.date).toLocaleDateString('en-GB') : '--';
-                    const bales = Number(r.total_packets || r.packets || 0);
+                    const bales = getRcptQty(r);
                     const weightMt = getLowestNetWeight(r);
                     const isPending = !r.mr_no || r.mr_no.trim() === '' || r.mr_no.trim().toUpperCase() === 'DIRECT REGISTER';
                     const isVoid = r.status === 'cancelled';

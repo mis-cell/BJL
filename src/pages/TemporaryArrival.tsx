@@ -481,8 +481,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     };
   }, [formData.lorry_date, formData.lorry_prefix, formData.lorry_suffix, formData.po_no]);
 
-  // Helper function to calculate allocated Netto (M.T) based on Final Weight and Chln
-  // Formula: (Final Weight / Sum(Chln)) * Chln.
+  // Helper function to calculate allocated Netto (M.T) based on Final Weight and RCPT
+  // Formula: (RCPT / Total RCPT) * Final Weight.
   // Note: This calculation is strictly NOT APPLICABLE for "LOOSE" unit.
   const calculateProportionalNetto = (finalWeightVal: number, rows: ArrivalDetailRow[]): ArrivalDetailRow[] => {
     const isLoose = (formData.unit_name || '').toUpperCase().includes('LOOSE');
@@ -490,12 +490,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       return rows; // Pro-rata calculation is NOT applicable for "LOOSE"
     }
 
-    const sumChln = rows.reduce((sum, d) => sum + (Number(d.quantity_chln) || 0), 0);
-    if (sumChln <= 0 || finalWeightVal <= 0) {
-      return rows; // Do NOT zero out when sumChln is 0
+    const getRowQuantity = (r: ArrivalDetailRow) => Number(r.quantity_rcpt) || Number(r.quantity_chln) || 0;
+
+    const sumRcpt = rows.reduce((sum, d) => sum + getRowQuantity(d), 0);
+    if (sumRcpt <= 0 || finalWeightVal <= 0) {
+      return rows; // Do NOT zero out when sumRcpt is 0
     }
 
-    const nonZeroIndices = rows.map((r, i) => (Number(r.quantity_chln) > 0 ? i : -1)).filter(i => i !== -1);
+    const nonZeroIndices = rows.map((r, i) => (getRowQuantity(r) > 0 ? i : -1)).filter(i => i !== -1);
     if (nonZeroIndices.length === 0) {
       return rows;
     }
@@ -504,21 +506,21 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     let allocated = 0;
 
     nonZeroIndices.forEach((idx, k) => {
-      const chln = Number(updated[idx].quantity_chln) || 0;
+      const q = getRowQuantity(updated[idx]);
       if (k === nonZeroIndices.length - 1) {
         // Last non-zero item absorbs any remaining rounding difference to match exact Final Weight
         const lastVal = Number((finalWeightVal - allocated).toFixed(3));
         updated[idx] = { ...updated[idx], netto_pnto: Math.max(0, lastVal) };
       } else {
-        const val = Number(((finalWeightVal / sumChln) * chln).toFixed(3));
+        const val = Number(((finalWeightVal / sumRcpt) * q).toFixed(3));
         updated[idx] = { ...updated[idx], netto_pnto: val };
         allocated += val;
       }
     });
 
-    // Zero out any rows with quantity_chln <= 0 for non-LOOSE items
+    // Zero out any rows with quantity <= 0 for non-LOOSE items
     rows.forEach((r, i) => {
-      if ((Number(r.quantity_chln) || 0) <= 0) {
+      if (getRowQuantity(r) <= 0) {
         updated[i] = { ...updated[i], netto_pnto: 0 };
       }
     });
@@ -578,7 +580,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     formData.electronic_net_weight
   ]);
 
-  // Recalculate Receipt Grade Details Netto (M.T) whenever Final Weight or quantity_chln changes (non-LOOSE only)
+  // Recalculate Receipt Grade Details Netto (M.T) whenever Final Weight or quantity_rcpt/quantity_chln changes (non-LOOSE only)
   useEffect(() => {
     const isLoose = (formData.unit_name || '').toUpperCase().includes('LOOSE');
     if (isLoose) return; // Strictly not applicable for LOOSE
@@ -592,7 +594,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   }, [
     formData.weight_reduced,
     formData.unit_name,
-    details.map(d => d.quantity_chln).join(',')
+    details.map(d => `${d.quantity_rcpt}_${d.quantity_chln}_${d.unit}`).join(',')
   ]);
 
   const loadDetailsFromPo = async (poNo: string) => {
@@ -2105,17 +2107,32 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
                   {/* Netto Pnto */}
                   <td className="p-0.5 border border-gray-300 w-24">
-                    <input  id="0_000_1824" name="0_000" aria-label="0.000"
-                      type="number" 
-                      step="0.001"
-                      placeholder="0.000"
-                      value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
-                      }}
-                      className="w-full bg-white border border-gray-300 p-0 text-right font-bold text-gray-900 outline-none pr-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600" 
-                    />
+                    {(() => {
+                      const rowUnit = (detail.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+                      const isBales = rowUnit === 'BALES' || rowUnit.includes('BALE');
+                      return (
+                        <input  id={`netto_pnto_main_${idx}`} name={`netto_pnto_main_${idx}`} aria-label="Netto M.T"
+                          type="number" 
+                          step="0.001"
+                          placeholder="0.000"
+                          readOnly={isBales}
+                          value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
+                          onChange={(e) => {
+                            if (!isBales) {
+                              const val = e.target.value;
+                              handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
+                            }
+                          }}
+                          title={isBales ? "Auto-calculated: (RCPT / Total RCPT) * Final Weight" : "Enter Netto Weight"}
+                          className={cn(
+                            "w-full p-0 text-right font-bold outline-none pr-1 transition-colors",
+                            isBales
+                              ? "bg-amber-50/90 border border-amber-300 text-amber-950 cursor-not-allowed"
+                              : "bg-white border border-gray-300 text-gray-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                          )}
+                        />
+                      );
+                    })()}
                   </td>
 
                   {/* Quantity Chln */}
@@ -3010,17 +3027,32 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
                   
                   <td className="p-0.5 border border-gray-300 w-24">
-                    <input 
-                      type="number" 
-                      step="0.001"
-                      placeholder="0.000"
-                      value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
-                      }}
-                      className="w-full bg-white border border-gray-300 p-0 text-right font-bold text-gray-900 outline-none pr-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600" 
-                    />
+                    {(() => {
+                      const rowUnit = (detail.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+                      const isBales = rowUnit === 'BALES' || rowUnit.includes('BALE');
+                      return (
+                        <input 
+                          type="number" 
+                          step="0.001"
+                          placeholder="0.000"
+                          readOnly={isBales}
+                          value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
+                          onChange={(e) => {
+                            if (!isBales) {
+                              const val = e.target.value;
+                              handleDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
+                            }
+                          }}
+                          title={isBales ? "Auto-calculated: (RCPT / Total RCPT) * Final Weight" : "Enter Netto Weight"}
+                          className={cn(
+                            "w-full p-0 text-right font-bold outline-none pr-1 transition-colors",
+                            isBales
+                              ? "bg-amber-50/90 border border-amber-300 text-amber-950 cursor-not-allowed"
+                              : "bg-white border border-gray-300 text-gray-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                          )}
+                        />
+                      );
+                    })()}
                   </td>
 
                   

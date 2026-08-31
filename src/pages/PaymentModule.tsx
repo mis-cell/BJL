@@ -489,6 +489,43 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const [areaMasterList, setAreaMasterList] = useState<any[]>([]);
 
   // Advance Recovery Calculation Engine
+  const isPoCompletedStatus = (po: any): boolean => {
+    if (!po) return false;
+    const statusStr = String(po.status || '').toLowerCase().trim();
+    const pendingStr = String(po.pending || '').toLowerCase().trim();
+    
+    if (po.pending === false || pendingStr === 'no' || pendingStr === 'false' || po.pending === 0) return true;
+    if (statusStr === 'completed' || statusStr === 'settled' || statusStr === 'final' || statusStr === 'moved_to_final') return true;
+
+    const contract = parseFloat(po.total_contract_mt || po.total_amt || 0) || 0;
+    const rcvd = Number(po.received_weight_mt || po.delivered_mt || 0);
+    if (contract > 0 && rcvd > 0) {
+      const diff = Math.abs(contract - rcvd);
+      if (rcvd >= contract || diff <= 0.5) return true;
+    }
+    return false;
+  };
+
+  const isPoPassStatus = (po: any): boolean => {
+    if (!po) return false;
+    const statusStr = String(po.status || '').toLowerCase().trim();
+    const passMismatchStr = String(po.pass_mismatch || po.pass_status || po.mismatch_status || po.quality_status || '').toUpperCase().trim();
+    
+    if (passMismatchStr === 'PASS') return true;
+    if (po.mismatch_cleared === true || String(po.mismatch_cleared) === 'true') return true;
+    if (po.satta_dispute_approved === true || String(po.satta_dispute_approved) === 'true') return true;
+    if (statusStr === 'final' || statusStr === 'moved_to_final' || statusStr === 'completed' || statusStr === 'settled') return true;
+    if (po.ptf_no && String(po.ptf_no).trim() && String(po.ptf_no).trim() !== 'N/A') return true;
+    if (statusStr !== 'mismatch' && statusStr !== 'dispute' && po.mismatch_cleared !== false) return true;
+
+    return false;
+  };
+
+  const isPoEligibleForPayment = (po: any): boolean => {
+    if (!po) return false;
+    return isPoCompletedStatus(po) && isPoPassStatus(po);
+  };
+
   const findMatchingPo = (targetPoNo: string, poArray: any[]) => {
     if (!targetPoNo || !poArray || poArray.length === 0) return null;
     const cleanTarget = String(targetPoNo).trim().toUpperCase();
@@ -834,8 +871,22 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         console.warn("dbModule fallback fetch error:", err);
       }
 
+      const combinedPoMap = new Map<string, any>();
+      (poList || []).forEach((p: any) => {
+        const k = String(p.po_no || p.contract_po_no || p.ptf_no || '').trim().toUpperCase();
+        if (k) combinedPoMap.set(k, { ...p, source_table: 'purchase_master' });
+      });
+      (scpList || []).forEach((s: any) => {
+        const k = String(s.po_no || s.contract_po_no || s.ptf_no || s.sauda_no || '').trim().toUpperCase();
+        if (k) {
+          const existing = combinedPoMap.get(k) || {};
+          combinedPoMap.set(k, { ...existing, ...s, source_table: 'sauda_check_point' });
+        }
+      });
+      const combinedPos = Array.from(combinedPoMap.values());
+
       setPaymentList(payData);
-      setPurchaseOrders(poList);
+      setPurchaseOrders(combinedPos);
       setSaudaCheckPoints(scpList);
 
       const verified = (arrList || []).filter(item => {
@@ -2047,18 +2098,18 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               </span>
             </div>
 
-            {/* CONTRACT FINAL P.O & VERIFIED M.R REFERENCE PANEL */}
+            {/* CONTRACT P.O & VERIFIED M.R REFERENCE PANEL */}
             <div className="bg-gradient-to-r from-slate-50 via-purple-50/50 to-indigo-50/50 p-3.5 rounded-xl border border-purple-200/80 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-purple-700" />
                   <span className="text-xs font-black uppercase text-purple-950 tracking-wide">
-                    Final P.O & Linked Verified M.R Reference
+                    P.O & Linked Verified M.R Reference
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold">
                   <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded border border-purple-200">
-                    {purchaseOrders.length} Final P.O Records
+                    {purchaseOrders.filter(po => isPoEligibleForPayment(po)).length} Eligible P.O Records (Status: Completed & PASS)
                   </span>
                   <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
                     {verifiedArrivals.length} Verified M.R & Inspection Records
@@ -2068,6 +2119,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               {/* PO and Inspection Selector Logic */}
               {(() => {
+                const eligiblePos = purchaseOrders.filter(po => isPoEligibleForPayment(po));
+                const displayPos = showAllPos ? purchaseOrders : (eligiblePos.length > 0 ? eligiblePos : purchaseOrders);
+
                 const selectedArrival = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
                 const inspectionPoNo = selectedArrival?.po_no || selectedArrival?.mill_po_no || '';
                 const matchedFinalPo = inspectionPoNo ? findMatchingPo(inspectionPoNo, purchaseOrders) : null;
@@ -2077,22 +2131,20 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 return (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      {/* Final P.O Selector */}
+                      {/* P.O Selector */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[10px] font-black uppercase text-purple-900">
                           <label className="flex items-center gap-1.5">
-                            <span>Final P.O</span>
+                            <span>P.O</span>
                             {selectedPoNo && <span className="text-purple-700 font-mono font-bold">({selectedPoNo})</span>}
                           </label>
-                          {selectedMrNo && (
-                            <button
-                              type="button"
-                              onClick={() => setShowAllPos(prev => !prev)}
-                              className="text-[10px] font-semibold text-purple-600 hover:text-purple-800 underline lowercase"
-                            >
-                              {showAllPos ? 'filter to matching' : `show all (${purchaseOrders.length})`}
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowAllPos(prev => !prev)}
+                            className="text-[10px] font-semibold text-purple-600 hover:text-purple-800 underline lowercase"
+                          >
+                            {showAllPos ? `filter eligible (${eligiblePos.length})` : `show all (${purchaseOrders.length})`}
+                          </button>
                         </div>
                         <select
                           id="selectedpono_1898"
@@ -2102,20 +2154,24 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           onChange={e => handlePoSelection(e.target.value)}
                           className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
                         >
-                          <option value="">-- Choose Final P.O --</option>
+                          <option value="">-- Choose P.O --</option>
                           {matchedFinalPo && (
                             <option value={matchedFinalPo.po_no} className="font-bold text-emerald-800 bg-emerald-50">
-                              ✓ Matched Final P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
+                              ✓ Matched P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
                             </option>
                           )}
-                          {purchaseOrders
+                          {displayPos
                             .filter(po => !isPoNotInFinal || showAllPos)
                             .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no)
-                            .map((po, i) => (
-                              <option key={i} value={po.po_no}>
-                                {po.po_no} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT)
-                              </option>
-                            ))}
+                            .map((po, i) => {
+                              const isEligible = isPoEligibleForPayment(po);
+                              const poDisplayNo = po.po_no || po.ptf_no || po.sauda_no;
+                              return (
+                                <option key={i} value={po.po_no || poDisplayNo}>
+                                  {poDisplayNo} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT) {isEligible ? ' [Status: Completed | PASS]' : ''}
+                                </option>
+                              );
+                            })}
                         </select>
                       </div>
 
@@ -2143,13 +2199,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                       </div>
                     </div>
 
-                    {/* Notice if Inspection P.O is in Check Point and not in Final P.O */}
+                    {/* Notice if Inspection P.O is in Check Point and not in P.O list */}
                     {isPoNotInFinal && (
                       <div className="p-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 text-xs flex items-start gap-2 shadow-xs">
                         <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
                         <div className="flex-1">
                           <div className="font-bold flex items-center gap-2">
-                            <span>Inspection P.O ({inspectionPoNo}) is NOT in Final P.O yet</span>
+                            <span>Inspection P.O ({inspectionPoNo}) is NOT in P.O list yet</span>
                             <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">
                               Status: In Sauda Check Point
                             </span>
@@ -2157,11 +2213,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           <div className="text-[11px] text-amber-800 mt-0.5">
                             {matchedScpPo ? (
                               <span>
-                                This P.O is currently located in <strong>Sauda Check Point / Temporary P.O</strong> (Sauda: {matchedScpPo.sauda_no || matchedScpPo.po_no}). Once mismatches are cleared and approved in Sauda Check Point, click <strong>"Pass ✓"</strong> to promote it to Final P.O.
+                                This P.O is currently located in <strong>Sauda Check Point / Temporary P.O</strong> (Sauda: {matchedScpPo.sauda_no || matchedScpPo.po_no}). Once mismatches are cleared and approved in Sauda Check Point, click <strong>"Pass ✓"</strong> to promote it to P.O.
                               </span>
                             ) : (
                               <span>
-                                This P.O has not yet been passed/promoted to <strong>Final P.O</strong> (purchase_master). You can still proceed with Inspection details, or select an existing Final P.O using "Show All".
+                                This P.O has not yet been passed/promoted to <strong>P.O</strong> (purchase_master). You can still proceed with Inspection details, or select an existing P.O using "Show All".
                               </span>
                             )}
                           </div>
@@ -2198,7 +2254,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               ) : (
                 <div className="bg-amber-50/90 p-2 rounded-lg border border-amber-200 text-xs flex items-center gap-2 text-amber-800 font-semibold">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Please select a <strong>Final P.O</strong> or <strong>Inspection</strong> record. At least one selection is required to save a payment record.</span>
+                  <span>Please select a <strong>P.O</strong> or <strong>Inspection</strong> record. At least one selection is required to save a payment record.</span>
                 </div>
               )}
             </div>

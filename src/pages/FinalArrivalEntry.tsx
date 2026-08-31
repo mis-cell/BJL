@@ -893,17 +893,87 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const totalChallanQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_chln) || 0), 0);
 
   const calculatedLowestNetWeight = useMemo(() => {
+    const elecNet = (Number(formData.electronic_gross_weight) || Number(formData.actual_gross_weight) || 0) - (Number(formData.electronic_tare_weight) || Number(formData.actual_tare_weight) || 0);
+    const suppNet = (Number(formData.supplier_challan_gross) || 0) - (Number(formData.supplier_tare_weight) || 0);
     const nets = [
       Number(formData.electronic_net_weight),
+      elecNet > 0 ? elecNet : 0,
       Number(formData.supplier_net_weight),
-      Number(formData.challan_material_weight)
+      suppNet > 0 ? suppNet : 0,
+      Number(formData.challan_material_weight),
+      Number(formData.weight_reduced)
     ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
     return nets.length > 0 ? Math.min(...nets) : '';
-  }, [formData.electronic_net_weight, formData.supplier_net_weight, formData.challan_material_weight]);
+  }, [
+    formData.electronic_net_weight,
+    formData.electronic_gross_weight,
+    formData.electronic_tare_weight,
+    formData.actual_gross_weight,
+    formData.actual_tare_weight,
+    formData.supplier_net_weight,
+    formData.supplier_challan_gross,
+    formData.supplier_tare_weight,
+    formData.challan_material_weight,
+    formData.weight_reduced
+  ]);
 
   const finalWeightDisplayValue = (formData.weight_reduced !== undefined && formData.weight_reduced !== null && formData.weight_reduced !== 0 && formData.weight_reduced !== '')
     ? formData.weight_reduced
     : calculatedLowestNetWeight;
+
+  // Auto-calculate NETTO (M.T) for rows where UNIT is BALES (not LOOSE): (RCPT / Total RCPT) * Final Weight (M.TON)
+  useEffect(() => {
+    const finalWeight = Number(finalWeightDisplayValue) || 0;
+
+    const isBalesRow = (row: ArrivalDetailRow) => {
+      const u = (row.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+      return u.includes('BALE') || u === 'BALES' || (!u.includes('LOOSE') && u !== 'LOOSE');
+    };
+
+    const getRowRcpt = (r: ArrivalDetailRow) => Number(r.quantity_rcpt) || Number(r.quantity_chln) || 0;
+
+    const balesIndices = details
+      .map((r, i) => (isBalesRow(r) && getRowRcpt(r) > 0 ? i : -1))
+      .filter(i => i !== -1);
+
+    const sumRcpt = balesIndices.reduce((sum, idx) => sum + getRowRcpt(details[idx]), 0);
+
+    let needsUpdate = false;
+    let allocatedNetto = 0;
+
+    const updated = details.map((row, index) => {
+      if (!isBalesRow(row)) return row;
+
+      const rcpt = getRowRcpt(row);
+      if (rcpt <= 0 || sumRcpt <= 0 || finalWeight <= 0) {
+        if (Number(row.netto_pnto) !== 0) {
+          needsUpdate = true;
+          return { ...row, netto_pnto: 0 };
+        }
+        return row;
+      }
+
+      const isLastBalesRow = index === balesIndices[balesIndices.length - 1];
+      let calculatedNetto = 0;
+      if (isLastBalesRow) {
+        calculatedNetto = Number((finalWeight - allocatedNetto).toFixed(3));
+        calculatedNetto = Math.max(0, calculatedNetto);
+      } else {
+        calculatedNetto = Number(((rcpt / sumRcpt) * finalWeight).toFixed(3));
+        allocatedNetto += calculatedNetto;
+      }
+
+      if (Number(row.netto_pnto) !== calculatedNetto) {
+        needsUpdate = true;
+        return { ...row, netto_pnto: calculatedNetto };
+      }
+      return row;
+    });
+
+    if (needsUpdate) {
+      setDetails(updated);
+    }
+  }, [finalWeightDisplayValue, formData.unit_name, details]);
 
   const resetFormToBlank = () => {
     let nextNum = 502;
@@ -1707,17 +1777,32 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                       />
                     </td>
                     <td className="p-1.5 w-24">
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={row.netto_pnto !== undefined && row.netto_pnto !== null ? row.netto_pnto : ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handleRowChange(index, 'netto_pnto', val === '' ? 0 : Number(val));
-                        }}
-                        placeholder="0.000"
-                        className="w-full h-7 bg-white border border-slate-300 rounded px-1.5 text-xs text-right font-bold outline-none font-mono"
-                      />
+                      {(() => {
+                        const rowUnit = (row.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+                        const isBales = rowUnit.includes('BALE') || rowUnit === 'BALES' || (!rowUnit.includes('LOOSE') && rowUnit !== 'LOOSE');
+                        return (
+                          <input
+                            type="number"
+                            step="0.001"
+                            readOnly={isBales}
+                            value={row.netto_pnto !== undefined && row.netto_pnto !== null ? row.netto_pnto : ''}
+                            onChange={(e) => {
+                              if (!isBales) {
+                                const val = e.target.value;
+                                handleRowChange(index, 'netto_pnto', val === '' ? 0 : Number(val));
+                              }
+                            }}
+                            placeholder="0.000"
+                            title={isBales ? "Auto-calculated: (RCPT / Total RCPT) * Final Weight" : "Enter Netto Weight"}
+                            className={cn(
+                              "w-full h-7 border rounded px-1.5 text-xs text-right font-bold outline-none font-mono transition-colors",
+                              isBales
+                                ? "bg-amber-50/90 border-amber-300 text-amber-950 cursor-not-allowed"
+                                : "bg-white border-slate-300 text-slate-900 focus:border-[#174C2C]"
+                            )}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="p-1.5">
                       <input
