@@ -1241,6 +1241,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (field === "ncv_claim" && (!currentRow.settlement_ncv || currentRow.settlement_ncv === 0)) {
         currentRow.settlement_ncv = Number(value) || 0;
       }
+      // remarks show simul
+      /* if (field === "row_remarks" ) {
+        let totalrow = detailRows.length
+
+        handleHeaderChange("remarks", currentRow.row_remarks)
+        console.log(currentRow.row_remarks+'****************111111111111111111')
+      } */
+      //reduced weight
+      if (currentRow.receipt_gross_wt > 0 || field === "add_weight" || field === "less_weight") {
+        let reducewtt = Number(currentRow.receipt_gross_wt)+Number(currentRow.add_weight)-Number(currentRow.less_weight)
+        currentRow.reduced_weight = reducewtt;
+        
+      }
+         
 
       updated[index] = currentRow;
       return updated;
