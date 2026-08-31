@@ -1002,7 +1002,7 @@ export default function Dashboard({
     },
     { 
       id: 'inspection', 
-      label: 'INSPECTION', 
+      label: 'MILL INSPECTION', 
       icon: ClipboardCheck, 
       desc: 'Quality Audit Register', 
       step: '4',
@@ -1259,7 +1259,7 @@ export default function Dashboard({
         { 
           id: 'inspection', 
           mappedId: 'inspection',
-          label: 'INSPECTION', 
+          label: 'MILL INSPECTION', 
           icon: ClipboardCheck, 
           desc: 'Quality Audit Register', 
           step: '2.2',

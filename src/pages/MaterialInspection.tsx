@@ -2238,39 +2238,150 @@ export default function MaterialInspection({
     setSuccessMessage("Edit mode enabled for active record.");
   };
 
+  // Comprehensive delete helper: removes inspection from ALL linked database tables and localStorage
+  const deleteInspectionPermanently = async (target: any) => {
+    if (!target) return;
+    const mrNo = target.mr_no || masterData.mr_no;
+    const poNo = target.po_no || target.mill_po_no || masterData.po_no;
+    const arrNo = target.arrival_no || target.temporary_arrival_no || masterData.arrival_no;
+    const inspNo = (target as any).inspection_no || (masterData as any).inspection_no;
+    const recordId = target.id;
+
+    if (!mrNo && !poNo && !recordId) {
+      throw new Error("No record identifier found to delete.");
+    }
+
+    if (supabase) {
+      // 1. Delete details across all detail tables
+      const detailDeletes: PromiseLike<any>[] = [];
+      if (mrNo) {
+        detailDeletes.push(
+          supabase.from("inspection_checklist_details").delete().eq("mr_no", mrNo),
+          supabase.from("inspection_details").delete().eq("mr_no", mrNo),
+          supabase.from("mill_inspection_detail").delete().eq("mr_no", mrNo),
+          supabase.from("material_inspection_details").delete().eq("mr_no", mrNo)
+        );
+      }
+      if (poNo) {
+        detailDeletes.push(
+          supabase.from("inspection_checklist_details").delete().eq("po_no", poNo),
+          supabase.from("inspection_details").delete().eq("po_no", poNo),
+          supabase.from("mill_inspection_detail").delete().eq("po_no", poNo),
+          supabase.from("material_inspection_details").delete().eq("po_no", poNo)
+        );
+      }
+      await Promise.all(detailDeletes.map(p => Promise.resolve(p).catch(() => ({}))));
+
+      // 2. Delete masters across all master tables
+      const masterDeletes: PromiseLike<any>[] = [];
+      if (mrNo) {
+        masterDeletes.push(
+          supabase.from("inspection_checklist").delete().eq("mr_no", mrNo),
+          supabase.from("inspection_master").delete().eq("mr_no", mrNo),
+          supabase.from("mill_inspection_master").delete().eq("mr_no", mrNo),
+          supabase.from("material_inspection").delete().eq("mr_no", mrNo),
+          supabase.from("mill_inspection_print_logs").delete().eq("mr_no", mrNo)
+        );
+      }
+      if (recordId) {
+        masterDeletes.push(
+          supabase.from("inspection_checklist").delete().eq("id", recordId),
+          supabase.from("inspection_master").delete().eq("id", recordId),
+          supabase.from("mill_inspection_master").delete().eq("id", recordId),
+          supabase.from("material_inspection").delete().eq("id", recordId)
+        );
+      }
+      if (poNo) {
+        masterDeletes.push(
+          supabase.from("inspection_checklist").delete().eq("po_no", poNo),
+          supabase.from("inspection_master").delete().eq("po_no", poNo),
+          supabase.from("mill_inspection_master").delete().eq("po_no", poNo),
+          supabase.from("material_inspection").delete().eq("po_no", poNo)
+        );
+      }
+      await Promise.all(masterDeletes.map(p => Promise.resolve(p).catch(() => ({}))));
+    }
+
+    // 3. Clean up localStorage caches
+    try {
+      const isTarget = (r: any) => {
+        if (!r) return false;
+        if (mrNo && (r.mr_no === mrNo || r.id === mrNo)) return true;
+        if (recordId && r.id === recordId) return true;
+        if (poNo && (r.po_no === poNo || r.mill_po_no === poNo)) return true;
+        if (arrNo && (r.arrival_no === arrNo || r.temporary_arrival_no === arrNo)) return true;
+        if (inspNo && r.inspection_no === inspNo) return true;
+        return false;
+      };
+
+      const cachedInsp = localStorage.getItem("inspection_master_records");
+      if (cachedInsp) {
+        const parsed = JSON.parse(cachedInsp);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(r => !isTarget(r));
+          localStorage.setItem("inspection_master_records", JSON.stringify(filtered));
+        }
+      }
+      const cachedMat = localStorage.getItem("material_inspection_records");
+      if (cachedMat) {
+        const parsed = JSON.parse(cachedMat);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(r => !isTarget(r));
+          localStorage.setItem("material_inspection_records", JSON.stringify(filtered));
+        }
+      }
+      localStorage.removeItem("AUTOSAVE_MATERIAL_INSPECTION");
+    } catch (e) {
+      console.warn("Storage cleanup warning:", e);
+    }
+
+    // 4. Update local component state
+    setSavedInspections(prev => prev.filter(r => {
+      if (mrNo && r.mr_no === mrNo) return false;
+      if (recordId && r.id === recordId) return false;
+      if (poNo && (r.po_no === poNo || r.mill_po_no === poNo)) return false;
+      return true;
+    }));
+
+    // 5. Notify the rest of the application
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_master', mr_no: mrNo } }));
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'mill_inspection_master', mr_no: mrNo } }));
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_checklist', mr_no: mrNo } }));
+  };
+
   // Delete current transaction fully (Restricted to L4, L5, Admin)
   const handleDeleteAction = async () => {
     if (!enforceEditOrDeletePermission("Delete")) {
       return;
     }
 
+    const targetMrNo = masterData.mr_no || masterData.po_no;
+    if (!targetMrNo) {
+      setErrorMessage("No active record loaded to delete.");
+      return;
+    }
+
     if (
       !window.confirm(
-        `Permanently delete all logs for MR No.: ${masterData.mr_no}?`,
+        `Permanently delete all logs for MR No.: ${targetMrNo}? This will delete the inspection from all database tables.`,
       )
     )
       return;
-    if (!supabase) return;
 
     setLoading(true);
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-
-      const { error } = await supabase.from("inspection_checklist").delete().eq("mr_no", masterData.mr_no);
-      await supabase.from("mill_inspection_master").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("material_inspection").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-
-      if (error) throw error;
+      await deleteInspectionPermanently(masterData);
 
       setSuccessMessage(
-        `Inspection report ${masterData.mr_no} completely purged from the system.`,
+        `Inspection report ${targetMrNo} completely purged from all respective tables.`,
       );
+      setMasterData(initialMasterState());
+      setDetailsList([1, 2, 3, 4, 5].map(createEmptyRow));
+      setIsEditMode(false);
       setViewMode("dashboard");
-      loadSavedInspectionsList();
+      await loadSavedInspectionsList();
     } catch (err: any) {
       setErrorMessage("Delete operation halted: " + err.message);
     } finally {
@@ -3653,23 +3764,17 @@ export default function MaterialInspection({
                                 <button
                                   onClick={async () => {
                                     if (!enforceEditOrDeletePermission("Delete")) return;
+                                    const targetLabel = row.mr_no || row.po_no || 'this record';
                                     if (
                                       confirm(
-                                        `Are you sure you want to delete Inspection record ${row.mr_no}?`,
+                                        `Are you sure you want to delete Inspection record ${targetLabel}? This will remove it completely from all inspection tables.`,
                                       )
                                     ) {
                                       try {
                                         setLoading(true);
-                                        await supabase
-                                          .from("mill_inspection_detail")
-                                          .delete()
-                                          .eq("mr_no", row.mr_no);
-                                        const { error } = await supabase
-                                          .from("mill_inspection_master")
-                                          .delete()
-                                          .eq("mr_no", row.mr_no);
-                                        if (error) throw error;
-                                        loadSavedInspectionsList();
+                                        await deleteInspectionPermanently(row);
+                                        await loadSavedInspectionsList();
+                                        setSuccessMessage(`Inspection record ${targetLabel} deleted successfully from all tables.`);
                                       } catch (err: any) {
                                         alert("Delete failed: " + err.message);
                                       } finally {

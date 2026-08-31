@@ -1412,7 +1412,7 @@ export default function AdminDesk({
         { id: 'sauda', label: 'Sauda Desk' },
         { id: 'po', label: 'Sauda Check Point' },
         { id: 'amad', label: 'Arrival / Amad' },
-        { id: 'inspection', label: 'INSPECTION' },
+        { id: 'inspection', label: 'MILL INSPECTION' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST' },
         { id: 'mismatch', label: 'Mismatch Case' },
         { id: 'club_po_mr', label: 'Club P.O & M.R' },

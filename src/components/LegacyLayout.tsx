@@ -262,7 +262,7 @@ export default function LegacyLayout({
       subItems: [
         { id: 'tmr', label: 'TEMPORARY ARRIVAL', icon: Clock, pageId: 'amad' },
         { id: 'final_mr', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
-        { id: 'inspection', label: 'INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
+        { id: 'inspection', label: 'MILL INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
         { id: 'satta_mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
         { id: 'material_mismatch', label: 'MATERIAL MISMATCH', icon: AlertTriangle, pageId: 'material_mismatch' },

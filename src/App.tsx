@@ -708,7 +708,7 @@ const allSidebarItems = [
   { id: "final_po", label: "Final P.O", icon: FileText },
   { id: "amad", label: "Temporary Arrival", icon: Archive },
   { id: "final_arrival", label: "Final Arrival", icon: CheckCircle2 },
-  { id: "inspection", label: "INSPECTION", icon: ClipboardCheck },
+  { id: "inspection", label: "MILL INSPECTION", icon: ClipboardCheck },
   { id: "material_inspection", label: "INSPECTION CHECKLIST", icon: ShieldCheck },
   { id: "mismatch", label: "Mismatch Case", icon: AlertTriangle },
   { id: "club_po_mr", label: "Club P.O & Arrival", icon: Link },
@@ -818,7 +818,7 @@ const JCI_WORKFLOW_STEPS: {
   },
   {
     stepNumber: 6,
-    title: "Inspection",
+    title: "Mill Inspection",
     pageId: "inspection",
     matchPages: ["inspection", "material_inspection"],
     icon: ClipboardCheck,

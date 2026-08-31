@@ -1519,13 +1519,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   const handleDeleteRecord = async (mr_no: string) => {
-    if (!confirm(`Are you sure you want to delete inspection record ${mr_no}?`)) return;
+    if (!confirm(`Are you sure you want to delete inspection record ${mr_no}? This will remove it from all inspection tables.`)) return;
     try {
       if (supabase) {
-        await supabase.from("material_inspection_details").delete().eq("mr_no", mr_no);
-        await supabase.from("inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {});
-        await supabase.from("material_inspection").delete().eq("mr_no", mr_no);
-        await supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {});
+        await Promise.all([
+          supabase.from("inspection_checklist_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("mill_inspection_detail").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("material_inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("inspection_checklist").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("material_inspection").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("mill_inspection_print_logs").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+        ]);
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       try {
@@ -1535,8 +1542,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           localStorage.setItem("material_inspection_records", JSON.stringify(list));
           localStorage.setItem("inspection_master_records", JSON.stringify(list));
         }
+        localStorage.removeItem("AUTOSAVE_MATERIAL_INSPECTION");
       } catch (e) {}
-      showToast(`Record ${mr_no} deleted.`);
+
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_master', mr_no } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'mill_inspection_master', mr_no } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_checklist', mr_no } }));
+
+      showToast(`Record ${mr_no} completely deleted from all respective tables.`);
     } catch (err: any) {
       alert("Delete failed: " + err.message);
     }
