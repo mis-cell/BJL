@@ -101,6 +101,10 @@ export default function SaudaEntry({
         .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs)
         .sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
 
+      if (copy.units_per_lorry === undefined && copy.units_per_lorry_type && !isNaN(Number(copy.units_per_lorry_type))) {
+        copy.units_per_lorry = Number(copy.units_per_lorry_type);
+      }
+
       const existingCount = realQD.length;
       if (existingCount < 1) {
         copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0 }];
@@ -123,6 +127,7 @@ export default function SaudaEntry({
       agency: '',
       marks: '',
       no_of_lorries: 1,
+      units_per_lorry: 0,
       units_per_lorry_type: 'BALES',
       total_unit: 0,
       wt_per_lorry: 0,
@@ -269,15 +274,47 @@ export default function SaudaEntry({
       }
 
       // Sync Unit Type when Units/Lorry changes
-      if (name === 'units_per_lorry_type') {
+      if (name === 'units_per_lorry_type' && isNaN(Number(finalValue))) {
         updated.unit_type = finalValue;
       }
 
-      // Automatically calculate total_wt_in_ton = no_of_lorries * wt_per_lorry
-      if (name === 'no_of_lorries' || name === 'wt_per_lorry') {
-        const lorries = name === 'no_of_lorries' ? parseFloat(value) || 0 : parseFloat(prev.no_of_lorries as any) || 0;
-        const wt = name === 'wt_per_lorry' ? parseFloat(value) || 0 : parseFloat(prev.wt_per_lorry as any) || 0;
+      // Automatically calculate Total Unit = No. of Lorries * Units/Lorry
+      // and Wt/Lorry = Total Wt. in Ton / No. of Lorries or Total Wt = Lorries * Wt/Lorry
+      if (name === 'no_of_lorries') {
+        const lorries = parseFloat(value) || 0;
+        const units = parseFloat(prev.units_per_lorry !== undefined && prev.units_per_lorry !== null ? prev.units_per_lorry as any : prev.units_per_lorry_type as any) || 0;
+        updated.total_unit = Math.round(lorries * units);
+
+        const wt = parseFloat(prev.wt_per_lorry as any) || 0;
+        if (wt > 0) {
+          updated.total_wt_in_ton = parseFloat((lorries * wt).toFixed(3));
+        } else if (parseFloat(prev.total_wt_in_ton as any) > 0 && lorries > 0) {
+          updated.wt_per_lorry = parseFloat(((parseFloat(prev.total_wt_in_ton as any)) / lorries).toFixed(3));
+        }
+      }
+
+      if (name === 'units_per_lorry') {
+        const units = parseFloat(value) || 0;
+        const lorries = parseFloat(prev.no_of_lorries as any) || 0;
+        updated.units_per_lorry = units;
+        updated.units_per_lorry_type = String(units);
+        updated.total_unit = Math.round(lorries * units);
+      }
+
+      if (name === 'wt_per_lorry') {
+        const wt = parseFloat(value) || 0;
+        const lorries = parseFloat(prev.no_of_lorries as any) || 0;
+        updated.wt_per_lorry = wt;
         updated.total_wt_in_ton = parseFloat((lorries * wt).toFixed(3));
+      }
+
+      if (name === 'total_wt_in_ton') {
+        const totalWt = parseFloat(value) || 0;
+        const lorries = parseFloat(prev.no_of_lorries as any) || 0;
+        updated.total_wt_in_ton = totalWt;
+        if (lorries > 0) {
+          updated.wt_per_lorry = parseFloat((totalWt / lorries).toFixed(3));
+        }
       }
 
       // Automatically update b_rate from active Satta Base Rates when date or b_date changes
@@ -425,6 +462,7 @@ export default function SaudaEntry({
         'agency',
         'marks',
         'no_of_lorries',
+        'units_per_lorry',
         'units_per_lorry_type',
         'total_unit',
         'wt_per_lorry',
@@ -555,6 +593,7 @@ export default function SaudaEntry({
           <TransportationCard
             formData={formData}
             onChange={handleChange}
+            onSelectChange={handleSelectChange}
             unitOptions={UNIT_OPTIONS}
           />
 

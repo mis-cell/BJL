@@ -3013,17 +3013,29 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       <input  id="no_of_lorries_3010" name="no_of_lorries" aria-label="No. of Lorries"
                         type="number"
                         value={formNoOfLorries}
-                        onChange={(e) => setFormNoOfLorries(Math.max(1, Number(e.target.value) || 1))}
+                        onChange={(e) => {
+                          const lorries = Math.max(1, Number(e.target.value) || 1);
+                          setFormNoOfLorries(lorries);
+                          const units = Number(formUnitsPerLorry) || 0;
+                          if (units > 0) setFormTotalUnit(lorries * units);
+                          if (formTotalWtTons > 0) setFormWtPerLorry(Number((formTotalWtTons / lorries).toFixed(3)));
+                        }}
                         className="w-full bg-slate-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-right text-slate-900"
                       />
                     </div>
                     <div>
                       <label htmlFor="units_lorry_3019" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Units/Lorry</label>
                       <input  id="units_lorry_3019" name="units_lorry" aria-label="Units/Lorry"
-                        type="text"
+                        type="number"
                         value={formUnitsPerLorry}
-                        onChange={(e) => setFormUnitsPerLorry(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-slate-900"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormUnitsPerLorry(val);
+                          const num = Number(val) || 0;
+                          setFormTotalUnit(formNoOfLorries * num);
+                        }}
+                        placeholder="e.g. 150"
+                        className="w-full bg-slate-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-right text-slate-900"
                       />
                     </div>
                     <div>
@@ -3031,18 +3043,22 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       <input  id="total_unit_3028" name="total_unit" aria-label="Total Unit"
                         type="number"
                         value={formTotalUnit}
-                        disabled
+                        onChange={(e) => setFormTotalUnit(Number(e.target.value) || 0)}
                         className="w-full bg-amber-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-right text-slate-900 font-mono"
-                        title="Auto-calculated from Quality details"
+                        title="Total Unit = No. of Lorries * Units/Lorry"
                       />
                     </div>
                     <div>
                       <label htmlFor="wt_lorry_mt_3038" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Wt/Lorry (MT)</label>
                       <input  id="wt_lorry_mt_3038" name="wt_lorry_mt" aria-label="Wt/Lorry (MT)"
                         type="number"
-                        step="0.01"
+                        step="0.001"
                         value={formWtPerLorry}
-                        onChange={(e) => setFormWtPerLorry(Number(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const wt = Number(e.target.value) || 0;
+                          setFormWtPerLorry(wt);
+                          setFormTotalWtTons(Number((formNoOfLorries * wt).toFixed(3)));
+                        }}
                         className="w-full bg-slate-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-right text-slate-900"
                       />
                     </div>
@@ -3062,11 +3078,17 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                       <label htmlFor="total_wt_mt_3060" className="text-[9px] font-black text-slate-500 uppercase block mb-1">Total Wt. (MT)</label>
                       <input  id="total_wt_mt_3060" name="total_wt_mt" aria-label="Total Wt. (MT)"
                         type="number"
-                        step="0.01"
+                        step="0.001"
                         value={formTotalWtTons}
-                        onChange={(e) => setFormTotalWtTons(Number(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const total = Number(e.target.value) || 0;
+                          setFormTotalWtTons(total);
+                          if (formNoOfLorries > 0) {
+                            setFormWtPerLorry(Number((total / formNoOfLorries).toFixed(3)));
+                          }
+                        }}
                         className="w-full bg-emerald-50 border border-slate-400 px-2 py-1 text-xs font-black rounded text-right text-slate-900 font-mono font-bold"
-                        title="Auto-calculated or override manually"
+                        title="Wt/Lorry = Total Wt. in Ton / No. of Lorries"
                       />
                     </div>
                   </div>

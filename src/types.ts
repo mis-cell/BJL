@@ -128,6 +128,7 @@ export interface Sauda {
   marks?: string;
   no_of_lorries?: number;
   total_lorry?: number;
+  units_per_lorry?: number;
   units_per_lorry_type?: string;
   total_unit?: number;
   wt_per_lorry?: number;
