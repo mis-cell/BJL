@@ -1016,7 +1016,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white p-2 md:p-4 space-y-5 max-w-[1700px] w-full mx-auto">
 
         {/* KPI CARDS GRID */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* KPI 1 */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
@@ -1031,10 +1031,10 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             </p>
           </div>
 
-          {/* KPI 2 */}
+          {/* KPI 2: Total */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Packets</span>
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total</span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#8C6D33] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Package className="w-4 h-4" />
               </div>
@@ -1055,19 +1055,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             <p className="text-[10px] font-medium text-slate-500 mt-1">Net Metric Tons</p>
           </div>
 
-          {/* KPI 4: Linked & Certified */}
-          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Linked & Certified</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl font-bold font-mono text-emerald-800">{completedFilteredCount}</p>
-            <p className="text-[10px] font-medium text-emerald-600 mt-1">Fully Audited</p>
-          </div>
-
-          {/* KPI 5: Sync Daemon */}
+          {/* KPI 4: Sync Daemon */}
           <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Sync Daemon</span>
