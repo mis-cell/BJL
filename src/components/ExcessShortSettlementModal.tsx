@@ -214,9 +214,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         saudaRate = Number(det.rate_qntl || det.rate || det.rs || 0);
       }
     }
-    // Default standard rate if 0
+    // Default standard rate if 0 (Standard jute market rate in ₹/Qtl)
     if (saudaRate === 0) {
-      saudaRate = curGrade === 'TD10' ? 1880 : (curGrade === 'TD11' ? 1830 : 1930);
+      saudaRate = curGrade === 'TD10' ? 18800 : (curGrade === 'TD11' ? 18300 : (curGrade === 'TD9' ? 19300 : 19300));
     }
     setSaudaRateQtl(saudaRate);
 
@@ -228,25 +228,21 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         String(s.start_date || '') <= lastArrivalDate
       );
       if (match) {
-        // Rates in Satta can be in ₹/Qtl (e.g. 1850) or ₹/Ton (e.g. 18500)
-        let r = Number(match.final_rate || match.base_rate || 0);
-        if (r > 5000) r = r / 10; // Convert to per Quintal if stored in MT
-        foundSattaRate = r;
+        // Rates in Satta are stored in ₹/Qtl (e.g. 17300, 17500, 19300)
+        foundSattaRate = Number(match.final_rate || match.base_rate || 0);
       }
     }
 
     if (foundSattaRate === 0 && sattaBaseRates && sattaBaseRates.length > 0) {
       const base = sattaBaseRates.find((b: any) => String(b.start_date || '') <= lastArrivalDate);
       if (base) {
-        let r = Number(base.base_rate || 0);
-        if (r > 5000) r = r / 10;
-        foundSattaRate = r;
+        foundSattaRate = Number(base.base_rate || 0);
       }
     }
 
     if (foundSattaRate === 0) {
-      // Intelligent standard market rate based on Sauda rate
-      foundSattaRate = Math.round(saudaRate * 0.96); // typically slightly lower for last arrival spot rate
+      // Standard spot rate based on Sauda rate (or default spot rate e.g. 17300)
+      foundSattaRate = Math.round(saudaRate * 0.90) || 17300;
     }
 
     setSattaRateQtl(foundSattaRate);
@@ -700,7 +696,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                           {pctOfTotal.toFixed(1)}%
                         </td>
                         <td className="p-2 border-r text-right font-black text-slate-900">
-                          ₹{g.saudaRateQtl > 0 ? g.saudaRateQtl.toLocaleString() : (saudaRateQtl > 0 ? saudaRateQtl.toLocaleString() : '1,880')}
+                          ₹{g.saudaRateQtl > 0 ? g.saudaRateQtl.toLocaleString() : (saudaRateQtl > 0 ? saudaRateQtl.toLocaleString() : '19,300')}
                         </td>
                         <td className="p-2 text-center font-sans">
                           {isSelected ? (
@@ -750,11 +746,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     value={saudaRateQtl || ''}
                     onChange={(e) => setSaudaRateQtl(Number(e.target.value))}
                     className="w-full px-2.5 py-1.5 text-sm font-black font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-slate-50"
-                    placeholder="e.g. 1880"
+                    placeholder="e.g. 19300"
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
                 </div>
-                <p className="text-[9px] text-slate-400">₹{(saudaRateQtl * 10).toLocaleString()} per MT</p>
+                <p className="text-[9px] text-slate-500 font-medium">Sauda Rate: ₹{saudaRateQtl.toLocaleString()} / Quintal</p>
               </div>
 
               {/* Box 2: Last Arrival Satta Market Rate */}
@@ -770,11 +766,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     value={sattaRateQtl || ''}
                     onChange={(e) => setSattaRateQtl(Number(e.target.value))}
                     className="w-full px-2.5 py-1.5 text-sm font-black font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-slate-50"
-                    placeholder="e.g. 1850"
+                    placeholder="e.g. 17300"
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
                 </div>
-                <p className="text-[9px] text-slate-400">₹{(sattaRateQtl * 10).toLocaleString()} per MT</p>
+                <p className="text-[9px] text-slate-500 font-medium">Satta Rate: ₹{sattaRateQtl.toLocaleString()} / Quintal</p>
               </div>
 
               {/* Box 3: Applicable Policy Rate */}
@@ -792,7 +788,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <span className="text-xs font-bold text-amber-800 ml-1">/ Qtl</span>
                 </div>
                 <p className="text-[8.5px] font-bold text-amber-900 leading-tight">
-                  Rule: MIN(Sauda Rate ₹{saudaRateQtl}, Satta Rate ₹{sattaRateQtl})
+                  Rule: MIN(Sauda Rate ₹{saudaRateQtl.toLocaleString()}, Satta Rate ₹{sattaRateQtl.toLocaleString()})
                 </p>
               </div>
             </div>
