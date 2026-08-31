@@ -340,12 +340,18 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     }
 
     // Sort: Delivered grades first (by totalWeightMt descending), then unreceived contracted grades
-    const list = Object.values(map).sort((a, b) => {
+    let list = Object.values(map).sort((a, b) => {
       if (b.totalWeightMt !== a.totalWeightMt) {
         return b.totalWeightMt - a.totalWeightMt;
       }
       return a.grade.localeCompare(b.grade);
     });
+
+    // Only display grades that were actually received in Final Arrivals
+    const hasDeliveredGrades = list.some(item => item.totalWeightMt > 0 || item.totalBags > 0);
+    if (hasDeliveredGrades) {
+      list = list.filter(item => item.totalWeightMt > 0 || item.totalBags > 0);
+    }
 
     return list;
   }, [linkedFinalArrivals, saudaQualities, allScpDetails, poNo, lastArrivalDate, liveSattaRates, liveBaseRates, liveDifferentials]);
@@ -801,8 +807,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     <th className="p-2 border-r text-right">Total Received (MT)</th>
                     <th className="p-2 border-r text-right">% of Delivery</th>
                     <th className="p-2 border-r text-right">Sauda Rate (₹/Qtl)</th>
-                    <th className="p-2 border-r text-right bg-indigo-50/50 text-indigo-950">Last Delivery Date Rate (₹/Qtl)</th>
-                    <th className="p-2 border-r text-right text-amber-900 bg-amber-50/60">Rate Diff (₹/Qtl)</th>
                     <th className="p-2 text-center">Status</th>
                   </tr>
                 </thead>
@@ -810,7 +814,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   {gradeBreakdown.map((g, idx) => {
                     const isSelected = selectedGrade === g.grade;
                     const pctOfTotal = totalReceivedMt > 0 ? (g.totalWeightMt / totalReceivedMt) * 100 : 0;
-                    const diff = Math.max(0, g.saudaRateQtl - g.sattaRateQtl);
 
                     return (
                       <tr 
@@ -851,12 +854,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                         </td>
                         <td className="p-2 border-r text-right font-black text-slate-900">
                           ₹{g.saudaRateQtl.toLocaleString()}
-                        </td>
-                        <td className="p-2 border-r text-right font-bold text-indigo-900">
-                          ₹{g.sattaRateQtl.toLocaleString()}
-                        </td>
-                        <td className="p-2 border-r text-right font-black text-amber-900 bg-amber-50/30">
-                          ₹{diff.toLocaleString()}
                         </td>
                         <td className="p-2 text-center font-sans">
                           {isSelected ? (
