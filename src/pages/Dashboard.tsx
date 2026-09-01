@@ -134,6 +134,7 @@ export default function Dashboard({
   const [isGoogleSheetLoading, setIsGoogleSheetLoading] = React.useState(false);
   const [googleSheetError, setGoogleSheetError] = React.useState<string | null>(null);
   const [smsSearchTerm, setSmsSearchTerm] = React.useState('');
+  const [smsSortOrder, setSmsSortOrder] = React.useState<'asc' | 'desc'>('desc');
   const [saudaSearchTerm, setSaudaSearchTerm] = React.useState('');
   const [saudaStatusFilter, setSaudaStatusFilter] = React.useState<'All' | 'Active' | 'Partial' | 'Closed'>('All');
   const [isManualFormOpen, setIsManualFormOpen] = React.useState(false);
@@ -2386,8 +2387,8 @@ export default function Dashboard({
                     </div>
                   )}
 
-                  {/* SMS Inbox Search Bar */}
-                  <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center  shrink-0 shadow-xs">
+                  {/* SMS Inbox Search Bar & Sort Control */}
+                  <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="relative flex-1 max-w-sm">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input  id="quick_filter_sms_logs_by__2275" name="quick_filter_sms_logs_by_" aria-label="Quick filter SMS logs by sender name or body..."
@@ -2398,6 +2399,18 @@ export default function Dashboard({
                         className="w-full bg-white pl-9 pr-3 py-2 text-xs border border-slate-250 rounded-lg shadow-sm font-bold text-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                       />
                     </div>
+
+                    <div className="flex items-center gap-1 bg-white border border-slate-250 px-2.5 py-1 rounded-lg shadow-xs">
+                      <span className="text-[10px] font-black uppercase text-slate-500">Sort:</span>
+                      <span className="text-[10px] font-black text-slate-800">Date</span>
+                      <button
+                        onClick={() => setSmsSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        className="ml-1 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all"
+                        title="Toggle Ascending / Descending"
+                      >
+                        {smsSortOrder === 'desc' ? '↓ Newest' : '↑ Oldest'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Row-wise Spreadsheet/Excel style layout for raw SMS logs */}
@@ -2406,7 +2419,13 @@ export default function Dashboard({
                       <thead className="bg-[#c2cfd6]/70 border-b-2 border-slate-400 text-slate-800 font-mono h-10 sticky top-0 z-10 font-bold uppercase ">
                         <tr>
                           <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-14">Row &or;</th>
-                          <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28">Date &or;</th>
+                          <th 
+                            onClick={() => setSmsSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                            className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28 cursor-pointer hover:bg-slate-300/80 select-none transition-colors"
+                            title="Click to sort by Date"
+                          >
+                            Date {smsSortOrder === 'desc' ? '↓' : '↑'}
+                          </th>
                           <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide w-48">Sender (Broker/Vyapari) &or;</th>
                           <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body payload)</th>
                         </tr>
@@ -2428,7 +2447,11 @@ export default function Dashboard({
                                 sms.service_center.toLowerCase().includes(query) ||
                                 sms.body.toLowerCase().includes(query)
                               );
-                            }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+                            }).sort((a, b) => {
+                              const timeA = new Date(a.date || 0).getTime();
+                              const timeB = new Date(b.date || 0).getTime();
+                              return smsSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+                            });
 
                             if (filtered.length === 0) {
                               return (

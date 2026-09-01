@@ -770,6 +770,12 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const [smsSearchTerm, setSmsSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
+  // Sorting state (Sort By Date)
+  const [saudaSortBy, setSaudaSortBy] = useState<'date'>('date');
+  const [saudaSortOrder, setSaudaSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [smsSortBy, setSmsSortBy] = useState<'date'>('date');
+  const [smsSortOrder, setSmsSortOrder] = useState<'asc' | 'desc'>('desc');
+
   // 100-rows per page pagination state
   const [saudaCurrentPage, setSaudaCurrentPage] = useState(1);
   const [saudaPageSize, setSaudaPageSize] = useState(100);
@@ -1076,7 +1082,11 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
     return matchesSearch && matchesStatus;
-  }).sort((a, b) => new Date(b.date || b.b_date || 0).getTime() - new Date(a.date || a.b_date || 0).getTime());
+  }).sort((a, b) => {
+    const timeA = new Date(a.date || a.b_date || 0).getTime();
+    const timeB = new Date(b.date || b.b_date || 0).getTime();
+    return saudaSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+  });
 
   const totalCount = filteredSaudas.length;
   const totalBalesSum = filteredSaudas.reduce((sum, s) => sum + getBales(s), 0);
@@ -1705,6 +1715,21 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                 
                 <span className="text-slate-400 mx-1 font-mono">|</span>
 
+                {/* Sort By Date */}
+                <div className="flex items-center gap-1 bg-white border border-slate-350 px-2 h-8 rounded shadow-xs">
+                  <span className="text-[10px] font-black uppercase text-slate-500">Sort:</span>
+                  <span className="text-[10px] font-black text-slate-800">Date</span>
+                  <button
+                    onClick={() => setSaudaSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    className="ml-1 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all"
+                    title="Toggle Ascending / Descending"
+                  >
+                    {saudaSortOrder === 'desc' ? '↓ Newest' : '↑ Oldest'}
+                  </button>
+                </div>
+
+                <span className="text-slate-400 mx-1 font-mono">|</span>
+
                 <button 
                   onClick={handleResetFilters}
                   className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-350 px-3 h-8 flex items-center gap-1 text-[10px] uppercase font-black tracking-wider rounded shadow-xs cursor-pointer"
@@ -1867,7 +1892,13 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#c2cfd6]/70 border-b-2 border-slate-400 text-slate-800 font-mono h-10 sticky top-0 z-10 font-bold uppercase ">
                   <tr>
-                    <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Date &or;</th>
+                    <th 
+                      onClick={() => setSaudaSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                      className="px-4 border-r border-slate-300 text-[10px] tracking-wide cursor-pointer hover:bg-slate-300/80 transition-colors select-none"
+                      title="Click to sort by Date"
+                    >
+                      Date {saudaSortOrder === 'desc' ? '↓' : '↑'}
+                    </th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Slip No. &or;</th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Area &or;</th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Broker &or;</th>
@@ -2282,8 +2313,8 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
               </div>
             )}
 
-            {/* SMS Search Bar */}
-            <div className="px-3 py-2 bg-slate-200/50 border border-slate-300 mt-2.5 flex items-center justify-between  rounded-lg gap-3">
+            {/* SMS Search & Sort Bar */}
+            <div className="px-3 py-2 bg-slate-200/50 border border-slate-300 mt-2.5 flex flex-wrap items-center justify-between rounded-lg gap-3">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input  id="quick_search_sheet_logs_b_2114" name="quick_search_sheet_logs_b" aria-label="Quick search sheet logs by broker, contact, or raw body..."
@@ -2294,8 +2325,24 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                   className="w-full bg-white pl-9 pr-3 py-1.5 text-xs border border-slate-350 rounded shadow-inner font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
-              <div className="text-[10px] font-bold text-slate-500 font-mono hidden sm:block">
-                TOTAL FEED: {googleSheetSmsData.length} RAW LOGS
+
+              <div className="flex items-center gap-2">
+                {/* Sort By Date */}
+                <div className="flex items-center gap-1 bg-white border border-slate-350 px-2 py-1 rounded shadow-xs">
+                  <span className="text-[10px] font-black uppercase text-slate-500">Sort:</span>
+                  <span className="text-[10px] font-black text-slate-800">Date</span>
+                  <button
+                    onClick={() => setSmsSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    className="ml-1 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-[9px] font-black uppercase tracking-wider cursor-pointer transition-all"
+                    title="Toggle Ascending / Descending"
+                  >
+                    {smsSortOrder === 'desc' ? '↓ Newest' : '↑ Oldest'}
+                  </button>
+                </div>
+
+                <div className="text-[10px] font-bold text-slate-500 font-mono hidden sm:block">
+                  TOTAL FEED: {googleSheetSmsData.length} RAW LOGS
+                </div>
               </div>
             </div>
 
@@ -2305,7 +2352,16 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                 <thead className="bg-[#c2cfd6]/70 border-b-2 border-slate-400 text-slate-800 font-mono h-10 sticky top-0 z-10 font-bold uppercase ">
                   <tr>
                     <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-14">Row &or;</th>
-                    <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28 cursor-pointer hover:bg-slate-300/60" onClick={() => setSmsCurrentPage(1)}>Date &or;</th>
+                    <th 
+                      className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28 cursor-pointer hover:bg-slate-300/60 select-none" 
+                      onClick={() => {
+                        setSmsSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+                        setSmsCurrentPage(1);
+                      }}
+                      title="Click to sort by Date"
+                    >
+                      Date {smsSortOrder === 'desc' ? '↓' : '↑'}
+                    </th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide w-48">Sender (Broker/Vyapari) &or;</th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body Payload)</th>
                     <th className="px-4 text-[10px] tracking-wide text-center font-bold w-72">Action</th>
@@ -2328,7 +2384,11 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                           sms.service_center.toLowerCase().includes(query) ||
                           sms.body.toLowerCase().includes(query)
                         );
-                      }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+                      }).sort((a, b) => {
+                        const timeA = new Date(a.date || 0).getTime();
+                        const timeB = new Date(b.date || 0).getTime();
+                        return smsSortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+                      });
 
                       if (filtered.length === 0) {
                         return (
