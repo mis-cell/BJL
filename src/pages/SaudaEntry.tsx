@@ -426,59 +426,18 @@ export default function SaudaEntry({
     }
 
     if (!formData.broker) {
-      alert("Please select a valid option for Broker.");
+      alert("Please fill in or select a Broker.");
       return;
-    }
-    if (brokers.length > 0) {
-      const isBrokerValid = brokers.some((b: any) => {
-        const name = (typeof b === 'object' && b !== null ? (b.brok_name || b.name || b.value || '') : String(b || '')).toString().trim().toUpperCase();
-        return name === formData.broker.trim().toUpperCase();
-      });
-      if (!isBrokerValid) {
-        alert("Please select a valid option for Broker.");
-        return;
-      }
     }
 
     if (!formData.supplier) {
-      alert("Please select a valid option for Supplier.");
+      alert("Please fill in or select a Supplier.");
       return;
-    }
-    if (suppliers.length > 0) {
-      const isSupplierValid = suppliers.some((s: any) => {
-        const name = (typeof s === 'object' && s !== null ? (s.supp_name || s.name || s.value || '') : String(s || '')).toString().trim().toUpperCase();
-        return name === formData.supplier.trim().toUpperCase();
-      });
-      if (!isSupplierValid) {
-        alert("Please select a valid option for Supplier.");
-        return;
-      }
-    }
-
-    if (formData.challan_supplier && suppliers.length > 0) {
-      const isChallanValid = suppliers.some((s: any) => {
-        const name = (typeof s === 'object' && s !== null ? (s.supp_name || s.name || s.value || '') : String(s || '')).toString().trim().toUpperCase();
-        return name === formData.challan_supplier.trim().toUpperCase();
-      });
-      if (!isChallanValid) {
-        alert("Please select a valid option for Challan Supplier.");
-        return;
-      }
     }
 
     if (!formData.area) {
-      alert("Please select a valid option for Area.");
+      alert("Please fill in or select an Area.");
       return;
-    }
-    if (areas.length > 0) {
-      const isAreaValid = areas.some((a: any) => {
-        const name = (typeof a === 'object' && a !== null ? (a.area_name || a.name || a.value || '') : String(a || '')).toString().trim().toUpperCase();
-        return name === formData.area.trim().toUpperCase();
-      });
-      if (!isAreaValid) {
-        alert("Please select a valid option for Area.");
-        return;
-      }
     }
 
     // Validate Quality Details rows
@@ -487,38 +446,8 @@ export default function SaudaEntry({
       const row = qdRows[i];
       if (row.quality || row.qty || row.rs || row.agency || row.marka) {
         if (!row.quality) {
-          alert(`Please select a valid option for Quality in Row ${i + 1}.`);
+          alert(`Please select or fill in Quality in Row ${i + 1}.`);
           return;
-        }
-        if (grades.length > 0) {
-          const isQualityValid = grades.some((g: any) => {
-            const name = (typeof g === 'object' && g !== null ? (g.grade_name || g.grade_code || g.name || g.value || '') : String(g || '')).toString().trim().toUpperCase();
-            return name === row.quality.trim().toUpperCase();
-          });
-          if (!isQualityValid) {
-            alert(`Please select a valid option for Quality "${row.quality}" in Row ${i + 1}.`);
-            return;
-          }
-        }
-        if (row.agency && agencies.length > 0) {
-          const isAgencyValid = agencies.some((a: any) => {
-            const name = (typeof a === 'object' && a !== null ? (a.agency_name || a.name || a.value || '') : String(a || '')).toString().trim().toUpperCase();
-            return name === row.agency.trim().toUpperCase();
-          });
-          if (!isAgencyValid) {
-            alert(`Please select a valid option for Agency "${row.agency}" in Row ${i + 1}.`);
-            return;
-          }
-        }
-        if (row.marka && markas.length > 0) {
-          const isMarkaValid = markas.some((m: any) => {
-            const name = (typeof m === 'object' && m !== null ? (m.marka_name || m.name || m.value || '') : String(m || '')).toString().trim().toUpperCase();
-            return name === row.marka.trim().toUpperCase();
-          });
-          if (!isMarkaValid) {
-            alert(`Please select a valid option for Marka "${row.marka}" in Row ${i + 1}.`);
-            return;
-          }
         }
       }
     }

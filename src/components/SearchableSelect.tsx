@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   isRequired?: boolean;
   compact?: boolean;
   errorMessage?: string;
+  allowCustomInput?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -37,7 +38,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   isAutoPopulated = false,
   isRequired = false,
   compact = false,
-  errorMessage
+  errorMessage,
+  allowCustomInput = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
@@ -134,12 +136,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     } else if (!value) {
       setQueryText('');
     } else {
-      // If value is provided (e.g. before master list finishes loading), keep it in queryText
+      // If value is provided (e.g. before master list finishes loading or manual custom input), keep it in queryText
       setQueryText(value);
     }
   }, [value, selectedOption]);
 
-  // Handle clicking outside: MUST NOT convert unselected typed text into selected value
+  // Handle clicking outside: MUST NOT convert unselected typed text into selected value if custom input is allowed
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -148,15 +150,17 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedOption, value, normalizedOptions, queryText]);
+  }, [selectedOption, value, normalizedOptions, queryText, allowCustomInput]);
 
   // Reset/restore valid state on blur, Tab, Escape, or clicking outside
   const handleCloseAndReset = () => {
     setIsOpen(false);
     setHighlightedIndex(-1);
 
+    const trimmed = queryText.trim().toUpperCase();
+
     // If input is empty, user cleared it
-    if (!queryText.trim()) {
+    if (!trimmed) {
       if (value) {
         onChange('');
       }
@@ -165,14 +169,24 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
       return;
     }
 
-    // If queryText does not match a selected option, do NOT save typed free text! Revert back!
     if (selectedOption) {
-      setQueryText(selectedOption.label || selectedOption.value);
+      const selectedLabel = selectedOption.label || selectedOption.value;
+      setQueryText(selectedLabel);
+      if (value !== selectedOption.value) {
+        onChange(selectedOption.value);
+      }
+      setHasBlurredInvalid(false);
+    } else if (allowCustomInput) {
+      // Allow custom typed text
+      setQueryText(trimmed);
+      if (value !== trimmed) {
+        onChange(trimmed);
+      }
       setHasBlurredInvalid(false);
     } else {
-      // No valid option was selected previously and user typed unselected text
+      // Revert if custom input is disabled
       setQueryText('');
-      setHasBlurredInvalid(true);
+      setHasBlurredInvalid(isRequired);
     }
   };
 
@@ -186,10 +200,20 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     );
   }, [normalizedOptions, queryText]);
 
-  // When user types in input - only updates local filter query, does NOT call onChange
+  // Check if queryText matches an existing option exactly
+  const hasExactMatch = React.useMemo(() => {
+    const q = queryText.trim().toUpperCase();
+    if (!q) return true;
+    return normalizedOptions.some(opt => opt.value.toUpperCase() === q || opt.label.toUpperCase() === q);
+  }, [normalizedOptions, queryText]);
+
+  // When user types in input - updates local text and updates onChange if custom input allowed
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value.toUpperCase();
     setQueryText(text);
+    if (allowCustomInput) {
+      onChange(text);
+    }
     updateDropdownDirection();
     setIsOpen(true);
     setHighlightedIndex(0);
@@ -239,7 +263,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
       }
     } else if (e.key === 'Enter') {
-      // Enter selects ONLY if dropdown is open and a valid option is highlighted
+      // Enter selects highlighted option if dropdown is open, else applies close/reset
       e.preventDefault();
       if (isOpen && highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
         handleSelectOption(filteredOptions[highlightedIndex]);
@@ -247,7 +271,6 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         handleCloseAndReset();
       }
     } else if (e.key === 'Tab') {
-      // Tab MUST NOT automatically convert typed text into a selected value
       handleCloseAndReset();
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -276,7 +299,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   }, [highlightedIndex, isOpen]);
 
   // Determine if error should be shown
-  const isInvalid = (isRequired && !value && hasBlurredInvalid) || Boolean(errorMessage);
+  const isInvalid = (isRequired && !value && hasBlurredInvalid && !allowCustomInput) || Boolean(errorMessage);
 
   return (
     <div className={`flex flex-col ${compact ? 'gap-0' : 'gap-1.5'} relative ${className}`} ref={containerRef}>
@@ -372,6 +395,22 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             } max-h-56 overflow-y-auto overscroll-contain bg-white border border-[#D8D3C5] rounded-xl shadow-2xl py-1 text-xs min-w-[200px]`}
             style={{ filter: 'drop-shadow(0 10px 15px rgba(0, 0, 0, 0.15))' }}
           >
+            {allowCustomInput && queryText.trim() && !hasExactMatch && (
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const customVal = queryText.trim().toUpperCase();
+                  handleSelectOption({ label: customVal, value: customVal });
+                }}
+                className="px-3.5 py-2 cursor-pointer flex items-center justify-between font-bold text-[#174C2C] bg-emerald-50 hover:bg-emerald-100 border-b border-emerald-200 transition-colors"
+              >
+                <span className="uppercase text-xs flex items-center gap-1.5">
+                  <span className="bg-[#174C2C] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">+ MANUAL INPUT</span>
+                  <span>Use &quot;{queryText.trim().toUpperCase()}&quot;</span>
+                </span>
+              </div>
+            )}
+
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt, idx) => {
                 const isSelected = opt.value.toUpperCase() === (value || '').toUpperCase();
@@ -397,12 +436,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   </div>
                 );
               })
-            ) : (
+            ) : !allowCustomInput ? (
               <div className="px-3.5 py-3 text-rose-500 font-bold italic text-center flex items-center justify-center gap-1.5 text-xs">
                 <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
                 <span>No record found</span>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
