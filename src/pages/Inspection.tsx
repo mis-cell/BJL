@@ -1838,7 +1838,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       </tr>
                     ) : (
                       filteredRecords.map((rec) => (
-                        <tr key={rec.mr_no} className="hover:bg-emerald-50/50 transition-colors">
+                        <tr
+                          key={rec.mr_no}
+                          onDoubleClick={() => handleEditRecord(rec)}
+                          className="hover:bg-emerald-50/50 transition-colors cursor-pointer select-none"
+                          title="Double-click to open edit mode for this record"
+                        >
                           <td className="py-3 px-4 font-black text-emerald-950 font-mono">{rec.mr_no}</td>
                           <td className="py-3 px-4 text-slate-600">
                             {rec.mr_date ? new Date(rec.mr_date).toLocaleDateString("en-GB") : "-"}
@@ -1864,7 +1869,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
+                            <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={() => handleEditRecord(rec)}
                                 className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded font-bold text-[11px] flex items-center gap-1"

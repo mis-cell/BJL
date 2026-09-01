@@ -6129,7 +6129,13 @@ export default function MaterialInspection({
                         filteredSavedInspections.map((row) => (
                           <tr
                             key={row.id}
-                            className="hover:bg-indigo-50/50 transition-colors h-9"
+                            onDoubleClick={() => {
+                              loadInspectionIntoForm(row);
+                              setIsEditMode(true);
+                              setViewMode("entry");
+                            }}
+                            className="hover:bg-indigo-50/50 transition-colors h-9 cursor-pointer select-none"
+                            title="Double-click to edit record"
                           >
                             <td className="px-3 text-indigo-900 font-extrabold text-xs">
                               {row.mr_no}
