@@ -1073,6 +1073,11 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       po_date: today,
       date: today,
       jci: 'No',
+      jci_no: 'No',
+      part_no: '',
+      rfs: '',
+      area: '',
+      rr_gr_no: '',
       challan_supplier: '',
       supplier: '',
       broker: '',
@@ -1113,7 +1118,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       electronic_gross_weight: 0,
       electronic_tare_weight: 0,
       weight_reduced: 0
-    });
+    } as any);
     setDetails(getPaddedDetails(null));
   };
 

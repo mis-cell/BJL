@@ -150,6 +150,7 @@ interface InspectionDetailRow {
   expanded?: boolean;
   is_auto?: boolean;
   auto_fields?: string[];
+  temporary_arrival_no?: string;
 }
 
 // Calculate Row Amount in ₹
@@ -2087,7 +2088,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   const isAlreadyInspected = records.some(r => {
                     const rMr = normalize(r.mr_no);
                     const rArr = normalize(r.arrival_no);
-                    const rTemp = normalize(r.temporary_arrival_no);
+                    const rTemp = normalize((r as any).temporary_arrival_no);
                     const rLorry = String(r.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
                     // 1. Direct arrival / MR number match

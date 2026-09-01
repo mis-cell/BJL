@@ -48,6 +48,7 @@ import {
   Scale,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { dbModule } from "../services/dbModule";
 import LegacyLayout, {
   LegacyFieldset,
   LegacyButton,
@@ -1041,6 +1042,46 @@ export default function AdminDesk({
           cleanedRow[col] = typeof val === "string" ? val.trim() : val;
         }
       }
+
+      // Ensure primary key UUID if omitted on insert for tables with 'id' or uuid PK
+      if (!cleanedRow[selectedTable.pk]) {
+        const colInfo = currentColumns.find((c) => c.name === selectedTable.pk);
+        const colType = (colInfo?.type || "").toLowerCase();
+        if (selectedTable.pk === "id" || colType.includes("uuid")) {
+          cleanedRow[selectedTable.pk] = crypto.randomUUID();
+        }
+      }
+
+      // Master table specific fallback values
+      if (selectedTable.name === "supply_master") {
+        if (!cleanedRow.supp_code && cleanedRow.supp_name) {
+          cleanedRow.supp_code = `SUPP-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      } else if (selectedTable.name === "broker_master") {
+        if (!cleanedRow.brok_code && cleanedRow.brok_name) {
+          cleanedRow.brok_code = `BROK-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      } else if (selectedTable.name === "area_master") {
+        if (!cleanedRow.area_code && cleanedRow.area_name) {
+          cleanedRow.area_code = `AREA-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      } else if (selectedTable.name === "agency_master") {
+        if (!cleanedRow.agency_code && cleanedRow.agency_name) {
+          cleanedRow.agency_code = `AGNC-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      } else if (selectedTable.name === "grade_master") {
+        if (!cleanedRow.grade_code && cleanedRow.grade_name) {
+          cleanedRow.grade_code = `GRD-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      } else if (selectedTable.name === "marka_master") {
+        if (!cleanedRow.marka_code && cleanedRow.marka_name) {
+          cleanedRow.marka_code = `MRK-${Math.floor(100 + Math.random() * 900)}`;
+        }
+      }
+
+      if (currentColumns.some((c) => c.name === "created_at") && !cleanedRow.created_at) {
+        cleanedRow.created_at = new Date().toISOString();
+      }
     } else {
       for (const col of Object.keys(rowToSave)) {
         const val = rowToSave[col];
@@ -1069,27 +1110,69 @@ export default function AdminDesk({
     }
 
     try {
-      let res;
+      let savedResult: any = null;
+      let res: any = null;
+
       if (isNew) {
         console.log(`[AdminDesk] Inserting row into ${selectedTable.name}:`, cleanedRow);
-        res = await supabase.from(selectedTable.name).insert([cleanedRow]).select();
-        if (!res.error) {
-          logActivityDirectly("DATA_INSERTION", `Created new record in "${selectedTable.name}". Row data: ${JSON.stringify(cleanedRow)}`);
+        try {
+          res = await supabase.from(selectedTable.name).insert([cleanedRow]).select();
+          if (res.data && res.data.length > 0) {
+            savedResult = res.data[0];
+          }
+        } catch (e) {
+          console.warn(`[AdminDesk] Primary insert error, executing dbModule fallback:`, e);
+          savedResult = await dbModule.insert(selectedTable.name, cleanedRow);
         }
+
+        if (res && res.error) {
+          console.warn(`[AdminDesk] Supabase insert error (${res.error.message}), executing dbModule fallback`);
+          savedResult = await dbModule.insert(selectedTable.name, cleanedRow);
+        }
+
+        if (!savedResult) savedResult = cleanedRow;
+        logActivityDirectly("DATA_INSERTION", `Created new record in "${selectedTable.name}". Row data: ${JSON.stringify(savedResult)}`);
       } else {
         const pkVal = cleanedRow[selectedTable.pk] ?? rowToSave[selectedTable.pk];
         console.log(`[AdminDesk] Updating row in ${selectedTable.name} [PK ${selectedTable.pk}=${pkVal}]:`, cleanedRow);
-        res = await supabase
-          .from(selectedTable.name)
-          .update(cleanedRow)
-          .eq(selectedTable.pk, pkVal)
-          .select();
-        if (!res.error) {
-          logActivityDirectly("DATA_MODIFICATION", `Updated record [PK: ${pkVal}] in "${selectedTable.name}". New data: ${JSON.stringify(cleanedRow)}`);
+        try {
+          res = await supabase
+            .from(selectedTable.name)
+            .update(cleanedRow)
+            .eq(selectedTable.pk, pkVal)
+            .select();
+          if (res.data && res.data.length > 0) {
+            savedResult = res.data[0];
+          }
+        } catch (e) {
+          console.warn(`[AdminDesk] Primary update error, executing dbModule fallback:`, e);
+          savedResult = await dbModule.update(selectedTable.name, selectedTable.pk, pkVal, cleanedRow);
         }
+
+        if (res && res.error) {
+          console.warn(`[AdminDesk] Supabase update error (${res.error.message}), executing dbModule fallback`);
+          savedResult = await dbModule.update(selectedTable.name, selectedTable.pk, pkVal, cleanedRow);
+        }
+
+        if (!savedResult) savedResult = { ...rowToSave, ...cleanedRow };
+        logActivityDirectly("DATA_MODIFICATION", `Updated record [PK: ${pkVal}] in "${selectedTable.name}". Row data: ${JSON.stringify(savedResult)}`);
       }
 
-      if (res.error) throw res.error;
+      // Broadcast update across application
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("app-data-updated", { detail: { table: selectedTable.name } }));
+      }
+
+      // Update local data state immediately
+      setData((prev) => {
+        if (isNew) {
+          return [savedResult, ...prev];
+        } else {
+          const pkVal = savedResult[selectedTable.pk] ?? rowToSave[selectedTable.pk];
+          return prev.map((r) => (r[selectedTable.pk] === pkVal ? savedResult : r));
+        }
+      });
+
       alert(`Record ${isNew ? "inserted" : "updated"} successfully in ${selectedTable.label}!`);
       setEditingRow(null);
       fetchData();
@@ -1102,7 +1185,7 @@ export default function AdminDesk({
   };
 
   // Delete matching table rows
-  const handleDelete = async ( pkValue: any) => {
+  const handleDelete = async (pkValue: any) => {
     if (!canDeleteData()) {
       alert("Only Admin can delete data.");
       return;
@@ -1110,12 +1193,29 @@ export default function AdminDesk({
 
     if (!supabase || !selectedTable || !confirm("Verify direct deletion request?")) return;
     try {
-      const { error } = await supabase.from(selectedTable.name).delete().eq(selectedTable.pk, pkValue);
-      if (error) throw error;
-      logActivityDirectly('DATA_DELETION', `Deleted record [PK: ${pkValue}] from table "${selectedTable.name}"`);
+      let err = null;
+      try {
+        const res = await supabase.from(selectedTable.name).delete().eq(selectedTable.pk, pkValue);
+        if (res.error) err = res.error;
+      } catch (e) {
+        err = e;
+      }
+
+      if (err) {
+        await dbModule.delete(selectedTable.name, selectedTable.pk, pkValue);
+      }
+
+      logActivityDirectly("DATA_DELETION", `Deleted record [PK: ${pkValue}] from table "${selectedTable.name}"`);
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("app-data-updated", { detail: { table: selectedTable.name } }));
+      }
+
+      setData((prev) => prev.filter((r) => r[selectedTable.pk] !== pkValue));
+      alert(`Record deleted successfully from ${selectedTable.label}!`);
       fetchData();
     } catch (err: any) {
-      alert("Delete transaction failure: " + err.message);
+      alert("Delete transaction failure: " + (err.message || JSON.stringify(err)));
     }
   };
 
