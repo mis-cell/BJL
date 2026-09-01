@@ -687,6 +687,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
             final_receipt_wt: nettoVal,
+            reduced_weight: nettoVal,
             moisture_act: moistAct,
             moisture_claim: Number(item.moisture_claim || item.claim_moisture || 0),
             grade_down_act: gdAct,
@@ -854,6 +855,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           unit: unitVal,
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
+          reduced_weight: nettoVal,
           final_receipt_wt: nettoVal,
           lorry_moisture_min: lMin,
           lorry_moisture_max: lMax,
@@ -1038,6 +1040,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             unit: unitVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
+            reduced_weight: nettoVal,
             final_receipt_wt: nettoVal,
             moisture_act: moistAct,
             moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
@@ -1088,6 +1091,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               unit: item.unit || "BALES",
               challan_gross_wt: nettoVal,
               receipt_gross_wt: nettoVal,
+              reduced_weight: nettoVal,
               final_receipt_wt: nettoVal,
               moisture_act: moistAct,
               moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
@@ -1265,7 +1269,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
         let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight)
         currentRow.reduced_weight = Number(reducewtt.toFixed(3));
+        currentRow.final_receipt_wt = Number(reducewtt.toFixed(3));
       }
+
+      if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "moisture_claim") ) {
+        let moisturediduct = ((Number(currentRow.receipt_gross_wt)/100) * Number(currentRow.moisture_claim))
+        let finalrecieptwt = Number(currentRow.receipt_gross_wt) - Number(moisturediduct.toFixed(3))
+        currentRow.final_receipt_wt = Number(finalrecieptwt.toFixed(3));
+      }
+      
         
       updated[index] = currentRow;
       return updated;
