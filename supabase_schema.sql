@@ -577,5 +577,21 @@ CREATE TABLE IF NOT EXISTS mill_inspection_detail (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- ============================================================================
+-- HIGH PERFORMANCE COMPOSITE INDEXES FOR REDUCING DISK I/O & EGRESS
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_sauda_status_created ON sauda_master(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sauda_check_point_po_status ON sauda_check_point(po_no, status);
+CREATE INDEX IF NOT EXISTS idx_purchase_master_po_status ON purchase_master(po_no, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_purchase_detail_po_grade ON purchase_detail_master(po_no, grade);
+CREATE INDEX IF NOT EXISTS idx_temp_arrival_po_created ON temporary_material_received(po_no, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_final_arrival_no_status ON final_arrival(final_arrival_no, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inspection_mr_status ON inspection_master(mr_no, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mill_inspection_mr_po ON mill_inspection_master(mr_no, po_no, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payment_master_supp_po ON payment_master(supplier, po_no, mr_no);
+CREATE INDEX IF NOT EXISTS idx_material_issue_no_date ON material_issue_master(issue_no, date DESC);
+CREATE INDEX IF NOT EXISTS idx_material_mismatch_created ON material_mismatch(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_satta_mismatch_created ON satta_mismatch(created_at DESC);
+
 
 
