@@ -1043,12 +1043,19 @@ export default function AdminDesk({
         }
       }
 
-      // Ensure primary key UUID if omitted on insert for tables with 'id' or uuid PK
+      // Determine if primary key is UUID vs integer/numeric
+      const pkColInfo = currentColumns.find((c) => c.name === selectedTable.pk);
+      const pkColType = (pkColInfo?.type || "").toLowerCase();
+      const samplePkVal = data && data.length > 0 ? data[0][selectedTable.pk] : null;
+      const isNumericPk = pkColType.includes("int") || pkColType.includes("serial") || pkColType.includes("numeric") || typeof samplePkVal === "number";
+      const isExplicitUuidPk = pkColType.includes("uuid") || (typeof samplePkVal === "string" && samplePkVal.includes("-") && samplePkVal.length === 36);
+
       if (!cleanedRow[selectedTable.pk]) {
-        const colInfo = currentColumns.find((c) => c.name === selectedTable.pk);
-        const colType = (colInfo?.type || "").toLowerCase();
-        if (selectedTable.pk === "id" || colType.includes("uuid")) {
+        if (isExplicitUuidPk) {
           cleanedRow[selectedTable.pk] = crypto.randomUUID();
+        } else if (isNumericPk) {
+          // Explicitly omit primary key so PostgreSQL sequence/identity auto-generates numeric ID (bigint)
+          delete cleanedRow[selectedTable.pk];
         }
       }
 
