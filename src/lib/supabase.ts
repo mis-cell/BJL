@@ -411,6 +411,90 @@ if (supabase) {
             ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS agency TEXT;
             ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS marka TEXT;
 
+            -- Create Master Tables if not existing and disable RLS
+            CREATE TABLE IF NOT EXISTS supply_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                supp_code TEXT,
+                supp_name TEXT,
+                acc_no TEXT,
+                supp_add1 TEXT,
+                supp_add2 TEXT,
+                supp_add3 TEXT,
+                supp_city TEXT,
+                supp_contact TEXT,
+                supp_ph_no TEXT,
+                supp_cell_no TEXT,
+                supp_fax_no TEXT,
+                supp_email TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS supply_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS broker_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                brok_code TEXT,
+                brok_name TEXT,
+                acc_no TEXT,
+                brok_add1 TEXT,
+                brok_add2 TEXT,
+                brok_add3 TEXT,
+                brok_city TEXT,
+                brok_contact TEXT,
+                brok_ph_no TEXT,
+                brok_cell_no TEXT,
+                brok_fax_no TEXT,
+                brok_email TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS broker_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS area_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                area_code TEXT,
+                area_name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS area_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS agency_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                agency_code TEXT,
+                agency_name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS agency_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS grade_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                grade_code TEXT,
+                grade_name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS grade_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS marka_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                marka_code TEXT,
+                marka_name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS marka_master DISABLE ROW LEVEL SECURITY;
+
+            CREATE TABLE IF NOT EXISTS batch_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                code TEXT,
+                name TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            ALTER TABLE IF EXISTS batch_master DISABLE ROW LEVEL SECURITY;
+
+            -- Helper RPC function for raw query execution returning JSON set
+            CREATE OR REPLACE FUNCTION exec_sql_return(query text) RETURNS SETOF json AS $$
+            BEGIN
+              RETURN QUERY EXECUTE query;
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER;
+
             -- Align supply_master to always use uppercase supp_name
             IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'supply_master') THEN
               UPDATE supply_master SET supp_name = UPPER(supp_name) WHERE supp_name IS NOT NULL;

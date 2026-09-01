@@ -847,6 +847,7 @@ export default function AdminDesk({
     if (!supabase || !selectedTable) return;
     setLoading(true);
     try {
+      let cols: { name: string; type: string }[] = [];
       const { data: colData, error: colError } = await supabase.rpc(
         "exec_sql_return",
         {
@@ -854,14 +855,90 @@ export default function AdminDesk({
         },
       );
 
-      if (!colError && colData) {
-        setCurrentColumns(colData.map((c: any) => ({ name: c.column_name, type: c.data_type })));
+      if (!colError && Array.isArray(colData) && colData.length > 0) {
+        cols = colData.map((c: any) => ({ name: c.column_name, type: c.data_type }));
       }
 
-      let records;
+      let records: any[] = [];
       const res = await supabase.from(selectedTable.name).select("*").limit(150);
       records = res.data || [];
       setData(records);
+
+      if (cols.length === 0) {
+        if (records.length > 0) {
+          cols = Object.keys(records[0]).map((k) => ({
+            name: k,
+            type: typeof records[0][k] === "number" ? "numeric" : "text",
+          }));
+        } else {
+          // Fallbacks for known tables if DB is empty and RPC query returned empty
+          if (selectedTable.name === "supply_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "supp_code", type: "text" },
+              { name: "supp_name", type: "text" },
+              { name: "acc_no", type: "text" },
+              { name: "supp_add1", type: "text" },
+              { name: "supp_add2", type: "text" },
+              { name: "supp_add3", type: "text" },
+              { name: "supp_city", type: "text" },
+              { name: "supp_contact", type: "text" },
+              { name: "supp_ph_no", type: "text" },
+              { name: "supp_cell_no", type: "text" },
+              { name: "supp_fax_no", type: "text" },
+              { name: "supp_email", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          } else if (selectedTable.name === "broker_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "brok_code", type: "text" },
+              { name: "brok_name", type: "text" },
+              { name: "acc_no", type: "text" },
+              { name: "brok_add1", type: "text" },
+              { name: "brok_add2", type: "text" },
+              { name: "brok_add3", type: "text" },
+              { name: "brok_city", type: "text" },
+              { name: "brok_contact", type: "text" },
+              { name: "brok_ph_no", type: "text" },
+              { name: "brok_cell_no", type: "text" },
+              { name: "brok_fax_no", type: "text" },
+              { name: "brok_email", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          } else if (selectedTable.name === "area_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "area_code", type: "text" },
+              { name: "area_name", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          } else if (selectedTable.name === "agency_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "agency_code", type: "text" },
+              { name: "agency_name", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          } else if (selectedTable.name === "grade_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "grade_code", type: "text" },
+              { name: "grade_name", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          } else if (selectedTable.name === "marka_master") {
+            cols = [
+              { name: "id", type: "uuid" },
+              { name: "marka_code", type: "text" },
+              { name: "marka_name", type: "text" },
+              { name: "created_at", type: "timestamp with time zone" },
+            ];
+          }
+        }
+      }
+
+      setCurrentColumns(cols);
     } catch (err) {
       console.error("Fetch records output failure:", err);
       setData([]);
@@ -915,56 +992,78 @@ export default function AdminDesk({
     if (selectedTable.name === "supply_master" && typeof rowToSave.supp_name === "string") {
       rowToSave.supp_name = rowToSave.supp_name.toUpperCase();
     }
+    if (selectedTable.name === "broker_master" && typeof rowToSave.brok_name === "string") {
+      rowToSave.brok_name = rowToSave.brok_name.toUpperCase();
+    }
 
-    // Clean up empty fields or auto-generated fields in the save payload
     const isNew = isNewRow;
-    const cleanedRow = { ...rowToSave };
-    for (const key of Object.keys(cleanedRow)) {
-      const val = cleanedRow[key];
-      const colInfo = currentColumns.find((c) => c.name === key);
-      const colType = (colInfo?.type || "").toLowerCase();
-      
-      if (isNew) {
-        // Strip auto-generated primary key
-        if (key === selectedTable.pk) {
-          const isUuid = colType.includes("uuid") || (selectedTable.name === "customer_master" && key === "id");
-          const isAutoNum = colType.toLowerCase().includes("int") || colType.toLowerCase().includes("serial") || colType.toLowerCase().includes("identity") || key === "id";
-          if (isUuid || isAutoNum || val === "AUTO_GENERATED" || !val) {
-            delete cleanedRow[key];
-            continue;
+    const cleanedRow: any = {};
+
+    // Use currentColumns if available, else Object.keys of rowToSave
+    const allCols = currentColumns.length > 0 ? currentColumns.map((c) => c.name) : Object.keys(rowToSave);
+
+    if (isNew) {
+      for (const col of allCols) {
+        const val = rowToSave[col];
+        const colInfo = currentColumns.find((c) => c.name === col);
+        const colType = (colInfo?.type || "").toLowerCase();
+
+        // 1. Primary key column handling
+        if (col === selectedTable.pk) {
+          const isUuid = colType.includes("uuid");
+          const isAutoNum = colType.includes("int") || colType.includes("serial") || colType.includes("identity");
+
+          if (isUuid || isAutoNum || val === "AUTO_GENERATED" || val === "" || val === null || val === undefined) {
+            continue; // Skip primary key so DB generates ID
           }
         }
-        
-        // On insert, delete empty fields for special data types so database defaults/nullable rules apply
-        if (val === "" || val === null || val === undefined) {
-          if (
-            colType.includes("timestamp") ||
-            colType.includes("date") ||
-            colType.includes("int") ||
-            colType.includes("numeric") ||
-            colType.includes("real") ||
-            colType.includes("double") ||
-            colType.includes("uuid") ||
-            colType.includes("boolean")
-          ) {
-            delete cleanedRow[key];
-          }
+
+        // 2. Omit empty / null / AUTO_GENERATED fields on insert
+        if (val === "" || val === null || val === undefined || val === "AUTO_GENERATED") {
+          continue;
         }
-      } else {
-        // On update, set empty values to null for special types to clear them correctly in DB
+
+        // 3. Type casting for numeric, int, boolean
+        if (colType.includes("int")) {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) cleanedRow[col] = num;
+        } else if (
+          colType.includes("numeric") ||
+          colType.includes("real") ||
+          colType.includes("double") ||
+          colType.includes("decimal")
+        ) {
+          const num = parseFloat(String(val));
+          if (!isNaN(num)) cleanedRow[col] = num;
+        } else if (colType.includes("boolean") || colType.includes("bool")) {
+          cleanedRow[col] = String(val).toLowerCase() === "true" || val === true || val === "1";
+        } else {
+          cleanedRow[col] = typeof val === "string" ? val.trim() : val;
+        }
+      }
+    } else {
+      for (const col of Object.keys(rowToSave)) {
+        const val = rowToSave[col];
+        const colInfo = currentColumns.find((c) => c.name === col);
+        const colType = (colInfo?.type || "").toLowerCase();
+
         if (val === "" || val === null || val === undefined) {
-          if (
-            colType.includes("timestamp") ||
-            colType.includes("date") ||
-            colType.includes("int") ||
-            colType.includes("numeric") ||
-            colType.includes("real") ||
-            colType.includes("double") ||
-            colType.includes("uuid") ||
-            colType.includes("boolean")
-          ) {
-            cleanedRow[key] = null;
-          }
+          cleanedRow[col] = null;
+        } else if (colType.includes("int")) {
+          const num = parseInt(String(val), 10);
+          cleanedRow[col] = isNaN(num) ? null : num;
+        } else if (
+          colType.includes("numeric") ||
+          colType.includes("real") ||
+          colType.includes("double") ||
+          colType.includes("decimal")
+        ) {
+          const num = parseFloat(String(val));
+          cleanedRow[col] = isNaN(num) ? null : num;
+        } else if (colType.includes("boolean") || colType.includes("bool")) {
+          cleanedRow[col] = String(val).toLowerCase() === "true" || val === true || val === "1";
+        } else {
+          cleanedRow[col] = typeof val === "string" ? val.trim() : val;
         }
       }
     }
@@ -972,25 +1071,31 @@ export default function AdminDesk({
     try {
       let res;
       if (isNew) {
-        res = await supabase.from(selectedTable.name).insert([cleanedRow]);
+        console.log(`[AdminDesk] Inserting row into ${selectedTable.name}:`, cleanedRow);
+        res = await supabase.from(selectedTable.name).insert([cleanedRow]).select();
         if (!res.error) {
-          logActivityDirectly('DATA_INSERTION', `Created new record in "${selectedTable.name}". Row data: ${JSON.stringify(cleanedRow)}`);
+          logActivityDirectly("DATA_INSERTION", `Created new record in "${selectedTable.name}". Row data: ${JSON.stringify(cleanedRow)}`);
         }
       } else {
+        const pkVal = cleanedRow[selectedTable.pk] ?? rowToSave[selectedTable.pk];
+        console.log(`[AdminDesk] Updating row in ${selectedTable.name} [PK ${selectedTable.pk}=${pkVal}]:`, cleanedRow);
         res = await supabase
           .from(selectedTable.name)
           .update(cleanedRow)
-          .eq(selectedTable.pk, cleanedRow[selectedTable.pk] ?? rowToSave[selectedTable.pk]);
+          .eq(selectedTable.pk, pkVal)
+          .select();
         if (!res.error) {
-          logActivityDirectly('DATA_MODIFICATION', `Updated record [PK: ${cleanedRow[selectedTable.pk] ?? rowToSave[selectedTable.pk]}] in "${selectedTable.name}". New data: ${JSON.stringify(cleanedRow)}`);
+          logActivityDirectly("DATA_MODIFICATION", `Updated record [PK: ${pkVal}] in "${selectedTable.name}". New data: ${JSON.stringify(cleanedRow)}`);
         }
       }
 
       if (res.error) throw res.error;
+      alert(`Record ${isNew ? "inserted" : "updated"} successfully in ${selectedTable.label}!`);
       setEditingRow(null);
       fetchData();
     } catch (err: any) {
-      alert("Save database record failure: " + err.message);
+      console.error("Save database record failure:", err);
+      alert("Save database record failure: " + (err.message || JSON.stringify(err)));
     } finally {
       setLoading(false);
     }
