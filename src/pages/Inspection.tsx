@@ -304,6 +304,168 @@ const detailFieldsConfig: { name: keyof InspectionDetailRow; label: string; type
   { name: "jqi_remarks", label: "JCI Remarks", type: "text" }
 ];
 
+interface SearchablePendingArrivalSelectProps {
+  pendingArrivalList: any[];
+  onSelect: (fa: any) => void;
+}
+
+const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectProps> = ({
+  pendingArrivalList,
+  onSelect,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDisplay, setSelectedDisplay] = useState("");
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredList = pendingArrivalList.filter((fa) => {
+    if (!searchTerm.trim()) return true;
+    const q = searchTerm.toLowerCase().trim();
+    const faNo = String(fa.final_arrival_no || fa.mr_no || "").toLowerCase();
+    const poNo = String(fa.po_no || "").toLowerCase();
+    const supplier = String(fa.supplier || fa.challan_supplier || "").toLowerCase();
+    const lorry = String(fa.lorry_number || "").toLowerCase();
+    const broker = String(fa.broker || "").toLowerCase();
+
+    return (
+      faNo.includes(q) ||
+      poNo.includes(q) ||
+      supplier.includes(q) ||
+      lorry.includes(q) ||
+      broker.includes(q)
+    );
+  });
+
+  return (
+    <div ref={containerRef} className="relative w-full max-w-xl">
+      {/* Trigger Button */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-white border border-emerald-300 hover:border-emerald-500 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 flex items-center justify-between cursor-pointer shadow-sm transition-all focus-within:ring-2 focus-within:ring-emerald-500"
+      >
+        <div className="flex items-center gap-2 truncate pr-2">
+          <Search className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+          <span className={selectedDisplay ? "text-slate-900 font-black truncate" : "text-slate-500 font-semibold truncate"}>
+            {selectedDisplay || "-- Select / Search Pending Arrival Record to Auto-Fill --"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedDisplay && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedDisplay("");
+                setSearchTerm("");
+              }}
+              className="p-0.5 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {isOpen ? <ChevronUp className="w-4 h-4 text-emerald-700" /> : <ChevronDown className="w-4 h-4 text-emerald-700" />}
+        </div>
+      </div>
+
+      {/* Floating Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute right-0 left-0 mt-1 bg-white border border-emerald-300 rounded-xl shadow-2xl z-50 overflow-hidden text-xs">
+          {/* Search Bar Input */}
+          <div className="p-2.5 border-b border-emerald-100 bg-emerald-50/70 flex items-center gap-2">
+            <Search className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by Arrival #, PO #, Supplier, Lorry #..."
+              className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-400 placeholder:font-normal"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+            {pendingArrivalList.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 font-medium italic">
+                -- No Pending Arrivals (All Already Inspected) --
+              </div>
+            ) : filteredList.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 font-medium italic">
+                No matching pending arrival record found for "{searchTerm}"
+              </div>
+            ) : (
+              filteredList.map((fa, idx) => {
+                const arrNo = fa.final_arrival_no || fa.mr_no || 'FA';
+                const poNo = fa.po_no || '-';
+                const suppName = fa.supplier || fa.challan_supplier || 'Supplier';
+                const lorryNo = fa.lorry_number || '-';
+                const labelStr = `Arrival #${arrNo} | PO: ${poNo} | ${suppName} | Lorry: ${lorryNo}`;
+                const isSelected = selectedDisplay === labelStr;
+
+                return (
+                  <div
+                    key={`p-arr-${idx}`}
+                    onClick={() => {
+                      setSelectedDisplay(labelStr);
+                      onSelect(fa);
+                      setIsOpen(false);
+                      setSearchTerm("");
+                    }}
+                    className={`px-3.5 py-2.5 cursor-pointer hover:bg-emerald-50 transition-colors flex items-center justify-between gap-3 ${
+                      isSelected ? "bg-emerald-100/70 font-bold text-emerald-950" : "text-slate-800"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-emerald-900 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md text-[11px] font-mono">
+                          #{arrNo}
+                        </span>
+                        <span className="font-mono text-slate-700 text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
+                          PO: <strong className="text-slate-900">{poNo}</strong>
+                        </span>
+                        {fa.lorry_number && (
+                          <span className="text-[10px] text-slate-600 bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">
+                            Lorry: {fa.lorry_number}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-600 truncate">
+                        <span className="font-bold text-slate-900">{suppName}</span>
+                        {fa.broker && <span className="text-slate-500 ml-1">(Broker: {fa.broker})</span>}
+                      </div>
+                    </div>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Inspection({ onNavigate }: InspectionProps) {
   const [records, setRecords] = useState<InspectionMasterRecord[]>([]);
   const [finalArrivalList, setFinalArrivalList] = useState<any[]>([]);
@@ -1966,33 +2128,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                         </span>
                       )}
                     </div>
-                    <select
-                      onChange={(e) => {
-                        if (!e.target.value) return;
-                        const selectedFa = pendingArrivalList.find(f => 
-                          (f.final_arrival_id && String(f.final_arrival_id) === e.target.value) ||
-                          (f.final_arrival_no && String(f.final_arrival_no) === e.target.value) ||
-                          (f.mr_no && String(f.mr_no) === e.target.value) ||
-                          (f.po_no && String(f.po_no) === e.target.value)
-                        );
-                        if (selectedFa) populateFromFinalArrival(selectedFa);
-                      }}
-                      defaultValue=""
-                      className="bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-md"
-                    >
-                      {pendingArrivalList.length > 0 ? (
-                        <>
-                          <option value="">-- Select Pending Arrival Record to Auto-Fill --</option>
-                          {pendingArrivalList.map((fa, idx) => (
-                            <option key={`p-${idx}`} value={fa.final_arrival_id || fa.final_arrival_no || fa.mr_no || fa.po_no}>
-                              Arrival #{fa.final_arrival_no || fa.mr_no || 'FA'} | PO: {fa.po_no || '-'} | {fa.supplier || fa.challan_supplier || 'Supplier'} | Lorry: {fa.lorry_number || '-'}
-                            </option>
-                          ))}
-                        </>
-                      ) : (
-                        <option value="" disabled>-- No Pending Arrivals (All Already Inspected) --</option>
-                      )}
-                    </select>
+                    <SearchablePendingArrivalSelect
+                      pendingArrivalList={pendingArrivalList}
+                      onSelect={(selectedFa) => populateFromFinalArrival(selectedFa)}
+                    />
                   </div>
                 );
               })()}
