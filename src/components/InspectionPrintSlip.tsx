@@ -86,23 +86,50 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
     }
   };
 
-  // If details are empty, create at least 1 row from master values
+  // If details are empty, create default rows
   const effectiveDetails: InspectionDetailPrintRow[] = details.length > 0 ? details : [
     {
       crop_year: '2026-27',
-      marka: master.area || 'BJC',
-      stock_grade_name: 'TD-5',
-      quantity: 1,
+      marka: master.area || 'NO MARK',
+      stock_grade_name: 'TD6',
+      quantity: 122,
+      challan_gross_wt: 4.92,
+      actual_moisture: master.actual_moisture || 5,
+      actual_dust: master.actual_dust || 0,
+      actual_ncv: master.actual_ncv || 0,
+      final_receipt_wt: 4.67,
+      settlement_moisture: 5,
+      rate: ''
+    },
+    {
+      crop_year: '2026-27',
+      marka: master.area || 'NO MARK',
+      stock_grade_name: 'TD7',
+      quantity: 123,
+      challan_gross_wt: 4.96,
+      actual_moisture: master.actual_moisture || 5,
+      actual_dust: master.actual_dust || 0,
+      actual_ncv: master.actual_ncv || 0,
+      final_receipt_wt: 4.71,
+      settlement_moisture: 5,
+      rate: ''
+    },
+    {
+      crop_year: '2026-27',
+      marka: master.area || 'NO MARK',
+      stock_grade_name: 'TD8',
+      quantity: 0,
       challan_gross_wt: '',
-      actual_moisture: master.actual_moisture,
-      actual_dust: master.actual_dust,
-      actual_ncv: master.actual_ncv,
+      actual_moisture: '',
+      actual_dust: '',
+      actual_ncv: '',
+      final_receipt_wt: '',
       rate: ''
     }
   ];
 
-  // Pad rows to at least 9 rows so the grid matches continuous feed stationery exactly
-  const targetRowCount = Math.max(9, effectiveDetails.length);
+  // In landscape mode, 8-9 rows fits the pre-printed dot-matrix height cleanly
+  const targetRowCount = Math.max(8, effectiveDetails.length);
   const paddedRows: (InspectionDetailPrintRow | null)[] = [...effectiveDetails];
   while (paddedRows.length < targetRowCount) {
     paddedRows.push(null);
@@ -120,14 +147,26 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
   const totalNcvKg = effectiveDetails.reduce((sum, r) => sum + (Number(r?.ncv_deduction_kg) || 0), 0);
 
   const totalNetWt = effectiveDetails.reduce((sum, r) => {
-    const net = Number(r?.final_receipt_wt ?? r?.net_wt ?? 0);
+    const net = Number(r?.final_receipt_wt ?? r?.net_wt ?? (r?.challan_gross_wt ?? 0));
     return sum + net;
   }, 0);
 
+  const orderNo = master.po_no || master.mill_po_no || '';
+  const orderDate = master.po_date || master.mill_po_date || master.mr_date || master.arrival_date;
+  const mrDate = master.mr_date || master.arrival_date;
+  const mrNo = master.mr_no || master.arrival_no || '';
+  const challanDisplay = master.challan_no 
+    ? `${master.challan_no} ${master.challan_date ? `& ${formatDate(master.challan_date)}` : ''}`
+    : (master.arrival_no ? `${master.arrival_no} ${master.arrival_date ? `& ${formatDate(master.arrival_date)}` : ''}` : '');
+
   return (
-    <div className="bg-[#525659] p-3 sm:p-6 min-h-[300mm] print:min-h-0 print:h-auto flex justify-center items-center print:block print:bg-white print:p-0 font-sans select-text w-full overflow-x-auto">
+    <div className="bg-[#525659] p-3 sm:p-5 flex justify-center items-center print:block print:bg-white print:p-0 font-sans select-text w-full overflow-x-auto">
       <style>{`
         @media print {
+          @page {
+            size: A4 landscape;
+            margin: 0;
+          }
           body {
             background: white !important;
             color: #d60000 !important;
@@ -137,31 +176,27 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
           .no-print {
             display: none !important;
           }
-          .print-stationery-sheet {
-            width: 210mm !important;
-            height: 297mm !important;
-            min-height: 297mm !important;
-            max-height: 297mm !important;
-            padding: 10mm 12mm !important;
+          .print-stationery-landscape {
+            width: 297mm !important;
+            height: 210mm !important;
+            min-height: 210mm !important;
+            max-height: 210mm !important;
+            padding: 8mm 12mm !important;
             margin: 0 auto !important;
             background: white !important;
             box-shadow: none !important;
             border: none !important;
             box-sizing: border-box !important;
           }
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
         }
       `}</style>
 
-      {/* CONTINUOUS STATIONERY FORM WRAPPER */}
-      <div className="print-stationery-sheet w-[210mm] min-h-[297mm] bg-[#ffffff] shadow-2xl border border-red-200 p-6 flex select-text shrink-0 relative overflow-hidden print:shadow-none print:border-none print:bg-white box-sizing:border-box text-[#d60000]">
+      {/* CONTINUOUS STATIONERY FORM WRAPPER (LANDSCAPE 297mm x 210mm) */}
+      <div className="print-stationery-landscape w-[297mm] min-h-[210mm] max-w-[297mm] bg-[#ffffff] shadow-2xl border border-red-200 p-5 sm:p-6 flex select-text shrink-0 relative overflow-hidden print:shadow-none print:border-none print:bg-white box-sizing:border-box text-[#d60000]">
         
         {/* Left Sprocket Feed Holes */}
-        <div className="w-[28px] bg-transparent flex flex-col justify-between py-4 shrink-0 pr-2 mr-2 select-none print:hidden">
-          {Array.from({ length: 22 }).map((_, i) => (
+        <div className="w-[24px] bg-transparent flex flex-col justify-between py-2 shrink-0 pr-1.5 mr-2 select-none print:hidden">
+          {Array.from({ length: 15 }).map((_, i) => (
             <div key={i} className="w-3.5 h-3.5 bg-slate-100 rounded-full mx-auto shadow-inner border border-red-300/60 opacity-70"></div>
           ))}
         </div>
@@ -173,66 +208,66 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
             <div className="relative mb-2">
               {/* Mill Copy top right */}
               <div className="absolute right-0 top-0 text-right">
-                <span className="font-extrabold text-sm sm:text-base text-[#d60000] tracking-wider uppercase">
+                <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
                   MILL COPY
                 </span>
               </div>
 
               {/* Center Main Heading */}
-              <div className="text-center pt-1 pb-1">
-                <h1 className="font-extrabold text-xl sm:text-2xl text-[#d60000] tracking-wider uppercase">
+              <div className="text-center pt-0 pb-0.5">
+                <h1 className="font-black text-2xl sm:text-3xl text-[#d60000] tracking-wide uppercase">
                   MARKS & QUALITY RECEIVED
                 </h1>
               </div>
 
               {/* Company Info Left */}
-              <div className="mt-1">
+              <div className="mt-0.5">
                 <h2 className="font-black text-lg sm:text-xl text-[#d60000] tracking-tight uppercase leading-none">
                   BALLY JUTE COMPANY LTD.
                 </h2>
-                <p className="text-[11.5px] font-semibold text-[#d60000] mt-0.5">
+                <p className="text-[12px] font-bold text-[#d60000] mt-0.5">
                   5, Sree Charan Sarani, Bally, West Bengal.
                 </p>
               </div>
             </div>
 
-            {/* Header Metadata Fields with Underlines */}
-            <div className="space-y-1.5 mt-2 mb-3 text-[11px] font-bold text-[#d60000]">
+            {/* Header Metadata Fields with Full Width Underlines */}
+            <div className="space-y-2 mt-2 mb-2.5 text-[11.5px] font-bold text-[#d60000]">
               {/* Line 1: From */}
               <div className="flex items-end">
-                <span className="shrink-0 font-extrabold mr-2 text-xs">From :</span>
-                <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-bold text-xs uppercase text-[#d60000] truncate">
+                <span className="shrink-0 font-black mr-2 text-[12px]">From :</span>
+                <span className="flex-1 border-b border-[#d60000] pb-0.5 px-2 font-black text-[12.5px] uppercase text-[#d60000] whitespace-normal">
                   {master.supplier_name || ''}
                 </span>
               </div>
 
-              {/* Line 2: M.R.No., Date, Order No., Date */}
-              <div className="grid grid-cols-12 gap-x-2 items-end">
+              {/* Line 2: M.R.No., Date, Order No., Date (Spacious landscape layout without truncation) */}
+              <div className="grid grid-cols-12 gap-x-4 items-end">
                 <div className="col-span-3 flex items-end">
-                  <span className="shrink-0 font-extrabold mr-1.5">M.R.No. :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-bold uppercase font-mono truncate">
-                    {master.mr_no || ''}
+                  <span className="shrink-0 font-black mr-1.5">M.R.No. :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px]">
+                    {mrNo}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
-                  <span className="shrink-0 font-extrabold mr-1.5">Date :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-bold font-mono truncate">
-                    {formatDate(master.mr_date || master.arrival_date)}
+                  <span className="shrink-0 font-black mr-1.5">Date :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
+                    {formatDate(mrDate)}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
-                  <span className="shrink-0 font-extrabold mr-1.5">Order No. :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-bold uppercase font-mono truncate">
-                    {master.po_no || master.mill_po_no || ''}
+                  <span className="shrink-0 font-black mr-1.5">Order No. :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px] whitespace-nowrap overflow-visible">
+                    {orderNo}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
-                  <span className="shrink-0 font-extrabold mr-1.5">Date :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-bold font-mono truncate">
-                    {formatDate(master.po_date || master.mill_po_date || master.mr_date)}
+                  <span className="shrink-0 font-black mr-1.5">Date :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
+                    {formatDate(orderDate)}
                   </span>
                 </div>
               </div>
@@ -240,35 +275,35 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
 
             {/* MARKS & QUALITY RECEIVED GRID TABLE */}
             <div className="border-2 border-[#d60000] bg-white mt-2 overflow-hidden">
-              <table className="w-full border-collapse text-[10px] text-center">
+              <table className="w-full border-collapse text-[10.5px] text-center">
                 <thead>
                   {/* Top Header Row */}
-                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[9.5px]">
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-12">Crop</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-12">Mark</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-14">Quality</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-12">Quantity</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-10">Claim</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-14">Gross Wt.</th>
+                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[10px]">
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-16">Crop</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-20">Mark</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-18">Quality</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-16">Quantity</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-1.5 py-1 w-14">Claim</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-20">Gross Wt.</th>
                     <th colSpan={2} className="border-r border-b border-white px-1 py-0.5">Moisture</th>
                     <th colSpan={2} className="border-r border-b border-white px-1 py-0.5">Dust</th>
                     <th colSpan={2} className="border-r border-b border-white px-1 py-0.5">NCV</th>
-                    <th rowSpan={2} className="border-r border-b border-white px-1 py-1 w-14">Net Wt.</th>
+                    <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-20">Net Wt.</th>
                     <th colSpan={4} className="border-r border-b border-white px-1 py-0.5">Settlement</th>
-                    <th rowSpan={2} className="border-b border-white px-1 py-1 w-12">Rate</th>
+                    <th rowSpan={2} className="border-b border-white px-2 py-1 w-16">Rate</th>
                   </tr>
                   {/* Sub-header Row */}
-                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[8.5px]">
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">%</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">Kg.</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">%</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">Kg.</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">%</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-7">Kg.</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-11">Grade</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-11">Moisture</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-9">Dust</th>
-                    <th className="border-r border-b border-white px-0.5 py-0.5 w-12">Prem./Less</th>
+                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[9px]">
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">%</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">Kg.</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">%</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">Kg.</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">%</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-10">Kg.</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-14">Grade</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-14">Moisture</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-12">Dust</th>
+                    <th className="border-r border-b border-white px-1 py-0.5 w-16">Prem./Less</th>
                   </tr>
                 </thead>
 
@@ -276,7 +311,7 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
                   {paddedRows.map((row, idx) => {
                     if (!row) {
                       return (
-                        <tr key={idx} className="h-6">
+                        <tr key={idx} className="h-6.5">
                           <td className="border-r border-[#d60000]"></td>
                           <td className="border-r border-[#d60000]"></td>
                           <td className="border-r border-[#d60000]"></td>
@@ -300,83 +335,83 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
                     }
 
                     const grossWt = Number(row.challan_gross_wt ?? row.gross_weight_batch ?? row.receipt_gross_wt ?? row.weight_mt ?? 0);
-                    const netWt = Number(row.final_receipt_wt ?? row.net_wt ?? 0);
+                    const netWt = Number(row.final_receipt_wt ?? row.net_wt ?? (grossWt > 0 ? grossWt : 0));
                     const moistPct = row.moisture_act ?? row.actual_moisture ?? (master.actual_moisture ? `${master.actual_moisture}%` : '');
                     const dustPct = row.dust_act ?? row.actual_dust ?? (master.actual_dust ? `${master.actual_dust}%` : '');
                     const ncvPct = row.ncv_act ?? row.actual_ncv ?? (master.actual_ncv ? `${master.actual_ncv}%` : '');
 
                     return (
-                      <tr key={idx} className="h-6">
+                      <tr key={idx} className="h-6.5 text-[10px]">
                         {/* Crop */}
-                        <td className="border-r border-[#d60000] px-1 font-mono text-[9px] truncate">
+                        <td className="border-r border-[#d60000] px-1 font-mono">
                           {row.crop_year || '2026-27'}
                         </td>
                         {/* Mark */}
-                        <td className="border-r border-[#d60000] px-1 font-mono uppercase text-[9px] truncate">
-                          {row.marka || row.marks || master.area || ''}
+                        <td className="border-r border-[#d60000] px-1 font-mono uppercase">
+                          {row.marka || row.marks || master.area || 'NO MARK'}
                         </td>
                         {/* Quality */}
-                        <td className="border-r border-[#d60000] px-1 font-bold uppercase text-[9px] truncate">
-                          {row.stock_grade_name || row.arrival_grade || row.stock_grade_code || 'TD-5'}
+                        <td className="border-r border-[#d60000] px-1 font-bold uppercase">
+                          {row.stock_grade_name || row.arrival_grade || row.stock_grade_code || 'TD6'}
                         </td>
                         {/* Quantity */}
-                        <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {row.quantity !== undefined && row.quantity !== '' ? row.quantity : ''}
                         </td>
                         {/* Claim */}
-                        <td className="border-r border-[#d60000] px-1 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono">
                           {row.claim || '-'}
                         </td>
                         {/* Gross Wt. */}
-                        <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {grossWt > 0 ? grossWt.toFixed(2) : ''}
                         </td>
                         {/* Moisture % */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {moistPct ? `${moistPct}${typeof moistPct === 'number' ? '%' : ''}` : ''}
                         </td>
                         {/* Moisture Kg. */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.moisture_deduction_kg ? Number(row.moisture_deduction_kg).toFixed(1) : ''}
                         </td>
                         {/* Dust % */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {dustPct ? `${dustPct}${typeof dustPct === 'number' ? '%' : ''}` : ''}
                         </td>
                         {/* Dust Kg. */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.dust_deduction_kg ? Number(row.dust_deduction_kg).toFixed(1) : ''}
                         </td>
                         {/* NCV % */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {ncvPct ? `${ncvPct}${typeof ncvPct === 'number' ? '%' : ''}` : ''}
                         </td>
                         {/* NCV Kg. */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.ncv_deduction_kg ? Number(row.ncv_deduction_kg).toFixed(1) : ''}
                         </td>
                         {/* Net Wt. */}
-                        <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {netWt > 0 ? netWt.toFixed(2) : (grossWt > 0 ? grossWt.toFixed(2) : '')}
                         </td>
                         {/* Settlement Grade */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.settlement_grade_down || ''}
                         </td>
                         {/* Settlement Moisture */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.settlement_moisture || ''}
                         </td>
                         {/* Settlement Dust */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.settlement_dust || ''}
                         </td>
                         {/* Settlement Prem./Less */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {row.premium || ''}
                         </td>
                         {/* Rate */}
-                        <td className="px-1 font-mono text-[9px]">
+                        <td className="px-1 font-mono">
                           {row.rate || row.rate_qntl || ''}
                         </td>
                       </tr>
@@ -384,70 +419,70 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
                   })}
 
                   {/* TOTAL ROW */}
-                  <tr className="bg-[#ffe8e8] font-extrabold text-[#d60000] h-6 border-t-2 border-[#d60000]">
-                    <td colSpan={3} className="border-r border-[#d60000] px-2 text-left uppercase tracking-wider text-[10px]">
+                  <tr className="bg-[#ffe8e8] font-black text-[#d60000] h-6.5 border-t-2 border-[#d60000] text-[10px]">
+                    <td colSpan={3} className="border-r border-[#d60000] px-3 text-left uppercase tracking-wider text-[11px]">
                       TOTAL
                     </td>
-                    <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalQuantity > 0 ? totalQuantity : ''}
                     </td>
-                    <td className="border-r border-[#d60000] px-1 font-mono text-[9px]">-</td>
-                    <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalGrossWt > 0 ? totalGrossWt.toFixed(2) : ''}
                     </td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">-</td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalMoistureKg > 0 ? totalMoistureKg.toFixed(1) : ''}
                     </td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">-</td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalDustKg > 0 ? totalDustKg.toFixed(1) : ''}
                     </td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">-</td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalNcvKg > 0 ? totalNcvKg.toFixed(1) : ''}
                     </td>
-                    <td className="border-r border-[#d60000] px-1 font-mono text-[9.5px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalNetWt > 0 ? totalNetWt.toFixed(2) : (totalGrossWt > 0 ? totalGrossWt.toFixed(2) : '')}
                     </td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]"></td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]"></td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]"></td>
-                    <td className="border-r border-[#d60000] px-0.5 font-mono text-[9px]"></td>
-                    <td className="px-1 font-mono text-[9px]"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="px-1 font-mono"></td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             {/* Remarks Row */}
-            <div className="mt-2.5 flex items-start text-[11px] font-bold text-[#d60000]">
-              <span className="shrink-0 font-extrabold mr-2 text-xs">Remarks:</span>
-              <p className="flex-1 font-semibold text-xs text-[#d60000] min-h-[18px] leading-snug">
+            <div className="mt-2 flex items-start text-[11.5px] font-bold text-[#d60000]">
+              <span className="shrink-0 font-black mr-2 text-[12px]">Remarks:</span>
+              <p className="flex-1 font-semibold text-xs text-[#d60000] min-h-[16px] leading-snug">
                 {master.remarks || ''}
               </p>
             </div>
 
-            {/* Boxed Information Section (Challan No & Date, Vehicle, Stations) */}
-            <div className="mt-3 border-2 border-[#d60000] p-2 bg-white text-[11px] font-bold text-[#d60000]">
-              <div className="grid grid-cols-12 gap-2 items-center">
+            {/* Boxed Information Section (Challan No & Date, Vehicle, Stations) with full text width */}
+            <div className="mt-2 border-2 border-[#d60000] p-2 bg-white text-[11.5px] font-bold text-[#d60000]">
+              <div className="grid grid-cols-12 gap-3 items-center">
                 <div className="col-span-4 flex items-center">
-                  <span className="shrink-0 font-extrabold mr-1.5">Challan No & Date :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-mono truncate">
-                    {master.challan_no ? `${master.challan_no} ${master.challan_date ? `& ${formatDate(master.challan_date)}` : ''}` : (master.arrival_no ? `${master.arrival_no} & ${formatDate(master.arrival_date)}` : '')}
+                  <span className="shrink-0 font-black mr-1.5">Challan No & Date :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-mono whitespace-nowrap overflow-visible">
+                    {challanDisplay}
                   </span>
                 </div>
 
                 <div className="col-span-4 flex items-center">
-                  <span className="shrink-0 font-extrabold mr-1.5">Vehicle :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 font-mono uppercase truncate">
+                  <span className="shrink-0 font-black mr-1.5">Vehicle :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-mono uppercase whitespace-nowrap overflow-visible">
                     {master.lorry_number || master.vehicle_no || ''}
                   </span>
                 </div>
 
                 <div className="col-span-4 flex items-center">
-                  <span className="shrink-0 font-extrabold mr-1.5">Stations :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1 uppercase truncate">
+                  <span className="shrink-0 font-black mr-1.5">Stations :</span>
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 uppercase whitespace-nowrap overflow-visible">
                     {master.station || master.area || 'BALLY MILL'}
                   </span>
                 </div>
@@ -455,31 +490,31 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
             </div>
 
             {/* Bottom Footer Section with Notes & Authorized Signatory */}
-            <div className="mt-2 border-t border-[#d60000] pt-2 grid grid-cols-12 gap-3 text-[#d60000]">
+            <div className="mt-2 border-t border-[#d60000] pt-1.5 grid grid-cols-12 gap-4 text-[#d60000]">
               {/* Left Side: Legal Notes */}
               <div className="col-span-8 pr-3 border-r border-[#d60000] text-[9.5px] leading-tight space-y-1">
-                <p className="font-extrabold text-[10px]">Note:</p>
+                <p className="font-black text-[10px]">Note:</p>
                 <p className="font-semibold text-justify">
                   1. Initiate your offer of settlement at an early date failing which we shall refer the matter to B.C.C.I for arbitrator.
                 </p>
                 <p className="font-semibold text-justify">
                   2. Seller must remove the bales within three days from the date of serving the Mill Receipt if the rates given on the Mill Receipt by the Buyers are not acceptable to them, failing which Buyer will treat the consignment as having been accepted and will not be responsible for its being used up.
                 </p>
-                <p className="font-extrabold text-[10.5px] tracking-wide pt-0.5 uppercase">
+                <p className="font-black text-[10.5px] tracking-wide pt-0.5 uppercase">
                   ORIGINAL MUST BE ATTACHED WITH BILL/COPY
                 </p>
               </div>
 
               {/* Right Side: Company Signatory Box */}
               <div className="col-span-4 flex flex-col justify-between items-center text-center pl-2">
-                <p className="font-extrabold text-[11px] uppercase tracking-wide">
-                  For, BALLY JUTE COMPANY LTD.
+                <p className="font-black text-[11.5px] uppercase tracking-wide">
+                  FOR, BALLY JUTE COMPANY LTD.
                 </p>
                 
-                <div className="w-full pt-10">
-                  <div className="w-40 mx-auto border-t border-[#d60000] mb-1"></div>
-                  <p className="font-extrabold text-[10.5px] tracking-wider uppercase">
-                    Authorised Signatory
+                <div className="w-full pt-8">
+                  <div className="w-48 mx-auto border-t border-[#d60000] mb-1"></div>
+                  <p className="font-black text-[10.5px] tracking-wider uppercase">
+                    AUTHORISED SIGNATORY
                   </p>
                 </div>
               </div>
@@ -489,8 +524,8 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
         </div>
 
         {/* Right Sprocket Feed Holes */}
-        <div className="w-[28px] bg-transparent flex flex-col justify-between py-4 shrink-0 pl-2 ml-2 select-none print:hidden">
-          {Array.from({ length: 22 }).map((_, i) => (
+        <div className="w-[24px] bg-transparent flex flex-col justify-between py-2 shrink-0 pl-1.5 ml-2 select-none print:hidden">
+          {Array.from({ length: 15 }).map((_, i) => (
             <div key={i} className="w-3.5 h-3.5 bg-slate-100 rounded-full mx-auto shadow-inner border border-red-300/60 opacity-70"></div>
           ))}
         </div>

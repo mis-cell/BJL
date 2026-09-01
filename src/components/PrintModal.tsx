@@ -176,7 +176,7 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
     >
       <div 
         id="print-modal-inner" 
-        className="w-full max-w-[1050px] bg-[#d4d0c8] border-2 border-white shadow-[3px_3px_10px_rgba(0,0,0,0.6)] flex flex-col my-6 print:my-0 print:border-none print:shadow-none"
+        className="w-full max-w-[1250px] bg-[#d4d0c8] border-2 border-white shadow-[3px_3px_10px_rgba(0,0,0,0.6)] flex flex-col my-4 sm:my-6 print:my-0 print:border-none print:shadow-none"
       >
         {/* Top Retro Menubar */}
         <div className="bg-[#2a3088] text-white px-3 py-1.5 flex justify-between items-center text-xs font-black  border-b border-white no-print">
