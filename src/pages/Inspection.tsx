@@ -603,21 +603,28 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     try {
       // 1. Fetch saved material_inspection records
       let inspectionList: InspectionMasterRecord[] = [];
+      const inspectionSummaryFields = `
+        inspection_id, mr_no, mr_date, arrival_no, arrival_date, po_no, po_date,
+        supplier_name, broker_name, lorry_number, status, actual_moisture, actual_dust,
+        actual_ncv, claim_moisture, claim_dust, claim_ncv, detention_days, unloading_date,
+        mill_po_no, mill_po_date, remarks, created_at
+      `;
+
       if (supabase) {
         const { data, error } = await supabase
           .from("material_inspection")
-          .select("*")
+          .select(inspectionSummaryFields)
           .order("created_at", { ascending: false });
 
         if (!error && data && data.length > 0) {
-          inspectionList = data;
+          inspectionList = data as any[];
         } else {
           // Fallback check
           const { data: fallback } = await supabase
             .from("inspection_master")
-            .select("*")
+            .select(inspectionSummaryFields)
             .order("created_at", { ascending: false });
-          if (fallback && fallback.length > 0) inspectionList = fallback;
+          if (fallback && fallback.length > 0) inspectionList = fallback as any[];
         }
       }
 
@@ -628,13 +635,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } catch (e) {}
       }
 
-      // 2. Fetch Final Arrival records (Actual physical arrivals received at the mill)
+      // 2. Fetch Final Arrival records (Summary fields only)
       let faList: any[] = [];
+      const faSummaryFields = `
+        final_arrival_id, final_arrival_no, mr_no, arrival_no, date, po_no, po_date,
+        supplier, challan_supplier, broker, lorry_number, arrival_area_name, unit_name,
+        weight_qtl, total_packets, status, created_at
+      `;
+
       if (supabase) {
         try {
           const faRes = await supabase
             .from("final_arrival")
-            .select("*")
+            .select(faSummaryFields)
             .order("created_at", { ascending: false });
 
           if (faRes.data && faRes.data.length > 0) {
@@ -913,6 +926,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     if (typeof rawGrid === "string") {
       try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+    }
+
+    if ((!Array.isArray(rawGrid) || rawGrid.length === 0) && supabase && fa.final_arrival_id) {
+      try {
+        const { data: fullFa } = await supabase
+          .from('final_arrival')
+          .select('grid_details')
+          .eq('final_arrival_id', fa.final_arrival_id)
+          .maybeSingle();
+        if (fullFa?.grid_details) {
+          rawGrid = typeof fullFa.grid_details === 'string' ? JSON.parse(fullFa.grid_details) : fullFa.grid_details;
+        }
+      } catch (e) {}
     }
 
     // Query purchase_detail_master / sauda_check_point_details / mill_inspection_detail if missing or empty
