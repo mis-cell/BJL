@@ -2856,6 +2856,23 @@ export default function MaterialInspection({
     }
 
     return matchesSearch && matchesDates;
+  }).sort((a, b) => {
+    // 1. Arrival No
+    const arrA = (a.arrival_no || a.mr_no || '').toUpperCase();
+    const arrB = (b.arrival_no || b.mr_no || '').toUpperCase();
+    const arrDiff = arrA.localeCompare(arrB, undefined, { numeric: true, sensitivity: 'base' });
+    if (arrDiff !== 0) return arrDiff;
+
+    // 2. Arrival Date (descending for newest date first)
+    const dateA = a.arrival_date || a.mr_date || '';
+    const dateB = b.arrival_date || b.mr_date || '';
+    const dateDiff = new Date(dateB || 0).getTime() - new Date(dateA || 0).getTime();
+    if (dateDiff !== 0) return dateDiff;
+
+    // 3. Status
+    const statusA = (a.status || 'Completed').toUpperCase();
+    const statusB = (b.status || 'Completed').toUpperCase();
+    return statusA.localeCompare(statusB);
   });
 
   const filteredPendingMrList = arrivalVouchers.filter((v) => {
@@ -2891,6 +2908,21 @@ export default function MaterialInspection({
     }
 
     return matchesSearch && matchesDates;
+  }).sort((a, b) => {
+    // 1. Arrival No
+    const arrA = (a.temporary_arrival_no || a.amad_no || '').toUpperCase();
+    const arrB = (b.temporary_arrival_no || b.amad_no || '').toUpperCase();
+    const arrDiff = arrA.localeCompare(arrB, undefined, { numeric: true, sensitivity: 'base' });
+    if (arrDiff !== 0) return arrDiff;
+
+    // 2. Arrival Date
+    const dateA = a.date || '';
+    const dateB = b.date || '';
+    const dateDiff = new Date(dateB || 0).getTime() - new Date(dateA || 0).getTime();
+    if (dateDiff !== 0) return dateDiff;
+
+    // 3. Status
+    return (a.status || 'Pending').localeCompare(b.status || 'Pending');
   });
 
   const totalInspections = savedInspections.length;

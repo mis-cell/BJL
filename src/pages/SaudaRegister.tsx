@@ -818,7 +818,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
 
     return true;
-  });
+  }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
 
   const pendingSaudas = saudaList.filter(s => !isSaudaInCheckPointOrPo(s));
   const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));

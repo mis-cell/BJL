@@ -916,6 +916,27 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     }
 
     return matchSearch && matchDateRange;
+  }).sort((a, b) => {
+    // 1. Voucher Date (b.date vs a.date - descending for newest date first)
+    const dateDiff = new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (dateDiff !== 0) return dateDiff;
+
+    // 2. Supplier Name
+    const suppA = (a.supplier || '').toUpperCase();
+    const suppB = (b.supplier || '').toUpperCase();
+    const suppDiff = suppA.localeCompare(suppB);
+    if (suppDiff !== 0) return suppDiff;
+
+    // 3. Unit
+    const unitA = (a.unit_name || (a as any).unit || a.unit_code || '').toUpperCase();
+    const unitB = (b.unit_name || (b as any).unit || b.unit_code || '').toUpperCase();
+    const unitDiff = unitA.localeCompare(unitB);
+    if (unitDiff !== 0) return unitDiff;
+
+    // 4. Inspection Status
+    const isCompletedA = (a.mr_no && a.mr_no.trim() !== '' && a.mr_no.trim().toUpperCase() !== 'DIRECT REGISTER') ? 'COMPLETED' : 'PENDING';
+    const isCompletedB = (b.mr_no && b.mr_no.trim() !== '' && b.mr_no.trim().toUpperCase() !== 'DIRECT REGISTER') ? 'COMPLETED' : 'PENDING';
+    return isCompletedA.localeCompare(isCompletedB);
   });
 
   // Helper to extract Receipt Quantity ("RCPT") from Receipt Grade Details (grid_details)

@@ -446,7 +446,9 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     );
   }
 
-  // Filter list
+  const inspectedSet = new Set(inspectionsList.map(i => String(i.arrival_no || '').trim().toUpperCase()));
+
+  // Filter and sort list
   const filteredAmads = amadList.filter(a => {
     const term = searchTerm.toLowerCase();
     const matchSearch = 
@@ -467,13 +469,32 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     }
 
     if (!canViewCompletedData()) {
-      const isInspected = inspectionsList.some(
-        (insp) => String(insp.arrival_no || '').trim().toUpperCase() === String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase()
-      );
+      const isInspected = inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase());
       if (isInspected) return false;
     }
 
     return matchSearch && matchDateRange;
+  }).sort((a, b) => {
+    // 1. Voucher Date (b.date vs a.date - descending for newest date first)
+    const dateDiff = new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (dateDiff !== 0) return dateDiff;
+
+    // 2. Supplier Name
+    const suppA = (a.supplier || '').toUpperCase();
+    const suppB = (b.supplier || '').toUpperCase();
+    const suppDiff = suppA.localeCompare(suppB);
+    if (suppDiff !== 0) return suppDiff;
+
+    // 3. Unit
+    const unitA = (a.unit_name || a.unit_code || '').toUpperCase();
+    const unitB = (b.unit_name || b.unit_code || '').toUpperCase();
+    const unitDiff = unitA.localeCompare(unitB);
+    if (unitDiff !== 0) return unitDiff;
+
+    // 4. Inspection Status
+    const inspA = inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase()) ? 'COMPLETED' : 'PENDING';
+    const inspB = inspectedSet.has(String(b.amad_no || b.temporary_arrival_no || '').trim().toUpperCase()) ? 'COMPLETED' : 'PENDING';
+    return inspA.localeCompare(inspB);
   });
 
   const handleExportToExcel = () => {
@@ -580,7 +601,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   const totalWeightMt = filteredAmads.reduce((acc, a) => acc + getLowestNetWeight(a), 0);
 
   // Inspection status counts
-  const inspectedSet = new Set(inspectionsList.map(i => String(i.arrival_no || '').trim().toUpperCase()));
   const pendingCount = filteredAmads.filter(a => !inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase())).length;
   const completedCount = filteredAmads.length - pendingCount;
 

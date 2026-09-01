@@ -1076,7 +1076,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }).sort((a, b) => new Date(b.date || b.b_date || 0).getTime() - new Date(a.date || a.b_date || 0).getTime());
 
   const totalCount = filteredSaudas.length;
   const totalBalesSum = filteredSaudas.reduce((sum, s) => sum + getBales(s), 0);
@@ -2305,10 +2305,8 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                 <thead className="bg-[#c2cfd6]/70 border-b-2 border-slate-400 text-slate-800 font-mono h-10 sticky top-0 z-10 font-bold uppercase ">
                   <tr>
                     <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-14">Row &or;</th>
-                    <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-24">Date &or;</th>
+                    <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28 cursor-pointer hover:bg-slate-300/60" onClick={() => setSmsCurrentPage(1)}>Date &or;</th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide w-48">Sender (Broker/Vyapari) &or;</th>
-                    <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Grade &or;</th>
-                    <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Unit Type &or;</th>
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body Payload)</th>
                     <th className="px-4 text-[10px] tracking-wide text-center font-bold w-72">Action</th>
                   </tr>
@@ -2316,7 +2314,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                 <tbody className="divide-y divide-slate-200 font-mono text-[11px] text-slate-800">
                   {isGoogleSheetLoading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-20 text-slate-400 font-mono">
+                      <td colSpan={5} className="text-center py-20 text-slate-400 font-mono">
                         <RefreshCw className="h-7 w-7 text-indigo-650 animate-spin mx-auto mb-2" />
                         <span className="text-xs font-black uppercase tracking-wider text-slate-700">Connecting Google Sheet feed...</span>
                       </td>
@@ -2330,12 +2328,12 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                           sms.service_center.toLowerCase().includes(query) ||
                           sms.body.toLowerCase().includes(query)
                         );
-                      });
+                      }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
                       if (filtered.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={7} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
+                            <td colSpan={5} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
                               No matching sheet records found in current feed filter.
                             </td>
                           </tr>
@@ -2343,15 +2341,6 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                       }
 
                       return filtered.slice((smsCurrentPage - 1) * smsPageSize, smsCurrentPage * smsPageSize).map((sms, index) => {
-                        const bodyLower = sms.body.toLowerCase();
-                        const isLry = bodyLower.includes('lry') || bodyLower.includes('lorry') || bodyLower.includes('truck');
-                        
-                        let detectedGrade = 'TD5';
-                        if (bodyLower.includes('td4')) detectedGrade = 'TD4';
-                        else if (bodyLower.includes('td6')) detectedGrade = 'TD6';
-                        else if (bodyLower.includes('w4')) detectedGrade = 'W4';
-                        else if (bodyLower.includes('w5')) detectedGrade = 'W5';
-
                         const markedInfo = markedSmsMap[sms.id] || (sms.body ? markedSmsMap[sms.body.trim()] : undefined);
                         const isMarked = Boolean(markedInfo && markedInfo.sauda_no);
                         const rowBgClass = isMarked
@@ -2376,14 +2365,6 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                                   {sms.service_center}
                                 </span>
                               )}
-                            </td>
-                            <td className="px-3 py-2 border-r border-slate-200 text-center align-top">
-                              <span className="bg-amber-50 text-amber-800 border border-amber-250 font-black text-[9px] tracking-wider px-2 py-0.5 rounded uppercase font-mono">
-                                {detectedGrade}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 border-r border-slate-200 text-center text-slate-600 font-extrabold align-top">
-                              {isLry ? "🚚 LORRY" : "BALES"}
                             </td>
                             <td className="px-4 py-2 border-r border-slate-200 font-mono text-[11px] text-slate-800 leading-relaxed select-text whitespace-pre-wrap align-top">
                               {sms.body}

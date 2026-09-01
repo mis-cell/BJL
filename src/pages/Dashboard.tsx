@@ -2406,17 +2406,15 @@ export default function Dashboard({
                       <thead className="bg-[#c2cfd6]/70 border-b-2 border-slate-400 text-slate-800 font-mono h-10 sticky top-0 z-10 font-bold uppercase ">
                         <tr>
                           <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-14">Row &or;</th>
-                          <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-24">Date &or;</th>
+                          <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide w-28">Date &or;</th>
                           <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide w-48">Sender (Broker/Vyapari) &or;</th>
-                          <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Grade &or;</th>
-                          <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Unit Type &or;</th>
                           <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body payload)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 font-mono text-[11px] text-slate-800">
                         {isGoogleSheetLoading ? (
                           <tr>
-                            <td colSpan={6} className="text-center py-24 text-slate-400 font-mono">
+                            <td colSpan={4} className="text-center py-24 text-slate-400 font-mono">
                               <RefreshCw className="h-8 w-8 text-indigo-600 animate-spin mx-auto mb-2" />
                               <p className="text-xs font-black uppercase tracking-wider text-slate-700">Retrieving contract feed...</p>
                             </td>
@@ -2430,12 +2428,12 @@ export default function Dashboard({
                                 sms.service_center.toLowerCase().includes(query) ||
                                 sms.body.toLowerCase().includes(query)
                               );
-                            });
+                            }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={6} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
+                                  <td colSpan={4} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
                                     No matching logs found in Google Sheets SMS feed.
                                   </td>
                                 </tr>
@@ -2443,20 +2441,6 @@ export default function Dashboard({
                             }
 
                             return filtered.map((sms, index) => {
-                              const bodyLower = sms.body.toLowerCase();
-                              const isTD5 = bodyLower.includes('td5');
-                              const isTD4 = bodyLower.includes('td4');
-                              const isTD6 = bodyLower.includes('td6');
-                              const isW4 = bodyLower.includes('w4');
-                              const isW5 = bodyLower.includes('w5');
-                              const isLry = bodyLower.includes('lry') || bodyLower.includes('lorry') || bodyLower.includes('truck');
-
-                              let detectedGrade = 'TD5';
-                              if (isTD4) detectedGrade = 'TD4';
-                              else if (isTD6) detectedGrade = 'TD6';
-                              else if (isW4) detectedGrade = 'W4';
-                              else if (isW5) detectedGrade = 'W5';
-
                               // Alternate row backgrounds
                               const rowBgClass = index % 2 === 1 ? "bg-slate-50 hover:bg-slate-100" : "bg-white hover:bg-slate-50";
 
@@ -2474,16 +2458,6 @@ export default function Dashboard({
                                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse shrink-0" />
                                       {sms.contact_name.toUpperCase()}
                                     </span>
-                                  </td>
-                                  {/* Grade */}
-                                  <td className="px-3 py-2 border-r border-slate-200 text-center ">
-                                    <span className="bg-amber-50 text-amber-800 border border-amber-250 font-black text-[9px] tracking-wider px-2 py-0.5 rounded uppercase font-mono">
-                                      {detectedGrade}
-                                    </span>
-                                  </td>
-                                  {/* Unit Type */}
-                                  <td className="px-3 py-2 border-r border-slate-200 text-center text-slate-600 font-extrabold ">
-                                    {isLry ? "🚚 LORRY" : "BALES"}
                                   </td>
                                   {/* Raw SMS Text payload */}
                                   <td className="px-4 py-2 border-r border-slate-200 font-mono text-[11px] text-slate-700 leading-normal select-text max-w-lg truncate hover:text-slate-950" title={sms.body}>
