@@ -455,11 +455,19 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             parsedGrid = rawGrid;
           }
           if (parsedGrid && parsedGrid.length > 0) {
-            setDetails(parsedGrid.map((row: any, idx: number) => ({ 
-              ...row, 
-              srl_no: idx + 1,
-              unit: row.unit || amadUnit
-            })));
+            setDetails(parsedGrid.map((row: any, idx: number) => {
+              const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
+              const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+              const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || Number(matchedAmad.supplier_net_weight) || 0;
+              return { 
+                ...row, 
+                srl_no: idx + 1,
+                unit: row.unit || amadUnit,
+                quantity_chln: isLoose ? 0 : (row.quantity_chln !== undefined ? Number(row.quantity_chln) : Number(row.quantity) || 0),
+                quantity_rcpt: isLoose ? 0 : (row.quantity_rcpt !== undefined ? Number(row.quantity_rcpt) : Number(row.quantity) || 0),
+                netto_pnto: rawNetto
+              };
+            }));
           }
         }
       } else {
@@ -575,6 +583,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             const markaName = matchingMarka ? matchingMarka.marka_name : (md.marka || 'NO MARK');
             const markaCode = matchingMarka ? matchingMarka.marka_code : (md.marka || '01');
 
+            const rowUnit = (md.unit || matchedInspection.unit_name || amadData?.unit_name || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+            const rawNetto = Number(md.challan_gross_wt) || Number(md.netto_pnto) || 0;
+
             return {
               srl_no: index + 1,
               receipt_grade_code: gradeCode,
@@ -585,10 +597,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               agency_name: md.agency || '',
               challan_marka_code: markaCode,
               challan_marka_name: markaName,
-              netto_pnto: Number(md.challan_gross_wt) || 0,
-              quantity_chln: Number(md.quantity) || Math.round(Number(md.challan_gross_wt) || 0),
-              quantity_rcpt: Number(md.quantity) || Math.round(Number(md.challan_gross_wt) || 0),
-              unit: md.unit || 'BALES',
+              netto_pnto: rawNetto,
+              quantity_chln: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
+              quantity_rcpt: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
+              unit: md.unit || rowUnit,
               remarks: '',
               marks_phota: md.marks_phota || ''
             };
@@ -658,6 +670,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           const agencyName = fd.agency_name || fd.agency || '';
           const agencyCode = fd.agency_code || '';
           const nettoVal = Number(fd.quantity_mt || fd.quantity || fd.netto_pnto || 0);
+          const rowUnit = (fd.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+          const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
 
           return {
             srl_no: index + 1,
@@ -670,8 +684,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             challan_marka_code: markaCode,
             challan_marka_name: markaName,
             netto_pnto: nettoVal,
-            quantity_chln: Math.round(nettoVal),
-            quantity_rcpt: Math.round(nettoVal),
+            quantity_chln: isLoose ? 0 : Math.round(nettoVal),
+            quantity_rcpt: isLoose ? 0 : Math.round(nettoVal),
+            unit: fd.unit || rowUnit,
             remarks: fd.remarks || ''
           };
         });
@@ -693,6 +708,16 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         next.challan_railway_receipt_no = val;
       } else if (field === 'challan_railway_receipt_no') {
         next.challan_rr_no = val;
+      }
+
+      if (field === 'unit_name') {
+        const uUpper = String(val || '').trim().toUpperCase();
+        const isLoose = uUpper.includes('LOOSE') || uUpper === 'LOOSE';
+        setDetails(prev => prev.map(r => ({
+          ...r,
+          unit: uUpper,
+          ...(isLoose ? { quantity_chln: 0, quantity_rcpt: 0 } : {})
+        })));
       }
 
       if (field === 'po_no' && val) {
@@ -748,8 +773,15 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
   const handleRowChange = (index: number, field: keyof ArrivalDetailRow, val: any) => {
     const updatedDetails = [...details];
     
-    // Auto-fill grade name on grade code select change
-    if (field === 'receipt_grade_code') {
+    if (field === 'unit') {
+      const uUpper = String(val || '').trim().toUpperCase();
+      const isLoose = uUpper.includes('LOOSE') || uUpper === 'LOOSE';
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        unit: uUpper,
+        ...(isLoose ? { quantity_chln: 0, quantity_rcpt: 0 } : {})
+      };
+    } else if (field === 'receipt_grade_code') {
       const g = grades.find(g => String(g.grade_code) === String(val));
       updatedDetails[index] = {
         ...updatedDetails[index],
@@ -904,6 +936,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
   const totalReceiptQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || 0), 0);
   const totalChallanQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_chln) || 0), 0);
+  const totalNettoWeight = details.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
   const calculatedLowestNetWeight = useMemo(() => {
     const elecNet = (Number(formData.electronic_gross_weight) || Number(formData.actual_gross_weight) || 0) - (Number(formData.electronic_tare_weight) || Number(formData.actual_tare_weight) || 0);
@@ -1818,20 +1851,54 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
                       })()}
                     </td>
                     <td className="p-1.5">
-                      <input
-                        type="number"
-                        value={row.quantity_chln !== undefined ? row.quantity_chln : 0}
-                        onChange={(e) => handleRowChange(index, 'quantity_chln', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-right font-bold outline-none"
-                      />
+                      {(() => {
+                        const rowUnit = (row.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+                        const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+                        return (
+                          <input
+                            type="number"
+                            readOnly={isLoose}
+                            value={isLoose ? 0 : (row.quantity_chln !== undefined ? row.quantity_chln : 0)}
+                            onChange={(e) => {
+                              if (!isLoose) {
+                                handleRowChange(index, 'quantity_chln', e.target.value === '' ? '' : Number(e.target.value));
+                              }
+                            }}
+                            title={isLoose ? "Challan quantity is 0 for LOOSE" : "Enter Challan Quantity"}
+                            className={cn(
+                              "w-full h-7 border rounded px-1 text-xs text-right font-bold outline-none transition-colors",
+                              isLoose
+                                ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
+                                : "bg-white border-slate-300 text-slate-900 focus:border-[#174C2C]"
+                            )}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="p-1.5">
-                      <input
-                        type="number"
-                        value={row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0}
-                        onChange={(e) => handleRowChange(index, 'quantity_rcpt', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full h-7 bg-white border border-slate-300 rounded px-1 text-xs text-right font-bold outline-none"
-                      />
+                      {(() => {
+                        const rowUnit = (row.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+                        const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+                        return (
+                          <input
+                            type="number"
+                            readOnly={isLoose}
+                            value={isLoose ? 0 : (row.quantity_rcpt !== undefined ? row.quantity_rcpt : 0)}
+                            onChange={(e) => {
+                              if (!isLoose) {
+                                handleRowChange(index, 'quantity_rcpt', e.target.value === '' ? '' : Number(e.target.value));
+                              }
+                            }}
+                            title={isLoose ? "Receipt quantity is 0 for LOOSE" : "Enter Receipt Quantity"}
+                            className={cn(
+                              "w-full h-7 border rounded px-1 text-xs text-right font-bold outline-none transition-colors",
+                              isLoose
+                                ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
+                                : "bg-white border-slate-300 text-slate-900 focus:border-[#174C2C]"
+                            )}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="p-1.5 w-24">
                       <input
@@ -1878,6 +1945,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
             </button>
             <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
               <span>GRID TOTAL:</span>
+              <span>NETTO: <span className="font-mono text-slate-900">{totalNettoWeight.toFixed(3)} M.T</span></span>
               <span>CHLN: <span className="font-mono text-slate-900">{totalChallanQuantity}</span></span>
               <span>RCPT: <span className="font-mono text-slate-900">{totalReceiptQuantity}</span></span>
               <span className="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded font-bold text-[10px] uppercase">
