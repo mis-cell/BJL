@@ -101,16 +101,45 @@ import { supabase } from "./lib/supabase";
       query: `
         DO $$ 
         BEGIN 
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS final_arrival_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS final_arrival_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS po_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS po_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS jci TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS jci_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_supplier TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS supplier TEXT;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_number TEXT;
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_date DATE;
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned TEXT DEFAULT 'No';
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned_other_mill TEXT DEFAULT 'No';
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note TEXT;
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_no TEXT;
-          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS pan_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS part_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS part_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS broker TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS transporter_name TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS di_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS di_date DATE;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_railway_receipt_no TEXT;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_rr_no TEXT;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS challan_rr_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS invoice_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS invoice_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS consignment_note_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_area_code TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arrival_area_name TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS ptf TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS rfs TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS lorry_returned_other_mill TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS way_bill_no TEXT;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS way_bill_date DATE;
+          ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS rr_gr_no TEXT;
 
           -- Migrate data safely
           IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='final_arrival' AND column_name='consignment_notice_no') THEN
