@@ -2075,40 +2075,37 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               {/* Pick Final Arrival Banner */}
               {finalArrivalList.length > 0 && (() => {
                 const pendingArrivalList = finalArrivalList.filter(fa => {
-                  const faNo = String(fa.final_arrival_no || fa.arrival_no || "").trim().toLowerCase();
-                  const faMrNo = String(fa.mr_no || "").trim().toLowerCase();
-                  const faId = String(fa.final_arrival_id || "").trim().toLowerCase();
-                  const faPoNo = String(fa.po_no || "").trim().toLowerCase();
+                  const normalize = (s: any) => String(s || "").trim().toLowerCase().replace(/^#/, '');
+
+                  const faNo = normalize(fa.final_arrival_no || fa.arrival_no);
+                  const faMrNo = normalize(fa.mr_no);
+                  const faId = normalize(fa.final_arrival_id);
+                  const faTempNo = normalize(fa.temporary_arrival_no);
                   const faLorry = String(fa.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
-                  if (fa.status === "Completed" || fa.status === "Inspected" || fa.status === "INSPECTED") {
-                    const hasInsp = records.some(r => {
-                      const rMr = String(r.mr_no || "").trim().toLowerCase();
-                      const rPo = String(r.po_no || "").trim().toLowerCase();
-                      return (faPoNo && rPo === faPoNo) || (faMrNo && rMr === faMrNo) || (faNo && rMr === faNo);
-                    });
-                    if (hasInsp) return false;
-                  }
-
-                  return !records.some(r => {
-                    const rMr = String(r.mr_no || "").trim().toLowerCase();
-                    const rArr = String(r.arrival_no || "").trim().toLowerCase();
-                    const rPo = String(r.po_no || "").trim().toLowerCase();
+                  // Check if an inspection record exists specifically for THIS final arrival
+                  const isAlreadyInspected = records.some(r => {
+                    const rMr = normalize(r.mr_no);
+                    const rArr = normalize(r.arrival_no);
+                    const rTemp = normalize(r.temporary_arrival_no);
                     const rLorry = String(r.lorry_number || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
                     // 1. Direct arrival / MR number match
-                    if (faNo && (rMr === faNo || rArr === faNo || rMr.includes(faNo) || rArr.includes(faNo))) return true;
+                    if (faNo && (rMr === faNo || rArr === faNo)) return true;
                     if (faMrNo && (rMr === faMrNo || rArr === faMrNo)) return true;
                     if (faId && (rMr === faId || rArr === faId || rMr === `fa-${faId}` || rArr === `fa-${faId}`)) return true;
+                    if (faTempNo && (rTemp === faTempNo || rMr === faTempNo || rArr === faTempNo)) return true;
 
-                    // 2. Direct PO number match
-                    if (faPoNo && rPo && faPoNo === rPo) {
-                      if (!faLorry || !rLorry || faLorry === rLorry) return true;
-                      if (faNo && (rArr === faNo || rMr === faNo)) return true;
+                    // 2. Lorry & partial arrival match
+                    if (faLorry && rLorry && faLorry === rLorry) {
+                      if (faNo && (rMr.includes(faNo) || rArr.includes(faNo))) return true;
+                      if (faMrNo && (rMr.includes(faMrNo) || rArr.includes(faMrNo))) return true;
                     }
 
                     return false;
                   });
+
+                  return !isAlreadyInspected;
                 });
 
                 return (
