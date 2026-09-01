@@ -67,6 +67,15 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     
     // Backfill quantity_chln and quantity_rcpt from netto_pnto if missing
     pDetails = pDetails.map(d => {
+      const u = (d.unit || initialFA?.unit_name || '').toString().trim().toUpperCase();
+      const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+      if (isLoose) {
+        return {
+          ...d,
+          quantity_chln: 0,
+          quantity_rcpt: 0
+        };
+      }
       if (Number(d.netto_pnto) > 0 && (!d.quantity_chln || !d.quantity_rcpt)) {
         const roundedNetto = Math.round(Number(d.netto_pnto));
         return {
@@ -814,7 +823,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         d.receipt_grade_name || d.receipt_grade_code || d.challan_grade_name || Number(d.netto_pnto) > 0 || Number(d.quantity_chln) > 0 || Number(d.quantity_rcpt) > 0
       );
 
-      const totalPacketsSum = activeRows.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || Number(curr.quantity_chln) || 0), 0);
+      const totalPacketsSum = activeRows.reduce((acc, curr) => {
+        const u = (curr.unit || formData.unit_name || '').toString().trim().toUpperCase();
+        const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+        if (isLoose) return acc;
+        return acc + (Number(curr.quantity_rcpt) || Number(curr.quantity_chln) || 0);
+      }, 0);
       const totalWeightSum = activeRows.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
       const payload = {
@@ -866,10 +880,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         total_packets: totalPacketsSum,
         weight_qtl: totalWeightSum * 10,
         grid_details: activeRows.map(row => {
+          const u = (row.unit || formData.unit_name || '').toString().trim().toUpperCase();
+          const isLoose = u.includes('LOOSE') || u === 'LOOSE';
           return {
             ...row,
-            quantity_chln: Math.round(Number(row.quantity_chln) || 0),
-            quantity_rcpt: Math.round(Number(row.quantity_rcpt) || 0)
+            quantity_chln: isLoose ? 0 : Math.round(Number(row.quantity_chln) || 0),
+            quantity_rcpt: isLoose ? 0 : Math.round(Number(row.quantity_rcpt) || 0)
           };
         }),
 
@@ -934,8 +950,17 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     }
   };
 
-  const totalReceiptQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_rcpt) || 0), 0);
-  const totalChallanQuantity = details.reduce((acc, curr) => acc + (Number(curr.quantity_chln) || 0), 0);
+  const totalReceiptQuantity = details.reduce((acc, curr) => {
+    const u = (curr.unit || formData.unit_name || '').toString().trim().toUpperCase();
+    const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+    return acc + (isLoose ? 0 : (Number(curr.quantity_rcpt) || 0));
+  }, 0);
+
+  const totalChallanQuantity = details.reduce((acc, curr) => {
+    const u = (curr.unit || formData.unit_name || '').toString().trim().toUpperCase();
+    const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+    return acc + (isLoose ? 0 : (Number(curr.quantity_chln) || 0));
+  }, 0);
   const totalNettoWeight = details.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
   const calculatedLowestNetWeight = useMemo(() => {
@@ -976,7 +1001,11 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       return u.includes('BALE') || u === 'BALES' || (!u.includes('LOOSE') && u !== 'LOOSE');
     };
 
-    const getRowRcpt = (r: ArrivalDetailRow) => Number(r.quantity_rcpt) || Number(r.quantity_chln) || 0;
+    const getRowRcpt = (r: ArrivalDetailRow) => {
+      const u = (r.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+      if (u.includes('LOOSE') || u === 'LOOSE') return 0;
+      return Number(r.quantity_rcpt) || Number(r.quantity_chln) || 0;
+    };
 
     const balesIndices = details
       .map((r, i) => (isBalesRow(r) && getRowRcpt(r) > 0 ? i : -1))
@@ -988,6 +1017,17 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     let allocatedNetto = 0;
 
     const updated = details.map((row, index) => {
+      const u = (row.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+      const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+
+      if (isLoose) {
+        if (row.quantity_chln !== 0 || row.quantity_rcpt !== 0) {
+          needsUpdate = true;
+          return { ...row, quantity_chln: 0, quantity_rcpt: 0 };
+        }
+        return row;
+      }
+
       if (!isBalesRow(row)) return row;
 
       const rcpt = getRowRcpt(row);
