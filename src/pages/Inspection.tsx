@@ -29,6 +29,8 @@ import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import LegacyLayout from "../components/LegacyLayout";
 import { PaginationControls } from "../components/PaginationControls";
+import PrintModal from "../components/PrintModal";
+import InspectionPrintSlip from "../components/InspectionPrintSlip";
 
 export interface DeductionRow {
   id: string;
@@ -476,6 +478,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sorting state for arrival date, arrival no, status
+  const [sortField, setSortField] = useState<"arrival_date" | "arrival_no" | "status">("arrival_date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Print modal state
+  const [printingRecord, setPrintingRecord] = useState<InspectionMasterRecord | null>(null);
+  const [printingDetails, setPrintingDetails] = useState<any[]>([]);
 
   // Pagination (100 rows per page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -1125,6 +1135,55 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
     ]);
     setViewMode("form");
+  };
+
+  const handlePrintRecord = async (rec: InspectionMasterRecord) => {
+    setPrintingRecord(rec);
+    setPrintingDetails([]);
+
+    let loadedDetails: any[] = [];
+
+    if (supabase) {
+      try {
+        const [midRes, inspRes, millDetRes] = await Promise.all([
+          supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true }),
+          supabase.from("inspection_details").select("*").eq("mr_no", rec.mr_no),
+          supabase.from("mill_inspection_detail").select("*").eq("mr_no", rec.mr_no)
+        ]);
+
+        if (midRes.data && midRes.data.length > 0) {
+          loadedDetails = midRes.data;
+        } else if (inspRes.data && inspRes.data.length > 0) {
+          loadedDetails = inspRes.data;
+        } else if (millDetRes.data && millDetRes.data.length > 0) {
+          loadedDetails = millDetRes.data;
+        }
+      } catch (err) {
+        console.warn("Could not fetch print details from remote DB:", err);
+      }
+    }
+
+    if (loadedDetails.length === 0) {
+      let rawGrid = rec.grid_details;
+      if (typeof rawGrid === 'string') {
+        try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+      }
+      if (Array.isArray(rawGrid) && rawGrid.length > 0) {
+        loadedDetails = rawGrid.map((item: any) => ({
+          crop_year: item.crop_year || "2026-27",
+          marka: item.challan_marka_name || item.marka_name || item.marka || item.marks || (rec as any).area || "BJC",
+          stock_grade_name: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "TD-5",
+          quantity: item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales || 1,
+          challan_gross_wt: item.netto_pnto || item.weight_mt || item.challan_gross_wt || item.gross_weight || item.weight || "",
+          actual_moisture: item.moisture_act || item.actual_moisture || rec.actual_moisture || 0,
+          actual_dust: item.dust_act || item.actual_dust || rec.actual_dust || 0,
+          actual_ncv: item.ncv_act || item.actual_ncv || rec.actual_ncv || 0,
+          rate: item.rate || item.rate_qntl || ""
+        }));
+      }
+    }
+
+    setPrintingDetails(loadedDetails);
   };
 
   const handleEditRecord = async (rec: InspectionMasterRecord) => {
@@ -1804,22 +1863,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     return matchesQuery && matchesStatus;
   }).sort((a, b) => {
-    // 1. Arrival No
-    const arrNoA = (a.arrival_no || a.mr_no || '').toUpperCase();
-    const arrNoB = (b.arrival_no || b.mr_no || '').toUpperCase();
-    const arrNoDiff = arrNoA.localeCompare(arrNoB, undefined, { numeric: true, sensitivity: 'base' });
-    if (arrNoDiff !== 0) return arrNoDiff;
+    if (sortField === "arrival_date") {
+      const dateA = new Date(a.arrival_date || a.mr_date || 0).getTime();
+      const dateB = new Date(b.arrival_date || b.mr_date || 0).getTime();
+      if (dateA !== dateB) {
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      }
+    } else if (sortField === "arrival_no") {
+      const arrNoA = (a.arrival_no || a.mr_no || '').toUpperCase();
+      const arrNoB = (b.arrival_no || b.mr_no || '').toUpperCase();
+      const diff = arrNoA.localeCompare(arrNoB, undefined, { numeric: true, sensitivity: 'base' });
+      if (diff !== 0) {
+        return sortOrder === "asc" ? diff : -diff;
+      }
+    } else if (sortField === "status") {
+      const statusA = (a.status || 'Completed').toUpperCase();
+      const statusB = (b.status || 'Completed').toUpperCase();
+      const diff = statusA.localeCompare(statusB);
+      if (diff !== 0) {
+        return sortOrder === "asc" ? diff : -diff;
+      }
+    }
 
-    // 2. Arrival Date
-    const dateA = a.arrival_date || a.mr_date || '';
-    const dateB = b.arrival_date || b.mr_date || '';
-    const dateDiff = new Date(dateB || 0).getTime() - new Date(dateA || 0).getTime();
-    if (dateDiff !== 0) return dateDiff;
-
-    // 3. Status
-    const statusA = (a.status || 'Completed').toUpperCase();
-    const statusB = (b.status || 'Completed').toUpperCase();
-    return statusA.localeCompare(statusB);
+    const defaultTimeA = new Date(a.arrival_date || a.mr_date || 0).getTime();
+    const defaultTimeB = new Date(b.arrival_date || b.mr_date || 0).getTime();
+    return defaultTimeB - defaultTimeA;
   });
 
   const totalInspections = records.length;
@@ -1854,13 +1922,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           <div className="flex items-center gap-2.5">
             {viewMode === "form" ? (
               <>
-                {/* <button
-                  onClick={() => setViewMode("dashboard")}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back </span>
-                </button> */}
                 <div className="relative z-10 flex items-center gap-3">
                   <button
                     type="button"
@@ -1872,13 +1933,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     <span>Back</span>
                   </button>
                 </div>
-                {/* <button
-                  onClick={handleSaveForm}
-                  className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Save Inspection</span>
-                </button> */}
               </>
             ) : (
               <>
@@ -1969,6 +2023,22 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* SORT BY ARRIVAL DATE CONTROL */}
+                <div className="flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                  <span className="text-[11px] font-black uppercase text-slate-500">Sort:</span>
+                  <span className="text-xs font-black text-slate-800">Arrival Date</span>
+                  <button
+                    onClick={() => {
+                      setSortField("arrival_date");
+                      setSortOrder(prev => prev === "desc" ? "asc" : "desc");
+                    }}
+                    className="ml-1 px-2 py-0.5 bg-white hover:bg-slate-200 text-slate-900 border border-slate-300 rounded text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all shadow-2xs"
+                    title="Toggle Ascending / Descending by Arrival Date"
+                  >
+                    {sortField === "arrival_date" && sortOrder === "asc" ? "↑ Oldest" : "↓ Newest"}
+                  </button>
+                </div>
+
                 <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                   <Filter className="w-3.5 h-3.5 text-slate-500" />
                   <select
@@ -1998,8 +2068,26 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 <table className="w-full text-left text-xs text-slate-700 border-collapse">
                   <thead>
                     <tr className="bg-[#174C2C] text-white font-extrabold uppercase tracking-wider text-[11px] border-b border-[#0F351E]">
-                      <th className="py-3 px-4">Arrival No</th>
-                      <th className="py-3 px-4">Arrival Date</th>
+                      <th 
+                        onClick={() => {
+                          setSortField("arrival_no");
+                          setSortOrder(prev => prev === "desc" ? "asc" : "desc");
+                        }}
+                        className="py-3 px-4 cursor-pointer hover:bg-[#123920] select-none transition-colors"
+                        title="Click to sort by Arrival No"
+                      >
+                        Arrival No {sortField === "arrival_no" ? (sortOrder === "desc" ? "↓" : "↑") : "↕"}
+                      </th>
+                      <th 
+                        onClick={() => {
+                          setSortField("arrival_date");
+                          setSortOrder(prev => prev === "desc" ? "asc" : "desc");
+                        }}
+                        className="py-3 px-4 cursor-pointer hover:bg-[#123920] select-none transition-colors bg-[#123920]/40"
+                        title="Click to sort by Arrival Date"
+                      >
+                        Arrival Date {sortField === "arrival_date" ? (sortOrder === "desc" ? "↓" : "↑") : "↕"}
+                      </th>
                       <th className="py-3 px-4">P.O. No</th>
                       <th className="py-3 px-4">Supplier Name</th>
                       <th className="py-3 px-4">Broker Name</th>
@@ -2007,7 +2095,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       <th className="py-3 px-4 text-center">Act. Moisture %</th>
                       <th className="py-3 px-4 text-center">Act. Dust %</th>
                       <th className="py-3 px-4 text-right">Deduction (₹)</th>
-                      <th className="py-3 px-4 text-center">Status</th>
+                      <th 
+                        onClick={() => {
+                          setSortField("status");
+                          setSortOrder(prev => prev === "desc" ? "asc" : "desc");
+                        }}
+                        className="py-3 px-4 text-center cursor-pointer hover:bg-[#123920] select-none transition-colors"
+                        title="Click to sort by Status"
+                      >
+                        Status {sortField === "status" ? (sortOrder === "desc" ? "↓" : "↑") : "↕"}
+                      </th>
                       <th className="py-3 px-4 text-center">Actions</th>
                     </tr>
                   </thead>
@@ -2031,11 +2128,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           key={rec.mr_no}
                           onDoubleClick={() => handleEditRecord(rec)}
                           className="hover:bg-emerald-50/50 transition-colors cursor-pointer select-none"
-                          title="Double-click to open edit mode for this record"
+                          title="Double-click to open edit form for this record"
                         >
                           <td className="py-3 px-4 font-black text-emerald-950 font-mono">{rec.mr_no}</td>
                           <td className="py-3 px-4 text-slate-600">
-                            {rec.mr_date ? new Date(rec.mr_date).toLocaleDateString("en-GB") : "-"}
+                            {rec.mr_date ? new Date(rec.mr_date).toLocaleDateString("en-GB") : (rec.arrival_date ? new Date(rec.arrival_date).toLocaleDateString("en-GB") : "-")}
                           </td>
                           <td className="py-3 px-4 font-semibold text-slate-800">{rec.po_no || "N/A"}</td>
                           <td className="py-3 px-4 font-bold text-slate-900 max-w-[180px] truncate">
@@ -2060,16 +2157,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
                               <button
-                                onClick={() => handleEditRecord(rec)}
-                                className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded font-bold text-[11px] flex items-center gap-1"
-                                title="Edit Record & Details"
+                                onClick={() => handlePrintRecord(rec)}
+                                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                                title="Print Marks & Quality Received Mill Copy"
                               >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Edit</span>
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Print</span>
                               </button>
                               <button
                                 onClick={() => handleDeleteRecord(rec.mr_no)}
-                                className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded"
+                                className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded cursor-pointer transition-colors"
                                 title="Delete Record"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -3518,6 +3615,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
           </div>
         )}
+
+        {/* PRINT MODAL (MARKS & QUALITY RECEIVED - MILL COPY) */}
+        <PrintModal
+          isOpen={printingRecord !== null}
+          onClose={() => setPrintingRecord(null)}
+          title={`MARKS & QUALITY RECEIVED - M.R. NO: ${printingRecord?.mr_no || ""}`}
+        >
+          {printingRecord && (
+            <InspectionPrintSlip
+              master={printingRecord}
+              details={printingDetails}
+            />
+          )}
+        </PrintModal>
 
       </div>
     </LegacyLayout>
