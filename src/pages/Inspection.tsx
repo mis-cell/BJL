@@ -2875,7 +2875,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isMoistureClaimBlocked}
                                 tabIndex={isMoistureClaimBlocked ? -1 : 0}
                                 title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
-                                value={row.moisture_claim !== undefined && row.moisture_claim !== null && Number(row.moisture_claim) > 0 ? row.moisture_claim : (row.moisture_act || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0)))}
+                                //value={row.moisture_claim !== undefined && row.moisture_claim !== null && Number(row.moisture_claim) > 0 ? row.moisture_claim : (row.moisture_act || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0)))}
+                                value={row.moisture_claim || 0}
                                 onChange={(e) => !isMoistureClaimBlocked && handleDetailChange(idx, "moisture_claim", Number(e.target.value))}
                                 className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-indigo-950 font-black text-center ${isMoistureClaimBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
