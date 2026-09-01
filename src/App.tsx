@@ -447,6 +447,11 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS sms_id TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS raw_sms_body TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS sauda_created BOOLEAN DEFAULT FALSE;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_by TEXT;
+          ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_at TIMESTAMP WITH TIME ZONE;
 
           DO $$
           BEGIN

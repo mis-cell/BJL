@@ -31,10 +31,13 @@ import {
   Inbox,
   Star,
   Paperclip,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  Tag,
+  Lock
 } from 'lucide-react';
 import { cn, getApiUrl } from '../lib/utils';
-import { canEditOrDelete, enforceEditOrDeletePermission } from '../lib/permissions';
+import { canEditOrDelete, enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
 import LegacyLayout from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
@@ -584,6 +587,183 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const [isGoogleSheetLoading, setIsGoogleSheetLoading] = useState(false);
   const [googleSheetError, setGoogleSheetError] = useState<string | null>(null);
 
+  // Marked SMS tracker (persisted in Supabase `sms_sauda` and localStorage)
+  const [markedSmsMap, setMarkedSmsMap] = useState<Record<string, { sauda_no: string; marked_by: string; marked_at?: string; db_id?: string }>>({});
+  const [saudaInputs, setSaudaInputs] = useState<Record<string, string>>({});
+
+  const isAuthorizedForMarkSms = () => {
+    const ctx = getCurrentUserContext();
+    const role = (ctx?.userRole || '').toUpperCase();
+    const level = (ctx?.userLevel || '').toUpperCase();
+    
+    const storedUserStr = localStorage.getItem('logged_in_user') || sessionStorage.getItem('logged_in_user') || localStorage.getItem('user_master');
+    let storedLevel = '';
+    let storedRole = '';
+    if (storedUserStr) {
+      try {
+        const u = JSON.parse(storedUserStr);
+        storedLevel = (u.level || u.userLevel || u.user_level || '').toUpperCase();
+        storedRole = (u.role || u.userRole || u.user_role || '').toUpperCase();
+      } catch(e) {}
+    }
+
+    const userRole = role || storedRole;
+    const userLevel = level || storedLevel;
+
+    return (
+      userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' ||
+      userLevel === 'ADMIN' || userLevel === 'ADMINISTRATOR' ||
+      userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX'
+    );
+  };
+
+  const loadMarkedSmsRecords = async () => {
+    let loadedMap: Record<string, { sauda_no: string; marked_by: string; marked_at?: string; db_id?: string }> = {};
+
+    const cachedMap = localStorage.getItem('sms_sauda_marked_map');
+    if (cachedMap) {
+      try {
+        loadedMap = JSON.parse(cachedMap);
+      } catch(e) {}
+    }
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('sms_sauda')
+          .select('*');
+
+        if (!error && data) {
+          data.forEach((rec: any) => {
+            if (rec.sauda_no || rec.sauda_created) {
+              const info = {
+                sauda_no: rec.sauda_no,
+                marked_by: rec.marked_by || rec.approved_by || 'Admin',
+                marked_at: rec.marked_at || rec.created_at,
+                db_id: rec.id
+              };
+              if (rec.sms_id) {
+                loadedMap[rec.sms_id] = info;
+              }
+              if (rec.raw_sms_body) {
+                loadedMap[rec.raw_sms_body.trim()] = info;
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("Error loading marked SMS records from Supabase:", err);
+      }
+    }
+
+    setMarkedSmsMap(loadedMap);
+    localStorage.setItem('sms_sauda_marked_map', JSON.stringify(loadedMap));
+  };
+
+  useEffect(() => {
+    loadMarkedSmsRecords();
+  }, []);
+
+  const handleMarkSmsDone = async (sms: any) => {
+    if (!isAuthorizedForMarkSms()) {
+      alert("Access Denied: Only Admin and Level 4 users are authorized to mark SMS as Sauda Done.");
+      return;
+    }
+
+    const inputSaudaNo = (saudaInputs[sms.id] || '').trim();
+    if (!inputSaudaNo) {
+      alert("Sauda Number is mandatory! Please enter the Sauda Number (e.g. BJCL/ 7017TD) before marking as done.");
+      return;
+    }
+
+    const userCtx = getCurrentUserContext();
+    const currentUserName = userCtx.userName || 'Admin';
+    const nowIso = new Date().toISOString();
+
+    const markInfo = {
+      sauda_no: inputSaudaNo,
+      marked_by: currentUserName,
+      marked_at: nowIso
+    };
+
+    const updatedMap = {
+      ...markedSmsMap,
+      [sms.id]: markInfo
+    };
+    if (sms.body) {
+      updatedMap[sms.body.trim()] = markInfo;
+    }
+
+    setMarkedSmsMap(updatedMap);
+    localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
+
+    if (supabase) {
+      try {
+        const { data: existing } = await supabase
+          .from('sms_sauda')
+          .select('id')
+          .or(`sms_id.eq.${sms.id},sauda_no.eq.${inputSaudaNo}`)
+          .limit(1);
+
+        const payload = {
+          sms_id: sms.id,
+          sauda_no: inputSaudaNo,
+          raw_sms_body: sms.body,
+          broker: sms.contact_name,
+          supplier: sms.contact_name,
+          challan_supplier: sms.contact_name,
+          area: 'SEMI NORTHERN',
+          date: sms.date && sms.date.match(/^\d{4}-\d{2}-\d{2}$/) ? sms.date : '2026-07-07',
+          status: 'Active',
+          sauda_created: true,
+          marked_by: currentUserName,
+          marked_at: nowIso,
+          remarks: sms.body
+        };
+
+        if (existing && existing.length > 0) {
+          await supabase.from('sms_sauda').update(payload).eq('id', existing[0].id);
+        } else {
+          await supabase.from('sms_sauda').insert([payload]);
+        }
+      } catch (dbErr) {
+        console.warn("Failed to save marked SMS to Supabase sms_sauda table:", dbErr);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
+    alert(`✓ SMS successfully marked as Sauda Created with Sauda #${inputSaudaNo}`);
+  };
+
+  const handleUnmarkSms = async (sms: any) => {
+    if (!isAuthorizedForMarkSms()) {
+      alert("Access Denied: Only Admin and Level 4 users are authorized to unmark this SMS.");
+      return;
+    }
+
+    const updatedMap = { ...markedSmsMap };
+    delete updatedMap[sms.id];
+    if (sms.body) {
+      delete updatedMap[sms.body.trim()];
+    }
+
+    setMarkedSmsMap(updatedMap);
+    localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
+
+    if (supabase) {
+      try {
+        await supabase
+          .from('sms_sauda')
+          .update({ sauda_created: false })
+          .or(`sms_id.eq.${sms.id},raw_sms_body.eq.${sms.body}`);
+      } catch (err) {
+        console.warn("Failed to unmark SMS in Supabase:", err);
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
+  };
+
   // Search and filters
   const [saudaSearchTerm, setSaudaSearchTerm] = useState('');
   const [smsSearchTerm, setSmsSearchTerm] = useState('');
@@ -810,7 +990,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setIsGoogleSheetLoading(true);
     setGoogleSheetError(null);
     try {
-      const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets/1WignMNJ2p2Qu5V34nuuthPItahIlNnQtBiJJ8KYgG9k/values/sauda!A:C?key=AIzaSyBLQaMfurS0w11dgPRPLIpUfAs6lOHRMgA");
+      const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets/1WignMNJ2p2Qu5V34nuuthPItahIlNnQtBiJJ8KYgG9k/values/sauda!A:E?key=AIzaSyBLQaMfurS0w11dgPRPLIpUfAs6lOHRMgA");
       if (!res.ok) {
         throw new Error(`Google Sheets API responded with status ${res.status}`);
       }
@@ -823,18 +1003,34 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
       }
       if (data.values && data.values.length > 0) {
         let rows = data.values;
-        // Skip header
-        if (rows[0] && rows[0][0]?.toLowerCase() === 'body') {
+        // Skip header if present
+        const firstRowHeader = (rows[0] || []).map((c: any) => String(c || '').toLowerCase()).join(' ');
+        if (firstRowHeader.includes('readable_date') || firstRowHeader.includes('body') || firstRowHeader.includes('service_center')) {
           rows = rows.slice(1);
         }
         
-        const parsed = rows.map((row: any, index: number) => ({
-          id: `SHEET-SMS-${index + 1}`,
-          body: row[0] || '',
-          service_center: row[1] || '',
-          contact_name: row[2] || 'Unknown Sender',
-          date: '2026-07-07'
-        }));
+        const parsed = rows.map((row: any, index: number) => {
+          let dateVal = row[0] || '2026-07-07';
+          let bodyVal = row[1] || '';
+          let phoneVal = row[2] || '';
+          let nameVal = row[3] || row[2] || 'Unknown Sender';
+
+          // If row[0] is body text (contains spaces or newlines) and row[1] is phone (3-column structure)
+          if (typeof row[0] === 'string' && (row[0].includes(' ') || row[0].includes('\n')) && !row[0].match(/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/)) {
+            bodyVal = row[0];
+            phoneVal = row[1] || '';
+            nameVal = row[2] || row[1] || 'Unknown Sender';
+            dateVal = '2026-07-07';
+          }
+
+          return {
+            id: `SHEET-SMS-${index + 1}`,
+            date: dateVal,
+            body: bodyVal,
+            service_center: phoneVal,
+            contact_name: nameVal
+          };
+        });
         setGoogleSheetSmsData(parsed);
       } else {
         setGoogleSheetError("No raw values found in the Google Sheet payload.");
@@ -2138,8 +2334,8 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                     <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide w-48">Sender (Broker/Vyapari) &or;</th>
                     <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Grade &or;</th>
                     <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Unit Type &or;</th>
-                    <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body payload)</th>
-                    <th className="px-4 text-[10px] tracking-wide text-center font-bold w-40">Action</th>
+                    <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body Payload)</th>
+                    <th className="px-4 text-[10px] tracking-wide text-center font-bold w-72">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono text-[11px] text-slate-800">
@@ -2181,39 +2377,97 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                         else if (bodyLower.includes('w4')) detectedGrade = 'W4';
                         else if (bodyLower.includes('w5')) detectedGrade = 'W5';
 
-                        const rowBgClass = index % 2 === 1 ? "bg-slate-50 hover:bg-slate-100" : "bg-white hover:bg-slate-50";
+                        const markedInfo = markedSmsMap[sms.id] || (sms.body ? markedSmsMap[sms.body.trim()] : undefined);
+                        const isMarked = Boolean(markedInfo && markedInfo.sauda_no);
+                        const rowBgClass = isMarked
+                          ? "bg-emerald-50/50 hover:bg-emerald-50"
+                          : (index % 2 === 1 ? "bg-slate-50 hover:bg-slate-100" : "bg-white hover:bg-slate-50");
 
                         return (
-                          <tr key={sms.id} className={cn("transition-colors h-10", rowBgClass)}>
-                            <td className="px-3 py-2 border-r border-slate-200 text-center font-bold text-slate-400 ">
+                          <tr key={sms.id} className={cn("transition-colors min-h-12", rowBgClass)}>
+                            <td className="px-3 py-2 border-r border-slate-200 text-center font-bold text-slate-400 align-top">
                               {sms.id.replace('SHEET-SMS-', '')}
                             </td>
-                            <td className="px-3 py-2 border-r border-slate-200 text-slate-500 font-medium">{sms.date}</td>
-                            <td className="px-4 py-2 border-r border-slate-200 font-black text-slate-900 uppercase tracking-tight">
-                              <span className="flex items-center gap-1.5">
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse shrink-0" />
-                                {sms.contact_name}
-                              </span>
+                            <td className="px-3 py-2 border-r border-slate-200 text-slate-700 font-semibold align-top whitespace-nowrap">
+                              {sms.date}
                             </td>
-                            <td className="px-3 py-2 border-r border-slate-200 text-center ">
+                            <td className="px-4 py-2 border-r border-slate-200 font-black text-slate-900 uppercase tracking-tight align-top">
+                              <span className="flex items-center gap-1.5">
+                                <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", isMarked ? "bg-emerald-600" : "bg-indigo-600 animate-pulse")} />
+                                <span>{sms.contact_name}</span>
+                              </span>
+                              {sms.service_center && (
+                                <span className="block text-[9px] text-slate-500 font-normal font-mono tracking-normal mt-0.5">
+                                  {sms.service_center}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 border-r border-slate-200 text-center align-top">
                               <span className="bg-amber-50 text-amber-800 border border-amber-250 font-black text-[9px] tracking-wider px-2 py-0.5 rounded uppercase font-mono">
                                 {detectedGrade}
                               </span>
                             </td>
-                            <td className="px-3 py-2 border-r border-slate-200 text-center text-slate-600 font-extrabold ">
+                            <td className="px-3 py-2 border-r border-slate-200 text-center text-slate-600 font-extrabold align-top">
                               {isLry ? "🚚 LORRY" : "BALES"}
                             </td>
-                            <td className="px-4 py-2 border-r border-slate-200 font-mono text-[11px] text-slate-700 leading-normal select-text max-w-lg truncate hover:text-slate-950" title={sms.body}>
+                            <td className="px-4 py-2 border-r border-slate-200 font-mono text-[11px] text-slate-800 leading-relaxed select-text whitespace-pre-wrap align-top">
                               {sms.body}
                             </td>
-                            <td className="px-4 py-2 text-center ">
-                              <button
-                                onClick={() => handleConvertSms(sms)}
-                                className="bg-[#024a68] hover:bg-[#035d82] text-white font-mono font-black text-[9px] uppercase px-3 py-1.5 rounded shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-1 mx-auto transition-all active:scale-95"
-                              >
-                                <PlusCircle className="h-3 w-3 text-yellow-300" />
-                                <span>Convert to Sauda</span>
-                              </button>
+                            <td className="px-3 py-2 text-center align-top">
+                              {isMarked ? (
+                                <div className="flex flex-col items-center justify-center p-2 bg-emerald-100/80 border border-emerald-300 rounded shadow-xs gap-1">
+                                  <div className="inline-flex items-center gap-1 bg-emerald-700 text-white px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-2xs">
+                                    <Check className="h-3 w-3 text-emerald-200 stroke-[3]" />
+                                    <span>SAUDA DONE</span>
+                                  </div>
+                                  <div className="font-mono text-xs font-black text-emerald-950 tracking-tight">
+                                    #{markedInfo.sauda_no}
+                                  </div>
+                                  {markedInfo.marked_by && (
+                                    <div className="text-[9px] text-emerald-800 font-bold">
+                                      By: {markedInfo.marked_by}
+                                    </div>
+                                  )}
+                                  {isAuthorizedForMarkSms() && (
+                                    <button
+                                      onClick={() => handleUnmarkSms(sms)}
+                                      className="text-[9px] text-slate-500 hover:text-rose-600 font-semibold underline cursor-pointer mt-0.5"
+                                    >
+                                      Unmark / Reset
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-2 p-1 bg-slate-50/80 border border-slate-200 rounded">
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      placeholder="Sauda # (Required)*"
+                                      value={saudaInputs[sms.id] || ''}
+                                      onChange={(e) => setSaudaInputs(prev => ({ ...prev, [sms.id]: e.target.value }))}
+                                      className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[11px] font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400 placeholder:font-normal"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      onClick={() => handleMarkSmsDone(sms)}
+                                      className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-black text-[9px] uppercase px-2 py-1.5 rounded shadow-2xs hover:shadow cursor-pointer flex items-center justify-center gap-1 transition-all active:scale-95"
+                                      title="Mark SMS as Sauda Done (Admin & Level 4 Authorized)"
+                                    >
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-200" />
+                                      <span>Mark Done</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleConvertSms(sms)}
+                                      className="flex-1 bg-[#024a68] hover:bg-[#035d82] text-white font-mono font-black text-[9px] uppercase px-2 py-1.5 rounded shadow-2xs hover:shadow cursor-pointer flex items-center justify-center gap-1 transition-all active:scale-95"
+                                      title="Open full Sauda contract form pre-filled with this SMS"
+                                    >
+                                      <PlusCircle className="h-3 w-3 text-yellow-300" />
+                                      <span>Convert</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );

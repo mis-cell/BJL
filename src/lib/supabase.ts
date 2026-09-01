@@ -1672,9 +1672,19 @@ if (supabase) {
           superior_normal_marks TEXT,
           status TEXT DEFAULT 'Pending',
           quality_details JSONB,
+          sms_id TEXT,
+          raw_sms_body TEXT,
+          sauda_created BOOLEAN DEFAULT FALSE,
+          marked_by TEXT,
+          marked_at TIMESTAMP WITH TIME ZONE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
       `ALTER TABLE IF EXISTS sms_sauda DISABLE ROW LEVEL SECURITY;`,
+      `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS sms_id TEXT;`,
+      `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS raw_sms_body TEXT;`,
+      `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS sauda_created BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_by TEXT;`,
+      `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_at TIMESTAMP WITH TIME ZONE;`,
       
       `DO $$
       BEGIN
