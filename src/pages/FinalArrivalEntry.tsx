@@ -831,6 +831,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       }, 0);
       const totalWeightSum = activeRows.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
 
+      const isHeaderLoose = (formData.unit_name || '').toString().trim().toUpperCase().includes('LOOSE');
       const payload = {
         financial_year: formData.financial_year,
         final_arrival_no: formData.arrival_no,
@@ -877,13 +878,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         remarks: formData.remarks,
         temporary_arrival_no: formData.temporary_arrival_no,
         temporary_arrival_date: formData.temporary_arrival_date || null,
-        total_packets: totalPacketsSum,
+        total_packets: isHeaderLoose ? 0 : totalPacketsSum,
         weight_qtl: totalWeightSum * 10,
         grid_details: activeRows.map(row => {
           const u = (row.unit || formData.unit_name || '').toString().trim().toUpperCase();
-          const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+          const isLoose = u.includes('LOOSE') || u === 'LOOSE' || isHeaderLoose;
           return {
             ...row,
+            unit: row.unit || formData.unit_name || 'BALES',
             quantity_chln: isLoose ? 0 : Math.round(Number(row.quantity_chln) || 0),
             quantity_rcpt: isLoose ? 0 : Math.round(Number(row.quantity_rcpt) || 0)
           };

@@ -164,6 +164,40 @@ import { supabase } from "./lib/supabase";
             ALTER TABLE final_arrival RENAME COLUMN vehicle_no TO lorry_number; 
           END IF; 
 
+          -- Sanitize LOOSE items in final_arrival table
+          UPDATE final_arrival SET total_packets = 0 WHERE unit_name ILIKE '%LOOSE%' OR unit_name = 'LOOSE';
+
+          DO $loose_clean$
+          DECLARE
+            r RECORD;
+            g_arr jsonb;
+            item jsonb;
+            new_arr jsonb;
+            u_str text;
+            is_l boolean;
+          BEGIN
+            FOR r IN SELECT ctid, grid_details, unit_name FROM final_arrival WHERE grid_details IS NOT NULL AND grid_details != '' LOOP
+              BEGIN
+                g_arr := r.grid_details::jsonb;
+                IF jsonb_typeof(g_arr) = 'array' THEN
+                  new_arr := '[]'::jsonb;
+                  FOR item IN SELECT * FROM jsonb_array_elements(g_arr) LOOP
+                    u_str := UPPER(COALESCE(item->>'unit', r.unit_name, ''));
+                    is_l := (u_str LIKE '%LOOSE%');
+                    IF is_l THEN
+                      item := jsonb_set(item, '{quantity_chln}', '0'::jsonb);
+                      item := jsonb_set(item, '{quantity_rcpt}', '0'::jsonb);
+                    END IF;
+                    new_arr := new_arr || jsonb_build_array(item);
+                  END FOR;
+                  UPDATE final_arrival SET grid_details = new_arr::text WHERE ctid = r.ctid;
+                END IF;
+              EXCEPTION WHEN OTHERS THEN
+                -- Ignore non-json or malformed strings
+              END;
+            END LOOP;
+          END $loose_clean$; 
+
           -- Ensure payment_master and payment_details tables exist
           CREATE TABLE IF NOT EXISTS payment_master (
             payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
