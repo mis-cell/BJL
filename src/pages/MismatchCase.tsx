@@ -13,6 +13,7 @@ import {
   Info
 } from 'lucide-react';
 import { cn, canApproveMismatch } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { comparePoInspection, PoMismatchDetail } from '../lib/poMatch';
@@ -193,6 +194,17 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   const [sattaMismatchList, setSattaMismatchList] = useState<SattaMismatchItem[]>([]);
   const [sattaFilterStatus, setSattaFilterStatus] = useState<'all' | 'dispute' | 'ok' | 'resolved'>('dispute');
   const [sattaSourceFilter, setSattaSourceFilter] = useState<'ALL' | 'sauda_master' | 'sauda_check_point' | 'purchase_master'>('ALL');
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+  const [sattaCurrentPage, setSattaCurrentPage] = useState(1);
+  const [sattaPageSize, setSattaPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSattaCurrentPage(1);
+  }, [searchQuery, filterStatus, selectedSupplier, selectedBroker, sattaFilterStatus, sattaSourceFilter]);
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -1320,7 +1332,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {filteredMismatchList.map(item => (
+                      {filteredMismatchList.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(item => (
                         <tr key={item.id} className="hover:bg-slate-50/80 transition align-top">
                           {/* PO Number & Date */}
                           <td className="p-3 border-r border-slate-200 font-mono">
@@ -1460,6 +1472,15 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   </table>
                 </div>
               )}
+              <div className="mt-2">
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredMismatchList.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
             </div>
           </div>
         ) : (
@@ -1562,7 +1583,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {filteredSattaList.map(item => (
+                      {filteredSattaList.slice((sattaCurrentPage - 1) * sattaPageSize, sattaCurrentPage * sattaPageSize).map(item => (
                         <tr key={item.id} className="hover:bg-slate-50 transition align-top">
                           <td className="p-3 border-r border-slate-200 font-mono">
                             <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
@@ -1672,6 +1693,15 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   </table>
                 </div>
               )}
+              <div className="mt-2">
+                <PaginationControls
+                  currentPage={sattaCurrentPage}
+                  totalItems={filteredSattaList.length}
+                  pageSize={sattaPageSize}
+                  onPageChange={setSattaCurrentPage}
+                  onPageSizeChange={setSattaPageSize}
+                />
+              </div>
             </div>
           </div>
         )}

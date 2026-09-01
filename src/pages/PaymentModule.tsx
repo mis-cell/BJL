@@ -32,6 +32,7 @@ import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/Legacy
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1871,6 +1872,20 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     doc.save('Payment_Records.pdf');
   };
 
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+  const [ledgerCurrentPage, setLedgerCurrentPage] = useState(1);
+  const [ledgerPageSize, setLedgerPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilter]);
+
+  useEffect(() => {
+    setLedgerCurrentPage(1);
+  }, [selectedLedgerParty]);
+
   // Filtered Payments list
   const filteredPayments = paymentList.filter(p => {
     if (!searchFilter.trim()) return true;
@@ -2190,7 +2205,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredPayments.length > 0 ? (
-                    filteredPayments.map((p, idx) => {
+                    filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p, idx) => {
                       const payable = Number(p.payable_amt || p.total_amount || 0);
                       const paid = Number(p.paid_amount || 0);
                       const pending = payable - paid;
@@ -2301,6 +2316,16 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-2">
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredPayments.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           </div>
         </div>
@@ -2420,7 +2445,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {partyLedgerRecords.length > 0 ? (
-                    partyLedgerRecords.map((p, idx) => {
+                    partyLedgerRecords.slice((ledgerCurrentPage - 1) * ledgerPageSize, ledgerCurrentPage * ledgerPageSize).map((p, idx) => {
                       const payable = Number(p.payable_amt || p.total_amount || 0);
                       const paid = Number(p.paid_amount || 0);
                       const pending = payable - paid;
@@ -2511,6 +2536,16 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   </tfoot>
                 )}
               </table>
+            </div>
+
+            <div className="mt-2">
+              <PaginationControls
+                currentPage={ledgerCurrentPage}
+                totalItems={partyLedgerRecords.length}
+                pageSize={ledgerPageSize}
+                onPageChange={setLedgerCurrentPage}
+                onPageSizeChange={setLedgerPageSize}
+              />
             </div>
           </div>
         </div>

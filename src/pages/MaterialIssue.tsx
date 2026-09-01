@@ -20,6 +20,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import MaterialIssueEntry from '../components/MaterialIssueEntry';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
@@ -719,6 +720,14 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
   const [endDateFilter, setEndDateFilter] = useState('');
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [savedDetails, setSavedDetails] = useState<any[]>([]);
+
+  // 100-rows per page pagination
+  const [listCurrentPage, setListCurrentPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(100);
+
+  useEffect(() => {
+    setListCurrentPage(1);
+  }, [searchQuery, startDateFilter, endDateFilter]);
 
   // Background Sync States
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
@@ -2712,7 +2721,7 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
 
                 <tbody className="divide-y divide-slate-100 font-mono text-xs">
 
-                  {filteredRecords.map((r, idx) => {
+                  {filteredRecords.slice((listCurrentPage - 1) * listPageSize, listCurrentPage * listPageSize).map((r, idx) => {
 
                     const isSelected = selectedRecordId === r.issue_no;
 
@@ -2930,6 +2939,15 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
 
               </table>
 
+            </div>
+            <div className="mt-2">
+              <PaginationControls
+                currentPage={listCurrentPage}
+                totalItems={filteredRecords.length}
+                pageSize={listPageSize}
+                onPageChange={setListCurrentPage}
+                onPageSizeChange={setListPageSize}
+              />
             </div>
           </div>
           {/* <div className="bg-[#d4d0c8] p-1 border border-slate-400 shadow-sm rounded-sm">

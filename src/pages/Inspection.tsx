@@ -28,6 +28,7 @@ import {
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import LegacyLayout from "../components/LegacyLayout";
+import { PaginationControls } from "../components/PaginationControls";
 
 export interface DeductionRow {
   id: string;
@@ -475,6 +476,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Pagination (100 rows per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   // Form State
   const [headerForm, setHeaderForm] = useState<InspectionMasterRecord>({
@@ -2000,7 +2009,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                         </td>
                       </tr>
                     ) : (
-                      filteredRecords.map((rec) => (
+                      filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((rec) => (
                         <tr
                           key={rec.mr_no}
                           onDoubleClick={() => handleEditRecord(rec)}
@@ -2056,6 +2065,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   </tbody>
                 </table>
               </div>
+            </div>
+            <div className="mt-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredRecords.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           </>
         ) : (

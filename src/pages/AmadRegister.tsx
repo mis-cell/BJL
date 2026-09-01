@@ -41,6 +41,7 @@ import { dbModule } from '../services/dbModule';
 import { Amad } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData } from '../lib/permissions';
+import { PaginationControls } from '../components/PaginationControls';
 
 export const calculateNetWeightVal = (
   gross: number,
@@ -161,6 +162,14 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   const [selectedAmadId, setSelectedAmadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDateFilter, endDateFilter]);
 
   // Modern Printing Form State System for "MARKS & QUALITY RECEIVED"
   const [printData, setPrintData] = useState<any | null>(null);
@@ -825,7 +834,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E6DDC8]/60 font-mono text-xs">
-                {filteredAmads.map((amad, idx) => {
+                {filteredAmads.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((amad, idx) => {
                   const isSelected = selectedAmadId === amad.amad_id;
                   const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '--';
                   const bales = getChlnQty(amad);
@@ -921,6 +930,15 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-2">
+            <PaginationControls
+              currentPage={currentPage}
+              totalItems={filteredAmads.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         </div>
 

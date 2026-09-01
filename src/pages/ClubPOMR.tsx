@@ -21,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -60,6 +61,14 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   // Clubbed History
   const [clubbingHistory, setClubbingHistory] = useState<ClubbingRecord[]>([]);
   const [remarks, setRemarks] = useState('');
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSupplier]);
   
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [printingClub, setPrintingClub] = useState<ClubbingRecord | null>(null);
@@ -614,7 +623,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
                     </td>
                   </tr>
                 ) : (
-                  clubbingHistory.map((item) => (
+                  clubbingHistory.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
                     <tr key={item.id} className="border-b border-slate-100/65 hover:bg-slate-50/30 transition text-slate-800">
                       <td className="p-3 font-black text-slate-900 uppercase">
                         {item.id}
@@ -681,6 +690,15 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-2">
+            <PaginationControls
+              currentPage={currentPage}
+              totalItems={clubbingHistory.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         </div>
 

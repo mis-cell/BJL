@@ -36,6 +36,7 @@ import LegacyLayout from "../components/LegacyLayout";
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from "../lib/permissions";
+import { PaginationControls } from "../components/PaginationControls";
 import { comparePoInspection } from "../lib/poMatch";
 import { sanitizeCsvData } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
@@ -815,10 +816,20 @@ export default function MaterialInspection({
   const [finalArrivals, setFinalArrivals] = useState<any[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
 
-
   // New dashboard features states
   const [arrivalStartDate, setArrivalStartDate] = useState("");
   const [arrivalEndDate, setArrivalEndDate] = useState("");
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+  const [pendingCurrentPage, setPendingCurrentPage] = useState(1);
+  const [pendingPageSize, setPendingPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setPendingCurrentPage(1);
+  }, [searchFilter, arrivalStartDate, arrivalEndDate]);
   const [expandedMrNo, setExpandedMrNo] = useState<string | null>(null);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, InspectionDetailRow[]>>({});
   const [viewSettingsOpen, setViewSettingsOpen] = useState(false);
@@ -3590,7 +3601,7 @@ export default function MaterialInspection({
               </thead>
               <tbody className="divide-y divide-slate-200 font-bold bg-white text-slate-800">
                 {currentTab === "inspections" ? (
-                  filteredSavedInspections.map((row, idx) => {
+                  filteredSavedInspections.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((row, idx) => {
                   const activeColSpanCount = Object.values(visibleColumns).filter(Boolean).length;
                   return (
                     <React.Fragment key={row.id}>
@@ -3944,7 +3955,7 @@ export default function MaterialInspection({
                   );
                 })
               ) : (
-                filteredPendingMrList.map((row, idx) => {
+                filteredPendingMrList.slice((pendingCurrentPage - 1) * pendingPageSize, pendingCurrentPage * pendingPageSize).map((row, idx) => {
                   const arrivalDateFormatted = row.date ? new Date(row.date).toLocaleDateString("en-GB") : "--";
                   const bales = Number(row.total_packets || row.packets || 0);
                   const weightMt = Number(row.weight_qtl || row.weight || 0) / 10;
@@ -4056,6 +4067,16 @@ export default function MaterialInspection({
               ))}
             </tbody>
             </table>
+          </div>
+
+          <div className="mt-2">
+            <PaginationControls
+              currentPage={currentTab === "inspections" ? currentPage : pendingCurrentPage}
+              totalItems={currentTab === "inspections" ? filteredSavedInspections.length : filteredPendingMrList.length}
+              pageSize={currentTab === "inspections" ? pageSize : pendingPageSize}
+              onPageChange={currentTab === "inspections" ? setCurrentPage : setPendingCurrentPage}
+              onPageSizeChange={currentTab === "inspections" ? setPageSize : setPendingPageSize}
+            />
           </div>
 
           {/* Status Bar */}

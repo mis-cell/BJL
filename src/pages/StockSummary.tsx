@@ -47,6 +47,7 @@ import {
   Pie 
 } from 'recharts';
 import { cn, sanitizeCsvData, canDeleteData } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -195,6 +196,17 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
   // Selection, Printing, and Audit Trail state hooks
   const [selectedStockId, setSelectedStockId] = useState<string | null>(null);
   const [selectedClosingStockId, setSelectedClosingStockId] = useState<string | null>(null);
+
+  // 100-rows per page pagination
+  const [closingCurrentPage, setClosingCurrentPage] = useState(1);
+  const [closingPageSize, setClosingPageSize] = useState(100);
+  const [liveCurrentPage, setLiveCurrentPage] = useState(1);
+  const [livePageSize, setLivePageSize] = useState(100);
+
+  useEffect(() => {
+    setClosingCurrentPage(1);
+    setLiveCurrentPage(1);
+  }, [searchQuery, selectedGodownFilter, selectedGradeFilter, selectedAreaFilter, startDateFilter, endDateFilter]);
 
     const [isPrintingModalOpen, setIsPrintingModalOpen] = useState(false);
   const [isClosingPrintModalOpen, setIsClosingPrintModalOpen] = useState(false);
@@ -2557,7 +2569,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
             {filteredClosingStocks.length > 0 ? (
 
-              filteredClosingStocks.map((row, i) => {
+              filteredClosingStocks.slice((closingCurrentPage - 1) * closingPageSize, closingCurrentPage * closingPageSize).map((row, i) => {
 
                 const isSelected =
                   selectedClosingStockId === row.id;
@@ -2688,6 +2700,16 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
 
         </table>
 
+      </div>
+
+      <div className="mt-2">
+        <PaginationControls
+          currentPage={closingCurrentPage}
+          totalItems={filteredClosingStocks.length}
+          pageSize={closingPageSize}
+          onPageChange={setClosingCurrentPage}
+          onPageSizeChange={setClosingPageSize}
+        />
       </div>
 
     </div>
@@ -2900,7 +2922,7 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                          );
                        }
 
-                       return filteredLive.map((item, idx) => (
+                       return filteredLive.slice((liveCurrentPage - 1) * livePageSize, liveCurrentPage * livePageSize).map((item, idx) => (
                          <StockItemRow
                            key={idx}
                            name={item.grade}
@@ -2923,7 +2945,39 @@ export default function StockSummary({ onClose, initialSubTab = 'opening' }: { o
                      ))}
                   </tbody>
                </table>
-            </div>
+             </div>
+
+             <div className="mt-2 mb-2">
+               {(() => {
+                 const liveStocks = calculateLiveStocks();
+                 const filteredLive = liveStocks.filter(item => {
+                   if (selectedGradeFilter !== 'ALL' && item.grade.toUpperCase() !== selectedGradeFilter.toUpperCase()) {
+                     return false;
+                   }
+                   const gradeRecs = openingStocks.filter(r => String(r.grade || '').trim().toUpperCase() === item.grade.toUpperCase());
+                   if (selectedAreaFilter !== 'ALL') {
+                     const hasArea = gradeRecs.some(r => String(r.area || '').trim().toUpperCase() === selectedAreaFilter.toUpperCase());
+                     if (!hasArea) return false;
+                   }
+                   if (selectedGodownFilter !== 'ALL') {
+                     const hasGodown = gradeRecs.some(r => String(r.godown || '').trim().toUpperCase() === selectedGodownFilter.toUpperCase());
+                     if (!hasGodown) return false;
+                   }
+                   if (!searchQuery) return true;
+                   const q = searchQuery.toLowerCase().trim();
+                   return item.grade.toLowerCase().includes(q) || gradeRecs.some(r => String(r.godown || '').toLowerCase().includes(q) || String(r.area || '').toLowerCase().includes(q));
+                 });
+                 return (
+                   <PaginationControls
+                     currentPage={liveCurrentPage}
+                     totalItems={filteredLive.length}
+                     pageSize={livePageSize}
+                     onPageChange={setLiveCurrentPage}
+                     onPageSizeChange={setLivePageSize}
+                   />
+                 );
+               })()}
+             </div>
 
             {/* Summary Footer */}
             <div className="bg-[#808080] p-1 flex justify-between gap-1 items-center border border-black/10 ">

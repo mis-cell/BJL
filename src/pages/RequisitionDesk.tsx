@@ -17,6 +17,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { cn, canDeleteData } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import LegacyLayout, { LegacyFieldset } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { EditableComboBox } from '../components/MaterialIssueEntry';
@@ -50,6 +51,14 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [deptFilter, setDeptFilter] = useState<string>('ALL');
+  
+  // 100-rows per page pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, deptFilter, statusFilter]);
   
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -428,9 +437,9 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                       <td colSpan={10} className="py-12 text-slate-400 italic">No matching requisition found. Click "NEW REQUISITION" to create one.</td>
                     </tr>
                   ) : (
-                    filteredList.map((req, index) => (
+                    filteredList.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((req, index) => (
                       <tr key={req.id || index} className="hover:bg-slate-50/50">
-                        <td className="py-3 px-2 text-center text-slate-400 font-mono text-[10px]">{index + 1}</td>
+                        <td className="py-3 px-2 text-center text-slate-400 font-mono text-[10px]">{(currentPage - 1) * pageSize + index + 1}</td>
                         <td className="py-3 px-3 text-left text-indigo-900 font-extrabold font-mono select-all">{req.requisition_no}</td>
                         <td className="py-3 px-3 text-center text-slate-600 font-mono">
                           {req.requisition_date ? new Date(req.requisition_date).toLocaleDateString('en-GB') : '--'}
@@ -471,6 +480,15 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-2 p-2 bg-white">
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredList.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             </div>
           </div>
         </div>

@@ -33,6 +33,7 @@ import SearchableSelect from '../components/SearchableSelect';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
+import { PaginationControls } from '../components/PaginationControls';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
 
 export interface SettlementDeductionItem {
@@ -2716,6 +2717,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     document.body.removeChild(link);
   };
 
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilter]);
+
   // Filter dashboard 
   const filteredSettles = settledList.filter(item => {
     if (!canViewCompletedData()) {
@@ -3090,7 +3099,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                       </tr>
 
                     ) : (
-                      filteredSettles.map((row) => (
+                      filteredSettles.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((row) => (
                         <tr
                           key={row.settlement_id}
                           className="hover:bg-emerald-50/60 text-[11px] font-sans transition-colors duration-150"
@@ -3207,6 +3216,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-2">
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredSettles.length}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
               </div>
             </div>
 

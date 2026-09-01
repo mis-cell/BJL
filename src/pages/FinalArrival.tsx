@@ -37,6 +37,7 @@ import {
 import Papa from 'papaparse';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from '../lib/permissions';
+import { PaginationControls } from '../components/PaginationControls';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
@@ -165,6 +166,14 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   const [endDateFilter, setEndDateFilter] = useState('');
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<FinalArrivalRecord | null>(null);
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, startDateFilter, endDateFilter]);
   
   // View states
   const [viewState, setViewState] = useState<'list' | 'entry' | 'reconciliation'>(() => initialData ? 'entry' : 'list');
@@ -1315,7 +1324,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 font-mono text-xs">
-                {filteredRecords.map((r, idx) => {
+                {filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((r, idx) => {
                     const isSelected = selectedRecordId === r.final_arrival_id;
                     const formattedDate = r.date ? new Date(r.date).toLocaleDateString('en-GB') : '--';
                     const bales = getRcptQty(r);
@@ -1580,6 +1589,15 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
               </tbody>
             </table>
           )}
+        </div>
+        <div className="mt-2">
+          <PaginationControls
+            currentPage={currentPage}
+            totalItems={filteredRecords.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </div>
 
