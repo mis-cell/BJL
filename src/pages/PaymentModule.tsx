@@ -470,6 +470,424 @@ const initialMaster = (): PaymentMaster => ({
   advance_payment_done: 'No'
 });
 
+/* Searchable P.O Dropdown Component */
+interface SearchablePoSelectProps {
+  selectedPoNo: string;
+  onSelectPo: (poNo: string) => void;
+  displayPos: any[];
+  matchedFinalPo: any;
+  isPoNotInFinal: boolean;
+  showAllPos: boolean;
+  isPoEligibleForPayment: (po: any) => boolean;
+}
+
+function SearchablePoSelect({
+  selectedPoNo,
+  onSelectPo,
+  displayPos,
+  matchedFinalPo,
+  isPoNotInFinal,
+  showAllPos,
+  isPoEligibleForPayment
+}: SearchablePoSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const baseList = displayPos
+    .filter(po => !isPoNotInFinal || showAllPos)
+    .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no);
+
+  const normalizedSearch = searchTerm.toLowerCase().trim();
+
+  const filteredList = baseList.filter(po => {
+    if (!normalizedSearch) return true;
+    const poNo = String(po.po_no || po.ptf_no || po.sauda_no || '').toLowerCase();
+    const supp = String(po.supplier || po.party_name || '').toLowerCase();
+    const brok = String(po.broker || '').toLowerCase();
+    const mt = String(po.total_contract_mt || po.total_amt || '').toLowerCase();
+    return poNo.includes(normalizedSearch) || supp.includes(normalizedSearch) || brok.includes(normalizedSearch) || mt.includes(normalizedSearch);
+  });
+
+  const selectedPo = displayPos.find(p => (p.po_no || p.ptf_no || p.sauda_no) === selectedPoNo);
+
+  const getLabel = () => {
+    if (selectedPoNo && matchedFinalPo && selectedPoNo === matchedFinalPo.po_no) {
+      return `✓ Matched P.O: ${matchedFinalPo.po_no} | ${matchedFinalPo.supplier || matchedFinalPo.party_name || 'Supplier'}`;
+    }
+    if (selectedPo) {
+      const pNo = selectedPo.po_no || selectedPo.ptf_no || selectedPo.sauda_no;
+      const supp = selectedPo.supplier || selectedPo.party_name || 'Supplier';
+      const brok = selectedPo.broker || 'No Broker';
+      const mt = selectedPo.total_contract_mt || selectedPo.total_amt || 0;
+      return `${pNo} | ${supp} | ${brok} (${mt} MT)`;
+    }
+    if (selectedPoNo) {
+      return `P.O: ${selectedPoNo}`;
+    }
+    return '-- Choose or Search P.O --';
+  };
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      {/* Trigger Box */}
+      <div
+        onClick={() => setIsOpen(prev => !prev)}
+        className={cn(
+          "w-full p-2 border rounded-lg bg-white font-semibold text-slate-900 shadow-sm flex items-center justify-between gap-2 cursor-pointer transition-all text-xs select-none",
+          isOpen ? "border-purple-600 ring-2 ring-purple-400/30" : "border-purple-300 hover:border-purple-400",
+          selectedPoNo ? "bg-purple-50/30" : ""
+        )}
+      >
+        <div className="flex items-center gap-1.5 truncate">
+          <Search className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+          <span className={cn("truncate font-medium", selectedPoNo ? "text-purple-900 font-bold" : "text-slate-500")}>
+            {getLabel()}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {selectedPoNo && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPo('');
+                setSearchTerm('');
+              }}
+              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronRight className={cn("w-4 h-4 text-purple-500 transition-transform duration-200", isOpen ? "rotate-90" : "rotate-0")} />
+        </div>
+      </div>
+
+      {/* Popover Dropdown */}
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-purple-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          {/* Search Header */}
+          <div className="p-2 border-b border-purple-100 bg-purple-50/60 flex items-center gap-2">
+            <Search className="w-4 h-4 text-purple-600 shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Type P.O No, Supplier, Broker to search..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full text-xs outline-none bg-transparent font-medium text-slate-900 placeholder:text-slate-400"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Results List */}
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs">
+            {/* Clear option */}
+            <div
+              onClick={() => {
+                onSelectPo('');
+                setIsOpen(false);
+                setSearchTerm('');
+              }}
+              className="p-2.5 hover:bg-slate-50 cursor-pointer text-slate-500 italic font-medium flex items-center justify-between"
+            >
+              <span>-- Clear Selection --</span>
+            </div>
+
+            {/* Matched PO highlight */}
+            {matchedFinalPo && (!normalizedSearch || matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch) || (matchedFinalPo.supplier||'').toLowerCase().includes(normalizedSearch)) && (
+              <div
+                onClick={() => {
+                  onSelectPo(matchedFinalPo.po_no);
+                  setIsOpen(false);
+                  setSearchTerm('');
+                }}
+                className={cn(
+                  "p-2.5 cursor-pointer font-semibold flex items-center justify-between transition-colors bg-emerald-50 text-emerald-950 hover:bg-emerald-100 border-l-4 border-emerald-500",
+                  selectedPoNo === matchedFinalPo.po_no ? "ring-1 ring-emerald-400" : ""
+                )}
+              >
+                <div>
+                  <div className="font-bold flex items-center gap-2 text-emerald-900">
+                    <span>✓ Matched P.O: {matchedFinalPo.po_no}</span>
+                    <span className="bg-emerald-200 text-emerald-900 text-[10px] px-1.5 py-0.2 rounded font-mono font-black">
+                      MATCHED INSPECTION
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-emerald-700 mt-0.5">
+                    {matchedFinalPo.supplier || matchedFinalPo.party_name} | {matchedFinalPo.broker || 'No Broker'} ({matchedFinalPo.total_contract_mt || matchedFinalPo.total_amt || 0} MT)
+                  </div>
+                </div>
+                {selectedPoNo === matchedFinalPo.po_no && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 ml-2" />
+                )}
+              </div>
+            )}
+
+            {/* Filtered List */}
+            {filteredList.map((po, i) => {
+              const poNo = po.po_no || po.ptf_no || po.sauda_no;
+              if (matchedFinalPo && poNo === matchedFinalPo.po_no) return null;
+
+              const isEligible = isPoEligibleForPayment(po);
+              const isSelected = selectedPoNo === poNo;
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => {
+                    onSelectPo(poNo);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                  className={cn(
+                    "p-2.5 cursor-pointer hover:bg-purple-50/80 transition-colors flex items-center justify-between gap-2",
+                    isSelected ? "bg-purple-100/70 font-bold text-purple-950" : "text-slate-800"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-extrabold text-slate-900">{poNo}</span>
+                      {isEligible && (
+                        <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-emerald-200">
+                          Completed / PASS
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-600 truncate mt-0.5">
+                      Supplier: <strong className="text-slate-800">{po.supplier || po.party_name || 'N/A'}</strong> | Broker: {po.broker || 'N/A'} ({po.total_contract_mt || po.total_amt || 0} MT)
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredList.length === 0 && (!matchedFinalPo || (normalizedSearch && !matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch))) && (
+              <div className="p-4 text-center text-slate-500 text-xs italic">
+                No P.O matching &quot;{searchTerm}&quot;
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Searchable Inspection / M.R Dropdown Component */
+interface SearchableMrSelectProps {
+  selectedMrNo: string;
+  onSelectMr: (mrNo: string) => void;
+  verifiedArrivals: any[];
+  selectedPoNo: string;
+}
+
+function SearchableMrSelect({
+  selectedMrNo,
+  onSelectMr,
+  verifiedArrivals,
+  selectedPoNo
+}: SearchableMrSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const baseList = selectedPoNo
+    ? verifiedArrivals.filter(a => (a.po_no === selectedPoNo || a.mill_po_no === selectedPoNo))
+    : verifiedArrivals;
+
+  const normalizedSearch = searchTerm.toLowerCase().trim();
+
+  const filteredList = baseList.filter(arr => {
+    if (!normalizedSearch) return true;
+    const mrNo = String(arr.mr_no || arr.final_arrival_no || arr.arrival_no || '').toLowerCase();
+    const supp = String(arr.supplier || arr.supplier_name || '').toLowerCase();
+    const poNo = String(arr.po_no || arr.mill_po_no || '').toLowerCase();
+    const lorry = String(arr.lorry_number || '').toLowerCase();
+    return mrNo.includes(normalizedSearch) || supp.includes(normalizedSearch) || poNo.includes(normalizedSearch) || lorry.includes(normalizedSearch);
+  });
+
+  const selectedArr = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo || a.arrival_no === selectedMrNo));
+
+  const getLabel = () => {
+    if (selectedArr) {
+      const mr = selectedArr.mr_no || selectedArr.final_arrival_no || selectedArr.arrival_no;
+      const supp = selectedArr.supplier || selectedArr.supplier_name || 'N/A';
+      const po = selectedArr.po_no || selectedArr.mill_po_no || 'N/A';
+      const lorry = selectedArr.lorry_number ? ` | Lorry: ${selectedArr.lorry_number}` : '';
+      return `M.R: ${mr} | Supplier: ${supp} | P.O: ${po}${lorry}`;
+    }
+    if (selectedMrNo) {
+      return `M.R: ${selectedMrNo}`;
+    }
+    return '-- Choose or Search Inspection --';
+  };
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div
+        onClick={() => setIsOpen(prev => !prev)}
+        className={cn(
+          "w-full p-2 border rounded-lg bg-white font-semibold text-slate-900 shadow-sm flex items-center justify-between gap-2 cursor-pointer transition-all text-xs select-none",
+          isOpen ? "border-emerald-600 ring-2 ring-emerald-400/30" : "border-emerald-300 hover:border-emerald-400",
+          selectedMrNo ? "bg-emerald-50/30" : ""
+        )}
+      >
+        <div className="flex items-center gap-1.5 truncate">
+          <Search className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className={cn("truncate font-medium", selectedMrNo ? "text-emerald-900 font-bold" : "text-slate-500")}>
+            {getLabel()}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {selectedMrNo && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectMr('');
+                setSearchTerm('');
+              }}
+              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronRight className={cn("w-4 h-4 text-emerald-500 transition-transform duration-200", isOpen ? "rotate-90" : "rotate-0")} />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-emerald-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          <div className="p-2 border-b border-emerald-100 bg-emerald-50/60 flex items-center gap-2">
+            <Search className="w-4 h-4 text-emerald-600 shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search M.R No, Supplier, P.O, Lorry..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full text-xs outline-none bg-transparent font-medium text-slate-900 placeholder:text-slate-400"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 text-xs">
+            <div
+              onClick={() => {
+                onSelectMr('');
+                setIsOpen(false);
+                setSearchTerm('');
+              }}
+              className="p-2.5 hover:bg-slate-50 cursor-pointer text-slate-500 italic font-medium flex items-center justify-between"
+            >
+              <span>-- Clear Selection --</span>
+            </div>
+
+            {filteredList.map((arr, i) => {
+              const mr = arr.mr_no || arr.final_arrival_no || arr.arrival_no;
+              const isSelected = selectedMrNo === mr;
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => {
+                    onSelectMr(mr);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                  className={cn(
+                    "p-2.5 cursor-pointer hover:bg-emerald-50/80 transition-colors flex items-center justify-between gap-2",
+                    isSelected ? "bg-emerald-100/70 font-bold text-emerald-950" : "text-slate-800"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-extrabold text-slate-900">M.R: {mr}</span>
+                      {arr.lorry_number && (
+                        <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.2 rounded font-mono">
+                          Lorry: {arr.lorry_number}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-600 truncate mt-0.5">
+                      Supplier: <strong className="text-slate-800">{arr.supplier || arr.supplier_name || 'N/A'}</strong> | P.O: {arr.po_no || arr.mill_po_no || 'N/A'}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredList.length === 0 && (
+              <div className="p-4 text-center text-slate-500 text-xs italic">
+                No Inspection matching &quot;{searchTerm}&quot;
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const [viewMode, setViewMode] = useState<'dashboard' | 'entry' | 'ledger'>('dashboard');
   const [selectedLedgerParty, setSelectedLedgerParty] = useState<string>('');
@@ -2160,33 +2578,15 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                             {showAllPos ? `filter eligible (${eligiblePos.length})` : `show all (${purchaseOrders.length})`}
                           </button>
                         </div>
-                        <select
-                          id="selectedpono_1898"
-                          name="selectedpono"
-                          aria-label="selectedpono"
-                          value={selectedPoNo}
-                          onChange={e => handlePoSelection(e.target.value)}
-                          className="w-full p-2 border border-purple-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
-                        >
-                          <option value="">-- Choose P.O --</option>
-                          {matchedFinalPo && (
-                            <option value={matchedFinalPo.po_no} className="font-bold text-emerald-800 bg-emerald-50">
-                              ✓ Matched P.O: {matchedFinalPo.po_no} | {matchedFinalPo.supplier || matchedFinalPo.party_name}
-                            </option>
-                          )}
-                          {displayPos
-                            .filter(po => !isPoNotInFinal || showAllPos)
-                            .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no)
-                            .map((po, i) => {
-                              const isEligible = isPoEligibleForPayment(po);
-                              const poDisplayNo = po.po_no || po.ptf_no || po.sauda_no;
-                              return (
-                                <option key={i} value={po.po_no || poDisplayNo}>
-                                  {poDisplayNo} | {po.supplier || po.party_name || 'Supplier'} | {po.broker || 'No Broker'} ({po.total_contract_mt || po.total_amt || 0} MT) {isEligible ? ' [Status: Completed | PASS]' : ''}
-                                </option>
-                              );
-                            })}
-                        </select>
+                        <SearchablePoSelect
+                          selectedPoNo={selectedPoNo}
+                          onSelectPo={handlePoSelection}
+                          displayPos={displayPos}
+                          matchedFinalPo={matchedFinalPo}
+                          isPoNotInFinal={isPoNotInFinal}
+                          showAllPos={showAllPos}
+                          isPoEligibleForPayment={isPoEligibleForPayment}
+                        />
                       </div>
 
                       {/* Verified M.R & Inspection Selector */}
@@ -2195,21 +2595,12 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           <span>Inspection</span>
                           {selectedMrNo && <span className="text-emerald-700 font-mono font-bold">M.R: {selectedMrNo}</span>}
                         </label>
-                        <select
-                          id="selectedmrno_1918"
-                          name="selectedmrno"
-                          aria-label="selectedmrno"
-                          value={selectedMrNo}
-                          onChange={e => handleMrSelection(e.target.value)}
-                          className="w-full p-2 border border-emerald-300 rounded-lg bg-white font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 shadow-sm"
-                        >
-                          <option value="">-- Choose Inspection --</option>
-                          {(selectedPoNo ? verifiedArrivals.filter(a => findMatchingPo(a.po_no, [{ po_no: selectedPoNo }])) : verifiedArrivals).map((arr, i) => (
-                            <option key={i} value={arr.mr_no || arr.final_arrival_no || arr.arrival_no}>
-                              M.R: {arr.mr_no || arr.final_arrival_no || arr.arrival_no} | Supplier: {arr.supplier || arr.supplier_name || 'N/A'} | P.O: {arr.po_no || arr.mill_po_no || 'N/A'} {arr.lorry_number ? `| Lorry: ${arr.lorry_number}` : ''}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableMrSelect
+                          selectedMrNo={selectedMrNo}
+                          onSelectMr={handleMrSelection}
+                          verifiedArrivals={verifiedArrivals}
+                          selectedPoNo={selectedPoNo}
+                        />
                       </div>
                     </div>
 
