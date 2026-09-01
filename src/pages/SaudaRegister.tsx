@@ -38,6 +38,7 @@ import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData } from '../lib/permissions';
+import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
 
 const compareQualities = (aStr: string, bStr: string): number => {
@@ -250,6 +251,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [selectedSaudaId, setSelectedSaudaId] = useState<string | null>(null);
   const [isAccountsModalOpen, setIsAccountsModalOpen] = useState(false);
   const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'idle' | 'sending' | 'success' | 'error'>>({});
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate, statusTab]);
 
   const handleSendMail = async (sauda: Sauda) => {
     const sId = sauda.sauda_id;
@@ -1048,7 +1057,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredSaudas.map((entry, idx) => {
+                {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
                   const { status: st } = getSaudaStatusAndWeight(entry);
                   return (
@@ -1179,6 +1188,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Bar */}
+          <PaginationControls
+            currentPage={currentPage}
+            totalItems={filteredSaudas.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
 
           {/* Quick Summary Footer Bar inside Card */}
           <div className="bg-slate-50 border-t border-slate-200 p-3 flex flex-wrap justify-between items-center gap-3">

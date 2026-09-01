@@ -43,6 +43,7 @@ import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
 import { comparePoInspection, PoMatchResult } from '../lib/poMatch';
+import { PaginationControls } from '../components/PaginationControls';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import PoPrintSlip from '../components/PoPrintSlip';
 import ExcessShortSettlementModal from '../components/ExcessShortSettlementModal';
@@ -1321,6 +1322,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'partial' | 'cancelled'>('all');
   const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
+
+  // 100-rows per page pagination (searches full dataset, displays paginated)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate, statusFilter]);
   const [sortConfig, setSortConfig] = useState<{
     key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'pass_mismatch';
     direction: 'asc' | 'desc';
@@ -4323,7 +4332,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-normal">
-                     {sortedPos.map((item, idx) => {
+                     {sortedPos.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item, idx) => {
                         const isSelected = selectedPoNo === item.po_no;
                         const isPoPending = item.pending === true || item.pending === 'Yes' || item.pending === 1 || String(item.pending).toLowerCase() === 'true';
                         const isVoid = item.status === 'cancelled';
@@ -4582,8 +4591,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      </span>
                   </div>
                </div>
-               <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500">Page 1 of 1</span>
+               <div className="flex-1 max-w-xl">
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalItems={sortedPos.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                  />
                </div>
             </div>
 

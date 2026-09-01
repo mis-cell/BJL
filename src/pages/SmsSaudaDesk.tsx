@@ -41,6 +41,7 @@ import { canEditOrDelete, enforceEditOrDeletePermission, getCurrentUserContext }
 import LegacyLayout from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
+import { PaginationControls } from '../components/PaginationControls';
 
 interface SmsSaudaQualityDetail {
   quality: string;
@@ -769,6 +770,20 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const [smsSearchTerm, setSmsSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
+  // 100-rows per page pagination state
+  const [saudaCurrentPage, setSaudaCurrentPage] = useState(1);
+  const [saudaPageSize, setSaudaPageSize] = useState(100);
+  const [smsCurrentPage, setSmsCurrentPage] = useState(1);
+  const [smsPageSize, setSmsPageSize] = useState(100);
+
+  useEffect(() => {
+    setSaudaCurrentPage(1);
+  }, [saudaSearchTerm, statusFilter]);
+
+  useEffect(() => {
+    setSmsCurrentPage(1);
+  }, [smsSearchTerm]);
+
   // New/Edit Modal control
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
@@ -1144,56 +1159,6 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setActiveView('form');
   };
 
-  // Convert logic from SMS inbox feed
-  const handleConvertSms = (sms: any) => {
-    // Determine grade & rate
-    const bodyLower = sms.body.toLowerCase();
-    const isLry = bodyLower.includes('lry') || bodyLower.includes('lorry') || bodyLower.includes('truck');
-    
-    let detectedGrade = 'TD5';
-    if (bodyLower.includes('td4')) detectedGrade = 'TD4';
-    else if (bodyLower.includes('td6')) detectedGrade = 'TD6';
-    else if (bodyLower.includes('w4')) detectedGrade = 'W4';
-    else if (bodyLower.includes('w5')) detectedGrade = 'W5';
-
-    const rateMatch = sms.body.match(/\b(3[0-9]{3}|4[0-9]{3}|5[0-9]{3}|6[0-9]{3}|16[0-9]{3}|17[0-9]{3})\b/);
-    const parsedRate = rateMatch ? Number(rateMatch[0]) : 16300;
-
-    // STRICTLY RESET FIRST, then set values to prevent carry-over
-    setEditingContractId(null);
-    setFormSaudaNo(`BJCL/ ${Math.floor(7000 + Math.random() * 1000)}TD`);
-    setFormPoType('Normal');
-    setFormDate('2026-07-07');
-    setFormSession('2026-2027');
-    
-    setFormBroker(sms.contact_name.toUpperCase());
-    setFormSupplier(sms.contact_name.toUpperCase());
-    setFormChallanSupplier(sms.contact_name.toUpperCase());
-    setFormArea('SEMI NORTHERN');
-    setFormNoOfLorries(1);
-    setFormUnitsPerLorry(isLry ? 'LOOSE' : 'BALES');
-    setFormTotalUnit(isLry ? 0 : 150);
-    setFormWtPerLorry(10.28);
-    setFormUnitType(isLry ? 'LOOSE' : 'BALES');
-    setFormTotalWtTons(isLry ? 10.28 : 22.5);
-    
-    setFormQualityDetails([
-      { quality: detectedGrade, qty: isLry ? 0 : 150, agency: 'TULSHIHATTA', marka: 'HEMANT', rs: parsedRate }
-    ]);
-    
-    setFormShipmentDate('2026-07-22');
-    setFormShipmentDays(15);
-    setFormShipmentPenalty(5);
-    setFormMarksClaim(0);
-    setFormQuantityClaim(0);
-    setFormRemarks(`CONVERTED FROM RAW SHEET SMS SENSOR:\n${sms.body}`);
-    setFormBRate(parsedRate);
-    setFormBDate('2026-07-07');
-    setFormSuperiorNormalMarks('Superior / Normal (Marks)');
-    setFormStatus('Active');
-
-    setActiveView('form');
-  };
 
   const parseRawGmailToSauda = (text: string) => {
     const textLower = text.toLowerCase();
@@ -1930,7 +1895,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                       </td>
                     </tr>
                   ) : (
-                    filteredSaudas.map((s, idx) => {
+                    filteredSaudas.slice((saudaCurrentPage - 1) * saudaPageSize, saudaCurrentPage * saudaPageSize).map((s, idx) => {
                       let bgClass = "bg-white hover:bg-slate-50";
                       if (s.status === 'Closed') {
                         bgClass = "bg-emerald-50/25 hover:bg-emerald-50/40";
@@ -2263,6 +2228,16 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
               </table>
             </div>
 
+            <div className="mt-2">
+              <PaginationControls
+                currentPage={saudaCurrentPage}
+                totalItems={filteredSaudas.length}
+                pageSize={saudaPageSize}
+                onPageChange={setSaudaCurrentPage}
+                onPageSizeChange={setSaudaPageSize}
+              />
+            </div>
+
           </div>
         ) : activeView === 'sms_feed' ? (
           /* GOOGLE SHEETS RAW SMS LIST VIEW */
@@ -2367,7 +2342,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                         );
                       }
 
-                      return filtered.map((sms, index) => {
+                      return filtered.slice((smsCurrentPage - 1) * smsPageSize, smsCurrentPage * smsPageSize).map((sms, index) => {
                         const bodyLower = sms.body.toLowerCase();
                         const isLry = bodyLower.includes('lry') || bodyLower.includes('lorry') || bodyLower.includes('truck');
                         
@@ -2448,22 +2423,14 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                                       className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[11px] font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400 placeholder:font-normal"
                                     />
                                   </div>
-                                  <div className="flex items-center justify-center gap-1.5">
+                                  <div className="flex items-center justify-center">
                                     <button
                                       onClick={() => handleMarkSmsDone(sms)}
-                                      className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-black text-[9px] uppercase px-2 py-1.5 rounded shadow-2xs hover:shadow cursor-pointer flex items-center justify-center gap-1 transition-all active:scale-95"
+                                      className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-black text-[9px] uppercase px-2 py-1.5 rounded shadow-2xs hover:shadow cursor-pointer flex items-center justify-center gap-1 transition-all active:scale-95"
                                       title="Mark SMS as Sauda Done (Admin & Level 4 Authorized)"
                                     >
                                       <CheckCircle2 className="h-3 w-3 text-emerald-200" />
                                       <span>Mark Done</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleConvertSms(sms)}
-                                      className="flex-1 bg-[#024a68] hover:bg-[#035d82] text-white font-mono font-black text-[9px] uppercase px-2 py-1.5 rounded shadow-2xs hover:shadow cursor-pointer flex items-center justify-center gap-1 transition-all active:scale-95"
-                                      title="Open full Sauda contract form pre-filled with this SMS"
-                                    >
-                                      <PlusCircle className="h-3 w-3 text-yellow-300" />
-                                      <span>Convert</span>
                                     </button>
                                   </div>
                                 </div>
@@ -2476,6 +2443,16 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                   )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-2">
+              <PaginationControls
+                currentPage={smsCurrentPage}
+                totalItems={googleSheetSmsData.length}
+                pageSize={smsPageSize}
+                onPageChange={setSmsCurrentPage}
+                onPageSizeChange={setSmsPageSize}
+              />
             </div>
           </div>
         ) : activeView === 'gmail_feed' ? (

@@ -2411,13 +2411,12 @@ export default function Dashboard({
                           <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Grade &or;</th>
                           <th className="px-3 border-r border-slate-300 text-[10px] tracking-wide text-center w-24">Unit Type &or;</th>
                           <th className="px-4 border-r border-slate-300 text-[10px] tracking-wide">Raw SMS Text (Google Sheet Body payload)</th>
-                          <th className="px-4 text-[10px] tracking-wide text-center font-bold w-40">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 font-mono text-[11px] text-slate-800">
                         {isGoogleSheetLoading ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-24 text-slate-400 font-mono">
+                            <td colSpan={6} className="text-center py-24 text-slate-400 font-mono">
                               <RefreshCw className="h-8 w-8 text-indigo-600 animate-spin mx-auto mb-2" />
                               <p className="text-xs font-black uppercase tracking-wider text-slate-700">Retrieving contract feed...</p>
                             </td>
@@ -2436,7 +2435,7 @@ export default function Dashboard({
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={7} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
+                                  <td colSpan={6} className="text-center py-16 text-slate-400 font-mono font-bold uppercase">
                                     No matching logs found in Google Sheets SMS feed.
                                   </td>
                                 </tr>
@@ -2489,35 +2488,6 @@ export default function Dashboard({
                                   {/* Raw SMS Text payload */}
                                   <td className="px-4 py-2 border-r border-slate-200 font-mono text-[11px] text-slate-700 leading-normal select-text max-w-lg truncate hover:text-slate-950" title={sms.body}>
                                     {sms.body}
-                                  </td>
-                                  {/* Convert Action Button */}
-                                  <td className="px-4 py-2 text-center ">
-                                    <button
-                                      onClick={() => {
-                                        setManualTrader(sms.contact_name);
-                                        setManualSupplier(sms.contact_name);
-                                        setManualGrade(detectedGrade);
-
-                                        const rateMatch = sms.body.match(/\b(3[0-9]{3}|4[0-9]{3}|5[0-9]{3}|6[0-9]{3}|16[0-9]{3}|17[0-9]{3})\b/);
-                                        setManualRate(rateMatch ? rateMatch[0] : '16300');
-
-                                        if (isLry) {
-                                          setManualBales('150');
-                                          setManualUnitType('LORRY');
-                                        } else {
-                                          setManualBales('150');
-                                          setManualUnitType('BALES');
-                                        }
-
-                                        setEditingSmsSaudaId(null);
-                                        setManualStatus('Active');
-                                        setSmsSaudaTab('manual');
-                                      }}
-                                      className="bg-[#024a68] hover:bg-[#035d82] text-white font-mono font-black text-[9px] uppercase px-3 py-1.5 rounded shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-1 mx-auto transition-all active:scale-95"
-                                    >
-                                      <PlusCircle className="h-3 w-3 text-yellow-300" />
-                                      <span>Convert to Sauda</span>
-                                    </button>
                                   </td>
                                 </tr>
                               );
