@@ -1154,7 +1154,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       })));
     }
   };
-
+  let totalrow = '';
   const handleDetailChange = (index: number, field: keyof InspectionDetailRow, value: any) => {
     setDetailRows(prev => {
       const updated = [...prev];
@@ -1243,19 +1243,30 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
       // remarks show simul
       /* if (field === "row_remarks" ) {
-        let totalrow = detailRows.length
-
-        handleHeaderChange("remarks", currentRow.row_remarks)
-        console.log(currentRow.row_remarks+'****************111111111111111111')
-      } */
-      //reduced weight
-      if (currentRow.receipt_gross_wt > 0 || field === "add_weight" || field === "less_weight") {
-        let reducewtt = Number(currentRow.receipt_gross_wt)+Number(currentRow.add_weight)-Number(currentRow.less_weight)
-        currentRow.reduced_weight = reducewtt;
+        if(currentRow.srl_no === '1'){
+          totalrow += currentRow.row_remarks
+        }
+        else{
+          totalrow += ' ,'+currentRow.row_remarks
+        }
         
-      }
-         
 
+        handleHeaderChange("remarks", totalrow)
+        console.log(currentRow.row_remarks+'****************111111111111111111')
+      } */ 
+      //reduced weight
+      if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "add_weight" || field === "less_weight") ) {
+   
+        if(currentRow.less_weight === 'undefined' || currentRow.less_weight === undefined ){
+          currentRow.less_weight = 0;
+        }
+        if(currentRow.add_weight === 'undefined' || currentRow.add_weight === undefined ){
+          currentRow.less_weight = 0;
+        }
+        let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight)
+        currentRow.reduced_weight = Number(reducewtt.toFixed(3));
+      }
+        
       updated[index] = currentRow;
       return updated;
     });
