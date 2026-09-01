@@ -301,7 +301,9 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
         });
 
         // Compute actual values from recorded final arrival
-        const actQty = Number(arrival.total_packets) || 0;
+        const arrUnit = (arrival.unit_name || arrival.unit || '').toString().trim().toUpperCase();
+        const isArrLoose = arrUnit.includes('LOOSE') || arrUnit === 'LOOSE';
+        const actQty = isArrLoose ? 0 : (Number(arrival.total_packets) || 0);
         const actWeight = Number(arrival.electronic_net_weight) || Number(arrival.supplier_net_weight) || Number(arrival.challan_material_weight) || 0;
 
         if (match) {

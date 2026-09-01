@@ -912,6 +912,9 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   // Helper to extract Receipt Quantity ("RCPT") from Receipt Grade Details (grid_details)
   const getRcptQty = (item: any): number => {
     if (!item) return 0;
+    const itemUnit = (item.unit_name || item.unit || item.unit_code || '').toString().trim().toUpperCase();
+    if (itemUnit.includes('LOOSE') || itemUnit === 'LOOSE') return 0;
+
     if (item.grid_details) {
       let grid: any[] = [];
       if (typeof item.grid_details === 'string') {
@@ -926,6 +929,8 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
         let hasRcpt = false;
         let sumRcpt = 0;
         grid.forEach((row: any) => {
+          const rowUnit = (row.unit || itemUnit).toString().trim().toUpperCase();
+          if (rowUnit.includes('LOOSE') || rowUnit === 'LOOSE') return;
           const val = row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== ''
             ? Number(row.quantity_rcpt)
             : (row.rcpt !== undefined && row.rcpt !== null && row.rcpt !== '' ? Number(row.rcpt) : NaN);
@@ -936,7 +941,11 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
         });
         if (hasRcpt) return sumRcpt;
 
-        const fallback = grid.reduce((acc: number, row: any) => acc + (Number(row.quantity_rcpt) || Number(row.rcpt) || Number(row.quantity) || Number(row.qty) || 0), 0);
+        const fallback = grid.reduce((acc: number, row: any) => {
+          const rowUnit = (row.unit || itemUnit).toString().trim().toUpperCase();
+          if (rowUnit.includes('LOOSE') || rowUnit === 'LOOSE') return acc;
+          return acc + (Number(row.quantity_rcpt) || Number(row.rcpt) || Number(row.quantity) || Number(row.qty) || 0);
+        }, 0);
         if (fallback > 0) return fallback;
       }
     }

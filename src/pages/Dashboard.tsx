@@ -568,7 +568,11 @@ export default function Dashboard({
       });
 
       // Sum values for active arrivals
-      const packetsSum = arrivals.reduce((sum: number, r: any) => sum + (Number(r.packets || r.total_packets) || 0), 0);
+      const packetsSum = arrivals.reduce((sum: number, r: any) => {
+        const u = (r.unit_name || r.unit || r.unit_code || '').toString().trim().toUpperCase();
+        if (u.includes('LOOSE') || u === 'LOOSE') return sum;
+        return sum + (Number(r.packets || r.total_packets) || 0);
+      }, 0);
       const getLowestNetWeightHelper = (item: any): number => {
         if (!item) return 0;
         const nets = [
@@ -848,7 +852,9 @@ export default function Dashboard({
       if (!groups[key]) {
         groups[key] = { name: key, packets: 0, count: 0 };
       }
-      groups[key].packets += Number(item.packets) || Number(item.total_packets) || 0;
+      const u = (item.unit_name || item.unit || item.unit_code || '').toString().trim().toUpperCase();
+      const isLoose = u.includes('LOOSE') || u === 'LOOSE';
+      groups[key].packets += isLoose ? 0 : (Number(item.packets) || Number(item.total_packets) || 0);
       groups[key].count++;
     });
     
