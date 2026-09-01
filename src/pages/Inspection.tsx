@@ -1261,11 +1261,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       //reduced weight
       if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "add_weight" || field === "less_weight") ) {
    
-        if(currentRow.less_weight === 'undefined' || currentRow.less_weight === undefined ){
+        if ((currentRow.less_weight as any) === 'undefined' || currentRow.less_weight === undefined || isNaN(currentRow.less_weight)) {
           currentRow.less_weight = 0;
         }
-        if(currentRow.add_weight === 'undefined' || currentRow.add_weight === undefined ){
-          currentRow.less_weight = 0;
+        if ((currentRow.add_weight as any) === 'undefined' || currentRow.add_weight === undefined || isNaN(currentRow.add_weight)) {
+          currentRow.add_weight = 0;
         }
         let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight)
         currentRow.reduced_weight = Number(reducewtt.toFixed(3));
