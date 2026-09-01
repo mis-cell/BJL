@@ -1209,7 +1209,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
         if (combinedMoistAvg > 0) {
           currentRow.moisture_act = combinedMoistAvg;
-          currentRow.moisture_claim = combinedMoistAvg;
+          //currentRow.moisture_claim = combinedMoistAvg;
           currentRow.settlement_moisture = combinedMoistAvg;
         }
       }
