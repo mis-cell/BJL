@@ -274,41 +274,18 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     if (records.length === 0) setLoading(true);
     try {
       const targetTable = isArchiveView ? 'm.r_archive' : 'final_arrival';
-      const summaryFields = `
-        final_arrival_id,
-        final_arrival_no,
-        arrival_no,
-        temporary_arrival_no,
-        date,
-        po_no,
-        po_date,
-        supplier,
-        challan_supplier,
-        broker,
-        lorry_number,
-        unit_name,
-        unit_code,
-        total_packets,
-        weight_qtl,
-        electronic_net_weight,
-        supplier_net_weight,
-        status,
-        created_at,
-        archived_at
-      `;
-
       let { data, error } = await supabase
         .from(targetTable)
-        .select(summaryFields)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (isArchiveView && (error || !data || data.length === 0)) {
-        const altRes = await supabase.from('mr_archive').select(summaryFields).order('created_at', { ascending: false });
+        const altRes = await supabase.from('mr_archive').select('*').order('created_at', { ascending: false });
         if (altRes.data && altRes.data.length > 0) {
           data = altRes.data;
           error = null;
         } else {
-          const rawRes = await supabase.from('final_arrival').select(summaryFields).eq('status', 'settled').order('created_at', { ascending: false });
+          const rawRes = await supabase.from('final_arrival').select('*').eq('status', 'settled').order('created_at', { ascending: false });
           data = rawRes.data || [];
           error = null;
         }
@@ -366,20 +343,6 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
   const handlePreparePrint = async (record: FinalArrivalRecord) => {
     setLoading(true);
     try {
-      let fullRecord = { ...record };
-      if (supabase && !fullRecord.grid_details) {
-        const targetTable = isArchiveView ? 'm.r_archive' : 'final_arrival';
-        const { data: singleRec } = await supabase
-          .from(targetTable)
-          .select('*')
-          .eq('final_arrival_id', record.final_arrival_id)
-          .maybeSingle();
-        if (singleRec) {
-          fullRecord = { ...fullRecord, ...singleRec };
-        }
-      }
-      record = fullRecord;
-
       let inspectionMaster: any = null;
       let inspectionDetails: any[] = [];
       let mrSettlementMaster: any = null;
