@@ -1685,6 +1685,17 @@ if (supabase) {
       `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS sauda_created BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_by TEXT;`,
       `ALTER TABLE IF EXISTS sms_sauda ADD COLUMN IF NOT EXISTS marked_at TIMESTAMP WITH TIME ZONE;`,
+
+      `CREATE INDEX IF NOT EXISTS idx_sauda_master_no ON sauda_master(sauda_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_sauda_master_created ON sauda_master(created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_sms_sauda_no ON sms_sauda(sauda_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_sms_sauda_sms_id ON sms_sauda(sms_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_sms_sauda_created ON sms_sauda(created_at DESC);`,
+      `CREATE INDEX IF NOT EXISTS idx_purchase_master_po ON purchase_master(po_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_temp_mat_mr ON temporary_material_received(mr_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_temp_mat_arr ON temporary_material_received(arrival_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_inspection_mr ON material_inspection(mr_no);`,
+      `CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC);`,
       
       `DO $$
       BEGIN

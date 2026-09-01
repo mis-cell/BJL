@@ -670,6 +670,18 @@ import { supabase } from "./lib/supabase";
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approval_level TEXT;
+
+          -- Performance Indexes to prevent Disk I/O depletion
+          CREATE INDEX IF NOT EXISTS idx_sauda_master_no ON sauda_master(sauda_no);
+          CREATE INDEX IF NOT EXISTS idx_sauda_master_created ON sauda_master(created_at DESC);
+          CREATE INDEX IF NOT EXISTS idx_sms_sauda_no ON sms_sauda(sauda_no);
+          CREATE INDEX IF NOT EXISTS idx_sms_sauda_sms_id ON sms_sauda(sms_id);
+          CREATE INDEX IF NOT EXISTS idx_sms_sauda_created ON sms_sauda(created_at DESC);
+          CREATE INDEX IF NOT EXISTS idx_purchase_master_po ON purchase_master(po_no);
+          CREATE INDEX IF NOT EXISTS idx_temp_mat_mr ON temporary_material_received(mr_no);
+          CREATE INDEX IF NOT EXISTS idx_temp_mat_arr ON temporary_material_received(arrival_no);
+          CREATE INDEX IF NOT EXISTS idx_inspection_mr ON material_inspection(mr_no);
+          CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC);
         END $$;
         NOTIFY pgrst, 'reload schema';
       ` 
