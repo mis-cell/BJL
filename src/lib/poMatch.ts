@@ -1,23 +1,23 @@
 import { calculateWeightTolerance } from './weightTolerance';
 
-// Temporary P.O  ↔  Material Inspection / Final M.R field-by-field comparison.
+// Material Mismatch Comparison Engine:
+// Sauda Check Point  ↔  Temporary Arrival (temporary_material_received)
 //
-// Compared fields (Sauda Check Point ↔ Temporary P.O ↔ Material Inspection):
-//   1. Purchase Order
-//   2. Broker
-//   3. Supplier
-//   4. Challan Supplier
-//   5. Area
-//   6. Total Contract (M.Ton) (Evaluated only if single lorry and after receipt)
-//   7. Grade
-//   8. Agency
-//   9. Rate / M.T
+// The 7 Comparison Fields & Matching Rules:
+//   1. Broker           ↔ Broker           (Exact Match)
+//   2. Supplier         ↔ Supplier         (Exact Match)
+//   3. Challan Supplier ↔ Challan Supplier (Exact Match)
+//   4. Area             ↔ Arrival Area     (Exact Match)
+//   5. Grade            ↔ Challan Grade    (Multiple-Value Match - Sauda is approved set)
+//   6. Agency           ↔ Agency           (Multiple-Value Match - Sauda is approved set)
+//   7. Marka            ↔ Challan Marka    (Multiple-Value Match - Sauda is approved set)
 
 export interface FieldMismatch {
-  field: string;           // e.g. "Broker", "Grade", "Agency", etc.
-  mismatchLabel: string;   // e.g. "Broker mismatch", "Grade mismatch", etc.
-  poValue: string;
-  inspValue: string;
+  field: string;           // "Broker" | "Supplier" | "Challan Supplier" | "Area" | "Grade" | "Agency" | "Marka" | "Total Contract (M.Ton)" | "Rate / M.T"
+  mismatchLabel: string;   // e.g. "Grade Mismatch: TD7 not approved"
+  poValue: string;         // Approved / Sauda Check Point value(s)
+  inspValue: string;       // Arrival value(s)
+  unapprovedValues?: string[]; // Specific unapproved values for multi-value fields
 }
 
 export type PoMismatchDetail = FieldMismatch;
@@ -32,8 +32,8 @@ export interface LorryProgress {
 
 export interface PoMatchResult {
   poNo: string;
-  hasInspection: boolean;   // false = no matching Material Inspection found yet
-  status: MatchSeverity;    // 'match' (green / Pass) or 'mismatch' (red)
+  hasInspection: boolean;   // false = no matching Temporary Arrival / Inspection found yet
+  status: MatchSeverity;    // 'match' (Pass / No Material Mismatch) or 'mismatch' (Material Mismatch)
   mismatches: FieldMismatch[];
   lorryProgress?: LorryProgress;
   totalContractMt?: number;
@@ -42,19 +42,19 @@ export interface PoMatchResult {
 
 // Standard Jute Grade Code <-> Grade Name mapping dictionary
 const GRADE_CODE_NAME_MAP: Record<string, string> = {
-  '831': 'TD5', 'TD5': '831',
-  '832': 'TD6', 'TD6': '832',
-  '833': 'TD7', 'TD7': '833',
-  '834': 'TD8', 'TD8': '834',
-  '835': 'W5',  'W5': '835',
-  '836': 'W6',  'W6': '836',
-  '837': 'W7',  'W7': '837',
-  '838': 'W8',  'W8': '838',
-  '839': 'M5',  'M5': '839',
-  '840': 'M6',  'M6': '840',
-  '841': 'M7',  'M7': '841',
-  '842': 'M8',  'M8': '842',
-  '843': 'B.TOW', 'BTOW': '843',
+  '831': 'TD5', 'TD5': '831', 'TD-5': '831', 'TD.5': '831',
+  '832': 'TD6', 'TD6': '832', 'TD-6': '832', 'TD.6': '832',
+  '833': 'TD7', 'TD7': '833', 'TD-7': '833', 'TD.7': '833',
+  '834': 'TD8', 'TD8': '834', 'TD-8': '834', 'TD.8': '834',
+  '835': 'W5',  'W5': '835',  'W-5': '835',  'W.5': '835',
+  '836': 'W6',  'W6': '836',  'W-6': '836',  'W.6': '836',
+  '837': 'W7',  'W7': '837',  'W-7': '837',  'W.7': '837',
+  '838': 'W8',  'W8': '838',  'W-8': '838',  'W.8': '838',
+  '839': 'M5',  'M5': '839',  'M-5': '839',  'M.5': '839',
+  '840': 'M6',  'M6': '840',  'M-6': '840',  'M.6': '840',
+  '841': 'M7',  'M7': '841',  'M-7': '841',  'M.7': '841',
+  '842': 'M8',  'M8': '842',  'M-8': '842',  'M.8': '842',
+  '843': 'B.TOW', 'BTOW': '843', 'B-TOW': '843',
 };
 
 // Agency Code <-> Agency Name mapping dictionary
@@ -69,70 +69,122 @@ const AGENCY_CODE_NAME_MAP: Record<string, string> = {
   '8': 'SILIGURI', 'SILIGURI': '8',
 };
 
-function cleanStr(v: unknown): string {
+/**
+ * Normalize string for exact matching (trim leading/trailing spaces, collapse multiple spaces, case-insensitive)
+ */
+export function normalizeExact(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  return String(v)
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+}
+
+/**
+ * Clean alphanumeric string
+ */
+export function cleanStr(v: unknown): string {
   return String(v ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-function expandGradeTokens(input: any): Set<string> {
+/**
+ * Split comma, slash, semicolon, pipe, or newline separated strings into clean tokens
+ */
+export function splitTokens(input: any): string[] {
+  if (input === null || input === undefined) return [];
+  const rawValues = Array.isArray(input) ? input : [input];
+  const list: string[] = [];
+  for (const item of rawValues) {
+    if (!item) continue;
+    if (typeof item === 'object') {
+      // If object, extract string values
+      Object.values(item).forEach(val => {
+        if (typeof val === 'string') {
+          const parts = val.split(/[,/\\;|\n\r]+/);
+          for (const p of parts) {
+            const tr = p.trim();
+            if (tr && !list.includes(tr)) list.push(tr);
+          }
+        }
+      });
+      continue;
+    }
+    const str = String(item).trim();
+    if (!str) continue;
+    const parts = str.split(/[,/\\;|\n\r]+/);
+    for (const p of parts) {
+      const tr = p.trim();
+      if (tr && !list.includes(tr)) {
+        list.push(tr);
+      }
+    }
+  }
+  return list;
+}
+
+/**
+ * Expand and normalize grade tokens into standardized key representations
+ */
+export function expandGradeTokens(input: any): Set<string> {
   const tokens = new Set<string>();
   if (!input) return tokens;
 
-  const rawValues = Array.isArray(input) ? input : [input];
-  for (const raw of rawValues) {
-    if (!raw) continue;
-    const str = String(raw).trim().toUpperCase();
+  const rawList = splitTokens(input);
+  for (const str of rawList) {
     if (!str) continue;
-
     const c = cleanStr(str);
     if (c) {
       tokens.add(c);
       if (GRADE_CODE_NAME_MAP[c]) {
         tokens.add(cleanStr(GRADE_CODE_NAME_MAP[c]));
       }
-    }
-
-    const parts = str.split(/[,/\\;|\-\s]+/);
-    for (const p of parts) {
-      const pc = cleanStr(p);
-      if (pc) {
-        tokens.add(pc);
-        if (GRADE_CODE_NAME_MAP[pc]) {
-          tokens.add(cleanStr(GRADE_CODE_NAME_MAP[pc]));
-        }
+      const u = str.toUpperCase().replace(/\s+/g, '');
+      if (GRADE_CODE_NAME_MAP[u]) {
+        tokens.add(cleanStr(GRADE_CODE_NAME_MAP[u]));
       }
     }
   }
   return tokens;
 }
 
-function expandAgencyTokens(input: any): Set<string> {
+/**
+ * Expand and normalize agency tokens
+ */
+export function expandAgencyTokens(input: any): Set<string> {
   const tokens = new Set<string>();
   if (!input) return tokens;
 
-  const rawValues = Array.isArray(input) ? input : [input];
-  for (const raw of rawValues) {
-    if (!raw) continue;
-    const str = String(raw).trim().toUpperCase();
+  const rawList = splitTokens(input);
+  for (const str of rawList) {
     if (!str) continue;
-
     const c = cleanStr(str);
     if (c) {
       tokens.add(c);
       if (AGENCY_CODE_NAME_MAP[c]) {
         tokens.add(cleanStr(AGENCY_CODE_NAME_MAP[c]));
       }
-    }
-
-    const parts = str.split(/[,/\\;|\-\s]+/);
-    for (const p of parts) {
-      const pc = cleanStr(p);
-      if (pc) {
-        tokens.add(pc);
-        if (AGENCY_CODE_NAME_MAP[pc]) {
-          tokens.add(cleanStr(AGENCY_CODE_NAME_MAP[pc]));
-        }
+      const u = str.toUpperCase().replace(/\s+/g, '');
+      if (AGENCY_CODE_NAME_MAP[u]) {
+        tokens.add(cleanStr(AGENCY_CODE_NAME_MAP[u]));
       }
     }
+  }
+  return tokens;
+}
+
+/**
+ * Expand and normalize marka tokens
+ */
+export function expandMarkaTokens(input: any): Set<string> {
+  const tokens = new Set<string>();
+  if (!input) return tokens;
+
+  const rawList = splitTokens(input);
+  for (const str of rawList) {
+    const c = normalizeExact(str);
+    if (c) tokens.add(c);
+    const alpha = cleanStr(str);
+    if (alpha) tokens.add(alpha);
   }
   return tokens;
 }
@@ -144,21 +196,26 @@ function toNum(v: unknown): number {
 }
 
 /**
- * Compare a Sauda Check Point / Temporary P.O against its Material Inspection record.
- * @param po         sauda_check_point / purchase_master row
- * @param _poItems   detail items for PO
- * @param insp       matching mill_inspection_master / temporary_material_received row, or null
- * @param _inspItems detail items for inspection / array of all lorry receipts for PO
+ * Compare Sauda Check Point vs Temporary Arrival (temporary_material_received)
+ * 
+ * Compares the 7 fields:
+ * 1. Broker            (Exact Match)
+ * 2. Supplier          (Exact Match)
+ * 3. Challan Supplier  (Exact Match)
+ * 4. Area              (Exact Match)
+ * 5. Grade             (Multiple-Value Match - Sauda is approved set)
+ * 6. Agency            (Multiple-Value Match - Sauda is approved set)
+ * 7. Marka             (Multiple-Value Match - Sauda is approved set)
  */
-export function comparePoInspection(
-  po: any,
-  _poItems: any[] = [],
-  insp: any | null = null,
-  _inspItems: any[] = [],
+export function compareSaudaTempArrival(
+  sauda: any,
+  saudaDetails: any[] = [],
+  arrival: any | null = null,
+  arrivalLorryReceipts: any[] = []
 ): PoMatchResult {
-  const poNo = String(po?.po_no || po?.contract_po_no || '').trim();
+  const poNo = String(sauda?.po_no || sauda?.contract_po_no || sauda?.sauda_no || sauda?.ptf_no || '').trim();
 
-  if (!insp) {
+  if (!arrival) {
     return {
       poNo,
       hasInspection: false,
@@ -169,204 +226,241 @@ export function comparePoInspection(
 
   const mismatches: FieldMismatch[] = [];
 
-  // Parse grid details from insp if string
-  let parsedInspGrids: any[] = [];
-  if (insp.grid_details) {
+  // Parse grid_details from arrival if present
+  let arrivalGridRows: any[] = [];
+  if (arrival.grid_details) {
     try {
-      parsedInspGrids = typeof insp.grid_details === 'string' ? JSON.parse(insp.grid_details) : insp.grid_details;
-      if (!Array.isArray(parsedInspGrids)) parsedInspGrids = [];
+      arrivalGridRows = typeof arrival.grid_details === 'string' ? JSON.parse(arrival.grid_details) : arrival.grid_details;
+      if (!Array.isArray(arrivalGridRows)) arrivalGridRows = [];
     } catch (_e) {
-      parsedInspGrids = [];
+      arrivalGridRows = [];
     }
   }
 
-  // Also include items from _inspItems if any
-  const allInspGridRows = [...parsedInspGrids];
-  if (Array.isArray(_inspItems)) {
-    _inspItems.forEach(item => {
+  if (Array.isArray(arrivalLorryReceipts)) {
+    arrivalLorryReceipts.forEach(item => {
       if (item && item.grid_details) {
         try {
           const g = typeof item.grid_details === 'string' ? JSON.parse(item.grid_details) : item.grid_details;
-          if (Array.isArray(g)) allInspGridRows.push(...g);
+          if (Array.isArray(g)) arrivalGridRows.push(...g);
         } catch (_e) {}
       }
     });
   }
 
-  // --- 1. BROKER ---
-  const poBroker = po.broker ?? po.broker_name;
-  const inspBroker = insp.broker ?? insp.broker_name;
-  if (poBroker && inspBroker) {
-    const cPo = cleanStr(poBroker);
-    const cInsp = cleanStr(inspBroker);
-    if (cPo && cInsp && cPo !== cInsp && !cPo.includes(cInsp) && !cInsp.includes(cPo)) {
+  // ==========================================
+  // 1. BROKER (Exact Match)
+  // ==========================================
+  const saudaBroker = sauda.broker ?? sauda.broker_name;
+  const arrivalBroker = arrival.broker ?? arrival.broker_name;
+  if (saudaBroker && arrivalBroker) {
+    const normSauda = normalizeExact(saudaBroker);
+    const normArrival = normalizeExact(arrivalBroker);
+    if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Broker',
-        mismatchLabel: 'Broker mismatch',
-        poValue: String(poBroker),
-        inspValue: String(inspBroker),
+        mismatchLabel: `Broker Mismatch: ${arrivalBroker} (Approved: ${saudaBroker})`,
+        poValue: String(saudaBroker),
+        inspValue: String(arrivalBroker),
       });
     }
   }
 
-  // --- 2. SUPPLIER ---
-  const poSupplier = po.supplier ?? po.supplier_name ?? po.party_name;
-  const inspSupplier = insp.supplier ?? insp.supplier_name ?? insp.party_name;
-  if (poSupplier && inspSupplier) {
-    const cPo = cleanStr(poSupplier);
-    const cInsp = cleanStr(inspSupplier);
-    if (cPo && cInsp && cPo !== cInsp && !cPo.includes(cInsp) && !cInsp.includes(cPo)) {
+  // ==========================================
+  // 2. SUPPLIER (Exact Match)
+  // ==========================================
+  const saudaSupplier = sauda.supplier ?? sauda.supplier_name ?? sauda.party_name;
+  const arrivalSupplier = arrival.supplier ?? arrival.supplier_name ?? arrival.party_name;
+  if (saudaSupplier && arrivalSupplier) {
+    const normSauda = normalizeExact(saudaSupplier);
+    const normArrival = normalizeExact(arrivalSupplier);
+    if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Supplier',
-        mismatchLabel: 'Supplier mismatch',
-        poValue: String(poSupplier),
-        inspValue: String(inspSupplier),
+        mismatchLabel: `Supplier Mismatch: ${arrivalSupplier} (Approved: ${saudaSupplier})`,
+        poValue: String(saudaSupplier),
+        inspValue: String(arrivalSupplier),
       });
     }
   }
 
-  // --- 3. CHALLAN SUPPLIER ---
-  const poChallanSupplier = po.challan_supplier ?? po.challan_party;
-  const inspChallanSupplier = insp.challan_supplier ?? insp.challan_party;
-  if (poChallanSupplier && inspChallanSupplier) {
-    const cPo = cleanStr(poChallanSupplier);
-    const cInsp = cleanStr(inspChallanSupplier);
-    if (cPo && cInsp && cPo !== cInsp && !cPo.includes(cInsp) && !cInsp.includes(cPo)) {
+  // ==========================================
+  // 3. CHALLAN SUPPLIER (Exact Match)
+  // ==========================================
+  const saudaChallan = sauda.challan_supplier ?? sauda.challan_party ?? sauda.supplier;
+  const arrivalChallan = arrival.challan_supplier ?? arrival.challan_party ?? arrival.supplier;
+  if (saudaChallan && arrivalChallan) {
+    const normSauda = normalizeExact(saudaChallan);
+    const normArrival = normalizeExact(arrivalChallan);
+    if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Challan Supplier',
-        mismatchLabel: 'Challan Supplier mismatch',
-        poValue: String(poChallanSupplier),
-        inspValue: String(inspChallanSupplier),
+        mismatchLabel: `Challan Supplier Mismatch: ${arrivalChallan} (Approved: ${saudaChallan})`,
+        poValue: String(saudaChallan),
+        inspValue: String(arrivalChallan),
       });
     }
   }
 
-  // --- 4. P.T.F MODE ---
-  // P.T.F Mode (Normal / PTF / Local / No / Yes) is an operational transport flag and is intentionally NOT evaluated as a mismatch.
-
-  // --- 5. P.O CONTRACT ---
-  const poPoContract = po.po_contract ?? po.contract_no ?? po.sauda_no ?? po.contract_po_no;
-  const inspPoContract = insp.po_contract ?? insp.contract_no ?? insp.sauda_no ?? insp.contract_po_no;
-  if (poPoContract && inspPoContract) {
-    const cPo = cleanStr(poPoContract);
-    const cInsp = cleanStr(inspPoContract);
-    const cPoNo = cleanStr(poNo);
-    const cSaudaNo = cleanStr(po.sauda_no);
-    const isIgnoredVal = (s: string) => !s || s === 'NO' || s === 'NA' || s === 'NONE' || s === 'NORMAL' || s === 'N';
-
-    if (
-      !isIgnoredVal(cPo) && !isIgnoredVal(cInsp) &&
-      cPo !== cInsp &&
-      !cPo.includes(cInsp) && !cInsp.includes(cPo) &&
-      cInsp !== cPoNo && cPo !== cPoNo &&
-      cInsp !== cSaudaNo && cPo !== cSaudaNo
-    ) {
-      mismatches.push({
-        field: 'P.O Contract',
-        mismatchLabel: 'P.O Contract mismatch',
-        poValue: String(poPoContract),
-        inspValue: String(inspPoContract),
-      });
-    }
+  // ==========================================
+  // 4. AREA (Exact Match: Sauda Area vs Temporary Arrival Arrival Area)
+  // ==========================================
+  const saudaAreas = [sauda.area, sauda.arrival_area_name, sauda.area_name, sauda.sourcing_area];
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => saudaAreas.push(d?.area, d?.area_name, d?.arrival_area_name));
   }
+  const normSaudaAreas = saudaAreas.map(normalizeExact).filter(Boolean);
 
-  // --- 6. AREA ---
-  const poAreas = [po.area, po.arrival_area_name, po.area_name, po.sourcing_area];
-  if (Array.isArray(_poItems)) _poItems.forEach(p => poAreas.push(p?.area, p?.area_name, p?.arrival_area_name));
-  const cleanPoAreas = poAreas.map(cleanStr).filter(Boolean);
+  const arrivalAreas = [arrival.arrival_area_name, arrival.area, arrival.arrival_area_code, arrival.sourcing_area];
+  arrivalGridRows.forEach(g => arrivalAreas.push(g?.arrival_area_name, g?.area, g?.area_name));
+  const normArrivalAreas = arrivalAreas.map(normalizeExact).filter(Boolean);
 
-  const inspAreas = [insp.area, insp.arrival_area_name, insp.area_name, insp.sourcing_area];
-  allInspGridRows.forEach(g => inspAreas.push(g?.area, g?.area_name, g?.arrival_area_name));
-  const cleanInspAreas = inspAreas.map(cleanStr).filter(Boolean);
-
-  if (cleanPoAreas.length > 0 && cleanInspAreas.length > 0) {
-    const areaMatch = cleanInspAreas.some(ia => cleanPoAreas.some(pa => pa === ia || pa.includes(ia) || ia.includes(pa)));
+  if (normSaudaAreas.length > 0 && normArrivalAreas.length > 0) {
+    const areaMatch = normArrivalAreas.some(aa => normSaudaAreas.some(sa => sa === aa || sa.includes(aa) || aa.includes(sa)));
     if (!areaMatch) {
+      const saudaDisplay = Array.from(new Set(normSaudaAreas)).join(', ');
+      const arrivalDisplay = Array.from(new Set(normArrivalAreas)).join(', ');
       mismatches.push({
         field: 'Area',
-        mismatchLabel: 'Area mismatch',
-        poValue: Array.from(new Set(cleanPoAreas)).join(', '),
-        inspValue: Array.from(new Set(cleanInspAreas)).join(', '),
+        mismatchLabel: `Area Mismatch: ${arrivalDisplay} (Approved: ${saudaDisplay})`,
+        poValue: saudaDisplay,
+        inspValue: arrivalDisplay,
       });
     }
   }
 
-  // --- 7. GRADE ---
-  const rawPoGrades: any[] = [po.quality, po.grade, po.grade_name, po.grade_code];
-  if (Array.isArray(_poItems)) {
-    _poItems.forEach(p => {
-      rawPoGrades.push(p?.grade_name, p?.quality, p?.grade, p?.grade_code, p?.stock_grade_name, p?.stock_grade_code);
+  // ==========================================
+  // 5. GRADE (Multiple-Value Match: Sauda is approved set)
+  // ==========================================
+  const rawSaudaGrades: any[] = [sauda.grade, sauda.quality, sauda.grade_name, sauda.grade_code];
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => {
+      rawSaudaGrades.push(d?.grade_name, d?.quality, d?.grade, d?.grade_code, d?.stock_grade_name);
     });
   }
-  const poGradeTokens = expandGradeTokens(rawPoGrades);
+  const saudaGradeTokens = expandGradeTokens(rawSaudaGrades);
 
-  const rawInspGrades: any[] = [insp.quality, insp.grade, insp.grade_name, insp.arrival_grade, insp.stock_grade, insp.stock_grade_name, insp.stock_grade_code];
-  allInspGridRows.forEach(g => {
-    rawInspGrades.push(g?.receipt_grade_code, g?.receipt_grade_name, g?.arrival_grade, g?.stock_grade_code, g?.stock_grade_name, g?.grade_code, g?.grade_name, g?.grade, g?.quality);
+  const rawArrivalGrades: any[] = [
+    arrival.challan_grade,
+    arrival.challan_grade_name,
+    arrival.receipt_grade_name,
+    arrival.grade,
+    arrival.quality,
+    arrival.variety,
+    arrival.grading
+  ];
+  arrivalGridRows.forEach(g => {
+    rawArrivalGrades.push(g?.challan_grade_name, g?.receipt_grade_name, g?.grade, g?.quality, g?.grade_name, g?.receipt_grade_code);
   });
-  const inspGradeTokens = expandGradeTokens(rawInspGrades);
+  const arrivalGradeList = splitTokens(rawArrivalGrades);
 
-  if (poGradeTokens.size > 0 && inspGradeTokens.size > 0) {
-    let allInspMatched = true;
-    inspGradeTokens.forEach(token => {
-      if (!poGradeTokens.has(token)) {
-        allInspMatched = false;
+  if (saudaGradeTokens.size > 0 && arrivalGradeList.length > 0) {
+    const unapprovedGrades: string[] = [];
+    arrivalGradeList.forEach(arrGrade => {
+      const gTokens = expandGradeTokens(arrGrade);
+      let isMatch = false;
+      gTokens.forEach(t => {
+        if (saudaGradeTokens.has(t)) isMatch = true;
+      });
+      if (!isMatch && arrGrade.trim()) {
+        unapprovedGrades.push(arrGrade.trim());
       }
     });
 
-    if (!allInspMatched) {
+    if (unapprovedGrades.length > 0) {
+      const approvedDisplay = splitTokens(rawSaudaGrades).join(', ') || Array.from(saudaGradeTokens).join(', ');
+      const arrivalDisplay = arrivalGradeList.join(', ');
       mismatches.push({
         field: 'Grade',
-        mismatchLabel: 'Grade mismatch',
-        poValue: Array.from(poGradeTokens).filter(t => isNaN(Number(t))).join(', ') || Array.from(poGradeTokens).join(', '),
-        inspValue: Array.from(inspGradeTokens).filter(t => isNaN(Number(t))).join(', ') || Array.from(inspGradeTokens).join(', '),
+        mismatchLabel: `Grade Mismatch: ${unapprovedGrades.join(', ')} not approved (Approved: ${approvedDisplay})`,
+        poValue: approvedDisplay,
+        inspValue: arrivalDisplay,
+        unapprovedValues: unapprovedGrades,
       });
     }
   }
 
-  // --- 8. AGENCY ---
-  const rawPoAgencies: any[] = [po.agency, po.agency_name, po.agency_code];
-  if (Array.isArray(_poItems)) {
-    _poItems.forEach(p => rawPoAgencies.push(p?.agency_name, p?.agency_code, p?.agency));
+  // ==========================================
+  // 6. AGENCY (Multiple-Value Match: Sauda is approved set)
+  // ==========================================
+  const rawSaudaAgencies: any[] = [sauda.agency, sauda.agency_name, sauda.agency_code];
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => rawSaudaAgencies.push(d?.agency_name, d?.agency_code, d?.agency));
   }
-  const poAgencyTokens = expandAgencyTokens(rawPoAgencies);
+  const saudaAgencyTokens = expandAgencyTokens(rawSaudaAgencies);
 
-  const rawInspAgencies: any[] = [insp.agency, insp.agency_name, insp.agency_code];
-  allInspGridRows.forEach(g => rawInspAgencies.push(g?.agency, g?.agency_name, g?.agency_code));
-  const inspAgencyTokens = expandAgencyTokens(rawInspAgencies);
+  const rawArrivalAgencies: any[] = [arrival.agency, arrival.agency_name, arrival.agency_code];
+  arrivalGridRows.forEach(g => rawArrivalAgencies.push(g?.agency_name, g?.agency_code, g?.agency));
+  const arrivalAgencyList = splitTokens(rawArrivalAgencies);
 
-  if (poAgencyTokens.size > 0 && inspAgencyTokens.size > 0) {
-    let agencyMatched = false;
-    inspAgencyTokens.forEach(token => {
-      if (poAgencyTokens.has(token)) agencyMatched = true;
+  if (saudaAgencyTokens.size > 0 && arrivalAgencyList.length > 0) {
+    const unapprovedAgencies: string[] = [];
+    arrivalAgencyList.forEach(arrAgency => {
+      const aTokens = expandAgencyTokens(arrAgency);
+      let isMatch = false;
+      aTokens.forEach(t => {
+        if (saudaAgencyTokens.has(t)) isMatch = true;
+      });
+      if (!isMatch && arrAgency.trim()) {
+        unapprovedAgencies.push(arrAgency.trim());
+      }
     });
 
-    if (!agencyMatched) {
+    if (unapprovedAgencies.length > 0) {
+      const approvedDisplay = splitTokens(rawSaudaAgencies).join(', ') || Array.from(saudaAgencyTokens).join(', ');
+      const arrivalDisplay = arrivalAgencyList.join(', ');
       mismatches.push({
         field: 'Agency',
-        mismatchLabel: 'Agency mismatch',
-        poValue: Array.from(poAgencyTokens).join(', '),
-        inspValue: Array.from(inspAgencyTokens).join(', '),
+        mismatchLabel: `Agency Mismatch: ${unapprovedAgencies.join(', ')} not matching (Approved: ${approvedDisplay})`,
+        poValue: approvedDisplay,
+        inspValue: arrivalDisplay,
+        unapprovedValues: unapprovedAgencies,
       });
     }
   }
 
-  // --- 9. RATE / M.T ---
-  const poRate = toNum(po.b_rate ?? po.rate_per_mt ?? (po.rate_qntl ? po.rate_qntl * 10 : NaN));
-  const inspRate = toNum(insp.b_rate ?? insp.rate_per_mt ?? (insp.rate_qntl ? insp.rate_qntl * 10 : NaN));
-  if (!isNaN(poRate) && !isNaN(inspRate) && Math.abs(poRate - inspRate) > 0.01) {
-    mismatches.push({
-      field: 'Rate / M.T',
-      mismatchLabel: 'Rate mismatch',
-      poValue: `₹ ${poRate.toFixed(2)}`,
-      inspValue: `₹ ${inspRate.toFixed(2)}`,
+  // ==========================================
+  // 7. MARKA (Multiple-Value Match: Sauda is approved set)
+  // ==========================================
+  const rawSaudaMarkas: any[] = [sauda.marka, sauda.marka_name, sauda.challan_marka, sauda.challan_marka_name];
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => rawSaudaMarkas.push(d?.marka, d?.marka_name, d?.challan_marka_name));
+  }
+  const saudaMarkaTokens = expandMarkaTokens(rawSaudaMarkas);
+
+  const rawArrivalMarkas: any[] = [arrival.challan_marka, arrival.challan_marka_name, arrival.marka];
+  arrivalGridRows.forEach(g => rawArrivalMarkas.push(g?.challan_marka_name, g?.challan_marka_code, g?.marka));
+  const arrivalMarkaList = splitTokens(rawArrivalMarkas);
+
+  if (saudaMarkaTokens.size > 0 && arrivalMarkaList.length > 0) {
+    const unapprovedMarkas: string[] = [];
+    arrivalMarkaList.forEach(arrMarka => {
+      const mTokens = expandMarkaTokens(arrMarka);
+      let isMatch = false;
+      mTokens.forEach(t => {
+        if (saudaMarkaTokens.has(t)) isMatch = true;
+      });
+      if (!isMatch && arrMarka.trim()) {
+        unapprovedMarkas.push(arrMarka.trim());
+      }
     });
+
+    if (unapprovedMarkas.length > 0) {
+      const approvedDisplay = splitTokens(rawSaudaMarkas).join(', ') || Array.from(saudaMarkaTokens).join(', ');
+      const arrivalDisplay = arrivalMarkaList.join(', ');
+      mismatches.push({
+        field: 'Marka',
+        mismatchLabel: `Marka Mismatch: ${unapprovedMarkas.join(', ')} not approved (Approved: ${approvedDisplay})`,
+        poValue: approvedDisplay,
+        inspValue: arrivalDisplay,
+        unapprovedValues: unapprovedMarkas,
+      });
+    }
   }
 
-  // --- 10. LORRY LOGIC & Total Contract (M.Ton) ---
-  const contractMt = toNum(po.total_contract_mt ?? po.total_wt_in_ton ?? po.total_wt) || 0;
-
-  let totalLorries = toNum(po.total_lorries ?? po.no_of_lorries ?? po.lorry_count);
+  // --- LORRY PROGRESS & WEIGHT TOLERANCE ---
+  const contractMt = toNum(sauda.total_contract_mt ?? sauda.total_wt_in_ton ?? sauda.total_wt) || 0;
+  let totalLorries = toNum(sauda.total_lorries ?? sauda.no_of_lorries ?? sauda.lorry_count);
   if (isNaN(totalLorries) || totalLorries <= 0) {
     totalLorries = Math.max(1, Math.round(contractMt / 12));
   }
@@ -374,9 +468,9 @@ export function comparePoInspection(
   let receivedLorriesCount = 0;
   let totalReceivedWeightSum = 0;
 
-  if (Array.isArray(_inspItems) && _inspItems.length > 0) {
+  if (Array.isArray(arrivalLorryReceipts) && arrivalLorryReceipts.length > 0) {
     const uniqueLorries = new Set<string>();
-    _inspItems.forEach((receipt: any) => {
+    arrivalLorryReceipts.forEach((receipt: any) => {
       const lorryNo = String(receipt.lorry_number || receipt.lorry_no || '').trim().toUpperCase();
       if (lorryNo) uniqueLorries.add(lorryNo);
 
@@ -386,29 +480,15 @@ export function comparePoInspection(
       if (!isNaN(wt)) totalReceivedWeightSum += wt;
     });
     receivedLorriesCount = uniqueLorries.size;
-  } else if (insp) {
+  } else if (arrival) {
     receivedLorriesCount = 1;
-    let wt = toNum(insp.total_wt_in_ton ?? insp.total_wt);
-    if (isNaN(wt) && insp.weight_qtl != null) wt = toNum(insp.weight_qtl) / 10;
-    if (isNaN(wt) && insp.total_actual_weight != null) wt = toNum(insp.total_actual_weight) / 1000;
+    let wt = toNum(arrival.total_wt_in_ton ?? arrival.total_wt);
+    if (isNaN(wt) && arrival.weight_qtl != null) wt = toNum(arrival.weight_qtl) / 10;
+    if (isNaN(wt) && arrival.total_actual_weight != null) wt = toNum(arrival.total_actual_weight) / 1000;
     if (!isNaN(wt)) totalReceivedWeightSum = wt;
   }
 
   const remainingLorries = Math.max(0, totalLorries - receivedLorriesCount);
-
-  // Weight check triggers if single lorry (totalLorries <= 1) and ALL lorries received (remainingLorries === 0).
-  if (totalLorries <= 1 && remainingLorries === 0 && contractMt > 0 && totalReceivedWeightSum > 0) {
-    const unit = po.purchase_unit_name || po.unit_type || po.unit || 'BALES';
-    const tol = calculateWeightTolerance(contractMt, totalReceivedWeightSum, unit);
-    if (!tol.isAcceptable) {
-      mismatches.push({
-        field: 'Total Contract (M.Ton)',
-        mismatchLabel: tol.isOverDelivery ? 'Excess Weight (Over Tolerance)' : 'Short Weight (Under Tolerance)',
-        poValue: `${contractMt.toFixed(3)} MT (${tol.formattedTolerance})`,
-        inspValue: `${totalReceivedWeightSum.toFixed(3)} MT [Allowed: ${tol.formattedRange}]`,
-      });
-    }
-  }
 
   return {
     poNo,
@@ -423,4 +503,17 @@ export function comparePoInspection(
     totalContractMt: contractMt,
     totalReceivedMt: totalReceivedWeightSum,
   };
+}
+
+/**
+ * Compare a Sauda Check Point / Temporary P.O against Temporary Arrival / Material Inspection.
+ * Delegates to compareSaudaTempArrival.
+ */
+export function comparePoInspection(
+  po: any,
+  poItems: any[] = [],
+  insp: any | null = null,
+  inspItems: any[] = []
+): PoMatchResult {
+  return compareSaudaTempArrival(po, poItems, insp, inspItems);
 }

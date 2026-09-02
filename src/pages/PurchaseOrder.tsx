@@ -44,7 +44,7 @@ import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/Legacy
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { cn, sanitizeCsvData, getApiUrl, canDeleteData } from '../lib/utils';
-import { comparePoInspection, PoMatchResult } from '../lib/poMatch';
+import { comparePoInspection, compareSaudaTempArrival, PoMatchResult } from '../lib/poMatch';
 import { PaginationControls } from '../components/PaginationControls';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import PoPrintSlip from '../components/PoPrintSlip';
@@ -2261,17 +2261,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         });
 
         const mismatchFields: string[] = [];
-        if (matchingInsp) {
-          const norm = (v: any) => String(v ?? '').toUpperCase().replace(/[^a-z0-9]/gi, '');
-          const cmp = (label: string, a: any, b: any) => {
-            const x = norm(a), y = norm(b);
-            if (x === '' || y === '') return;
-            if (x !== y && !x.includes(y) && !y.includes(x)) mismatchFields.push(label);
-          };
-          cmp('Supplier', p.supplier, matchingInsp.supplier_name || matchingInsp.supplier);
-          cmp('Broker', p.broker, matchingInsp.broker_name || matchingInsp.broker);
-          cmp('Challan Supplier', p.challan_supplier, matchingInsp.challan_supplier || matchingInsp.supplier_name || matchingInsp.supplier);
-          cmp('Area', p.area, matchingInsp.area);
+        const poDetails = (purchaseDetailRows || []).filter((d: any) => matchPoRecord(p, d));
+        const activeArrival = matchingTemp[0] || (arrivals || []).find((ar: any) => matchPoRecord(p, ar));
+        if (activeArrival || matchingInsp) {
+          const tempMatchRes = compareSaudaTempArrival(p, poDetails, activeArrival || matchingInsp, matchingInsp ? [matchingInsp] : []);
+          if (tempMatchRes.hasInspection && tempMatchRes.status === 'mismatch') {
+            tempMatchRes.mismatches.forEach(m => mismatchFields.push(m.mismatchLabel || m.field));
+          }
         }
 
         const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || p.pass_status === 'mismatch');

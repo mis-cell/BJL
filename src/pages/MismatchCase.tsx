@@ -16,7 +16,7 @@ import { cn, canApproveMismatch } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
-import { comparePoInspection, PoMismatchDetail } from '../lib/poMatch';
+import { comparePoInspection, compareSaudaTempArrival, PoMismatchDetail } from '../lib/poMatch';
 import LegacyLayout from '../components/LegacyLayout';
 import { getCurrentUserContext } from '../lib/permissions';
 
@@ -331,17 +331,17 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         const matchingAmads = amadRows.filter((a: any) => String(a.po_no || '').trim().toUpperCase() === poNo);
         const poDetails = allDetailRecords.filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNo);
 
-        const latestInsp = matchingInspections[0] || null;
+        const latestInsp = matchingAmads[0] || matchingInspections[0] || null;
         if (!latestInsp) return;
 
         const enrichedInsp = {
-          ...latestInsp,
+          ...(matchingInspections[0] || {}),
           ...(matchingAmads[0] || {}),
         };
 
         const allLorryReceipts = [...matchingInspections];
 
-        const matchRes = comparePoInspection(po, poDetails, enrichedInsp, allLorryReceipts);
+        const matchRes = compareSaudaTempArrival(po, poDetails, enrichedInsp, allLorryReceipts);
 
         if (matchRes.hasInspection && matchRes.status === 'mismatch' && matchRes.mismatches.length > 0) {
           const dbMm = (dbMismatches || []).find((m: any) => {
