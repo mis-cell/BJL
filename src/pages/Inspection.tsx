@@ -113,8 +113,6 @@ export function calculateBaleWeightDeduction(
   }
 
   // Sort ascending by threshold: e.g. 139 < 142 < 144
-  // If avg weight is 140.34, 139 is false, 142 is true (rate 30.00), 144 is true
-  // The tightest bracket (lowest threshold that avgKgPerBale is strictly under) is selected
   candidates.sort((a, b) => a.threshold - b.threshold);
 
   if (candidates.length > 0) {
@@ -131,6 +129,198 @@ export function calculateBaleWeightDeduction(
   }
 
   return { totalBales, totalReceiptGrossWtMt, totalWeightKg, avgKgPerBale, matchedRule: null, ruleName: "", rate: 0 };
+}
+
+export interface MatchedAutoDeduction {
+  category: "bale_weight" | "ropes_chatta" | "delivery_claim" | "damage" | "other";
+  ruleName: string;
+  matchedRule: any;
+  rate: number;
+  qty: number;
+  amount: number;
+  reason: string;
+  badge: string;
+}
+
+export function calculateAllMatchingDeductions(
+  detailRows: InspectionDetailRow[],
+  headerForm: Partial<InspectionMasterRecord>,
+  deductionMasterList: any[]
+): {
+  matchedDeductions: MatchedAutoDeduction[];
+  baleAudit: {
+    totalBales: number;
+    totalReceiptGrossWtMt: number;
+    totalWeightKg: number;
+    avgKgPerBale: number;
+  };
+} {
+  const masterList = deductionMasterList && deductionMasterList.length > 0 ? deductionMasterList : DEFAULT_DEDUCTION_TYPES;
+  const matchedDeductions: MatchedAutoDeduction[] = [];
+
+  // 1. Bale Weight Evaluation
+  const baleAudit = calculateBaleWeightDeduction(detailRows, deductionMasterList);
+  if (baleAudit.matchedRule && baleAudit.rate > 0) {
+    const totalBalesQty = baleAudit.totalBales > 0 ? baleAudit.totalBales : 1;
+    const amount = Number((baleAudit.rate * totalBalesQty).toFixed(2));
+    matchedDeductions.push({
+      category: "bale_weight",
+      ruleName: baleAudit.ruleName,
+      matchedRule: baleAudit.matchedRule,
+      rate: baleAudit.rate,
+      qty: totalBalesQty,
+      amount,
+      reason: `Avg Weight ${baleAudit.avgKgPerBale.toFixed(2)} KG/Bale under standard threshold`,
+      badge: `⚖️ Bale Weight Policy: ${baleAudit.totalBales} Bales (${baleAudit.avgKgPerBale.toFixed(2)} KG/Bale)`
+    });
+  }
+
+  // 2. CT FOR HABIJABI / CHATTA / ROPE Evaluation
+  const totalRopesKg = (detailRows || []).reduce((sum, r) => sum + (Number(r.ropes_weight) || 0) + (Number(r.chotta_weight) || 0), 0);
+  const hbRows = (detailRows || []).filter(r => {
+    const grade = `${r.arrival_grade || ""} ${r.stock_grade_name || ""} ${r.stock_grade_code || ""}`.toUpperCase();
+    return grade.includes("HABIJABI") || grade.includes("HBJB") || grade.includes("CHATTA") || grade.includes("ROPES");
+  });
+  const hbRowsKg = hbRows.reduce((sum, r) => sum + ((Number(r.receipt_gross_wt) || Number(r.challan_gross_wt) || 0) * 1000), 0);
+  const aggregateRopesKg = totalRopesKg > 0 ? totalRopesKg : (hbRowsKg > 0 ? hbRowsKg : 0);
+
+  if (aggregateRopesKg > 0) {
+    const ropesRule = masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return n.includes("HABIJABI") || n.includes("CHATTA") || n.includes("ROPE") || n.includes("HBJB");
+    });
+    if (ropesRule) {
+      const rate = ropesRule.rate_per_qntl != null ? Number(ropesRule.rate_per_qntl) : (Number(ropesRule.rate_per_unit) || 1500);
+      const qtyQntl = Number((aggregateRopesKg / 100).toFixed(2));
+      const amount = Number((rate * qtyQntl).toFixed(2));
+      matchedDeductions.push({
+        category: "ropes_chatta",
+        ruleName: ropesRule.deduction,
+        matchedRule: ropesRule,
+        rate,
+        qty: qtyQntl,
+        amount,
+        reason: `Ropes/Habijabi/Chatta: ${aggregateRopesKg.toFixed(2)} KG (${qtyQntl} Qntl)`,
+        badge: `🧶 Habijabi / Chatta / Ropes (${qtyQntl} Qtl)`
+      });
+    }
+  }
+
+  // 3. DELIVERY CLAIM PER QUINTAL (RS. PER DAY) Evaluation
+  const detentionDays = Number(headerForm?.detention_days) || 0;
+  const isDeliveryClaim = detentionDays > 0 || Number(headerForm?.delivery_claim) > 0;
+  const totalGrossMt = (detailRows || []).reduce((sum, r) => {
+    const wt = Number(r.receipt_gross_wt) > 0 
+      ? Number(r.receipt_gross_wt) 
+      : (Number(r.gross_weight_batch) > 0 ? Number(r.gross_weight_batch) : Number(r.challan_gross_wt) || 0);
+    return sum + wt;
+  }, 0);
+
+  if (isDeliveryClaim && totalGrossMt > 0) {
+    const deliveryRule = masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return n.includes("DELIVERY CLAIM") || n.includes("PER DAY");
+    });
+    if (deliveryRule) {
+      const days = detentionDays > 0 ? detentionDays : 1;
+      const baseRate = deliveryRule.rate_per_unit != null ? Number(deliveryRule.rate_per_unit) : (Number(deliveryRule.rate_per_qntl) || 5);
+      const totalQuintals = Number((totalGrossMt * 10).toFixed(2));
+      const effectiveRate = Number((baseRate * days).toFixed(2));
+      const amount = Number((effectiveRate * totalQuintals).toFixed(2));
+      matchedDeductions.push({
+        category: "delivery_claim",
+        ruleName: deliveryRule.deduction,
+        matchedRule: deliveryRule,
+        rate: effectiveRate,
+        qty: totalQuintals,
+        amount,
+        reason: `Detention / Late Delivery: ${days} day(s) @ ₹${baseRate}/Qtl/Day`,
+        badge: `🚚 Delivery Claim: ${days} Day(s) (${totalQuintals} Qtl)`
+      });
+    }
+  }
+
+  // 4. DAMAGE / WET Policies (Godown Damage, Rain Wet, Pitch Damage)
+  const combinedRemarks = `${headerForm?.remarks || ""} ${headerForm?.mr_spcl_print || ""} ${(detailRows || []).map(r => `${r.row_remarks || ""} ${r.jqi_remarks || ""} ${r.jci_remarks || ""}`).join(" ")}`.toUpperCase();
+  const baleRows = (detailRows || []).filter(r => {
+    const u = (r.unit || "").trim().toUpperCase();
+    return !u || u.includes("BALE") || u === "BALES" || u === "B";
+  });
+  const dominantUnit = (baleRows.length > 0) ? "BALES" : ((detailRows && detailRows[0]?.unit) ? String(detailRows[0]?.unit).toUpperCase() : "BALES");
+
+  if (combinedRemarks.includes("RAIN WET") || combinedRemarks.includes("RAIN DAMAGE") || combinedRemarks.includes("WET DAMAGE")) {
+    const rainRule = masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return n.includes("RAIN WET") && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
+    }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("RAIN WET"));
+
+    if (rainRule) {
+      const rate = rainRule.rate_per_unit != null ? Number(rainRule.rate_per_unit) : (Number(rainRule.rate_per_qntl) || 200);
+      const qty = (rainRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const amount = Number((rate * qty).toFixed(2));
+      matchedDeductions.push({
+        category: "damage",
+        ruleName: rainRule.deduction,
+        matchedRule: rainRule,
+        rate,
+        qty,
+        amount,
+        reason: `Rain wet condition noted for ${dominantUnit}`,
+        badge: `🌧️ Rain Wet Deduction (${qty} Units)`
+      });
+    }
+  }
+
+  if (combinedRemarks.includes("GODOWN DAMAGE") || combinedRemarks.includes("GODOWN")) {
+    const godownRule = masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return n.includes("GODOWN DAMAGE") && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
+    }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("GODOWN DAMAGE"));
+
+    if (godownRule) {
+      const rate = godownRule.rate_per_unit != null ? Number(godownRule.rate_per_unit) : (Number(godownRule.rate_per_qntl) || 400);
+      const qty = (godownRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const amount = Number((rate * qty).toFixed(2));
+      matchedDeductions.push({
+        category: "damage",
+        ruleName: godownRule.deduction,
+        matchedRule: godownRule,
+        rate,
+        qty,
+        amount,
+        reason: `Godown damage noted for ${dominantUnit}`,
+        badge: `🏚️ Godown Damage (${qty} Units)`
+      });
+    }
+  }
+
+  if (combinedRemarks.includes("PITCH DAMAGE") || combinedRemarks.includes("RTCH DAMAGE") || combinedRemarks.includes("PITCH")) {
+    const pitchRule = masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return (n.includes("PITCH DAMAGE") || n.includes("RTCH DAMAGE")) && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
+    }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("PITCH DAMAGE"));
+
+    if (pitchRule) {
+      const rate = pitchRule.rate_per_unit != null ? Number(pitchRule.rate_per_unit) : (Number(pitchRule.rate_per_qntl) || 400);
+      const qty = (pitchRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const amount = Number((rate * qty).toFixed(2));
+      matchedDeductions.push({
+        category: "damage",
+        ruleName: pitchRule.deduction,
+        matchedRule: pitchRule,
+        rate,
+        qty,
+        amount,
+        reason: `Pitch / Rtch damage noted for ${dominantUnit}`,
+        badge: `⚠️ Pitch Damage (${qty} Units)`
+      });
+    }
+  }
+
+  return {
+    matchedDeductions,
+    baleAudit
+  };
 }
 
 interface InspectionMasterRecord {
@@ -639,83 +829,129 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }));
   };
 
-  // Helper to test if a deduction rule is an automated bale weight rule
-  const isBaleWeightDeductionRule = (name: string) => {
+  // Helper to identify automated deduction rules
+  const isAutoDeductionRule = (name: string) => {
     const n = String(name || "").trim().toUpperCase();
-    return (n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT"));
+    return (
+      ((n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT") || n.includes("<"))) ||
+      n.includes("HABIJABI") || n.includes("CHATTA") || n.includes("ROPE") ||
+      n.includes("DELIVERY CLAIM") || n.includes("PER DAY") ||
+      n.includes("RAIN WET") || n.includes("GODOWN DAMAGE") || n.includes("PITCH DAMAGE") || n.includes("RTCH DAMAGE")
+    );
   };
 
-  // Auto-sync deduction policy when bale weight changes
-  const applyAutoBaleDeduction = (details: InspectionDetailRow[], dMaster: any[]) => {
-    const autoCalc = calculateBaleWeightDeduction(details, dMaster);
+  // Helper to test specifically if a deduction rule is an automated bale weight rule
+  const isBaleWeightDeductionRule = (name: string) => {
+    const n = String(name || "").trim().toUpperCase();
+    return (n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT") || n.includes("<"));
+  };
+
+  // Comprehensive auto-sync of all deduction policies from deduction_master
+  const applyAllAutoDeductions = (
+    details: InspectionDetailRow[],
+    hForm: Partial<InspectionMasterRecord>,
+    dMaster: any[]
+  ) => {
+    const { matchedDeductions } = calculateAllMatchingDeductions(details, hForm, dMaster);
 
     setDeductionRows(prevRows => {
-      if (autoCalc.matchedRule && autoCalc.rate > 0) {
-        const totalBalesQty = autoCalc.totalBales > 0 ? autoCalc.totalBales : 1;
-        const existingIndex = prevRows.findIndex(r => isBaleWeightDeductionRule(r.deduction_type || ""));
-        let nextRows = [...prevRows];
+      let nextRows = [...prevRows];
 
-        if (existingIndex >= 0) {
-          const cur = nextRows[existingIndex];
-          // If already set to the identical matched policy, rate, and qty, do nothing
-          if (
-            cur.deduction_type === autoCalc.ruleName && 
-            Number(cur.deduction_rate) === Number(autoCalc.rate) &&
-            Number(cur.deduction_qty) === Number(totalBalesQty)
-          ) {
-            return prevRows;
-          }
-          nextRows[existingIndex] = {
+      // Keep track of which matched policies have been applied
+      const matchedApplied = new Set<string>();
+
+      // Update existing rows or prepare new rows for each matched auto policy
+      matchedDeductions.forEach(matched => {
+        const existingIdx = nextRows.findIndex(
+          r => r.deduction_type === matched.ruleName || (matched.category === "bale_weight" && isBaleWeightDeductionRule(r.deduction_type || ""))
+        );
+
+        matchedApplied.add(matched.ruleName);
+
+        if (existingIdx >= 0) {
+          const cur = nextRows[existingIdx];
+          nextRows[existingIdx] = {
             ...cur,
-            deduction_type: autoCalc.ruleName,
-            deduction_rate: autoCalc.rate,
-            deduction_qty: totalBalesQty,
-            deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
+            deduction_type: matched.ruleName,
+            deduction_rate: matched.rate,
+            deduction_qty: matched.qty,
+            deduction_amount: matched.amount
           };
         } else {
-          // If only 1 row exists and it is empty / unselected
-          const isFirstRowEmpty = nextRows.length === 1 && (!nextRows[0].deduction_type || nextRows[0].deduction_type.trim() === "" || nextRows[0].deduction_type.includes("-- SELECT"));
+          // If first row is empty / placeholder
+          const isFirstRowEmpty =
+            nextRows.length === 1 &&
+            (!nextRows[0].deduction_type ||
+              nextRows[0].deduction_type.trim() === "" ||
+              nextRows[0].deduction_type.includes("-- SELECT"));
+
           if (isFirstRowEmpty) {
-            nextRows = [{
-              id: nextRows[0].id || "1",
-              deduction_type: autoCalc.ruleName,
-              deduction_rate: autoCalc.rate,
-              deduction_qty: totalBalesQty,
-              deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
-            }];
+            nextRows = [
+              {
+                id: nextRows[0].id || "1",
+                deduction_type: matched.ruleName,
+                deduction_rate: matched.rate,
+                deduction_qty: matched.qty,
+                deduction_amount: matched.amount
+              }
+            ];
           } else {
             // Append as a new deduction row
             nextRows.push({
               id: String(Date.now() + Math.random()),
-              deduction_type: autoCalc.ruleName,
-              deduction_rate: autoCalc.rate,
-              deduction_qty: totalBalesQty,
-              deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
+              deduction_type: matched.ruleName,
+              deduction_rate: matched.rate,
+              deduction_qty: matched.qty,
+              deduction_amount: matched.amount
             });
           }
         }
-        syncHeaderDeductions(nextRows);
-        return nextRows;
-      } else {
-        // When no bale weight penalty applies (e.g. weight >= 144 KG/Bale)
-        const hasBaleRule = prevRows.some(r => isBaleWeightDeductionRule(r.deduction_type || ""));
-        if (hasBaleRule) {
-          const filtered = prevRows.filter(r => !isBaleWeightDeductionRule(r.deduction_type || ""));
-          const nextRows = filtered.length > 0 ? filtered : [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
-          syncHeaderDeductions(nextRows);
-          return nextRows;
-        }
+      });
+
+      // Remove any previously auto-added rules that are no longer matched
+      nextRows = nextRows.filter(r => {
+        const isAuto = isAutoDeductionRule(r.deduction_type || "");
+        if (!isAuto) return true; // Keep manual rows
+        return matchedApplied.has(r.deduction_type || "");
+      });
+
+      if (nextRows.length === 0) {
+        nextRows = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
+      }
+
+      // Check if rows actually changed to avoid unnecessary renders
+      const isSame =
+        prevRows.length === nextRows.length &&
+        prevRows.every(
+          (r, i) =>
+            r.deduction_type === nextRows[i].deduction_type &&
+            Number(r.deduction_rate) === Number(nextRows[i].deduction_rate) &&
+            Number(r.deduction_qty) === Number(nextRows[i].deduction_qty) &&
+            Number(r.deduction_amount) === Number(nextRows[i].deduction_amount)
+        );
+
+      if (isSame) {
         return prevRows;
       }
+
+      syncHeaderDeductions(nextRows);
+      return nextRows;
     });
   };
 
-  // Re-run auto bale policy evaluation whenever detailRows or deduction master changes
+  // Re-run auto policy evaluation whenever detailRows, header claim fields, remarks, or deduction master changes
   useEffect(() => {
     if (detailRows && detailRows.length > 0) {
-      applyAutoBaleDeduction(detailRows, deductionMasterList);
+      applyAllAutoDeductions(detailRows, headerForm, deductionMasterList);
     }
-  }, [detailRows, deductionMasterList]);
+  }, [
+    detailRows,
+    headerForm.detention_days,
+    headerForm.delivery_claim,
+    headerForm.remarks,
+    headerForm.mr_spcl_print,
+    deductionMasterList
+  ]);
 
   const handleDeductionTypeChange = (idx: number, selectedName: string) => {
     const found = deductionMasterList.find(d => d.deduction === selectedName);
@@ -2656,7 +2892,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
             {/* DEDUCTIONS & PENALTIES CARD (Compact & Sleek Layout) */}
             {(() => {
-              const autoBaleAudit = calculateBaleWeightDeduction(detailRows, deductionMasterList);
+              const { matchedDeductions, baleAudit } = calculateAllMatchingDeductions(detailRows, headerForm, deductionMasterList);
               return (
                 <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                   <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
@@ -2688,31 +2924,54 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                     </div>
                   </div>
 
-                  {/* Auto-Policy Bale Weight Summary Banner */}
-                  {autoBaleAudit.totalBales > 0 && autoBaleAudit.avgKgPerBale > 0 && (
-                    <div className="mx-3 mt-3 px-3 py-2 bg-gradient-to-r from-amber-50/80 via-rose-50/50 to-slate-50 border border-amber-200/80 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center flex-wrap gap-2">
-                        <span className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1">
-                          ⚖️ Bale Weight Policy:
-                        </span>
-                        <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
-                          Qty: <strong className="text-indigo-700">{autoBaleAudit.totalBales} Bales</strong>
-                        </span>
-                        <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
-                          Gross Wt: <strong className="text-slate-900">{autoBaleAudit.totalReceiptGrossWtMt.toFixed(3)} MT</strong> ({Math.round(autoBaleAudit.totalWeightKg).toLocaleString()} KG)
-                        </span>
-                        <span className="bg-amber-100/80 border border-amber-300 text-amber-900 px-2.5 py-0.5 rounded font-mono font-black text-[11px]">
-                          Avg: {autoBaleAudit.avgKgPerBale.toFixed(2)} KG/Bale
-                        </span>
-                      </div>
-                      {autoBaleAudit.matchedRule ? (
-                        <div className="flex items-center gap-1.5 bg-rose-100/80 border border-rose-300 text-rose-900 px-2.5 py-1 rounded font-bold text-[11px]">
-                          <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
-                          <span>Auto Matched Policy: <strong>{autoBaleAudit.ruleName}</strong> (₹{autoBaleAudit.rate.toFixed(2)}/Unit)</span>
+                  {/* Auto-Policy Deduction Master Summary Banner */}
+                  {(baleAudit.totalBales > 0 || matchedDeductions.length > 0) && (
+                    <div className="mx-3 mt-3 px-3 py-2 bg-gradient-to-r from-amber-50/80 via-rose-50/50 to-slate-50 border border-amber-200/80 rounded-lg flex flex-col gap-2 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <span className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1">
+                            ⚖️ Auto Policy Audit:
+                          </span>
+                          {baleAudit.totalBales > 0 && (
+                            <>
+                              <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                                Qty: <strong className="text-indigo-700">{baleAudit.totalBales} Bales</strong>
+                              </span>
+                              <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                                Gross Wt: <strong className="text-slate-900">{baleAudit.totalReceiptGrossWtMt.toFixed(3)} MT</strong> ({Math.round(baleAudit.totalWeightKg).toLocaleString()} KG)
+                              </span>
+                              <span className="bg-amber-100/80 border border-amber-300 text-amber-900 px-2.5 py-0.5 rounded font-mono font-black text-[11px]">
+                                Avg: {baleAudit.avgKgPerBale.toFixed(2)} KG/Bale
+                              </span>
+                            </>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
-                          ✓ Average Weight Standard (≥144 KG/Bale) — No Weight Penalty
+
+                        {matchedDeductions.length === 0 ? (
+                          <div className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
+                            ✓ Standard Weights &amp; Conditions (No Automated Deductions Applicable)
+                          </div>
+                        ) : (
+                          <div className="text-rose-800 font-bold text-[11px] bg-rose-100/70 px-2.5 py-0.5 rounded border border-rose-300 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                            <span>{matchedDeductions.length} Policy Rule{matchedDeductions.length > 1 ? "s" : ""} Auto-Applied</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Display Badges for all matched auto-deduction policies */}
+                      {matchedDeductions.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/60">
+                          {matchedDeductions.map((m, mIdx) => (
+                            <div
+                              key={mIdx}
+                              className="flex items-center gap-1.5 bg-white border border-rose-300 text-rose-900 px-2.5 py-0.5 rounded-md shadow-2xs text-[11px] font-bold"
+                            >
+                              <span>{m.badge}</span>
+                              <span className="text-slate-400">|</span>
+                              <span className="text-rose-700 font-mono">₹{m.rate.toFixed(2)} × {m.qty} = <strong>-₹{m.amount.toFixed(2)}</strong></span>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
