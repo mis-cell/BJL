@@ -651,34 +651,37 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     setDeductionRows(prevRows => {
       if (autoCalc.matchedRule && autoCalc.rate > 0) {
+        const totalBalesQty = autoCalc.totalBales > 0 ? autoCalc.totalBales : 1;
         const existingIndex = prevRows.findIndex(r => isBaleWeightDeductionRule(r.deduction_type || ""));
         let nextRows = [...prevRows];
 
         if (existingIndex >= 0) {
           const cur = nextRows[existingIndex];
-          // If already set to the identical matched policy and rate, do nothing
-          if (cur.deduction_type === autoCalc.ruleName && Number(cur.deduction_rate) === Number(autoCalc.rate)) {
+          // If already set to the identical matched policy, rate, and qty, do nothing
+          if (
+            cur.deduction_type === autoCalc.ruleName && 
+            Number(cur.deduction_rate) === Number(autoCalc.rate) &&
+            Number(cur.deduction_qty) === Number(totalBalesQty)
+          ) {
             return prevRows;
           }
-          const qty = cur.deduction_qty > 0 ? cur.deduction_qty : 1;
           nextRows[existingIndex] = {
             ...cur,
             deduction_type: autoCalc.ruleName,
             deduction_rate: autoCalc.rate,
-            deduction_qty: qty,
-            deduction_amount: Number((autoCalc.rate * qty).toFixed(2))
+            deduction_qty: totalBalesQty,
+            deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
           };
         } else {
           // If only 1 row exists and it is empty / unselected
           const isFirstRowEmpty = nextRows.length === 1 && (!nextRows[0].deduction_type || nextRows[0].deduction_type.trim() === "" || nextRows[0].deduction_type.includes("-- SELECT"));
           if (isFirstRowEmpty) {
-            const qty = nextRows[0].deduction_qty > 0 ? nextRows[0].deduction_qty : 1;
             nextRows = [{
               id: nextRows[0].id || "1",
               deduction_type: autoCalc.ruleName,
               deduction_rate: autoCalc.rate,
-              deduction_qty: qty,
-              deduction_amount: Number((autoCalc.rate * qty).toFixed(2))
+              deduction_qty: totalBalesQty,
+              deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
             }];
           } else {
             // Append as a new deduction row
@@ -686,8 +689,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               id: String(Date.now() + Math.random()),
               deduction_type: autoCalc.ruleName,
               deduction_rate: autoCalc.rate,
-              deduction_qty: 1,
-              deduction_amount: Number((autoCalc.rate * 1).toFixed(2))
+              deduction_qty: totalBalesQty,
+              deduction_amount: Number((autoCalc.rate * totalBalesQty).toFixed(2))
             });
           }
         }
@@ -718,12 +721,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     const found = deductionMasterList.find(d => d.deduction === selectedName);
     const rate = found ? (found.rate_per_unit != null ? Number(found.rate_per_unit) : (found.rate_per_qntl != null ? Number(found.rate_per_qntl) : 0)) : 0;
 
+    const autoCalc = calculateBaleWeightDeduction(detailRows, deductionMasterList);
+    const isBaleRule = isBaleWeightDeductionRule(selectedName);
+
     setDeductionRows(prev => {
       const updated = [...prev];
       const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
       current.deduction_type = selectedName;
       current.deduction_rate = rate;
-      const qty = current.deduction_qty > 0 ? current.deduction_qty : 1;
+      const qty = isBaleRule && autoCalc.totalBales > 0 
+        ? autoCalc.totalBales 
+        : (current.deduction_qty > 0 ? current.deduction_qty : 1);
       current.deduction_qty = qty;
       current.deduction_amount = Number((rate * qty).toFixed(2));
       updated[idx] = current;
