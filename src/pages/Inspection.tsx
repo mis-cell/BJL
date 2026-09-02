@@ -376,6 +376,8 @@ interface InspectionMasterRecord {
   remarks?: string;
   lorry_number?: string;
   delivery_claim?: number;
+  unit_name?: string;
+  unit_code?: string;
   deduction_type?: string;
   deduction_rate?: number;
   deduction_qty?: number;
@@ -1200,6 +1202,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       let gradeMap: Record<string, string> = {};
       let agencyMap: Record<string, string> = {};
       let markaMap: Record<string, string> = {};
+      let pmData: any = null;
 
       if (supabase) {
         const [pdmRes, scpRes, midRes, pmRes, gradesRes, agenciesRes, markasRes] = await Promise.all([
@@ -1229,7 +1232,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
 
         if (pmRes.data && pmRes.data.length > 0) {
-          const pm = pmRes.data[0];
+          pmData = pmRes.data[0];
+          const pm = pmData;
           setHeaderForm(prev => ({
             ...prev,
             po_no: pm.po_no || prev.po_no,
@@ -1258,6 +1262,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
 
       if (matchedItems && matchedItems.length > 0) {
+        let resolvedUnitName = (pmData?.unit_name || pmData?.unit || "").toString().trim().toUpperCase();
+        if (!resolvedUnitName && matchedItems.length > 0) {
+          for (const itm of matchedItems) {
+            const u = (itm.unit || itm.unit_name || "").toString().trim().toUpperCase();
+            if (u && u !== "BALES") {
+              resolvedUnitName = u;
+              break;
+            }
+          }
+        }
+
         const details: InspectionDetailRow[] = matchedItems.map((item: any, i: number) => {
           const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
           const resolvedGradeName = gradeMap[gradeCode] || item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || gradeCode;
@@ -1277,7 +1292,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           } else if (item.bales !== undefined && item.bales !== null && item.bales !== "") {
             qtyVal = Number(item.bales);
           }
-          const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
+          const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
+          const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
           const lMin = Number(item.lorry_read_min || 0);
@@ -1384,6 +1400,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
     }
 
+    // Resolve parent unit from Final Arrival or look up from DB/cache if missing
+    let resolvedUnitName = (fa.unit_name || fa.unit || fa.unit_code || "").toString().trim().toUpperCase();
+
+    // Check if any row in rawGrid has a unit
+    if ((!resolvedUnitName || resolvedUnitName === "BALES") && Array.isArray(rawGrid)) {
+      for (const row of rawGrid) {
+        const u = (row?.unit || row?.unit_name || "").toString().trim().toUpperCase();
+        if (u && u !== "BALES") {
+          resolvedUnitName = u;
+          break;
+        }
+      }
+    }
+
     // Query purchase_detail_master / sauda_check_point_details / mill_inspection_detail if missing or empty
     if (!Array.isArray(rawGrid) || rawGrid.length === 0) {
       const searchKeys = [fa.po_no, fa.mr_no, fa.final_arrival_no, fa.arrival_no].filter(Boolean);
@@ -1392,11 +1422,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           for (const key of searchKeys) {
             const cleanKey = String(key).trim();
             const upperKey = cleanKey.toUpperCase();
-            const [pdmRes, scpRes, midRes] = await Promise.all([
+            const [pdmRes, scpRes, midRes, faDb, pmDb, tmrDb] = await Promise.all([
               supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
               supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
-              supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`)
+              supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`),
+              supabase.from('final_arrival').select('unit_name, unit_code, grid_details').or(`final_arrival_no.eq.${cleanKey},arrival_no.eq.${cleanKey},mr_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1),
+              supabase.from('purchase_master').select('unit_name, unit_code').or(`po_no.eq.${cleanKey}`).limit(1),
+              supabase.from('temporary_material_received').select('unit_name, unit_code').or(`mr_no.eq.${cleanKey},arrival_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1)
             ]);
+
+            if ((!resolvedUnitName || resolvedUnitName === "BALES")) {
+              const foundUnit = faDb.data?.[0]?.unit_name || pmDb.data?.[0]?.unit_name || tmrDb.data?.[0]?.unit_name;
+              if (foundUnit) {
+                resolvedUnitName = foundUnit.toString().trim().toUpperCase();
+              }
+            }
 
             const found = (pdmRes.data && pdmRes.data.length > 0)
               ? pdmRes.data
@@ -1449,7 +1489,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           qtyVal = Number(item.bales);
         }
 
-        const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
+        const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
+        const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
 
         const lMin = Number(item.lorry_read_min || 0);
         const lMax = Number(item.lorry_read_max || 0);
@@ -1685,6 +1726,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
 
       if (Array.isArray(rawGrid) && rawGrid.length > 0) {
+        const resolvedUnitName = (rec.unit_name || (rec as any).unit || "").toString().trim().toUpperCase();
         loadedDetails = rawGrid.map((item: any, i: number) => {
           const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
           
@@ -1699,7 +1741,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             qtyVal = Number(item.bales);
           }
 
-          const unitVal = (item.unit || item.unit_name || "BALES").toString().trim().toUpperCase();
+          const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
+          const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
 
           const moistAct = Number(item.moisture_act || item.actual_moisture || item.insp_read_avg || rec.actual_moisture || 0);
           const gdAct = Number(item.grade_down_act || item.grade_down || 0);
@@ -1751,12 +1794,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         const poClean = rec.po_no.trim();
         const { data: pdm } = await supabase.from('purchase_detail_master').select('*').eq('po_no', poClean);
         if (pdm && pdm.length > 0) {
+          const resolvedUnitName = (rec.unit_name || (rec as any).unit || "").toString().trim().toUpperCase();
           loadedDetails = pdm.map((item: any, i: number) => {
             const nettoVal = Number(item.weight_mt || item.quantity_mt || item.netto_pnto || item.weight || item.quantity || 0);
             const moistAct = Number(item.moisture_act || item.actual_moisture || rec.actual_moisture || 0);
             const gdAct = Number(item.grade_down_act || item.grade_down || 0);
             const dustAct = Number(item.dust_act || item.actual_dust || rec.actual_dust || 0);
             const ncvAct = Number(item.ncv_act || item.actual_ncv || rec.actual_ncv || 0);
+            const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
+            const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
 
             return {
               srl_no: item.srl_no || (i + 1),
@@ -1768,7 +1814,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               marks: item.marka || item.marka_name || "",
               crop_year: item.crop_year || "2026-27",
               quantity: Number(item.quantity || (nettoVal > 0 ? Math.round(nettoVal) : 0)) || 0,
-              unit: item.unit || "BALES",
+              unit: unitVal,
               challan_gross_wt: nettoVal,
               receipt_gross_wt: nettoVal,
               reduced_weight: nettoVal,
@@ -2026,10 +2072,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   }, [detailRows]);
 
   const handleAddRow = () => {
+    const existingUnit = detailRows.find(r => r.unit && r.unit.trim() !== "")?.unit || (headerForm as any).unit_name || "BALES";
     setDetailRows(prev => [
       ...prev,
       {
-        unit: "BALES",
+        unit: existingUnit,
         quantity: 0,
         challan_gross_wt: 0,
         tolerable: "Yes",
@@ -2092,7 +2139,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         crop_year: row.crop_year || "2026-27",
         lot: row.lot || "",
         quantity: Number(row.quantity) || 0,
-        unit: row.unit || "BALES",
+        unit: row.unit || (headerForm as any).unit_name || "BALES",
         rate: Number((row as any).rate || (row as any).rate_qntl || 0) || 0,
         rate_qntl: Number((row as any).rate_qntl || (row as any).rate || 0) || 0,
         challan_gross_wt: Number(row.challan_gross_wt) || 0,
@@ -2147,6 +2194,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       const payload: any = {
         ...headerForm,
+        unit_name: (headerForm as any).unit_name || validDetails[0]?.unit || "BALES",
         deduction_type: activeDeductions.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryDeduction.deduction_type || "",
         deduction_rate: primaryDeduction.deduction_rate || 0,
         deduction_qty: primaryDeduction.deduction_qty || 0,
@@ -3453,7 +3501,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                   readOnly={isUnitBlocked}
                                   tabIndex={isUnitBlocked ? -1 : 0}
                                   title={isUnitBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                  value={row.unit || "BALES"}
+                                  value={row.unit || (headerForm as any).unit_name || "BALES"}
                                   onChange={(e) => !isUnitBlocked && handleDetailChange(idx, "unit", e.target.value.toUpperCase())}
                                   className={getFieldInputStyle(isUnitBlocked, "text-center uppercase font-bold")}
                                 />
