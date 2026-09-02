@@ -407,8 +407,98 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   // Gmail Feed states
   const [gmailSearchTerm, setGmailSearchTerm] = useState('');
   const [gmailFolder, setGmailFolder] = useState<'inbox' | 'starred' | 'sent' | 'trash' | 'paste'>('inbox');
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>('GM-101');
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [pastedGmailText, setPastedGmailText] = useState('');
+  const [emailBodyViewMode, setEmailBodyViewMode] = useState<'formatted' | 'raw'>('formatted');
+  
+  // Helpers to clean & format email content
+  const formatEmailDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    const isThisYear = d.getFullYear() === now.getFullYear();
+    if (isThisYear) {
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
+  };
+
+  const formatEmailFullDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  };
+
+  const cleanEmailContent = (mail: any) => {
+    if (!mail) return mail;
+    let body = mail.body || '';
+    let html = mail.html || '';
+
+    // Clean raw subject if RFC2047 remains
+    let subject = mail.subject || 'No Subject';
+    if (subject.includes('=?utf-8?') || subject.includes('=?UTF-8?')) {
+      subject = subject.replace(/=\?([^?]+)\?([BQbq])\?([^?]+)\?=/g, (_: any, __: any, encoding: string, text: string) => {
+        try {
+          if (encoding.toUpperCase() === 'B') return atob(text);
+          if (encoding.toUpperCase() === 'Q') {
+            return decodeURIComponent(escape(text.replace(/_/g, ' ').replace(/=([A-Fa-f0-9]{2})/g, (_m: any, hex: string) => String.fromCharCode(parseInt(hex, 16)))));
+          }
+        } catch (e) {}
+        return text;
+      });
+    }
+
+    let senderName = mail.senderName || 'Unknown';
+    if (senderName.includes('=?utf-8?') || senderName.includes('=?UTF-8?')) {
+      senderName = senderName.replace(/=\?([^?]+)\?([BQbq])\?([^?]+)\?=/g, (_: any, __: any, encoding: string, text: string) => {
+        try {
+          if (encoding.toUpperCase() === 'B') return atob(text);
+          if (encoding.toUpperCase() === 'Q') {
+            return decodeURIComponent(escape(text.replace(/_/g, ' ').replace(/=([A-Fa-f0-9]{2})/g, (_m: any, hex: string) => String.fromCharCode(parseInt(hex, 16)))));
+          }
+        } catch (e) {}
+        return text;
+      });
+    }
+
+    // Clean body if raw MIME boundaries remain
+    if (body.includes('--attachment') || body.includes('Content-Transfer-Encoding: base64') || body.includes('Content-Type: text/')) {
+      const base64Match = body.match(/Content-Transfer-Encoding:\s*base64\s*\n\n([A-Za-z0-9+/=\s]+)/i);
+      if (base64Match && base64Match[1]) {
+        try {
+          const decoded = atob(base64Match[1].replace(/\s+/g, ''));
+          if (decoded.includes('<') && decoded.includes('>')) {
+            html = decoded;
+            body = decoded.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          } else {
+            body = decoded;
+          }
+        } catch (e) {}
+      } else {
+        const parts = body.split(/--[a-zA-Z0-9_-]+/);
+        const cleanParts = parts.map((p: string) => {
+          return p.replace(/Content-[^:]+:[^\n]+\n/gi, '').replace(/MIME-Version:[^\n]+\n/gi, '').replace(/Date:[^\n]+\n/gi, '').replace(/From:[^\n]+\n/gi, '').replace(/To:[^\n]+\n/gi, '').trim();
+        }).filter(Boolean);
+        if (cleanParts.length > 0) {
+          body = cleanParts.join('\n\n');
+        }
+      }
+    }
+
+    return {
+      ...mail,
+      subject,
+      senderName,
+      body,
+      html
+    };
+  };
   
   // Compose states
   const [isComposing, setIsComposing] = useState(false);
@@ -500,6 +590,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setIsFetchingGmail(true);
     setGmailError('');
     try {
+      let emailList: any[] = [];
       // 1. Try to fetch from Supabase directly first to bypass any potential iframe redirect/CORS issues
       if (supabase) {
         console.log("Attempting direct Supabase query for IMAP emails...");
@@ -509,7 +600,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
           .order('date', { ascending: false });
           
         if (!error && data && data.length > 0) {
-          const mapped = data.map((item: any) => ({
+          emailList = data.map((item: any) => cleanEmailContent({
             id: item.id,
             subject: item.subject || 'No Subject',
             senderName: item.sender_name || 'Unknown',
@@ -517,6 +608,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
             date: item.date,
             snippet: item.snippet || '',
             body: item.body || '',
+            html: item.html || '',
             attachments: (() => {
               try {
                 return item.attachments ? (typeof item.attachments === 'string' ? JSON.parse(item.attachments) : item.attachments) : [];
@@ -527,36 +619,31 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
             unread: item.unread,
             starred: item.starred
           }));
-          setGmailList(mapped);
-          setIsFetchingGmail(false);
-          return;
         } else if (error) {
           console.warn("Supabase direct query failed, falling back to API:", error.message);
         }
       }
 
-      // 2. Fallback to API endpoint
-      const res = await fetch(getApiUrl(`/api/fetch-emails?t=${Date.now()}`));
-      if (!res.ok) {
-        throw new Error(`Server returned ${res.status} ${res.statusText}. Please wait 5 seconds and try again (server might be restarting).`);
+      // 2. Fallback to API endpoint if Supabase had 0 items or errored
+      if (emailList.length === 0) {
+        const res = await fetch(getApiUrl(`/api/fetch-emails?t=${Date.now()}`));
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data.success && data.emails) {
+              emailList = data.emails.map((item: any) => cleanEmailContent(item));
+            }
+          }
+        }
       }
-      
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned HTML instead of JSON. The server might be restarting or there is a configuration error.");
-      }
-      
-      let data;
-      const resText = await res.text();
-      try {
-        data = JSON.parse(resText);
-      } catch (e) {
-        throw new Error("Failed to parse emails response: " + resText.substring(0, 100));
-      }
-      if (data.success && data.emails) {
-        setGmailList(data.emails);
-      } else {
-        setGmailError(data.error || 'Failed to fetch emails');
+
+      if (emailList.length > 0) {
+        setGmailList(emailList);
+        setSelectedEmailId(prev => {
+          if (prev && emailList.some(m => m.id === prev)) return prev;
+          return emailList[0]?.id || null;
+        });
       }
     } catch (err: any) {
       console.error('Error fetching emails:', err);
@@ -566,17 +653,21 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     }
   };
 
-  // Pull fresh mail from Gmail (via the sync-gmail Edge Function), then reload
-  // the inbox from Supabase so the newest messages show immediately.
+  // Pull fresh mail from Gmail (via the /api/sync-emails route & edge function)
   const syncGmailNow = async () => {
     setIsSyncing(true);
     try {
-      if (supabase) {
-        const { error } = await supabase.functions.invoke('sync-gmail', { method: 'POST' });
-        if (error) console.warn('sync-gmail invoke error:', error.message);
+      const res = await fetch(getApiUrl(`/api/sync-emails?t=${Date.now()}`), {
+        method: 'POST'
+      });
+      if (!res.ok && supabase) {
+        await supabase.functions.invoke('sync-gmail', { method: 'POST' }).catch(() => {});
       }
     } catch (e) {
-      console.warn('sync-gmail failed:', e);
+      console.warn('sync-emails API failed, falling back to Edge function:', e);
+      if (supabase) {
+        await supabase.functions.invoke('sync-gmail', { method: 'POST' }).catch(() => {});
+      }
     } finally {
       await fetchEmails();
       setIsSyncing(false);
@@ -2752,8 +2843,8 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                                 <span className={cn("text-xs truncate font-semibold", mail.unread ? "text-slate-900 font-extrabold" : "text-slate-650")}>
                                   {mail.senderName}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-semibold shrink-0">
-                                  {mail.date.split(' ')[1] + ' ' + mail.date.split(' ')[2]}
+                                <span className="text-[10px] text-slate-400 font-semibold shrink-0" title={formatEmailFullDate(mail.date)}>
+                                  {formatEmailDate(mail.date)}
                                 </span>
                               </div>
                               <h4 className={cn("text-xs truncate mt-1", mail.unread ? "text-slate-900 font-extrabold" : "text-slate-700")}>
@@ -2846,14 +2937,43 @@ Booked 150 Bales TD5 Jute at ₹16,300/Qtl, Agency: Tulshihatta with Chopra Corp
                                   <span className="font-bold text-slate-900">{mail.senderName}</span>
                                   <span className="text-slate-400 font-semibold ml-1.5">&lt;{mail.senderEmail}&gt;</span>
                                 </div>
-                                <span className="text-[10px] text-slate-500 font-semibold">{mail.date}</span>
+                                <div className="flex items-center gap-2">
+                                  {mail.html && (
+                                    <div className="flex rounded bg-slate-100 p-0.5 border border-slate-200 text-[10px] font-bold">
+                                      <button
+                                        type="button"
+                                        onClick={() => setEmailBodyViewMode('formatted')}
+                                        className={cn("px-2 py-0.5 rounded cursor-pointer transition-colors", emailBodyViewMode === 'formatted' ? "bg-white text-rose-600 shadow-xs" : "text-slate-500 hover:text-slate-700")}
+                                      >
+                                        Rich
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEmailBodyViewMode('raw')}
+                                        className={cn("px-2 py-0.5 rounded cursor-pointer transition-colors", emailBodyViewMode === 'raw' ? "bg-white text-rose-600 shadow-xs" : "text-slate-500 hover:text-slate-700")}
+                                      >
+                                        Text
+                                      </button>
+                                    </div>
+                                  )}
+                                  <span className="text-[10px] text-slate-500 font-semibold" title={mail.date}>{formatEmailFullDate(mail.date)}</span>
+                                </div>
                               </div>
                             </div>
 
                             {/* Body */}
-                            <div className="whitespace-pre-wrap text-xs text-slate-750 font-medium leading-relaxed font-sans max-h-[300px] overflow-y-auto bg-slate-50/50 p-4 rounded-lg border border-slate-150">
-                              {mail.body}
-                            </div>
+                            {mail.html && emailBodyViewMode === 'formatted' ? (
+                              <div className="bg-white rounded-lg border border-slate-200 overflow-hidden max-h-[380px] overflow-y-auto p-4 select-text">
+                                <div 
+                                  className="prose prose-sm max-w-none text-xs text-slate-800 leading-relaxed font-sans"
+                                  dangerouslySetInnerHTML={{ __html: mail.html }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="whitespace-pre-wrap text-xs text-slate-750 font-medium leading-relaxed font-sans max-h-[350px] overflow-y-auto bg-slate-50/50 p-4 rounded-lg border border-slate-150 select-text">
+                                {mail.body || 'No text content in this email.'}
+                              </div>
+                            )}
 
                             {/* Attachments Section */}
                             {mail.attachments && mail.attachments.length > 0 && (

@@ -1483,13 +1483,15 @@ export default function MaterialInspection({
     if (!supabase) return;
     setLoading(true);
     try {
-      const [checklistRes, inspMasterRes, millInspRes] = await Promise.all([
+      const [matInspRes, checklistRes, inspMasterRes, millInspRes] = await Promise.all([
+        supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
         supabase.from("inspection_checklist").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
         supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
         supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
       ]);
 
       const combined = [
+        ...((matInspRes as any)?.data || []),
         ...((checklistRes as any)?.data || []),
         ...((inspMasterRes as any)?.data || []),
         ...((millInspRes as any)?.data || []),

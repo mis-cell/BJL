@@ -1072,24 +1072,36 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   async function fetchInspectionRecords(isManual: boolean = false) {
     setLoading(true);
     try {
-      // 1. Fetch saved material_inspection records
+      // 1. Fetch saved material_inspection records (and merge fallback tables)
       let inspectionList: InspectionMasterRecord[] = [];
       if (supabase) {
-        const { data, error } = await supabase
-          .from("material_inspection")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const [miRes, mimRes, imRes] = await Promise.all([
+          supabase.from("material_inspection").select("*").order("created_at", { ascending: false }),
+          supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] as any[] })),
+          supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] as any[] }))
+        ]);
 
-        if (!error && data && data.length > 0) {
-          inspectionList = data;
-        } else {
-          // Fallback check
-          const { data: fallback } = await supabase
-            .from("inspection_master")
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (fallback && fallback.length > 0) inspectionList = fallback;
+        const mergedMap = new Map<string, InspectionMasterRecord>();
+        if (mimRes.data && Array.isArray(mimRes.data)) {
+          mimRes.data.forEach((r: any) => {
+            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
+            if (k) mergedMap.set(k, r);
+          });
         }
+        if (imRes.data && Array.isArray(imRes.data)) {
+          imRes.data.forEach((r: any) => {
+            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
+            if (k) mergedMap.set(k, r);
+          });
+        }
+        if (miRes.data && Array.isArray(miRes.data)) {
+          miRes.data.forEach((r: any) => {
+            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
+            if (k) mergedMap.set(k, r);
+          });
+        }
+
+        inspectionList = Array.from(mergedMap.values());
       }
 
       if (inspectionList.length === 0) {

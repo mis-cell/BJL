@@ -694,25 +694,31 @@ export default function Dashboard({
         }
 
         try {
-          const [insMastersRes, insDetailsRes, stNodeStocksRes] = await Promise.all([
-            supabase.from('mill_inspection_master').select('mr_no, mr_date, arrival_date'),
-            supabase.from('mill_inspection_detail').select('mr_no, stock_grade_code, quantity, unit'),
+          const [matInspRes, millInspRes, matDetRes, millDetRes, stNodeStocksRes] = await Promise.all([
+            supabase.from('material_inspection').select('mr_no, mr_date, arrival_date, date, status, created_at'),
+            supabase.from('mill_inspection_master').select('mr_no, mr_date, arrival_date, date, status, created_at').then(r => r, () => ({ data: [] as any[] })),
+            supabase.from('material_inspection_details').select('mr_no, stock_grade_code, quantity, unit'),
+            supabase.from('mill_inspection_detail').select('mr_no, stock_grade_code, quantity, unit').then(r => r, () => ({ data: [] as any[] })),
             supabase.from('opening_stock').select('grade, quantity, weight, godown')
           ]);
           
-          if (insMastersRes.data) {
-            setInspectionMasters(insMastersRes.data);
-          } else {
-            const fallbackMasters = await dbModule.fetchAll('mill_inspection_master').catch(() => []);
-            setInspectionMasters(fallbackMasters);
+          const combinedMastersMap = new Map<string, any>();
+          if (millInspRes.data && Array.isArray(millInspRes.data)) {
+            millInspRes.data.forEach((r: any) => { if (r.mr_no) combinedMastersMap.set(String(r.mr_no).trim().toUpperCase(), r); });
           }
+          if (matInspRes.data && Array.isArray(matInspRes.data)) {
+            matInspRes.data.forEach((r: any) => { if (r.mr_no) combinedMastersMap.set(String(r.mr_no).trim().toUpperCase(), r); });
+          }
+          const finalMasters = Array.from(combinedMastersMap.values());
+          setInspectionMasters(finalMasters.length > 0 ? finalMasters : await dbModule.fetchAll('mill_inspection_master').catch(() => []));
           
-          if (insDetailsRes.data) {
-            setInspectionDetails(insDetailsRes.data);
-          } else {
-            const fallbackDetails = await dbModule.fetchAll('mill_inspection_detail').catch(() => []);
-            setInspectionDetails(fallbackDetails);
+          const combinedDetails: any[] = [];
+          if (matDetRes.data && Array.isArray(matDetRes.data) && matDetRes.data.length > 0) {
+            combinedDetails.push(...matDetRes.data);
+          } else if (millDetRes.data && Array.isArray(millDetRes.data) && millDetRes.data.length > 0) {
+            combinedDetails.push(...millDetRes.data);
           }
+          setInspectionDetails(combinedDetails.length > 0 ? combinedDetails : await dbModule.fetchAll('mill_inspection_detail').catch(() => []));
           
           const getOpeningStocksFallback = async () => {
             const fb = await dbModule.fetchAll('opening_stock').catch(() => []);

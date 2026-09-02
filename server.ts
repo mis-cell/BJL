@@ -18,6 +18,165 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 dotenv.config();
 
+// Helper to clean RFC 2047 encoded words if any remain
+function cleanMimeWords(str: string): string {
+  if (!str) return '';
+  return str.replace(/=\?([^?]+)\?([BQbq])\?([^?]+)\?=/g, (_, charset, encoding, text) => {
+    try {
+      if (encoding.toUpperCase() === 'B') {
+        return Buffer.from(text, 'base64').toString('utf8');
+      } else if (encoding.toUpperCase() === 'Q') {
+        const decoded = text
+          .replace(/_/g, ' ')
+          .replace(/=([A-Fa-f0-9]{2})/g, (__: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+        return decodeURIComponent(escape(decoded));
+      }
+    } catch (e) {
+      return text;
+    }
+    return text;
+  });
+}
+
+async function runImapSync() {
+  const config = {
+    imap: {
+      user: "rawjute@ballyjute.com",
+      password: "ochhyhnjlkhdlpot",
+      host: "imap.gmail.com",
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      authTimeout: 10000,
+      connTimeout: 15000
+    }
+  };
+
+  let connection;
+  try {
+    console.log("[Sync] Connecting to IMAP server...");
+    connection = await imaps.connect(config);
+    await connection.openBox('INBOX');
+    
+    const searchCriteria = ['ALL'];
+    const fetchOptions = {
+      bodies: ['HEADER', 'TEXT', 'RFC822', ''],
+      markSeen: false,
+      struct: true
+    };
+    
+    const results = await connection.search(searchCriteria, fetchOptions);
+    console.log(`[Sync] Found ${results.length} total emails on live Gmail. Processing the most recent 50...`);
+    
+    // Sort UIDs descending and take top 50
+    const sortedResults = results.sort((a, b) => b.attributes.uid - a.attributes.uid).slice(0, 50);
+    
+    const emails = await Promise.all(sortedResults.map(async (res) => {
+      const fullPart = res.parts.find(part => part.which === '' || part.which === 'RFC822' || part.which === 'BODY[]');
+      const id = res.attributes.uid;
+      
+      let parsed: any;
+      try {
+        if (fullPart && fullPart.body) {
+          parsed = await simpleParser(fullPart.body);
+        } else {
+          const headerPart = res.parts.find(part => part.which === 'HEADER');
+          const textPart = res.parts.find(part => part.which === 'TEXT');
+          const rawEmail = (headerPart ? headerPart.body : '') + '\r\n\r\n' + (textPart ? textPart.body : '');
+          parsed = await simpleParser(rawEmail);
+        }
+      } catch (parseErr) {
+        console.error(`[Sync] Error parsing email UID ${id}:`, parseErr);
+        parsed = {
+          subject: 'Error parsing email',
+          from: { value: [{ name: 'Unknown', address: 'Unknown' }] },
+          date: new Date(),
+          text: 'Content could not be parsed',
+          html: ''
+        };
+      }
+
+      let attachmentsList: any[] = [];
+      if (parsed.attachments && Array.isArray(parsed.attachments)) {
+        attachmentsList = parsed.attachments.map((att: any) => ({
+          filename: att.filename || 'attachment',
+          contentType: att.contentType || 'application/octet-stream',
+          size: att.size || 0,
+          content: att.content ? att.content.toString('base64') : ''
+        }));
+      }
+
+      const rawSubject = cleanMimeWords(parsed.subject || 'No Subject');
+      const senderName = cleanMimeWords(parsed.from?.value[0]?.name || parsed.from?.value[0]?.address || 'Unknown');
+      const senderEmail = parsed.from?.value[0]?.address || 'Unknown';
+      const cleanSnippet = (parsed.text ? parsed.text.substring(0, 180).replace(/\s+/g, ' ') : '').trim();
+
+      return {
+        id: id.toString(),
+        subject: rawSubject,
+        sender_name: senderName,
+        sender_email: senderEmail,
+        date: parsed.date ? parsed.date.toISOString() : new Date().toISOString(),
+        snippet: cleanSnippet || (rawSubject ? `${rawSubject}...` : 'No preview'),
+        body: parsed.text || (parsed.html ? parsed.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : ''),
+        html: parsed.html || '',
+        attachments: JSON.stringify(attachmentsList),
+        unread: !res.attributes.flags.includes('\\Seen'),
+        starred: res.attributes.flags.includes('\\Flagged')
+      };
+    }));
+
+    connection.end();
+    connection = null;
+    
+    if (emails.length > 0) {
+      console.log(`[Sync] Upserting ${emails.length} live Gmail emails to Supabase...`);
+      const { error } = await supabase
+        .from('imap_emails')
+        .upsert(emails, { onConflict: 'id' });
+        
+      if (error) {
+        console.error("[Sync] Error upserting to Supabase:", error);
+      } else {
+        console.log("[Sync] Successfully synchronized live Gmail emails to Supabase!");
+      }
+
+      // Also update local cache file
+      try {
+        const filePath = path.join(process.cwd(), "emails.json");
+        const mappedEmails = emails.map(e => ({
+          id: e.id,
+          subject: e.subject,
+          senderName: e.sender_name,
+          senderEmail: e.sender_email,
+          date: e.date,
+          snippet: e.snippet,
+          body: e.body,
+          html: e.html,
+          attachments: e.attachments,
+          unread: e.unread,
+          starred: e.starred
+        }));
+        fs.writeFileSync(filePath, JSON.stringify({ success: true, emails: mappedEmails }, null, 2), "utf8");
+      } catch (fileErr) {
+        console.error("[Sync] Failed to write to local emails.json:", fileErr);
+      }
+    }
+    return emails;
+  } catch (err: any) {
+    if (err.message?.includes('timed out') || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+      console.warn("[Sync] Background IMAP email sync paused (connection timed out / offline).");
+    } else {
+      console.error("[Sync] Error in live Gmail email sync:", err.message);
+    }
+    throw err;
+  } finally {
+    if (connection) {
+      try { connection.end(); } catch (e) {}
+    }
+  }
+}
+
 async function syncEmailsBackground() {
   console.log("Starting background IMAP email sync process...");
   
@@ -33,12 +192,14 @@ async function syncEmailsBackground() {
           date TIMESTAMP WITH TIME ZONE,
           snippet TEXT,
           body TEXT,
+          html TEXT,
           attachments TEXT,
           unread BOOLEAN DEFAULT TRUE,
           starred BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
         ALTER TABLE imap_emails DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE imap_emails ADD COLUMN IF NOT EXISTS html TEXT;
         ALTER TABLE imap_emails ADD COLUMN IF NOT EXISTS attachments TEXT;
       `
     });
@@ -47,139 +208,15 @@ async function syncEmailsBackground() {
     console.warn("Failed to create/verify 'imap_emails' table in Supabase via RPC:", err);
   }
 
-  const runSync = async () => {
-    const config = {
-      imap: {
-        user: "rawjute@ballyjute.com",
-        password: "ochhyhnjlkhdlpot",
-        host: "imap.gmail.com",
-        port: 993,
-        tls: true,
-        tlsOptions: { rejectUnauthorized: false },
-        authTimeout: 10000,
-        connTimeout: 15000
-      }
-    };
-
-    let connection;
-    try {
-      console.log("[Sync] Connecting to IMAP server...");
-      connection = await imaps.connect(config);
-      await connection.openBox('INBOX');
-      
-      const searchCriteria = ['ALL'];
-      const fetchOptions = {
-        bodies: ['HEADER', 'TEXT', ''],
-        markSeen: false,
-        struct: true
-      };
-      
-      const results = await connection.search(searchCriteria, fetchOptions);
-      console.log(`[Sync] Found ${results.length} total emails. Processing the most recent 30...`);
-      
-      // Sort UIDs descending and take top 30
-      const sortedResults = results.sort((a, b) => b.attributes.uid - a.attributes.uid).slice(0, 30);
-      
-      const emails = await Promise.all(sortedResults.map(async (res) => {
-        const all = res.parts.find(part => part.which === '');
-        const id = res.attributes.uid;
-        
-        let parsed;
-        try {
-          if (all) {
-            parsed = await simpleParser(all.body);
-          } else {
-            const headerPart = res.parts.find(part => part.which === 'HEADER');
-            const textPart = res.parts.find(part => part.which === 'TEXT');
-            const rawEmail = (headerPart ? headerPart.body : '') + '\n\n' + (textPart ? textPart.body : '');
-            parsed = await simpleParser(rawEmail);
-          }
-        } catch (parseErr) {
-          console.error(`[Sync] Error parsing email UID ${id}:`, parseErr);
-          parsed = {
-            subject: 'Error parsing email',
-            from: { value: [{ name: 'Unknown', address: 'Unknown' }] },
-            date: new Date(),
-            text: 'Content could not be parsed'
-          };
-        }
-
-        let attachmentsList: any[] = [];
-        if (parsed.attachments && Array.isArray(parsed.attachments)) {
-          attachmentsList = parsed.attachments.map((att: any) => ({
-            filename: att.filename || 'attachment',
-            contentType: att.contentType || 'application/octet-stream',
-            size: att.size || 0,
-            content: att.content ? att.content.toString('base64') : ''
-          }));
-        }
-
-        return {
-          id: id.toString(),
-          subject: parsed.subject || 'No Subject',
-          sender_name: parsed.from?.value[0]?.name || parsed.from?.value[0]?.address || 'Unknown',
-          sender_email: parsed.from?.value[0]?.address || 'Unknown',
-          date: parsed.date ? parsed.date.toISOString() : new Date().toISOString(),
-          snippet: parsed.text ? parsed.text.substring(0, 150).replace(/\s+/g, ' ') + '...' : '',
-          body: parsed.text || parsed.html || '',
-          attachments: JSON.stringify(attachmentsList),
-          unread: !res.attributes.flags.includes('\\Seen'),
-          starred: res.attributes.flags.includes('\\Flagged')
-        };
-      }));
-
-      connection.end();
-      connection = null;
-      
-      if (emails.length > 0) {
-        console.log(`[Sync] Upserting ${emails.length} emails to Supabase...`);
-        // Save to Supabase
-        const { error } = await supabase
-          .from('imap_emails')
-          .upsert(emails, { onConflict: 'id' });
-          
-        if (error) {
-          console.error("[Sync] Error upserting to Supabase:", error);
-        } else {
-          console.log("[Sync] Successfully synchronized emails to Supabase!");
-        }
-
-        // Also update local cache file
-        try {
-          const filePath = path.join(process.cwd(), "emails.json");
-          const mappedEmails = emails.map(e => ({
-            id: e.id,
-            subject: e.subject,
-            senderName: e.sender_name,
-            senderEmail: e.sender_email,
-            date: e.date,
-            snippet: e.snippet,
-            body: e.body,
-            attachments: e.attachments,
-            unread: e.unread,
-            starred: e.starred
-          }));
-          fs.writeFileSync(filePath, JSON.stringify({ success: true, emails: mappedEmails }, null, 2), "utf8");
-        } catch (fileErr) {
-          console.error("[Sync] Failed to write to local emails.json:", fileErr);
-        }
-      }
-    } catch (err: any) {
-      if (err.message?.includes('timed out') || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
-        console.warn("[Sync] Background IMAP email sync paused (connection timed out / offline).");
-      } else {
-        console.error("[Sync] Error in background email sync:", err.message);
-      }
-    } finally {
-      if (connection) {
-        try { connection.end(); } catch (e) {}
-      }
-    }
-  };
-
   // Run immediately, then every 30 seconds
-  await runSync();
-  setInterval(runSync, 30000);
+  try {
+    await runImapSync();
+  } catch (e) {}
+  setInterval(async () => {
+    try {
+      await runImapSync();
+    } catch (e) {}
+  }, 30000);
 }
 
 async function startServer() {
@@ -541,12 +578,13 @@ async function startServer() {
         }
         return {
           id: item.id,
-          subject: item.subject || 'No Subject',
-          senderName: item.sender_name || 'Unknown',
+          subject: cleanMimeWords(item.subject || 'No Subject'),
+          senderName: cleanMimeWords(item.sender_name || 'Unknown'),
           senderEmail: item.sender_email || 'Unknown',
           date: item.date,
           snippet: item.snippet || '',
           body: item.body || '',
+          html: item.html || '',
           attachments: attachmentsParsed,
           unread: item.unread,
           starred: item.starred
@@ -567,6 +605,18 @@ async function startServer() {
         console.error("Failed to read emails.json:", fileErr);
       }
       return res.status(500).json({ success: false, error: err.message, details: err.stack });
+    }
+  });
+
+  // Manual on-demand IMAP sync endpoint
+  app.post(["/api/sync-emails", "/Jute-Purchase-Automation/api/sync-emails"], async (req, res) => {
+    try {
+      console.log("Triggering on-demand IMAP sync with rawjute@ballyjute.com on Gmail...");
+      const freshEmails = await runImapSync();
+      return res.json({ success: true, count: freshEmails.length, emails: freshEmails });
+    } catch (err: any) {
+      console.error("On-demand sync failed:", err.message);
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
