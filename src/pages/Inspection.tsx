@@ -48,8 +48,90 @@ export const DEFAULT_DEDUCTION_TYPES = [
   { deduction: "RAIN WET FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
   { deduction: "GODOWN DAMAGE FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
   { deduction: "GODOWN DAMAGE FOR HALF BALES", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "GODOWN DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 }
+  { deduction: "PITCH DAMAGE FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "PITCH DAMAGE FOR HALF BALES", rate_per_unit: 200, rate_per_qntl: null },
+  { deduction: "GODOWN DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
+  { deduction: "PITCH DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
+  { deduction: "RAIN WET FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
+  { deduction: "IN CASE OF BALE IF WEIGHT IS LESS THAN 144", rate_per_unit: 20, rate_per_qntl: null },
+  { deduction: "IN CASE OF BALE IF WEIGHT IS LESS THAN 142", rate_per_unit: 30, rate_per_qntl: null },
+  { deduction: "IN CASE OF BALES IF WEIGHT IS LESS THAN 139", rate_per_unit: 40, rate_per_qntl: null },
+  { deduction: "DELIVERY CLAIM PER QUINTAL (RS. PER DAY)", rate_per_unit: 5, rate_per_qntl: null }
 ];
+
+export function calculateBaleWeightDeduction(
+  detailRows: InspectionDetailRow[],
+  deductionMasterList: any[]
+): {
+  totalBales: number;
+  totalReceiptGrossWtMt: number;
+  totalWeightKg: number;
+  avgKgPerBale: number;
+  matchedRule: any | null;
+  ruleName: string;
+  rate: number;
+} {
+  const baleRows = (detailRows || []).filter(r => {
+    const u = (r.unit || "").trim().toUpperCase();
+    return !u || u.includes("BALE") || u === "BALES" || u === "B";
+  });
+
+  const totalBales = baleRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+  const totalReceiptGrossWtMt = baleRows.reduce((sum, r) => {
+    const wt = Number(r.receipt_gross_wt) > 0 
+      ? Number(r.receipt_gross_wt) 
+      : (Number(r.gross_weight_batch) > 0 ? Number(r.gross_weight_batch) : Number(r.challan_gross_wt) || 0);
+    return sum + wt;
+  }, 0);
+
+  const totalWeightKg = totalReceiptGrossWtMt * 1000;
+  const avgKgPerBale = totalBales > 0 ? (totalWeightKg / totalBales) : 0;
+
+  if (totalBales <= 0 || totalReceiptGrossWtMt <= 0 || avgKgPerBale <= 0) {
+    return { totalBales, totalReceiptGrossWtMt, totalWeightKg, avgKgPerBale, matchedRule: null, ruleName: "", rate: 0 };
+  }
+
+  const masterList = deductionMasterList && deductionMasterList.length > 0 ? deductionMasterList : DEFAULT_DEDUCTION_TYPES;
+  const candidates: { rule: any; threshold: number; rate: number }[] = [];
+
+  for (const d of masterList) {
+    const name = String(d.deduction || "").trim();
+    if (!name) continue;
+
+    // Matches rules like "IN CASE OF BALE IF WEIGHT IS LESS THAN 142", "IN CASE OF BALES IF WEIGHT IS LESS THAN 139", "LESS THAN 144", "< 142"
+    const isBaleRelated = /BALE/i.test(name) || !/DRUM|HALF|LOOSE/i.test(name);
+    const match = name.match(/LESS\s+THAN\s+(\d+(?:\.\d+)?)/i) || name.match(/<\s*(\d+(?:\.\d+)?)/i);
+    if (isBaleRelated && match) {
+      const threshold = parseFloat(match[1]);
+      const rate = d.rate_per_unit != null ? Number(d.rate_per_unit) : (d.rate_per_qntl != null ? Number(d.rate_per_qntl) : 0);
+      if (!isNaN(threshold) && threshold > 0 && rate > 0) {
+        if (avgKgPerBale < threshold) {
+          candidates.push({ rule: d, threshold, rate });
+        }
+      }
+    }
+  }
+
+  // Sort ascending by threshold: e.g. 139 < 142 < 144
+  // If avg weight is 140.34, 139 is false, 142 is true (rate 30.00), 144 is true
+  // The tightest bracket (lowest threshold that avgKgPerBale is strictly under) is selected
+  candidates.sort((a, b) => a.threshold - b.threshold);
+
+  if (candidates.length > 0) {
+    const best = candidates[0];
+    return {
+      totalBales,
+      totalReceiptGrossWtMt,
+      totalWeightKg,
+      avgKgPerBale,
+      matchedRule: best.rule,
+      ruleName: best.rule.deduction,
+      rate: best.rate
+    };
+  }
+
+  return { totalBales, totalReceiptGrossWtMt, totalWeightKg, avgKgPerBale, matchedRule: null, ruleName: "", rate: 0 };
+}
 
 interface InspectionMasterRecord {
   mr_no: string;
@@ -556,6 +638,81 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       deductions: rows
     }));
   };
+
+  // Helper to test if a deduction rule is an automated bale weight rule
+  const isBaleWeightDeductionRule = (name: string) => {
+    const n = String(name || "").trim().toUpperCase();
+    return (n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT"));
+  };
+
+  // Auto-sync deduction policy when bale weight changes
+  const applyAutoBaleDeduction = (details: InspectionDetailRow[], dMaster: any[]) => {
+    const autoCalc = calculateBaleWeightDeduction(details, dMaster);
+
+    setDeductionRows(prevRows => {
+      if (autoCalc.matchedRule && autoCalc.rate > 0) {
+        const existingIndex = prevRows.findIndex(r => isBaleWeightDeductionRule(r.deduction_type || ""));
+        let nextRows = [...prevRows];
+
+        if (existingIndex >= 0) {
+          const cur = nextRows[existingIndex];
+          // If already set to the identical matched policy and rate, do nothing
+          if (cur.deduction_type === autoCalc.ruleName && Number(cur.deduction_rate) === Number(autoCalc.rate)) {
+            return prevRows;
+          }
+          const qty = cur.deduction_qty > 0 ? cur.deduction_qty : 1;
+          nextRows[existingIndex] = {
+            ...cur,
+            deduction_type: autoCalc.ruleName,
+            deduction_rate: autoCalc.rate,
+            deduction_qty: qty,
+            deduction_amount: Number((autoCalc.rate * qty).toFixed(2))
+          };
+        } else {
+          // If only 1 row exists and it is empty / unselected
+          const isFirstRowEmpty = nextRows.length === 1 && (!nextRows[0].deduction_type || nextRows[0].deduction_type.trim() === "" || nextRows[0].deduction_type.includes("-- SELECT"));
+          if (isFirstRowEmpty) {
+            const qty = nextRows[0].deduction_qty > 0 ? nextRows[0].deduction_qty : 1;
+            nextRows = [{
+              id: nextRows[0].id || "1",
+              deduction_type: autoCalc.ruleName,
+              deduction_rate: autoCalc.rate,
+              deduction_qty: qty,
+              deduction_amount: Number((autoCalc.rate * qty).toFixed(2))
+            }];
+          } else {
+            // Append as a new deduction row
+            nextRows.push({
+              id: String(Date.now() + Math.random()),
+              deduction_type: autoCalc.ruleName,
+              deduction_rate: autoCalc.rate,
+              deduction_qty: 1,
+              deduction_amount: Number((autoCalc.rate * 1).toFixed(2))
+            });
+          }
+        }
+        syncHeaderDeductions(nextRows);
+        return nextRows;
+      } else {
+        // When no bale weight penalty applies (e.g. weight >= 144 KG/Bale)
+        const hasBaleRule = prevRows.some(r => isBaleWeightDeductionRule(r.deduction_type || ""));
+        if (hasBaleRule) {
+          const filtered = prevRows.filter(r => !isBaleWeightDeductionRule(r.deduction_type || ""));
+          const nextRows = filtered.length > 0 ? filtered : [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
+          syncHeaderDeductions(nextRows);
+          return nextRows;
+        }
+        return prevRows;
+      }
+    });
+  };
+
+  // Re-run auto bale policy evaluation whenever detailRows or deduction master changes
+  useEffect(() => {
+    if (detailRows && detailRows.length > 0) {
+      applyAutoBaleDeduction(detailRows, deductionMasterList);
+    }
+  }, [detailRows, deductionMasterList]);
 
   const handleDeductionTypeChange = (idx: number, selectedName: string) => {
     const found = deductionMasterList.find(d => d.deduction === selectedName);
@@ -2490,37 +2647,70 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             </section>
 
             {/* DEDUCTIONS & PENALTIES CARD (Compact & Sleek Layout) */}
-            <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-              <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 bg-rose-100 text-rose-700 rounded-md border border-rose-200">
-                    <Percent className="w-3.5 h-3.5" />
-                  </div>
-                  <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Deduction Details &amp; Penalties</h2>
-                  <span className="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-rose-200">
-                    {deductionRows.length} {deductionRows.length === 1 ? "Option" : "Options"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {headerForm.deduction_amount ? (
-                    <div className="bg-rose-50 text-rose-900 border border-rose-200 px-2.5 py-0.5 rounded-md text-xs font-black flex items-center gap-1">
-                      <span className="text-[10px] font-bold text-rose-700 uppercase">Total Claim:</span>
-                      <span className="font-mono text-xs text-rose-900">-₹{Number(headerForm.deduction_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {(() => {
+              const autoBaleAudit = calculateBaleWeightDeduction(detailRows, deductionMasterList);
+              return (
+                <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 bg-rose-100 text-rose-700 rounded-md border border-rose-200">
+                        <Percent className="w-3.5 h-3.5" />
+                      </div>
+                      <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Deduction Details &amp; Penalties</h2>
+                      <span className="bg-rose-100 text-rose-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-rose-200">
+                        {deductionRows.length} {deductionRows.length === 1 ? "Option" : "Options"}
+                      </span>
                     </div>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={handleAddDeductionRow}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Deduction</span>
-                  </button>
-                </div>
-              </div>
 
-              <div className="p-3 overflow-x-auto">
+                    <div className="flex items-center gap-2">
+                      {headerForm.deduction_amount ? (
+                        <div className="bg-rose-50 text-rose-900 border border-rose-200 px-2.5 py-0.5 rounded-md text-xs font-black flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-rose-700 uppercase">Total Claim:</span>
+                          <span className="font-mono text-xs text-rose-900">-₹{Number(headerForm.deduction_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleAddDeductionRow}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Deduction</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Auto-Policy Bale Weight Summary Banner */}
+                  {autoBaleAudit.totalBales > 0 && autoBaleAudit.avgKgPerBale > 0 && (
+                    <div className="mx-3 mt-3 px-3 py-2 bg-gradient-to-r from-amber-50/80 via-rose-50/50 to-slate-50 border border-amber-200/80 rounded-lg flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1">
+                          ⚖️ Bale Weight Policy:
+                        </span>
+                        <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                          Qty: <strong className="text-indigo-700">{autoBaleAudit.totalBales} Bales</strong>
+                        </span>
+                        <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
+                          Gross Wt: <strong className="text-slate-900">{autoBaleAudit.totalReceiptGrossWtMt.toFixed(3)} MT</strong> ({Math.round(autoBaleAudit.totalWeightKg).toLocaleString()} KG)
+                        </span>
+                        <span className="bg-amber-100/80 border border-amber-300 text-amber-900 px-2.5 py-0.5 rounded font-mono font-black text-[11px]">
+                          Avg: {autoBaleAudit.avgKgPerBale.toFixed(2)} KG/Bale
+                        </span>
+                      </div>
+                      {autoBaleAudit.matchedRule ? (
+                        <div className="flex items-center gap-1.5 bg-rose-100/80 border border-rose-300 text-rose-900 px-2.5 py-1 rounded font-bold text-[11px]">
+                          <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                          <span>Auto Matched Policy: <strong>{autoBaleAudit.ruleName}</strong> (₹{autoBaleAudit.rate.toFixed(2)}/Unit)</span>
+                        </div>
+                      ) : (
+                        <div className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
+                          ✓ Average Weight Standard (≥144 KG/Bale) — No Weight Penalty
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-3 overflow-x-auto">
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] font-extrabold uppercase text-slate-600">
@@ -2616,6 +2806,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 </table>
               </div>
             </section>
+          );
+        })()}
 
             {/* INSPECTION DETAILS WIDE TABLE SECTION */}
             <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
