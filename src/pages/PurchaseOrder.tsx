@@ -1491,28 +1491,37 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         return;
       }
       try {
-        const [inspRes, amadRes, detailsRes] = await Promise.all([
-          supabase.from('mill_inspection_master').select('*'),
-          dbModule.fetchAll('temporary_material_received').catch(() => []),
-          supabase.from('sauda_check_point_details').select('*'),
+        const [inspRes, matInspRes, detailsRes] = await Promise.all([
+          supabase.from('mill_inspection_master').select('*').then(r => r, () => ({ data: [] as any[] })),
+          supabase.from('material_inspection').select('*').then(r => r, () => ({ data: [] as any[] })),
+          supabase.from('sauda_check_point_details').select('*').then(r => r, () => ({ data: [] as any[] })),
         ]);
 
-        const inspList = inspRes.data || [];
-        const amadList = amadRes || [];
-        const detailsList = detailsRes.data || [];
+        const inspList = [
+          ...((matInspRes as any)?.data || []),
+          ...((inspRes as any)?.data || [])
+        ];
+        const detailsList = (detailsRes as any)?.data || [];
 
         const clean = (v: any) => String(v ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
         const results: Record<string, PoMatchResult> = {};
 
         for (const po of poList) {
           const poNoClean = clean(po.po_no || po.contract_po_no);
-          const matchInsp = inspList.find((i: any) => i.po_no && clean(i.po_no) === poNoClean);
-          const matchAmad = amadList.find((a: any) => a.po_no && clean(a.po_no) === poNoClean);
+          // Find matching inspection record strictly from the Mill Inspection section
+          const matchInsp = inspList.find((i: any) => {
+            const inspPoClean = clean(i.po_no);
+            const inspMillPoClean = clean(i.mill_po_no);
+            return (inspPoClean && inspPoClean === poNoClean) || (inspMillPoClean && inspMillPoClean === poNoClean);
+          });
           const poDetails = detailsList.filter((d: any) => d.po_no && clean(d.po_no) === poNoClean);
-          const allReceipts = [...inspList.filter((i: any) => i.po_no && clean(i.po_no) === poNoClean), ...amadList.filter((a: any) => a.po_no && clean(a.po_no) === poNoClean)];
+          const allReceipts = inspList.filter((i: any) => {
+            const inspPoClean = clean(i.po_no);
+            const inspMillPoClean = clean(i.mill_po_no);
+            return (inspPoClean && inspPoClean === poNoClean) || (inspMillPoClean && inspMillPoClean === poNoClean);
+          });
 
-          const enrichedInsp = matchInsp || matchAmad || null;
-          results[po.po_no] = comparePoInspection(po, poDetails, enrichedInsp, allReceipts);
+          results[po.po_no] = comparePoInspection(po, poDetails, matchInsp || null, allReceipts);
         }
         if (!cancelled) setMatchResults(results);
       } catch (_e) {
@@ -2051,6 +2060,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         arrivals, 
         finalArrivals, 
         inspections, 
+        matInspections,
         sattaBasesRes, 
         sattaCalculatedRes, 
         sattaDiffsRes,
@@ -2069,6 +2079,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         safeFetch('temporary_material_received', 'created_at', false),
         safeFetch('final_arrival', 'created_at', false),
         safeFetch('mill_inspection_master', 'created_at', false),
+        safeFetch('material_inspection', 'created_at', false),
         safeSupabaseSelect('satta_base_rates', 'start_date', false),
         safeSupabaseSelect('satta_calculated_rates'),
         safeSupabaseSelect('satta_differentials'),
@@ -2106,10 +2117,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         });
       }
 
+      const allMergedInspections = [...(matInspections || []), ...(inspections || [])];
       const pos = initialPos;
       setAllTempArrivals(arrivals || []);
       setAllFinalArrivals(finalArrivals || []);
-      setAllInspections(inspections || []);
+      setAllInspections(allMergedInspections);
 
       const matchPoNo = (po1: string, po2: string) => {
         if (!po1 || !po2) return false;
@@ -2162,11 +2174,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const isWeightCompleted = tol.isCompleted;
         const computedPending = (isExplicitCompleted || isWeightCompleted) ? false : true;
 
-        // Pass / Mismatch: compare this P.O against its matched Temporary M.R on
-        // the shared fields. All match → Pass; any differ → Mismatch; no arrival yet
-        // → Awaiting. (Blank-on-either-side fields are skipped, not counted as diffs.)
+        // Pass / Mismatch: strictly validate this P.O against the Mill Inspection Section.
+        // If a Mill Inspection has been recorded and all fields match → Pass; if fields differ → Mismatch;
+        // if no Mill Inspection recorded yet → Awaiting.
         const isPtfRow = !!(p.ptf_no && String(p.ptf_no).trim());
-        const arr: any = [...matchingFinal, ...matchingTemp][0];
+        const matchingInsp = allMergedInspections.find((i: any) =>
+          exactPo(p.po_no, i.po_no) || exactPo(p.contract_po_no, i.po_no) ||
+          exactPo(p.po_no, i.mill_po_no) || exactPo(p.contract_po_no, i.mill_po_no)
+        );
         let passStatus: 'awaiting' | 'pass' | 'mismatch' = 'awaiting';
         const mismatchFields: string[] = [];
         
@@ -2179,21 +2194,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
         if (isPtfRow || isCleared) {
           passStatus = 'pass';
-        } else if (totalReceivedMt > 0 && arr) {
-          // Only evaluate once material has actually been received.
+        } else if (matchingInsp) {
+          // Validate from Mill Inspection section
           const norm = (v: any) => String(v ?? '').toUpperCase().replace(/[^a-z0-9]/gi, '');
           const cmp = (label: string, a: any, b: any) => {
             const x = norm(a), y = norm(b);
             if (x === '' || y === '') return;
             if (x !== y) mismatchFields.push(label);
           };
-          cmp('Supplier', p.supplier, arr.supplier);
-          cmp('Broker', p.broker, arr.broker);
-          cmp('Challan Supplier', p.challan_supplier, arr.challan_supplier);
-          cmp('Area', p.area, arr.arrival_area_name || arr.area);
+          cmp('Supplier', p.supplier, matchingInsp.supplier_name || matchingInsp.supplier);
+          cmp('Broker', p.broker, matchingInsp.broker_name || matchingInsp.broker);
+          cmp('Challan Supplier', p.challan_supplier, matchingInsp.challan_supplier || matchingInsp.supplier_name || matchingInsp.supplier);
+          cmp('Area', p.area, matchingInsp.area);
           passStatus = mismatchFields.length === 0 ? 'pass' : 'mismatch';
+        } else {
+          passStatus = 'awaiting';
         }
-        // else: nothing received yet → stays 'awaiting'.
 
         return {
           ...p,
@@ -2241,7 +2257,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive'] });
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive', 'material_inspection', 'mill_inspection_master'] });
 
   useEffect(() => {
     fetchPosAndMasters();
@@ -2265,6 +2281,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point_details' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inspection' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'mill_inspection_master' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'temporary_material_received' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
