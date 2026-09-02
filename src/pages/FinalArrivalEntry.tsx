@@ -944,6 +944,21 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         }
       }
 
+      // Synchronize unit with material_inspection_details and mill_inspection_detail in Supabase
+      if (supabase && formData.unit_name) {
+        const u = formData.unit_name.toUpperCase();
+        const keys = [formData.arrival_no, formData.mr_no, formData.temporary_arrival_no, formData.po_no].filter(Boolean);
+        for (const k of keys) {
+          Promise.all([
+            supabase.from('material_inspection_details').update({ unit: u }).eq('mr_no', k),
+            supabase.from('mill_inspection_detail').update({ unit: u }).eq('mr_no', k),
+            supabase.from('inspection_details').update({ unit: u }).eq('mr_no', k),
+            supabase.from('material_inspection').update({ unit_name: u }).eq('mr_no', k),
+            supabase.from('mill_inspection_master').update({ unit_name: u }).eq('mr_no', k)
+          ]).catch(() => {});
+        }
+      }
+
       if (onSave) onSave(payload);
     } catch (e: any) {
       alert("Failed to save final arrival voucher: " + e.message);

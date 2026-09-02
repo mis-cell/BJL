@@ -1170,6 +1170,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (isManual) {
         showToast("Inspection register data refreshed successfully.");
       }
+      syncInspectionUnitsWithDatabase(displayList, faList);
     } catch (err) {
       console.error("Error fetching material_inspection records:", err);
       if (isManual) {
@@ -1177,6 +1178,44 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncInspectionUnitsWithDatabase = async (currentRecords?: InspectionMasterRecord[], faItems?: any[]) => {
+    if (!supabase) return;
+    try {
+      const arrivals = faItems || finalArrivalList || [];
+      for (const fa of arrivals) {
+        let uName = (fa.unit_name || fa.unit || "").toString().trim().toUpperCase();
+        let rawGrid = fa.grid_details || fa.details || fa.items;
+        if (typeof rawGrid === "string") {
+          try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+        }
+        if ((!uName || uName === "BALES") && Array.isArray(rawGrid)) {
+          for (const row of rawGrid) {
+            const u = (row?.unit || row?.unit_name || "").toString().trim().toUpperCase();
+            if (u && u !== "BALES") {
+              uName = u;
+              break;
+            }
+          }
+        }
+
+        if (uName && uName !== "BALES") {
+          const keys = [fa.mr_no, fa.final_arrival_no, fa.temporary_arrival_no, fa.arrival_no].filter(Boolean);
+          for (const k of keys) {
+            await Promise.all([
+              supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k),
+              supabase.from("mill_inspection_detail").update({ unit: uName }).eq("mr_no", k),
+              supabase.from("inspection_details").update({ unit: uName }).eq("mr_no", k),
+              supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k),
+              supabase.from("mill_inspection_master").update({ unit_name: uName }).eq("mr_no", k)
+            ]).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("syncInspectionUnitsWithDatabase non-blocking exception:", e);
     }
   };
 
@@ -1840,8 +1879,45 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
     }
 
+    // Resolve true unit from Final Arrival or record header
+    const matchingFa = finalArrivalList.find(f => 
+      (f.mr_no && (f.mr_no === rec.mr_no || f.mr_no === rec.arrival_no)) ||
+      (f.final_arrival_no && (f.final_arrival_no === rec.mr_no || f.final_arrival_no === rec.arrival_no)) ||
+      (f.temporary_arrival_no && (f.temporary_arrival_no === rec.mr_no || f.temporary_arrival_no === rec.arrival_no)) ||
+      (f.po_no && (f.po_no === rec.po_no || f.po_no === (rec as any).mill_po_no))
+    );
+    let targetUnit = (matchingFa?.unit_name || matchingFa?.unit || rec.unit_name || (rec as any).unit || "").toString().trim().toUpperCase();
+    if ((!targetUnit || targetUnit === "BALES") && matchingFa) {
+      let rawGrid = matchingFa.grid_details || matchingFa.details || matchingFa.items;
+      if (typeof rawGrid === "string") {
+        try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
+      }
+      if (Array.isArray(rawGrid)) {
+        for (const row of rawGrid) {
+          const u = (row?.unit || row?.unit_name || "").toString().trim().toUpperCase();
+          if (u && u !== "BALES") {
+            targetUnit = u;
+            break;
+          }
+        }
+      }
+    }
+
+    if (targetUnit && targetUnit !== "BALES") {
+      loadedDetails = loadedDetails.map(r => ({
+        ...r,
+        unit: (!r.unit || r.unit === "BALES") ? targetUnit : r.unit
+      }));
+      if (supabase && rec.mr_no) {
+        supabase.from("material_inspection_details").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
+        supabase.from("mill_inspection_detail").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
+        supabase.from("material_inspection").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
+        supabase.from("mill_inspection_master").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
+      }
+    }
+
     if (loadedDetails.length === 0) {
-      loadedDetails = [{ unit: "BALES", quantity: 0, tolerable: "Yes", expanded: false }];
+      loadedDetails = [{ unit: targetUnit || "BALES", quantity: 0, tolerable: "Yes", expanded: false }];
     }
 
     setDetailRows(loadedDetails);

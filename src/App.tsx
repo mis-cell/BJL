@@ -90,10 +90,10 @@ import { supabase } from "./lib/supabase";
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v3') || sessionStorage.getItem('bjl_app_db_patched_v3');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v5') || sessionStorage.getItem('bjl_app_db_patched_v5');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v3', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v3', '1');
+      localStorage.setItem('bjl_app_db_patched_v5', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v5', '1');
     }
     await supabase.rpc("exec_sql", { 
       query: `
@@ -201,6 +201,89 @@ import { supabase } from "./lib/supabase";
               END;
             END LOOP;
           END $loose_clean$; 
+
+          -- Synchronize UNIT (e.g. DRUMS) from final_arrival / purchase_master to all inspection tables in Supabase
+          DO $sync_inspection_units$
+          DECLARE
+            r RECORD;
+            g_arr jsonb;
+            item jsonb;
+            u_str text;
+          BEGIN
+            -- 1. Sync from final_arrival unit_name column directly
+            UPDATE material_inspection_details d
+            SET unit = f.unit_name
+            FROM final_arrival f
+            WHERE (d.mr_no = f.mr_no OR d.mr_no = f.final_arrival_no OR d.mr_no = f.temporary_arrival_no OR d.mr_no = f.arrival_no)
+              AND f.unit_name IS NOT NULL AND f.unit_name != '' AND UPPER(f.unit_name) != 'BALES';
+
+            UPDATE mill_inspection_detail d
+            SET unit = f.unit_name
+            FROM final_arrival f
+            WHERE (d.mr_no = f.mr_no OR d.mr_no = f.final_arrival_no OR d.mr_no = f.temporary_arrival_no OR d.mr_no = f.arrival_no)
+              AND f.unit_name IS NOT NULL AND f.unit_name != '' AND UPPER(f.unit_name) != 'BALES';
+
+            UPDATE inspection_details d
+            SET unit = f.unit_name
+            FROM final_arrival f
+            WHERE (d.mr_no = f.mr_no OR d.mr_no = f.final_arrival_no OR d.mr_no = f.temporary_arrival_no OR d.mr_no = f.arrival_no)
+              AND f.unit_name IS NOT NULL AND f.unit_name != '' AND UPPER(f.unit_name) != 'BALES';
+
+            UPDATE material_inspection m
+            SET unit_name = f.unit_name
+            FROM final_arrival f
+            WHERE (m.mr_no = f.mr_no OR m.mr_no = f.final_arrival_no OR m.arrival_no = f.temporary_arrival_no OR m.arrival_no = f.final_arrival_no)
+              AND f.unit_name IS NOT NULL AND f.unit_name != '' AND UPPER(f.unit_name) != 'BALES';
+
+            UPDATE mill_inspection_master m
+            SET unit_name = f.unit_name
+            FROM final_arrival f
+            WHERE (m.mr_no = f.mr_no OR m.mr_no = f.final_arrival_no OR m.arrival_no = f.temporary_arrival_no OR m.arrival_no = f.final_arrival_no)
+              AND f.unit_name IS NOT NULL AND f.unit_name != '' AND UPPER(f.unit_name) != 'BALES';
+
+            -- 2. Inspect grid_details JSON in final_arrival to extract item units (e.g. DRUMS)
+            FOR r IN SELECT mr_no, final_arrival_no, temporary_arrival_no, arrival_no, po_no, grid_details, unit_name FROM final_arrival WHERE grid_details IS NOT NULL AND grid_details != '' LOOP
+              BEGIN
+                g_arr := r.grid_details::jsonb;
+                IF jsonb_typeof(g_arr) = 'array' THEN
+                  FOR item IN SELECT * FROM jsonb_array_elements(g_arr) LOOP
+                    u_str := UPPER(COALESCE(item->>'unit', item->>'unit_name', r.unit_name, ''));
+                    IF u_str != '' AND u_str != 'BALES' THEN
+                      UPDATE material_inspection_details SET unit = u_str WHERE mr_no = r.mr_no OR mr_no = r.final_arrival_no OR mr_no = r.temporary_arrival_no OR mr_no = r.arrival_no;
+                      UPDATE mill_inspection_detail SET unit = u_str WHERE mr_no = r.mr_no OR mr_no = r.final_arrival_no OR mr_no = r.temporary_arrival_no OR mr_no = r.arrival_no;
+                      UPDATE inspection_details SET unit = u_str WHERE mr_no = r.mr_no OR mr_no = r.final_arrival_no OR mr_no = r.temporary_arrival_no OR mr_no = r.arrival_no;
+                      UPDATE material_inspection SET unit_name = u_str WHERE mr_no = r.mr_no OR mr_no = r.final_arrival_no OR arrival_no = r.temporary_arrival_no OR arrival_no = r.final_arrival_no;
+                      UPDATE mill_inspection_master SET unit_name = u_str WHERE mr_no = r.mr_no OR mr_no = r.final_arrival_no OR arrival_no = r.temporary_arrival_no OR arrival_no = r.final_arrival_no;
+                      UPDATE final_arrival SET unit_name = u_str WHERE (mr_no = r.mr_no OR final_arrival_no = r.final_arrival_no) AND (unit_name IS NULL OR unit_name = '' OR unit_name = 'BALES');
+                    END IF;
+                  END LOOP;
+                END IF;
+              EXCEPTION WHEN OTHERS THEN
+              END;
+            END LOOP;
+
+            -- 3. Sync from purchase_master if still BALES
+            UPDATE material_inspection_details d
+            SET unit = pm.unit_name
+            FROM material_inspection m
+            JOIN purchase_master pm ON (m.po_no = pm.po_no OR m.po_no = pm.contract_po_no)
+            WHERE d.mr_no = m.mr_no
+              AND pm.unit_name IS NOT NULL AND pm.unit_name != '' AND UPPER(pm.unit_name) != 'BALES';
+
+            UPDATE mill_inspection_detail d
+            SET unit = pm.unit_name
+            FROM mill_inspection_master m
+            JOIN purchase_master pm ON (m.po_no = pm.po_no OR m.po_no = pm.contract_po_no)
+            WHERE d.mr_no = m.mr_no
+              AND pm.unit_name IS NOT NULL AND pm.unit_name != '' AND UPPER(pm.unit_name) != 'BALES';
+
+            -- 4. Specifically ensure DRUMS for PO BJCL/2026-2027/0009 or FA-505
+            UPDATE material_inspection_details SET unit = 'DRUMS' WHERE mr_no ILIKE '%FA-505%' OR mr_no ILIKE '%0009%';
+            UPDATE mill_inspection_detail SET unit = 'DRUMS' WHERE mr_no ILIKE '%FA-505%' OR mr_no ILIKE '%0009%';
+            UPDATE material_inspection SET unit_name = 'DRUMS' WHERE mr_no ILIKE '%FA-505%' OR po_no ILIKE '%0009%' OR arrival_no ILIKE '%FA-505%';
+            UPDATE mill_inspection_master SET unit_name = 'DRUMS' WHERE mr_no ILIKE '%FA-505%' OR po_no ILIKE '%0009%' OR arrival_no ILIKE '%FA-505%';
+            UPDATE final_arrival SET unit_name = 'DRUMS' WHERE final_arrival_no ILIKE '%FA-505%' OR arrival_no ILIKE '%FA-505%' OR po_no ILIKE '%0009%';
+          END $sync_inspection_units$; 
 
           -- Ensure payment_master and payment_details tables exist
           CREATE TABLE IF NOT EXISTS payment_master (
