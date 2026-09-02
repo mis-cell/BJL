@@ -35,6 +35,7 @@ import {
   AlertCircle,
   Scale,
   CreditCard,
+  AlertTriangle,
   ArrowUpDown,
   ArrowUp,
   ArrowDown
@@ -1509,21 +1510,36 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const results: Record<string, PoMatchResult> = {};
 
         for (const po of poList) {
-          const poNoClean = clean(po.po_no || po.contract_po_no);
-          // Find matching inspection record strictly from the Mill Inspection section
+          const poNoClean = clean(po.po_no || po.contract_po_no || po.ptf_no);
+          // Find matching inspection record strictly from the Mill Inspection / Material Inspection section
           const matchInsp = inspList.find((i: any) => {
             const inspPoClean = clean(i.po_no);
             const inspMillPoClean = clean(i.mill_po_no);
-            return (inspPoClean && inspPoClean === poNoClean) || (inspMillPoClean && inspMillPoClean === poNoClean);
+            const inspPtfClean = clean(i.ptf_no);
+            return (
+              (inspPoClean && inspPoClean === poNoClean) || 
+              (inspMillPoClean && inspMillPoClean === poNoClean) ||
+              (inspPtfClean && inspPtfClean === poNoClean) ||
+              (po.ptf_no && clean(po.ptf_no) && clean(po.ptf_no) === inspPoClean) ||
+              (po.po_no && clean(po.po_no) && clean(po.po_no) === inspPoClean)
+            );
           });
           const poDetails = detailsList.filter((d: any) => d.po_no && clean(d.po_no) === poNoClean);
           const allReceipts = inspList.filter((i: any) => {
             const inspPoClean = clean(i.po_no);
             const inspMillPoClean = clean(i.mill_po_no);
-            return (inspPoClean && inspPoClean === poNoClean) || (inspMillPoClean && inspMillPoClean === poNoClean);
+            const inspPtfClean = clean(i.ptf_no);
+            return (
+              (inspPoClean && inspPoClean === poNoClean) || 
+              (inspMillPoClean && inspMillPoClean === poNoClean) ||
+              (inspPtfClean && inspPtfClean === poNoClean)
+            );
           });
 
-          results[po.po_no] = comparePoInspection(po, poDetails, matchInsp || null, allReceipts);
+          const res = comparePoInspection(po, poDetails, matchInsp || null, allReceipts);
+          if (po.po_no) results[po.po_no] = res;
+          if (po.contract_po_no) results[po.contract_po_no] = res;
+          if (po.ptf_no) results[po.ptf_no] = res;
         }
         if (!cancelled) setMatchResults(results);
       } catch (_e) {
@@ -2158,13 +2174,45 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const y = String(b || '').trim().toUpperCase();
         return x !== '' && x === y;
       };
+      const cleanVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+
+      // Flexible identifier matching for PO, Sauda, PTF against any database table record
+      const matchPoRecord = (po: any, rec: any) => {
+        if (!po || !rec) return false;
+        const pKeys = [
+          cleanVal(po.po_no),
+          cleanVal(po.contract_po_no),
+          cleanVal(po.ptf_no),
+          cleanVal(po.sauda_no),
+          cleanVal(po.contract_no)
+        ].filter(Boolean);
+
+        const rKeys = [
+          cleanVal(rec.po_no),
+          cleanVal(rec.mill_po_no),
+          cleanVal(rec.contract_po_no),
+          cleanVal(rec.sauda_no || rec.contract_no),
+          cleanVal(rec.ptf_no),
+          cleanVal(rec.temporary_arrival_no || rec.arrival_no || rec.amad_no),
+          cleanVal(rec.final_arrival_no || rec.mr_no)
+        ].filter(Boolean);
+
+        for (const pk of pKeys) {
+          for (const rk of rKeys) {
+            if (pk === rk) return true;
+            if (pk.length >= 6 && rk.length >= 6 && (pk.includes(rk) || rk.includes(pk))) return true;
+          }
+        }
+        return false;
+      };
+
       setPoList((pos || []).map((p: any) => {
         const contractWeight = parseFloat(p.total_contract_mt) || 0;
         const matchingFinal = (finalArrivals || []).filter((ar: any) =>
-          exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
+          matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
         );
         const matchingTemp = (arrivals || []).filter((ar: any) =>
-          (exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)) &&
+          (matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)) &&
           !matchingFinal.some(f => f.temporary_arrival_no === ar.temporary_arrival_no || f.mr_no === ar.amad_no)
         );
         // Received quantity = ONLY material accepted at Final M.R (final_arrival).
@@ -2178,53 +2226,83 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
         const isWeightCompleted = tol.isCompleted;
 
-        // Pass / Mismatch: strictly validate this P.O against the Mill Inspection Section.
-        // If a Mill Inspection has been recorded and all fields match → Pass; if fields differ → Mismatch;
-        // if no Mill Inspection recorded yet → Awaiting.
-        const isPtfRow = !!(p.ptf_no && String(p.ptf_no).trim());
-        const matchingInsp = allMergedInspections.find((i: any) =>
-          exactPo(p.po_no, i.po_no) || exactPo(p.contract_po_no, i.po_no) ||
-          exactPo(p.po_no, i.mill_po_no) || exactPo(p.contract_po_no, i.mill_po_no)
-        );
-        let passStatus: 'awaiting' | 'pass' | 'mismatch' = 'awaiting';
-        const mismatchFields: string[] = [];
-        
-        // If mismatch is cleared / approved by admin or PTF, mark as pass immediately
+        const pPoClean = cleanVal(p.po_no);
+        const pContractClean = cleanVal(p.contract_po_no);
+        const pPtfClean = cleanVal(p.ptf_no);
+        const pSaudaClean = cleanVal(p.sauda_no);
+
+        // 1. Check Temporary Arrival Dashboard (temporary_material_received)
+        const hasTempArrival = (arrivals || []).some((ar: any) => matchPoRecord(p, ar)) ||
+                               matchingFinal.length > 0 ||
+                               totalReceivedMt > 0;
+
+        // 2. Check Final Arrival Dashboard (final_arrival)
+        const hasFinalArrival = matchingFinal.length > 0 || totalReceivedMt > 0;
+
+        // 3. Check Mill Inspection (material_inspection & mill_inspection_master)
+        const matchingInsp = allMergedInspections.find((i: any) => matchPoRecord(p, i));
+        const hasInspection = Boolean(matchingInsp);
+
+        // 4. Check Mismatch (material_mismatch, satta_mismatch, and field-level validation)
         const isCleared = p.mismatch_cleared === true || 
           p.mismatch_cleared === 'true' || 
           p.satta_dispute_approved === true || 
           p.satta_dispute_approved === 'true' || 
           isPoMismatchResolved(p);
 
-        if (isPtfRow || isCleared) {
-          passStatus = 'pass';
-        } else if (matchingInsp) {
-          // Validate from Mill Inspection section
+        const hasDbMismatch = (combinedMatMismatches || []).some((m: any) => {
+          if (!matchPoRecord(p, m)) return false;
+          const st = String(m.status || m.resolution_status || '').toLowerCase();
+          return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+        }) || (combinedSatMismatches || []).some((m: any) => {
+          if (!matchPoRecord(p, m)) return false;
+          const st = String(m.status || m.resolution_status || '').toLowerCase();
+          return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+        });
+
+        const mismatchFields: string[] = [];
+        if (matchingInsp) {
           const norm = (v: any) => String(v ?? '').toUpperCase().replace(/[^a-z0-9]/gi, '');
           const cmp = (label: string, a: any, b: any) => {
             const x = norm(a), y = norm(b);
             if (x === '' || y === '') return;
-            if (x !== y) mismatchFields.push(label);
+            if (x !== y && !x.includes(y) && !y.includes(x)) mismatchFields.push(label);
           };
           cmp('Supplier', p.supplier, matchingInsp.supplier_name || matchingInsp.supplier);
           cmp('Broker', p.broker, matchingInsp.broker_name || matchingInsp.broker);
           cmp('Challan Supplier', p.challan_supplier, matchingInsp.challan_supplier || matchingInsp.supplier_name || matchingInsp.supplier);
           cmp('Area', p.area, matchingInsp.area);
-          passStatus = mismatchFields.length === 0 ? 'pass' : 'mismatch';
-        } else {
-          passStatus = 'awaiting';
         }
 
-        const isPass = (isPtfRow || isCleared || passStatus === 'pass');
+        const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || p.pass_status === 'mismatch');
+
+        // Dynamic Workflow Stage Calculation (Sequential Priority Order):
+        // 1. Temporary Arrival Done + Final Arrival Missing -> Final Arrival Pending
+        // 2. Final Arrival Done + Mismatch Found -> Mismatch
+        // 3. Final Arrival Done + No Mismatch + Mill Inspection Missing -> Inspection Pending
+        // 4. Final Arrival Done + No Mismatch + Mill Inspection Done -> Eligible for Advance Payment
+        let workflowStage: 'temp_arrival_pending' | 'final_arrival_pending' | 'mismatch' | 'inspection_pending' | 'eligible_adv_payment' = 'temp_arrival_pending';
+
+        if (!hasTempArrival && !hasFinalArrival) {
+          workflowStage = 'temp_arrival_pending';
+        } else if (hasTempArrival && !hasFinalArrival) {
+          workflowStage = 'final_arrival_pending';
+        } else if (isMismatch) {
+          workflowStage = 'mismatch';
+        } else if (!hasInspection) {
+          workflowStage = 'inspection_pending';
+        } else {
+          workflowStage = 'eligible_adv_payment';
+        }
+
+        const isPass = isCleared || (workflowStage === 'eligible_adv_payment');
 
         // Check Payment Status in payment_master
-        const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
-        const pPoClean = cleanPoVal(p.po_no);
-        const pContractClean = cleanPoVal(p.contract_po_no);
         const matchingPayments = (payments || []).filter((pay: any) => {
-          const payPoClean = cleanPoVal(pay.po_no);
+          const payPoClean = cleanVal(pay.po_no);
           return exactPo(p.po_no, pay.po_no) || 
                  exactPo(p.contract_po_no, pay.po_no) ||
+                 matchPoRecord(p, pay) ||
                  (pPoClean && pPoClean === payPoClean) ||
                  (pContractClean && pContractClean === payPoClean);
         });
@@ -2235,7 +2313,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           String(pay.status || '').toLowerCase() === 'completed'
         );
 
-        // User Rule: "Here Complete Means 'STATUS' Is Complete and 'PASS/MISMATCH' is 'Pass', other Is Treated as 'Pending'"
+        // Complete means weight is fulfilled and stage is passed to final/eligible
         const isWeightFulfilled = isExplicitCompleted || isWeightCompleted;
         const isFullyComplete = isTempPo 
           ? (isWeightFulfilled && isPass)
@@ -2251,7 +2329,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           pending: computedPending,
           received_weight_mt: totalReceivedMt,
           weight_tolerance: tol,
-          pass_status: passStatus,
+          workflow_stage: workflowStage,
+          stage: workflowStage,
+          has_temp_arrival: hasTempArrival,
+          has_final_arrival: hasFinalArrival,
+          has_inspection: hasInspection,
+          pass_status: workflowStage === 'eligible_adv_payment' ? 'pass' : (isMismatch ? 'mismatch' : (workflowStage === 'inspection_pending' ? 'awaiting' : workflowStage)),
           mismatch_fields: mismatchFields,
           has_payment_done: hasPaymentDone,
           is_fully_completed: isFullyComplete
@@ -2290,7 +2373,24 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive', 'material_inspection', 'mill_inspection_master', 'payment_master'] });
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { 
+    tables: [
+      'purchase_master', 
+      'purchase_detail_master', 
+      'sauda_check_point', 
+      'sauda_check_point_details', 
+      'sauda_check_point_deductions', 
+      'p.o_archive', 
+      'po_archive', 
+      'temporary_material_received',
+      'final_arrival',
+      'material_inspection', 
+      'mill_inspection_master', 
+      'material_mismatch',
+      'satta_mismatch',
+      'payment_master'
+    ] 
+  });
 
   useEffect(() => {
     fetchPosAndMasters();
@@ -3879,13 +3979,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         case 'pass_mismatch': {
           const getPassMismatchText = (item: any) => {
             const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
-            if (isFinalized) return 'PASS';
-            if (item.ptf_no && String(item.ptf_no).trim()) return 'PASS';
-            const mr = matchResults[item.po_no];
-            if (!mr || !mr.hasInspection) return 'AWAITING';
-            if (mr.status === 'match') return 'PASS';
-            if (isPoMismatchResolved(item)) return 'PASS';
-            return 'MISMATCH';
+            if (isFinalized) return '5_PASS';
+            const isResolved = isPoMismatchResolved(item);
+            if (isResolved) return '4_ELIGIBLE';
+            const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'eligible_adv_payment' : item.pass_status);
+            if (stage === 'eligible_adv_payment') return '4_ELIGIBLE';
+            if (stage === 'inspection_pending') return '3_INSPECTION_PENDING';
+            if (stage === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0)) return '2_MISMATCH';
+            if (stage === 'final_arrival_pending') return '1_FINAL_ARRIVAL_PENDING';
+            return '0_TEMP_ARRIVAL_PENDING';
           };
           comparison = getPassMismatchText(a).localeCompare(getPassMismatchText(b));
           break;
@@ -4510,9 +4612,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const rcvd = Number(item.received_weight_mt || 0);
                                  const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
                                  const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-                                 const mr = matchResults[item.po_no];
+                                 const mr = matchResults[item.po_no] || matchResults[item.contract_po_no] || (item.ptf_no ? matchResults[item.ptf_no] : null);
+                                 const isResolved = isPoMismatchResolved(item);
                                  const isPass = isTempPo 
-                                    ? (item.pass_status === 'pass' || (mr && mr.status === 'match') || isPoMismatchResolved(item) || !!(item.ptf_no && String(item.ptf_no).trim()))
+                                    ? (isResolved || item.pass_status === 'pass' || (mr && mr.hasInspection && mr.status === 'match'))
                                     : true;
                                  const isWeightComplete = item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
                                  const isCompletedPo = isTempPo 
@@ -4594,42 +4697,63 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  if (isFinalized) {
                                     return <span className="text-[9px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase" title="Passed to Final P.O">Pass ✓</span>;
                                  }
-                                 const isPtf = !!(item.ptf_no && String(item.ptf_no).trim());
-                                 const mr = matchResults[item.po_no];
+                                 const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'eligible_adv_payment' : item.pass_status) || 'temp_arrival_pending';
                                  const isResolved = isPoMismatchResolved(item);
-                                 const isPass = isPtf || isResolved || item.pass_status === 'pass' || (mr && mr.status === 'match');
+                                 const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments) || item.has_payment_done;
 
-                                 // Check payment status from payment_master / allPayments
-                                 const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments);
-
-                                 // 1. If awaiting Mill Inspection
-                                 if (!isPass && item.pass_status === 'awaiting' && (!mr || !mr.hasInspection)) {
+                                 // Stage 1: Temporary Arrival Pending (Material has not arrived at mill gate yet)
+                                 if (stage === 'temp_arrival_pending') {
                                     return (
                                       <span 
-                                        className="text-[8.5px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase" 
-                                        title="No Material Inspection recorded yet in Mill Inspection section"
+                                        className="text-[8.5px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 uppercase whitespace-nowrap shadow-2xs" 
+                                        title="Temporary Arrival Pending — Material has not arrived at mill gate yet"
                                       >
-                                        Awaiting
+                                        Temp Arrival Pending
                                       </span>
                                     );
                                  }
 
-                                 // 2. If mismatch with Mill Inspection
-                                 if (!isPass && (item.pass_status === 'mismatch' || (mr && mr.status === 'mismatch'))) {
+                                 // Stage 2: Final Arrival Pending (Temporary Arrival completed, Final Arrival missing)
+                                 if (stage === 'final_arrival_pending') {
+                                    return (
+                                      <span 
+                                        className="text-[8.5px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 uppercase whitespace-nowrap shadow-2xs" 
+                                        title="Temporary Arrival Completed — Final Arrival (Final M.R) is Pending"
+                                      >
+                                        Final Arrival Pending
+                                      </span>
+                                    );
+                                 }
+
+                                 // Stage 3: Mismatch (Final Arrival exists, but mismatch found with P.O / Sauda specs)
+                                 if (stage === 'mismatch') {
                                     const diffFields = item.mismatch_fields?.length 
                                       ? item.mismatch_fields.join(', ') 
-                                      : (mr?.mismatches?.map((m: any) => m.field).join(', ') || 'Fields differ');
+                                      : 'Fields differ';
                                     return (
                                       <span
-                                         className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs"
+                                         className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs whitespace-nowrap inline-flex items-center gap-1"
                                          title={`Mismatch in: ${diffFields}. Resolve dispute in Mismatch Section.`}
                                       >
-                                        Mismatch
+                                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                        <span>Mismatch</span>
                                       </span>
                                     );
                                  }
 
-                                 // 3. When Inspection is Pass (or PTF / Cleared):
+                                 // Stage 4: Inspection Pending (Final Arrival completed without mismatch, Mill Inspection pending)
+                                 if (stage === 'inspection_pending') {
+                                    return (
+                                      <span 
+                                        className="text-[8.5px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 uppercase whitespace-nowrap shadow-2xs" 
+                                        title="Final Arrival exists with no mismatch — Mill Inspection data is Pending"
+                                      >
+                                        Inspection Pending
+                                      </span>
+                                    );
+                                 }
+
+                                 // 3. When Inspection is Pass (or Cleared):
                                  // A. When Advance Payment is Done in Payment Dashboard:
                                  // The "Eligible For Adv. Payment" card turns YELLOW and the PASS button works to move data to Final P.O
                                  if (isPaymentDone) {
