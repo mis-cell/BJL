@@ -1370,7 +1370,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Receipt Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="date_1140" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Receipt Date <span className="text-rose-600 font-black">*</span>
+                    Temporary Date <span className="text-rose-600 font-black">*</span>
                   </label>
 
                   <div className="flex-1 flex gap-2">
@@ -2108,14 +2108,15 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                   {/* Netto Pnto */}
                   <td className="p-0.5 border border-gray-300 w-24">
                     {(() => {
-                      const rowUnit = (detail.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
-                      const isBales = rowUnit === 'BALES' || rowUnit.includes('BALE');
+                      const rowUnit = (detail.unit || formData.unit_name || 'BALES' ||'DRUMS' ).toString().trim().toUpperCase();
+                      const isBales = rowUnit === 'BALES' || rowUnit.includes('BALE') || rowUnit === 'DRUMS' || rowUnit.includes('DRUM');
+                      //const isDrumss = rowUnit === 'DRUMS' || rowUnit.includes('DRUM');
                       return (
                         <input  id={`netto_pnto_main_${idx}`} name={`netto_pnto_main_${idx}`} aria-label="Netto M.T"
                           type="number" 
                           step="0.001"
                           placeholder="0.000"
-                          readOnly={isBales}
+                          readOnly={isBales }
                           value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0} 
                           onChange={(e) => {
                             if (!isBales) {
