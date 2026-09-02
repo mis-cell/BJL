@@ -4901,7 +4901,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <input  id="pending_radio_3443" aria-label="Pending"type="radio" value="Yes" checked={formData.pending === 'Yes'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="mr-0.5 w-3 h-3 cursor-pointer" /> Yes
                   <input  id="pending_radio_3444" aria-label="Pending"type="radio" value="No" checked={formData.pending === 'No'} onChange={(e) => setFormData({...formData, pending: e.target.value})} name="pending_radio" className="ml-2 mr-0.5 w-3 h-3 cursor-pointer" /> No
                 </div>
-                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
+                <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 -ml-6">
                   <label htmlFor="p_o_contract_3449" className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
                   {formData.is_ptf ? (
                     <input  id="p_o_contract_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
@@ -4916,7 +4916,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   )}
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                  <label htmlFor="date_3456" className="ml-0 sm:ml-2 min-w-[30px]">Date</label>
+                  <label htmlFor="date_3456" className="ml-0 sm:ml-2 min-w-[30px]">PO Date</label>
                   <input  id="date_3456" name="date" aria-label="Date"type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
                 </div>
 
@@ -5268,7 +5268,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      <select  id="po_identification_3645" name="po_identification" aria-label="PO Identification"className="w-48 bg-white border border-slate-400 p-0.5 outline-none font-normal text-black">
                         <option>{formData.po_identification}</option>
                      </select>
-                     <label className="ml-0 sm:ml-4 shrink-0">S Date</label>
+                     <label className="ml-0 sm:ml-4 shrink-0">Souda Date</label>
                      <input  id="po_identification_3649" name="po_identification" aria-label="PO Identification"type="date" className={`w-28 p-0.5 outline-none font-normal border text-black transition-colors duration-150 ${
                        isSaudaActive ? "bg-[#EAF4FF] border-sky-300 text-sky-950 font-semibold" : "bg-white border-slate-400"
                      }`} value={formData.s_date} onChange={(e) => {
