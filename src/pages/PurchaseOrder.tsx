@@ -3035,10 +3035,49 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
+  // Helper function to check if advance payment has been recorded for a PO
+  const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]) => {
+    if (item.has_payment_done) return true;
+    const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const pPoClean = cleanPoVal(item.po_no);
+    const pContractClean = cleanPoVal(item.contract_po_no);
+    const ptfClean = cleanPoVal(item.ptf_no);
+    const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
+    
+    const poPayments = (paymentsList || []).filter((pay: any) => {
+      const payPoClean = cleanPoVal(pay.po_no);
+      return (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.po_no).trim().toUpperCase()) ||
+             (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.contract_po_no).trim().toUpperCase()) ||
+             (pay.po_no && item.ptf_no && String(pay.po_no).trim().toUpperCase() === String(item.ptf_no).trim().toUpperCase()) ||
+             (pPoClean && pPoClean === payPoClean) ||
+             (pContractClean && pContractClean === payPoClean) ||
+             (ptfClean && ptfClean === payPoClean) ||
+             (saudaClean && saudaClean === payPoClean);
+    });
+
+    return poPayments.some((pay: any) =>
+      (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
+      Number(pay.paid_amount || 0) > 0 ||
+      String(pay.payment_status || '').toLowerCase() === 'paid' ||
+      String(pay.status || '').toLowerCase() === 'completed'
+    );
+  };
+
   // "Pass" = every field of the linked Material Inspection matches this P.O, so it
   // is promoted to the Final P.O stage (status 'final'). Mismatches stay in Temp and
   // surface in the Mismatch section until cleared.
   const handlePassToFinal = async (item: any) => {
+    // Check advance payment status before allowing move to Final P.O
+    const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments);
+    if (!isPaymentDone) {
+      setEmailNotification({
+        type: 'warning',
+        title: 'Advance Payment Required',
+        message: `Advance Payment is not completed yet for PO #${item.po_no || item.ptf_no}. Please record Advance Payment in Payment Dashboard before moving to Final P.O.`
+      });
+      return;
+    }
+
     const ok = await askConfirm(
       `Move ${item.po_no} from Sauda Check Point to Final P.O?`,
       { title: 'Pass → Final P.O', confirmLabel: 'Pass' }
@@ -4560,31 +4599,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const isResolved = isPoMismatchResolved(item);
                                  const isPass = isPtf || isResolved || item.pass_status === 'pass' || (mr && mr.status === 'match');
 
-                                 // Check payment status from payment_master
-                                 const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
-                                 const pPoClean = cleanPoVal(item.po_no);
-                                 const pContractClean = cleanPoVal(item.contract_po_no);
-                                 const poPayments = (allPayments || []).filter((pay: any) => {
-                                   const payPoClean = cleanPoVal(pay.po_no);
-                                   return (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.po_no).trim().toUpperCase()) ||
-                                          (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.contract_po_no).trim().toUpperCase()) ||
-                                          (pPoClean && pPoClean === payPoClean) ||
-                                          (pContractClean && pContractClean === payPoClean);
-                                 });
-                                 const isPaymentDone = item.has_payment_done || poPayments.some((pay: any) =>
-                                   (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
-                                   Number(pay.paid_amount || 0) > 0 ||
-                                   String(pay.payment_status || '').toLowerCase() === 'paid' ||
-                                   String(pay.status || '').toLowerCase() === 'completed'
-                                 );
-
-                                 // Contract weight fulfillment
-                                 const contract = parseFloat(item.total_contract_mt || 0) || 0;
-                                 const rcvd = Number(item.received_weight_mt || 0);
-                                 const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
-                                 const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-                                 const isWeightComplete = item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
-                                 const isCompleteAndPass = isPass && (item.pending === false || item.is_fully_completed || isWeightComplete);
+                                 // Check payment status from payment_master / allPayments
+                                 const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments);
 
                                  // 1. If awaiting Mill Inspection
                                  if (!isPass && item.pass_status === 'awaiting' && (!mr || !mr.hasInspection)) {
@@ -4614,44 +4630,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  }
 
                                  // 3. When Inspection is Pass (or PTF / Cleared):
-                                 // A. If Payment is Done in Payment Section: Show "Payment Done" badge + "Pass" button to move to Final P.O
+                                 // A. When Advance Payment is Done in Payment Dashboard:
+                                 // The "Eligible For Adv. Payment" card turns YELLOW and the PASS button works to move data to Final P.O
                                  if (isPaymentDone) {
                                     return (
                                        <div className="flex flex-col items-center gap-1">
                                           <span 
-                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
-                                            title="Advance / Final Payment has been completed in Payment Section."
+                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-amber-300 text-amber-950 border border-amber-500 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1 font-mono tracking-tight"
+                                            title="Advance Payment Done in Payment Dashboard — Ready to Move to Final P.O"
                                           >
-                                            <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3]" />
-                                            <span>Payment Done</span>
+                                            <Check className="w-2.5 h-2.5 text-amber-950 stroke-[3]" />
+                                            <span>Eligible For Adv. Pay</span>
                                           </span>
                                           <button
                                              onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                             title="Payment Completed! Click to Move this P.O to Final P.O"
-                                             className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
-                                          >
-                                            Pass ✓
-                                          </button>
-                                       </div>
-                                    );
-                                 }
-
-                                 // B. If Status is Complete & Pass (Contract fulfilled + Inspection Pass):
-                                 // Show "Eligible for Advance Payment" badge + "Pass" button to move to Final P.O
-                                 if (isCompleteAndPass) {
-                                    return (
-                                       <div className="flex flex-col items-center gap-1">
-                                          <span 
-                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
-                                            title="Status is Complete & Inspection Passed — Eligible for Advance Payment in Payment Section."
-                                          >
-                                            <CreditCard className="w-2.5 h-2.5 text-blue-700" />
-                                            <span>Eligible for Adv. Pay</span>
-                                          </span>
-                                          <button
-                                             onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                             title="Inspection Passed & Complete — Click to Move to Final P.O (or complete Advance Payment first in Payment section)"
-                                             className="text-[8.5px] font-black px-2 py-0.5 rounded-md bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer active:scale-95 transition-all"
+                                             title="Advance Payment Completed! Click to Move this P.O to Final P.O"
+                                             className="text-[8.5px] font-black px-2.5 py-0.5 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
                                           >
                                             Pass → Final
                                           </button>
@@ -4659,21 +4653,32 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     );
                                  }
 
-                                 // C. If Inspection is Passed, but delivery weight is still in progress:
+                                 // B. Before Advance Payment is Done:
+                                 // Shows standard Blue "Eligible for Adv. Pay" card, and Button displays "Advance Payment Not Done"
                                  return (
                                     <div className="flex flex-col items-center gap-1">
                                        <span 
-                                         className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase whitespace-nowrap"
-                                         title="Inspection details match. Delivery weight still in progress."
+                                         className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
+                                         title="Inspection Passed — Eligible for Advance Payment in Payment Dashboard."
                                        >
-                                         Insp. Pass ✓
+                                         <CreditCard className="w-2.5 h-2.5 text-blue-700" />
+                                         <span>Eligible For Adv. Pay</span>
                                        </span>
                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="Inspection Passed — Click to move to Final P.O"
-                                          className="text-[8.5px] font-black px-2 py-0.5 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer active:scale-95"
+                                          type="button"
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEmailNotification({
+                                              type: 'warning',
+                                              title: 'Advance Payment Required',
+                                              message: `Advance Payment is not completed yet for PO #${item.po_no || item.ptf_no}. Please record Advance Payment in Payment Dashboard before moving to Final P.O.`
+                                            });
+                                          }}
+                                          title="Advance Payment is not done yet. Please complete Advance Payment in Payment Dashboard first."
+                                          className="text-[8px] font-black px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
                                        >
-                                          Pass
+                                          <AlertCircle className="w-2.5 h-2.5 text-amber-700" />
+                                          <span>Adv. Pay Not Done</span>
                                        </button>
                                     </div>
                                  );
