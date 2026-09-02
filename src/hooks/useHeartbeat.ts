@@ -1,62 +1,92 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-export function useHeartbeat(pingIntervalMs = 15000) {
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+// Shared singleton state to prevent duplicate HTTP requests across multiple mounted components
+let globalIsOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
+let lastPingTime = 0;
+let isPinging = false;
+let globalIntervalId: ReturnType<typeof setInterval> | null = null;
+const subscribers = new Set<(online: boolean) => void>();
+
+async function performHeartbeat() {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    updateOnlineState(false);
+    return;
+  }
+
+  const now = Date.now();
+  // Throttle: don't ping more than once every 15 seconds globally
+  if (isPinging || (now - lastPingTime < 15000 && lastPingTime > 0)) {
+    return;
+  }
+
+  isPinging = true;
+  lastPingTime = now;
+
+  try {
+    const { error } = await supabase
+      .from('user_master')
+      .select('user_id')
+      .limit(1)
+      .abortSignal(AbortSignal.timeout(5000));
+
+    if (error && (error.code === 'FetchError' || error.message?.includes('timeout') || error.message?.includes('network'))) {
+      updateOnlineState(false);
+    } else {
+      updateOnlineState(true);
+    }
+  } catch {
+    updateOnlineState(false);
+  } finally {
+    isPinging = false;
+  }
+}
+
+function updateOnlineState(online: boolean) {
+  if (globalIsOnline !== online) {
+    globalIsOnline = online;
+    subscribers.forEach(cb => cb(online));
+  }
+}
+
+function setupGlobalListeners() {
+  if (typeof window === 'undefined') return;
+
+  if (!globalIntervalId) {
+    // Single shared timer every 30 seconds
+    globalIntervalId = setInterval(performHeartbeat, 30000);
+
+    window.addEventListener('online', () => {
+      performHeartbeat();
+    });
+
+    window.addEventListener('offline', () => {
+      updateOnlineState(false);
+    });
+
+    // Run first check
+    performHeartbeat();
+  }
+}
+
+export function useHeartbeat(_pingIntervalMs = 30000) {
+  const [isOnline, setIsOnline] = useState<boolean>(globalIsOnline);
 
   useEffect(() => {
-    // Initial check
-    let isMounted = true;
-    
-    const checkConnection = async () => {
-      if (!navigator.onLine) {
-        if (isMounted) setIsOnline(false);
-        return;
-      }
-      
-      try {
-        // Fast, lightweight query just to verify connection
-        const { error } = await supabase.from('user_master').select('user_id').limit(1).abortSignal(AbortSignal.timeout(5000));
-        
-        if (isMounted) {
-          // If we hit an auth error or other expected DB error, we are still technically online to the server
-          // If we hit a fetch error or timeout, we are offline
-          if (error && (error.code === 'FetchError' || error.message?.includes('timeout'))) {
-            setIsOnline(false);
-          } else {
-            setIsOnline(true);
-          }
-        }
-      } catch (e) {
-        if (isMounted) setIsOnline(false);
-      }
+    setupGlobalListeners();
+
+    const handler = (status: boolean) => {
+      setIsOnline(status);
     };
 
-    // Check immediately on mount
-    checkConnection();
-
-    // Set up periodic heartbeat
-    const intervalId = setInterval(checkConnection, pingIntervalMs);
-
-    // Listen to standard browser events as fallbacks/triggers
-    const handleOnline = () => {
-      checkConnection(); // Immediately verify with DB when browser says online
-    };
-    
-    const handleOffline = () => {
-      if (isMounted) setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    subscribers.add(handler);
+    setIsOnline(globalIsOnline);
 
     return () => {
-      isMounted = false;
-      clearInterval(intervalId);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      subscribers.delete(handler);
     };
-  }, [pingIntervalMs]);
+  }, []);
 
   return isOnline;
 }
+

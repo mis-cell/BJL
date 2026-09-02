@@ -41,6 +41,77 @@ import NotificationCenter from './NotificationCenter';
 import { getCurrentUserContext } from '../lib/permissions';
 import { supabase } from '../lib/supabase';
 
+interface DisputeSummaryData {
+  materialMismatchCount: number;
+  sattaDisputeCount: number;
+  recentCases: any[];
+}
+
+let globalDisputeCache: DisputeSummaryData = {
+  materialMismatchCount: 0,
+  sattaDisputeCount: 0,
+  recentCases: []
+};
+
+let disputePollTimer: ReturnType<typeof setInterval> | null = null;
+let isDisputePolling = false;
+let lastDisputePollTime = 0;
+const disputeSubscribers = new Set<(data: DisputeSummaryData) => void>();
+
+async function fetchGlobalDisputes() {
+  if (!supabase) return;
+  const now = Date.now();
+  if (isDisputePolling || (now - lastDisputePollTime < 25000 && lastDisputePollTime > 0)) {
+    return;
+  }
+  isDisputePolling = true;
+  lastDisputePollTime = now;
+
+  try {
+    const [mmRes, smRes] = await Promise.all([
+      supabase.from('material_mismatch').select('*').order('created_at', { ascending: false }).limit(10),
+      supabase.from('satta_mismatch').select('*').order('created_at', { ascending: false }).limit(10)
+    ]);
+
+    const mmList = mmRes.data || [];
+    const smList = smRes.data || [];
+    
+    const pendingMM = mmList.filter((m: any) => (m.status || 'pending').toLowerCase() !== 'approved' && (m.status || 'pending').toLowerCase() !== 'cleared');
+    const pendingSM = smList.filter((s: any) => (s.status || 'dispute').toLowerCase() !== 'approved' && (s.status || 'dispute').toLowerCase() !== 'cleared');
+
+    const combined = [
+      ...pendingMM.map((m: any) => ({ ...m, caseType: 'Material Mismatch', id: m.mismatch_id || m.id, date: m.created_at || new Date().toISOString() })),
+      ...pendingSM.map((s: any) => ({ ...s, caseType: 'Satta Dispute', id: s.mismatch_id || s.id, date: s.created_at || new Date().toISOString() }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    globalDisputeCache = {
+      materialMismatchCount: pendingMM.length,
+      sattaDisputeCount: pendingSM.length,
+      recentCases: combined
+    };
+
+    disputeSubscribers.forEach(cb => cb(globalDisputeCache));
+  } catch (err) {
+    console.warn("Dispute fetch warn:", err);
+  } finally {
+    isDisputePolling = false;
+  }
+}
+
+function subscribeToDisputes(callback: (data: DisputeSummaryData) => void) {
+  disputeSubscribers.add(callback);
+  callback(globalDisputeCache);
+
+  if (!disputePollTimer && typeof window !== 'undefined') {
+    fetchGlobalDisputes();
+    disputePollTimer = setInterval(fetchGlobalDisputes, 45000);
+  }
+
+  return () => {
+    disputeSubscribers.delete(callback);
+  };
+}
+
 interface LegacyLayoutProps {
   title: string;
   subtitle?: string;
@@ -73,47 +144,20 @@ export default function LegacyLayout({
 
   const currentUser = getCurrentUserContext().username || "Admin User";
 
-  const [disputeSummary, setDisputeSummary] = React.useState({
-    materialMismatchCount: 0,
-    sattaDisputeCount: 0,
-    recentCases: [] as any[]
-  });
+  const [disputeSummary, setDisputeSummary] = React.useState<{
+    materialMismatchCount: number;
+    sattaDisputeCount: number;
+    recentCases: any[];
+  }>(() => globalDisputeCache);
   const [isDisputeTrayOpen, setIsDisputeTrayOpen] = React.useState(false);
 
   React.useEffect(() => {
-    const fetchDisputes = async () => {
-      try {
-        if (!supabase) return;
-        const [mmRes, smRes] = await Promise.all([
-          supabase.from('material_mismatch').select('*').order('created_at', { ascending: false }).limit(10),
-          supabase.from('satta_mismatch').select('*').order('created_at', { ascending: false }).limit(10)
-        ]);
-
-        const mmList = mmRes.data || [];
-        const smList = smRes.data || [];
-        
-        const pendingMM = mmList.filter((m: any) => (m.status || 'pending').toLowerCase() !== 'approved' && (m.status || 'pending').toLowerCase() !== 'cleared');
-        const pendingSM = smList.filter((s: any) => (s.status || 'dispute').toLowerCase() !== 'approved' && (s.status || 'dispute').toLowerCase() !== 'cleared');
-
-        const combined = [
-          ...pendingMM.map((m: any) => ({ ...m, caseType: 'Material Mismatch', id: m.mismatch_id || m.id, date: m.created_at || new Date().toISOString() })),
-          ...pendingSM.map((s: any) => ({ ...s, caseType: 'Satta Dispute', id: s.mismatch_id || s.id, date: s.created_at || new Date().toISOString() }))
-        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        setDisputeSummary({
-          materialMismatchCount: pendingMM.length,
-          sattaDisputeCount: pendingSM.length,
-          recentCases: combined
-        });
-      } catch (err) {
-        console.warn("Error fetching dispute cases for header tray:", err);
-      }
-    };
-
-    fetchDisputes();
-    const interval = setInterval(fetchDisputes, 20000);
-    return () => clearInterval(interval);
+    const unsubscribe = subscribeToDisputes((summary) => {
+      setDisputeSummary(summary);
+    });
+    return unsubscribe;
   }, []);
+
   
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
