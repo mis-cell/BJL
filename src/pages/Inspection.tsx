@@ -1072,214 +1072,94 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   async function fetchInspectionRecords(isManual: boolean = false) {
     setLoading(true);
     try {
-      // 1. Fetch saved material_inspection, mill_inspection_master, and inspection_master records concurrently
-      const map = new Map<string, InspectionMasterRecord>();
-
-      let matInspList: any[] = [];
-      let millInspList: any[] = [];
-      let inspMasterList: any[] = [];
-      let faList: any[] = [];
-      let archiveList: any[] = [];
-
+      // 1. Fetch saved material_inspection records
+      let inspectionList: InspectionMasterRecord[] = [];
       if (supabase) {
-        try {
-          const [matRes, millRes, inspRes, faRes, archRes] = await Promise.all([
-            supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).limit(5000),
-            supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).limit(5000),
-            supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).limit(5000),
-            supabase.from("final_arrival").select("*").order("created_at", { ascending: false }).limit(5000),
-            supabase.from("mr_archive").select("*").order("created_at", { ascending: false }).limit(5000)
-          ]);
+        const { data, error } = await supabase
+          .from("material_inspection")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-          if (matRes.data && matRes.data.length > 0) matInspList = matRes.data;
-          if (millRes.data && millRes.data.length > 0) millInspList = millRes.data;
-          if (inspRes.data && inspRes.data.length > 0) inspMasterList = inspRes.data;
-          if (faRes.data && faRes.data.length > 0) faList = faRes.data;
-          if (archRes.data && archRes.data.length > 0) archiveList = archRes.data;
-        } catch (e) {
-          console.error("Error fetching multi-table inspection and arrival records:", e);
+        if (!error && data && data.length > 0) {
+          inspectionList = data;
+        } else {
+          // Fallback check
+          const { data: fallback } = await supabase
+            .from("inspection_master")
+            .select("*")
+            .order("created_at", { ascending: false });
+          if (fallback && fallback.length > 0) inspectionList = fallback;
         }
       }
 
-      // Local storage fallbacks
-      try {
-        const cachedMat = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
-        if (cachedMat) {
-          const parsed = JSON.parse(cachedMat);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((item: any) => {
-              if (!matInspList.some(r => r.mr_no === item.mr_no)) matInspList.push(item);
-            });
-          }
-        }
-      } catch (e) {}
+      if (inspectionList.length === 0) {
+        try {
+          const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
+          if (cached) inspectionList = JSON.parse(cached);
+        } catch (e) {}
+      }
 
+      // 2. Fetch Final Arrival records (Actual physical arrivals received at the mill)
+      let faList: any[] = [];
+      if (supabase) {
+        try {
+          const faRes = await supabase
+            .from("final_arrival")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (faRes.data && faRes.data.length > 0) {
+            faList.push(...faRes.data);
+          }
+        } catch (e) {
+          console.error("Error fetching arrivals from final_arrival:", e);
+        }
+      }
+
+      // Local storage fallbacks for Final Arrival Vouchers
       try {
-        const cachedFa = localStorage.getItem("final_arrival_vouchers") || localStorage.getItem("final_arrival_records");
+        const cachedFa = localStorage.getItem("final_arrival_vouchers");
         if (cachedFa) {
           const parsed = JSON.parse(cachedFa);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((item: any) => {
-              if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id) || (f.mr_no && f.mr_no === item.mr_no))) {
-                faList.push(item);
-              }
-            });
-          }
+          parsed.forEach((item: any) => {
+            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id) || (f.mr_no && f.mr_no === item.mr_no))) {
+              faList.push(item);
+            }
+          });
         }
       } catch (e) {}
 
       setFinalArrivalList(faList);
 
-      const normalizeKey = (val?: any) => {
-        if (!val) return "";
-        return String(val).trim().toUpperCase();
-      };
+      // 3. Enrich existing saved inspection records if missing details, but do NOT auto-create unsaved rows
+      const map = new Map<string, InspectionMasterRecord>();
 
-      // Helper to register/merge inspection record
-      const addOrMergeInspection = (rec: any) => {
-        const k = normalizeKey(rec.mr_no || rec.arrival_no || rec.final_arrival_no || rec.temporary_arrival_no);
-        if (!k) return;
+      inspectionList.forEach(rec => {
+        const k = (rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
+        if (k) map.set(k, rec);
+      });
 
-        const existing = map.get(k);
+      // Enrich saved records with info from Final Arrival if available
+      faList.forEach(fa => {
+        const mrKey = (fa.mr_no || "").trim().toUpperCase();
+        const arrKey = (fa.final_arrival_no || fa.arrival_no || "").trim().toUpperCase();
+
+        const existing = (mrKey && map.get(mrKey)) || (arrKey && map.get(arrKey));
+
         if (existing) {
-          map.set(k, {
-            ...existing,
-            ...rec,
-            mr_no: existing.mr_no || rec.mr_no || k,
-            arrival_no: existing.arrival_no || rec.arrival_no || rec.final_arrival_no || k,
-            actual_moisture: rec.actual_moisture ?? existing.actual_moisture,
-            claim_moisture: rec.claim_moisture ?? existing.claim_moisture,
-            actual_dust: rec.actual_dust ?? existing.actual_dust,
-            claim_dust: rec.claim_dust ?? existing.claim_dust,
-            actual_ncv: rec.actual_ncv ?? existing.actual_ncv,
-            claim_ncv: rec.claim_ncv ?? existing.claim_ncv,
-            deduction_amount: rec.deduction_amount ?? existing.deduction_amount,
-            status: rec.status || existing.status || "Completed"
-          });
-        } else {
-          map.set(k, {
-            mr_no: rec.mr_no || rec.arrival_no || rec.final_arrival_no || k,
-            mr_date: rec.mr_date || rec.date || rec.arrival_date || rec.created_at,
-            arrival_no: rec.arrival_no || rec.final_arrival_no || rec.mr_no || k,
-            arrival_date: rec.arrival_date || rec.date || rec.mr_date || rec.created_at,
-            po_no: rec.po_no || rec.contract_po_no || "",
-            po_date: rec.po_date || rec.date || "",
-            broker_name: rec.broker_name || rec.broker || "",
-            supplier_name: rec.supplier_name || rec.supplier || rec.challan_supplier || "",
-            lorry_number: rec.lorry_number || rec.lorry_no || rec.vehicle_no || "",
-            actual_moisture: Number(rec.actual_moisture || rec.moisture_act || rec.insp_read_avg || 0),
-            claim_moisture: Number(rec.claim_moisture || rec.moisture_claim || 0),
-            actual_dust: Number(rec.actual_dust || rec.dust_act || 0),
-            claim_dust: Number(rec.claim_dust || rec.dust_claim || 0),
-            actual_ncv: Number(rec.actual_ncv || rec.ncv_act || 0),
-            claim_ncv: Number(rec.claim_ncv || rec.ncv_claim || 0),
-            detention_days: Number(rec.detention_days || 0),
-            unloading_date: rec.unloading_date || "",
-            mill_po_no: rec.mill_po_no || rec.po_no || "",
-            mill_po_date: rec.mill_po_date || rec.po_date || "",
-            mr_spcl_print: rec.mr_spcl_print || "",
-            remarks: rec.remarks || "",
-            delivery_claim: Number(rec.delivery_claim || 0),
-            unit_name: rec.unit_name || rec.unit || "",
-            unit_code: rec.unit_code || "",
-            deduction_type: rec.deduction_type || "",
-            deduction_rate: Number(rec.deduction_rate || 0),
-            deduction_qty: Number(rec.deduction_qty || 0),
-            deduction_amount: Number(rec.deduction_amount || 0),
-            deductions: rec.deductions || [],
-            status: rec.status || "Completed",
-            created_at: rec.created_at || rec.mr_date || rec.arrival_date || new Date().toISOString(),
-            grid_details: rec.grid_details || rec.items || rec.details
-          });
-        }
-      };
-
-      // 2. Load all inspection masters
-      matInspList.forEach(addOrMergeInspection);
-      millInspList.forEach(addOrMergeInspection);
-      inspMasterList.forEach(addOrMergeInspection);
-
-      // 3. Load all Final Arrival vouchers and Archived arrivals into the Register
-      const allArrivals = [...faList, ...archiveList];
-      allArrivals.forEach(fa => {
-        const mrKey = normalizeKey(fa.mr_no);
-        const arrKey = normalizeKey(fa.final_arrival_no || fa.arrival_no);
-        const tempKey = normalizeKey(fa.temporary_arrival_no);
-        const idKey = fa.final_arrival_id ? `FA-${fa.final_arrival_id}`.toUpperCase() : "";
-
-        // Find existing match if any
-        let existingKey = (mrKey && map.has(mrKey) ? mrKey : "") ||
-                          (arrKey && map.has(arrKey) ? arrKey : "") ||
-                          (tempKey && map.has(tempKey) ? tempKey : "") ||
-                          (idKey && map.has(idKey) ? idKey : "");
-
-        const primaryKey = arrKey || mrKey || tempKey || idKey || `ARR-${fa.id || Math.random()}`;
-
-        if (existingKey) {
-          const existing = map.get(existingKey)!;
+          // Fill missing header attributes from Final Arrival record
           if (!existing.po_no && fa.po_no) existing.po_no = fa.po_no;
           if (!existing.po_date && (fa.po_date || fa.date)) existing.po_date = fa.po_date || fa.date;
           if (!existing.supplier_name && (fa.supplier || fa.challan_supplier)) existing.supplier_name = fa.supplier || fa.challan_supplier;
           if (!existing.broker_name && fa.broker) existing.broker_name = fa.broker;
           if (!existing.lorry_number && fa.lorry_number) existing.lorry_number = fa.lorry_number;
-          if (!existing.arrival_no && (fa.final_arrival_no || fa.arrival_no)) existing.arrival_no = fa.final_arrival_no || fa.arrival_no;
+          if (!existing.arrival_no && fa.final_arrival_no) existing.arrival_no = fa.final_arrival_no;
           if (!existing.arrival_date && fa.date) existing.arrival_date = fa.date;
-          if (!existing.unit_name && (fa.unit_name || fa.unit)) existing.unit_name = fa.unit_name || fa.unit;
           if (!existing.grid_details) existing.grid_details = fa.grid_details || fa.items || fa.details;
-        } else {
-          // Add arrival to the inspection register
-          const hasInspectionParams = Number(fa.actual_moisture || fa.insp_read_avg || fa.moisture || 0) > 0 || Number(fa.deduction_amount || 0) > 0;
-          const statusText = (fa.status && String(fa.status).toLowerCase() === "settled") 
-            ? "Settled" 
-            : (hasInspectionParams ? "Completed" : "Pending Inspection");
-
-          map.set(primaryKey, {
-            mr_no: fa.final_arrival_no || fa.mr_no || fa.arrival_no || primaryKey,
-            mr_date: fa.date || fa.arrival_date || fa.created_at,
-            arrival_no: fa.final_arrival_no || fa.arrival_no || fa.mr_no || primaryKey,
-            arrival_date: fa.date || fa.arrival_date || fa.created_at,
-            po_no: fa.po_no || "",
-            po_date: fa.po_date || fa.date || "",
-            broker_name: fa.broker || "",
-            supplier_name: fa.supplier || fa.challan_supplier || "",
-            lorry_number: fa.lorry_number || fa.lorry_no || fa.vehicle_no || "",
-            actual_moisture: Number(fa.actual_moisture || fa.insp_read_avg || fa.moisture || 0),
-            claim_moisture: Number(fa.claim_moisture || 0),
-            actual_dust: Number(fa.actual_dust || fa.dust || 0),
-            claim_dust: Number(fa.claim_dust || 0),
-            actual_ncv: Number(fa.actual_ncv || fa.ncv || 0),
-            claim_ncv: Number(fa.claim_ncv || 0),
-            detention_days: Number(fa.detention_days || 0),
-            unloading_date: fa.unloading_date || "",
-            mill_po_no: fa.mill_po_no || fa.po_no || "",
-            mill_po_date: fa.mill_po_date || fa.po_date || "",
-            mr_spcl_print: fa.mr_spcl_print || "",
-            remarks: fa.remarks || "",
-            delivery_claim: Number(fa.delivery_claim || 0),
-            unit_name: fa.unit_name || fa.unit || "BALES",
-            unit_code: fa.unit_code || "",
-            deduction_type: fa.deduction_type || "",
-            deduction_rate: Number(fa.deduction_rate || 0),
-            deduction_qty: Number(fa.deduction_qty || 0),
-            deduction_amount: Number(fa.deduction_amount || 0),
-            deductions: fa.deductions || [],
-            status: statusText,
-            created_at: fa.created_at || fa.date || new Date().toISOString(),
-            grid_details: fa.grid_details || fa.items || fa.details
-          });
         }
       });
 
       const displayList = Array.from(map.values());
-
-      // Sort by Arrival Date / MR Date descending
-      displayList.sort((a, b) => {
-        const dateA = new Date(a.mr_date || a.arrival_date || a.created_at || 0).getTime();
-        const dateB = new Date(b.mr_date || b.arrival_date || b.created_at || 0).getTime();
-        if (dateB !== dateA) return dateB - dateA;
-        return (b.mr_no || "").localeCompare(a.mr_no || "");
-      });
-
       setRecords(displayList);
 
       try {
@@ -1288,11 +1168,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       } catch (e) {}
 
       if (isManual) {
-        showToast(`Loaded ${displayList.length} total inspection & arrival records.`);
+        showToast("Inspection register data refreshed successfully.");
       }
       syncInspectionUnitsWithDatabase(displayList, faList);
     } catch (err) {
-      console.error("Error fetching inspection records:", err);
+      console.error("Error fetching material_inspection records:", err);
       if (isManual) {
         showToast("Failed to refresh records from database.");
       }
@@ -2584,10 +2464,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   });
 
   const totalInspections = records.length;
-  const testedRecords = records.filter(r => Number(r.actual_moisture) > 0);
-  const avgMoisture = testedRecords.length > 0 
-    ? (testedRecords.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / testedRecords.length).toFixed(1) 
-    : (records.length > 0 ? (records.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / records.length).toFixed(1) : "0.0");
+  const avgMoisture = records.length > 0 ? (records.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / records.length).toFixed(1) : "0.0";
   const totalDeductions = records.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
 
   return (
@@ -2662,7 +2539,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 <div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Audits</p>
                   <p className="text-2xl font-black text-slate-900 mt-1">{totalInspections}</p>
-                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">All Inspections & Arrivals</p>
+                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">material_inspection records</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
                   <ShieldCheck className="w-6 h-6" />
