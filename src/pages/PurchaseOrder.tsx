@@ -34,6 +34,7 @@ import {
   Check,
   AlertCircle,
   Scale,
+  CreditCard,
   ArrowUpDown,
   ArrowUp,
   ArrowDown
@@ -1365,6 +1366,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [allTempArrivals, setAllTempArrivals] = useState<any[]>([]);
   const [allFinalArrivals, setAllFinalArrivals] = useState<any[]>([]);
   const [allInspections, setAllInspections] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
 
   // Temporary P.O ↔ Material Inspection match status, keyed by po_no.
   const [matchResults, setMatchResults] = useState<Record<string, PoMatchResult>>({});
@@ -2067,7 +2069,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         matMismatchesRes,
         satMismatchesRes,
         dbMatMismatches,
-        dbSatMismatches
+        dbSatMismatches,
+        payments
       ] = await Promise.all([
         safeFetch('broker_master'),
         safeFetch('supply_master'),
@@ -2088,6 +2091,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         safeFetch('material_mismatch'),
         safeFetch('satta_mismatch'),
         safeFetch('sauda_check_point_deductions'),
+        safeFetch('payment_master', 'created_at', false)
       ]);
 
       const combinedMatMismatches = [...((matMismatchesRes as any)?.data || []), ...(dbMatMismatches || [])];
@@ -2096,6 +2100,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       setDbSattaMismatches(combinedSatMismatches);
       setSattaBases((sattaBasesRes as any)?.data || sattaBasesRes || []);
       setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
+      setAllPayments(payments || []);
       if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
 
       const dedMap: Record<string, any> = {};
@@ -2172,7 +2177,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const tol = calculateWeightTolerance(contractWeight, totalReceivedMt, unit);
         const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
         const isWeightCompleted = tol.isCompleted;
-        const computedPending = (isExplicitCompleted || isWeightCompleted) ? false : true;
 
         // Pass / Mismatch: strictly validate this P.O against the Mill Inspection Section.
         // If a Mill Inspection has been recorded and all fields match → Pass; if fields differ → Mismatch;
@@ -2211,6 +2215,33 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           passStatus = 'awaiting';
         }
 
+        const isPass = (isPtfRow || isCleared || passStatus === 'pass');
+
+        // Check Payment Status in payment_master
+        const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const pPoClean = cleanPoVal(p.po_no);
+        const pContractClean = cleanPoVal(p.contract_po_no);
+        const matchingPayments = (payments || []).filter((pay: any) => {
+          const payPoClean = cleanPoVal(pay.po_no);
+          return exactPo(p.po_no, pay.po_no) || 
+                 exactPo(p.contract_po_no, pay.po_no) ||
+                 (pPoClean && pPoClean === payPoClean) ||
+                 (pContractClean && pContractClean === payPoClean);
+        });
+        const hasPaymentDone = matchingPayments.some((pay: any) =>
+          (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
+          Number(pay.paid_amount || 0) > 0 ||
+          String(pay.payment_status || '').toLowerCase() === 'paid' ||
+          String(pay.status || '').toLowerCase() === 'completed'
+        );
+
+        // User Rule: "Here Complete Means 'STATUS' Is Complete and 'PASS/MISMATCH' is 'Pass', other Is Treated as 'Pending'"
+        const isWeightFulfilled = isExplicitCompleted || isWeightCompleted;
+        const isFullyComplete = isTempPo 
+          ? (isWeightFulfilled && isPass)
+          : isWeightFulfilled;
+        const computedPending = !isFullyComplete;
+
         return {
           ...p,
           date: p.date || p.po_date || (p.created_at ? p.created_at.slice(0, 10) : ''),
@@ -2221,7 +2252,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           received_weight_mt: totalReceivedMt,
           weight_tolerance: tol,
           pass_status: passStatus,
-          mismatch_fields: mismatchFields
+          mismatch_fields: mismatchFields,
+          has_payment_done: hasPaymentDone,
+          is_fully_completed: isFullyComplete
         };
       }));
 
@@ -2257,7 +2290,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive', 'material_inspection', 'mill_inspection_master'] });
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { tables: ['purchase_master', 'purchase_detail_master', 'sauda_check_point', 'sauda_check_point_details', 'sauda_check_point_deductions', 'p.o_archive', 'po_archive', 'material_inspection', 'mill_inspection_master', 'payment_master'] });
 
   useEffect(() => {
     fetchPosAndMasters();
@@ -2283,6 +2316,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inspection' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'mill_inspection_master' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_master' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'temporary_material_received' }, handleDataUpdate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
         .subscribe();
@@ -4437,7 +4471,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const rcvd = Number(item.received_weight_mt || 0);
                                  const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
                                  const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-                                 const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+                                 const mr = matchResults[item.po_no];
+                                 const isPass = isTempPo 
+                                    ? (item.pass_status === 'pass' || (mr && mr.status === 'match') || isPoMismatchResolved(item) || !!(item.ptf_no && String(item.ptf_no).trim()))
+                                    : true;
+                                 const isWeightComplete = item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+                                 const isCompletedPo = isTempPo 
+                                    ? ((item.pending === false || item.is_fully_completed || isWeightComplete) && isPass)
+                                    : (item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted);
                                  const isOverdue = !isCompletedPo && item.delivery_to &&
                                     new Date(item.delivery_to) < new Date(new Date().toDateString());
                                  return (
@@ -4521,40 +4562,125 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  }
                                  const isPtf = !!(item.ptf_no && String(item.ptf_no).trim());
                                  const mr = matchResults[item.po_no];
-                                 if (isPtf) {
+                                 const isResolved = isPoMismatchResolved(item);
+                                 const isPass = isPtf || isResolved || item.pass_status === 'pass' || (mr && mr.status === 'match');
+
+                                 // Check payment status from payment_master
+                                 const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+                                 const pPoClean = cleanPoVal(item.po_no);
+                                 const pContractClean = cleanPoVal(item.contract_po_no);
+                                 const poPayments = (allPayments || []).filter((pay: any) => {
+                                   const payPoClean = cleanPoVal(pay.po_no);
+                                   return (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.po_no).trim().toUpperCase()) ||
+                                          (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.contract_po_no).trim().toUpperCase()) ||
+                                          (pPoClean && pPoClean === payPoClean) ||
+                                          (pContractClean && pContractClean === payPoClean);
+                                 });
+                                 const isPaymentDone = item.has_payment_done || poPayments.some((pay: any) =>
+                                   (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
+                                   Number(pay.paid_amount || 0) > 0 ||
+                                   String(pay.payment_status || '').toLowerCase() === 'paid' ||
+                                   String(pay.status || '').toLowerCase() === 'completed'
+                                 );
+
+                                 // Contract weight fulfillment
+                                 const contract = parseFloat(item.total_contract_mt || 0) || 0;
+                                 const rcvd = Number(item.received_weight_mt || 0);
+                                 const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
+                                 const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+                                 const isWeightComplete = item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+                                 const isCompleteAndPass = isPass && (item.pending === false || item.is_fully_completed || isWeightComplete);
+
+                                 // 1. If awaiting Mill Inspection
+                                 if (!isPass && item.pass_status === 'awaiting' && (!mr || !mr.hasInspection)) {
                                     return (
-                                       <button
-                                          onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="PTF entry — direct Final P.O. Click to move."
-                                          className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer"
-                                       >Pass</button>
+                                      <span 
+                                        className="text-[8.5px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase" 
+                                        title="No Material Inspection recorded yet in Mill Inspection section"
+                                      >
+                                        Awaiting
+                                      </span>
                                     );
                                  }
-                                 if (!mr || !mr.hasInspection) {
-                                    return <span className="text-[8px] font-bold text-slate-400 uppercase" title="No Material Inspection recorded yet">Awaiting</span>;
-                                 }
-                                 if (mr.status === 'match') {
+
+                                 // 2. If mismatch with Mill Inspection
+                                 if (!isPass && (item.pass_status === 'mismatch' || (mr && mr.status === 'mismatch'))) {
+                                    const diffFields = item.mismatch_fields?.length 
+                                      ? item.mismatch_fields.join(', ') 
+                                      : (mr?.mismatches?.map((m: any) => m.field).join(', ') || 'Fields differ');
                                     return (
-                                       <button
-                                          onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="All fields match Material Inspection — click to move to Final P.O"
-                                          className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer"
-                                       >Pass</button>
+                                      <span
+                                         className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs"
+                                         title={`Mismatch in: ${diffFields}. Resolve dispute in Mismatch Section.`}
+                                      >
+                                        Mismatch
+                                      </span>
                                     );
                                  }
+
+                                 // 3. When Inspection is Pass (or PTF / Cleared):
+                                 // A. If Payment is Done in Payment Section: Show "Payment Done" badge + "Pass" button to move to Final P.O
+                                 if (isPaymentDone) {
+                                    return (
+                                       <div className="flex flex-col items-center gap-1">
+                                          <span 
+                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
+                                            title="Advance / Final Payment has been completed in Payment Section."
+                                          >
+                                            <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3]" />
+                                            <span>Payment Done</span>
+                                          </span>
+                                          <button
+                                             onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
+                                             title="Payment Completed! Click to Move this P.O to Final P.O"
+                                             className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+                                          >
+                                            Pass ✓
+                                          </button>
+                                       </div>
+                                    );
+                                 }
+
+                                 // B. If Status is Complete & Pass (Contract fulfilled + Inspection Pass):
+                                 // Show "Eligible for Advance Payment" badge + "Pass" button to move to Final P.O
+                                 if (isCompleteAndPass) {
+                                    return (
+                                       <div className="flex flex-col items-center gap-1">
+                                          <span 
+                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
+                                            title="Status is Complete & Inspection Passed — Eligible for Advance Payment in Payment Section."
+                                          >
+                                            <CreditCard className="w-2.5 h-2.5 text-blue-700" />
+                                            <span>Eligible for Adv. Pay</span>
+                                          </span>
+                                          <button
+                                             onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
+                                             title="Inspection Passed & Complete — Click to Move to Final P.O (or complete Advance Payment first in Payment section)"
+                                             className="text-[8.5px] font-black px-2 py-0.5 rounded-md bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer active:scale-95 transition-all"
+                                          >
+                                            Pass → Final
+                                          </button>
+                                       </div>
+                                    );
+                                 }
+
+                                 // C. If Inspection is Passed, but delivery weight is still in progress:
                                  return (
-                                    isPoMismatchResolved(item) ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                       <span 
+                                         className="text-[8.5px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase whitespace-nowrap"
+                                         title="Inspection details match. Delivery weight still in progress."
+                                       >
+                                         Insp. Pass ✓
+                                       </span>
                                        <button
                                           onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="Mismatch Cleared & Approved by Admin — Click to Move to Final P.O"
-                                          className="text-[9px] font-black px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white uppercase shadow-xs whitespace-nowrap cursor-pointer transition-all border border-emerald-600"
-                                       >PASS ✓</button>
-                                    ) : (
-                                       <span
-                                          className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help"
-                                          title={`Mismatch in: ${mr.mismatches.map((m: any) => m.field).join(', ')}`}
-                                       >Mismatch</span>
-                                    )
+                                          title="Inspection Passed — Click to move to Final P.O"
+                                          className="text-[8.5px] font-black px-2 py-0.5 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer active:scale-95"
+                                       >
+                                          Pass
+                                       </button>
+                                    </div>
                                  );
                               })()}
                            </td>
