@@ -622,157 +622,164 @@ export default function AdminDesk({
       return;
     }
     try {
-      // Automatically patch user_master to align user_id to TEXT PRIMARY KEY and correct column list
-      try {
-        await supabase.rpc("exec_sql", {
-          query: `
-            DO $$
-            BEGIN
-              IF EXISTS (
-                SELECT 1 
-                FROM information_schema.columns 
-                WHERE table_name = 'user_master' 
-                  AND (column_name = 'is_active' OR (column_name = 'user_id' AND data_type = 'uuid'))
-              ) THEN
-                DROP TABLE IF EXISTS user_master CASCADE;
-              END IF;
-            END $$;
+      const isBootstrapped = typeof window !== 'undefined' && (sessionStorage.getItem('admindesk_tables_bootstrapped') || localStorage.getItem('admindesk_tables_bootstrapped'));
+      if (!isBootstrapped) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('admindesk_tables_bootstrapped', '1');
+          localStorage.setItem('admindesk_tables_bootstrapped', '1');
+        }
+        // Automatically patch user_master to align user_id to TEXT PRIMARY KEY and correct column list
+        try {
+          await supabase.rpc("exec_sql", {
+            query: `
+              DO $$
+              BEGIN
+                IF EXISTS (
+                  SELECT 1 
+                  FROM information_schema.columns 
+                  WHERE table_name = 'user_master' 
+                    AND (column_name = 'is_active' OR (column_name = 'user_id' AND data_type = 'uuid'))
+                ) THEN
+                  DROP TABLE IF EXISTS user_master CASCADE;
+                END IF;
+              END $$;
 
-            CREATE TABLE IF NOT EXISTS user_master (
-              user_id TEXT PRIMARY KEY,
-              username TEXT UNIQUE NOT NULL,
-              password TEXT NOT NULL,
-              role TEXT DEFAULT 'USER',
-              status TEXT DEFAULT 'Active',
-              allowed_modules TEXT DEFAULT '*',
-              level TEXT DEFAULT 'L1', last_login TIMESTAMP WITH TIME ZONE,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
+              CREATE TABLE IF NOT EXISTS user_master (
+                user_id TEXT PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT DEFAULT 'USER',
+                status TEXT DEFAULT 'Active',
+                allowed_modules TEXT DEFAULT '*',
+                level TEXT DEFAULT 'L1', last_login TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
 
-            INSERT INTO user_master (user_id, username, password, role, status, allowed_modules, level)
-            VALUES ('001', 'ADMIN', 'ADMIN', 'ADMIN', 'Active', '*', 'L1')
-            ON CONFLICT (username) DO NOTHING;
-          `
-        });
-      } catch (err) {
-        console.warn("Table patch user_master schema validation failure:", err);
-      }
+              INSERT INTO user_master (user_id, username, password, role, status, allowed_modules, level)
+              VALUES ('001', 'ADMIN', 'ADMIN', 'ADMIN', 'Active', '*', 'L1')
+              ON CONFLICT (username) DO NOTHING;
+            `
+          });
+        } catch (err) {
+          console.warn("Table patch user_master schema validation failure:", err);
+        }
 
-      // Automatically construct customer_master if it doesn't exist
-      try {
-        await supabase.rpc("exec_sql", {
-          query: `
-            CREATE TABLE IF NOT EXISTS customer_master (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              firm_name TEXT,
-              proprietor_name TEXT,
-              email TEXT,
-              contact_number TEXT,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-            ALTER TABLE IF EXISTS customer_master DISABLE ROW LEVEL SECURITY;
+        // Automatically construct customer_master if it doesn't exist
+        try {
+          await supabase.rpc("exec_sql", {
+            query: `
+              CREATE TABLE IF NOT EXISTS customer_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                firm_name TEXT,
+                proprietor_name TEXT,
+                email TEXT,
+                contact_number TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS customer_master DISABLE ROW LEVEL SECURITY;
 
-            CREATE TABLE IF NOT EXISTS moisture_logic (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              season TEXT,
-              operating_area TEXT,
-              threshold_limit TEXT,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-            ALTER TABLE IF EXISTS moisture_logic DISABLE ROW LEVEL SECURITY;
+              CREATE TABLE IF NOT EXISTS moisture_logic (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                season TEXT,
+                operating_area TEXT,
+                threshold_limit TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS moisture_logic DISABLE ROW LEVEL SECURITY;
 
-            INSERT INTO moisture_logic (season, operating_area, threshold_limit)
-            SELECT 'JANUARY TO JUNE (WET SEASON)', 'DAISEE Operating Areas', 'Moisture threshold limit is 18%'
-            WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JANUARY TO JUNE (WET SEASON)' AND operating_area = 'DAISEE Operating Areas');
+              INSERT INTO moisture_logic (season, operating_area, threshold_limit)
+              SELECT 'JANUARY TO JUNE (WET SEASON)', 'DAISEE Operating Areas', 'Moisture threshold limit is 18%'
+              WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JANUARY TO JUNE (WET SEASON)' AND operating_area = 'DAISEE Operating Areas');
 
-            INSERT INTO moisture_logic (season, operating_area, threshold_limit)
-            SELECT 'JANUARY TO JUNE (WET SEASON)', 'Standard / Non-DAISEE', 'Moisture threshold limit is 16%'
-            WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JANUARY TO JUNE (WET SEASON)' AND operating_area = 'Standard / Non-DAISEE');
+              INSERT INTO moisture_logic (season, operating_area, threshold_limit)
+              SELECT 'JANUARY TO JUNE (WET SEASON)', 'Standard / Non-DAISEE', 'Moisture threshold limit is 16%'
+              WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JANUARY TO JUNE (WET SEASON)' AND operating_area = 'Standard / Non-DAISEE');
 
-            INSERT INTO moisture_logic (season, operating_area, threshold_limit)
-            SELECT 'JULY TO DECEMBER (DRY SEASON)', 'DAISEE Operating Areas', 'Moisture threshold limit is 20%'
-            WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JULY TO DECEMBER (DRY SEASON)' AND operating_area = 'DAISEE Operating Areas');
+              INSERT INTO moisture_logic (season, operating_area, threshold_limit)
+              SELECT 'JULY TO DECEMBER (DRY SEASON)', 'DAISEE Operating Areas', 'Moisture threshold limit is 20%'
+              WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JULY TO DECEMBER (DRY SEASON)' AND operating_area = 'DAISEE Operating Areas');
 
-            INSERT INTO moisture_logic (season, operating_area, threshold_limit)
-            SELECT 'JULY TO DECEMBER (DRY SEASON)', 'Standard / Non-DAISEE', 'Moisture threshold limit is 18%'
-            WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JULY TO DECEMBER (DRY SEASON)' AND operating_area = 'Standard / Non-DAISEE');
-          `
-        });
-      } catch (err) {
-        console.warn("Table creation warn on customer_master/moisture_logic:", err);
-      }
+              INSERT INTO moisture_logic (season, operating_area, threshold_limit)
+              SELECT 'JULY TO DECEMBER (DRY SEASON)', 'Standard / Non-DAISEE', 'Moisture threshold limit is 18%'
+              WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JULY TO DECEMBER (DRY SEASON)' AND operating_area = 'Standard / Non-DAISEE');
+            `
+          });
+        } catch (err) {
+          console.warn("Table creation warn on customer_master/moisture_logic:", err);
+        }
 
-      // Automatically construct user_activity_logs if it doesn't exist
-      try {
-        await supabase.rpc("exec_sql", {
-          query: `
-            CREATE TABLE IF NOT EXISTS user_activity_logs (
-              log_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-              username TEXT,
-              activity_type TEXT,
-              module_name TEXT,
-              action_details TEXT,
-              ip_address TEXT DEFAULT 'Local',
-              created_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            ALTER TABLE IF EXISTS user_activity_logs DISABLE ROW LEVEL SECURITY;
-          `
-        });
-      } catch (err) {
-        console.warn("Table creation warn on user_activity_logs:", err);
-      }
+        // Automatically construct user_activity_logs if it doesn't exist
+        try {
+          await supabase.rpc("exec_sql", {
+            query: `
+              CREATE TABLE IF NOT EXISTS user_activity_logs (
+                log_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+                username TEXT,
+                activity_type TEXT,
+                module_name TEXT,
+                action_details TEXT,
+                ip_address TEXT DEFAULT 'Local',
+                created_at TIMESTAMPTZ DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS user_activity_logs DISABLE ROW LEVEL SECURITY;
+            `
+          });
+        } catch (err) {
+          console.warn("Table creation warn on user_activity_logs:", err);
+        }
 
-      // Automatically construct unit_master and drop unit_maste if exists
-      try {
-        await supabase.rpc("exec_sql", {
-          query: `
-            -- Drop unit_maste
-            DROP TABLE IF EXISTS unit_maste CASCADE;
+        // Automatically construct unit_master and drop unit_maste if exists
+        try {
+          await supabase.rpc("exec_sql", {
+            query: `
+              -- Drop unit_maste
+              DROP TABLE IF EXISTS unit_maste CASCADE;
 
-            -- Create unit_master
-            CREATE TABLE IF NOT EXISTS unit_master (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              unit_name TEXT NOT NULL UNIQUE,
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-            ALTER TABLE IF EXISTS unit_master DISABLE ROW LEVEL SECURITY;
+              -- Create unit_master
+              CREATE TABLE IF NOT EXISTS unit_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                unit_name TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS unit_master DISABLE ROW LEVEL SECURITY;
 
-            INSERT INTO unit_master (unit_name)
-            VALUES ('DRUMS'), ('BALES'), ('LOOSE'), ('P.BALES'), ('H.BALES')
-            ON CONFLICT (unit_name) DO NOTHING;
+              INSERT INTO unit_master (unit_name)
+              VALUES ('DRUMS'), ('BALES'), ('LOOSE'), ('P.BALES'), ('H.BALES')
+              ON CONFLICT (unit_name) DO NOTHING;
 
-            CREATE TABLE IF NOT EXISTS deduction_master (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              deduction TEXT NOT NULL UNIQUE,
-              rate_per_qntl NUMERIC(15,2),
-              rate_per_unit NUMERIC(15,2),
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-            ALTER TABLE IF EXISTS deduction_master DISABLE ROW LEVEL SECURITY;
+              CREATE TABLE IF NOT EXISTS deduction_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                deduction TEXT NOT NULL UNIQUE,
+                rate_per_qntl NUMERIC(15,2),
+                rate_per_unit NUMERIC(15,2),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS deduction_master DISABLE ROW LEVEL SECURITY;
 
-            INSERT INTO deduction_master (deduction, rate_per_qntl, rate_per_unit) VALUES
-            ('GODOWN DAMAGE FOR BALES', NULL, 400),
-            ('RAIN WET FOR BALES', NULL, 200),
-            ('RTCH DAMAGE FOR BALES', NULL, 400),
-            ('CT FOR HABIJABI / CHATTA / ROPE', 1500, NULL),
-            ('RAIN WET FOR DRUMS', NULL, 200),
-            ('RAIN WET FOR HALF BALES', NULL, 200),
-            ('GODOWN DAMAGE FOR DRUMS', NULL, 200),
-            ('GODOWN DAMAGE FOR HALF BALES', NULL, 200),
-            ('PITCH DAMAGE FOR DRUMS', NULL, 200),
-            ('PITCH DAMAGE FOR HALF BALES', NULL, 200),
-            ('GODOWN DAMAGE FOR LOOSE', 400, NULL),
-            ('PITCH DAMAGE FOR LOOSE', 400, NULL),
-            ('RAIN WET FOR LOOSE', 400, NULL),
-            ('IN CASE OF BALE IF WEIGHT IS LESS THAN 144', NULL, 20),
-            ('IN CASE OF BALE IF WEIGHT IS LESS THAN 142', NULL, 30),
-            ('IN CASE OF BALES IF WEIGHT IS LESS THAN 139', NULL, 40),
-            ('DELIVERY CLAIM PER QUINTAL (RS. PER DAY)', NULL, 5)
-            ON CONFLICT (deduction) DO NOTHING;
-          `
-        });
-      } catch (err) {
-        console.warn("Table creation warn on unit masters auto bootstrap:", err);
+              INSERT INTO deduction_master (deduction, rate_per_qntl, rate_per_unit) VALUES
+              ('GODOWN DAMAGE FOR BALES', NULL, 400),
+              ('RAIN WET FOR BALES', NULL, 200),
+              ('RTCH DAMAGE FOR BALES', NULL, 400),
+              ('CT FOR HABIJABI / CHATTA / ROPE', 1500, NULL),
+              ('RAIN WET FOR DRUMS', NULL, 200),
+              ('RAIN WET FOR HALF BALES', NULL, 200),
+              ('GODOWN DAMAGE FOR DRUMS', NULL, 200),
+              ('GODOWN DAMAGE FOR HALF BALES', NULL, 200),
+              ('PITCH DAMAGE FOR DRUMS', NULL, 200),
+              ('PITCH DAMAGE FOR HALF BALES', NULL, 200),
+              ('GODOWN DAMAGE FOR LOOSE', 400, NULL),
+              ('PITCH DAMAGE FOR LOOSE', 400, NULL),
+              ('RAIN WET FOR LOOSE', 400, NULL),
+              ('IN CASE OF BALE IF WEIGHT IS LESS THAN 144', NULL, 20),
+              ('IN CASE OF BALE IF WEIGHT IS LESS THAN 142', NULL, 30),
+              ('IN CASE OF BALES IF WEIGHT IS LESS THAN 139', NULL, 40),
+              ('DELIVERY CLAIM PER QUINTAL (RS. PER DAY)', NULL, 5)
+              ON CONFLICT (deduction) DO NOTHING;
+            `
+          });
+        } catch (err) {
+          console.warn("Table creation warn on unit masters auto bootstrap:", err);
+        }
       }
 
       let { data: records, error } = await supabase.rpc("exec_sql_return", {

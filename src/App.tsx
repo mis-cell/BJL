@@ -89,18 +89,22 @@ import { supabase } from "./lib/supabase";
 (async () => {
   if (!supabase) return;
   try {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('app_db_patched')) return;
-    if (typeof window !== 'undefined') sessionStorage.setItem('app_db_patched', '1');
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;" }).then(() => {}, () => {});
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;" }).then(() => {}, () => {});
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE inspection_checklist ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
-    await supabase.rpc("exec_sql", { query: "ALTER TABLE material_inspection ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;" }).then(() => {}, () => {});
+    if (typeof window !== 'undefined') {
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v3') || sessionStorage.getItem('bjl_app_db_patched_v3');
+      if (isPatched) return;
+      localStorage.setItem('bjl_app_db_patched_v3', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v3', '1');
+    }
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 
         BEGIN 
+          ALTER TABLE IF EXISTS user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_no TEXT;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_date DATE;
           ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS final_arrival_no TEXT;

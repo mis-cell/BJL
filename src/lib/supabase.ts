@@ -14,8 +14,12 @@ export const supabase = isConfigured
 if (supabase) {
   Promise.resolve().then(async () => {
     try {
-      if (typeof window !== 'undefined' && sessionStorage.getItem('supabase_schema_aligned')) return;
-      if (typeof window !== 'undefined') sessionStorage.setItem('supabase_schema_aligned', '1');
+      if (typeof window !== 'undefined') {
+        const isSynced = localStorage.getItem('bjl_schema_synced_v3') || sessionStorage.getItem('bjl_schema_synced_v3');
+        if (isSynced) return;
+        localStorage.setItem('bjl_schema_synced_v3', '1');
+        sessionStorage.setItem('bjl_schema_synced_v3', '1');
+      }
       await supabase.rpc('exec_sql', {
         query: `
           DO $$
@@ -2287,12 +2291,12 @@ if (supabase) {
        END $$;`
     ];
 
-    for (const query of schemaQueries) {
-      try {
-        await supabase.rpc('exec_sql', { query });
-      } catch (sqErr) {
-        console.warn('Independent schema patch query failed or already run:', sqErr);
-      }
+    // Combine schema queries into a single compound execution to eliminate 50+ network roundtrips
+    try {
+      const combinedSchemaQuery = schemaQueries.join(';\n');
+      await supabase.rpc('exec_sql', { query: combinedSchemaQuery });
+    } catch (bulkErr) {
+      console.warn('Batch schema sync fallback:', bulkErr);
     }
 
     // Force PostgREST schema cache reload
