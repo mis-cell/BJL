@@ -4479,8 +4479,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const isCompletedPo = isTempPo 
                                     ? ((item.pending === false || item.is_fully_completed || isWeightComplete) && isPass)
                                     : (item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted);
-                                 const isOverdue = !isCompletedPo && item.delivery_to &&
-                                    new Date(item.delivery_to) < new Date(new Date().toDateString());
                                  return (
                                     <div className="flex flex-col items-center gap-0.5">
                                        {contract > 0 && rcvd > 0 && rcvd < 5.0 ? (
@@ -4545,9 +4543,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                          );
                                        })() : (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
-                                       )}
-                                       {isOverdue && (
-                                         <span title={`Delivery was due ${item.delivery_to}`} className="text-[8px] font-black px-1.5 text-amber-800 bg-amber-100 rounded border border-amber-300 uppercase">Overdue</span>
                                        )}
                                     </div>
                                  );
