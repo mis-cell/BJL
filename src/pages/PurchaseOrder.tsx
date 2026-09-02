@@ -705,8 +705,10 @@ const DualComboBox = ({
     if (exactMatch) {
       const validName = String(exactMatch[nameField] || '').toUpperCase();
       const validCode = String(exactMatch[codeField] || '');
-      onNameChange(validName);
-      onCodeChange(validCode);
+      if (validName !== (name || '').trim().toUpperCase() || validCode !== (code || '').trim().toUpperCase()) {
+        onNameChange(validName);
+        onCodeChange(validCode);
+      }
       setSearchQuery(validName);
       setShowInvalidError(false);
     } else if (selectedOption) {
@@ -715,6 +717,10 @@ const DualComboBox = ({
       setShowInvalidError(false);
     } else {
       // No previously selected option and typed text is invalid
+      if (name || code) {
+        onNameChange('');
+        onCodeChange('');
+      }
       setSearchQuery('');
       setShowInvalidError(true);
     }
@@ -723,14 +729,16 @@ const DualComboBox = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        handleCloseAndRevert();
+        if (isOpen || isTyping) {
+          handleCloseAndRevert();
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [selectedOption, searchQuery, options, nameField, codeField, isRequired]);
+  }, [isOpen, isTyping, selectedOption, searchQuery, options, nameField, codeField, isRequired]);
 
   // When user explicitly selects an option
   const handleSelectOption = (opt: any) => {
@@ -2273,17 +2281,25 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     };
   }, []);
 
-  // Auto-sync B. Rate from Satta Base Rate for given S Date
+  // Auto-sync B. Rate from Satta Base Rate for given S Date (only for empty new records, never overwrite existing rates)
   useEffect(() => {
     if (sattaBaseRates.length > 0 && formData.s_date) {
       const activeBase = lookupSattaBaseRate(formData.s_date, sattaBaseRates);
       if (activeBase && (!formData.b_rate || formData.b_rate === '0' || formData.b_rate === '')) {
-        const updatedItems = recalculateAllRates(formData.items, formData.s_date, activeBase);
-        setFormData(prev => ({
-          ...prev,
-          b_rate: activeBase,
-          items: updatedItems
-        }));
+        const hasExistingRates = formData.items && formData.items.some(item => Number(item.rate) > 0);
+        if (!hasExistingRates && !formData.no) {
+          const updatedItems = recalculateAllRates(formData.items, formData.s_date, activeBase);
+          setFormData(prev => ({
+            ...prev,
+            b_rate: activeBase,
+            items: updatedItems
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            b_rate: activeBase
+          }));
+        }
       }
     }
   }, [sattaBaseRates, formData.s_date]);
@@ -2339,8 +2355,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             const rowGradeName = matchingGrade?.grade_name || item.quality || '';
             const rowAgencyName = agencyObj?.agency_name || rowAgency;
 
-            const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, selectedBRate);
-            const finalRate = computedSattaRate !== null ? computedSattaRate : (item.rs || 0);
+            const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, selectedBRate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, sauda.area);
+            const saudaItemRate = (item.rs !== undefined && item.rs !== null && Number(item.rs) > 0) ? Number(item.rs) : 0;
+            const finalRate = saudaItemRate > 0 ? saudaItemRate : (computedSattaRate !== null ? computedSattaRate : 0);
 
             return {
               srl: index + 1,
@@ -4971,12 +4988,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                     name={formData.area} 
                     onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))} 
                     onNameChange={(val) => {
-                      const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val);
-                      setFormData(prev => ({
-                        ...prev, 
-                        area: val,
-                        items: updatedItems
-                      }));
+                      if (val && val.trim().toUpperCase() !== (formData.area || '').trim().toUpperCase()) {
+                        const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val);
+                        setFormData(prev => ({
+                          ...prev, 
+                          area: val,
+                          items: updatedItems
+                        }));
+                      } else {
+                        setFormData(prev => ({
+                          ...prev,
+                          area: val
+                        }));
+                      }
                     }} 
                     options={areaList} 
                     codeField="area_code" 
