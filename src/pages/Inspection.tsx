@@ -242,21 +242,36 @@ export function calculateAllMatchingDeductions(
 
   // 4. DAMAGE / WET Policies (Godown Damage, Rain Wet, Pitch Damage)
   const combinedRemarks = `${headerForm?.remarks || ""} ${headerForm?.mr_spcl_print || ""} ${(detailRows || []).map(r => `${r.row_remarks || ""} ${r.jqi_remarks || ""} ${r.jci_remarks || ""}`).join(" ")}`.toUpperCase();
-  const baleRows = (detailRows || []).filter(r => {
-    const u = (r.unit || "").trim().toUpperCase();
-    return !u || u.includes("BALE") || u === "BALES" || u === "B";
-  });
-  const dominantUnit = (baleRows.length > 0) ? "BALES" : ((detailRows && detailRows[0]?.unit) ? String(detailRows[0]?.unit).toUpperCase() : "BALES");
+  // Determine packaging type: LOOSE, DRUMS, HALF BALES, or BALES
+  let dominantUnit = "BALES";
+  const rawUnits = (detailRows || []).map(r => String(r.unit || "").trim().toUpperCase()).join(" ");
+  if (rawUnits.includes("LOOSE")) {
+    dominantUnit = "LOOSE";
+  } else if (rawUnits.includes("DRUM")) {
+    dominantUnit = "DRUMS";
+  } else if (rawUnits.includes("HALF") || rawUnits.includes("H.BALE")) {
+    dominantUnit = "HALF BALES";
+  } else if (rawUnits.includes("BALE") || rawUnits.includes("P.BALE")) {
+    dominantUnit = "BALES";
+  }
 
-  if (combinedRemarks.includes("RAIN WET") || combinedRemarks.includes("RAIN DAMAGE") || combinedRemarks.includes("WET DAMAGE")) {
+  const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+
+  // Rain Wet Evaluation (BALES, DRUMS, HALF BALES, LOOSE)
+  if (combinedRemarks.includes("RAIN WET") || combinedRemarks.includes("RAIN DAMAGE") || combinedRemarks.includes("WET DAMAGE") || combinedRemarks.includes("RAIN")) {
     const rainRule = masterList.find(d => {
       const n = String(d.deduction || "").toUpperCase();
-      return n.includes("RAIN WET") && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
+      if (!n.includes("RAIN WET")) return false;
+      if (dominantUnit === "LOOSE") return n.includes("LOOSE");
+      if (dominantUnit === "DRUMS") return n.includes("DRUMS");
+      if (dominantUnit === "HALF BALES") return n.includes("HALF BALES");
+      return n.includes("FOR BALES") || (!n.includes("DRUMS") && !n.includes("HALF") && !n.includes("LOOSE"));
     }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("RAIN WET"));
 
     if (rainRule) {
       const rate = rainRule.rate_per_unit != null ? Number(rainRule.rate_per_unit) : (Number(rainRule.rate_per_qntl) || 200);
-      const qty = (rainRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const isQntl = rainRule.rate_per_qntl != null;
+      const qty = isQntl ? Number((totalGrossMt * 10).toFixed(2)) : (totalItemQty > 0 ? totalItemQty : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1));
       const amount = Number((rate * qty).toFixed(2));
       matchedDeductions.push({
         category: "damage",
@@ -266,20 +281,26 @@ export function calculateAllMatchingDeductions(
         qty,
         amount,
         reason: `Rain wet condition noted for ${dominantUnit}`,
-        badge: `🌧️ Rain Wet Deduction (${qty} Units)`
+        badge: `🌧️ Rain Wet (${dominantUnit}): ${qty} ${isQntl ? 'Qtl' : 'Units'}`
       });
     }
   }
 
+  // Godown Damage Evaluation (BALES, DRUMS, HALF BALES, LOOSE)
   if (combinedRemarks.includes("GODOWN DAMAGE") || combinedRemarks.includes("GODOWN")) {
     const godownRule = masterList.find(d => {
       const n = String(d.deduction || "").toUpperCase();
-      return n.includes("GODOWN DAMAGE") && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
+      if (!n.includes("GODOWN DAMAGE")) return false;
+      if (dominantUnit === "LOOSE") return n.includes("LOOSE");
+      if (dominantUnit === "DRUMS") return n.includes("DRUMS");
+      if (dominantUnit === "HALF BALES") return n.includes("HALF BALES");
+      return n.includes("FOR BALES") || (!n.includes("DRUMS") && !n.includes("HALF") && !n.includes("LOOSE"));
     }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("GODOWN DAMAGE"));
 
     if (godownRule) {
       const rate = godownRule.rate_per_unit != null ? Number(godownRule.rate_per_unit) : (Number(godownRule.rate_per_qntl) || 400);
-      const qty = (godownRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const isQntl = godownRule.rate_per_qntl != null;
+      const qty = isQntl ? Number((totalGrossMt * 10).toFixed(2)) : (totalItemQty > 0 ? totalItemQty : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1));
       const amount = Number((rate * qty).toFixed(2));
       matchedDeductions.push({
         category: "damage",
@@ -289,20 +310,29 @@ export function calculateAllMatchingDeductions(
         qty,
         amount,
         reason: `Godown damage noted for ${dominantUnit}`,
-        badge: `🏚️ Godown Damage (${qty} Units)`
+        badge: `🏚️ Godown Damage (${dominantUnit}): ${qty} ${isQntl ? 'Qtl' : 'Units'}`
       });
     }
   }
 
-  if (combinedRemarks.includes("PITCH DAMAGE") || combinedRemarks.includes("RTCH DAMAGE") || combinedRemarks.includes("PITCH")) {
+  // Pitch / Rtch Damage Evaluation (BALES, DRUMS, HALF BALES, LOOSE)
+  if (combinedRemarks.includes("PITCH DAMAGE") || combinedRemarks.includes("RTCH DAMAGE") || combinedRemarks.includes("PITCH") || combinedRemarks.includes("RTCH")) {
     const pitchRule = masterList.find(d => {
       const n = String(d.deduction || "").toUpperCase();
-      return (n.includes("PITCH DAMAGE") || n.includes("RTCH DAMAGE")) && (n.includes(dominantUnit) || (dominantUnit === "BALES" && n.includes("BALE")));
-    }) || masterList.find(d => String(d.deduction || "").toUpperCase().includes("PITCH DAMAGE"));
+      if (!n.includes("PITCH DAMAGE") && !n.includes("RTCH DAMAGE")) return false;
+      if (dominantUnit === "LOOSE") return n.includes("LOOSE");
+      if (dominantUnit === "DRUMS") return n.includes("DRUMS");
+      if (dominantUnit === "HALF BALES") return n.includes("HALF BALES");
+      return n.includes("FOR BALES") || (!n.includes("DRUMS") && !n.includes("HALF") && !n.includes("LOOSE"));
+    }) || masterList.find(d => {
+      const n = String(d.deduction || "").toUpperCase();
+      return n.includes("PITCH DAMAGE") || n.includes("RTCH DAMAGE");
+    });
 
     if (pitchRule) {
       const rate = pitchRule.rate_per_unit != null ? Number(pitchRule.rate_per_unit) : (Number(pitchRule.rate_per_qntl) || 400);
-      const qty = (pitchRule.rate_per_qntl != null) ? Number((totalGrossMt * 10).toFixed(2)) : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+      const isQntl = pitchRule.rate_per_qntl != null;
+      const qty = isQntl ? Number((totalGrossMt * 10).toFixed(2)) : (totalItemQty > 0 ? totalItemQty : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1));
       const amount = Number((rate * qty).toFixed(2));
       matchedDeductions.push({
         category: "damage",
@@ -312,7 +342,7 @@ export function calculateAllMatchingDeductions(
         qty,
         amount,
         reason: `Pitch / Rtch damage noted for ${dominantUnit}`,
-        badge: `⚠️ Pitch Damage (${qty} Units)`
+        badge: `⚠️ Pitch Damage (${dominantUnit}): ${qty} ${isQntl ? 'Qtl' : 'Units'}`
       });
     }
   }
@@ -955,21 +985,39 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
   const handleDeductionTypeChange = (idx: number, selectedName: string) => {
     const found = deductionMasterList.find(d => d.deduction === selectedName);
-    const rate = found ? (found.rate_per_unit != null ? Number(found.rate_per_unit) : (found.rate_per_qntl != null ? Number(found.rate_per_qntl) : 0)) : 0;
+    let rate = found ? (found.rate_per_unit != null ? Number(found.rate_per_unit) : (found.rate_per_qntl != null ? Number(found.rate_per_qntl) : 0)) : 0;
 
     const autoCalc = calculateBaleWeightDeduction(detailRows, deductionMasterList);
     const isBaleRule = isBaleWeightDeductionRule(selectedName);
+
+    const totalGrossMt = (detailRows || []).reduce((sum, r) => {
+      const wt = Number(r.receipt_gross_wt) > 0 
+        ? Number(r.receipt_gross_wt) 
+        : (Number(r.gross_weight_batch) > 0 ? Number(r.gross_weight_batch) : Number(r.challan_gross_wt) || 0);
+      return sum + wt;
+    }, 0);
+    const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+
+    let defaultQty = 1;
+    if (isBaleRule && autoCalc.totalBales > 0) {
+      defaultQty = autoCalc.totalBales;
+    } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
+      defaultQty = Number((totalGrossMt * 10).toFixed(2));
+    } else if (selectedName.includes("DELIVERY CLAIM")) {
+      const days = Number(headerForm?.detention_days) > 0 ? Number(headerForm?.detention_days) : 1;
+      rate = Number((rate * days).toFixed(2));
+      defaultQty = totalGrossMt > 0 ? Number((totalGrossMt * 10).toFixed(2)) : 1;
+    } else if (totalItemQty > 0) {
+      defaultQty = totalItemQty;
+    }
 
     setDeductionRows(prev => {
       const updated = [...prev];
       const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
       current.deduction_type = selectedName;
       current.deduction_rate = rate;
-      const qty = isBaleRule && autoCalc.totalBales > 0 
-        ? autoCalc.totalBales 
-        : (current.deduction_qty > 0 ? current.deduction_qty : 1);
-      current.deduction_qty = qty;
-      current.deduction_amount = Number((rate * qty).toFixed(2));
+      current.deduction_qty = defaultQty;
+      current.deduction_amount = Number((rate * defaultQty).toFixed(2));
       updated[idx] = current;
       syncHeaderDeductions(updated);
       return updated;
