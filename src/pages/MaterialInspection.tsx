@@ -1791,9 +1791,12 @@ export default function MaterialInspection({
       const voucherArrivalDate = voucher.date || voucher.arrival_date || prev.arrival_date || new Date().toISOString().split("T")[0];
       const voucherUnloadingDate = voucher.unloading_date || voucher.date || voucher.arrival_date || prev.unloading_date || voucherArrivalDate;
 
+      const targetArrivalNo = voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no;
+
       return {
         ...prev,
-        arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
+        mr_no: targetArrivalNo,
+        arrival_no: targetArrivalNo,
         arrival_date: voucherArrivalDate,
         unloading_date: voucherUnloadingDate,
         consignment_date: voucher.consignment_date || voucher.date || voucher.arrival_date || prev.consignment_date,

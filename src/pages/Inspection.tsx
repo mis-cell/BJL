@@ -1505,9 +1505,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   const populateFromFinalArrival = async (fa: any) => {
-    const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
-      ? fa.mr_no
-      : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
+    const displayMrNo = fa.temporary_arrival_no || fa.amad_no || (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
+      ? (fa.temporary_arrival_no || fa.amad_no || fa.mr_no)
+      : (fa.final_arrival_no || fa.arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
 
     const poNo = fa.po_no || fa.mr_no || "";
 
@@ -1515,7 +1515,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ...prev,
       mr_no: displayMrNo,
       mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
-      arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
+      arrival_no: displayMrNo,
       arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
       unloading_date: fa.unloading_date || fa.date || prev.unloading_date || new Date().toISOString().split("T")[0],
       po_no: poNo || prev.po_no,
