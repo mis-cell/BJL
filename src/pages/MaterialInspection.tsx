@@ -41,6 +41,7 @@ import { comparePoInspection } from "../lib/poMatch";
 import { sanitizeCsvData } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
+import { sanitizeInspectionMaster, safeRender } from "../utils/sanitizeRecord";
 
 // Helper function to parse date string without timezone offset shifts
 function parseDateOnly(dateStr: string | null | undefined): Date | null {
@@ -1530,7 +1531,7 @@ export default function MaterialInspection({
         }
       } catch (e) {}
 
-      const allInspections = Array.from(uniqueMap.values());
+      const allInspections = Array.from(uniqueMap.values()).map(rec => sanitizeInspectionMaster(rec)).filter(Boolean);
       setSavedInspections(allInspections);
 
       // Fetch final arrivals to identify "Final received" POs
@@ -3701,12 +3702,12 @@ export default function MaterialInspection({
                         )}
                         {visibleColumns.supplier && (
                           <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                            {row.supplier_name || "-"}
+                            {safeRender(row.supplier_name || row.supplier)}
                           </td>
                         )}
                         {visibleColumns.broker && (
                           <td className="px-4 font-bold uppercase truncate max-w-[150px] border-r border-slate-200">
-                            {row.broker_name || "-"}
+                            {safeRender(row.broker_name || row.broker)}
                           </td>
                         )}
                         {visibleColumns.po_ref && (() => {
@@ -4028,12 +4029,12 @@ export default function MaterialInspection({
 
                       {/* Supplier */}
                       <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                        {row.supplier || "-"}
+                        {safeRender(row.supplier || row.supplier_name)}
                       </td>
 
                       {/* Broker */}
                       <td className="px-4 font-semibold uppercase truncate max-w-[150px] border-r border-slate-200 text-slate-650">
-                        {row.broker || "-"}
+                        {safeRender(row.broker || row.broker_name)}
                       </td>
 
                       {/* Bales */}
