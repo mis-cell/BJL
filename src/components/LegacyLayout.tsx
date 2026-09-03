@@ -542,33 +542,43 @@ export default function LegacyLayout({
                       {disputeSummary.recentCases.length === 0 ? (
                         <div className="p-4 text-center text-slate-400 text-xs">No active dispute cases.</div>
                       ) : (
-                        disputeSummary.recentCases.slice(0, 6).map((c: any, i: number) => (
-                          <div key={i} className="p-3 hover:bg-slate-800/85 transition-colors flex flex-col gap-1">
-                            <div className="flex justify-between items-center">
-                              <span className="font-black text-amber-300 text-[11px] uppercase">{c.caseType}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                {new Date(c.date).toLocaleDateString()}
-                              </span>
+                        disputeSummary.recentCases.slice(0, 6).map((c: any, i: number) => {
+                          const caseTypeStr = typeof c.caseType === 'object' ? JSON.stringify(c.caseType) : String(c.caseType || '');
+                          const mrPoVal = c.mr_no || c.po_no || c.sauda_no;
+                          const mrPoStr = typeof mrPoVal === 'object' ? (mrPoVal.mr_no || mrPoVal.po_no || JSON.stringify(mrPoVal)) : String(mrPoVal || 'N/A');
+                          const gradeStr = typeof c.grade === 'object' ? '' : (c.grade ? `(${c.grade})` : '');
+                          const rawDesc = c.remarks || c.issue_description || c.field;
+                          const descStr = typeof rawDesc === 'object' ? (rawDesc.field || rawDesc.message || JSON.stringify(rawDesc)) : String(rawDesc || 'Discrepancy flagged between expected and actual values.');
+                          const dateStr = c.date && !isNaN(new Date(c.date).getTime()) ? new Date(c.date).toLocaleDateString() : '';
+
+                          return (
+                            <div key={i} className="p-3 hover:bg-slate-800/85 transition-colors flex flex-col gap-1">
+                              <div className="flex justify-between items-center">
+                                <span className="font-black text-amber-300 text-[11px] uppercase">{caseTypeStr}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {dateStr}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-200 font-bold truncate">
+                                MR / PO: {mrPoStr} {gradeStr}
+                              </p>
+                              <p className="text-[10px] text-slate-400 line-clamp-1">
+                                {descStr}
+                              </p>
+                              <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={() => {
+                                    setIsDisputeTrayOpen(false);
+                                    handleNavNavigation(c.caseType === 'Material Mismatch' ? 'material_mismatch' : 'mismatch');
+                                  }}
+                                  className="text-[10px] bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold px-2 py-0.5 rounded transition-colors"
+                                >
+                                  Review Case →
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-[11px] text-slate-200 font-bold truncate">
-                              MR / PO: {c.mr_no || c.po_no || c.sauda_no || 'N/A'} {c.grade ? `(${c.grade})` : ''}
-                            </p>
-                            <p className="text-[10px] text-slate-400 line-clamp-1">
-                              {c.remarks || c.issue_description || c.field || 'Discrepancy flagged between expected and actual values.'}
-                            </p>
-                            <div className="flex gap-2 mt-1">
-                              <button
-                                onClick={() => {
-                                  setIsDisputeTrayOpen(false);
-                                  handleNavNavigation(c.caseType === 'Material Mismatch' ? 'material_mismatch' : 'mismatch');
-                                }}
-                                className="text-[10px] bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold px-2 py-0.5 rounded transition-colors"
-                              >
-                                Review Case →
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>

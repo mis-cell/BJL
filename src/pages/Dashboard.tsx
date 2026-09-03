@@ -2014,18 +2014,26 @@ export default function Dashboard({
                          </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                         {recentAmad.length > 0 ? recentAmad.map((row, i) => (
-                           <tr key={i} className="hover:bg-slate-50 cursor-default transition-colors">
-                              <td className="px-3 py-2.5 border-r border-slate-100 text-slate-400 font-mono italic">
-                                 {row.created_at ? new Date(row.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
-                              </td>
-                              <td className="px-3 py-2.5 border-r border-slate-100">{row.truck_no}</td>
-                              <td className="px-3 py-2.5 border-r border-slate-100 text-indigo-950 font-extrabold">{row.vyapari_name || 'LOCAL'}</td>
-                              <td className="px-3 py-2.5 border-r border-slate-100">{row.station || 'MAIN'}</td>
-                              <td className="px-3 py-2.5 border-r border-slate-100 text-slate-700">{row.packets}</td>
-                              <td className="px-3 py-2.5 text-emerald-700">{row.status}</td>
-                           </tr>
-                         )) : (
+                         {recentAmad.length > 0 ? recentAmad.map((row, i) => {
+                           const safeCell = (v: any, fallback = '...') => {
+                             if (v === null || v === undefined) return fallback;
+                             if (typeof v === 'object') return v.name || v.title || JSON.stringify(v);
+                             return String(v);
+                           };
+
+                           return (
+                             <tr key={i} className="hover:bg-slate-50 cursor-default transition-colors">
+                                <td className="px-3 py-2.5 border-r border-slate-100 text-slate-400 font-mono italic">
+                                   {row.created_at && !isNaN(new Date(row.created_at).getTime()) ? new Date(row.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
+                                </td>
+                                <td className="px-3 py-2.5 border-r border-slate-100">{safeCell(row.truck_no || row.lorry_number || row.vehicle_no, '-')}</td>
+                                <td className="px-3 py-2.5 border-r border-slate-100 text-indigo-950 font-extrabold">{safeCell(row.vyapari_name || row.supplier, 'LOCAL')}</td>
+                                <td className="px-3 py-2.5 border-r border-slate-100">{safeCell(row.station, 'MAIN')}</td>
+                                <td className="px-3 py-2.5 border-r border-slate-100 text-slate-700">{safeCell(row.packets, '0')}</td>
+                                <td className="px-3 py-2.5 text-emerald-700">{safeCell(row.status, 'RECEIVED')}</td>
+                             </tr>
+                           );
+                         }) : (
                            <tr>
                               <td colSpan={6} className="px-3 py-10 text-center text-slate-400 italic">No recent transactions found</td>
                            </tr>

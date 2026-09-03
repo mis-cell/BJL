@@ -789,22 +789,28 @@ export default function ExecutiveBiDashboard({
   const matrixRows = useMemo(() => {
     const list = (filteredArrivals.length > 0 ? filteredArrivals : arrivals);
     if (list && list.length > 0) {
+      const safeStr = (v: any, fallback = '') => {
+        if (v === null || v === undefined) return fallback;
+        if (typeof v === 'object') return v.name || v.title || v.code || JSON.stringify(v);
+        return String(v);
+      };
+
       return list.map((item, i) => {
         const netWt = Number(item.weight || item.weight_qtl || item.electronic_net_weight || 0);
         const rate = Number(item.rate || item.b_rate || 5850);
         return {
-          id: item.id || `ARV-${i + 1}`,
-          chalan: item.chalan_no || item.gate_pass || `CH-${1000 + i}`,
+          id: safeStr(item.id, `ARV-${i + 1}`),
+          chalan: safeStr(item.chalan_no || item.gate_pass, `CH-${1000 + i}`),
           date: item.created_at ? new Date(item.created_at).toLocaleDateString() : new Date().toISOString().slice(0, 10),
-          supplier: item.supplier_name || item.supplier || 'Supplier',
-          broker: item.broker_name || item.broker || 'Broker',
-          vehicle: item.lorry_no || item.vehicle_no || `WB-${25 + i}`,
-          grade: item.jute_grade || item.grade || 'TD-4',
+          supplier: safeStr(item.supplier_name || item.supplier, 'Supplier'),
+          broker: safeStr(item.broker_name || item.broker, 'Broker'),
+          vehicle: safeStr(item.lorry_no || item.vehicle_no, `WB-${25 + i}`),
+          grade: safeStr(item.jute_grade || item.grade, 'TD-4'),
           grossWt: Number((netWt + 5).toFixed(2)),
           netWt: Number(netWt.toFixed(2)),
-          moisture: item.moisture ? String(Number(item.moisture).toFixed(1)) : '14.0',
+          moisture: item.moisture && !isNaN(Number(item.moisture)) ? String(Number(item.moisture).toFixed(1)) : '14.0',
           totalVal: Math.round(netWt * rate),
-          status: item.status || (i % 2 === 0 ? 'Verified' : 'Inspected')
+          status: safeStr(item.status, i % 2 === 0 ? 'Verified' : 'Inspected')
         };
       });
     }

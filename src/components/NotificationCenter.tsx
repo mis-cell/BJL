@@ -46,6 +46,14 @@ interface NotificationCenterProps {
   setUnreadCount?: React.Dispatch<React.SetStateAction<number>>;
 }
 
+function toSafeStr(val: any, fallback = ""): string {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "object") {
+    return val.name || val.title || val.mr_no || val.field_name || val.message || val.action_details || JSON.stringify(val);
+  }
+  return String(val);
+}
+
 export default function NotificationCenter({
   isOpen,
   onClose,
@@ -77,21 +85,25 @@ export default function NotificationCenter({
             const moisture = Number(item.claim_moisture || 0);
             const dust = Number(item.claim_dust || 0);
             const ncv = Number(item.claim_ncv || 0);
+            const mrNoStr = toSafeStr(item.mr_no, "N/A");
+            const lorryStr = toSafeStr(item.lorry_number || item.lorry_no, "N/A");
+            const suppStr = toSafeStr(item.supplier, "N/A");
+            const userStr = toSafeStr(item.updated_by || item.created_by, "Operator");
 
             // Check if flagged or manually adjusted
             if (moisture > 0 || item.moisture_override) {
               list.push({
-                id: `override-moisture-${item.mr_no}`,
+                id: `override-moisture-${mrNoStr}`,
                 type: "override",
                 title: `Manual Entry: Claim Moisture % Override`,
-                description: `M.R. No: ${item.mr_no} | Vehicle: ${item.lorry_number || item.lorry_no || "N/A"} | Supplier: ${item.supplier || "N/A"}`,
-                timestamp: item.date || new Date().toISOString(),
-                mr_no: item.mr_no,
-                lorry_no: item.lorry_number || item.lorry_no,
+                description: `M.R. No: ${mrNoStr} | Vehicle: ${lorryStr} | Supplier: ${suppStr}`,
+                timestamp: toSafeStr(item.date, new Date().toISOString()),
+                mr_no: mrNoStr,
+                lorry_no: lorryStr,
                 field_name: "Claim Moisture %",
-                past_value: item.auto_claim_moisture || "Calculated Auto",
+                past_value: toSafeStr(item.auto_claim_moisture, "Calculated Auto"),
                 new_value: `${moisture}%`,
-                user: item.updated_by || item.created_by || "Operator",
+                user: userStr,
                 severity: "high",
                 read: false,
                 module: "material_inspection"
@@ -100,17 +112,17 @@ export default function NotificationCenter({
 
             if (dust > 0) {
               list.push({
-                id: `override-dust-${item.mr_no}`,
+                id: `override-dust-${mrNoStr}`,
                 type: "override",
                 title: `Manual Entry: Claim Dust % Override`,
-                description: `M.R. No: ${item.mr_no} | Vehicle: ${item.lorry_number || item.lorry_no || "N/A"}`,
-                timestamp: item.date || new Date().toISOString(),
-                mr_no: item.mr_no,
-                lorry_no: item.lorry_number || item.lorry_no,
+                description: `M.R. No: ${mrNoStr} | Vehicle: ${lorryStr}`,
+                timestamp: toSafeStr(item.date, new Date().toISOString()),
+                mr_no: mrNoStr,
+                lorry_no: lorryStr,
                 field_name: "Claim Dust %",
-                past_value: item.auto_claim_dust || "Calculated Auto",
+                past_value: toSafeStr(item.auto_claim_dust, "Calculated Auto"),
                 new_value: `${dust}%`,
-                user: item.updated_by || item.created_by || "Operator",
+                user: userStr,
                 severity: "high",
                 read: false,
                 module: "material_inspection"
@@ -119,17 +131,17 @@ export default function NotificationCenter({
 
             if (ncv > 0) {
               list.push({
-                id: `override-ncv-${item.mr_no}`,
+                id: `override-ncv-${mrNoStr}`,
                 type: "override",
                 title: `Manual Entry: Claim NCV % Override`,
-                description: `M.R. No: ${item.mr_no} | Vehicle: ${item.lorry_number || item.lorry_no || "N/A"}`,
-                timestamp: item.date || new Date().toISOString(),
-                mr_no: item.mr_no,
-                lorry_no: item.lorry_number || item.lorry_no,
+                description: `M.R. No: ${mrNoStr} | Vehicle: ${lorryStr}`,
+                timestamp: toSafeStr(item.date, new Date().toISOString()),
+                mr_no: mrNoStr,
+                lorry_no: lorryStr,
                 field_name: "Claim NCV %",
-                past_value: item.auto_claim_ncv || "Calculated Auto",
+                past_value: toSafeStr(item.auto_claim_ncv, "Calculated Auto"),
                 new_value: `${ncv}%`,
-                user: item.updated_by || item.created_by || "Operator",
+                user: userStr,
                 severity: "high",
                 read: false,
                 module: "material_inspection"
@@ -151,13 +163,17 @@ export default function NotificationCenter({
 
         if (mismatchData) {
           mismatchData.forEach((m: any) => {
+            const mrStr = toSafeStr(m.mr_no, "N/A");
+            const poStr = toSafeStr(m.po_no, "N/A");
+            const remarkStr = toSafeStr(m.remarks || m.reason, "Discrepancy logged between PO and Arrival");
+
             list.push({
-              id: `mismatch-${m.id || m.mr_no}`,
+              id: `mismatch-${toSafeStr(m.id || m.mr_no)}`,
               type: "mismatch",
               title: `Weight / Quality Mismatch Discrepancy`,
-              description: `MR: ${m.mr_no || "N/A"} | PO: ${m.po_no || "N/A"} - ${m.remarks || m.reason || "Discrepancy logged between PO and Arrival"}`,
-              timestamp: m.created_at || new Date().toISOString(),
-              mr_no: m.mr_no,
+              description: `MR: ${mrStr} | PO: ${poStr} - ${remarkStr}`,
+              timestamp: toSafeStr(m.created_at, new Date().toISOString()),
+              mr_no: mrStr,
               severity: "high",
               read: false,
               module: "mismatch"
@@ -179,16 +195,19 @@ export default function NotificationCenter({
         if (auditData) {
           auditData.forEach((log: any) => {
             if (log.activity_type?.includes("OVERRIDE") || log.activity_type?.includes("EDIT") || log.activity_type?.includes("DELETE") || log.activity_type?.includes("INSPECTION")) {
+              const actDetailsStr = toSafeStr(log.action_details, "System activity recorded");
+              const modNameStr = toSafeStr(log.module_name, "System");
+
               list.push({
-                id: `audit-${log.id}`,
+                id: `audit-${toSafeStr(log.id)}`,
                 type: "audit",
-                title: `Audit Event: ${log.activity_type}`,
-                description: `${log.action_details || "System activity recorded"} [Module: ${log.module_name || "System"}]`,
-                timestamp: log.created_at || new Date().toISOString(),
-                user: log.username,
+                title: `Audit Event: ${toSafeStr(log.activity_type)}`,
+                description: `${actDetailsStr} [Module: ${modNameStr}]`,
+                timestamp: toSafeStr(log.created_at, new Date().toISOString()),
+                user: toSafeStr(log.username),
                 severity: log.activity_type?.includes("DELETE") ? "high" : "medium",
                 read: true,
-                module: log.module_name
+                module: modNameStr
               });
             }
           });
