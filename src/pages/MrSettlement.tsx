@@ -2509,6 +2509,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           .from('sauda_master')
           .update({ status: 'settled', pending: false })
           .or(`sauda_no.eq.${masterData.po_no},po_no.eq.${masterData.po_no}`);
+
+        await supabase
+          .from('sauda_check_point')
+          .update({ status: 'settled', pending: false })
+          .eq('po_no', masterData.po_no);
       }
 
       if (targetMrNo || masterData.po_no) {

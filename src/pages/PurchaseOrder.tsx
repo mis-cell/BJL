@@ -38,7 +38,9 @@ import {
   AlertTriangle,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -1369,6 +1371,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [allFinalArrivals, setAllFinalArrivals] = useState<any[]>([]);
   const [allInspections, setAllInspections] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [allSettlements, setAllSettlements] = useState<any[]>([]);
 
   // Temporary P.O ↔ Material Inspection match status, keyed by po_no.
   const [matchResults, setMatchResults] = useState<Record<string, PoMatchResult>>({});
@@ -1552,7 +1555,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [printingPo, setPrintingPo] = useState<any | null>(null);
   const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'idle' | 'sending' | 'success' | 'error'>>({});
   const [emailNotification, setEmailNotification] = useState<{
-    type: 'success' | 'error' | 'warning';
+    type: 'success' | 'error' | 'warning' | 'info';
     title: string;
     message: string;
   } | null>(null);
@@ -2087,7 +2090,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         satMismatchesRes,
         dbMatMismatches,
         dbSatMismatches,
-        payments
+        payments,
+        mrSettlementsRes,
+        mrSettlementAltRes
       ] = await Promise.all([
         safeFetch('broker_master'),
         safeFetch('supply_master'),
@@ -2108,16 +2113,20 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         safeFetch('material_mismatch'),
         safeFetch('satta_mismatch'),
         safeFetch('sauda_check_point_deductions'),
-        safeFetch('payment_master', 'created_at', false)
+        safeFetch('payment_master', 'created_at', false),
+        safeFetch('mr_settlement_master', 'created_at', false),
+        safeFetch('m_r_settlement', 'created_at', false)
       ]);
 
       const combinedMatMismatches = [...((matMismatchesRes as any)?.data || []), ...(dbMatMismatches || [])];
       const combinedSatMismatches = [...((satMismatchesRes as any)?.data || []), ...(dbSatMismatches || [])];
+      const combinedSettlements = [...(mrSettlementsRes || []), ...(mrSettlementAltRes || [])];
       setDbMaterialMismatches(combinedMatMismatches);
       setDbSattaMismatches(combinedSatMismatches);
       setSattaBases((sattaBasesRes as any)?.data || sattaBasesRes || []);
       setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
       setAllPayments(payments || []);
+      setAllSettlements(combinedSettlements);
       if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
 
       const dedMap: Record<string, any> = {};
@@ -2273,26 +2282,35 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
         const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || p.pass_status === 'mismatch');
 
-        // Dynamic Workflow Stage Calculation (Sequential Priority Order):
-        // 1. Temporary Arrival Done + Final Arrival Missing -> Final Arrival Pending
-        // 2. Final Arrival Done + Mismatch Found -> Mismatch
-        // 3. Final Arrival Done + No Mismatch + Mill Inspection Missing -> Inspection Pending
-        // 4. Final Arrival Done + No Mismatch + Mill Inspection Done -> Eligible for Advance Payment
-        let workflowStage: 'temp_arrival_pending' | 'final_arrival_pending' | 'mismatch' | 'inspection_pending' | 'eligible_adv_payment' = 'temp_arrival_pending';
+        // Matching Temporary Arrivals count (each entry in temporary_material_received is 1 lorry arrival)
+        const matchingTempArrivals = (arrivals || []).filter((ar: any) =>
+          matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
+        );
+        const distinctArrivalKeys = new Set<string>();
+        matchingTempArrivals.forEach((ar: any) => {
+          const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
+          if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+        });
+        matchingFinal.forEach((fa: any) => {
+          const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
+          if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+        });
+        const receivedLorries = Math.max(matchingTempArrivals.length, distinctArrivalKeys.size);
 
-        if (!hasTempArrival && !hasFinalArrival) {
-          workflowStage = 'temp_arrival_pending';
-        } else if (hasTempArrival && !hasFinalArrival) {
-          workflowStage = 'final_arrival_pending';
-        } else if (isMismatch) {
-          workflowStage = 'mismatch';
-        } else if (!hasInspection) {
-          workflowStage = 'inspection_pending';
-        } else {
-          workflowStage = 'eligible_adv_payment';
-        }
+        const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
-        const isPass = isCleared || (workflowStage === 'eligible_adv_payment');
+        const cleanPoKey = String(p.po_no || '').trim().toUpperCase();
+        const isExplicitReopened = p.is_reopened === true || 
+                                   p.reopened === true || 
+                                   localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true';
+
+        const isExplicitClosed = p.is_closed === true || 
+                                 p.sauda_closed === true || 
+                                 p.status === 'closed' || 
+                                 localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true';
+
+        const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
+        const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
 
         // Check Payment Status in payment_master
         const matchingPayments = (payments || []).filter((pay: any) => {
@@ -2308,7 +2326,46 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           Number(pay.paid_amount || 0) > 0 ||
           String(pay.payment_status || '').toLowerCase() === 'paid' ||
           String(pay.status || '').toLowerCase() === 'completed'
-        );
+        ) || Boolean(p.has_payment_done);
+
+        // Check Settlement Status in mr_settlement_master / m_r_settlement
+        const matchingSettlements = (combinedSettlements || []).filter((s: any) => {
+          const sPoClean = cleanVal(s.po_no || s.po_contract || s.contract_po_no);
+          return exactPo(p.po_no, s.po_no) || 
+                 exactPo(p.contract_po_no, s.po_no) || 
+                 matchPoRecord(p, s) || 
+                 (pPoClean && pPoClean === sPoClean) || 
+                 (pContractClean && pContractClean === sPoClean);
+        });
+        const hasSettlementDone = matchingSettlements.length > 0 || p.status === 'settled';
+
+        // Dynamic Workflow Stage Calculation (Sequential Priority Order):
+        // 1. Temporary Arrival Missing -> temp_arrival_pending
+        // 2. Temporary Arrival Done + Final Arrival Missing -> final_arrival_pending
+        // 3. Mismatch Found -> mismatch (NOT eligible for Advance Payment or Settlement)
+        // 4. Final Arrival Done + No Mismatch + Mill Inspection Missing -> inspection_pending
+        // 5. Inspection Done + Advance Payment Not Done -> adv_payment_not_done ("Adv. Pay Not Done")
+        // 6. Advance Payment Done + Settlement Not Done -> settlement_pending ("Settlement Pending")
+        // 7. Settlement Done -> final_po (Data Full move To Final P.O)
+        let workflowStage: 'temp_arrival_pending' | 'final_arrival_pending' | 'mismatch' | 'inspection_pending' | 'adv_payment_not_done' | 'settlement_pending' | 'final_po' = 'temp_arrival_pending';
+
+        if (!hasTempArrival && !hasFinalArrival) {
+          workflowStage = 'temp_arrival_pending';
+        } else if (hasTempArrival && !hasFinalArrival) {
+          workflowStage = 'final_arrival_pending';
+        } else if (isMismatch) {
+          workflowStage = 'mismatch';
+        } else if (!hasInspection) {
+          workflowStage = 'inspection_pending';
+        } else if (!hasPaymentDone) {
+          workflowStage = 'adv_payment_not_done';
+        } else if (!hasSettlementDone) {
+          workflowStage = 'settlement_pending';
+        } else {
+          workflowStage = 'final_po';
+        }
+
+        const isPass = isCleared || (workflowStage === 'final_po');
 
         // Complete means weight is fulfilled and stage is passed to final/eligible
         const isWeightFulfilled = isExplicitCompleted || isWeightCompleted;
@@ -2326,12 +2383,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           pending: computedPending,
           received_weight_mt: totalReceivedMt,
           weight_tolerance: tol,
+          contract_lorries: contractLorries,
+          received_lorries: receivedLorries,
+          is_closed: isClosed,
+          is_reopened: isExplicitReopened,
+          has_settlement_done: hasSettlementDone,
           workflow_stage: workflowStage,
           stage: workflowStage,
           has_temp_arrival: hasTempArrival,
           has_final_arrival: hasFinalArrival,
           has_inspection: hasInspection,
-          pass_status: workflowStage === 'eligible_adv_payment' ? 'pass' : (isMismatch ? 'mismatch' : (workflowStage === 'inspection_pending' ? 'awaiting' : workflowStage)),
+          pass_status: workflowStage === 'final_po' ? 'pass' : (isMismatch ? 'mismatch' : workflowStage),
           mismatch_fields: mismatchFields,
           has_payment_done: hasPaymentDone,
           is_fully_completed: isFullyComplete
@@ -2734,6 +2796,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const canBypassLock = isAdminUser || isL4L5User;
 
     const mrLock = matchResults[poHeader.po_no];
+    if (poHeader?.is_closed && !canBypassLock) {
+      alert(`🔒 Action Prohibited: Sauda #${poHeader.po_no} is Closed (${poHeader.received_lorries}/${poHeader.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited by standard users. Only an Admin or Level 4 User can Reopen this Sauda.`);
+      return;
+    }
+    if (poHeader?.is_closed) {
+      setEmailNotification({
+        type: 'warning',
+        title: 'Closed Sauda (Admin/L4 Mode)',
+        message: `Sauda #${poHeader.po_no} is currently Closed. You have Admin / Level 4 privileges to inspect or reopen it.`
+      });
+    }
+
     if (!canBypassLock && isTempPo && mrLock && mrLock.hasInspection && mrLock.status === 'mismatch' && !isPoMismatchResolved(poHeader.po_no)) {
       alert(`P.O ${poHeader.po_no} is LOCKED — it has a Material Mismatch in: ${mrLock.mismatches.map((m: any) => m.field).join(', ')}.\n\nResolve it in the Material Mismatch section before editing.`);
       return;
@@ -2875,6 +2949,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleDeletePo = async (poNo: string) => {
+    const targetItem = (poList || []).find(p => String(p.po_no).trim().toUpperCase() === String(poNo).trim().toUpperCase());
+    if (targetItem?.is_closed) {
+      alert(`🔒 Action Prohibited: Sauda #${poNo} is Closed (${targetItem.received_lorries}/${targetItem.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited or deleted by any user unless reopened by an Admin or Level 4 User.`);
+      return;
+    }
+
     if (!enforceEditOrDeletePermission("Delete")) {
       return;
     }
@@ -2957,6 +3037,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleSave = async () => {
+    const targetPoNo = String(formData.no || (formData as any).po_no || formData.ptf_no || '').trim().toUpperCase();
+    const existingPo = (poList || []).find(p => String(p.po_no).trim().toUpperCase() === targetPoNo);
+    if (existingPo?.is_closed) {
+      alert(`🔒 Action Prohibited: Sauda #${targetPoNo} is Closed (${existingPo.received_lorries}/${existingPo.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited or modified by any user unless reopened by an Admin or Level 4 User.`);
+      return;
+    }
+
     // Validate select-only fields: Broker, Supplier, Challan Supplier, Area
     const upperBroker = (formData.broker || '').trim().toUpperCase();
     const isValidBroker = brokerList.length > 0
@@ -3160,17 +3247,151 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     );
   };
 
+  // Helper function to check if account settlement has been recorded for a PO
+  const checkIsSettlementDone = (item: any, settlementsList: any[]) => {
+    if (!item) return false;
+    if (item.status === 'settled' || item.has_settlement_done) return true;
+    const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+    const pPoClean = cleanPoVal(item.po_no);
+    const pContractClean = cleanPoVal(item.contract_po_no);
+    const ptfClean = cleanPoVal(item.ptf_no);
+    const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
+
+    return (settlementsList || []).some((s: any) => {
+      const sPo = String(s.po_no || s.po_contract || s.contract_po_no || '').trim().toUpperCase();
+      const sPoClean = cleanPoVal(sPo);
+      return (sPo && String(item.po_no || '').trim().toUpperCase() === sPo) ||
+             (sPo && String(item.contract_po_no || '').trim().toUpperCase() === sPo) ||
+             (sPo && item.ptf_no && String(item.ptf_no || '').trim().toUpperCase() === sPo) ||
+             (pPoClean && sPoClean && pPoClean === sPoClean) ||
+             (pContractClean && sPoClean && pContractClean === sPoClean) ||
+             (ptfClean && sPoClean && ptfClean === sPoClean) ||
+             (saudaClean && sPoClean && saudaClean === sPoClean);
+    });
+  };
+
+  const handleReopenSauda = async (item: any) => {
+    const userCtx = getCurrentUserContext();
+    const userRole = String(userCtx?.userRole || '').toUpperCase();
+    const userLevel = String(userCtx?.userLevel || '').toUpperCase();
+    const isAuthorized = userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
+                         userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX';
+
+    if (!isAuthorized) {
+      alert("🔒 Access Denied: Only an Admin or Level 4 User can Reopen a Closed Sauda.");
+      return;
+    }
+
+    const cleanPo = String(item.po_no || '').trim().toUpperCase();
+    const confirmed = window.confirm(`Are you sure you want to REOPEN Sauda #${item.po_no}? This will re-enable editing and arrivals.`);
+    if (!confirmed) return;
+
+    try {
+      localStorage.setItem(`sauda_reopened_${cleanPo}`, 'true');
+      localStorage.removeItem(`sauda_closed_${cleanPo}`);
+
+      if (supabase) {
+        await supabase
+          .from('sauda_check_point')
+          .update({ is_closed: false, is_reopened: true, status: 'open' })
+          .eq('po_no', item.po_no);
+
+        await supabase
+          .from('sauda_master')
+          .update({ is_closed: false, is_reopened: true, status: 'open' })
+          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+      }
+
+      setEmailNotification({
+        type: 'success',
+        title: 'Sauda Reopened',
+        message: `Sauda #${item.po_no} has been reopened successfully by ${userRole || 'Authorized User'}.`
+      });
+
+      fetchPosAndMasters();
+    } catch (err: any) {
+      console.error("Failed to reopen sauda:", err);
+      alert("Failed to reopen sauda: " + (err.message || String(err)));
+    }
+  };
+
+  const handleCloseSauda = async (item: any) => {
+    const userCtx = getCurrentUserContext();
+    const userRole = String(userCtx?.userRole || '').toUpperCase();
+    const userLevel = String(userCtx?.userLevel || '').toUpperCase();
+    const isAuthorized = userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
+                         userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX';
+
+    if (!isAuthorized) {
+      alert("🔒 Access Denied: Only an Admin or Level 4 User can manually Close a Sauda.");
+      return;
+    }
+
+    const cleanPo = String(item.po_no || '').trim().toUpperCase();
+    const confirmed = window.confirm(`Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted.`);
+    if (!confirmed) return;
+
+    try {
+      localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
+      localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+
+      if (supabase) {
+        await supabase
+          .from('sauda_check_point')
+          .update({ is_closed: true, is_reopened: false, status: 'closed' })
+          .eq('po_no', item.po_no);
+
+        await supabase
+          .from('sauda_master')
+          .update({ is_closed: true, is_reopened: false, status: 'closed' })
+          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+      }
+
+      setEmailNotification({
+        type: 'info',
+        title: 'Sauda Closed',
+        message: `Sauda #${item.po_no} has been closed.`
+      });
+
+      fetchPosAndMasters();
+    } catch (err: any) {
+      console.error("Failed to close sauda:", err);
+      alert("Failed to close sauda: " + (err.message || String(err)));
+    }
+  };
+
   // "Pass" = every field of the linked Material Inspection matches this P.O, so it
   // is promoted to the Final P.O stage (status 'final'). Mismatches stay in Temp and
   // surface in the Mismatch section until cleared.
   const handlePassToFinal = async (item: any) => {
-    // Check advance payment status before allowing move to Final P.O
-    const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments);
+    // 1. If mismatch exists, block advance payment or settlement/pass
+    if (item.workflow_stage === 'mismatch' || item.stage === 'mismatch' || item.pass_status === 'mismatch') {
+      setEmailNotification({
+        type: 'warning',
+        title: 'Dispute Resolution Required',
+        message: `PO #${item.po_no || item.ptf_no} has an unresolved material/satta mismatch. It is not eligible for Advance Payment or Settlement until cleared in the Mismatch Section.`
+      });
+      return;
+    }
+
+    // 2. Check advance payment status before allowing move to Final P.O
+    const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments) || item.has_payment_done;
     if (!isPaymentDone) {
       setEmailNotification({
         type: 'warning',
         title: 'Advance Payment Required',
         message: `Advance Payment is not completed yet for PO #${item.po_no || item.ptf_no}. Please record Advance Payment in Payment Dashboard before moving to Final P.O.`
+      });
+      return;
+    }
+
+    // 3. Check settlement status before allowing move to Final P.O
+    const isSettlementDone = checkIsSettlementDone(item, allSettlements) || item.has_settlement_done || item.status === 'settled';
+    if (!isSettlementDone) {
+      setEmailNotification({
+        type: 'warning',
+        title: 'Settlement Required',
+        message: `Account Settlement is not completed yet for PO #${item.po_no || item.ptf_no}. Please complete Settlement in MR Settlement section before moving to Final P.O.`
       });
       return;
     }
@@ -4673,6 +4894,67 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const isCompletedPo = isTempPo 
                                     ? ((item.pending === false || item.is_fully_completed || isWeightComplete) && isPass)
                                     : (item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted);
+
+                                 const userCtx = getCurrentUserContext();
+                                 const canReopen = userCtx?.userRole === 'ADMIN' || userCtx?.userRole === 'ADMINISTRATOR' || userCtx?.userLevel === 'L4' || userCtx?.userLevel === 'L5';
+
+                                 const poKey = String(item.po_no || '').trim().toUpperCase();
+                                 const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
+                                 const isSettledDeduction = Boolean(
+                                   settledDeductions[poKey] || 
+                                   settledDeductions[saudaKey] || 
+                                   item.excess_short_deduction != null || 
+                                   (item.excess_short_status && item.excess_short_status !== 'pending')
+                                 );
+
+                                 const diffMt = rcvd - contract;
+                                 const diffLabel = diffMt > 0 ? `+${diffMt.toFixed(3)} MT` : `${diffMt.toFixed(3)} MT`;
+
+                                 if (item.is_closed) {
+                                   return (
+                                     <div className="flex flex-col items-center gap-1">
+                                       <div className="flex items-center gap-1">
+                                         <span 
+                                           className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
+                                           title={`Sauda is CLOSED: ${item.received_lorries || 1} of ${item.contract_lorries || 1} Lorries Received.`}
+                                         >
+                                           <Lock className="w-2.5 h-2.5 text-amber-400" />
+                                           <span>CLOSED ({item.received_lorries || 1}/{item.contract_lorries || 1} Lorry)</span>
+                                         </span>
+                                       </div>
+
+                                       {(tol.isOverDelivery || tol.isUnderDelivery) && (
+                                         <button 
+                                           type="button" 
+                                           onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
+                                           className={cn(
+                                             "text-[8.5px] font-black px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
+                                             tol.isOverDelivery 
+                                               ? (isSettledDeduction ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-purple-100 text-purple-900 border-purple-300")
+                                               : (isSettledDeduction ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-900 border-amber-300")
+                                           )} 
+                                           title={`Received Quantity: ${tol.isOverDelivery ? 'EXCESS' : 'SHORT'} (${diffLabel}). Click to view or adjust Excess / Short Settlement Calculation.`}
+                                         >
+                                           <Scale className="w-2.5 h-2.5" />
+                                           <span>{tol.isOverDelivery ? 'EXCESS' : 'SHORT'} ({diffLabel}){isSettledDeduction ? ' ✓' : ''}</span>
+                                         </button>
+                                       )}
+
+                                       {canReopen && (
+                                         <button
+                                           type="button"
+                                           onClick={(e) => { e.stopPropagation(); handleReopenSauda(item); }}
+                                           className="text-[8px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                           title="Admin / Level 4: Click to Reopen this Closed Sauda"
+                                         >
+                                           <Unlock className="w-2 h-2 text-emerald-600" />
+                                           <span>Reopen</span>
+                                         </button>
+                                       )}
+                                     </div>
+                                   );
+                                 }
+
                                  return (
                                     <div className="flex flex-col items-center gap-0.5">
                                        {contract > 0 && rcvd > 0 && rcvd < 5.0 ? (
@@ -4749,9 +5031,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  if (isFinalized) {
                                     return <span className="text-[9px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase" title="Passed to Final P.O">Pass ✓</span>;
                                  }
-                                 const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'eligible_adv_payment' : item.pass_status) || 'temp_arrival_pending';
+                                 const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
                                  const isResolved = isPoMismatchResolved(item);
                                  const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments) || item.has_payment_done;
+                                 const isSettlementDone = checkIsSettlementDone(item, allSettlements) || item.has_settlement_done || item.status === 'settled';
 
                                  // Stage 1: Temporary Arrival Pending (Material has not arrived at mill gate yet)
                                  if (stage === 'temp_arrival_pending') {
@@ -4778,18 +5061,27 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  }
 
                                  // Stage 3: Mismatch (Final Arrival exists, but mismatch found with P.O / Sauda specs)
+                                 // User instruction: "if After Received Mismatch Show Then Its not eligable For Advance payment or Settelment ."
                                  if (stage === 'mismatch') {
                                     const diffFields = item.mismatch_fields?.length 
                                       ? item.mismatch_fields.join(', ') 
                                       : 'Fields differ';
                                     return (
-                                      <span
-                                         className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs whitespace-nowrap inline-flex items-center gap-1"
-                                         title={`Mismatch in: ${diffFields}. Resolve dispute in Mismatch Section.`}
-                                      >
-                                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
-                                        <span>Mismatch</span>
-                                      </span>
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span
+                                           className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs whitespace-nowrap inline-flex items-center gap-1"
+                                           title={`Mismatch in: ${diffFields}. Resolve dispute in Mismatch Section.`}
+                                        >
+                                          <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                          <span>Mismatch</span>
+                                        </span>
+                                        <span 
+                                          className="text-[7.5px] font-black text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 uppercase whitespace-nowrap shadow-2xs"
+                                          title="Not eligible for Advance Payment or Settlement until mismatch dispute is resolved in Mismatch Section"
+                                        >
+                                          Not Eligible for Adv/Settle
+                                        </span>
+                                      </div>
                                     );
                                  }
 
@@ -4805,41 +5097,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     );
                                  }
 
-                                 // 3. When Inspection is Pass (or Cleared):
-                                 // A. When Advance Payment is Done in Payment Dashboard:
-                                 // The "Eligible For Adv. Payment" card turns YELLOW and the PASS button works to move data to Final P.O
-                                 if (isPaymentDone) {
+                                 // 5. Advance Payment Not Done:
+                                 // User instruction: "Just Delete 'Eligable for Advance payment' Here Here Sho Advance payment not Done its Ok"
+                                 if (!isPaymentDone) {
                                     return (
-                                       <div className="flex flex-col items-center gap-1">
-                                          <span 
-                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-amber-300 text-amber-950 border border-amber-500 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1 font-mono tracking-tight"
-                                            title="Advance Payment Done in Payment Dashboard — Ready to Move to Final P.O"
-                                          >
-                                            <Check className="w-2.5 h-2.5 text-amber-950 stroke-[3]" />
-                                            <span>Eligible For Adv. Pay</span>
-                                          </span>
-                                          <button
-                                             onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                             title="Advance Payment Completed! Click to Move this P.O to Final P.O"
-                                             className="text-[8.5px] font-black px-2.5 py-0.5 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
-                                          >
-                                            Pass → Final
-                                          </button>
-                                       </div>
-                                    );
-                                 }
-
-                                 // B. Before Advance Payment is Done:
-                                 // Shows standard Blue "Eligible for Adv. Pay" card, and Button displays "Advance Payment Not Done"
-                                 return (
-                                    <div className="flex flex-col items-center gap-1">
-                                       <span 
-                                         className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-300 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1"
-                                         title="Inspection Passed — Eligible for Advance Payment in Payment Dashboard."
-                                       >
-                                         <CreditCard className="w-2.5 h-2.5 text-blue-700" />
-                                         <span>Eligible For Adv. Pay</span>
-                                       </span>
                                        <button
                                           type="button"
                                           onClick={(e) => { 
@@ -4851,10 +5112,54 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                             });
                                           }}
                                           title="Advance Payment is not done yet. Please complete Advance Payment in Payment Dashboard first."
-                                          className="text-[8px] font-black px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
+                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
                                        >
                                           <AlertCircle className="w-2.5 h-2.5 text-amber-700" />
-                                          <span>Adv. Pay Not Done</span>
+                                          <span>Advance payment not Done</span>
+                                       </button>
+                                    );
+                                 }
+
+                                 // 6. Advance Payment Done, but Settlement Pending:
+                                 // User instruction: "When In payment Section Advance payment done Then Here Show Settement Pending"
+                                 if (!isSettlementDone) {
+                                    return (
+                                       <button
+                                          type="button"
+                                          onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setEmailNotification({
+                                              type: 'info',
+                                              title: 'Settlement Pending',
+                                              message: `Advance Payment is completed. Account Settlement is pending in MR Settlement section for PO #${item.po_no || item.ptf_no}.`
+                                            });
+                                          }}
+                                          title="Advance Payment completed. Account Settlement is pending in MR Settlement."
+                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
+                                       >
+                                          <Clock className="w-2.5 h-2.5 text-blue-700" />
+                                          <span>Settlement Pending</span>
+                                       </button>
+                                    );
+                                 }
+
+                                 // 7. Settlement Done:
+                                 // User instruction: "if Settelment done Then Data Full move To Final P.O"
+                                 return (
+                                    <div className="flex flex-col items-center gap-1">
+                                       <span 
+                                         className="text-[8.5px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-400 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1 font-mono tracking-tight"
+                                         title="Settlement Done in MR Settlement — Ready to Move to Final P.O"
+                                       >
+                                         <Check className="w-2.5 h-2.5 text-emerald-800 stroke-[3]" />
+                                         <span>Settlement Done</span>
+                                       </span>
+                                       <button
+                                          onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
+                                          title="Settlement Completed! Click to Move this P.O to Final P.O"
+                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
+                                       >
+                                         Pass → Final P.O
                                        </button>
                                     </div>
                                  );
@@ -5932,6 +6237,30 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             {isTempPo ? (
               <>
                 <button 
+                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} 
+                  className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 text-blue-700 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  <Edit className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>{actionMenu.item.is_closed ? 'View Sauda' : 'Edit / View'}</span>
+                </button>
+                {actionMenu.item.is_closed ? (
+                  <button 
+                    onClick={() => { const it = actionMenu.item; setActionMenu(null); handleReopenSauda(it); }} 
+                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Reopen Sauda</span>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => { const it = actionMenu.item; setActionMenu(null); handleCloseSauda(it); }} 
+                    className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4 text-slate-600 shrink-0" />
+                    <span>Close Sauda</span>
+                  </button>
+                )}
+                <button 
                   onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} 
                   className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-xl flex items-center gap-2.5 text-indigo-600 font-bold text-xs transition-colors cursor-pointer"
                 >
@@ -5941,7 +6270,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="border-t border-slate-100 my-0.5" />
                 <button 
                   onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} 
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50/70 rounded-xl flex items-center gap-2.5 text-rose-600 font-bold text-xs transition-colors cursor-pointer"
+                  disabled={actionMenu.item.is_closed}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
+                    actionMenu.item.is_closed 
+                      ? "text-slate-400 opacity-50 cursor-not-allowed"
+                      : "hover:bg-rose-50/70 text-rose-600"
+                  )}
+                  title={actionMenu.item.is_closed ? "Closed Saudas cannot be deleted" : "Delete Sauda"}
                 >
                   <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>Delete</span>
@@ -5975,10 +6311,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             "p-2 rounded-xl shrink-0 mt-0.5",
             emailNotification.type === 'success' ? "bg-emerald-100 text-emerald-700" :
             emailNotification.type === 'warning' ? "bg-amber-100 text-amber-800" :
+            emailNotification.type === 'info' ? "bg-blue-100 text-blue-800" :
             "bg-rose-100 text-rose-700"
           )}>
             {emailNotification.type === 'success' ? (
               <Check className="w-5 h-5" />
+            ) : emailNotification.type === 'info' ? (
+              <Clock className="w-5 h-5" />
             ) : (
               <AlertCircle className="w-5 h-5" />
             )}
