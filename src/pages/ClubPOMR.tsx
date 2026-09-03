@@ -195,7 +195,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const handleUnclubInspection = async (mrNo: string) => {
     setLoading(true);
     try {
-      await dbModule.update('mill_inspection_master', 'mr_no', mrNo, {
+      await dbModule.update('material_inspection', 'mr_no', mrNo, {
         arrival_no: "",
         po_no: "",
         mill_po_no: ""

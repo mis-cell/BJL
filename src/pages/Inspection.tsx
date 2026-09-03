@@ -1075,33 +1075,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       // 1. Fetch saved material_inspection records (and merge fallback tables)
       let inspectionList: InspectionMasterRecord[] = [];
       if (supabase) {
-        const [miRes, mimRes, imRes] = await Promise.all([
-          supabase.from("material_inspection").select("*").order("created_at", { ascending: false }),
-          supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] as any[] })),
-          supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] as any[] }))
-        ]);
-
-        const mergedMap = new Map<string, InspectionMasterRecord>();
-        if (mimRes.data && Array.isArray(mimRes.data)) {
-          mimRes.data.forEach((r: any) => {
-            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
-            if (k) mergedMap.set(k, r);
-          });
-        }
-        if (imRes.data && Array.isArray(imRes.data)) {
-          imRes.data.forEach((r: any) => {
-            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
-            if (k) mergedMap.set(k, r);
-          });
-        }
+        const miRes = await supabase.from("material_inspection").select("*").order("created_at", { ascending: false });
         if (miRes.data && Array.isArray(miRes.data)) {
-          miRes.data.forEach((r: any) => {
-            const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
-            if (k) mergedMap.set(k, r);
-          });
+          inspectionList = miRes.data;
         }
-
-        inspectionList = Array.from(mergedMap.values());
       }
 
       if (inspectionList.length === 0) {
@@ -1252,7 +1229,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
   }, []);
 
-  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'mill_inspection_master', 'temporary_material_received'] });
+  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'temporary_material_received'] });
 
   const loadDetailsForPo = async (poNo: string) => {
     if (!poNo) return;
@@ -1269,7 +1246,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         const [pdmRes, scpRes, midRes, pmRes, gradesRes, agenciesRes, markasRes] = await Promise.all([
           supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
-          supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${poClean},mr_no.ilike.${poUpper},po_no.eq.${poClean}`),
+          supabase.from('material_inspection_details').select('*').or(`mr_no.eq.${poClean},mr_no.ilike.${poUpper},po_no.eq.${poClean}`),
           supabase.from('purchase_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('grade_master').select('*'),
           supabase.from('agency_master').select('*'),
@@ -2315,17 +2292,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } catch (mErr) {
           console.warn("Exception upserting material_inspection:", mErr);
         }
-        try { await supabase.from("mill_inspection_master").upsert([payload]); } catch {}
-        try { await supabase.from("inspection_master").upsert([payload]); } catch {}
-        try { await supabase.from("inspection_checklist").upsert([payload]); } catch {}
         
         // Clean out old detail rows
         try {
           await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
         } catch (e) {}
-        try { await supabase.from("inspection_details").delete().eq("mr_no", headerForm.mr_no); } catch {}
-        try { await supabase.from("inspection_checklist_details").delete().eq("mr_no", headerForm.mr_no); } catch {}
-        try { await supabase.from("mill_inspection_detail").delete().eq("mr_no", headerForm.mr_no); } catch {}
 
         if (validDetails.length > 0) {
           try {
@@ -2336,9 +2307,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           } catch (dErr) {
             console.warn("Exception inserting material_inspection_details:", dErr);
           }
-          try { await supabase.from("inspection_details").insert(validDetails); } catch {}
-          try { await supabase.from("inspection_checklist_details").insert(validDetails); } catch {}
-          try { await supabase.from("mill_inspection_detail").insert(validDetails); } catch {}
         }
 
         // Sync with final_arrival table
