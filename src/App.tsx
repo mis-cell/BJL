@@ -788,6 +788,43 @@ import { supabase } from "./lib/supabase";
           CREATE INDEX IF NOT EXISTS idx_temp_mat_arr ON temporary_material_received(arrival_no);
           CREATE INDEX IF NOT EXISTS idx_inspection_mr ON material_inspection(mr_no);
           CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC);
+
+          -- Arrival Number Harmonization: Temporary M.R No. = Final Arrival Arrival No. = Mill Inspection Arrival No.
+          DO $sync_arrival_nos$
+          BEGIN
+            -- 1. Sync final_arrival records with temporary_material_received
+            UPDATE final_arrival f
+            SET arrival_no = t.mr_no,
+                final_arrival_no = t.mr_no,
+                mr_no = t.mr_no
+            FROM temporary_material_received t
+            WHERE t.mr_no IS NOT NULL AND t.mr_no != ''
+            AND (
+              (f.temporary_arrival_no IS NOT NULL AND f.temporary_arrival_no != '' AND (f.temporary_arrival_no = t.temporary_arrival_no OR f.temporary_arrival_no = t.mr_no OR f.temporary_arrival_no = t.arrival_no))
+              OR (f.mr_no IS NOT NULL AND f.mr_no != '' AND (f.mr_no = t.mr_no OR f.mr_no = t.temporary_arrival_no))
+              OR (f.challan_no IS NOT NULL AND f.challan_no != '' AND f.challan_no = t.challan_no AND f.lorry_number IS NOT NULL AND f.lorry_number != '' AND f.lorry_number = t.lorry_number)
+            )
+            AND (f.arrival_no != t.mr_no OR f.final_arrival_no != t.mr_no OR f.mr_no != t.mr_no);
+
+            -- 2. Sync material_inspection records with temporary_material_received
+            UPDATE material_inspection m
+            SET arrival_no = t.mr_no,
+                mr_no = t.mr_no
+            FROM temporary_material_received t
+            WHERE t.mr_no IS NOT NULL AND t.mr_no != ''
+            AND (
+              (m.arrival_no IS NOT NULL AND m.arrival_no != '' AND (m.arrival_no = t.temporary_arrival_no OR m.arrival_no = t.arrival_no OR m.arrival_no = t.mr_no))
+              OR (m.mr_no IS NOT NULL AND m.mr_no != '' AND (m.mr_no = t.mr_no OR m.mr_no = t.temporary_arrival_no))
+              OR (m.challan_no IS NOT NULL AND m.challan_no != '' AND m.challan_no = t.challan_no AND m.lorry_number IS NOT NULL AND m.lorry_number != '' AND m.lorry_number = t.lorry_number)
+            )
+            AND (m.arrival_no != t.mr_no OR m.mr_no != t.mr_no);
+
+            -- 3. Sync material_inspection_details
+            UPDATE material_inspection_details d
+            SET mr_no = m.mr_no
+            FROM material_inspection m
+            WHERE (d.mr_no = m.mr_no OR d.mr_no = m.arrival_no) AND m.mr_no IS NOT NULL AND m.mr_no != '';
+          END $sync_arrival_nos$;
         END $$;
         NOTIFY pgrst, 'reload schema';
       ` 
