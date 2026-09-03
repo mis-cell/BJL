@@ -224,7 +224,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
           aData = aRes.data || [];
           const mRes = await supabase.from("marka_master").select("*");
           mData = mRes.data || [];
-          const wRes = await supabase.from("lorry_weighments").select("*").order("createdAt", { ascending: false });
+          const wRes = await supabase.from("lorry_weighments").select("*").order("created_at", { ascending: false });
           wData = wRes.data || [];
         }
       } catch {
@@ -234,7 +234,7 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
           dbModule.fetchAll("unit_master").catch(() => []),
           dbModule.fetchAll("agency_master").catch(() => []),
           dbModule.fetchAll("marka_master").catch(() => []),
-          dbModule.fetchAll("lorry_weighments", "createdAt", false).catch(() => [])
+          dbModule.fetchAll("lorry_weighments", "created_at", false).catch(() => [])
         ]);
         bData = res[0];
         gData = res[1];

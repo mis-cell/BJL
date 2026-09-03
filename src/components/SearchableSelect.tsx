@@ -431,7 +431,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="uppercase">{opt.label}</span>
+                    <span className="uppercase">{typeof opt.label === 'object' ? String((opt.label as any)?.name || (opt.label as any)?.title || JSON.stringify(opt.label)) : String(opt.label || '')}</span>
                     {isSelected && <Check className="h-3.5 w-3.5 text-[#174C2C] shrink-0 ml-2" />}
                   </div>
                 );

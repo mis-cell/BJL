@@ -1174,11 +1174,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!supabase) return;
     try {
       const arrivals = faItems || finalArrivalList || [];
-      const records = currentRecords || recordsList || [];
-      if (!arrivals.length || !records.length) return;
+      const recordsToSync = currentRecords || records || [];
+      if (!arrivals.length || !recordsToSync.length) return;
 
       const recordMap = new Map<string, InspectionMasterRecord>();
-      records.forEach(r => {
+      recordsToSync.forEach(r => {
         if (r.mr_no) recordMap.set(r.mr_no.toUpperCase(), r);
         if (r.arrival_no) recordMap.set(r.arrival_no.toUpperCase(), r);
       });

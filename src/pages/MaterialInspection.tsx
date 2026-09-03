@@ -235,7 +235,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     };
   }, []);
 
-  useLiveAutoRefresh(fetchLiveData, [], { tables: ['inspection_master', 'mill_inspection_master', 'mill_inspection_detail', 'inspection_checklist'] });
+  useLiveAutoRefresh(fetchLiveData, [], { tables: ['material_inspection', 'final_arrival'] });
 
   // Fetch data directly from Supabase & LocalStorage (Inspection and Mill Inspection Register)
   async function fetchLiveData() {
@@ -244,17 +244,13 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
     try {
       let data: any[] = [];
       if (supabase) {
-        const [inspMasterRes, millInspRes, checklistRes, finalArrRes] = await Promise.all([
-          supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-          supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-          supabase.from("inspection_checklist").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
+        const [matInspRes, finalArrRes] = await Promise.all([
+          supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
           supabase.from("final_arrival").select("*").order("date", { ascending: false }).then(r => r, () => ({ data: [] })),
         ]);
 
         const combined = [
-          ...((inspMasterRes as any)?.data || []),
-          ...((millInspRes as any)?.data || []),
-          ...((checklistRes as any)?.data || []),
+          ...((matInspRes as any)?.data || []),
           ...((finalArrRes as any)?.data || []),
         ];
         const uniqueMap = new Map();
@@ -266,10 +262,9 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
         });
         data = Array.from(uniqueMap.values());
       } else {
-        const inspMasterRes = await dbModule.fetchAll("inspection_master").catch(() => []);
-        const inspRes = await dbModule.fetchAll("mill_inspection_master").catch(() => []);
-        const checklistRes = await dbModule.fetchAll("inspection_checklist").catch(() => []);
-        const combined = [...(inspMasterRes || []), ...(inspRes || []), ...(checklistRes || [])];
+        const matInspRes = await dbModule.fetchAll("material_inspection").catch(() => []);
+        const finalArrRes = await dbModule.fetchAll("final_arrival").catch(() => []);
+        const combined = [...(matInspRes || []), ...(finalArrRes || [])];
         const uniqueMap = new Map();
         combined.forEach((item: any) => {
           const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
@@ -1483,18 +1478,10 @@ export default function MaterialInspection({
     if (!supabase) return;
     setLoading(true);
     try {
-      const [matInspRes, checklistRes, inspMasterRes, millInspRes] = await Promise.all([
-        supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-        supabase.from("inspection_checklist").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-        supabase.from("inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-        supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-      ]);
+      const matInspRes = await supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] }));
 
       const combined = [
         ...((matInspRes as any)?.data || []),
-        ...((checklistRes as any)?.data || []),
-        ...((inspMasterRes as any)?.data || []),
-        ...((millInspRes as any)?.data || []),
       ];
 
       const uniqueMap = new Map();
