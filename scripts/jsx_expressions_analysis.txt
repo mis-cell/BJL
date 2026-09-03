@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useLiveAutoRefresh } from "../hooks/useLiveAutoRefresh";
-import { motion, AnimatePresence } from "motion/react";
-import Papa from "papaparse";
-import {
-  ShieldCheck,
+Line 2: useLiveAutoRefresh
+Line 5: ShieldCheck,
   Plus,
   Search,
   Trash2,
@@ -31,52 +27,8 @@ import {
   CheckSquare,
   Calendar,
   User
-} from "lucide-react";
-import LegacyLayout from "../components/LegacyLayout";
-import { supabase } from "../lib/supabase";
-import { dbModule } from "../services/dbModule";
-import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from "../lib/permissions";
-import { PaginationControls } from "../components/PaginationControls";
-import { comparePoInspection } from "../lib/poMatch";
-import { sanitizeCsvData } from "../lib/utils";
-import PrintModal from "../components/PrintModal";
-import InspectionPrintSlip from "../components/InspectionPrintSlip";
-
-// Helper function to parse date string without timezone offset shifts
-function parseDateOnly(dateStr: string | null | undefined): Date | null {
-  if (!dateStr) return null;
-  const s = String(dateStr).trim();
-  if (!s) return null;
-  if (s.includes('T')) {
-    const parts = s.split('T')[0].split('-');
-    if (parts.length === 3) {
-      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
-    }
-  }
-  if (s.includes('-')) {
-    const parts = s.split('-');
-    if (parts[0].length === 4) {
-      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
-    } else if (parts[2].length === 4) {
-      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
-    }
-  }
-  if (s.includes('/')) {
-    const parts = s.split('/');
-    if (parts[2].length === 4) {
-      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
-      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
-    }
-  }
-  const parsed = new Date(s);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function safeRenderText(val: any, fallback = "-"): string {
-  if (val === null || val === undefined || val === "") return fallback;
+Line 41: sanitizeCsvData
+Line 78: if (val === null || val === undefined || val === "") return fallback;
   if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
     return String(val);
   }
@@ -99,11 +51,7 @@ function safeRenderText(val: any, fallback = "-"): string {
     return fallback;
   }
   return fallback;
-}
-
-// Type declarations matching the schema created in Supabase
-interface InspectionMaster {
-  id?: string;
+Line 105: id?: string;
   mr_no: string;
   mr_date: string;
   arrival_no: string;
@@ -148,10 +96,7 @@ interface InspectionMaster {
   total_challan_gross_wt?: number;
   total_receipt_gross_wt?: number;
   arival_apmc_fees?: number;
-}
-
-interface InspectionDetailRow {
-  id?: string;
+Line 153: id?: string;
   srl_no: number;
   arrival_grade: string;
   stock_grade_code: string;
@@ -214,10 +159,7 @@ interface InspectionDetailRow {
   row_remarks?: string;
   jqi_remarks?: string;
   jci_remarks?: string;
-}
-
-interface SupabaseAutoCompleteInputProps {
-  label: string;
+Line 219: label: string;
   name: "arrival_no" | "po_no";
   fieldColumn: "temporary_arrival_no" | "po_no";
   value: string;
@@ -226,10 +168,7 @@ interface SupabaseAutoCompleteInputProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectOption?: (val: string, record?: any) => void;
   savedInspections?: any[];
-}
-
-const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
-  label,
+Line 231: label,
   name,
   fieldColumn,
   value,
@@ -238,8 +177,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
   onChange,
   onSelectOption,
   savedInspections = [],
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
+Line 241: const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dbRecords, setDbRecords] = useState<any[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -512,16 +450,11 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
       )}
     </div>
   );
-};
-
-export default function MaterialInspection({
-  onClose,
+Line 517: onClose,
   onLogEvent,
-}: {
-  onClose?: () => void;
+Line 520: onClose?: () => void;
   onLogEvent?: (event: string, details: string) => void;
-}) {
-  // Autocomplete lists from database
+Line 523: // Autocomplete lists from database
   const [brokers, setBrokers] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
@@ -3514,7 +3447,7 @@ export default function MaterialInspection({
                   );
                 });
 
-                return pendingCount.length;
+                return pendingCount;
               })()}
               )
             </button>
@@ -6294,4 +6227,3 @@ export default function MaterialInspection({
       </div>
     </LegacyLayout>
   );
-}

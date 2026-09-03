@@ -1142,8 +1142,7 @@ export default function App() {
   React.useEffect(() => {
     try {
       if (typeof window !== "undefined") {
-        localStorage.clear();
-        sessionStorage.clear();
+        // Preserving local storage/session storage to maintain login sessions and schema sync flags.
         if ("caches" in window) {
           caches.keys().then((names) => {
             names.forEach((name) => caches.delete(name));
@@ -1151,7 +1150,7 @@ export default function App() {
         }
       }
     } catch (e) {
-      console.warn("Storage purge error:", e);
+      console.warn("Cache purge error:", e);
     }
   }, []);
 

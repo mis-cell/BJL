@@ -15,6 +15,24 @@ import {
 import { LorryRecord, MasterOptions, UserRole } from "../pages/LorryDispatchSystem";
 import { cn } from "../lib/utils";
 
+function safeStr(val: any, fallback = "N/A"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (typeof val === "object") {
+    if (typeof val.name === "string") return val.name;
+    if (typeof val.supp_name === "string") return val.supp_name;
+    if (typeof val.brok_name === "string") return val.brok_name;
+    if (typeof val.supplier_name === "string") return val.supplier_name;
+    if (typeof val.broker_name === "string") return val.broker_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 interface MillWeighmentSectionProps {
   lorries: LorryRecord[];
   masters: MasterOptions;
@@ -246,7 +264,7 @@ export default function MillWeighmentSection({
                     </div>
 
                     <p className="text-xs text-[#5A6E54]">
-                      Party: <strong className="text-[#1E331B]">{l.broker}</strong> | Mokam: <strong className="text-[#1E331B]">{l.mokam}</strong> | Marka: <strong className="text-[#1E331B]">{l.marka}</strong>
+                      Party: <strong className="text-[#1E331B]">{safeStr(l.broker)}</strong> | Mokam: <strong className="text-[#1E331B]">{safeStr(l.mokam)}</strong> | Marka: <strong className="text-[#1E331B]">{safeStr(l.marka)}</strong>
                     </p>
 
                     {/* Live Weighbridge Log */}
@@ -396,9 +414,10 @@ export default function MillWeighmentSection({
                     className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#1E331B] outline-none"
                   />
                   <datalist id="mill-mokam-options">
-                    {masters.mokams.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
+                    {masters.mokams.map((m, idx) => {
+                      const val = safeStr(m);
+                      return <option key={val + idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
               </div>

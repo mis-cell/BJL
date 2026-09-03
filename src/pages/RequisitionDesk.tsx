@@ -109,7 +109,12 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
           .select('dept_name')
           .order('dept_name');
         if (deptData && deptData.length > 0) {
-          setDepartments(Array.from(new Set(deptData.map(d => d.dept_name))));
+          const names = deptData
+            .map(d => typeof d.dept_name === 'string' ? d.dept_name : (d.dept_name?.name || String(d.dept_name || '')))
+            .filter(Boolean);
+          if (names.length > 0) {
+            setDepartments(Array.from(new Set(names)));
+          }
         }
 
         // Fetch batches
@@ -371,9 +376,10 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                 className="bg-white border border-slate-300 rounded text-xs font-bold px-2 py-1.5 outline-none cursor-pointer text-slate-700"
               >
                 <option value="ALL">ALL DEPARTMENTS</option>
-                {departments.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
+                {departments.map((d, idx) => {
+                  const val = typeof d === 'string' ? d : (d as any)?.name || String(d);
+                  return <option key={val + idx} value={val}>{val}</option>;
+                })}
               </select>
             </div>
 
@@ -559,9 +565,10 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
                     onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
                     className="border border-slate-300 px-2.5 py-1.5 rounded font-bold text-slate-700 outline-none text-[13px] cursor-pointer bg-white"
                   >
-                    {departments.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
+                    {departments.map((d, idx) => {
+                      const val = typeof d === 'string' ? d : (d as any)?.name || String(d);
+                      return <option key={val + idx} value={val}>{val}</option>;
+                    })}
                   </select>
                 </div>
 

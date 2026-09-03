@@ -15,6 +15,24 @@ import {
 import { LorryRecord, UserRole } from "../pages/LorryDispatchSystem";
 import { cn } from "../lib/utils";
 
+function safeStr(val: any, fallback = "N/A"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (typeof val === "object") {
+    if (typeof val.name === "string") return val.name;
+    if (typeof val.supp_name === "string") return val.supp_name;
+    if (typeof val.brok_name === "string") return val.brok_name;
+    if (typeof val.supplier_name === "string") return val.supplier_name;
+    if (typeof val.broker_name === "string") return val.broker_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 interface ElectricWeighbridgeSectionProps {
   lorries: LorryRecord[];
   currentUserRole: UserRole;
@@ -185,15 +203,15 @@ export default function ElectricWeighbridgeSection({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Party / Broker</span>
-                <span className="font-extrabold text-[#1E331B]">{activeLorry.broker}</span>
+                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.broker)}</span>
               </div>
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Department</span>
-                <span className="font-extrabold text-[#1E331B]">{activeLorry.department}</span>
+                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.department)}</span>
               </div>
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Mokam / Marka</span>
-                <span className="font-extrabold text-[#1E331B]">{activeLorry.mokam} / {activeLorry.marka}</span>
+                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.mokam)} / {safeStr(activeLorry.marka)}</span>
               </div>
             </div>
 
@@ -363,7 +381,7 @@ export default function ElectricWeighbridgeSection({
                   </div>
 
                   <p className="text-xs text-[#5A6E54]">
-                    Party: <strong className="text-[#1E331B]">{l.broker}</strong> | Status: <span className="font-bold uppercase text-[#1E331B]">{l.status.replace(/_/g, " ")}</span>
+                    Party: <strong className="text-[#1E331B]">{safeStr(l.broker)}</strong> | Status: <span className="font-bold uppercase text-[#1E331B]">{l.status.replace(/_/g, " ")}</span>
                   </p>
                 </div>
 

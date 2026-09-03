@@ -958,9 +958,10 @@ export default function MainGateSection({
                     defaultValue=""
                   />
                   <datalist id="mokam-options">
-                    {masters.mokams.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
+                    {masters.mokams.map((m, idx) => {
+                      const val = safeStr(m);
+                      return <option key={val + idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
                 <div>
@@ -974,9 +975,10 @@ export default function MainGateSection({
                     defaultValue=""
                   />
                   <datalist id="marka-options">
-                    {masters.markas.map((mk) => (
-                      <option key={mk} value={mk}>{mk}</option>
-                    ))}
+                    {masters.markas.map((mk, idx) => {
+                      const val = safeStr(mk);
+                      return <option key={val + idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
               </div>
