@@ -1867,9 +1867,9 @@ export default function LorryDispatchSystem({
                   {auditLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-[#EAE2D2]/50">
                       <td className="p-3 text-[#5A6E54]">{new Date(log.timestamp).toLocaleString("en-IN")}</td>
-                      <td className="p-3 font-bold text-[#1E331B]">{log.role} ({log.username})</td>
-                      <td className="p-3 font-bold text-emerald-800">{log.action}</td>
-                      <td className="p-3 text-[#1E331B]">{log.details}</td>
+                      <td className="p-3 font-bold text-[#1E331B]">{typeof log.role === 'object' ? JSON.stringify(log.role) : log.role} ({typeof log.username === 'object' ? JSON.stringify(log.username) : log.username})</td>
+                      <td className="p-3 font-bold text-emerald-800">{typeof log.action === 'object' ? JSON.stringify(log.action) : log.action}</td>
+                      <td className="p-3 text-[#1E331B]">{typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details || "")}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1890,10 +1890,10 @@ export default function ExecutiveBiDashboard({
               {paginatedMatrixRows.length > 0 ? (
                 paginatedMatrixRows.map((row) => (
                   <tr key={row.id} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                    <td className="p-3 font-mono font-bold text-[#1E331B]">{row.chalan}</td>
-                    <td className="p-3 text-[#556952]">{row.date}</td>
-                    <td className="p-3 font-medium text-[#1E331B]">{row.supplier}</td>
-                    <td className="p-3 text-[#556952]">{row.broker}</td>
+                    <td className="p-3 font-mono font-bold text-[#1E331B]">{typeof row.chalan === 'object' ? JSON.stringify(row.chalan) : row.chalan}</td>
+                    <td className="p-3 text-[#556952]">{typeof row.date === 'object' ? JSON.stringify(row.date) : row.date}</td>
+                    <td className="p-3 font-medium text-[#1E331B]">{typeof row.supplier === 'object' ? (row.supplier.name || row.supplier.supplier_name || JSON.stringify(row.supplier)) : row.supplier}</td>
+                    <td className="p-3 text-[#556952]">{typeof row.broker === 'object' ? (row.broker.name || row.broker.broker_name || JSON.stringify(row.broker)) : row.broker}</td>
                     <td className="p-3 font-mono text-xs">{row.vehicle}</td>
                     <td className="p-3 font-bold text-emerald-900">{row.grade}</td>
                     <td className="p-3 text-right font-bold text-[#1E331B]">{row.netWt}</td>

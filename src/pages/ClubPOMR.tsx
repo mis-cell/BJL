@@ -636,20 +636,26 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex flex-wrap gap-1 justify-center max-w-[150px] mx-auto">
-                          {item.poNos.map(p => (
-                            <span key={p} className="text-[8.5px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 px-1.5 py-0.5 rounded">
-                              {p}
-                            </span>
-                          ))}
+                          {item.poNos.map((p, idx) => {
+                            if (!p) return null;
+                            return (
+                              <span key={idx} className="text-[8.5px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 px-1.5 py-0.5 rounded">
+                                {(p && typeof p === 'object') ? ((p as any).po_no || (p as any).final_arrival_no || JSON.stringify(p)) : String(p)}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex flex-wrap gap-1 justify-center max-w-[150px] mx-auto">
-                          {item.amadNos.map(a => (
-                            <span key={a} className="text-[8.5px] font-semibold bg-teal-50 text-teal-800 border border-teal-150 px-1.5 py-0.5 rounded">
-                              {a}
-                            </span>
-                          ))}
+                          {item.amadNos.map((a, idx) => {
+                            if (!a) return null;
+                            return (
+                              <span key={idx} className="text-[8.5px] font-semibold bg-teal-50 text-teal-800 border border-teal-150 px-1.5 py-0.5 rounded">
+                                {(a && typeof a === 'object') ? ((a as any).mr_no || (a as any).amad_no || JSON.stringify(a)) : String(a)}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="p-3 text-right font-semibold">

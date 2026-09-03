@@ -1471,9 +1471,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"
                 >
                   <option value="">All Parties</option>
-                  {brokerList.map((b, i) => (
-                    <option key={i} value={b}>{b}</option>
-                  ))}
+                  {brokerList.map((b, i) => {
+                    if (!b) return null;
+                    const val = (b && typeof b === 'object') ? ((b as any).name || (b as any).brok_name || (b as any).broker_name || JSON.stringify(b)) : String(b);
+                    return <option key={i} value={val}>{val}</option>;
+                  })}
                 </select>
               </div>
 
@@ -1485,9 +1487,11 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
                   className="w-full bg-white border border-slate-300 px-2 py-1 rounded text-xs outline-none focus:border-indigo-600"
                 >
                   <option value="">All Mokams</option>
-                  {agencyList.map((a, i) => (
-                    <option key={i} value={a}>{a}</option>
-                  ))}
+                  {agencyList.map((a, i) => {
+                    if (!a) return null;
+                    const val = (a && typeof a === 'object') ? ((a as any).name || (a as any).area_name || (a as any).agency_name || JSON.stringify(a)) : String(a);
+                    return <option key={i} value={val}>{val}</option>;
+                  })}
                 </select>
               </div>
 

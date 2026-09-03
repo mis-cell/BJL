@@ -469,16 +469,16 @@ export default function NotificationCenter({
                           <span className="text-slate-700 block text-[9px] font-sans font-bold uppercase">
                             Past Auto Value
                           </span>
-                          <span className="font-extrabold text-blue-900 text-xs">
-                            {item.past_value || "Auto Calculated"}
+                          <span className="font-extrabold text-blue-900 text-xs truncate block">
+                            {typeof item.past_value === 'object' ? JSON.stringify(item.past_value) : String(item.past_value || "Auto Calculated")}
                           </span>
                         </div>
                         <div className="bg-red-200/90 p-1.5 rounded border border-red-300">
                           <span className="text-red-900 block text-[9px] font-sans font-bold uppercase">
                             Current Manual Value
                           </span>
-                          <span className="font-extrabold text-red-950 text-xs">
-                            {item.new_value || "Manual Value"}
+                          <span className="font-extrabold text-red-950 text-xs truncate block">
+                            {typeof item.new_value === 'object' ? JSON.stringify(item.new_value) : String(item.new_value || "Manual Value")}
                           </span>
                         </div>
                       </div>
@@ -487,7 +487,7 @@ export default function NotificationCenter({
 
                   {/* Card Description */}
                   <p className="text-xs text-slate-200 font-medium leading-relaxed my-1">
-                    {item.description}
+                    {typeof item.description === 'object' ? JSON.stringify(item.description) : String(item.description || "")}
                   </p>
 
                   {/* Footer Meta & Quick Action */}
@@ -496,12 +496,12 @@ export default function NotificationCenter({
                       {item.user && (
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3 text-amber-400" />
-                          <span>{item.user}</span>
+                          <span>{typeof item.user === 'object' ? JSON.stringify(item.user) : String(item.user)}</span>
                         </span>
                       )}
                       {item.mr_no && (
                         <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
-                          MR: {item.mr_no}
+                          MR: {typeof item.mr_no === 'object' ? JSON.stringify(item.mr_no) : String(item.mr_no)}
                         </span>
                       )}
                     </div>

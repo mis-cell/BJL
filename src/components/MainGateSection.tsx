@@ -906,9 +906,11 @@ export default function MainGateSection({
                     defaultValue=""
                   />
                   <datalist id="maingate-broker-options">
-                    {masters.brokers.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
+                    {masters.brokers.map((b, idx) => {
+                      if (!b) return null;
+                      const val = (b && typeof b === 'object') ? ((b as any).name || (b as any).brok_name || (b as any).broker_name || JSON.stringify(b)) : String(b);
+                      return <option key={idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
                 <div>
@@ -922,9 +924,11 @@ export default function MainGateSection({
                     defaultValue=""
                   />
                   <datalist id="maingate-quality-options">
-                    {masters.qualities.map((q) => (
-                      <option key={q} value={q}>{q}</option>
-                    ))}
+                    {masters.qualities.map((q, idx) => {
+                      if (!q) return null;
+                      const val = (q && typeof q === 'object') ? ((q as any).name || (q as any).grade_name || (q as any).grade || JSON.stringify(q)) : String(q);
+                      return <option key={idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
               </div>
@@ -940,9 +944,11 @@ export default function MainGateSection({
                     defaultValue=""
                   />
                   <datalist id="maingate-mokam-options">
-                    {masters.mokams.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
+                    {masters.mokams.map((m, idx) => {
+                      if (!m) return null;
+                      const val = (m && typeof m === 'object') ? ((m as any).name || (m as any).area_name || (m as any).mokam || JSON.stringify(m)) : String(m);
+                      return <option key={idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
                 <div>

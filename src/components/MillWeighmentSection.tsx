@@ -351,9 +351,11 @@ export default function MillWeighmentSection({
                     className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#1E331B] outline-none"
                   />
                   <datalist id="mill-party-options">
-                    {masters.brokers.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
+                    {masters.brokers.map((b, idx) => {
+                      if (!b) return null;
+                      const val = (b && typeof b === 'object') ? ((b as any).name || (b as any).brok_name || (b as any).broker_name || JSON.stringify(b)) : String(b);
+                      return <option key={idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
 
@@ -396,9 +398,11 @@ export default function MillWeighmentSection({
                     className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#1E331B] outline-none"
                   />
                   <datalist id="mill-mokam-options">
-                    {masters.mokams.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
+                    {masters.mokams.map((m, idx) => {
+                      if (!m) return null;
+                      const val = (m && typeof m === 'object') ? ((m as any).name || (m as any).area_name || (m as any).mokam || JSON.stringify(m)) : String(m);
+                      return <option key={idx} value={val}>{val}</option>;
+                    })}
                   </datalist>
                 </div>
               </div>
