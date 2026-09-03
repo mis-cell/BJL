@@ -1507,20 +1507,28 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       }
 
       // Map detail columns from arrival grid_details / inspection details, or fallback to PO items
-      let rawArrItems = parseGridOrItems(arrival.grid_details || arrival.items || arrival.details);
+      let rawArrItems: any[] = [];
       
-      if (rawArrItems.length === 0 && supabase) {
+      if (supabase) {
         try {
           const targetMr = arrival.mr_no || arrival.final_arrival_no || mrNo;
           const [midRes, idRes] = await Promise.all([
             supabase.from('material_inspection_details').select('*').eq('mr_no', targetMr),
             supabase.from('inspection_details').select('*').eq('mr_no', targetMr)
           ]);
-          if (midRes.data && midRes.data.length > 0) rawArrItems = midRes.data;
-          else if (idRes.data && idRes.data.length > 0) rawArrItems = idRes.data;
+          if (midRes.data && midRes.data.length > 0) {
+            rawArrItems = midRes.data;
+          } else if (idRes.data && idRes.data.length > 0) {
+            rawArrItems = idRes.data;
+          }
         } catch (e) {
           console.warn("Failed to fetch inspection details:", e);
         }
+      }
+
+      // If not loaded from DB, fallback to arrival grid_details
+      if (rawArrItems.length === 0) {
+        rawArrItems = parseGridOrItems(arrival.grid_details || arrival.items || arrival.details);
       }
 
       const poItems = po ? await getPoItemDetails(po) : [];
