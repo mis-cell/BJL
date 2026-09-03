@@ -405,12 +405,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
       if (matchedAmad) {
         const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(matchedAmad.po_no || '').trim().toUpperCase());
-        const targetTempNo = matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || searchVal;
 
         setFormData(prev => ({
           ...prev,
-          arrival_no: targetTempNo,
-          temporary_arrival_no: targetTempNo,
+          temporary_arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
           temporary_arrival_date: matchedAmad.date || matchedAmad.temporary_arrival_date || prev.temporary_arrival_date,
           po_no: matchedAmad.po_no || prev.po_no,
           po_date: matchedAmad.po_date || matchedAmad.date || matchedPo?.po_date || matchedPo?.date || prev.po_date,
@@ -527,12 +525,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
         const finalPoNo = matchedInspection.po_no || amadData?.po_no || '';
         const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(finalPoNo).trim().toUpperCase());
-        const targetTempNo = matchedInspection.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || mrNo;
 
         setFormData(prev => ({
           ...prev,
-          arrival_no: targetTempNo,
-          mr_no: targetTempNo,
+          mr_no: matchedInspection.mr_no,
           po_no: finalPoNo || prev.po_no || '',
           po_date: matchedInspection.po_date || matchedPo?.po_date || matchedPo?.date || amadData?.date || amadData?.lorry_date || prev.po_date || '',
           jci: matchedInspection.jci || amadData?.jci || prev.jci || 'No',
@@ -721,12 +717,6 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         next.challan_railway_receipt_no = val;
       } else if (field === 'challan_railway_receipt_no') {
         next.challan_rr_no = val;
-      } else if (field === 'temporary_arrival_no') {
-        next.arrival_no = val;
-        next.mr_no = val;
-      } else if (field === 'arrival_no') {
-        next.temporary_arrival_no = val;
-        next.mr_no = val;
       }
 
       if (field === 'unit_name') {
@@ -844,10 +834,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
       const isHeaderLoose = (formData.unit_name || '').toString().trim().toUpperCase().includes('LOOSE');
       const payload = {
         financial_year: formData.financial_year,
-        final_arrival_no: formData.arrival_no || formData.temporary_arrival_no,
-        arrival_no: formData.arrival_no || formData.temporary_arrival_no,
+        final_arrival_no: formData.arrival_no,
+        arrival_no: formData.arrival_no,
         final_arrival_date: formData.date || null,
-        mr_no: formData.arrival_no || formData.temporary_arrival_no || formData.mr_no || null,
+        mr_no: formData.mr_no || null,
         po_no: formData.po_no || null,
         po_date: formData.po_date || null,
         date: formData.date || null,

@@ -2329,23 +2329,13 @@ if (supabase) {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
       `ALTER TABLE IF EXISTS mail_logs DISABLE ROW LEVEL SECURITY;`,
-      `CREATE TABLE IF NOT EXISTS satta_quality_details (
-          detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          satta_id UUID,
-          financial_year TEXT,
-          quality TEXT,
-          qty NUMERIC(15,3),
-          rs NUMERIC(15,2),
-          agency TEXT,
-          marka TEXT
+      `CREATE TABLE IF NOT EXISTS inspection_checklist (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          mr_no TEXT,
+          checklist_data JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
-      `ALTER TABLE IF EXISTS satta_quality_details DISABLE ROW LEVEL SECURITY;`,
-      `CREATE OR REPLACE VIEW inspection_checklist AS SELECT * FROM material_inspection;`,
-      `CREATE OR REPLACE VIEW inspection_checklist_details AS SELECT * FROM material_inspection_details;`,
-      `CREATE OR REPLACE VIEW inspection_master AS SELECT * FROM material_inspection;`,
-      `CREATE OR REPLACE VIEW inspection_details AS SELECT * FROM material_inspection_details;`,
-      `CREATE OR REPLACE VIEW mill_inspection_master AS SELECT * FROM material_inspection;`,
-      `CREATE OR REPLACE VIEW mill_inspection_detail AS SELECT * FROM material_inspection_details;`,
+      `ALTER TABLE IF EXISTS inspection_checklist DISABLE ROW LEVEL SECURITY;`,
       `DO $$
        BEGIN
          IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='purchase_master') THEN

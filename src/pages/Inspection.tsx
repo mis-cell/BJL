@@ -31,7 +31,6 @@ import LegacyLayout from "../components/LegacyLayout";
 import { PaginationControls } from "../components/PaginationControls";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
-import { sanitizeInspectionMaster, sanitizeInspectionDetailRow, safeRender } from "../utils/sanitizeRecord";
 
 export interface DeductionRow {
   id: string;
@@ -1099,7 +1098,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }, 0);
     const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
-    let defaultQty = 0;
+    let defaultQty = 1;
     if (isBaleRule && autoCalc.totalBales > 0) {
       defaultQty = autoCalc.totalBales;
     } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
@@ -1247,9 +1246,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
       });
 
-      const displayList = Array.from(map.values())
-        .map(rec => sanitizeInspectionMaster(rec))
-        .filter(Boolean);
+      const displayList = Array.from(map.values());
       setRecords(displayList);
 
       try {
@@ -1508,9 +1505,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   const populateFromFinalArrival = async (fa: any) => {
-    const displayMrNo = fa.temporary_arrival_no || fa.amad_no || (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
-      ? (fa.temporary_arrival_no || fa.amad_no || fa.mr_no)
-      : (fa.final_arrival_no || fa.arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
+    const displayMrNo = (fa.mr_no && fa.mr_no !== "DIRECT REGISTER" && fa.mr_no.trim() !== "")
+      ? fa.mr_no
+      : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
 
     const poNo = fa.po_no || fa.mr_no || "";
 
@@ -1518,7 +1515,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ...prev,
       mr_no: displayMrNo,
       mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
-      arrival_no: displayMrNo,
+      arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
       arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
       unloading_date: fa.unloading_date || fa.date || prev.unloading_date || new Date().toISOString().split("T")[0],
       po_no: poNo || prev.po_no,
@@ -3077,48 +3074,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   />
                 </div>
 
-                {/* Stations (Unique Area & Agency from Inspection Details) */}
-                {(() => {
-                  const uniqueAreas = Array.from(
-                    new Set(
-                      detailRows
-                        .map((r: any) => (r?.area || r?.area_name || '').toString().trim())
-                        .filter(val => val && val !== '-' && val !== 'N/A' && val.toLowerCase() !== 'null' && val.toLowerCase() !== 'undefined')
-                    )
-                  );
-                  const uniqueAgencies = Array.from(
-                    new Set(
-                      detailRows
-                        .map((r: any) => (r?.agency || r?.agency_name || '').toString().trim())
-                        .filter(val => val && val !== '-' && val !== 'N/A' && val.toLowerCase() !== 'null' && val.toLowerCase() !== 'undefined')
-                    )
-                  );
-                  const stationParts: string[] = [];
-                  if (uniqueAreas.length > 0) stationParts.push(uniqueAreas.join(', '));
-                  if (uniqueAgencies.length > 0) {
-                    const distinctAgencies = uniqueAgencies.filter(ag => !uniqueAreas.includes(ag));
-                    if (distinctAgencies.length > 0) stationParts.push(distinctAgencies.join(', '));
-                  }
-                  const derivedStations = stationParts.length > 0 ? stationParts.join(' / ') : ((headerForm as any).station || (headerForm as any).area || 'BALLY MILL');
-
-                  return (
-                    <div className="flex flex-col gap-1 sm:col-span-2 md:col-span-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-extrabold text-slate-700">Stations</label>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          Derived from Area &amp; Agency
-                        </span>
-                      </div>
-                      <input
-                        type="text"
-                        readOnly
-                        value={derivedStations}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold bg-slate-50 text-emerald-900 focus:outline-none cursor-default"
-                      />
-                    </div>
-                  );
-                })()}
-
                 {/* Left group */}
                 <div className="flex flex-col gap-1 border-l-4 border-blue-400 pl-2">
                   <label className="text-xs font-extrabold text-slate-700">Actual Moisture %</label>
@@ -4078,18 +4033,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                               />
                             </td>
 
-                            {/* Settlement % (Highlighted in Emerald Theme - Blank by default) */}
+                            {/* Settlement % (Highlighted in Emerald Theme) */}
                             <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
                               <input
                                 type="number"
                                 step="0.01"
                                 readOnly={isSettlementMoistureBlocked}
                                 tabIndex={isSettlementMoistureBlocked ? -1 : 0}
-                                title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture"}
-                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : ""}
-                                placeholder="0.00"
-                                onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", e.target.value === "" ? 0 : Number(e.target.value))}
-                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-white text-emerald-950 font-bold text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+                                title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture (Auto-pulled from Act. Moisture)"}
+                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.settlement_moisture || row.settlement_moisture || ((Number(row.settlement_moisture) > 0 && Number(row.settlement_moisture) > 0) ? Number(((Number(row.settlement_moisture) + Number(row.settlement_moisture)) / 2).toFixed(2)) : (Number(row.settlement_moisture) || Number(row.settlement_moisture) || 0)))}
+                                onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
                             <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
@@ -4098,11 +4052,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 step="0.01"
                                 readOnly={isSettlementGradeDownBlocked}
                                 tabIndex={isSettlementGradeDownBlocked ? -1 : 0}
-                                title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Gr. Down"}
-                                value={row.settlement_grade_down !== undefined && row.settlement_grade_down !== null && Number(row.settlement_grade_down) > 0 ? row.settlement_grade_down : ""}
-                                placeholder="0.00"
-                                onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", e.target.value === "" ? 0 : Number(e.target.value))}
-                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-white text-emerald-950 font-bold text-center ${isSettlementGradeDownBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+                                title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Gr. Down (Auto-pulled from Act. Grade Down)"}
+                                value={row.settlement_grade_down !== undefined && row.settlement_grade_down !== null && Number(row.settlement_grade_down) > 0 ? row.settlement_grade_down : (row.settlement_grade_down || row.settlement_grade_down || 0)}
+                                onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementGradeDownBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
                             <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
@@ -4111,11 +4064,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 step="0.01"
                                 readOnly={isSettlementDustBlocked}
                                 tabIndex={isSettlementDustBlocked ? -1 : 0}
-                                title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Dust"}
-                                value={row.settlement_dust !== undefined && row.settlement_dust !== null && Number(row.settlement_dust) > 0 ? row.settlement_dust : ""}
-                                placeholder="0.00"
-                                onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", e.target.value === "" ? 0 : Number(e.target.value))}
-                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-white text-emerald-950 font-bold text-center ${isSettlementDustBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+                                title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Dust (Auto-pulled from Act. Dust)"}
+                                value={row.settlement_dust !== undefined && row.settlement_dust !== null && Number(row.settlement_dust) > 0 ? row.settlement_dust : (row.settlement_dust || row.settlement_dust || headerForm.settlement_dust || headerForm.settlement_dust || 0)}
+                                onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementDustBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
                             <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
@@ -4124,11 +4076,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 step="0.01"
                                 readOnly={isSettlementNcvBlocked}
                                 tabIndex={isSettlementNcvBlocked ? -1 : 0}
-                                title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % NCV"}
-                                value={row.settlement_ncv !== undefined && row.settlement_ncv !== null && Number(row.settlement_ncv) > 0 ? row.settlement_ncv : ""}
-                                placeholder="0.00"
-                                onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", e.target.value === "" ? 0 : Number(e.target.value))}
-                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-white text-emerald-950 font-bold text-center ${isSettlementNcvBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+                                title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % NCV (Auto-pulled from Act. NCV)"}
+                                value={row.settlement_ncv !== undefined && row.settlement_ncv !== null && Number(row.settlement_ncv) > 0 ? row.settlement_ncv : (row.settlement_ncv || row.settlement_ncv || headerForm.settlement_ncv || headerForm.settlement_ncv || 0)}
+                                onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
+                                className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementNcvBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
                             </td>
 

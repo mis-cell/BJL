@@ -41,7 +41,6 @@ import { comparePoInspection } from "../lib/poMatch";
 import { sanitizeCsvData } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
-import { sanitizeInspectionMaster, sanitizeInspectionDetailRow, safeRender } from "../utils/sanitizeRecord";
 
 // Helper function to parse date string without timezone offset shifts
 function parseDateOnly(dateStr: string | null | undefined): Date | null {
@@ -283,18 +282,16 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed)) {
             parsed.forEach((item: any) => {
-              const sanitizedItem = sanitizeInspectionMaster(item);
-              const key = sanitizedItem?.mr_no || sanitizedItem?.id || sanitizedItem?.mill_po_no || sanitizedItem?.po_no;
+              const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
               if (key && !data.some(d => d.mr_no === key || d.mill_po_no === key)) {
-                data.unshift(sanitizedItem);
+                data.unshift(item);
               }
             });
           }
         }
       } catch (e) {}
 
-      const sanitizedData = data.map(rec => sanitizeInspectionMaster(rec)).filter(Boolean);
-      setDbRecords(sanitizedData);
+      setDbRecords(data);
     } catch (err: any) {
       console.error(`Error fetching inspection records for ${name}:`, err);
       setFetchError("Unable to connect to database");
@@ -1533,7 +1530,7 @@ export default function MaterialInspection({
         }
       } catch (e) {}
 
-      const allInspections = Array.from(uniqueMap.values()).map(rec => sanitizeInspectionMaster(rec)).filter(Boolean);
+      const allInspections = Array.from(uniqueMap.values());
       setSavedInspections(allInspections);
 
       // Fetch final arrivals to identify "Final received" POs
@@ -1673,16 +1670,25 @@ export default function MaterialInspection({
         : Array.isArray((insp as any).deduction_types) ? (insp as any).deduction_types : [];
       setSelectedDeductionTypes(dedArr);
 
-      // Fetch corresponding details rows from material_inspection_details
+      // Fetch corresponding details rows from all detail tables
       let { data, error } = await supabase
-        .from("material_inspection_details")
+        .from("inspection_checklist_details")
         .select("*")
         .eq("mr_no", insp.mr_no)
         .order("srl_no", { ascending: true });
 
       if (error || !data || data.length === 0) {
-        const fallback = await supabase
+        const fallback1 = await supabase
           .from("inspection_details")
+          .select("*")
+          .eq("mr_no", insp.mr_no)
+          .order("srl_no", { ascending: true });
+        data = fallback1.data;
+      }
+
+      if (!data || data.length === 0) {
+        const fallback = await supabase
+          .from("mill_inspection_detail")
           .select("*")
           .eq("mr_no", insp.mr_no)
           .order("srl_no", { ascending: true });
@@ -1691,11 +1697,13 @@ export default function MaterialInspection({
 
       if (data && data.length > 0) {
         const enrichedData = data.map((row: any) => {
-          const sanitizedRow = sanitizeInspectionDetailRow(row, insp.mr_no);
-          if ((sanitizedRow.quantity === 0 || sanitizedRow.quantity === "" || sanitizedRow.quantity == null) && Number(sanitizedRow.challan_gross_wt) > 0) {
-            sanitizedRow.quantity = Math.round(Number(sanitizedRow.challan_gross_wt));
+          if ((row.quantity === 0 || row.quantity === "" || row.quantity == null) && Number(row.challan_gross_wt) > 0) {
+            return {
+              ...row,
+              quantity: Math.round(Number(row.challan_gross_wt))
+            };
           }
-          return sanitizedRow;
+          return row;
         });
         setDetailsList(enrichedData);
 
@@ -1783,12 +1791,9 @@ export default function MaterialInspection({
       const voucherArrivalDate = voucher.date || voucher.arrival_date || prev.arrival_date || new Date().toISOString().split("T")[0];
       const voucherUnloadingDate = voucher.unloading_date || voucher.date || voucher.arrival_date || prev.unloading_date || voucherArrivalDate;
 
-      const targetArrivalNo = voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no;
-
       return {
         ...prev,
-        mr_no: targetArrivalNo,
-        arrival_no: targetArrivalNo,
+        arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
         arrival_date: voucherArrivalDate,
         unloading_date: voucherUnloadingDate,
         consignment_date: voucher.consignment_date || voucher.date || voucher.arrival_date || prev.consignment_date,
@@ -3693,12 +3698,12 @@ export default function MaterialInspection({
                         )}
                         {visibleColumns.supplier && (
                           <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                            {safeRender(row.supplier_name || row.supplier)}
+                            {row.supplier_name || "-"}
                           </td>
                         )}
                         {visibleColumns.broker && (
                           <td className="px-4 font-bold uppercase truncate max-w-[150px] border-r border-slate-200">
-                            {safeRender(row.broker_name || row.broker)}
+                            {row.broker_name || "-"}
                           </td>
                         )}
                         {visibleColumns.po_ref && (() => {
@@ -3765,7 +3770,7 @@ export default function MaterialInspection({
                         )}
                         {visibleColumns.lorry_number && (
                           <td className="px-3 border-r border-slate-200 font-mono text-slate-700">
-                            {safeRender(row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no)}
+                            {row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no || "-"}
                           </td>
                         )}
                         {visibleColumns.gate_entry_time && (
@@ -3903,7 +3908,7 @@ export default function MaterialInspection({
                                   <div className="space-y-1 text-[11px]">
                                     <div className="flex justify-between">
                                       <span className="text-slate-550">Lorry Number:</span>
-                                      <span className="font-mono font-black text-slate-800">{safeRender(row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no)}</span>
+                                      <span className="font-mono font-black text-slate-800">{row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no || "-"}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-slate-550">Gate Entry:</span>
@@ -4020,12 +4025,12 @@ export default function MaterialInspection({
 
                       {/* Supplier */}
                       <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                        {safeRender(row.supplier || row.supplier_name)}
+                        {row.supplier || "-"}
                       </td>
 
                       {/* Broker */}
                       <td className="px-4 font-semibold uppercase truncate max-w-[150px] border-r border-slate-200 text-slate-650">
-                        {safeRender(row.broker || row.broker_name)}
+                        {row.broker || "-"}
                       </td>
 
                       {/* Bales */}

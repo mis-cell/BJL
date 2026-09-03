@@ -165,13 +165,12 @@ function ManualEntryComboBox({
                   e.preventDefault();
                 }}
                 onClick={() => {
-                  const o = opt as any;
-                  onChange(o && typeof o === 'object' ? (o.value || o.label || o.name || '') : String(o ?? ''));
+                  onChange(opt);
                   setIsOpen(false);
                 }}
                 className="p-1.5 hover:bg-slate-900 hover:text-white cursor-pointer uppercase text-left font-bold text-slate-700"
               >
-                {(() => { const o = opt as any; return o && typeof o === 'object' ? (o.label || o.name || o.value || '') : String(o ?? ''); })()}
+                {opt}
               </li>
             ))
           ) : (
@@ -237,13 +236,12 @@ function CustomDropdownSelect({
               key={idx}
               type="button"
               onClick={() => {
-                const o = opt as any;
-                onChange(o && typeof o === 'object' ? (o.value || o.label || o.name || '') : String(o ?? ''));
+                onChange(opt);
                 setIsOpen(false);
               }}
               className="w-full p-2 text-left hover:bg-indigo-600 hover:text-white font-black text-slate-750 uppercase transition-all duration-100 cursor-pointer block"
             >
-              {(() => { const o = opt as any; return o && typeof o === 'object' ? (o.label || o.name || o.value || '') : String(o ?? ''); })()}
+              {opt}
             </button>
           ))}
         </div>
@@ -334,13 +332,12 @@ function CustomEditableSelect({
                   e.preventDefault();
                 }}
                 onClick={() => {
-                  const o = opt as any;
-                  onChange(o && typeof o === 'object' ? (o.value || o.label || o.name || '') : String(o ?? ''));
+                  onChange(opt);
                   setIsOpen(false);
                 }}
                 className="w-full p-2 text-left hover:bg-indigo-600 hover:text-white font-black text-slate-750 uppercase transition-all duration-100 cursor-pointer block"
               >
-                {(() => { const o = opt as any; return o && typeof o === 'object' ? (o.label || o.name || o.value || '') : String(o ?? ''); })()}
+                {opt}
               </button>
             ))
           ) : (
