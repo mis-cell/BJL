@@ -899,36 +899,32 @@ export default function MainGateSection({
                   <label htmlFor="broker_695" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Broker / Supplier</label>
                   <input
  id="broker_695" aria-label="Broker / Supplier"                    name="broker"
-                    list="maingate-broker-options"
+                    list="broker-options"
                     autoComplete="off"
                     placeholder="Type or select Broker..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
                   />
-                  <datalist id="maingate-broker-options">
-                    {masters.brokers.map((b, idx) => {
-                      if (!b) return null;
-                      const val = (b && typeof b === 'object') ? ((b as any).name || (b as any).brok_name || (b as any).broker_name || JSON.stringify(b)) : String(b);
-                      return <option key={idx} value={val}>{val}</option>;
-                    })}
+                  <datalist id="broker-options">
+                    {masters.brokers.map((b) => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
                   </datalist>
                 </div>
                 <div>
                   <label htmlFor="quality_711" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Quality / Grade</label>
                   <input
  id="quality_711" aria-label="Quality / Grade"                    name="quality"
-                    list="maingate-quality-options"
+                    list="quality-options"
                     autoComplete="off"
                     placeholder="Type or select Quality..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
                   />
-                  <datalist id="maingate-quality-options">
-                    {masters.qualities.map((q, idx) => {
-                      if (!q) return null;
-                      const val = (q && typeof q === 'object') ? ((q as any).name || (q as any).grade_name || (q as any).grade || JSON.stringify(q)) : String(q);
-                      return <option key={idx} value={val}>{val}</option>;
-                    })}
+                  <datalist id="quality-options">
+                    {masters.qualities.map((q) => (
+                      <option key={q} value={q}>{q}</option>
+                    ))}
                   </datalist>
                 </div>
               </div>
@@ -937,31 +933,29 @@ export default function MainGateSection({
                   <label htmlFor="mokam_729" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Mokam / Origin</label>
                   <input
  id="mokam_729" aria-label="Mokam / Origin"                    name="mokam"
-                    list="maingate-mokam-options"
+                    list="mokam-options"
                     autoComplete="off"
                     placeholder="Type or select Mokam..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
                   />
-                  <datalist id="maingate-mokam-options">
-                    {masters.mokams.map((m, idx) => {
-                      if (!m) return null;
-                      const val = (m && typeof m === 'object') ? ((m as any).name || (m as any).area_name || (m as any).mokam || JSON.stringify(m)) : String(m);
-                      return <option key={idx} value={val}>{val}</option>;
-                    })}
+                  <datalist id="mokam-options">
+                    {masters.mokams.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
                   </datalist>
                 </div>
                 <div>
                   <label htmlFor="marka_745" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">Marka</label>
                   <input
  id="marka_745" aria-label="Marka"                    name="marka"
-                    list="maingate-marka-options"
+                    list="marka-options"
                     autoComplete="off"
                     placeholder="Type or select Marka..."
                     className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl p-2 text-xs outline-none focus:border-[#1E331B]"
                     defaultValue=""
                   />
-                  <datalist id="maingate-marka-options">
+                  <datalist id="marka-options">
                     {masters.markas.map((mk) => (
                       <option key={mk} value={mk}>{mk}</option>
                     ))}

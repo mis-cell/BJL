@@ -3115,6 +3115,54 @@ export default function MaterialInspection({
 
           </div>
 
+          {/* Top Control Bar with search */}
+          {/* <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2.5 items-center flex-wrap shadow-sm">
+            <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[280px]">
+              <input id="search_m_r_no_supplier_na_2188" name="search_m_r_no_supplier_na" aria-label="Search M.R. No, Supplier name, Broker name, P.O. No..."                className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold"
+                placeholder="Search M.R. No, Supplier name, Broker name, P.O. No..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+              />
+              <button className="bg-[#d4d0c8] px-3 border-l border-gray-400 hover:bg-gray-300 transition-colors">
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-[#d4d0c8] px-2.5 py-1 border border-black/15 shadow-inner">
+              <span className="text-[9px] font-black uppercase text-slate-800 ">Arrival From:</span>
+              <input id="arrivalstartdate_2202" name="arrivalstartdate" aria-label="arrivalstartdate"                type="date"
+                value={arrivalStartDate}
+                onChange={(e) => setArrivalStartDate(e.target.value)}
+                className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
+              />
+              <span className="text-[9px] font-black uppercase text-slate-800 ">To:</span>
+              <input id="arrivalenddate_2209" name="arrivalenddate" aria-label="arrivalenddate"                type="date"
+                value={arrivalEndDate}
+                onChange={(e) => setArrivalEndDate(e.target.value)}
+                className="bg-white border border-gray-400 text-[10.5px] px-1.5 py-0.5 font-mono font-bold outline-none cursor-pointer"
+              />
+            </div>
+
+            <div className="flex gap-1">
+              <button
+                onClick={() => {
+                  setSearchFilter("");
+                  setArrivalStartDate("");
+                  setArrivalEndDate("");
+                }}
+                className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1.5 text-[10px] uppercase font-black tracking-tight flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] active:translate-y-px cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5 text-blue-900" /> Clear
+              </button>
+              <button
+                onClick={handleRefreshDatabase}
+                title="Refresh database records"
+                className="bg-emerald-700 hover:bg-[#1b5e20] text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1.5 text-[10px] uppercase font-black tracking-tight flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] active:translate-y-px cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-wait" disabled={loading}
+              >
+                <RefreshCcw className={`h-3.5 w-3.5 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div> */}
           <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#174C2C] p-2 shadow-sm">
   
             <div className="flex flex-1 min-w-[280px] overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
@@ -3195,6 +3243,126 @@ export default function MaterialInspection({
           </div>
 
           {/* Action Toolbar */}
+          {/* <div className="flex gap-1.5 flex-wrap items-center">
+            <button
+              onClick={() => {
+                setMasterData(initialMasterState());
+                setDetailsList([1, 2, 3, 4, 5].map(createEmptyRow));
+                setIsEditMode(true);
+                setErrorMessage("");
+                setSuccessMessage("");
+                setViewMode("entry");
+              }}
+              className="bg-[#0d47a1] hover:bg-blue-800 text-white border-2 border-slate-400 hover:border-slate-600 font-extrabold text-[10px] px-5 py-2 uppercase tracking-wide rounded-sm active:translate-y-px flex items-center gap-1 shadow cursor-pointer "
+            >
+              <Plus className="h-4 w-4" />
+              New Inspection
+            </button>
+
+             <button
+              onClick={handleExportToExcel}
+              className="bg-[#1e7145] hover:bg-[#155231] text-white border-2 border-[#103e25] font-extrabold text-[10px] px-5 py-2 uppercase tracking-wide rounded-sm active:translate-y-px flex items-center gap-1.5 shadow cursor-pointer "
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Export to Excel
+            </button>
+
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => setViewSettingsOpen(!viewSettingsOpen)}
+                className="bg-[#d4d0c8] hover:bg-gray-200 text-slate-800 border-2 border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-sm active:translate-y-px flex items-center gap-1.5 cursor-pointer "
+              >
+                ⚙️ View Settings
+                <span className="text-[8px]">{viewSettingsOpen ? "▲" : "▼"}</span>
+              </button>
+              {viewSettingsOpen && (
+                <div className="origin-top-left absolute left-0 md:left-auto md:right-0 mt-1 w-56 rounded-md shadow-lg bg-white border border-gray-400 ring-1 ring-black ring-opacity-5 z-20 p-2 text-xs font-semibold">
+                  <div className="border-b border-gray-200 pb-1 mb-1 flex items-center justify-between ">
+                    <span className="text-[9px] uppercase font-black tracking-wider text-gray-500">Toggle Column View</span>
+                    <button
+                      onClick={() => setViewSettingsOpen(false)}
+                      className="text-gray-405 hover:text-gray-900 font-extrabold font-mono text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-0.5">
+                    {Object.keys(visibleColumns).map((colKey) => {
+                      return (
+                        <label key={colKey} className="flex items-center gap-2 hover:bg-slate-100 p-1 rounded cursor-pointer ">
+                          <input id="checkbox_2290" name="checkbox" aria-label="checkbox" type="checkbox"
+                            checked={visibleColumns[colKey]}
+                            onChange={(e) => {
+                              setVisibleColumns(prev => ({
+                                ...prev,
+                                [colKey]: e.target.checked
+                              }));
+                            }}
+                            className="cursor-pointer h-3.5 w-3.5 border-gray-400"
+                          />
+                          <span className="text-[11px] text-slate-700 font-bold">{columnLabels[colKey] || colKey}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCurrentTab(currentTab === "inspections" ? "pending_mr" : "inspections")}
+              className={`border-2 border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] font-extrabold text-[10px] px-4 py-2 uppercase tracking-wide rounded-sm active:translate-y-px flex items-center gap-1.5 cursor-pointer  transition-all ${
+                currentTab === "pending_mr"
+                  ? "bg-amber-700 text-white hover:bg-amber-800"
+                  : "bg-[#d4d0c8] hover:bg-gray-200 text-slate-800"
+              }`}
+            >
+              ⏳ M.R Wise Pending List ({(() => {
+                const pendingCount = arrivalVouchers.filter((v) => {
+                  const arrivalVal = (v.temporary_arrival_no || v.amad_no || "").trim().toUpperCase();
+                  if (!arrivalVal) return false;
+                  return !savedInspections.some(
+                    (insp) => (insp.arrival_no || "").trim().toUpperCase() === arrivalVal
+                  );
+                }).length;
+                return pendingCount;
+              })()})
+            </button>
+
+            {selectedMrNos.length > 0 && currentTab === "inspections" && (
+              <button
+                onClick={handleBatchPrint}
+                className="bg-[#2a3088] hover:bg-[#1a2168] text-white border-2 border-slate-400 font-extrabold text-[10px] px-5 py-2 uppercase tracking-wide rounded-sm active:translate-y-px flex items-center gap-1.5 shadow cursor-pointer "
+              >
+                <Printer className="h-4 w-4 text-cyan-200 animate-pulse" />
+                Batch Print Selected ({selectedMrNos.length})
+              </button>
+            )}
+
+            <div className="flex-1" />
+
+            <div className="flex items-center text-[10.5px] font-bold text-slate-700  uppercase">
+              <span>
+                {currentTab === "inspections" ? (
+                  <>
+                    Total Inspections Logged:{" "}
+                    <b className="text-[#0d47a1] text-xs font-black">
+                      {filteredSavedInspections.length}
+                    </b>
+                  </>
+                ) : (
+                  <>
+                    Total Pending Inspections:{" "}
+                    <b className="text-amber-850 text-xs font-black">
+                      {filteredPendingMrList.length}
+                    </b>
+                  </>
+                )}
+              </span>
+            </div>
+          </div> */}
           <div className="flex gap-2 flex-wrap items-center rounded-md border border-slate-300 bg-[#174C2C] p-2 shadow-sm">
             <button
               onClick={() => {
@@ -3255,9 +3423,9 @@ export default function MaterialInspection({
                           className="flex items-center gap-2 hover:bg-slate-100 p-1.5 rounded-md cursor-pointer transition-colors"
                         >
                           <input
-                            id={`col_toggle_${colKey}`}
-                            name={`col_toggle_${colKey}`}
-                            aria-label={`Toggle column ${colKey}`}
+                            id="checkbox_2290"
+                            name="checkbox"
+                            aria-label="checkbox"
                             type="checkbox"
                             checked={visibleColumns[colKey]}
                             onChange={(e) => {

@@ -2986,6 +2986,55 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
               </div>
             </div>
+            {/* <div className="flex bg-[#c0c0c0] p-1.5 border border-black/20 gap-2 items-center flex-wrap shadow-sm">
+              <div className="flex bg-white border border-gray-400 p-px flex-1 min-w-[280px]">
+                <input  id="query_by_m_r_no_supplier__2032" name="query_by_m_r_no_supplier_" aria-label="Query by M.R. No., Supplier Name, Broker, P.O. No..."
+                  className="flex-1 text-xs px-2.5 outline-none py-1.5 font-sans font-bold" 
+                  placeholder="Query by M.R. No., Supplier Name, Broker, P.O. No..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                />
+                <button className="bg-[#d4d0c8] px-3 border-l border-gray-400 hover:bg-gray-300 transition-colors">
+                  <Search className="h-3.5 w-3.5 text-slate-800" />
+                </button>
+              </div>
+
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => {
+                    setMasterData(initialMaster());
+                    setDetailCols([1, 2, 3, 4].map(emptyDetailColumn));
+                    setErrorMessage('');
+                    setSuccessMessage('');
+                    setIsEdit(false);
+                    setViewMode('entry');
+                  }}
+                  className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3.5 py-1.5 text-[10px] uppercase font-black flex items-center gap-1 hover:bg-white active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5 text-green-800" /> Create Settlement
+                </button>
+                <button 
+                  onClick={handleExportCsv}
+                  className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3.5 py-1.5 text-[10px] uppercase font-black flex items-center gap-1 hover:bg-white active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-blue-800" /> Export CSV
+                </button>
+                <button 
+                  onClick={() => setSearchFilter('')}
+                  className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1.5 text-[10px] uppercase font-black flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] cursor-pointer"
+                  title="Clear Search"
+                >
+                  <X className="h-3.5 w-3.5 text-red-800" /> Clear
+                </button>
+                <button 
+                  onClick={handleManualRefresh}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 py-1.5 text-[10px] uppercase font-black flex items-center gap-1 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  disabled={loading}
+                >
+                  <RefreshCcw className={`h-3.5 w-3.5 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+            </div> */}
 
             {/* List Table Grid of settlements */}
             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
@@ -4890,7 +4939,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }}
           title={`SETTLEMENT STATEMENT - M.R. #${viewModalData.master.mr_no || 'N/A'}`}
         >
-          <div id="mr-settlement-statement-content" className="p-6 bg-white text-slate-900 font-sans space-y-4">
+          <div id="print-modal-children-canvas" className="p-6 bg-white text-slate-900 font-sans space-y-4">
             {/* Header */}
             <div className="border-b-2 border-slate-900 pb-3 text-center">
               <h2 className="text-xl font-black tracking-wide text-[#2a3088] uppercase">BALLY JUTE COMPANY LIMITED</h2>

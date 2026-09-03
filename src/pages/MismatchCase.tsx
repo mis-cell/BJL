@@ -1282,11 +1282,9 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                     className="w-full text-xs py-1.5 px-2 border border-slate-300 rounded bg-white text-slate-800 font-medium focus:outline-none focus:border-indigo-600"
                   >
                     <option value="ALL">All Brokers ({brokerOptions.length})</option>
-                    {brokerOptions.map((b, idx) => {
-                      if (!b) return null;
-                      const val = (b && typeof b === 'object') ? ((b as any).name || (b as any).brok_name || (b as any).broker_name || JSON.stringify(b)) : String(b);
-                      return <option key={idx} value={val}>{val}</option>;
-                    })}
+                    {brokerOptions.map((b, idx) => (
+                      <option key={idx} value={b}>{b}</option>
+                    ))}
                   </select>
                 </div>
 

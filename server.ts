@@ -60,7 +60,7 @@ async function runImapSync() {
     
     const searchCriteria = ['ALL'];
     const fetchOptions = {
-      bodies: [''],
+      bodies: ['HEADER', 'TEXT', 'RFC822', ''],
       markSeen: false,
       struct: true
     };
@@ -164,12 +164,12 @@ async function runImapSync() {
     }
     return emails;
   } catch (err: any) {
-    if (err.message?.includes('timed out') || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND' || err.message?.includes('Could not parse command')) {
-      console.warn("[Sync] Background IMAP email sync notice:", err.message);
+    if (err.message?.includes('timed out') || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+      console.warn("[Sync] Background IMAP email sync paused (connection timed out / offline).");
     } else {
       console.error("[Sync] Error in live Gmail email sync:", err.message);
     }
-    return [];
+    throw err;
   } finally {
     if (connection) {
       try { connection.end(); } catch (e) {}
@@ -223,12 +223,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // 1. CORS & No-Cache & URL sanitization middleware
+  // 1. CORS & No-Cache middleware
   app.use((req, res, next) => {
-    if (req.url && req.url.includes(' ')) {
-      const cleanUrl = req.url.split(' ')[0];
-      req.url = cleanUrl;
-    }
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");

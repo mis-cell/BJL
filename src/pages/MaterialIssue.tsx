@@ -2365,6 +2365,70 @@ export default function MaterialIssue({ onSave, onCancel, setCurrentPage, closeP
             </div>
 
           </div>
+          {/* <div className="flex bg-[#d4d0c8] p-1 border-2 border-white border-b-slate-650 border-r-slate-650 gap-2 items-center flex-wrap rounded-sm">
+            <div className="flex bg-white border border-slate-400 p-px flex-1 min-w-[200px]">
+              <input  id="search_by_issue_no_depart_1952" name="search_by_issue_no_depart" aria-label="Search by Issue No, Department, Godown, Stock Group..."
+                className="flex-1 text-xs px-2 outline-none py-1 font-sans font-semibold uppercase" 
+                placeholder="Search by Issue No, Department, Godown, Stock Group..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <div className="bg-[#d4d0c8] px-2 border-l border-slate-400 flex items-center justify-center">
+                <Search className="h-3.5 w-3.5 text-slate-600" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-white border border-slate-400 p-px">
+              <span className="text-[9px] font-black uppercase text-slate-500 pl-1">From:</span>
+              <input  id="startdatefilter_1965" name="startdatefilter" aria-label="startdatefilter"
+                type="date"
+                className="text-xs px-1 py-0.5 outline-none font-bold"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+              />
+              <span className="text-[9px] font-black uppercase text-slate-500">To:</span>
+              <input  id="enddatefilter_1972" name="enddatefilter" aria-label="enddatefilter"
+                type="date"
+                className="text-xs px-1 py-0.5 outline-none font-bold"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+              />
+              {(startDateFilter || endDateFilter) && (
+                <button 
+                  onClick={() => { setStartDateFilter(''); setEndDateFilter(''); }}
+                  className="text-slate-400 hover:text-red-650 px-1.5 border-l border-slate-200 font-bold cursor-pointer"
+                  title="Clear date range"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-1">
+              <button 
+                onClick={handleExportCSV} 
+                className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Download filtered records as CSV"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-100" /> Export to CSV
+              </button>
+              <button 
+                onClick={() => { setSearchQuery(''); setStartDateFilter(''); setEndDateFilter(''); }} 
+                className="bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1 hover:bg-[#c8c4bc] cursor-pointer"
+                title="Clear Search & Filters"
+              >
+                <X className="h-3 w-3 text-red-800" /> Clear
+              </button>
+              <button 
+                onClick={fetchRecords} 
+                className="bg-emerald-700 hover:bg-emerald-800 text-white border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-3 text-[10px] font-bold h-6 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                disabled={loading}
+                title="Refresh database records"
+              >
+                <RefreshCw className={`h-3 w-3 text-emerald-100 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div> */}
 
           {/* ACTION TOOLBAR */}
           <div className="flex flex-wrap items-stretch justify-end gap-2 my-3 p-2 rounded-xl border border-slate-200 bg-slate-50">

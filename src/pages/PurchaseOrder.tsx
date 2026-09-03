@@ -3889,9 +3889,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     // Section split by status. Temporary P.O (Sauda Check Point) = NOT yet final; Final P.O = final.
     // A P.O appears in exactly ONE section — never both — so the two are fully
     // independent. Clicking "Pass" flips status to 'final', moving it from Sauda Check Point to Final P.O.
-    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final';
+    const isFinalizedPo = p.status !== 'temp';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && p.status === 'temp') return false; // Final P.O: hide temp rows
+    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4060,9 +4060,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
     if (isCancelled) return false;
 
-    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final';
+    const isFinalizedPo = p.status !== 'temp';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && p.status === 'temp') return false; // Final P.O: hide temp rows
+    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4294,11 +4294,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                     </button>
                   </div>
                 </div>
-                <div className="w-24 h-16 relative flex justify-center items-center shrink-0">
+                <div className="w-16 h-12 relative flex justify-center items-center shrink-0">
                   {scopedPos.length === 0 ? (
                     <div className="text-slate-400 text-[9px] font-bold">No Data</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={10} minHeight={10} initialDimension={{ width: 96, height: 64 }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                       <PieChart>
                         <Pie
                           data={statusPieData}
@@ -5223,7 +5223,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 -ml-6">
                   <label htmlFor="p_o_contract_3449" className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
                   {formData.is_ptf ? (
-                    <input  id="p_o_contract_disabled_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
+                    <input  id="p_o_contract_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
                   ) : (
                     <SearchablePoContractDropdown 
                       id="p_o_contract_3449" 
