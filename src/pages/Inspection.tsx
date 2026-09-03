@@ -1826,7 +1826,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             settlement_dust: item.settlement_dust || '',
             settlement_ncv: item.settlement_ncv || '',
             final_receipt_wt: item.final_receipt_wt || item.net_wt || item.netto_pnto || "",
-            rate: item.rate || item.rate_qntl || ""
+            rate: item.rate || item.rate_qntl || "",
+            area: item.area || item.arrival_area_name || item.purch_area_name || (rec as any).area || "",
+            agency: item.agency || item.arrival_agency_name || item.purch_agency_name || (rec as any).agency || ""
           }));
       }
     }
