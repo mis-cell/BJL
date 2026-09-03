@@ -2982,44 +2982,35 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         <td className="p-2 font-bold text-slate-500">{col.col_index}</td>
                         <td className="p-2">
                           <input
- id="grade_e_g_td5_2364" name="grade_e_g_td5" aria-label="Grade (e.g. TD5)"                            type="text"
+                            id="grade_e_g_td5_2364" name="grade_e_g_td5" aria-label="Grade (e.g. TD5)"
+                            type="text"
                             list="grade-options-list"
                             value={col.grade}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].grade = e.target.value;
-                              setDetailCols(updated);
-                            }}
+                            readOnly
                             placeholder="Grade (e.g. TD5)"
-                            className="w-full p-1 border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-purple-500"
+                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
                           />
                         </td>
                         <td className="p-2">
                           <input
- id="area_e_g_daisee_2378" name="area_e_g_daisee" aria-label="Area (e.g. DAISEE)"                            type="text"
+                            id="area_e_g_daisee_2378" name="area_e_g_daisee" aria-label="Area (e.g. DAISEE)"
+                            type="text"
                             list="area-options-list"
                             value={col.area}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].area = e.target.value;
-                              setDetailCols(updated);
-                            }}
+                            readOnly
                             placeholder="Area (e.g. DAISEE)"
-                            className="w-full p-1 border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-purple-500"
+                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
                           />
                         </td>
                         <td className="p-2">
                           <input
- id="agency_e_g_ambagan_2392" name="agency_e_g_ambagan" aria-label="Agency (e.g. AMBAGAN)"                            type="text"
+                            id="agency_e_g_ambagan_2392" name="agency_e_g_ambagan" aria-label="Agency (e.g. AMBAGAN)"
+                            type="text"
                             list="agency-options-list"
                             value={col.agency}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].agency = e.target.value;
-                              setDetailCols(updated);
-                            }}
+                            readOnly
                             placeholder="Agency (e.g. AMBAGAN)"
-                            className="w-full p-1 border border-slate-300 rounded text-xs font-semibold focus:ring-1 focus:ring-purple-500"
+                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
                           />
                         </td>
                         <td className="p-2">
