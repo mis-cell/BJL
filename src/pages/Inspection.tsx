@@ -788,6 +788,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Print modal state
+  const [copyType, setCopyType] = useState<string | null>('1');
   const [printingRecord, setPrintingRecord] = useState<InspectionMasterRecord | null>(null);
   const [printingDetails, setPrintingDetails] = useState<any[]>([]);
 
@@ -4240,11 +4241,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           isOpen={printingRecord !== null}
           onClose={() => setPrintingRecord(null)}
           title={`MARKS & QUALITY RECEIVED - M.R. NO: ${printingRecord?.mr_no || ""}`}
+          copyType={copyType}
+          setCopyType={setCopyType}
         >
           {printingRecord && (
             <InspectionPrintSlip
               master={printingRecord}
               details={printingDetails}
+              copyType={copyType}
             />
           )}
         </PrintModal>

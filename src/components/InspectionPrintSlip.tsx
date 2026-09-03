@@ -71,9 +71,11 @@ export interface InspectionMasterPrintData {
 interface Props {
   master: InspectionMasterPrintData;
   details?: InspectionDetailPrintRow[];
+  copyType?: copyType
 }
 
-export default function InspectionPrintSlip({ master, details = [] }: Props) {
+export default function InspectionPrintSlip({ master, details = [], copyType }: Props) {
+  //console.log(copyType)
   // Format date helper: DD/MM/YYYY
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -208,9 +210,22 @@ export default function InspectionPrintSlip({ master, details = [] }: Props) {
             <div className="relative mb-2">
               {/* Mill Copy top right */}
               <div className="absolute right-0 top-0 text-right">
-                <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
-                  MILL COPY
-                </span>
+                {copyType==='1'&&(
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
+                    MILL COPY
+                  </span>
+                )}
+                {copyType==='2'&&(
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
+                    Original Copy
+                  </span>
+                )}
+                {copyType==='3'&&(
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
+                    Not for Bill
+                  </span>
+                )}
+                
               </div>
 
               {/* Center Main Heading */}
