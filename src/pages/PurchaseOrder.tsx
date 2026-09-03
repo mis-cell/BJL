@@ -6463,6 +6463,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           onClose={() => setExcessShortModalPo(null)}
           onSaveSuccess={() => { fetchPosAndMasters(); }}
           allFinalArrivals={allFinalArrivals}
+          allTempArrivals={allTempArrivals}
           allScpDetails={allScpDetails}
           sattaCalculatedRates={sattaCalcs}
           sattaBaseRates={sattaBases}
