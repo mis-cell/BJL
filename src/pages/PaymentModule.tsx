@@ -2797,7 +2797,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 />
               </div>
 
-              <div>
+              <div style={{display:'none'}}>
                 <label className="block text-[10px] font-black uppercase text-purple-900 mb-1 flex items-center justify-between">
                   <span>Advance Payment Done? *</span>
                   <span className={cn(
@@ -2809,8 +2809,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {(masterData.advance_payment_done || 'No') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
                   </span>
                 </label>
-                <select
- id="masterdata_advance_paymen_2069" name="masterdata_advance_paymen" aria-label="masterdata advance paymen"                  value={masterData.advance_payment_done || 'No'}
+                <select id="masterdata_advance_paymen_2069" name="masterdata_advance_paymen" aria-label="masterdata advance paymen"                  value={masterData.advance_payment_done || 'No'}
                   onChange={e => setMasterData({ ...masterData, advance_payment_done: e.target.value })}
                   className={cn(
                     "w-full p-2 border rounded font-black text-xs transition-colors",

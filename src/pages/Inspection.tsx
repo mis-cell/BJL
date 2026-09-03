@@ -2008,42 +2008,42 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
         }
         if (combinedMoistAvg > 0) {
-          currentRow.moisture_act = combinedMoistAvg;
+          currentRow.moisture_act = lorryAvg;
           //currentRow.moisture_claim = combinedMoistAvg;
-          currentRow.settlement_moisture = combinedMoistAvg;
+          //currentRow.settlement_moisture = combinedMoistAvg;
         }
       }
 
       // Auto-pull Moisture Act / Claim into Mill Settlement % Moisture
       if (field === "moisture_act") {
-        currentRow.settlement_moisture = Number(value) || 0;
+        //currentRow.settlement_moisture = Number(value) || 0;
       }
       if (field === "moisture_claim" && (!currentRow.settlement_moisture || currentRow.settlement_moisture === 0)) {
-        currentRow.settlement_moisture = Number(value) || 0;
+        //currentRow.settlement_moisture = Number(value) || 0;
       }
 
       // Auto-pull Grade Down Act / Claim into Mill Settlement % Gr. Down
       if (field === "grade_down_act") {
-        currentRow.settlement_grade_down = Number(value) || 0;
+        //currentRow.settlement_grade_down = Number(value) || 0;
       }
       if (field === "grade_down_claim" && (!currentRow.settlement_grade_down || currentRow.settlement_grade_down === 0)) {
-        currentRow.settlement_grade_down = Number(value) || 0;
+        //currentRow.settlement_grade_down = Number(value) || 0;
       }
 
       // Auto-pull Dust Act / Claim into Mill Settlement % Dust
       if (field === "dust_act") {
-        currentRow.settlement_dust = Number(value) || 0;
+        //currentRow.settlement_dust = Number(value) || 0;
       }
       if (field === "dust_claim" && (!currentRow.settlement_dust || currentRow.settlement_dust === 0)) {
-        currentRow.settlement_dust = Number(value) || 0;
+        //currentRow.settlement_dust = Number(value) || 0;
       }
 
       // Auto-pull NCV Act / Claim into Mill Settlement % NCV
       if (field === "ncv_act") {
-        currentRow.settlement_ncv = Number(value) || 0;
+        //currentRow.settlement_ncv = Number(value) || 0;
       }
       if (field === "ncv_claim" && (!currentRow.settlement_ncv || currentRow.settlement_ncv === 0)) {
-        currentRow.settlement_ncv = Number(value) || 0;
+        //currentRow.settlement_ncv = Number(value) || 0;
       }
       // remarks show simul
       /* if (field === "row_remarks" ) {
@@ -3876,7 +3876,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementMoistureBlocked}
                                 tabIndex={isSettlementMoistureBlocked ? -1 : 0}
                                 title={isSettlementMoistureBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Moisture (Auto-pulled from Act. Moisture)"}
-                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.moisture_act || row.moisture_claim || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0)))}
+                                value={row.settlement_moisture !== undefined && row.settlement_moisture !== null && Number(row.settlement_moisture) > 0 ? row.settlement_moisture : (row.settlement_moisture || row.settlement_moisture || ((Number(row.settlement_moisture) > 0 && Number(row.settlement_moisture) > 0) ? Number(((Number(row.settlement_moisture) + Number(row.settlement_moisture)) / 2).toFixed(2)) : (Number(row.settlement_moisture) || Number(row.settlement_moisture) || 0)))}
                                 onChange={(e) => !isSettlementMoistureBlocked && handleDetailChange(idx, "settlement_moisture", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementMoistureBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -3888,7 +3888,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementGradeDownBlocked}
                                 tabIndex={isSettlementGradeDownBlocked ? -1 : 0}
                                 title={isSettlementGradeDownBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Gr. Down (Auto-pulled from Act. Grade Down)"}
-                                value={row.settlement_grade_down !== undefined && row.settlement_grade_down !== null && Number(row.settlement_grade_down) > 0 ? row.settlement_grade_down : (row.grade_down_act || row.grade_down_claim || 0)}
+                                value={row.settlement_grade_down !== undefined && row.settlement_grade_down !== null && Number(row.settlement_grade_down) > 0 ? row.settlement_grade_down : (row.settlement_grade_down || row.settlement_grade_down || 0)}
                                 onChange={(e) => !isSettlementGradeDownBlocked && handleDetailChange(idx, "settlement_grade_down", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementGradeDownBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -3900,7 +3900,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementDustBlocked}
                                 tabIndex={isSettlementDustBlocked ? -1 : 0}
                                 title={isSettlementDustBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % Dust (Auto-pulled from Act. Dust)"}
-                                value={row.settlement_dust !== undefined && row.settlement_dust !== null && Number(row.settlement_dust) > 0 ? row.settlement_dust : (row.dust_act || row.dust_claim || headerForm.actual_dust || headerForm.claim_dust || 0)}
+                                value={row.settlement_dust !== undefined && row.settlement_dust !== null && Number(row.settlement_dust) > 0 ? row.settlement_dust : (row.settlement_dust || row.settlement_dust || headerForm.settlement_dust || headerForm.settlement_dust || 0)}
                                 onChange={(e) => !isSettlementDustBlocked && handleDetailChange(idx, "settlement_dust", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementDustBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
@@ -3912,7 +3912,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                                 readOnly={isSettlementNcvBlocked}
                                 tabIndex={isSettlementNcvBlocked ? -1 : 0}
                                 title={isSettlementNcvBlocked ? "Auto-populated (Manual edit blocked)" : "Mill Settlement % NCV (Auto-pulled from Act. NCV)"}
-                                value={row.settlement_ncv !== undefined && row.settlement_ncv !== null && Number(row.settlement_ncv) > 0 ? row.settlement_ncv : (row.ncv_act || row.ncv_claim || headerForm.actual_ncv || headerForm.claim_ncv || 0)}
+                                value={row.settlement_ncv !== undefined && row.settlement_ncv !== null && Number(row.settlement_ncv) > 0 ? row.settlement_ncv : (row.settlement_ncv || row.settlement_ncv || headerForm.settlement_ncv || headerForm.settlement_ncv || 0)}
                                 onChange={(e) => !isSettlementNcvBlocked && handleDetailChange(idx, "settlement_ncv", Number(e.target.value))}
                                 className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-emerald-500 bg-emerald-50/70 text-emerald-950 font-black text-center ${isSettlementNcvBlocked ? "cursor-not-allowed opacity-80" : ""}`}
                               />
