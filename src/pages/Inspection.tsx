@@ -2115,7 +2115,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        currentRow.lorry_read_avg = avg;
+        //currentRow.lorry_read_avg = avg;
       }
 
       // Auto Calculate Insp. Moisture Read Avg from Min & Max
@@ -2128,7 +2128,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        currentRow.insp_read_avg = avg;
+        //currentRow.insp_read_avg = avg;
       }
 
       // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act.
@@ -2149,7 +2149,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
         }
         if (combinedMoistAvg > 0) {
-          currentRow.moisture_act = combinedMoistAvg;
+          currentRow.moisture_act = lorryAvg;
         }
       }
 
@@ -2208,9 +2208,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           field === "lorry_read_min" ||
           field === "lorry_read_max" ||
           field === "lorry_read_avg" ||
-          field === "insp_read_min" ||
-          field === "insp_read_max" ||
-          field === "insp_read_avg" ||
           field === "moisture_act" ||
           field === "area" ||
           field === "receipt_gross_wt" ||
@@ -2235,7 +2232,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setDetailRows(prev => {
         let hasChanges = false;
         const updated = prev.map(row => {
-          const actM = Number(row.moisture_act) || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0));
+          const actM = Number(row.moisture_act) || ((Number(row.lorry_read_avg) > 0 ) ? Number(((Number(row.lorry_read_avg) + Number(0))).toFixed(2)) : (Number(row.lorry_read_avg) || 0));
           if (actM > 0) {
             const calculatedClaim = calculateClaimMoisture(actM, headerForm.arrival_date || headerForm.mr_date, row.area || (headerForm as any).area, moistureLogicRules);
             if (row.moisture_claim !== calculatedClaim) {
