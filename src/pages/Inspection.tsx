@@ -934,7 +934,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
   // Deduction state for multiple deduction rows
   const [deductionRows, setDeductionRows] = useState<DeductionRow[]>([
-    { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+    { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
   ]);
   const [deductionMasterList, setDeductionMasterList] = useState<any[]>(DEFAULT_DEDUCTION_TYPES);
   const [moistureLogicRules, setMoistureLogicRules] = useState<any[]>([]);
@@ -953,7 +953,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ...prev,
       deduction_type: activeRows.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryRow.deduction_type || "",
       deduction_rate: primaryRow.deduction_rate || 0,
-      deduction_qty: primaryRow.deduction_qty || 0,
+      //deduction_qty: primaryRow.deduction_qty || 0,
+      deduction_qty: 0,
       deduction_amount: totalAmt,
       deductions: rows
     }));
@@ -1004,7 +1005,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             ...cur,
             deduction_type: matched.ruleName,
             deduction_rate: matched.rate,
-            deduction_qty: matched.qty,
+            //deduction_qty: matched.qty,
+            deduction_qty: 0,
             deduction_amount: matched.amount
           };
         } else {
@@ -1021,7 +1023,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 id: nextRows[0].id || "1",
                 deduction_type: matched.ruleName,
                 deduction_rate: matched.rate,
-                deduction_qty: matched.qty,
+                //deduction_qty: matched.qty,
+                deduction_qty: 0,
                 deduction_amount: matched.amount
               }
             ];
@@ -1031,7 +1034,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               id: String(Date.now() + Math.random()),
               deduction_type: matched.ruleName,
               deduction_rate: matched.rate,
-              deduction_qty: matched.qty,
+              //deduction_qty: matched.qty,
+              deduction_qty: 0,
               deduction_amount: matched.amount
             });
           }
@@ -1046,7 +1050,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       });
 
       if (nextRows.length === 0) {
-        nextRows = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
+        nextRows = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }];
       }
 
       // Check if rows actually changed to avoid unnecessary renders
@@ -1056,7 +1060,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           (r, i) =>
             r.deduction_type === nextRows[i].deduction_type &&
             Number(r.deduction_rate) === Number(nextRows[i].deduction_rate) &&
-            Number(r.deduction_qty) === Number(nextRows[i].deduction_qty) &&
+            //Number(r.deduction_qty) === Number(nextRows[i].deduction_qty) &&
+            Number(r.deduction_qty) === 0 &&
             Number(r.deduction_amount) === Number(nextRows[i].deduction_amount)
         );
 
@@ -1096,9 +1101,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         : (Number(r.gross_weight_batch) > 0 ? Number(r.gross_weight_batch) : Number(r.challan_gross_wt) || 0);
       return sum + wt;
     }, 0);
-    const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    //const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    const totalItemQty = 0;
 
-    let defaultQty = 1;
+    let defaultQty = 0;
     if (isBaleRule && autoCalc.totalBales > 0) {
       defaultQty = autoCalc.totalBales;
     } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
@@ -1110,13 +1116,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     } else if (totalItemQty > 0) {
       defaultQty = totalItemQty;
     }
-
+    defaultQty = 0
     setDeductionRows(prev => {
       const updated = [...prev];
-      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
+      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }) };
       current.deduction_type = selectedName;
       current.deduction_rate = rate;
-      current.deduction_qty = defaultQty;
+      //current.deduction_qty = defaultQty;
+      current.deduction_qty = 0;
       current.deduction_amount = Number((rate * defaultQty).toFixed(2));
       updated[idx] = current;
       syncHeaderDeductions(updated);
@@ -1127,7 +1134,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const handleDeductionChange = (idx: number, field: "deduction_rate" | "deduction_qty" | "deduction_amount", value: number) => {
     setDeductionRows(prev => {
       const updated = [...prev];
-      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }) };
+      const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }) };
       if (field === "deduction_rate") current.deduction_rate = value;
       if (field === "deduction_qty") current.deduction_qty = value;
       if (field === "deduction_amount") {
@@ -1145,7 +1152,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setDeductionRows(prev => {
       const updated = [
         ...prev,
-        { id: String(Date.now() + Math.random()), deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+        { id: String(Date.now() + Math.random()), deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ];
       syncHeaderDeductions(updated);
       return updated;
@@ -1156,7 +1163,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const handleRemoveDeductionRow = (idx: number) => {
     setDeductionRows(prev => {
       if (prev.length <= 1) {
-        const reset = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }];
+        const reset = [{ id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }];
         syncHeaderDeductions(reset);
         return reset;
       }
@@ -1711,13 +1718,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           id: "1",
           deduction_type: fa.deduction_type || "",
           deduction_rate: Number(fa.deduction_rate) || 0,
-          deduction_qty: Number(fa.deduction_qty) || 1,
+          deduction_qty: Number(fa.deduction_qty) || 0,
           deduction_amount: Number(fa.deduction_amount) || 0
         }
       ]);
     } else {
       setDeductionRows([
-        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ]);
     }
 
@@ -1750,7 +1757,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       status: "Completed",
       deduction_type: "",
       deduction_rate: 0,
-      deduction_qty: 1,
+      deduction_qty: 0,
       deduction_amount: 0
     });
     setDetailRows([
@@ -1763,7 +1770,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
     ]);
     setDeductionRows([
-      { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+      { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
     ]);
     setViewMode("form");
   };
@@ -1848,13 +1855,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           id: "1",
           deduction_type: rec.deduction_type || "",
           deduction_rate: Number(rec.deduction_rate) || 0,
-          deduction_qty: Number(rec.deduction_qty) || 1,
+          deduction_qty: Number(rec.deduction_qty) || 0,
           deduction_amount: Number(rec.deduction_amount) || 0
         }
       ]);
     } else {
       setDeductionRows([
-        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
+        { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ]);
     }
 
