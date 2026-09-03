@@ -11,7 +11,7 @@ export function safeString(val: any, fallback: string = ''): string {
   if (typeof val === 'number' || typeof val === 'boolean') return String(val);
   if (typeof val === 'object') {
     // If it's an object with common label/name/value fields, extract the string
-    return val.name || val.label || val.value || val.mr_no || val.title || val.code || fallback;
+    return val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || fallback;
   }
   return fallback;
 }
@@ -37,7 +37,7 @@ export function safeRender(val: any, fallback: string = '-'): string {
     if (Array.isArray(val)) {
       return val.map(item => safeRender(item, '')).filter(Boolean).join(', ') || fallback;
     }
-    return val.name || val.label || val.value || val.mr_no || val.title || val.code || fallback;
+    return val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || fallback;
   }
   return fallback;
 }
@@ -46,10 +46,10 @@ export function sanitizeInspectionMaster(rec: any): any {
   if (!rec || typeof rec !== 'object') return null;
 
   const sanitized: any = {
-    ...rec,
     id: safeString(rec.id, undefined),
     mr_no: safeString(rec.mr_no || rec.arrival_no || rec.final_arrival_no || rec.temporary_arrival_no),
     arrival_no: safeString(rec.arrival_no || rec.mr_no || rec.final_arrival_no || rec.temporary_arrival_no),
+    temporary_arrival_no: safeString(rec.temporary_arrival_no),
     mr_date: safeString(rec.mr_date || rec.arrival_date || rec.date),
     arrival_date: safeString(rec.arrival_date || rec.mr_date || rec.date),
     date: safeString(rec.date || rec.mr_date || rec.arrival_date),
@@ -59,14 +59,14 @@ export function sanitizeInspectionMaster(rec: any): any {
     mill_po_date: safeString(rec.mill_po_date || rec.po_date),
     supplier_name: safeString(rec.supplier_name || rec.supplier || rec.challan_supplier),
     broker_name: safeString(rec.broker_name || rec.broker),
-    supplier: safeString(rec.supplier_name || rec.supplier || rec.challan_supplier),
-    broker: safeString(rec.broker_name || rec.broker),
+    supplier: safeString(rec.supplier || rec.supplier_name || rec.challan_supplier),
+    broker: safeString(rec.broker || rec.broker_name),
     arrival_area_code: safeString(rec.arrival_area_code),
-    arrival_area_name: safeString(rec.arrival_area_name || rec.area),
+    arrival_area_name: safeString(rec.arrival_area_name || rec.arrival_area || rec.area),
+    arrival_area: safeString(rec.arrival_area || rec.arrival_area_name || rec.area),
     arrival_remarks: safeString(rec.arrival_remarks),
     consignment_no: safeString(rec.consignment_no),
     consignment_date: safeString(rec.consignment_date),
-    temporary_arrival_no: safeString(rec.temporary_arrival_no),
     lorry_number: safeString(rec.lorry_number || rec.lorry_no || rec.vehicle_no),
     unit_name: safeString(rec.unit_name || rec.unit, 'BALES'),
     actual_moisture: safeNumber(rec.actual_moisture ?? rec.moisture_act),
@@ -82,11 +82,21 @@ export function sanitizeInspectionMaster(rec: any): any {
     mr_spcl_print: safeString(rec.mr_spcl_print),
     remarks: safeString(rec.remarks),
     status: safeString(rec.status, 'Completed'),
+    deduction_type: safeString(typeof rec.deduction_type === 'string' ? rec.deduction_type : ''),
     deduction_rate: safeNumber(rec.deduction_rate),
     deduction_qty: safeNumber(rec.deduction_qty, 1),
     deduction_amount: safeNumber(rec.deduction_amount),
+    advance_amount: safeNumber(rec.advance_amount),
+    on_account_advance_amount: safeNumber(rec.on_account_advance_amount),
     settlement_amount: safeNumber(rec.settlement_amount),
-    created_at: safeString(rec.created_at, new Date().toISOString())
+    sent_settlement_date: safeString(rec.sent_settlement_date),
+    arival_apmc_fees: safeNumber(rec.arival_apmc_fees),
+    lorry_returned: safeString(rec.lorry_returned),
+    lorry_returned_other_mill: safeString(rec.lorry_returned_other_mill),
+    mr_print_date: safeString(rec.mr_print_date),
+    delivery_claim: safeNumber(rec.delivery_claim),
+    created_at: safeString(rec.created_at, new Date().toISOString()),
+    updated_at: safeString(rec.updated_at, new Date().toISOString())
   };
 
   // Sanitize deduction_type
