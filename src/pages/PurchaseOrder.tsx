@@ -5223,7 +5223,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1 -ml-6">
                   <label htmlFor="p_o_contract_3449" className={`whitespace-nowrap min-w-[70px] ${formData.is_ptf ? 'text-slate-400' : ''}`}>P.O Contract</label>
                   {formData.is_ptf ? (
-                    <input  id="p_o_contract_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
+                    <input  id="p_o_contract_disabled_3449" name="p_o_contract" aria-label="P.O Contract"type="text" className="flex-1 bg-slate-100 border border-slate-400 p-0.5 outline-none text-slate-400" disabled value="" />
                   ) : (
                     <SearchablePoContractDropdown 
                       id="p_o_contract_3449" 

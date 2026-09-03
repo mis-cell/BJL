@@ -1828,14 +1828,14 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
               <div className="print-continuous-paper-container flex bg-white shadow-2xl border border-gray-400 select-text pr-px print:shadow-none print:border-none">
                     
                     {/* Left Tractor Feed band with holes */}
-                    <div id="tractor-feed-holes-left" className="w-[32px] bg-[#fdfaf2] border-r border-red-200 flex flex-col justify-between py-6 shrink-0 ">
+                    <div id="final-arrival-tractor-feed-holes-left" className="w-[32px] bg-[#fdfaf2] border-r border-red-200 flex flex-col justify-between py-6 shrink-0 ">
                       {Array.from({ length: 18 }).map((_, i) => (
                         <div key={i} className="w-3.5 h-3.5 bg-[#403c34]/50 rounded-full mx-auto shadow-[inset_1.5px_1.5px_2.5px_rgba(0,0,0,0.7)] opacity-85 border border-amber-900/10"></div>
                       ))}
                     </div>
 
                     {/* Main Print Slip Sheet */}
-                    <div id="print-sheet-wrapper" className="w-[840px] bg-white p-6 md:p-8 flex flex-col justify-between select-text text-black print:p-0 print:w-full">
+                    <div id="final-arrival-print-sheet-wrapper" className="w-[840px] bg-white p-6 md:p-8 flex flex-col justify-between select-text text-black print:p-0 print:w-full">
                       
                       {/* Slip Header */}
                       <div>
@@ -2231,7 +2231,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
                     </div>
 
                     {/* Right Tractor Feed band with holes */}
-                    <div id="tractor-feed-holes-right" className="w-[32px] bg-[#fdfaf2] border-l border-[#dcd8cc] flex flex-col justify-between py-6 shrink-0 ">
+                    <div id="final-arrival-tractor-feed-holes-right" className="w-[32px] bg-[#fdfaf2] border-l border-[#dcd8cc] flex flex-col justify-between py-6 shrink-0 ">
                       {Array.from({ length: 18 }).map((_, i) => (
                         <div key={i} className="w-3.5 h-3.5 bg-[#403c34]/50 rounded-full mx-auto shadow-[inset_1.5px_1.5px_2.5px_rgba(0,0,0,0.7)] opacity-85 border border-amber-900/10"></div>
                       ))}

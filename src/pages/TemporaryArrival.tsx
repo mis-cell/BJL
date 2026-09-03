@@ -2561,11 +2561,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="challan_supplier"
                     value={formData.challan_supplier}
                     onChange={handleChange}
-                    list="challan_supplier_list"
+                    list="challan_supplier_list_compact"
                     placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
                     className="flex-1 border border-gray-400 bg-white px-2 py-0.5 font-bold outline-none h-6 uppercase font-mono text-xs"
                   />
-                  <datalist id="challan_supplier_list">
+                  <datalist id="challan_supplier_list_compact">
                     {suppliers.map(s => (
                       <option key={s.id || s.supp_name} value={s.supp_name}>
                         {s.supp_name}
@@ -2581,11 +2581,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="supplier"
                     value={formData.supplier}
                     onChange={handleChange}
-                    list="supplier_list"
+                    list="supplier_list_compact"
                     placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
                     className="flex-1 border border-gray-400 bg-white px-2 py-0.5 font-bold outline-none h-6 uppercase font-mono text-xs"
                   />
-                  <datalist id="supplier_list">
+                  <datalist id="supplier_list_compact">
                     {suppliers.map(s => (
                       <option key={s.id || s.supp_name} value={s.supp_name}>
                         {s.supp_name}
@@ -2601,11 +2601,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="broker"
                     value={formData.broker}
                     onChange={handleChange}
-                    list="broker_list"
+                    list="broker_list_compact"
                     placeholder="-- TYPE OR SELECT BROKER --"
                     className="flex-1 border border-gray-400 bg-white px-2 py-0.5 font-bold outline-none h-6 uppercase font-mono text-xs"
                   />
-                  <datalist id="broker_list">
+                  <datalist id="broker_list_compact">
                     <option value="DIRECT" />
                     {brokers.map(b => (
                       <option key={b.id || b.brok_name} value={b.brok_name}>
