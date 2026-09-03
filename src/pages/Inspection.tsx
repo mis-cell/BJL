@@ -478,9 +478,101 @@ export const calculateRowAmount = (row: InspectionDetailRow): number => {
   return 0;
 };
 
+// Extract Month (1 to 12) from date string or Date object
+export const extractMonthFromDate = (dateStr?: string | null): number => {
+  if (!dateStr) return new Date().getMonth() + 1;
+  const trimmed = String(dateStr).trim();
+  if (!trimmed) return new Date().getMonth() + 1;
+
+  // Match YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoMatch) {
+    return parseInt(isoMatch[2], 10) || 1;
+  }
+
+  // Match DD-MM-YYYY or DD/MM/YYYY
+  const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (ddmmyyyyMatch) {
+    return parseInt(ddmmyyyyMatch[2], 10) || 1;
+  }
+
+  // Fallback to JS Date parse
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.getMonth() + 1;
+  }
+
+  return 8; // fallback to dry season default if unparseable
+};
+
+// Calculate Claim Moisture % based on moisture_logic rules from database
+// Formula: Claim Moisture % = CEIL(MAX(0, Actual Moisture % - Applicable Moisture %))
+export const calculateClaimMoisture = (
+  actualM: number,
+  dateStr?: string | null,
+  areaStr?: string | null,
+  rules: any[] = []
+): number => {
+  const actual = Number(actualM) || 0;
+  if (actual <= 0) return 0;
+
+  const month = extractMonthFromDate(dateStr);
+  const isWetSeason = month >= 1 && month <= 6; // Jan to Jun
+  const seasonKeyword = isWetSeason ? "JANUARY TO JUNE" : "JULY TO DECEMBER";
+
+  const cleanArea = String(areaStr || "").trim().toUpperCase();
+  const isDaisee = cleanArea.includes("DAISEE");
+
+  // Default standard thresholds if not configured in DB:
+  // Jan - Jun (Wet Season): DAISEE = 18%, Standard / Non-DAISEE (e.g. BIHAR, ASSAM, etc.) = 16%
+  // Jul - Dec (Dry Season): DAISEE = 20%, Standard / Non-DAISEE (e.g. BIHAR, ASSAM, etc.) = 18%
+  let threshold = isDaisee ? (isWetSeason ? 18 : 20) : (isWetSeason ? 16 : 18);
+
+  if (rules && rules.length > 0) {
+    // 1. Try exact area match under the applicable season
+    const exactMatch = rules.find((r: any) => {
+      const rSeason = String(r.season || "").toUpperCase();
+      const rArea = String(r.operating_area || "").toUpperCase();
+      const seasonMatch =
+        !rSeason ||
+        rSeason.includes(seasonKeyword) ||
+        (isWetSeason && rSeason.includes("WET")) ||
+        (!isWetSeason && rSeason.includes("DRY"));
+      return seasonMatch && cleanArea && rArea === cleanArea;
+    });
+
+    // 2. Try standard category match (DAISEE Operating Areas vs Standard / Non-DAISEE)
+    const categoryMatch = rules.find((r: any) => {
+      const rSeason = String(r.season || "").toUpperCase();
+      const rArea = String(r.operating_area || "").toUpperCase();
+      const seasonMatch =
+        !rSeason ||
+        rSeason.includes(seasonKeyword) ||
+        (isWetSeason && rSeason.includes("WET")) ||
+        (!isWetSeason && rSeason.includes("DRY"));
+      const areaMatch = isDaisee
+        ? rArea.includes("DAISEE") && !rArea.includes("NON-DAISEE")
+        : (rArea.includes("NON-DAISEE") || rArea.includes("STANDARD") || (!rArea.includes("DAISEE") && cleanArea && (rArea.includes(cleanArea) || cleanArea.includes(rArea))));
+      return seasonMatch && areaMatch;
+    });
+
+    const matchedRule = exactMatch || categoryMatch;
+    if (matchedRule && matchedRule.threshold_limit) {
+      const matchVal = String(matchedRule.threshold_limit).match(/(\d+(\.\d+)?)/);
+      if (matchVal) {
+        threshold = parseFloat(matchVal[1]);
+      }
+    }
+  }
+
+  const excess = actual - threshold;
+  if (excess <= 0) return 0;
+  return Math.ceil(excess);
+};
+
 export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionDetailRow): boolean => {
   if (row.is_auto === false) return false;
-  if (field === "lorry_read_avg" || field === "insp_read_avg") return true;
+  if (field === "lorry_read_avg" || field === "insp_read_avg" || field === "moisture_claim") return true;
   if (row.auto_fields && Array.isArray(row.auto_fields) && row.auto_fields.includes(field as string)) {
     return true;
   }
@@ -845,6 +937,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 1, deduction_amount: 0 }
   ]);
   const [deductionMasterList, setDeductionMasterList] = useState<any[]>(DEFAULT_DEDUCTION_TYPES);
+  const [moistureLogicRules, setMoistureLogicRules] = useState<any[]>([]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -1231,10 +1324,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           setDeductionMasterList(r.data);
         }
       }, () => {});
+      supabase.from("moisture_logic").select("*").then(r => {
+        if (r.data && r.data.length > 0) {
+          setMoistureLogicRules(r.data);
+        }
+      }, () => {});
     }
   }, []);
 
-  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'temporary_material_received'] });
+  useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'temporary_material_received', 'moisture_logic', 'deduction_master'] });
 
   const loadDetailsForPo = async (poNo: string) => {
     if (!poNo) return;
@@ -1728,7 +1826,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             settlement_dust: item.settlement_dust || '',
             settlement_ncv: item.settlement_ncv || '',
             final_receipt_wt: item.final_receipt_wt || item.net_wt || item.netto_pnto || "",
-            rate: item.rate || item.rate_qntl || ""
+            rate: item.rate || item.rate_qntl || "",
+            area: item.area || item.arrival_area_name || item.purch_area_name || (rec as any).area || "",
+            agency: item.agency || item.arrival_agency_name || item.purch_agency_name || (rec as any).agency || ""
           }));
       }
     }
@@ -1956,6 +2056,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (match) {
         populateFromFinalArrival(match);
       }
+    } else if (field === 'arrival_date') {
+      const arrDate = String(value);
+      setDetailRows(prev => prev.map(r => {
+        const actM = Number(r.moisture_act) || ((Number(r.lorry_read_avg) > 0 && Number(r.insp_read_avg) > 0) ? Number(((Number(r.lorry_read_avg) + Number(r.insp_read_avg)) / 2).toFixed(2)) : (Number(r.lorry_read_avg) || Number(r.insp_read_avg) || 0));
+        const newClaim = calculateClaimMoisture(actM, arrDate, r.area || (headerForm as any).area, moistureLogicRules);
+        let updatedRow = { ...r, moisture_claim: newClaim };
+        if (Number(r.receipt_gross_wt) > 0) {
+          const baseWt = Number(r.reduced_weight) || Number(r.receipt_gross_wt);
+          const moisturediduct = ((baseWt / 100) * newClaim);
+          updatedRow.final_receipt_wt = Number((baseWt - Number(moisturediduct.toFixed(3))).toFixed(3));
+        }
+        return updatedRow;
+      }));
     } else if (field === 'actual_moisture' || field === 'claim_moisture') {
       const numVal = Number(value) || 0;
       setDetailRows(prev => prev.map(r => ({
@@ -1995,7 +2108,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        //currentRow.lorry_read_avg = avg;
+        currentRow.lorry_read_avg = avg;
       }
 
       // Auto Calculate Insp. Moisture Read Avg from Min & Max
@@ -2008,10 +2121,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        //currentRow.insp_read_avg = avg;
+        currentRow.insp_read_avg = avg;
       }
 
-      // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act., Claim, and Mill Settlement % Moisture
+      // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act.
       if (
         field === "lorry_read_min" ||
         field === "lorry_read_max" ||
@@ -2029,18 +2142,26 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
         }
         if (combinedMoistAvg > 0) {
-          currentRow.moisture_act = lorryAvg;
-          //currentRow.moisture_claim = combinedMoistAvg;
-          //currentRow.settlement_moisture = combinedMoistAvg;
+          currentRow.moisture_act = combinedMoistAvg;
         }
       }
 
-      // Auto-pull Moisture Act / Claim into Mill Settlement % Moisture
-      if (field === "moisture_act") {
-        //currentRow.settlement_moisture = Number(value) || 0;
-      }
-      if (field === "moisture_claim" && (!currentRow.settlement_moisture || currentRow.settlement_moisture === 0)) {
-        //currentRow.settlement_moisture = Number(value) || 0;
+      // Automatically calculate Claim Moisture % based on moisture_logic rules whenever moisture reading, moisture_act, or area changes
+      if (
+        field === "lorry_read_min" ||
+        field === "lorry_read_max" ||
+        field === "lorry_read_avg" ||
+        field === "insp_read_min" ||
+        field === "insp_read_max" ||
+        field === "insp_read_avg" ||
+        field === "moisture_act" ||
+        field === "area"
+      ) {
+        const actM = Number(currentRow.moisture_act) || 0;
+        const arrDate = headerForm.arrival_date || headerForm.mr_date || "";
+        const rowArea = currentRow.area || (headerForm as any).area || "";
+        const claimM = calculateClaimMoisture(actM, arrDate, rowArea, moistureLogicRules);
+        currentRow.moisture_claim = claimM;
       }
 
       // Auto-pull Grade Down Act / Claim into Mill Settlement % Gr. Down
@@ -2053,57 +2174,80 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       // Auto-pull Dust Act / Claim into Mill Settlement % Dust
       if (field === "dust_act") {
-        //currentRow.settlement_dust = Number(value) || 0;
-      }
-      if (field === "dust_claim" && (!currentRow.settlement_dust || currentRow.settlement_dust === 0)) {
-        //currentRow.settlement_dust = Number(value) || 0;
+        currentRow.dust_claim = Number(value) || 0;
       }
 
       // Auto-pull NCV Act / Claim into Mill Settlement % NCV
       if (field === "ncv_act") {
-        //currentRow.settlement_ncv = Number(value) || 0;
+        currentRow.ncv_claim = Number(value) || 0;
       }
-      if (field === "ncv_claim" && (!currentRow.settlement_ncv || currentRow.settlement_ncv === 0)) {
-        //currentRow.settlement_ncv = Number(value) || 0;
-      }
-      // remarks show simul
-      /* if (field === "row_remarks" ) {
-        if(currentRow.srl_no === '1'){
-          totalrow += currentRow.row_remarks
-        }
-        else{
-          totalrow += ' ,'+currentRow.row_remarks
-        }
-        
 
-        handleHeaderChange("remarks", totalrow)
-        console.log(currentRow.row_remarks+'****************111111111111111111')
-      } */ 
-      //reduced weight
+      // Reduced weight calculation
       if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "add_weight" || field === "less_weight") ) {
-   
         if ((currentRow.less_weight as any) === 'undefined' || currentRow.less_weight === undefined || isNaN(currentRow.less_weight)) {
           currentRow.less_weight = 0;
         }
         if ((currentRow.add_weight as any) === 'undefined' || currentRow.add_weight === undefined || isNaN(currentRow.add_weight)) {
           currentRow.add_weight = 0;
         }
-        let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight)
+        let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight);
         currentRow.reduced_weight = Number(reducewtt.toFixed(3));
         currentRow.final_receipt_wt = Number(reducewtt.toFixed(3));
       }
 
-      if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "moisture_claim") ) {
-        let moisturediduct = ((Number(currentRow.receipt_gross_wt)/100) * Number(currentRow.moisture_claim))
-        let finalrecieptwt = Number(currentRow.receipt_gross_wt) - Number(moisturediduct.toFixed(3))
+      if (
+        Number(currentRow.receipt_gross_wt) > 0 &&
+        (field === "moisture_claim" ||
+          field === "lorry_read_min" ||
+          field === "lorry_read_max" ||
+          field === "lorry_read_avg" ||
+          field === "insp_read_min" ||
+          field === "insp_read_max" ||
+          field === "insp_read_avg" ||
+          field === "moisture_act" ||
+          field === "area" ||
+          field === "receipt_gross_wt" ||
+          field === "add_weight" ||
+          field === "less_weight")
+      ) {
+        const claimMoist = Number(currentRow.moisture_claim) || 0;
+        const baseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
+        const moisturediduct = ((baseWt / 100) * claimMoist);
+        const finalrecieptwt = baseWt - Number(moisturediduct.toFixed(3));
         currentRow.final_receipt_wt = Number(finalrecieptwt.toFixed(3));
       }
-      
         
       updated[index] = currentRow;
       return updated;
     });
   };
+
+  // Auto-sync moisture_claim for all detail rows whenever moistureLogicRules or arrival_date updates
+  useEffect(() => {
+    if (moistureLogicRules && moistureLogicRules.length > 0 && detailRows.length > 0) {
+      setDetailRows(prev => {
+        let hasChanges = false;
+        const updated = prev.map(row => {
+          const actM = Number(row.moisture_act) || ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0) ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2)) : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || 0));
+          if (actM > 0) {
+            const calculatedClaim = calculateClaimMoisture(actM, headerForm.arrival_date || headerForm.mr_date, row.area || (headerForm as any).area, moistureLogicRules);
+            if (row.moisture_claim !== calculatedClaim) {
+              hasChanges = true;
+              let nextRow = { ...row, moisture_act: row.moisture_act || actM, moisture_claim: calculatedClaim };
+              if (Number(row.receipt_gross_wt) > 0) {
+                const baseWt = Number(row.reduced_weight) || Number(row.receipt_gross_wt);
+                const moisturediduct = ((baseWt / 100) * calculatedClaim);
+                nextRow.final_receipt_wt = Number((baseWt - Number(moisturediduct.toFixed(3))).toFixed(3));
+              }
+              return nextRow;
+            }
+          }
+          return row;
+        });
+        return hasChanges ? updated : prev;
+      });
+    }
+  }, [moistureLogicRules, headerForm.arrival_date]);
 
   // Auto calculate Actual/Claim Moisture %, Dust %, NCV % header averages from detail rows
   useEffect(() => {

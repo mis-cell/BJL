@@ -651,7 +651,7 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
                           }}
                           className="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-250 text-[7.5px] font-mono font-bold text-indigo-900 tracking-tight rounded cursor-pointer uppercase"
                         >
-                          {item}
+                          {typeof item === 'object' ? JSON.stringify(item) : String(item ?? '')}
                         </button>
                       ))}
                     </div>

@@ -566,7 +566,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         try {
           if (supabase) {
             const { data: inspData } = await supabase
-              .from('jute_arrival_inspection')
+              .from('material_inspection')
               .select('deductions, deduction_types, summary_deduction_type, summary_deduction_rate, summary_deduction_qty, summary_deduction_amount')
               .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo}`)
               .maybeSingle();
@@ -2532,7 +2532,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           .or(filterStr);
 
         await supabase
-          .from('amad_master')
+          .from('temporary_material_received')
           .update({ status: 'settled' })
           .or(filterStr);
       }
@@ -2608,7 +2608,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         .or(filterStr);
 
       await supabase
-        .from('amad_master')
+        .from('temporary_material_received')
         .update({ status: 'active' })
         .or(filterStr);
 

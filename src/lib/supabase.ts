@@ -2278,6 +2278,64 @@ if (supabase) {
       `ALTER TABLE IF EXISTS "m.r_archive" DISABLE ROW LEVEL SECURITY;`,
       `CREATE TABLE IF NOT EXISTS mr_archive ( LIKE "m.r_archive" INCLUDING ALL );`,
       `ALTER TABLE IF EXISTS mr_archive DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS mill_inspection_print_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          mr_no TEXT,
+          printed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          printed_by TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS mill_inspection_print_logs DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS satta_base_rate_audit_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id TEXT,
+          action TEXT,
+          details JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS satta_base_rate_audit_logs DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS mismatch_cases (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          mr_no TEXT,
+          po_no TEXT,
+          reason TEXT,
+          remarks TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS mismatch_cases DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS clubbed_pomr (
+          id TEXT PRIMARY KEY,
+          supplier TEXT,
+          clubbed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          details JSONB
+       );`,
+      `ALTER TABLE IF EXISTS clubbed_pomr DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS imap_emails (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          sender TEXT,
+          subject TEXT,
+          body TEXT,
+          received_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS imap_emails DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS mail_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          recipient TEXT,
+          subject TEXT,
+          status TEXT,
+          sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS mail_logs DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS inspection_checklist (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          mr_no TEXT,
+          checklist_data JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS inspection_checklist DISABLE ROW LEVEL SECURITY;`,
       `DO $$
        BEGIN
          IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='purchase_master') THEN
