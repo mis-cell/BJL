@@ -108,7 +108,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       actual_ncv: master.actual_ncv || 0,
       moisture_deduction_kg: 246.0,
       final_receipt_wt: 4.67,
-      settlement_moisture: 5,
+      settlement_moisture: '',
       rate: ''
     },
     {
@@ -123,7 +123,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       actual_ncv: master.actual_ncv || 0,
       moisture_deduction_kg: 248.0,
       final_receipt_wt: 4.71,
-      settlement_moisture: 5,
+      settlement_moisture: '',
       rate: ''
     }
   ];
@@ -494,11 +494,11 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Settlement Moisture */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.settlement_moisture || (moistNum > 0 ? moistNum : '')}
+                          {row.settlement_moisture || ''}
                         </td>
                         {/* Settlement Dust */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.settlement_dust || (dustNum > 0 ? dustNum : '')}
+                          {row.settlement_dust || ''}
                         </td>
                         {/* Settlement Prem./Less */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
