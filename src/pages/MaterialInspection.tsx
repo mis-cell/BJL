@@ -75,6 +75,26 @@ function parseDateOnly(dateStr: string | null | undefined): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function safeRenderText(val: any, fallback = "-"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (typeof val === "object") {
+    if (typeof val.name === "string") return val.name;
+    if (typeof val.supp_name === "string") return val.supp_name;
+    if (typeof val.brok_name === "string") return val.brok_name;
+    if (typeof val.supplier_name === "string") return val.supplier_name;
+    if (typeof val.broker_name === "string") return val.broker_name;
+    if (typeof val.area_name === "string") return val.area_name;
+    if (typeof val.agency_name === "string") return val.agency_name;
+    if (typeof val.marka_name === "string") return val.marka_name;
+    if (typeof val.grade_name === "string") return val.grade_name;
+    return fallback;
+  }
+  return fallback;
+}
+
 // Type declarations matching the schema created in Supabase
 interface InspectionMaster {
   id?: string;
@@ -3644,7 +3664,7 @@ export default function MaterialInspection({
                   filteredSavedInspections.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((row, idx) => {
                   const activeColSpanCount = Object.values(visibleColumns).filter(Boolean).length;
                   return (
-                    <React.Fragment key={row.id}>
+                    <React.Fragment key={row.id || row.mr_no || `insp-${idx}`}>
                       <tr
                         onClick={() => {
                           loadInspectionIntoForm(row);
@@ -3698,12 +3718,12 @@ export default function MaterialInspection({
                         )}
                         {visibleColumns.supplier && (
                           <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                            {row.supplier_name || "-"}
+                            {safeRenderText(row.supplier_name || row.supplier)}
                           </td>
                         )}
                         {visibleColumns.broker && (
                           <td className="px-4 font-bold uppercase truncate max-w-[150px] border-r border-slate-200">
-                            {row.broker_name || "-"}
+                            {safeRenderText(row.broker_name || row.broker)}
                           </td>
                         )}
                         {visibleColumns.po_ref && (() => {
@@ -4003,14 +4023,14 @@ export default function MaterialInspection({
 
                   return (
                     <tr
-                      key={row.id || idx}
+                      key={row.id || row.temporary_arrival_no || row.arrival_no || `pending-${idx}`}
                       className={`h-9 hover:bg-amber-50/50 transition-colors ${
                         idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                       }`}
                     >
                       {/* M.R. / Arrival No. */}
                       <td className="px-3 font-extrabold text-[#b45309] border-r border-slate-200">
-                        {arrivalVal}
+                        {safeRenderText(arrivalVal)}
                       </td>
 
                       {/* Arrival Date */}
@@ -4025,12 +4045,12 @@ export default function MaterialInspection({
 
                       {/* Supplier */}
                       <td className="px-4 font-bold uppercase truncate max-w-[200px] border-r border-slate-200">
-                        {row.supplier || "-"}
+                        {safeRenderText(row.supplier || row.supplier_name)}
                       </td>
 
                       {/* Broker */}
                       <td className="px-4 font-semibold uppercase truncate max-w-[150px] border-r border-slate-200 text-slate-650">
-                        {row.broker || "-"}
+                        {safeRenderText(row.broker || row.broker_name)}
                       </td>
 
                       {/* Bales */}
@@ -6187,9 +6207,9 @@ export default function MaterialInspection({
                     </thead>
                     <tbody className="divide-y divide-slate-250 font-bold bg-white text-slate-700">
                       {filteredSavedInspections.length > 0 ? (
-                        filteredSavedInspections.map((row) => (
+                        filteredSavedInspections.map((row, idx) => (
                           <tr
-                            key={row.id}
+                            key={row.id || row.mr_no || `modal-${idx}`}
                             onDoubleClick={() => {
                               loadInspectionIntoForm(row);
                               setIsEditMode(true);
@@ -6203,10 +6223,10 @@ export default function MaterialInspection({
                             </td>
                             <td className="px-2 font-mono">{row.mr_date}</td>
                             <td className="px-3 uppercase truncate max-w-[150px]">
-                              {row.supplier_name || "-"}
+                              {safeRenderText(row.supplier_name || row.supplier)}
                             </td>
                             <td className="px-3 uppercase truncate max-w-[130px]">
-                              {row.broker_name || "-"}
+                              {safeRenderText(row.broker_name || row.broker)}
                             </td>
                             <td className="px-2 text-center font-bold font-mono text-emerald-800">
                               {row.actual_moisture} %
