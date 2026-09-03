@@ -90,6 +90,12 @@ function safeRenderText(val: any, fallback = "-"): string {
     if (typeof val.agency_name === "string") return val.agency_name;
     if (typeof val.marka_name === "string") return val.marka_name;
     if (typeof val.grade_name === "string") return val.grade_name;
+    if (val.supplier) return safeRenderText(val.supplier, fallback);
+    if (val.broker) return safeRenderText(val.broker, fallback);
+    if (val.mr_no) return String(val.mr_no);
+    if (val.arrival_no) return String(val.arrival_no);
+    if (val.temporary_arrival_no) return String(val.temporary_arrival_no);
+    if (val.po_no) return String(val.po_no);
     return fallback;
   }
   return fallback;
@@ -483,18 +489,18 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
                   </div>
                   <span className="text-[10px] text-slate-500 truncate text-right">
                     {fieldColumn === "temporary_arrival_no"
-                      ? `${opt.record?.po_no || opt.record?.mill_po_no ? `P.O. #${opt.record.mill_po_no || opt.record.po_no}` : ""}${
-                          (opt.record?.supplier_name || opt.record?.supplier) ? ` | ${opt.record.supplier_name || opt.record.supplier}` : ""
+                      ? `${opt.record?.po_no || opt.record?.mill_po_no ? `P.O. #${safeRenderText(opt.record.mill_po_no || opt.record.po_no, "")}` : ""}${
+                          (opt.record?.supplier_name || opt.record?.supplier) ? ` | ${safeRenderText(opt.record.supplier_name || opt.record.supplier, "")}` : ""
                         }`
                       : `${
                           opt.record?.mr_no
-                            ? `Insp MR #${opt.record.mr_no}`
+                            ? `Insp MR #${safeRenderText(opt.record.mr_no, "")}`
                             : (opt.record?.arrival_no || opt.record?.temporary_arrival_no)
-                            ? `Arrival: ${opt.record.arrival_no || opt.record.temporary_arrival_no}`
+                            ? `Arrival: ${safeRenderText(opt.record.arrival_no || opt.record.temporary_arrival_no, "")}`
                             : ""
                         }${
                           (opt.record?.supplier_name || opt.record?.supplier || opt.record?.broker_name || opt.record?.broker)
-                            ? ` | ${opt.record.supplier_name || opt.record.supplier || opt.record.broker_name || opt.record.broker}`
+                            ? ` | ${safeRenderText(opt.record.supplier_name || opt.record.supplier || opt.record.broker_name || opt.record.broker, "")}`
                             : ""
                         }`}
                   </span>
@@ -4210,63 +4216,63 @@ export default function MaterialInspection({
         {/* --- Datalists for autocompletion --- */}
         <datalist id="brokersList">
           {brokers.map((b, idx) => (
-            <option key={idx} value={b.name} />
+            <option key={idx} value={safeRenderText(b.name, "")} />
           ))}
         </datalist>
         <datalist id="suppliersList">
           {suppliers.map((s, idx) => (
-            <option key={idx} value={s.name} />
+            <option key={idx} value={safeRenderText(s.name, "")} />
           ))}
         </datalist>
         <datalist id="gradesList">
           {grades.map((g, idx) => (
-            <option key={idx} value={g.code} />
+            <option key={idx} value={safeRenderText(g.code || g.name, "")} />
           ))}
         </datalist>
         <datalist id="areasList">
           {areas.map((a, idx) => (
-            <option key={idx} value={a.name} />
+            <option key={idx} value={safeRenderText(a.name, "")} />
           ))}
         </datalist>
         <datalist id="agenciesList">
           {agencies.map((ag, idx) => (
-            <option key={idx} value={ag.name} />
+            <option key={idx} value={safeRenderText(ag.name, "")} />
           ))}
         </datalist>
         <datalist id="markasList">
           {markas.map((m, idx) => (
-            <option key={idx} value={m.name} />
+            <option key={idx} value={safeRenderText(m.name, "")} />
           ))}
         </datalist>
         <datalist id="arrivalPoList">
           {arrivalVouchers
             .filter((v) => {
               if (!v.po_no) return false;
-              const arrivalVal = (v.temporary_arrival_no || v.arrival_no || v.amad_no || "").trim().toUpperCase();
+              const arrivalVal = safeRenderText(v.temporary_arrival_no || v.arrival_no || v.amad_no, "").trim().toUpperCase();
               if (!arrivalVal) return false;
               return true;
             })
             .map((v, idx) => (
               <option
                 key={idx}
-                value={v.po_no}
-              >{`P.O. #${v.po_no} | Inspection MR / Arr: ${v.mr_no || v.temporary_arrival_no || v.arrival_no || ""} | Supplier: ${v.supplier || v.supplier_name || ""}`}</option>
+                value={safeRenderText(v.po_no, "")}
+              >{`P.O. #${safeRenderText(v.po_no, "")} | Inspection MR / Arr: ${safeRenderText(v.mr_no || v.temporary_arrival_no || v.arrival_no, "")} | Supplier: ${safeRenderText(v.supplier || v.supplier_name, "")}`}</option>
             ))}
         </datalist>
         <datalist id="arrivalNoList">
           {arrivalVouchers
             .filter((v) => {
-              const arrivalVal = (v.temporary_arrival_no || v.arrival_no || v.amad_no || "").trim().toUpperCase();
+              const arrivalVal = safeRenderText(v.temporary_arrival_no || v.arrival_no || v.amad_no, "").trim().toUpperCase();
               if (!arrivalVal) return false;
               return true;
             })
             .map((v, idx) => {
-              const arrivalVal = v.temporary_arrival_no || v.arrival_no || v.amad_no;
+              const arrivalVal = safeRenderText(v.temporary_arrival_no || v.arrival_no || v.amad_no, "");
               return (
                 <option
                   key={idx}
                   value={arrivalVal}
-                >{`Inspection MR / Arr No: ${arrivalVal} | P.O. #${v.po_no || ""} | Supplier: ${v.supplier || v.supplier_name || ""}`}</option>
+                >{`Inspection MR / Arr No: ${arrivalVal} | P.O. #${safeRenderText(v.po_no, "")} | Supplier: ${safeRenderText(v.supplier || v.supplier_name, "")}`}</option>
               );
             })}
         </datalist>
