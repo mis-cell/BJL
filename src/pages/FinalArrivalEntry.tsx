@@ -409,6 +409,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         setFormData(prev => ({
           ...prev,
           temporary_arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
+          arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
           temporary_arrival_date: matchedAmad.date || matchedAmad.temporary_arrival_date || prev.temporary_arrival_date,
           po_no: matchedAmad.po_no || prev.po_no,
           po_date: matchedAmad.po_date || matchedAmad.date || matchedPo?.po_date || matchedPo?.date || prev.po_date,
@@ -562,6 +563,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           apmc_fees: matchedInspection.apmc_fees || amadData?.apmc_fees || prev.apmc_fees,
           remarks: matchedInspection.remarks || amadData?.remarks || prev.remarks,
           temporary_arrival_no: matchedInspection.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
+          arrival_no: matchedInspection.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
           temporary_arrival_date: matchedInspection.arrival_date || amadData?.date || prev.temporary_arrival_date,
           challan_material_weight: Number(matchedInspection.challan_material_weight) || Number(amadData?.challan_material_weight) || Number(prev.challan_material_weight),
           actual_gross_weight: Number(matchedInspection.actual_gross_weight) || Number(amadData?.actual_gross_weight) || Number(prev.actual_gross_weight),
@@ -717,6 +719,8 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         next.challan_railway_receipt_no = val;
       } else if (field === 'challan_railway_receipt_no') {
         next.challan_rr_no = val;
+      } else if (field === 'temporary_arrival_no') {
+        next.arrival_no = val;
       }
 
       if (field === 'unit_name') {

@@ -1308,8 +1308,42 @@ export default function MaterialInspection({
             });
           }
         }
+
+        // Fetch matching Temporary Arrival Number based on PO No
+        const { data: tempArrival } = await supabase
+          .from("temporary_material_received")
+          .select("temporary_arrival_no")
+          .eq("po_no", masterData.po_no.trim())
+          .limit(1)
+          .maybeSingle();
+
+        if (tempArrival && tempArrival.temporary_arrival_no) {
+          setMasterData((prev) => {
+            if (prev.arrival_no !== tempArrival.temporary_arrival_no) {
+              return { ...prev, arrival_no: tempArrival.temporary_arrival_no };
+            }
+            return prev;
+          });
+        } else {
+          // Check final_arrival table as fallback
+          const { data: finalArrival } = await supabase
+            .from("final_arrival")
+            .select("temporary_arrival_no")
+            .eq("po_no", masterData.po_no.trim())
+            .limit(1)
+            .maybeSingle();
+
+          if (finalArrival && finalArrival.temporary_arrival_no) {
+            setMasterData((prev) => {
+              if (prev.arrival_no !== finalArrival.temporary_arrival_no) {
+                return { ...prev, arrival_no: finalArrival.temporary_arrival_no };
+              }
+              return prev;
+            });
+          }
+        }
       } catch (err) {
-        console.warn("Failed to fetch exact PO from purchase_master:", err);
+        console.warn("Failed to fetch exact PO and Temporary Arrival No:", err);
       }
     };
     fetchActualPoData();
