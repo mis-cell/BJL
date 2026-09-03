@@ -951,10 +951,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         for (const k of keys) {
           Promise.all([
             supabase.from('material_inspection_details').update({ unit: u }).eq('mr_no', k),
-            supabase.from('mill_inspection_detail').update({ unit: u }).eq('mr_no', k),
-            supabase.from('inspection_details').update({ unit: u }).eq('mr_no', k),
-            supabase.from('material_inspection').update({ unit_name: u }).eq('mr_no', k),
-            supabase.from('mill_inspection_master').update({ unit_name: u }).eq('mr_no', k)
+            supabase.from('material_inspection').update({ unit_name: u }).eq('mr_no', k)
           ]).catch(() => {});
         }
       }

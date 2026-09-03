@@ -1197,6 +1197,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!supabase) return;
     try {
       const arrivals = faItems || finalArrivalList || [];
+      const records = currentRecords || recordsList || [];
+      if (!arrivals.length || !records.length) return;
+
+      const recordMap = new Map<string, InspectionMasterRecord>();
+      records.forEach(r => {
+        if (r.mr_no) recordMap.set(r.mr_no.toUpperCase(), r);
+        if (r.arrival_no) recordMap.set(r.arrival_no.toUpperCase(), r);
+      });
+
       for (const fa of arrivals) {
         let uName = (fa.unit_name || fa.unit || "").toString().trim().toUpperCase();
         let rawGrid = fa.grid_details || fa.details || fa.items;
@@ -1216,13 +1225,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         if (uName && uName !== "BALES") {
           const keys = [fa.mr_no, fa.final_arrival_no, fa.temporary_arrival_no, fa.arrival_no].filter(Boolean);
           for (const k of keys) {
-            await Promise.all([
-              supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("mill_inspection_detail").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("inspection_details").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k),
-              supabase.from("mill_inspection_master").update({ unit_name: uName }).eq("mr_no", k)
-            ]).catch(() => {});
+            const upperK = k.toString().toUpperCase();
+            const existing = recordMap.get(upperK);
+            if (existing && existing.unit_name !== uName) {
+              await Promise.all([
+                supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k),
+                supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k)
+              ]).catch(() => {});
+            }
           }
         }
       }
@@ -1922,9 +1932,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }));
       if (supabase && rec.mr_no) {
         supabase.from("material_inspection_details").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
-        supabase.from("mill_inspection_detail").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
         supabase.from("material_inspection").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
-        supabase.from("mill_inspection_master").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
       }
     }
 

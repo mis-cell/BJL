@@ -2521,14 +2521,11 @@ export default function MaterialInspection({
         status: 'Completed'
       };
 
-      // 1. Save or Update Master into all inspection master tables
-      const { error: masterErr } = await supabase.from("inspection_master").upsert(masterPayload);
+      // 1. Save or Update Master into active material_inspection table
+      const { error: masterErr } = await supabase.from("material_inspection").upsert(masterPayload);
       if (masterErr) {
-        console.warn("Primary upsert to inspection_master error, retrying:", masterErr);
+        console.warn("Primary upsert to material_inspection error:", masterErr);
       }
-      await supabase.from("mill_inspection_master").upsert(masterPayload).then(() => {}, () => {});
-      await supabase.from("inspection_checklist").upsert(masterPayload).then(() => {}, () => {});
-      await supabase.from("material_inspection").upsert(masterPayload).then(() => {}, () => {});
 
       // 2. Clean out old Detail Rows (to safely rewrite or insert)
       await supabase.from("inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
