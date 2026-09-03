@@ -3356,9 +3356,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           <input
                             type="number"
                             step="0.01"
-                            value={dRow.deduction_qty || ""}
+                            value={dRow.deduction_qty !== undefined && dRow.deduction_qty !== null ? dRow.deduction_qty : 0}
                             onChange={(e) => handleDeductionChange(idx, "deduction_qty", parseFloat(e.target.value) || 0)}
-                            placeholder="1"
+                            placeholder="0"
                             className="bg-white border border-slate-300 rounded-md px-2 py-1 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
                           />
                         </td>

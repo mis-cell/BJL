@@ -355,23 +355,23 @@ export const mapItemsToDetailCols = (
       const area = resolveArea(item);
       const marka = resolveMarka(item);
       const qty = Number(
-        item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== ''
-          ? item.quantity_rcpt
-          : (item.rcpt !== undefined && item.rcpt !== null && item.rcpt !== ''
-              ? item.rcpt
-              : (item.quantity !== undefined && item.quantity !== null && item.quantity !== ''
-                  ? item.quantity
+        item.quantity !== undefined && item.quantity !== null && item.quantity !== ""
+          ? item.quantity
+          : (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== ''
+              ? item.quantity_rcpt
+              : (item.rcpt !== undefined && item.rcpt !== null && item.rcpt !== ''
+                  ? item.rcpt
                   : (item.quantity_chln || item.qty || item.packets || item.units || item.total_units || 0)))
       );
       const wt = Number(
-        item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== ''
-          ? item.netto_pnto
-          : (item.netto !== undefined && item.netto !== null && item.netto !== ''
-              ? item.netto
-              : (item.netto_mt !== undefined && item.netto_mt !== null && item.netto_mt !== ''
-                  ? item.netto_mt
-                  : (item.final_receipt_wt !== undefined && item.final_receipt_wt !== null && item.final_receipt_wt !== ''
-                      ? item.final_receipt_wt
+        item.final_receipt_wt !== undefined && item.final_receipt_wt !== null && item.final_receipt_wt !== ''
+          ? item.final_receipt_wt
+          : (item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== ''
+              ? item.netto_pnto
+              : (item.netto !== undefined && item.netto !== null && item.netto !== ''
+                  ? item.netto
+                  : (item.netto_mt !== undefined && item.netto_mt !== null && item.netto_mt !== ''
+                      ? item.netto_mt
                       : (item.arr_qty_wt || item.weight_mt || item.weight || item.receipt_gross_wt || item.challan_gross_wt || item.total_wt_in_ton || (item.weight_qtl ? Number(item.weight_qtl) / 10 : 0)))))
       );
       const rate = Number(item.rate_per_mt || item.rate_mt || item.rate_qntl || item.rate || item.rate_value || poHeader?.b_rate || defaultRate || 0);
