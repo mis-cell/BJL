@@ -3765,7 +3765,7 @@ export default function MaterialInspection({
                         )}
                         {visibleColumns.lorry_number && (
                           <td className="px-3 border-r border-slate-200 font-mono text-slate-700">
-                            {row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no || "-"}
+                            {safeRender(row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no)}
                           </td>
                         )}
                         {visibleColumns.gate_entry_time && (
@@ -3903,7 +3903,7 @@ export default function MaterialInspection({
                                   <div className="space-y-1 text-[11px]">
                                     <div className="flex justify-between">
                                       <span className="text-slate-550">Lorry Number:</span>
-                                      <span className="font-mono font-black text-slate-800">{row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no || "-"}</span>
+                                      <span className="font-mono font-black text-slate-800">{safeRender(row.lorry_number || (getVoucherForInspection(row) as any)?.lorry_number || (getVoucherForInspection(row) as any)?.lorry_no || (getVoucherForInspection(row) as any)?.vehicle_no)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-slate-550">Gate Entry:</span>

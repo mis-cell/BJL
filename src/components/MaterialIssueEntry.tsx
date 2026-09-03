@@ -137,7 +137,7 @@ export function EditableComboBox({
                 }}
                 className="px-3 py-1.5 hover:bg-indigo-50 hover:text-indigo-900 cursor-pointer border-b border-slate-100 last:border-b-0 text-left"
               >
-                {opt}
+                {typeof opt === 'string' || typeof opt === 'number' ? opt : ((opt as any)?.name || (opt as any)?.label || (opt as any)?.value || String(opt))}
               </li>
             ))
           ) : (
@@ -587,7 +587,7 @@ export default function MaterialIssueEntry({
             </div>
             <ul className="list-disc pl-8 text-[11px] font-semibold text-rose-900 space-y-0.5">
               {Object.entries(validationErrors).map(([field, msg]) => (
-                <li key={field} className="uppercase tracking-tight">{msg}</li>
+                <li key={field} className="uppercase tracking-tight">{typeof msg === 'string' ? msg : String(msg)}</li>
               ))}
             </ul>
           </div>

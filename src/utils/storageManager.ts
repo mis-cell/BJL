@@ -6,7 +6,7 @@
 
 import { sanitizeInspectionMaster, safeRender } from "./sanitizeRecord";
 
-export const CURRENT_APP_STORAGE_VERSION = "v2026.09.03.v1";
+export const CURRENT_APP_STORAGE_VERSION = "v2026.09.03.v3";
 
 /**
  * Initializes state versioning on application startup.

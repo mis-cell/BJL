@@ -10,8 +10,12 @@ export function safeString(val: any, fallback: string = ''): string {
   if (typeof val === 'string') return val;
   if (typeof val === 'number' || typeof val === 'boolean') return String(val);
   if (typeof val === 'object') {
-    // If it's an object with common label/name/value fields, extract the string
-    return val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || fallback;
+    const extracted = val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || val.supp_name || val.brok_name || val.area_name || val.area || val.party_name;
+    if (typeof extracted === 'string' || typeof extracted === 'number') return String(extracted);
+    if (typeof extracted === 'object' && extracted !== null && extracted !== val) {
+      return safeString(extracted, fallback);
+    }
+    return fallback;
   }
   return fallback;
 }
@@ -37,7 +41,12 @@ export function safeRender(val: any, fallback: string = '-'): string {
     if (Array.isArray(val)) {
       return val.map(item => safeRender(item, '')).filter(Boolean).join(', ') || fallback;
     }
-    return val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || fallback;
+    const extracted = val.name || val.label || val.value || val.mr_no || val.title || val.code || val.grade_name || val.quality || val.supplier || val.broker || val.supp_name || val.brok_name || val.area_name || val.area || val.party_name;
+    if (typeof extracted === 'string' || typeof extracted === 'number') return String(extracted);
+    if (typeof extracted === 'object' && extracted !== null && extracted !== val) {
+      return safeRender(extracted, fallback);
+    }
+    return fallback;
   }
   return fallback;
 }
