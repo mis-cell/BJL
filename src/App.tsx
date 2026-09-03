@@ -1889,9 +1889,9 @@ export default function App() {
         </div>
 
         {/* Single Unified Dark Green Footer */}
-        <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 overflow-x-auto scrollbar-none">
+        <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 w-full min-w-0">
           {/* Left Section: Online status & JCI Arrow-Wise Workflow Guide */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none shrink-0 min-w-0">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
             {/* System Online Status Badge */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-[#E2EDDE] shrink-0">
               <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-400 shadow-xs" : "bg-rose-500")} />

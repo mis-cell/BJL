@@ -2991,7 +2991,7 @@ export default function MaterialInspection({
               </p>
             </div>
           </div> */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-3 w-full min-w-0">
   
             {/* Quality Audits */}
             <div className="relative overflow-hidden rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -3147,9 +3147,9 @@ export default function MaterialInspection({
               </button>
             </div>
           </div> */}
-          <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#174C2C] p-2 shadow-sm">
+          <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#174C2C] p-2 shadow-sm w-full min-w-0">
   
-            <div className="flex flex-1 min-w-[280px] overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+            <div className="flex flex-1 min-w-0 sm:min-w-[260px] w-full sm:w-auto overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
               <input
                 id="search_m_r_no_supplier_na_2188"
                 name="search_m_r_no_supplier_na"

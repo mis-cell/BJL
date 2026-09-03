@@ -1284,7 +1284,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     </div>
 
                     {showPoDropdown && (
-                      <div className="absolute top-8 left-0 min-w-[360px] w-full max-w-[480px] bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
+                      <div className="absolute top-8 left-0 min-w-0 sm:min-w-[320px] w-full max-w-[calc(100vw-32px)] sm:max-w-[480px] bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
                         {purchaseOrders.length === 0 ? (
                           <div className="p-3 text-xs text-gray-500 italic text-center">
                             No active P.O. records found in sauda_check_point
@@ -1972,6 +1972,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 </button>
              </div>
           </div>
+          <div className="w-full overflow-x-auto">
           <table className="w-full table-fixed min-w-[950px] border-collapse text-left text-[11px] font-sans">
             <thead className="sticky top-0 bg-slate-100 z-10 shadow-sm">
               <tr className="bg-slate-800 text-white font-bold uppercase text-[9px]/tight text-center">
@@ -2179,6 +2180,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               ))}
             </tbody>
           </table>
+          </div>
           </div>
 
         </div>

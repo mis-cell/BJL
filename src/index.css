@@ -466,3 +466,25 @@
   }
 }
 
+/* Global Responsive & Zoom Safeguards */
+.overflow-x-auto {
+  max-width: 100% !important;
+}
+
+/* Modal containment for zoom and small viewports */
+.fixed.inset-0 > div:not(.absolute) {
+  max-width: min(96vw, 100%);
+  max-height: min(92vh, 100%);
+}
+
+/* Prevent image and canvas overflow */
+img, canvas, svg {
+  max-width: 100%;
+}
+
+/* Ensure form controls scale within their grid cells */
+input, select, textarea {
+  max-width: 100%;
+}
+
+

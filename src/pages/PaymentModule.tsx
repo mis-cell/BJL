@@ -2138,7 +2138,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
           {/* Search Bar & Toolbar */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-            <div className="relative flex-1 min-w-[240px]">
+            <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
  id="search_by_voucher_no_part_1467" name="search_by_voucher_no_part" aria-label="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."                type="text"
@@ -2336,7 +2336,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         <div className="space-y-4">
           {/* Party Ledger Filter Header */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+            <div className="flex items-center gap-3 flex-1 min-w-0 sm:min-w-[260px] w-full sm:w-auto">
               <div className="p-2 bg-purple-100 text-purple-700 rounded-lg">
                 <BookOpen className="w-5 h-5" />
               </div>

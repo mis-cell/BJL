@@ -932,7 +932,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           </div>
 
           {/* Large Search Box */}
-          <div className="relative flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input  id="search_broker_or_supplier_830" name="search_broker_or_supplier" aria-label="Search Broker or Supplier..."
               type="text"
@@ -1374,16 +1374,16 @@ function AccountsModal({ saudaList, poList, arrivalsList, onClose }: any) {
         </div>
 
         {/* Stats Summary */}
-        <div className="bg-[#f0ece1] p-3 flex gap-4 shrink-0 border-b border-gray-400">
-          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-[150px] flex-1">
+        <div className="bg-[#f0ece1] p-3 flex flex-wrap gap-2.5 sm:gap-4 shrink-0 border-b border-gray-400">
+          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-0 sm:min-w-[140px] flex-1">
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Pending Saudas</p>
             <p className="text-lg font-black text-blue-900">{ledgerData.length}</p>
           </div>
-          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-[150px] flex-1">
+          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-0 sm:min-w-[140px] flex-1">
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Pending Quantity</p>
             <p className="text-lg font-black text-orange-700">{totalPendingWt.toFixed(3)} Ton</p>
           </div>
-          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-[200px] flex-1">
+          <div className="bg-white px-4 py-2 border border-gray-400 shadow-sm min-w-0 sm:min-w-[180px] flex-1">
             <p className="text-[10px] font-bold text-gray-500 uppercase">Total Pending Value</p>
             <p className="text-lg font-black text-green-800">Rs. {totalPendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
