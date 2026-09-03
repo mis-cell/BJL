@@ -4975,7 +4975,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  // 2. Below 8 MT (e.g. 42 MT sauda, received 38 MT => 4 MT short => SHORT and Deduction It, Full Closed without Reopen).
                                  // 3. Other (no shortage / completed / excess) => Full Closed without Reopen.
                                  const canShowReopen = canReopen && contract > 0 && shortageMt >= 7.95;
-                                 const showShortOrExcess = tol.isOverDelivery || tol.isUnderDelivery || (contract > 0 && shortageMt > 0.05);
+                                 const showShortOrExcess = (tol.isOverDelivery || tol.isUnderDelivery) && !tol.isCompleted && !tol.isAcceptable;
 
                                  if (item.is_closed) {
                                    return (

@@ -11,12 +11,12 @@ import {
   Printer, 
   ShieldCheck,
   ArrowRight,
-  DollarSign
+  DollarSign,
+  Info
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
-import { getCurrentUserContext } from '../lib/permissions';
 import { cn } from '../lib/utils';
 
 interface ExcessShortSettlementModalProps {
@@ -89,7 +89,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const supplierName = String(po.supplier || po.supplier_name || po.supp_name || 'RADHE KRISHNA ENTERPRISES').trim();
   const brokerName = String(po.broker || po.broker_name || 'SOHANLALL CHANDANMULL & CO.').trim();
   const unit = String(po.purchase_unit_name || po.unit_type || po.unit || 'BALES').toUpperCase();
-  const contractMt = parseFloat(po.total_contract_mt || po.contract_weight_mt || 0) || 42.039;
+  const contractMt = parseFloat(po.total_contract_mt || po.contract_weight_mt || 0) || 11.063;
   const contractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.base_rate || 16500) || 16500;
 
   // State variables for fetched data
@@ -99,23 +99,22 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   
   // Sauda Date state (Fetched automatically from Sauda Desk Table)
   const [saudaDate, setSaudaDate] = useState<string>(() => {
-    return po.sauda_date || po.po_date || po.contract_date || po.voucher_date || po.date || '2026-04-01';
+    return po.sauda_date || po.po_date || po.contract_date || po.voucher_date || po.date || '2026-04-08';
   });
 
   // Last Temporary Arrival Date (Fetched automatically from Temporary Arrival Section)
-  const [lastArrivalDate, setLastArrivalDate] = useState<string>('2026-04-07');
+  const [lastArrivalDate, setLastArrivalDate] = useState<string>('2026-04-15');
 
   // Total received MT
   const [totalReceivedMt, setTotalReceivedMt] = useState<number>(() => {
-    return parseFloat(po.total_received_mt || po.received_weight_mt || 0) || 0;
+    return parseFloat(po.total_received_mt || po.received_weight_mt || 0) || 10.790;
   });
 
-  // Existing Sauda Total Amount (e.g., ₹6,93,643.50)
+  // Existing Sauda Total Amount
   const [existingSaudaAmount, setExistingSaudaAmount] = useState<number>(() => {
     if (po.total_amount || po.contract_amount || po.sauda_amount) {
       return parseFloat(po.total_amount || po.contract_amount || po.sauda_amount || 0);
     }
-    // Base contract calculation: Contract MT * 10 * Rate
     return Math.round(contractMt * 10 * contractRate * 100) / 100;
   });
 
@@ -143,7 +142,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           } else {
             const { data: pMaster } = await supabase
               .from('purchase_master')
-              .select('po_date, sauda_date, date, total_amount, contract_amount')
+              .select('po_date, sauda_date, date, total_amount, contract_amount, total_contract_mt, received_weight_mt')
               .eq('po_no', poNo)
               .maybeSingle();
             if (pMaster?.sauda_date || pMaster?.po_date || pMaster?.date) {
@@ -151,6 +150,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             }
             if (pMaster?.total_amount || pMaster?.contract_amount) {
               setExistingSaudaAmount(parseFloat(pMaster.total_amount || pMaster.contract_amount || 0));
+            }
+            if (pMaster?.received_weight_mt) {
+              setTotalReceivedMt(parseFloat(pMaster.received_weight_mt));
             }
           }
 
@@ -223,7 +225,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     });
   }, [liveFinalArrivals, allFinalArrivals, poNo, saudaNo]);
 
-  // Calculate Total Received MT across Final Arrivals (or fallback to po/temp arrivals)
+  // Calculate Total Received MT across Final Arrivals (or fallback to po)
   useEffect(() => {
     if (matchedFinalArrivals.length > 0) {
       const sumMt = matchedFinalArrivals.reduce((acc: number, ar: any) => {
@@ -235,8 +237,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     } else if (po.total_received_mt || po.received_weight_mt) {
       setTotalReceivedMt(parseFloat(po.total_received_mt || po.received_weight_mt || 0));
-    } else {
-      setTotalReceivedMt(48.910);
     }
   }, [matchedFinalArrivals, po]);
 
@@ -259,10 +259,10 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     if (dates.length > 0) {
       dates.sort((a, b) => b.localeCompare(a));
       setLastArrivalDate(dates[0]);
-    } else {
-      setLastArrivalDate('2026-04-07');
+    } else if (po.last_arrival_date || po.arrival_date) {
+      setLastArrivalDate(po.last_arrival_date || po.arrival_date);
     }
-  }, [matchedTempArrivals, matchedFinalArrivals]);
+  }, [matchedTempArrivals, matchedFinalArrivals, po]);
 
   // Lookup Base Rate from Satta Base Rates schedule for any given date
   const getSattaBaseRateOnDate = (dateStr: string): number => {
@@ -285,27 +285,25 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     }
 
-    // Benchmark Schedule defaults:
-    // 01-04-2026 -> 16,500
-    // 07-04-2026 / 20-04-2026 -> 17,000 / 17,300
-    if (targetYmd <= '2026-04-04') {
-      return 16500;
+    // Benchmark fallback defaults
+    if (targetYmd <= '2026-04-10') {
+      return 17300;
     }
-    return 17000;
+    return 16501;
   };
 
-  // Base Rate on Sauda Date (01-04-2026 -> ₹16,500)
+  // Base Rate on Sauda Date
   const saudaBaseRate = useMemo(() => {
     return getSattaBaseRateOnDate(saudaDate);
   }, [saudaDate, liveBaseRates, sattaBaseRates]);
 
-  // Base Rate on Last Temporary Arrival Date (20-04-2026 -> ₹17,000 / 07-04-2026 -> ₹17,300)
+  // Base Rate on Last Temporary Arrival Date
   const arrivalBaseRate = useMemo(() => {
     return getSattaBaseRateOnDate(lastArrivalDate);
   }, [lastArrivalDate, liveBaseRates, sattaBaseRates]);
 
-  // Rate Difference = Last Temporary Arrival Date Base Rate - Sauda Date Base Rate
-  // Requirement: NEVER display a negative (-) value for Sort/Excess calculation, convert to positive (absolute value)
+  // Rate Difference = |Last Temporary Arrival Date Base Rate - Sauda Date Base Rate|
+  // Requirement: NEVER display a negative (-) value, convert to positive (absolute value)
   const rawRateDiff = arrivalBaseRate - saudaBaseRate;
   const rateDifference = Math.abs(rawRateDiff);
 
@@ -314,23 +312,53 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return calculateWeightTolerance(contractMt, totalReceivedMt, unit);
   }, [contractMt, totalReceivedMt, unit]);
 
-  // Is this an Excess or Short delivery?
-  const isOverDelivery = tolerance.isOverDelivery || (totalReceivedMt > contractMt);
-  const isUnderDelivery = !isOverDelivery;
+  // Tolerance bounds classification:
+  // If isWithinTolerance (i.e. isAcceptable), it is strictly WITHIN BOUNDS and NOT Excess or Short!
+  const isWithinTolerance = tolerance.isAcceptable || (totalReceivedMt >= (tolerance.minAcceptableMt - 0.001) && totalReceivedMt <= (tolerance.maxAcceptableMt + 0.001));
+  const isOverDelivery = !isWithinTolerance && (totalReceivedMt > tolerance.maxAcceptableMt);
+  const isUnderDelivery = !isWithinTolerance && (totalReceivedMt < tolerance.minAcceptableMt);
 
-  // Weight Quantity state
-  const [activeTab, setActiveTab] = useState<'excess' | 'sort'>(isOverDelivery ? 'excess' : 'sort');
-  const [customWeightQtl, setCustomWeightQtl] = useState<number>(() => {
-    if (isOverDelivery) {
-      return Math.round((tolerance.excessOverToleranceMt || (totalReceivedMt - contractMt)) * 10 * 100) / 100 || 1.00;
-    }
-    return Math.round((tolerance.shortUnderToleranceMt || (contractMt - totalReceivedMt)) * 10 * 100) / 100 || 1.00;
+  // Deduction Basis Selection:
+  // Options:
+  // - 'within_bounds': Within Bounds (0.000 MT / 0.00 Qtl) - No excess/short
+  // - 'excess_over_tolerance': Excess Over Tolerance
+  // - 'excess_over_contract': Excess Over Contract
+  // - 'short_under_tolerance': Short Under Tolerance
+  // - 'short_under_contract': Short Under Contract
+  // - 'custom': Custom MT / Qtl
+  type DeductionBasis = 'within_bounds' | 'excess_over_tolerance' | 'excess_over_contract' | 'short_under_tolerance' | 'short_under_contract' | 'custom';
+
+  const [basisMode, setBasisMode] = useState<DeductionBasis>(() => {
+    if (isWithinTolerance) return 'within_bounds';
+    if (isOverDelivery) return 'excess_over_tolerance';
+    return 'short_under_tolerance';
+  });
+
+  // Custom Weight MT / Qtl Input
+  const [customWeightMt, setCustomWeightMt] = useState<number>(() => {
+    if (isWithinTolerance) return 0.000;
+    if (isOverDelivery) return tolerance.excessOverToleranceMt;
+    return tolerance.shortUnderToleranceMt;
   });
 
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
+
+  // Sync default basisMode if tolerance changes
+  useEffect(() => {
+    if (isWithinTolerance) {
+      setBasisMode('within_bounds');
+      setCustomWeightMt(0);
+    } else if (isOverDelivery) {
+      setBasisMode('excess_over_tolerance');
+      setCustomWeightMt(tolerance.excessOverToleranceMt);
+    } else if (isUnderDelivery) {
+      setBasisMode('short_under_tolerance');
+      setCustomWeightMt(tolerance.shortUnderToleranceMt);
+    }
+  }, [isWithinTolerance, isOverDelivery, isUnderDelivery, tolerance]);
 
   // Load existing saved settlement record if available
   useEffect(() => {
@@ -346,11 +374,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         if (data) {
           setExistingRecordId(data.id);
           if (data.remarks) setRemarks(data.remarks);
-          if (data.deduction_qty_qtl) {
-            setCustomWeightQtl(Number(data.deduction_qty_qtl));
+          if (data.deduction_qty_mt != null) {
+            setCustomWeightMt(Number(data.deduction_qty_mt));
           }
-          if (data.variation_type === 'excess' || data.variation_type === 'short') {
-            setActiveTab(data.variation_type === 'excess' ? 'excess' : 'sort');
+          if (data.basis_mode) {
+            setBasisMode(data.basis_mode as DeductionBasis);
           }
         }
       } catch (e) {
@@ -360,29 +388,43 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     loadSaved();
   }, [poNo]);
 
-  // Excess / Sort Calculations:
-  // Excess Rate = rateDifference (₹/Qtl)
-  // Excess Weight = customWeightQtl (Qtl)
-  // Excess Calculated Amount = Excess Weight (Qtl) * Excess Rate
-  const excessWeightQtl = Math.max(0, customWeightQtl);
-  const excessRate = rateDifference;
-  const excessCalculatedAmount = Math.round(excessWeightQtl * excessRate * 100) / 100;
-  // Excess: Total Final Payable = Existing Sauda Total Amount + Excess Calculated Amount
-  const excessFinalPayable = Math.round((existingSaudaAmount + excessCalculatedAmount) * 100) / 100;
+  // Selected Weight MT & Qtl according to basisMode
+  const activeWeightMt = useMemo(() => {
+    if (basisMode === 'within_bounds') return 0;
+    if (basisMode === 'excess_over_tolerance') return Math.max(0, tolerance.excessOverToleranceMt);
+    if (basisMode === 'excess_over_contract') return Math.max(0, totalReceivedMt - contractMt);
+    if (basisMode === 'short_under_tolerance') return Math.max(0, tolerance.shortUnderToleranceMt);
+    if (basisMode === 'short_under_contract') return Math.max(0, contractMt - totalReceivedMt);
+    return Math.max(0, customWeightMt);
+  }, [basisMode, tolerance, totalReceivedMt, contractMt, customWeightMt]);
 
-  // Sort / Short Calculations:
-  // Sort Rate = rateDifference (positive absolute value)
-  // Sort Weight = customWeightQtl (Qtl)
-  // Sort Deducted Amount = Sort Weight (Qtl) * Sort Rate
-  const sortWeightQtl = Math.max(0, customWeightQtl);
-  const sortRate = rateDifference;
-  const sortDeductedAmount = Math.round(sortWeightQtl * sortRate * 100) / 100;
-  // Sort: Total Final Payable = Existing Sauda Total Amount - Sort Deducted Amount
-  const sortFinalPayable = Math.round((existingSaudaAmount - sortDeductedAmount) * 100) / 100;
+  const activeWeightQtl = useMemo(() => {
+    return Math.round(activeWeightMt * 10 * 100) / 100;
+  }, [activeWeightMt]);
 
-  // Active amounts based on selected calculation mode
-  const currentCalculatedAmount = activeTab === 'excess' ? excessCalculatedAmount : sortDeductedAmount;
-  const currentFinalPayable = activeTab === 'excess' ? excessFinalPayable : sortFinalPayable;
+  // Active variation category
+  const activeVariationType = useMemo<'within_bounds' | 'excess' | 'short'>(() => {
+    if (basisMode === 'within_bounds' || activeWeightMt === 0) return 'within_bounds';
+    if (basisMode.startsWith('excess') || isOverDelivery) return 'excess';
+    return 'short';
+  }, [basisMode, activeWeightMt, isOverDelivery]);
+
+  // Calculated Amount = Active Weight Qtl × Rate Difference (Positive)
+  const totalCalculatedAmount = useMemo(() => {
+    if (activeVariationType === 'within_bounds' || activeWeightQtl === 0) return 0;
+    return Math.round(activeWeightQtl * rateDifference * 100) / 100;
+  }, [activeVariationType, activeWeightQtl, rateDifference]);
+
+  // Final Payable = Existing Sauda Amount + (if excess) OR - (if short) OR Unchanged (if within bounds)
+  const totalFinalPayable = useMemo(() => {
+    if (activeVariationType === 'within_bounds' || totalCalculatedAmount === 0) {
+      return existingSaudaAmount;
+    }
+    if (activeVariationType === 'excess') {
+      return Math.round((existingSaudaAmount + totalCalculatedAmount) * 100) / 100;
+    }
+    return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
+  }, [activeVariationType, existingSaudaAmount, totalCalculatedAmount]);
 
   // Direct Save to database tables (No Approval Workflow)
   const handleSaveSettlement = async () => {
@@ -401,15 +443,21 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       rate_difference: rateDifference,
       applicable_rate: rateDifference,
       contract_weight_mt: contractMt,
+      received_weight_mt: totalReceivedMt,
       existing_sauda_amount: existingSaudaAmount,
-      variation_type: activeTab,
-      deduction_qty_qtl: customWeightQtl,
-      deduction_qty_mt: customWeightQtl / 10,
-      deduction_amount: currentCalculatedAmount,
-      final_payable_amount: currentFinalPayable,
+      variation_type: activeVariationType,
+      basis_mode: basisMode,
+      deduction_qty_mt: activeWeightMt,
+      deduction_qty_qtl: activeWeightQtl,
+      deduction_amount: totalCalculatedAmount,
+      final_payable_amount: totalFinalPayable,
       rate_basis: 'rate_difference',
       status: 'settled',
-      remarks: remarks || `${activeTab.toUpperCase()} Weight ${customWeightQtl.toFixed(2)} Qtl settled at ₹${rateDifference}/Qtl rate difference. Final Payable: ₹${currentFinalPayable.toLocaleString()}`,
+      remarks: remarks || (
+        activeVariationType === 'within_bounds'
+          ? `Consignment within tolerance bounds (${tolerance.formattedRange}). Passes Sauda Specs (0.00 MT adjustment).`
+          : `${activeVariationType.toUpperCase()} Weight ${activeWeightMt.toFixed(3)} MT (${activeWeightQtl.toFixed(2)} Qtl) settled at ₹${rateDifference}/Qtl. Final Payable: ₹${totalFinalPayable.toLocaleString()}`
+      ),
       updated_at: new Date().toISOString()
     };
 
@@ -433,18 +481,18 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         await supabase
           .from('purchase_master')
           .update({
-            excess_short_deduction: currentCalculatedAmount,
-            excess_short_status: 'settled',
-            final_payable_amount: currentFinalPayable
+            excess_short_deduction: totalCalculatedAmount,
+            excess_short_status: activeVariationType === 'within_bounds' ? 'within_bounds' : 'settled',
+            final_payable_amount: totalFinalPayable
           })
           .eq('po_no', poNo);
 
         await supabase
           .from('sauda_check_point')
           .update({
-            excess_short_deduction: currentCalculatedAmount,
-            excess_short_status: 'settled',
-            final_payable_amount: currentFinalPayable
+            excess_short_deduction: totalCalculatedAmount,
+            excess_short_status: activeVariationType === 'within_bounds' ? 'within_bounds' : 'settled',
+            final_payable_amount: totalFinalPayable
           })
           .eq('po_no', poNo);
       } else {
@@ -467,14 +515,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[1000] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
       
       {/* Printable Slip Container */}
       <div className="hidden print:block fixed inset-0 bg-white text-black p-8 font-sans">
         <div className="border-b-2 border-black pb-4 mb-4 text-center">
           <h1 className="text-xl font-black uppercase tracking-wider">BIRLA JUTE MILLS - RAW JUTE DIVISION</h1>
-          <h2 className="text-base font-bold uppercase mt-1">EXCESS AND SORT WEIGHT SETTLEMENT VOUCHER</h2>
-          <p className="text-xs text-gray-600 mt-1">Direct Automatic Calculation Engine</p>
+          <h2 className="text-base font-bold uppercase mt-1">EXCESS / SHORT WEIGHT &amp; RATE SETTLEMENT VOUCHER</h2>
+          <p className="text-xs text-gray-600 mt-1">Sauda Policy &amp; Tolerance Analysis Engine</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-xs border border-gray-300 p-3 rounded mb-4">
@@ -486,9 +534,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           </div>
           <div>
             <p><strong>Last Temporary Arrival Date:</strong> {formatDisplayDate(lastArrivalDate)}</p>
-            <p><strong>Contract Weight:</strong> {contractMt.toFixed(3)} MT</p>
-            <p><strong>Existing Sauda Amount:</strong> ₹{existingSaudaAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p><strong>Settlement Type:</strong> {activeTab.toUpperCase()}</p>
+            <p><strong>Contract Weight:</strong> {contractMt.toFixed(3)} MT ({unit})</p>
+            <p><strong>Total Received Weight:</strong> {totalReceivedMt.toFixed(3)} MT</p>
+            <p><strong>Tolerance Status:</strong> {isWithinTolerance ? 'WITHIN BOUNDS (Passes Sauda Specs)' : (isOverDelivery ? 'EXCESS WEIGHT' : 'SHORT WEIGHT')}</p>
           </div>
         </div>
 
@@ -504,7 +552,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
               <strong className="text-sm">₹{arrivalBaseRate.toLocaleString()}/Qtl</strong>
             </div>
             <div>
-              <span className="text-gray-600 block">Rate Difference ({activeTab === 'excess' ? 'Excess Rate' : 'Sort Rate'}):</span>
+              <span className="text-gray-600 block">Rate Difference:</span>
               <strong className="text-sm">₹{rateDifference.toLocaleString()}/Qtl</strong>
             </div>
           </div>
@@ -512,20 +560,25 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
         <div className="border-2 border-black p-4 mb-4 bg-gray-50 text-center">
           <span className="text-xs font-bold uppercase text-gray-700 block">
-            {activeTab === 'excess' ? 'Excess Calculated Amount (+)' : 'Sort Deducted Amount (−)'}
+            {activeVariationType === 'within_bounds' 
+              ? 'Consignment Within Bounds (0.00 Deduction / Addition)' 
+              : (activeVariationType === 'excess' ? 'Excess Calculated Addition (+)' : 'Short Calculated Deduction (−)')}
           </span>
           <span className="text-2xl font-black block my-1">
-            ₹{currentCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            ₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </span>
           <p className="text-xs text-gray-700">
-            Calculation: {customWeightQtl.toFixed(2)} Qtl × ₹{rateDifference.toLocaleString()}/Qtl = ₹{currentCalculatedAmount.toLocaleString()}
+            {activeVariationType === 'within_bounds'
+              ? `Received weight is within allowable tolerance (${tolerance.formattedRange}). No adjustment required.`
+              : `Calculation: ${activeWeightQtl.toFixed(2)} Qtl (${activeWeightMt.toFixed(3)} MT) × ₹${rateDifference.toLocaleString()}/Qtl = ₹${totalCalculatedAmount.toLocaleString()}`
+            }
           </p>
           <div className="mt-3 pt-2 border-t border-gray-300 font-bold text-sm">
-            Total Final Payable = Existing Sauda Total Amount ({activeTab === 'excess' ? '+' : '−'}) {activeTab === 'excess' ? 'Excess Amount' : 'Sort Amount'} = <strong>₹{currentFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            Total Final Payable = Existing Sauda Total Amount ({activeVariationType === 'excess' ? '+' : '−'}) Adjustment = <strong>₹{totalFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
           </div>
         </div>
 
-        <p className="text-xs italic text-gray-700 mb-8"><strong>Remarks:</strong> {remarks || 'Automated rate movement calculation'}</p>
+        <p className="text-xs italic text-gray-700 mb-8"><strong>Remarks:</strong> {remarks || 'Automated Sauda tolerance acceptance'}</p>
 
         <div className="grid grid-cols-3 gap-4 text-center text-xs pt-12 border-t border-gray-300">
           <div>
@@ -541,39 +594,43 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       </div>
 
       {/* Main Screen Dialog Modal */}
-      <div className="print:hidden bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden my-auto text-slate-900 animate-in zoom-in-95 duration-150">
+      <div className="print:hidden bg-white w-full max-w-6xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[95vh] overflow-hidden my-auto text-slate-900 animate-in zoom-in-95 duration-150">
         
-        {/* Modal Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between border-b border-slate-700 select-none">
+        {/* Modal Top Header (Matching Reference Screenshot) */}
+        <div className="px-5 py-3.5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800 select-none">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 shadow-inner">
+            <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 shadow-inner">
               <Scale className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black uppercase tracking-wide">
-                  Excess and Sort Weight Settlement
+                <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
+                  EXCESS / SHORT WEIGHT &amp; RATE SETTLEMENT
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 uppercase shadow-xs">
-                  Automated Calculation
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-amber-950 uppercase tracking-tight shadow-xs">
+                  SAUDA POLICY ENGINE
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
-                <span>Sauda No: <strong className="text-white font-mono">{saudaNo || poNo}</strong></span>
-                <span>|</span>
-                <span>Supplier: <strong className="text-amber-100">{supplierName}</strong></span>
-                <span>|</span>
+              <p className="text-[11px] text-slate-300 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-mono">
+                <span>P.O / Sauda: <strong className="text-white font-bold">{poNo || saudaNo}</strong></span>
+                <span className="text-slate-500">|</span>
+                <span>Sauda Date: <strong className="text-amber-200">{formatDisplayDate(saudaDate)}</strong> <span className="text-slate-400">(Base Rate: ₹{saudaBaseRate.toLocaleString()})</span></span>
+                <span className="text-slate-500">|</span>
+                <span>Last Arrival Date: <strong className="text-emerald-300">{formatDisplayDate(lastArrivalDate)}</strong> <span className="text-slate-400">(Base Rate: ₹{arrivalBaseRate.toLocaleString()})</span></span>
+                <span className="text-slate-500">|</span>
+                <span>Supplier: <strong className="text-white">{supplierName}</strong></span>
+                <span className="text-slate-500">|</span>
                 <span>Broker: <strong className="text-slate-200">{brokerName}</strong></span>
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handlePrint}
               className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
               title="Print Settlement Slip"
             >
-              <Printer className="w-3.5 h-3.5" /> Print
+              <Printer className="w-3.5 h-3.5" /> Print Slip
             </button>
             <button
               onClick={onClose}
@@ -585,10 +642,10 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50/50">
+        {/* Modal Body Container */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/60">
           
-          {/* Notification banner */}
+          {/* Notification banner if saving */}
           {saveMessage && (
             <div className={`p-3.5 rounded-xl text-xs font-bold flex items-center gap-2 border shadow-xs animate-in fade-in duration-200 ${
               saveMessage.startsWith('✓') 
@@ -600,251 +657,427 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           )}
 
-          {/* Mode Switcher: Excess vs Sort */}
-          <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('excess')}
-                className={cn(
-                  "px-5 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-2 cursor-pointer",
-                  activeTab === 'excess'
-                    ? "bg-purple-700 text-white shadow-xs"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                )}
-              >
-                <TrendingUp className="w-4 h-4" />
-                <span>Excess Weight Settlement</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('sort')}
-                className={cn(
-                  "px-5 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-2 cursor-pointer",
-                  activeTab === 'sort'
-                    ? "bg-amber-600 text-white shadow-xs"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                )}
-              >
-                <TrendingDown className="w-4 h-4" />
-                <span>Sort / Short Weight Settlement</span>
-              </button>
-            </div>
-
-            <div className="text-[11px] font-mono text-slate-500 font-bold px-3">
-              Existing Sauda Amount: <strong className="text-slate-900">₹{existingSaudaAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-            </div>
-          </div>
-
-          {/* Section 1: Sauda Date & Last Temporary Arrival Date Base Rates */}
-          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          {/* 1. SAUDA CONTRACT & TOLERANCE ACCEPTANCE ANALYSIS */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calculator className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                  1. Satta Section – Effective Base Rate Schedule Ranges
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                  1. SAUDA CONTRACT &amp; TOLERANCE ACCEPTANCE ANALYSIS
                 </h3>
               </div>
-              <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                Automatic Date &amp; Rate Fetch
+              <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
+                Rule: ±3% vs ±1,500 KG (Whichever is Lower)
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Box 1: Sauda Date Base Rate */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
-                <span className="text-[10px] font-bold uppercase text-slate-500 block">
-                  Sauda Date (from Sauda Desk)
+            {/* 5-Card Grid (Matching Screenshot Exactly) */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              
+              {/* Card 1: SAUDA CONTRACT */}
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                <span className="text-[9.5px] font-bold uppercase text-slate-500 tracking-wider block">
+                  SAUDA CONTRACT
                 </span>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-black text-indigo-950 font-mono">
-                    {formatDisplayDate(saudaDate)}
-                  </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-                    Sauda Desk
-                  </span>
+                <div className="text-xl font-black font-mono text-slate-900">
+                  {contractMt.toFixed(3)} <span className="text-xs font-bold text-slate-600">MT</span>
                 </div>
-                <div className="pt-2 border-t border-slate-200/80">
-                  <span className="text-[9.5px] font-bold uppercase text-slate-500 block">Sauda Date Base Rate:</span>
-                  <span className="text-xl font-black text-slate-900 font-mono">
-                    ₹{saudaBaseRate.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-500 ml-1">/ Qtl</span>
-                </div>
+                <span className="text-[10px] font-medium text-slate-500 block">
+                  Unit: <strong className="text-slate-700">{unit}</strong>
+                </span>
               </div>
 
-              {/* Box 2: Last Temporary Arrival Date Base Rate */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
-                <span className="text-[10px] font-bold uppercase text-slate-500 block">
-                  Last Arrival Date (from Temp Arrival)
+              {/* Card 2: TOLERANCE APPLIED */}
+              <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-2xs space-y-1">
+                <span className="text-[9.5px] font-bold uppercase text-indigo-600 tracking-wider block">
+                  TOLERANCE APPLIED
                 </span>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-black text-emerald-950 font-mono">
-                    {formatDisplayDate(lastArrivalDate)}
-                  </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    Temp Arrival Desk
-                  </span>
+                <div className="text-xl font-black font-mono text-indigo-900">
+                  ±{tolerance.toleranceMt.toFixed(3)} <span className="text-xs font-bold text-indigo-700">MT</span>
                 </div>
-                <div className="pt-2 border-t border-slate-200/80">
-                  <span className="text-[9.5px] font-bold uppercase text-slate-500 block">Last Arrival Date Base Rate:</span>
-                  <span className="text-xl font-black text-emerald-900 font-mono">
-                    ₹{arrivalBaseRate.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-500 ml-1">/ Qtl</span>
-                </div>
+                <span className="text-[10px] font-medium text-indigo-600 block">
+                  {tolerance.toleranceBasis} ({tolerance.toleranceBasis.includes('3%') ? `3% = ${tolerance.toleranceMt.toFixed(3)} MT` : `Max 1.500 MT`})
+                </span>
               </div>
 
-              {/* Box 3: Rate Difference (Always Positive) */}
-              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3.5 rounded-xl border border-indigo-800 space-y-1.5 flex flex-col justify-between">
+              {/* Card 3: ALLOWABLE RANGE */}
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                <span className="text-[9.5px] font-bold uppercase text-slate-500 tracking-wider block">
+                  ALLOWABLE RANGE
+                </span>
+                <div className="text-base font-black font-mono text-slate-900 truncate">
+                  {tolerance.formattedRange}
+                </div>
+                <span className="text-[10px] font-medium text-slate-500 block">
+                  Upper limit: {tolerance.maxAcceptableMt.toFixed(3)} MT
+                </span>
+              </div>
+
+              {/* Card 4: FINAL M.R RECEIVED */}
+              <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1">
+                <span className="text-[9.5px] font-bold uppercase text-emerald-700 tracking-wider block">
+                  FINAL M.R RECEIVED
+                </span>
+                <div className="text-xl font-black font-mono text-emerald-900">
+                  {totalReceivedMt.toFixed(3)} <span className="text-xs font-bold text-emerald-700">MT</span>
+                </div>
+                <span className="text-[10px] font-medium text-emerald-600 block">
+                  {(totalReceivedMt * 10).toFixed(2)} Quintals
+                </span>
+              </div>
+
+              {/* Card 5: TOLERANCE STATUS (WITHIN BOUNDS / EXCESS / SHORT) */}
+              <div className={cn(
+                "p-3.5 rounded-xl border shadow-2xs space-y-1 flex flex-col justify-between",
+                isWithinTolerance 
+                  ? "bg-emerald-50/80 border-emerald-300 text-emerald-950" 
+                  : isOverDelivery 
+                    ? "bg-purple-50/80 border-purple-300 text-purple-950" 
+                    : "bg-amber-50/80 border-amber-300 text-amber-950"
+              )}>
+                <span className={cn(
+                  "text-[9.5px] font-black uppercase tracking-wider block",
+                  isWithinTolerance ? "text-emerald-800" : isOverDelivery ? "text-purple-800" : "text-amber-800"
+                )}>
+                  TOLERANCE STATUS
+                </span>
+                
                 <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
-                      Rate Difference ({activeTab === 'excess' ? 'Excess Rate' : 'Sort Rate'})
-                    </span>
-                    <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-amber-400 text-amber-950 uppercase">
-                      Positive Value ✓
+                  <div className="flex items-center gap-1.5">
+                    {isWithinTolerance ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : isOverDelivery ? (
+                      <TrendingUp className="w-4 h-4 text-purple-600 shrink-0" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-amber-600 shrink-0" />
+                    )}
+                    <span className="text-sm font-black tracking-tight">
+                      {isWithinTolerance ? 'WITHIN BOUNDS' : isOverDelivery ? 'EXCESS WEIGHT' : 'SHORT WEIGHT'}
                     </span>
                   </div>
-                  <div className="mt-1">
-                    <span className="text-2xl font-black text-white font-mono">
-                      ₹{rateDifference.toLocaleString()}
-                    </span>
-                    <span className="text-xs font-bold text-amber-300 ml-1">/ Qtl</span>
-                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold block mt-0.5 px-1.5 py-0.2 rounded w-fit",
+                    isWithinTolerance ? "bg-emerald-200/80 text-emerald-900" : isOverDelivery ? "bg-purple-200/80 text-purple-900" : "bg-amber-200/80 text-amber-900"
+                  )}>
+                    {isWithinTolerance ? 'Passes Sauda Specs' : isOverDelivery ? `+${(totalReceivedMt - tolerance.maxAcceptableMt).toFixed(3)} MT Over Limit` : `-${(tolerance.minAcceptableMt - totalReceivedMt).toFixed(3)} MT Under Limit`}
+                  </span>
                 </div>
-                <p className="text-[9.5px] text-slate-300 font-mono leading-tight">
-                  ₹{arrivalBaseRate.toLocaleString()} − ₹{saudaBaseRate.toLocaleString()} = ₹{rateDifference.toLocaleString()}/Qtl
+              </div>
+
+            </div>
+          </div>
+
+          {/* Satta Benchmarks Bar (Matching Screenshot) */}
+          <div className="bg-slate-900 text-white rounded-xl p-3 sm:px-4 sm:py-3 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20 border border-amber-400/30 text-amber-300 shrink-0">
+                <Calculator className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-100">
+                    EFFECTIVE BASE RATE SCHEDULE RANGES
+                  </h4>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-400 text-amber-950 uppercase">
+                    SATTA MARKET BENCHMARKS
+                  </span>
+                </div>
+                <p className="text-[10.5px] text-slate-400">
+                  Sauda Date ({formatDisplayDate(saudaDate)}) Base Rate vs Last Temporary Arrival Date ({formatDisplayDate(lastArrivalDate)}) Base Rate
                 </p>
               </div>
             </div>
+
+            <div className="flex items-center gap-2 font-mono shrink-0">
+              <div className="bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-lg text-right">
+                <span className="text-[9px] font-bold text-slate-400 block uppercase">SAUDA DATE ({formatDisplayDate(saudaDate)})</span>
+                <span className="text-xs font-black text-amber-300">₹{saudaBaseRate.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400">/Qtl</span>
+              </div>
+
+              <span className="text-slate-500 font-bold">→</span>
+
+              <div className="bg-slate-800/90 border border-slate-700 px-3 py-1.5 rounded-lg text-right">
+                <span className="text-[9px] font-bold text-slate-400 block uppercase">LAST ARRIVAL ({formatDisplayDate(lastArrivalDate)})</span>
+                <span className="text-xs font-black text-emerald-400">₹{arrivalBaseRate.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400">/Qtl</span>
+              </div>
+
+              <div className="bg-amber-950/80 border border-amber-500/50 px-3 py-1.5 rounded-lg text-right">
+                <span className="text-[9px] font-bold text-amber-300 block uppercase">BASE RATE MOVEMENT</span>
+                <span className="text-xs font-black text-amber-300">+{rateDifference.toLocaleString()}</span>
+                <span className="text-[9px] text-amber-300">/Qtl</span>
+              </div>
+            </div>
           </div>
 
-          {/* Section 2: Calculation Engine (Excess vs Sort) */}
-          <div className={`rounded-xl p-5 border-2 shadow-sm space-y-4 ${
-            activeTab === 'excess' 
-              ? 'bg-gradient-to-br from-purple-50/50 via-white to-slate-50 border-purple-300' 
-              : 'bg-gradient-to-br from-amber-50/50 via-white to-slate-50 border-amber-300'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-2 border-slate-200">
+          {/* 2. EXCESS / SORT WEIGHT SETTLEMENT & DEDUCTION CALCULATOR */}
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-amber-200 shadow-sm space-y-4">
+            
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <div className="flex items-center gap-2">
-                <Scale className={`w-5 h-5 ${activeTab === 'excess' ? 'text-purple-700' : 'text-amber-700'}`} />
-                <h3 className="text-sm font-black uppercase text-slate-900 tracking-wider">
-                  2. {activeTab === 'excess' ? 'Excess Weight Calculation & Addition' : 'Sort / Short Weight Calculation & Deduction'}
+                <Scale className="w-4 h-4 text-amber-600" />
+                <h3 className="text-xs sm:text-sm font-black uppercase text-slate-900 tracking-wider">
+                  2. EXCESS / SORT WEIGHT SETTLEMENT &amp; DEDUCTION CALCULATOR
                 </h3>
               </div>
-              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                activeTab === 'excess' 
-                  ? 'bg-purple-100 text-purple-900 border-purple-300' 
-                  : 'bg-amber-100 text-amber-900 border-amber-300'
-              }`}>
-                {activeTab === 'excess' ? 'Existing Sauda + Excess Amount' : 'Existing Sauda − Sort Amount'}
+              <span className="text-[10px] font-mono font-bold text-slate-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded">
+                Auto-Calculation &amp; Database Sync
               </span>
             </div>
 
-            {/* Inputs & Formula Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* Step 1: Weight Input (Qtl) */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                <label className="text-[10px] font-bold uppercase text-slate-600 block">
-                  {activeTab === 'excess' ? 'Excess Weight (Qtl):' : 'Sort Weight (Qtl):'}
-                </label>
-                <div className="flex items-center gap-2">
+            {/* Within Bounds Explanatory Banner */}
+            {isWithinTolerance && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-emerald-500 text-white shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                      Tolerance Status: Within Bounds (Passes Sauda Specs)
+                    </h4>
+                    <p className="text-[11px] text-emerald-800 font-medium mt-0.5">
+                      Total received weight <strong>{totalReceivedMt.toFixed(3)} MT</strong> falls strictly within the allowable contract tolerance bounds (<strong>{tolerance.formattedRange}</strong>).
+                      Under Sauda policy, this consignment does <strong>NOT</strong> require Excess addition or Short weight deduction.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full text-[10px] font-black bg-emerald-600 text-white uppercase shadow-xs shrink-0 whitespace-nowrap">
+                  Normal Delivery (0.00 MT Adjustment)
+                </span>
+              </div>
+            )}
+
+            {/* 3 Rate Cards Comparison Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-slate-500">A. SAUDA DATE BASE RATE</span>
+                  <span className="text-[9px] font-mono text-slate-400">({formatDisplayDate(saudaDate)})</span>
+                </div>
+                <div className="text-xl font-black font-mono text-slate-900">
+                  ₹ {saudaBaseRate.toLocaleString()} <span className="text-xs font-bold text-slate-500">/ Qtl</span>
+                </div>
+                <p className="text-[9.5px] text-slate-500">Fetched from Sauda Desk &amp; Satta Schedule</p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase text-slate-500">B. LAST TEMPORARY ARRIVAL BASE RATE</span>
+                  <span className="text-[9px] font-mono text-slate-400">({formatDisplayDate(lastArrivalDate)})</span>
+                </div>
+                <div className="text-xl font-black font-mono text-slate-900">
+                  ₹ {arrivalBaseRate.toLocaleString()} <span className="text-xs font-bold text-slate-500">/ Qtl</span>
+                </div>
+                <p className="text-[9.5px] text-slate-500">Fetched from Temporary Arrival Desk &amp; Satta Schedule</p>
+              </div>
+
+              <div className="bg-amber-50/90 p-3.5 rounded-xl border border-amber-300 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-amber-900">CALCULATED RATE DIFFERENCE</span>
+                  <span className="text-[9px] font-bold bg-amber-200 text-amber-950 px-1 rounded">|B - A| (POSITIVE) ✓</span>
+                </div>
+                <div className="text-xl font-black font-mono text-slate-900">
+                  ₹{rateDifference.toLocaleString()} <span className="text-xs font-bold text-amber-800">/ Qtl</span>
+                </div>
+                <p className="text-[9.5px] text-amber-900 font-mono">
+                  Rate Diff: |₹{arrivalBaseRate.toLocaleString()} − ₹{saudaBaseRate.toLocaleString()}| = ₹{rateDifference.toLocaleString()}/Qtl
+                </p>
+              </div>
+            </div>
+
+            {/* Deduction Basis Selection Buttons */}
+            <div className="space-y-2 pt-1">
+              <span className="text-[10px] font-bold uppercase text-slate-600 block">
+                {isWithinTolerance ? 'SAUDA TOLERANCE BASIS:' : (isOverDelivery ? 'EXCESS DELIVERY CALCULATION BASIS:' : 'SHORT DELIVERY DEDUCTION BASIS:')}
+              </span>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {isWithinTolerance && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBasisMode('within_bounds');
+                      setCustomWeightMt(0);
+                    }}
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                      basisMode === 'within_bounds'
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    )}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Within Bounds (0.000 MT / 0.00 Qtl)</span>
+                  </button>
+                )}
+
+                {isOverDelivery && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBasisMode('excess_over_tolerance');
+                        setCustomWeightMt(tolerance.excessOverToleranceMt);
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                        basisMode === 'excess_over_tolerance'
+                          ? "bg-purple-700 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      )}
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>Excess Over Tolerance (+{tolerance.excessOverToleranceMt.toFixed(3)} MT / {(tolerance.excessOverToleranceMt * 10).toFixed(2)} Qtl)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBasisMode('excess_over_contract');
+                        setCustomWeightMt(Math.max(0, totalReceivedMt - contractMt));
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                        basisMode === 'excess_over_contract'
+                          ? "bg-purple-700 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      )}
+                    >
+                      <span>Excess Over Contract (+{Math.max(0, totalReceivedMt - contractMt).toFixed(3)} MT / {((totalReceivedMt - contractMt) * 10).toFixed(2)} Qtl)</span>
+                    </button>
+                  </>
+                )}
+
+                {isUnderDelivery && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBasisMode('short_under_tolerance');
+                        setCustomWeightMt(tolerance.shortUnderToleranceMt);
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                        basisMode === 'short_under_tolerance'
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      )}
+                    >
+                      <TrendingDown className="w-3.5 h-3.5" />
+                      <span>Short Under Tolerance (-{tolerance.shortUnderToleranceMt.toFixed(3)} MT / {(tolerance.shortUnderToleranceMt * 10).toFixed(2)} Qtl)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBasisMode('short_under_contract');
+                        setCustomWeightMt(Math.max(0, contractMt - totalReceivedMt));
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                        basisMode === 'short_under_contract'
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      )}
+                    >
+                      <span>Short Under Contract (-{Math.max(0, contractMt - totalReceivedMt).toFixed(3)} MT / {((contractMt - totalReceivedMt) * 10).toFixed(2)} Qtl)</span>
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setBasisMode('custom')}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                    basisMode === 'custom'
+                      ? "bg-slate-800 text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  )}
+                >
+                  <span>Custom MT / Qtl</span>
+                </button>
+              </div>
+
+              {/* Custom Input Field when 'custom' is active */}
+              {basisMode === 'custom' && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 w-fit mt-2">
+                  <label className="text-[10px] font-bold uppercase text-slate-600">Enter Settlement Weight (MT):</label>
                   <input
                     type="number"
-                    step="0.01"
-                    value={customWeightQtl || ''}
-                    onChange={(e) => setCustomWeightQtl(Math.max(0, Number(e.target.value)))}
-                    className="w-full px-3 py-1.5 text-base font-black font-mono border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white border-slate-300"
+                    step="0.001"
+                    value={customWeightMt || ''}
+                    onChange={(e) => setCustomWeightMt(Math.max(0, Number(e.target.value)))}
+                    className="w-28 px-3 py-1 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
                   />
-                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Qtl</span>
+                  <span className="text-xs font-bold text-slate-500">MT ({(customWeightMt * 10).toFixed(2)} Qtl)</span>
                 </div>
-                <p className="text-[9.5px] text-slate-400 font-mono">
-                  Equivalent to {(customWeightQtl / 10).toFixed(3)} MT
-                </p>
-              </div>
-
-              {/* Step 2: Rate Multiplication */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                <label className="text-[10px] font-bold uppercase text-slate-600 block">
-                  {activeTab === 'excess' ? 'Excess Rate (₹/Qtl):' : 'Sort Rate (₹/Qtl):'}
-                </label>
-                <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
-                  <span className="text-base font-black font-mono text-slate-900">
-                    ₹{rateDifference.toLocaleString()}
-                  </span>
-                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                    Rate Diff
-                  </span>
-                </div>
-                <p className="text-[9.5px] text-slate-500 font-mono">
-                  {customWeightQtl.toFixed(2)} Qtl × ₹{rateDifference.toLocaleString()}
-                </p>
-              </div>
-
-              {/* Step 3: Calculated Amount */}
-              <div className={`p-3.5 rounded-xl border shadow-2xs space-y-1.5 ${
-                activeTab === 'excess' ? 'bg-purple-50/80 border-purple-200' : 'bg-amber-50/80 border-amber-200'
-              }`}>
-                <label className={`text-[10px] font-black uppercase block ${
-                  activeTab === 'excess' ? 'text-purple-900' : 'text-amber-900'
-                }`}>
-                  {activeTab === 'excess' ? 'Excess Calculated Amount:' : 'Sort Deducted Amount:'}
-                </label>
-                <div className="text-2xl font-black font-mono text-slate-900">
-                  ₹{currentCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                <p className="text-[9px] text-slate-600 font-semibold">
-                  {activeTab === 'excess' ? 'To be added to Sauda Amount' : 'To be deducted from Sauda Amount'}
-                </p>
-              </div>
-
+              )}
             </div>
 
-            {/* Total Final Payable Calculation Banner */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-4 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+            {/* Total Calculated Amount Display Box (Matching Screenshot Bottom Strip) */}
+            <div className="bg-slate-950 text-white p-4 rounded-xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block">
-                  Total Final Payable Summary
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+                  {activeVariationType === 'within_bounds' 
+                    ? 'TOTAL CALCULATED DEDUCTION / SETTLEMENT AMOUNT' 
+                    : (activeVariationType === 'excess' ? 'TOTAL CALCULATED EXCESS ADDITION AMOUNT' : 'TOTAL CALCULATED SHORT DEDUCTION AMOUNT')}
                 </span>
-                <p className="text-xs text-slate-300 font-mono mt-0.5">
-                  ₹{existingSaudaAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {activeTab === 'excess' ? '+' : '−'} ₹{currentCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} =
+                <div className="text-3xl font-black font-mono text-white mt-0.5">
+                  ₹ {totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 font-mono">
+                  {activeVariationType === 'within_bounds'
+                    ? 'Within allowable bounds: 0.00 MT (0.00 Qtl) adjustment'
+                    : `${activeWeightMt.toFixed(3)} MT (${activeWeightQtl.toFixed(2)} Qtl) × ₹${rateDifference.toLocaleString()}/Qtl`
+                  }
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 font-mono">
-                <div className="text-right">
-                  <span className="text-[9px] font-bold uppercase text-slate-400 block">Total Final Payable</span>
-                  <span className="text-2xl font-black text-emerald-400">
-                    ₹{currentFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
+              <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-right font-mono min-w-[220px]">
+                <span className="text-[9px] font-bold uppercase text-slate-400 block">
+                  TOTAL FINAL PAYABLE (AFTER SETTLEMENT)
+                </span>
+                <span className="text-xl font-black text-emerald-400">
+                  ₹ {totalFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                  Existing Sauda: ₹{existingSaudaAmount.toLocaleString()}
+                </span>
               </div>
             </div>
 
             {/* Remarks Input */}
             <div>
               <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
-                Settlement Remarks / Voucher Accounting Notes:
+                Settlement Notes &amp; Ledger Remarks:
               </label>
               <input 
                 type="text"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                placeholder={`e.g. ${activeTab.toUpperCase()} weight ${customWeightQtl.toFixed(2)} Qtl settled at ₹${rateDifference}/Qtl rate difference based on Satta schedule.`}
-                className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white border-slate-300"
+                placeholder={
+                  isWithinTolerance 
+                    ? "Consignment within tolerance bounds (Passes Sauda Specs). No adjustment required." 
+                    : `Settling ${activeWeightMt.toFixed(3)} MT at ₹${rateDifference}/Qtl rate difference.`
+                }
+                className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white border-slate-300 font-medium"
               />
             </div>
+
           </div>
+
         </div>
 
         {/* Modal Footer with Actions */}
-        <div className="px-6 py-3.5 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
+        <div className="px-5 py-3 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
           <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-            Direct Database Sync: Updates <code className="text-[10px] bg-slate-200 px-1 py-0.5 rounded font-mono">sauda_check_point_deductions</code> &amp; <code className="text-[10px] bg-slate-200 px-1 py-0.5 rounded font-mono">purchase_master</code>
+            <span className={cn("w-2 h-2 rounded-full inline-block", isWithinTolerance ? "bg-emerald-500" : "bg-amber-500")}></span>
+            <span>Auto-calculated from Sauda Desk ({formatDisplayDate(saudaDate)}) &amp; Temporary Arrival ({formatDisplayDate(lastArrivalDate)})</span>
           </div>
+          
           <div className="flex items-center gap-2.5">
             <button
               type="button"
@@ -857,12 +1090,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
               type="button"
               onClick={handleSaveSettlement}
               disabled={isSaving}
-              className={`px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer ${
-                activeTab === 'excess' ? 'bg-purple-700 hover:bg-purple-800' : 'bg-amber-600 hover:bg-amber-700'
-              } active:scale-95 disabled:opacity-50`}
+              className={cn(
+                "px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50",
+                isWithinTolerance 
+                  ? "bg-emerald-700 hover:bg-emerald-800" 
+                  : (isOverDelivery ? "bg-purple-700 hover:bg-purple-800" : "bg-amber-600 hover:bg-amber-700")
+              )}
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Saving Settlement...' : (existingRecordId ? 'Update & Save Settlement' : 'Save & Record Settlement')}
+              {isSaving ? 'Saving Settlement...' : (isWithinTolerance ? 'Save & Record (Within Bounds)' : 'Save & Record Settlement')}
             </button>
           </div>
         </div>
