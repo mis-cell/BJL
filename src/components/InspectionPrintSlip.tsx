@@ -108,7 +108,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       actual_ncv: master.actual_ncv || 0,
       moisture_deduction_kg: 246.0,
       final_receipt_wt: 4.67,
-      settlement_moisture: '',
+      settlement_moisture: 5,
       rate: ''
     },
     {
@@ -123,16 +123,17 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       actual_ncv: master.actual_ncv || 0,
       moisture_deduction_kg: 248.0,
       final_receipt_wt: 4.71,
-      settlement_moisture: '',
+      settlement_moisture: 5,
       rate: ''
     }
   ];
 
-  // Exclude rows where quantity is 0 or empty (User requirement: if quantity is 0, do not show row in print preview)
+  // Exclude rows where quantity is 0 or empty (unless it has positive gross weight)
   const effectiveDetails: InspectionDetailPrintRow[] = rawDetails.filter((r) => {
     if (!r) return false;
     const qty = Number(r.quantity);
-    return !isNaN(qty) && qty > 0;
+    const gross = Number(r.challan_gross_wt ?? r.gross_weight_batch ?? r.receipt_gross_wt ?? r.weight_mt ?? 0);
+    return qty > 0 || gross > 0;
   });
 
   // Helper calculation for detail row deductions & weights
@@ -233,39 +234,6 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
     const calcs = getRowCalculations(r);
     return sum + calcs.netWt;
   }, 0);
-
-  // Extract unique Area and Agency values from Inspection Details rows (or fallback to master)
-  const allRowsForStations = effectiveDetails.length > 0 ? effectiveDetails : rawDetails;
-  const uniqueAreas = Array.from(
-    new Set(
-      allRowsForStations
-        .map((r: any) => (r?.area || r?.area_name || r?.arrival_area_name || r?.purch_area_name || master.area || '').toString().trim())
-        .filter(val => val && val !== '-' && val !== 'N/A' && val.toLowerCase() !== 'null' && val.toLowerCase() !== 'undefined')
-    )
-  );
-
-  const uniqueAgencies = Array.from(
-    new Set(
-      allRowsForStations
-        .map((r: any) => (r?.agency || r?.agency_name || r?.arrival_agency_name || r?.purch_agency_name || (master as any)?.agency || '').toString().trim())
-        .filter(val => val && val !== '-' && val !== 'N/A' && val.toLowerCase() !== 'null' && val.toLowerCase() !== 'undefined')
-    )
-  );
-
-  const stationParts: string[] = [];
-  if (uniqueAreas.length > 0) {
-    stationParts.push(uniqueAreas.join(', '));
-  }
-  if (uniqueAgencies.length > 0) {
-    const distinctAgencies = uniqueAgencies.filter(ag => !uniqueAreas.includes(ag));
-    if (distinctAgencies.length > 0) {
-      stationParts.push(distinctAgencies.join(', '));
-    }
-  }
-
-  const stationsDisplay = stationParts.length > 0 
-    ? stationParts.join(' / ') 
-    : (master.station || master.area || (master as any)?.agency || 'BALLY MILL');
 
   const orderNo = master.po_no || master.mill_po_no || '';
   const orderDate = master.po_date || master.mill_po_date || master.mr_date || master.arrival_date;
@@ -520,14 +488,22 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {netWt > 0 ? netWt.toFixed(2) : (grossWt > 0 ? grossWt.toFixed(2) : '')}
                         </td>
-                        {/* Settlement Grade - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
-                        {/* Settlement Moisture - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
-                        {/* Settlement Dust - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
-                        {/* Settlement Prem./Less - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                        {/* Settlement Grade */}
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
+                          {row.settlement_grade_down || ''}
+                        </td>
+                        {/* Settlement Moisture */}
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
+                          {row.settlement_moisture || (moistNum > 0 ? moistNum : '')}
+                        </td>
+                        {/* Settlement Dust */}
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
+                          {row.settlement_dust || (dustNum > 0 ? dustNum : '')}
+                        </td>
+                        {/* Settlement Prem./Less */}
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
+                          {row.premium || ''}
+                        </td>
                         {/* Rate */}
                         <td className="px-1 font-mono">
                           {row.rate || row.rate_qntl || ''}
@@ -600,8 +576,8 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
 
                 <div className="col-span-4 flex items-center">
                   <span className="shrink-0 font-black mr-1.5">Stations :</span>
-                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 uppercase whitespace-nowrap overflow-visible font-semibold">
-                    {stationsDisplay}
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 uppercase whitespace-nowrap overflow-visible">
+                    {master.station || master.area || 'BALLY MILL'}
                   </span>
                 </div>
               </div>

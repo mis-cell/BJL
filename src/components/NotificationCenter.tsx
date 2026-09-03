@@ -156,7 +156,7 @@ export default function NotificationCenter({
       // 2. Fetch Mismatch cases
       try {
         const { data: mismatchData } = await supabase
-          .from("material_mismatch")
+          .from("mismatch_cases")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(15);

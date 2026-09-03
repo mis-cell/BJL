@@ -2162,7 +2162,7 @@ export default function AdminDesk({
                               </span>
                             </td>
                             <td className="p-2.5 font-sans font-semibold text-slate-800 break-words max-w-[30vw] border-r border-slate-100">
-                              {typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details ?? '')}
+                              {log.details}
                             </td>
                             <td className="p-2.5 text-center border-r border-slate-100">
                               <span className="bg-slate-50 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[9px] font-bold block truncate uppercase">
@@ -2255,7 +2255,7 @@ export default function AdminDesk({
                             </div>
                           </td>
                           <td className="p-2.5 font-sans text-slate-800 break-words">
-                            {typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details ?? '')}
+                            {log.details}
                           </td>
                         </tr>
                       ))

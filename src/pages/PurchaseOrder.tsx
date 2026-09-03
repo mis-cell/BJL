@@ -5036,7 +5036,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                          </span>
                                        ) : isCompletedPo ? (
                                          <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
-                                       ) : ((tol.isOverDelivery || tol.isUnderDelivery) && !tol.isAcceptable && !tol.isCompleted) ? (() => {
+                                       ) : (tol.isOverDelivery || tol.isUnderDelivery) ? (() => {
                                          const poKey = String(item.po_no || '').trim().toUpperCase();
                                          const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
                                          const isSettledDeduction = Boolean(

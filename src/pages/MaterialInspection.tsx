@@ -956,7 +956,6 @@ export default function MaterialInspection({
   const [hoveredField, setHoveredField] = useState<string | null>(null);
 
   // Calculate Claim Moisture % based on moisture_logic rules
-  // Formula: Claim Moisture % = CEIL(MAX(0, Actual Moisture % - Applicable Moisture %))
   const calculateClaimMoisture = (
     actualM: number,
     dateStr: string,
@@ -967,28 +966,16 @@ export default function MaterialInspection({
 
     let month = 7;
     if (dateStr) {
-      const trimmed = String(dateStr).trim();
-      const isoMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-      if (isoMatch) {
-        month = parseInt(isoMatch[2], 10) || 7;
-      } else {
-        const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-        if (ddmmyyyyMatch) {
-          month = parseInt(ddmmyyyyMatch[2], 10) || 7;
-        } else {
-          const parts = trimmed.split("-");
-          if (parts.length === 3) {
-            if (parts[0].length === 4) month = parseInt(parts[1], 10) || 7;
-            else if (parts[2].length === 4) month = parseInt(parts[1], 10) || 7;
-          }
-        }
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) month = parseInt(parts[1], 10) || 7;
+        else if (parts[2].length === 4) month = parseInt(parts[1], 10) || 7;
       }
     }
 
     const isWetSeason = month >= 1 && month <= 6;
     const seasonKeyword = isWetSeason ? "JANUARY TO JUNE" : "JULY TO DECEMBER";
-    const cleanArea = String(areaStr || "").trim().toUpperCase();
-    const isDaisee = cleanArea.includes("DAISEE");
+    const isDaisee = (areaStr || "").toUpperCase().includes("DAISEE");
 
     let threshold = isDaisee ? (isWetSeason ? 18 : 20) : (isWetSeason ? 16 : 18);
 
@@ -999,32 +986,23 @@ export default function MaterialInspection({
       { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 16%" },
     ];
 
-    const exactMatch = allRules.find((r) => {
+    const matched = allRules.find((r) => {
       const rSeason = (r.season || "").toUpperCase();
       const rArea = (r.operating_area || "").toUpperCase();
       const seasonMatch = rSeason.includes(seasonKeyword);
-      return seasonMatch && cleanArea && rArea === cleanArea;
-    });
-
-    const categoryMatch = allRules.find((r) => {
-      const rSeason = (r.season || "").toUpperCase();
-      const rArea = (r.operating_area || "").toUpperCase();
-      const seasonMatch = rSeason.includes(seasonKeyword);
-      const areaMatch = isDaisee ? (rArea.includes("DAISEE") && !rArea.includes("NON-DAISEE")) : (rArea.includes("NON-DAISEE") || rArea.includes("STANDARD") || (!rArea.includes("DAISEE") && cleanArea && (rArea.includes(cleanArea) || cleanArea.includes(rArea))));
+      const areaMatch = isDaisee ? rArea.includes("DAISEE") : (rArea.includes("NON-DAISEE") || rArea.includes("STANDARD"));
       return seasonMatch && areaMatch;
     });
 
-    const matched = exactMatch || categoryMatch;
     if (matched && matched.threshold_limit) {
-      const matchVal = String(matched.threshold_limit).match(/(\d+(\.\d+)?)/);
+      const matchVal = matched.threshold_limit.match(/(\d+(\.\d+)?)/);
       if (matchVal) {
         threshold = parseFloat(matchVal[1]);
       }
     }
 
-    const excess = actualM - threshold;
-    if (excess <= 0) return 0;
-    return Math.ceil(excess);
+    const claim = actualM - threshold;
+    return claim > 0 ? Math.round(claim * 10) / 10 : 0;
   };
 
   const [masterData, setMasterData] =
