@@ -8,7 +8,10 @@ import {
   RefreshCw,
   Archive,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  Unlock,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
@@ -21,6 +24,7 @@ import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/per
 export default function TemporaryArrival({ onSave, onCancel, initialData }: { onSave?: (d: any) => void; onCancel?: () => void; initialData?: Amad }) {
   const [loading, setLoading] = useState(false);
   const [showPoDropdown, setShowPoDropdown] = useState(false);
+  const [closedSaudaMap, setClosedSaudaMap] = useState<Map<string, { po_no: string; sauda_no?: string; contractLorries: number; receivedLorries: number; isClosed: boolean }>>(new Map());
 
   const amadContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(amadContainerRef, () => {
@@ -205,12 +209,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
   const fetchPurchaseOrders = async () => {
     try {
-      const [scpRes, amadRes] = await Promise.all([
+      const [scpRes, amadRes, faRes] = await Promise.all([
         supabase ? supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }) : dbModule.fetchAll('sauda_check_point', 'created_at', false).then(d => ({ data: d, error: null })),
-        supabase ? supabase.from('temporary_material_received').select('*') : dbModule.fetchAll('temporary_material_received').then(d => ({ data: d, error: null }))
+        supabase ? supabase.from('temporary_material_received').select('*') : dbModule.fetchAll('temporary_material_received').then(d => ({ data: d, error: null })),
+        supabase ? supabase.from('final_arrival').select('*') : dbModule.fetchAll('final_arrival').then(d => ({ data: d, error: null }))
       ]);
 
       const amadList = amadRes?.data || [];
+      const faList = faRes?.data || [];
       const tempPoData = (scpRes?.data || []).map((po: any) => ({ ...po, status: po.status || 'temp', sourceTable: 'sauda_check_point' }));
 
       // Deduplicate by po_no from sauda_check_point
@@ -225,42 +231,188 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       });
 
       const uniquePos = Array.from(uniqueMap.values());
+      const nextClosedMap = new Map<string, { po_no: string; sauda_no?: string; contractLorries: number; receivedLorries: number; isClosed: boolean }>();
 
       const filtered = uniquePos
         .filter((po: any) => {
           if (!po.po_no || po.status === 'cancelled') return false;
 
-          const isCurrentMatch = initialData && initialData.po_no && String(po.po_no).trim().toUpperCase() === String(initialData.po_no).trim().toUpperCase();
-
           const poKey = String(po.po_no).trim().toUpperCase();
-          const amadMatches = amadList.filter((a: any) => String(a.po_no || '').trim().toUpperCase() === poKey);
-          const totalAmadWeight = amadMatches.reduce((sum: number, a: any) => sum + (parseFloat(a.challan_material_weight || a.quantity || 0) || 0), 0);
+          const saudaKey = String(po.sauda_no || '').trim().toUpperCase();
+          const isCurrentMatch = initialData && initialData.po_no && (
+            String(initialData.po_no).trim().toUpperCase() === poKey ||
+            (saudaKey && String(initialData.po_no).trim().toUpperCase() === saudaKey)
+          );
 
-          const pendingStr = String(po.pending ?? '').trim().toLowerCase();
-          const statusStr = String(po.status ?? '').trim().toLowerCase();
-          const receivedWt = Math.max(parseFloat(po.received_weight_mt || po.received_mt) || 0, totalAmadWeight);
-          const contractWt = parseFloat(po.total_contract_mt || po.quantity) || 0;
-          const isCompleted = po.pending === false || pendingStr === 'no' || pendingStr === 'false' || po.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || (contractWt > 0 && receivedWt >= contractWt);
+          // 1. Check if explicitly reopened by Level 4 or Admin
+          const isExplicitReopened = po.is_reopened === true || 
+                                     po.reopened === true || 
+                                     localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
+                                     (saudaKey && localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true');
 
-          if (isCurrentMatch) return true;
-          return !isCompleted;
+          // 2. Check if explicitly closed
+          const isExplicitClosed = po.is_closed === true || 
+                                   po.sauda_closed === true || 
+                                   po.status === 'closed' || 
+                                   localStorage.getItem(`sauda_closed_${poKey}`) === 'true' ||
+                                   (saudaKey && localStorage.getItem(`sauda_closed_${saudaKey}`) === 'true');
+
+          // 3. Contract lorries
+          const contractLorries = Math.max(1, parseInt(po.total_lorries || po.total_no_of_lorries || po.no_of_lorries || po.lorries || 1, 10) || 1);
+
+          // 4. Calculate received lorries from both temporary material received and final arrival
+          const amadMatches = amadList.filter((a: any) => {
+            const aPo = String(a.po_no || a.ptf_no || '').trim().toUpperCase();
+            const aSauda = String(a.sauda_no || '').trim().toUpperCase();
+            return (aPo && (aPo === poKey || (saudaKey && aPo === saudaKey))) ||
+                   (aSauda && (aSauda === poKey || (saudaKey && aSauda === saudaKey)));
+          });
+
+          const faMatches = (faList || []).filter((f: any) => {
+            const fPo = String(f.po_no || f.ptf_no || '').trim().toUpperCase();
+            const fSauda = String(f.sauda_no || '').trim().toUpperCase();
+            return (fPo && (fPo === poKey || (saudaKey && fPo === saudaKey))) ||
+                   (fSauda && (fSauda === poKey || (saudaKey && fSauda === saudaKey)));
+          });
+
+          const distinctArrivalKeys = new Set<string>();
+          amadMatches.forEach((ar: any) => {
+            const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
+            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+          });
+          faMatches.forEach((fa: any) => {
+            const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
+            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+          });
+          const receivedLorries = Math.max(amadMatches.length, distinctArrivalKeys.size);
+
+          const tempWeightOf = (ar: any) => {
+            if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+            if (ar.weight_reduced && Number(ar.weight_reduced) > 0) return Number(ar.weight_reduced);
+            if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+            if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+            return 0;
+          };
+          const finalWeightOf = (ar: any) => {
+            if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+            if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+            if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+            return 0;
+          };
+
+          const matchingFinalArrivalNos = new Set(
+            faMatches.map((f: any) => String(f.temporary_arrival_no || f.amad_no || '').trim().toUpperCase()).filter(Boolean)
+          );
+          const matchingFinalLorries = new Set(
+            faMatches.map((f: any) => String(f.lorry_number || '').trim().toUpperCase()).filter(Boolean)
+          );
+
+          const unpromotedAmad = amadMatches.filter((a: any) => {
+            const aNo = String(a.temporary_arrival_no || a.amad_no || '').trim().toUpperCase();
+            const aLorry = String(a.lorry_number || '').trim().toUpperCase();
+            return (!aNo || !matchingFinalArrivalNos.has(aNo)) && (!aLorry || !matchingFinalLorries.has(aLorry));
+          });
+
+          const totalReceivedMt = faMatches.reduce((sum: number, f: any) => sum + finalWeightOf(f), 0) +
+                                  unpromotedAmad.reduce((sum: number, a: any) => sum + tempWeightOf(a), 0);
+
+          const contractWeight = parseFloat(po.total_contract_mt) || 0;
+          const remainingWeight = contractWeight - totalReceivedMt;
+
+          // Sauda is considered closed if all contracted lorries have arrived, or if remaining weight <= 8 MT,
+          // UNLESS explicitly reopened by Admin or Level 4 user.
+          const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
+          const isWeightClosed = contractWeight > 0 && totalReceivedMt >= 5.0 && (remainingWeight <= 8.25 || totalReceivedMt >= contractWeight - 8.25);
+          const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed || isWeightClosed);
+
+          if (isClosed) {
+            const closedEntry = {
+              po_no: String(po.po_no).trim(),
+              sauda_no: po.sauda_no ? String(po.sauda_no).trim() : undefined,
+              contractLorries,
+              receivedLorries,
+              contractWeight,
+              receivedWeight: totalReceivedMt,
+              isClosed: true
+            };
+            nextClosedMap.set(poKey, closedEntry);
+            if (saudaKey) nextClosedMap.set(saudaKey, closedEntry);
+          }
+
+          // Strict User Requirement:
+          // "here Sauda Closed Means In Temporary Arrival Section That Sauda number Is Not shown
+          // When It reopen By Level 4 user or admin Then opnly In Temporary Arrival That Sauda or P.O number Show ."
+          if (isClosed && !isCurrentMatch) {
+            return false;
+          }
+
+          return true;
         })
-        .map((po: any) => ({
-          ...po,
-          po_no: String(po.po_no).trim(),
-          broker: (po.broker || '').toUpperCase(),
-          supplier: (po.supplier || po.party_name || po.merchant || '').toUpperCase(),
-          challan_supplier: (po.challan_supplier || po.supplier || po.party_name || po.merchant || '').toUpperCase(),
-          area: (po.area || '').toUpperCase()
-        }));
+        .map((po: any) => {
+          const poKey = String(po.po_no).trim().toUpperCase();
+          const saudaKey = String(po.sauda_no || '').trim().toUpperCase();
+          const isExplicitReopened = po.is_reopened === true || 
+                                     po.reopened === true || 
+                                     localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
+                                     (saudaKey && localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true');
+          const contractLorries = Math.max(1, parseInt(po.total_lorries || po.total_no_of_lorries || po.no_of_lorries || po.lorries || 1, 10) || 1);
 
+          const amadMatches = amadList.filter((a: any) => {
+            const aPo = String(a.po_no || a.ptf_no || '').trim().toUpperCase();
+            const aSauda = String(a.sauda_no || '').trim().toUpperCase();
+            return (aPo && (aPo === poKey || (saudaKey && aPo === saudaKey))) ||
+                   (aSauda && (aSauda === poKey || (saudaKey && aSauda === saudaKey)));
+          });
+          const faMatches = (faList || []).filter((f: any) => {
+            const fPo = String(f.po_no || f.ptf_no || '').trim().toUpperCase();
+            const fSauda = String(f.sauda_no || '').trim().toUpperCase();
+            return (fPo && (fPo === poKey || (saudaKey && fPo === saudaKey))) ||
+                   (fSauda && (fSauda === poKey || (saudaKey && fSauda === saudaKey)));
+          });
+          const distinctArrivalKeys = new Set<string>();
+          amadMatches.forEach((ar: any) => {
+            const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
+            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+          });
+          faMatches.forEach((fa: any) => {
+            const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
+            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
+          });
+          const receivedLorries = Math.max(amadMatches.length, distinctArrivalKeys.size);
+
+          return {
+            ...po,
+            po_no: String(po.po_no).trim(),
+            broker: (po.broker || '').toUpperCase(),
+            supplier: (po.supplier || po.party_name || po.merchant || '').toUpperCase(),
+            challan_supplier: (po.challan_supplier || po.supplier || po.party_name || po.merchant || '').toUpperCase(),
+            area: (po.area || '').toUpperCase(),
+            contract_lorries: contractLorries,
+            received_lorries: receivedLorries,
+            is_reopened: isExplicitReopened
+          };
+        });
+
+      setClosedSaudaMap(nextClosedMap);
       setPurchaseOrders(filtered);
     } catch (err) {
       console.warn("Error in fetchPurchaseOrders from sauda_check_point:", err);
     }
   };
 
-  useLiveAutoRefresh(fetchPurchaseOrders, [], { tables: ['temporary_material_received', 'sauda_check_point', 'sauda_check_point_details', 'purchase_master', 'purchase_detail_master', 'lorry_weighments'] });
+  useLiveAutoRefresh(fetchPurchaseOrders, [], { tables: ['temporary_material_received', 'sauda_check_point', 'sauda_check_point_details', 'purchase_master', 'purchase_detail_master', 'lorry_weighments', 'final_arrival'] });
+
+  useEffect(() => {
+    const handleSaudaStatusChange = () => {
+      fetchPurchaseOrders();
+    };
+    window.addEventListener('storage', handleSaudaStatusChange);
+    window.addEventListener('sauda_status_changed', handleSaudaStatusChange);
+    return () => {
+      window.removeEventListener('storage', handleSaudaStatusChange);
+      window.removeEventListener('sauda_status_changed', handleSaudaStatusChange);
+    };
+  }, []);
 
   // Load master records and set up real-time PO query subscription
   useEffect(() => {
@@ -874,6 +1026,15 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     if (initialData && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
+
+    // Guard: Prohibit creating new temporary arrivals against closed saudas
+    const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();
+    if (!initialData && cleanEnteredPo && closedSaudaMap.has(cleanEnteredPo)) {
+      const closedItem = closedSaudaMap.get(cleanEnteredPo);
+      alert(`🔒 Action Prohibited: Sauda #${closedItem?.po_no || cleanEnteredPo} is CLOSED (${closedItem?.receivedLorries || 0}/${closedItem?.contractLorries || 1} Lorries Received).\n\nClosed Saudas are not accepted for Temporary Arrival. Only an Admin or Level 4 user can Reopen this Sauda from Sauda Check Point.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const activeRows = details.filter(row => 
@@ -1283,6 +1444,20 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       </div>
                     </div>
 
+                    {(() => {
+                      const cleanEntered = String(formData.po_no || '').trim().toUpperCase();
+                      const closedItem = closedSaudaMap.get(cleanEntered);
+                      if (closedItem && !initialData) {
+                        return (
+                          <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-1 rounded">
+                            <Lock className="w-3 h-3 text-amber-700 shrink-0" />
+                            <span>Sauda #{closedItem.po_no} is CLOSED ({closedItem.receivedLorries}/{closedItem.contractLorries} Lorries Received). Reopen by Admin or Level 4 User is required.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {showPoDropdown && (
                       <div className="absolute top-8 left-0 min-w-0 sm:min-w-[320px] w-full max-w-[calc(100vw-32px)] sm:max-w-[480px] bg-white border-2 border-indigo-600 rounded-lg shadow-2xl max-h-56 overflow-y-auto z-[9999]">
                         {purchaseOrders.length === 0 ? (
@@ -1301,9 +1476,31 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                             });
 
                             if (filteredList.length === 0) {
+                              const searchUpper = (formData.po_no || '').trim().toUpperCase();
+                              const closedMatch = Array.from(closedSaudaMap.values()).find(
+                                c => c.po_no.toUpperCase().includes(searchUpper) || (c.sauda_no && String(c.sauda_no).toUpperCase().includes(searchUpper))
+                              );
+
+                              if (closedMatch) {
+                                return (
+                                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                                      <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                      <span>Sauda #{closedMatch.po_no} is CLOSED</span>
+                                    </div>
+                                    <p className="text-[11px] text-amber-900 leading-snug">
+                                      All {closedMatch.contractLorries} contracted {closedMatch.contractLorries === 1 ? 'lorry has' : 'lorries have'} been received ({closedMatch.receivedLorries}/{closedMatch.contractLorries}).
+                                    </p>
+                                    <p className="text-[10px] font-semibold text-rose-800 bg-white/80 p-1.5 rounded border border-rose-200">
+                                      🔒 Closed Saudas are NOT shown for Temporary Arrival. An Admin or Level 4 user must Reopen this Sauda in Sauda Check Point to record further arrivals.
+                                    </p>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div className="p-3 text-xs text-gray-500 italic text-center">
-                                  No matching P.O. found for "{formData.po_no}"
+                                  No matching active P.O. found for "{formData.po_no}"
                                 </div>
                               );
                             }
@@ -1348,9 +1545,16 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                                 <div className="flex items-center justify-between font-bold text-indigo-950">
                                   <span className="flex items-center gap-1.5">
                                     P.O. #{po.po_no}
-                                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans normal-case">
-                                      Sauda Check Point
-                                    </span>
+                                    {po.is_reopened ? (
+                                      <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold flex items-center gap-0.5">
+                                        <Unlock className="w-2.5 h-2.5 text-amber-700" />
+                                        <span>REOPENED ({po.received_lorries || 0}/{po.contract_lorries || 1} Lorry)</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans normal-case">
+                                        Sauda Check Point
+                                      </span>
+                                    )}
                                   </span>
                                   <span className="text-[10px] text-gray-500 font-normal">{po.po_date || ''}</span>
                                 </div>
@@ -2456,6 +2660,21 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       <ChevronDown size={14} />
                     </div>
                   </div>
+
+                  {(() => {
+                    const cleanEntered = String(formData.po_no || '').trim().toUpperCase();
+                    const closedItem = closedSaudaMap.get(cleanEntered);
+                    if (closedItem && !initialData) {
+                      return (
+                        <div className="absolute top-7 left-0 z-10 flex items-center gap-1.5 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded shadow-sm">
+                          <Lock className="w-3 h-3 text-amber-700 shrink-0" />
+                          <span>Sauda #{closedItem.po_no} is CLOSED ({closedItem.receivedLorries}/{closedItem.contractLorries} Lorries Received). Reopen by Admin/L4 required.</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {showPoDropdown && (
                      <div className="absolute top-6 left-0 min-w-[360px] w-full max-w-[480px] bg-white border border-gray-400 max-h-56 overflow-y-auto z-[9999] shadow-2xl rounded border-2 border-indigo-600">
                         {purchaseOrders.length === 0 ? (
@@ -2474,9 +2693,31 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                             });
 
                             if (filteredList.length === 0) {
+                              const searchUpper = (formData.po_no || '').trim().toUpperCase();
+                              const closedMatch = Array.from(closedSaudaMap.values()).find(
+                                c => c.po_no.toUpperCase().includes(searchUpper) || (c.sauda_no && String(c.sauda_no).toUpperCase().includes(searchUpper))
+                              );
+
+                              if (closedMatch) {
+                                return (
+                                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs space-y-1">
+                                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                                      <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                      <span>Sauda #{closedMatch.po_no} is CLOSED</span>
+                                    </div>
+                                    <p className="text-[11px] text-amber-900 leading-snug">
+                                      All {closedMatch.contractLorries} contracted {closedMatch.contractLorries === 1 ? 'lorry has' : 'lorries have'} been received ({closedMatch.receivedLorries}/{closedMatch.contractLorries}).
+                                    </p>
+                                    <p className="text-[10px] font-semibold text-rose-800 bg-white/80 p-1.5 rounded border border-rose-200">
+                                      🔒 Closed Saudas are NOT shown for Temporary Arrival. An Admin or Level 4 user must Reopen this Sauda in Sauda Check Point to record further arrivals.
+                                    </p>
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <div className="p-3 text-xs text-gray-500 italic text-center">
-                                  No matching P.O. found for "{formData.po_no}"
+                                  No matching active P.O. found for "{formData.po_no}"
                                 </div>
                               );
                             }
@@ -2519,7 +2760,19 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                                  }}
                               >
                                  <div className="flex items-center justify-between font-bold text-indigo-950">
-                                   <span>P.O. #{po.po_no}</span>
+                                   <span className="flex items-center gap-1.5">
+                                     P.O. #{po.po_no}
+                                     {po.is_reopened ? (
+                                       <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold flex items-center gap-0.5">
+                                         <Unlock className="w-2.5 h-2.5 text-amber-700" />
+                                         <span>REOPENED ({po.received_lorries || 0}/{po.contract_lorries || 1} Lorry)</span>
+                                       </span>
+                                     ) : (
+                                       <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans normal-case">
+                                         Sauda Check Point
+                                       </span>
+                                     )}
+                                   </span>
                                    <span className="text-[10px] text-gray-500 font-normal">{po.po_date || ''}</span>
                                  </div>
                                  <div className="text-[11px] text-gray-600 flex items-center justify-between gap-2 mt-0.5">

@@ -2223,13 +2223,36 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         );
         const matchingTemp = (arrivals || []).filter((ar: any) =>
           (matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)) &&
-          !matchingFinal.some(f => f.temporary_arrival_no === ar.temporary_arrival_no || f.mr_no === ar.amad_no)
+          !matchingFinal.some(f => 
+            (f.temporary_arrival_no && ar.temporary_arrival_no && f.temporary_arrival_no === ar.temporary_arrival_no) ||
+            (f.mr_no && ar.amad_no && f.mr_no === ar.amad_no) ||
+            (f.lorry_number && ar.lorry_number && String(f.lorry_number).trim().toUpperCase() === String(ar.lorry_number).trim().toUpperCase())
+          )
         );
-        // Received quantity = ONLY material accepted at Final M.R (final_arrival).
-        // No Temporary-Arrival or dummy data is counted — a P.O with no Final M.R
-        // correctly shows 0.000.
-        const weightOf = (ar: any) => Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10;
-        const totalReceivedMt = matchingFinal.reduce((sum: number, ar: any) => sum + weightOf(ar), 0);
+
+        const tempWeightOf = (ar: any) => {
+          if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+          if (ar.weight_reduced && Number(ar.weight_reduced) > 0) return Number(ar.weight_reduced);
+          if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+          if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+          if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
+            return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
+          }
+          return 0;
+        };
+        const finalWeightOf = (ar: any) => {
+          if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+          if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+          if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
+            return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
+          }
+          if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+          return 0;
+        };
+
+        const totalFinalMt = matchingFinal.reduce((sum: number, ar: any) => sum + finalWeightOf(ar), 0);
+        const totalTempMt = matchingTemp.reduce((sum: number, ar: any) => sum + tempWeightOf(ar), 0);
+        const totalReceivedMt = totalFinalMt + totalTempMt;
 
         const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
         const tol = calculateWeightTolerance(contractWeight, totalReceivedMt, unit);
@@ -2309,8 +2332,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  p.status === 'closed' || 
                                  localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true';
 
+        const remainingWeight = contractWeight - totalReceivedMt;
+        // User Requirement:
+        // 1. Temporary Arrival Lorry / Arrival Count and Sauda Check Point Lorry Count is same -> Closed
         const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
-        const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
+        // 2. Weight buffer: If contract weight minus received weight <= 8 MT (e.g. 42.106 MT received of 44.250 MT, or 36 MT received of 44.250 MT) -> Closed
+        const isWeightClosed = contractWeight > 0 && totalReceivedMt >= 5.0 && (remainingWeight <= 8.25 || totalReceivedMt >= contractWeight - 8.25);
+        const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed || isWeightClosed);
 
         // Check Payment Status in payment_master
         const matchingPayments = (payments || []).filter((pay: any) => {
@@ -3282,13 +3310,27 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       return;
     }
 
+    const contract = parseFloat(item.total_contract_mt || 0) || 0;
+    const rcvd = Number(item.received_weight_mt || 0);
+    const shortageMt = Math.max(0, contract - rcvd);
+
+    if (contract > 0 && shortageMt < 7.95) {
+      alert(`🔒 Action Prohibited: Sauda #${item.po_no} has a shortage of ${shortageMt.toFixed(3)} MT (Below 8 MT threshold).\n\nSaudas with shortage below 8 MT are Full Closed and must be settled via SHORT / Excess Deduction, not Reopened.`);
+      return;
+    }
+
     const cleanPo = String(item.po_no || '').trim().toUpperCase();
-    const confirmed = window.confirm(`Are you sure you want to REOPEN Sauda #${item.po_no}? This will re-enable editing and arrivals.`);
+    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
+    const confirmed = window.confirm(`Are you sure you want to REOPEN Sauda #${item.po_no}? This will re-enable editing and make this Sauda visible in Temporary Arrival for new arrivals.`);
     if (!confirmed) return;
 
     try {
       localStorage.setItem(`sauda_reopened_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_closed_${cleanPo}`);
+      if (cleanSauda) {
+        localStorage.setItem(`sauda_reopened_${cleanSauda}`, 'true');
+        localStorage.removeItem(`sauda_closed_${cleanSauda}`);
+      }
 
       if (supabase) {
         await supabase
@@ -3301,11 +3343,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           .update({ is_closed: false, is_reopened: true, status: 'open' })
           .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
       }
+      try {
+        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { is_closed: false, is_reopened: true, status: 'open' });
+      } catch (e) {}
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, sauda_no: item.sauda_no, status: 'reopened' } }));
 
       setEmailNotification({
         type: 'success',
         title: 'Sauda Reopened',
-        message: `Sauda #${item.po_no} has been reopened successfully by ${userRole || 'Authorized User'}.`
+        message: `Sauda #${item.po_no} has been reopened by ${userRole || 'Authorized User'}. It is now active and visible in Temporary Arrival.`
       });
 
       fetchPosAndMasters();
@@ -3328,12 +3376,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
 
     const cleanPo = String(item.po_no || '').trim().toUpperCase();
-    const confirmed = window.confirm(`Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted.`);
+    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
+    const confirmed = window.confirm(`Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted, and will not be shown in Temporary Arrival.`);
     if (!confirmed) return;
 
     try {
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+      if (cleanSauda) {
+        localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
+        localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
+      }
 
       if (supabase) {
         await supabase
@@ -3346,11 +3399,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           .update({ is_closed: true, is_reopened: false, status: 'closed' })
           .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
       }
+      try {
+        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { is_closed: true, is_reopened: false, status: 'closed' });
+      } catch (e) {}
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, sauda_no: item.sauda_no, status: 'closed' } }));
 
       setEmailNotification({
         type: 'info',
         title: 'Sauda Closed',
-        message: `Sauda #${item.po_no} has been closed.`
+        message: `Sauda #${item.po_no} has been closed. It is now hidden from Temporary Arrival.`
       });
 
       fetchPosAndMasters();
@@ -4908,7 +4967,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  );
 
                                  const diffMt = rcvd - contract;
+                                 const shortageMt = Math.max(0, contract - rcvd);
                                  const diffLabel = diffMt > 0 ? `+${diffMt.toFixed(3)} MT` : `${diffMt.toFixed(3)} MT`;
+
+                                 // User Business Rule:
+                                 // 1. Reopen option ONLY available where Short is 8 MT or above (e.g. 42 MT 5 Lorry sauda, received 34 MT with 5 lorries => 8 MT short => Reopen option Available).
+                                 // 2. Below 8 MT (e.g. 42 MT sauda, received 38 MT => 4 MT short => SHORT and Deduction It, Full Closed without Reopen).
+                                 // 3. Other (no shortage / completed / excess) => Full Closed without Reopen.
+                                 const canShowReopen = canReopen && contract > 0 && shortageMt >= 7.95;
+                                 const showShortOrExcess = tol.isOverDelivery || tol.isUnderDelivery || (contract > 0 && shortageMt > 0.05);
 
                                  if (item.is_closed) {
                                    return (
@@ -4916,14 +4983,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                        <div className="flex items-center gap-1">
                                          <span 
                                            className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
-                                           title={`Sauda is CLOSED: ${item.received_lorries || 1} of ${item.contract_lorries || 1} Lorries Received.`}
+                                            title={`Sauda is CLOSED: ${item.received_lorries ?? 0} of ${item.contract_lorries || 1} Lorries Received (${Number(item.received_weight_mt || 0).toFixed(3)} MT of ${contract.toFixed(3)} MT).`}
                                          >
                                            <Lock className="w-2.5 h-2.5 text-amber-400" />
-                                           <span>CLOSED ({item.received_lorries || 1}/{item.contract_lorries || 1} Lorry)</span>
+                                            <span>CLOSED ({item.received_lorries ?? 0}/{item.contract_lorries || 1} Lorry)</span>
                                          </span>
                                        </div>
 
-                                       {(tol.isOverDelivery || tol.isUnderDelivery) && (
+                                       {showShortOrExcess && (
                                          <button 
                                            type="button" 
                                            onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
@@ -4940,12 +5007,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                          </button>
                                        )}
 
-                                       {canReopen && (
+                                       {canShowReopen && (
                                          <button
                                            type="button"
                                            onClick={(e) => { e.stopPropagation(); handleReopenSauda(item); }}
                                            className="text-[8px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors flex items-center gap-0.5 cursor-pointer"
-                                           title="Admin / Level 4: Click to Reopen this Closed Sauda"
+                                           title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
                                          >
                                            <Unlock className="w-2 h-2 text-emerald-600" />
                                            <span>Reopen</span>
@@ -6244,13 +6311,23 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <span>{actionMenu.item.is_closed ? 'View Sauda' : 'Edit / View'}</span>
                 </button>
                 {actionMenu.item.is_closed ? (
-                  <button 
-                    onClick={() => { const it = actionMenu.item; setActionMenu(null); handleReopenSauda(it); }} 
-                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Reopen Sauda</span>
-                  </button>
+                  (() => {
+                    const actContract = parseFloat(actionMenu.item.total_contract_mt || 0) || 0;
+                    const actRcvd = Number(actionMenu.item.received_weight_mt || 0);
+                    const actShort = Math.max(0, actContract - actRcvd);
+                    const canReopenThis = canEditOrDelete() && actContract > 0 && actShort >= 7.95;
+                    if (!canReopenThis) return null;
+                    return (
+                      <button 
+                        onClick={() => { const it = actionMenu.item; setActionMenu(null); handleReopenSauda(it); }} 
+                        className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
+                        title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
+                      >
+                        <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Reopen Sauda</span>
+                      </button>
+                    );
+                  })()
                 ) : (
                   <button 
                     onClick={() => { const it = actionMenu.item; setActionMenu(null); handleCloseSauda(it); }} 
