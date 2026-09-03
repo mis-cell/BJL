@@ -1330,7 +1330,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'partial' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'short' | 'excess' | 'cancelled'>('all');
   const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
 
   // 100-rows per page pagination (searches full dataset, displays paginated)
@@ -1350,6 +1350,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+    setCurrentPage(1);
   };
   
   // Modal toggle state for calculation helper overlay
@@ -2261,7 +2262,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         });
 
         const mismatchFields: string[] = [];
-        const poDetails = (purchaseDetailRows || []).filter((d: any) => matchPoRecord(p, d));
+        const poDetails = (allScpDetails || []).filter((d: any) => matchPoRecord(p, d));
         const activeArrival = matchingTemp[0] || (arrivals || []).find((ar: any) => matchPoRecord(p, ar));
         if (activeArrival || matchingInsp) {
           const tempMatchRes = compareSaudaTempArrival(p, poDetails, activeArrival || matchingInsp, matchingInsp ? [matchingInsp] : []);
@@ -3910,6 +3911,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     if (statusFilter !== 'all') {
       if (statusFilter === 'pending') {
         if (computedStatus !== 'pending') return false;
+      } else if (statusFilter === 'completed') {
+        if (computedStatus !== 'completed') return false;
+      } else if (statusFilter === 'short') {
+        if (!tol.isUnderDelivery || isCompleted) return false;
+      } else if (statusFilter === 'excess') {
+        if (!tol.isOverDelivery || isCompleted) return false;
+      } else if (statusFilter === 'cancelled') {
+        if (!isCancelled) return false;
       } else if (computedStatus !== statusFilter) {
         return false;
       }
@@ -3942,34 +3951,32 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           break;
         }
         case 'status': {
-          const getStatusText = (item: any) => {
+          const getStatusRank = (item: any) => {
             const contract = parseFloat(item.total_contract_mt || 0) || 0;
             const rcvd = Number(item.received_weight_mt || 0);
             const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-            const isCompletedPo = item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
+            const pendingStr = String(item.pending ?? '').trim().toLowerCase();
+            const statusStr = String(item.status ?? '').trim().toLowerCase();
+            const isCompletedPo = item.pending === false || pendingStr === 'no' || pendingStr === 'false' || item.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
 
-            if (contract > 0 && rcvd > 0 && rcvd < 5.0) return 'CANCELLED';
-            if (isCompletedPo) return 'COMPLETED';
-
-            const poKey = String(item.po_no || '').trim().toUpperCase();
-            const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
-            const isSettledDeduction = Boolean(
-              settledDeductions[poKey] || 
-              settledDeductions[saudaKey] || 
-              item.excess_short_deduction != null || 
-              (item.excess_short_status && item.excess_short_status !== 'pending')
-            );
-
-            if (tol.isOverDelivery) {
-              return isSettledDeduction ? 'EXCESS WT (SETTLED)' : 'EXCESS WT';
-            }
-            if (tol.isUnderDelivery) {
-              return isSettledDeduction ? 'SHORT WT (SETTLED)' : 'SHORT WT';
-            }
-            return 'PENDING';
+            if (contract > 0 && rcvd > 0 && rcvd < 5.0) return 5; // CANCELLED
+            if (isCompletedPo) return 2; // COMPLETED
+            if (tol.isUnderDelivery) return 3; // SHORT WT
+            if (tol.isOverDelivery) return 4; // EXCESS WT
+            return 1; // PENDING
           };
-          comparison = getStatusText(a).localeCompare(getStatusText(b));
+
+          const rankA = getStatusRank(a);
+          const rankB = getStatusRank(b);
+
+          if (rankA !== rankB) {
+            comparison = rankA - rankB;
+          } else {
+            const dateA = a.po_date || a.date || (a.created_at ? a.created_at.slice(0, 10) : '') || '';
+            const dateB = b.po_date || b.date || (b.created_at ? b.created_at.slice(0, 10) : '') || '';
+            comparison = dateB.localeCompare(dateA);
+          }
           break;
         }
         case 'pass_mismatch': {
@@ -4102,15 +4109,40 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
     return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
   }).length;
+
+  const totalShortPos = scopedPos.filter(p => {
+    const pendingStr = String(p.pending ?? '').trim().toLowerCase();
+    const statusStr = String(p.status ?? '').trim().toLowerCase();
+    const receivedWt = parseFloat(p.received_weight_mt) || 0;
+    const contractWt = parseFloat(p.total_contract_mt) || 0;
+    const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
+    const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    return !isCompleted && tol.isUnderDelivery;
+  }).length;
+
+  const totalExcessPos = scopedPos.filter(p => {
+    const pendingStr = String(p.pending ?? '').trim().toLowerCase();
+    const statusStr = String(p.status ?? '').trim().toLowerCase();
+    const receivedWt = parseFloat(p.received_weight_mt) || 0;
+    const contractWt = parseFloat(p.total_contract_mt) || 0;
+    const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
+    const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    return !isCompleted && tol.isOverDelivery;
+  }).length;
+
   const totalPendingPos = scopedPos.length - totalCompletedPos;
   const totalGeneratedPos = scopedPos.length;
   const cumulativeWeight = scopedPos.reduce((acc, p) => acc + (parseFloat(p.total_contract_mt) || 0), 0);
 
   const statusPieData = [
     { name: 'Pending', value: totalPendingPos },
-    { name: 'Completed', value: totalCompletedPos }
-  ];
-  const STATUS_COLORS = ['#be123c', '#15803d'];
+    { name: 'Completed', value: totalCompletedPos },
+    { name: 'Short Wt', value: totalShortPos },
+    { name: 'Excess Wt', value: totalExcessPos }
+  ].filter(i => i.value > 0);
+  const STATUS_COLORS = ['#be123c', '#15803d', '#d97706', '#2563eb'];
 
   if (printingPo) {
     const portalModal = (
@@ -4417,6 +4449,30 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                    >
                      <span className={`w-2 h-2 rounded-full ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
                      Completed ({totalCompletedPos})
+                   </button>
+                   <button
+                     onClick={() => setStatusFilter('short')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                       statusFilter === 'short'
+                         ? 'bg-amber-600 text-white shadow-xs font-extrabold'
+                         : 'text-slate-600 hover:text-amber-800'
+                     }`}
+                     title="Show Short Weight Purchase Orders"
+                   >
+                     <span className={`w-2 h-2 rounded-full ${statusFilter === 'short' ? 'bg-white' : 'bg-amber-500'}`} />
+                     Short Wt ({totalShortPos})
+                   </button>
+                   <button
+                     onClick={() => setStatusFilter('excess')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                       statusFilter === 'excess'
+                         ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                         : 'text-slate-600 hover:text-blue-800'
+                     }`}
+                     title="Show Excess Weight Purchase Orders"
+                   >
+                     <span className={`w-2 h-2 rounded-full ${statusFilter === 'excess' ? 'bg-white' : 'bg-blue-500'}`} />
+                     Excess Wt ({totalExcessPos})
                    </button>
                  </div>
                </div>

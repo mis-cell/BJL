@@ -94,12 +94,92 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return calculateWeightTolerance(contractMt, totalReceivedMt, unit);
   }, [contractMt, totalReceivedMt, unit]);
 
+  // Sauda Date state & Last Arrival Date computation
+  const [saudaDate, setSaudaDate] = useState<string>(() => {
+    return po.sauda_date || po.po_date || po.contract_date || po.voucher_date || po.date || po.created_at?.split('T')[0] || '';
+  });
+
   // Last Arrival Date
   const lastArrivalDate = useMemo(() => {
     if (linkedFinalArrivals.length === 0) return new Date().toISOString().split('T')[0];
     const last = linkedFinalArrivals[linkedFinalArrivals.length - 1];
-    return last.voucher_date || last.arrival_date || last.date || last.created_at?.split('T')[0] || new Date().toISOString().split('T')[0];
+    return last.lorry_arrival_date || last.temporary_date || last.voucher_date || last.arrival_date || last.date || last.created_at?.split('T')[0] || new Date().toISOString().split('T')[0];
   }, [linkedFinalArrivals]);
+
+  // Helper to format dates as DD-MM-YYYY
+  const formatDisplayDate = (dStr: string) => {
+    if (!dStr) return '--';
+    let clean = String(dStr).trim();
+    if (clean.includes('T')) clean = clean.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD -> DD-MM-YYYY
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+    return clean;
+  };
+
+  // Helper to lookup Satta Base Rate for any specific date from satta_base_rates
+  const getSattaBaseRateOnDate = (dateStr: string): number => {
+    if (!dateStr) return 16500;
+    let targetDate = String(dateStr).trim();
+    if (targetDate.includes('T')) targetDate = targetDate.split('T')[0];
+    if (targetDate.includes('-')) {
+      const parts = targetDate.split('-');
+      if (parts[0].length === 2 && parts[2].length === 4) {
+        // DD-MM-YYYY -> YYYY-MM-DD
+        targetDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    const baseList = liveBaseRates.length > 0 ? liveBaseRates : (sattaBaseRates || []);
+    if (!baseList || baseList.length === 0) return 16500;
+
+    // Filter base_rates where start_date <= targetDate
+    const matches = baseList.filter((b: any) => {
+      let bDate = String(b.start_date || b.start || b.date || '').trim();
+      if (bDate.includes('T')) bDate = bDate.split('T')[0];
+      if (bDate.includes('-')) {
+        const p = bDate.split('-');
+        if (p[0].length === 2 && p[2].length === 4) {
+          bDate = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+      }
+      return bDate <= targetDate;
+    }).sort((a: any, b: any) => {
+      let d1 = String(a.start_date || a.start || '');
+      let d2 = String(b.start_date || b.start || '');
+      if (d1.includes('-') && d1.split('-')[0].length === 2) {
+        const p = d1.split('-'); d1 = `${p[2]}-${p[1]}-${p[0]}`;
+      }
+      if (d2.includes('-') && d2.split('-')[0].length === 2) {
+        const p = d2.split('-'); d2 = `${p[2]}-${p[1]}-${p[0]}`;
+      }
+      return d2.localeCompare(d1);
+    });
+
+    if (matches.length > 0) {
+      return Number(matches[0].base_rate || matches[0].rate || 16500);
+    }
+
+    const sortedAsc = [...baseList].sort((a: any, b: any) => String(a.start_date || '').localeCompare(String(b.start_date || '')));
+    return Number(sortedAsc[0]?.base_rate || 16500);
+  };
+
+  // Base rate on Sauda Date (e.g. 01-04-2026 -> 16,500)
+  const saudaBaseRate = useMemo(() => {
+    return getSattaBaseRateOnDate(saudaDate);
+  }, [saudaDate, liveBaseRates, sattaBaseRates]);
+
+  // Base rate on Last Arrival Date (e.g. 07-04-2026 -> 17,300)
+  const arrivalBaseRate = useMemo(() => {
+    return getSattaBaseRateOnDate(lastArrivalDate);
+  }, [lastArrivalDate, liveBaseRates, sattaBaseRates]);
+
+  // Base rate movement
+  const baseRateDiff = arrivalBaseRate - saudaBaseRate;
 
   // Fetch live Sauda Quality details, Satta Calculated Rates, Satta Differentials & Base Rates
   useEffect(() => {
@@ -110,11 +190,29 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         const targetSauda = clean(saudaNo);
         const targetPo = clean(poNo);
 
+        // Fetch exact Sauda Date from purchase_master / sauda_master / sauda_check_point
+        const { data: pMasterRec } = await supabase
+          .from('purchase_master')
+          .select('po_date, sauda_date, date, created_at')
+          .eq('po_no', poNo)
+          .maybeSingle();
+
+        const { data: sMasterRec } = await supabase
+          .from('sauda_master')
+          .select('sauda_date, date, created_at')
+          .or(`sauda_no.eq.${targetSauda},sauda_no.eq.${targetPo}`)
+          .maybeSingle();
+
+        const exactSaudaDate = pMasterRec?.sauda_date || pMasterRec?.po_date || pMasterRec?.date || sMasterRec?.sauda_date || sMasterRec?.date;
+        if (exactSaudaDate) {
+          setSaudaDate(exactSaudaDate);
+        }
+
         // Fetch from sauda_quality_details
         let sqDet: any[] = [];
         const { data: sMaster } = await supabase
           .from('sauda_master')
-          .select('sauda_id, sauda_no, session')
+          .select('sauda_id, sauda_no, session, sauda_date')
           .or(`sauda_no.eq.${targetSauda},sauda_no.eq.${targetPo},session.eq.${targetPo}`)
           .maybeSingle();
 
@@ -575,8 +673,16 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   Sauda Policy Engine
                 </span>
               </div>
-              <p className="text-xs text-slate-300 font-medium">
-                P.O / Sauda: <strong className="text-white font-mono">{poNo}</strong> | Supplier: <strong className="text-amber-200">{supplierName}</strong> | Broker: <strong className="text-slate-200">{brokerName}</strong>
+              <p className="text-xs text-slate-300 font-medium flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>P.O / Sauda: <strong className="text-white font-mono">{poNo}</strong></span>
+                <span>|</span>
+                <span>Sauda Date: <strong className="text-amber-300 font-mono">{formatDisplayDate(saudaDate)}</strong> (Base Rate: <strong className="text-amber-200 font-mono">₹{saudaBaseRate.toLocaleString()}</strong>)</span>
+                <span>|</span>
+                <span>Last Arrival Date: <strong className="text-emerald-300 font-mono">{formatDisplayDate(lastArrivalDate)}</strong> (Base Rate: <strong className="text-emerald-200 font-mono">₹{arrivalBaseRate.toLocaleString()}</strong>)</span>
+                <span>|</span>
+                <span>Supplier: <strong className="text-amber-100">{supplierName}</strong></span>
+                <span>|</span>
+                <span>Broker: <strong className="text-slate-200">{brokerName}</strong></span>
               </p>
             </div>
           </div>
@@ -684,7 +790,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   ) : tolerance.isUnderDelivery ? (
                     <>
                       <TrendingDown className="w-4 h-4 text-rose-600" />
-                      <span className="text-base font-black font-mono">-{tolerance.shortUnderToleranceMt.toFixed(3)} MT</span>
+                      <span className="text-base font-black font-mono">{Math.abs(tolerance.shortUnderToleranceMt).toFixed(3)} MT Short</span>
                     </>
                   ) : (
                     <>
@@ -696,10 +802,60 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <p className="text-[9px] font-semibold mt-0.5 opacity-90">
                   {tolerance.isOverDelivery 
                     ? `Over Upper Limit (+${tolerance.excessOverContractMt.toFixed(3)} MT over Sauda)` 
-                    : (tolerance.isUnderDelivery ? `Below Lower Limit (-${Math.max(0, contractMt - totalReceivedMt).toFixed(3)} MT under Sauda)` : 'Passes Sauda Specs')}
+                    : (tolerance.isUnderDelivery ? `Below Lower Limit (${Math.abs(contractMt - totalReceivedMt).toFixed(3)} MT Short under Sauda)` : 'Passes Sauda Specs')}
                 </p>
               </div>
             </div>
+
+            {/* Satta Base Rate Schedule Analysis Card */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-3.5 border border-indigo-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 mt-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
+                      Effective Base Rate Schedule Ranges
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-amber-400 text-amber-950 uppercase">
+                      Satta Market Benchmarks
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-medium">
+                    Sauda Date ({formatDisplayDate(saudaDate)}) Base Rate vs Last Temporary Arrival Date ({formatDisplayDate(lastArrivalDate)}) Base Rate
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 font-mono shrink-0">
+                {/* Sauda Date Base Rate */}
+                <div className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/15 text-center">
+                  <span className="text-[8.5px] uppercase font-bold text-slate-300 block">Sauda Date ({formatDisplayDate(saudaDate)})</span>
+                  <span className="text-sm font-black text-amber-300">₹{saudaBaseRate.toLocaleString()}</span>
+                  <span className="text-[8.5px] text-slate-400 font-sans ml-0.5">/Qtl</span>
+                </div>
+
+                <div className="text-slate-400 font-black text-xs">→</div>
+
+                {/* Last Arrival Base Rate */}
+                <div className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/15 text-center">
+                  <span className="text-[8.5px] uppercase font-bold text-slate-300 block">Last Arrival ({formatDisplayDate(lastArrivalDate)})</span>
+                  <span className="text-sm font-black text-emerald-300">₹{arrivalBaseRate.toLocaleString()}</span>
+                  <span className="text-[8.5px] text-slate-400 font-sans ml-0.5">/Qtl</span>
+                </div>
+
+                {/* Base Rate Shift */}
+                <div className="bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-400/40 text-center">
+                  <span className="text-[8.5px] uppercase font-bold text-amber-300 block">Base Rate Movement</span>
+                  <span className="text-sm font-black text-white">
+                    {baseRateDiff >= 0 ? `+₹${baseRateDiff.toLocaleString()}` : `-₹${Math.abs(baseRateDiff).toLocaleString()}`}
+                  </span>
+                  <span className="text-[8.5px] text-amber-200 font-sans ml-0.5">/Qtl</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Section 2: Linked Final Arrivals Breakdown */}
@@ -937,8 +1093,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
               
               {/* Box 1: Sauda Agreed Rate */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500 block">
-                  A. Sauda Contract Rate ({selectedGrade})
+                <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center justify-between">
+                  <span>A. Sauda Contract Rate ({selectedGrade})</span>
+                  <span className="text-[9px] font-semibold text-amber-700 font-mono">
+                    ({formatDisplayDate(saudaDate)})
+                  </span>
                 </label>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-slate-400 font-sans">₹</span>
@@ -958,14 +1117,18 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
                 </div>
-                <p className="text-[9px] text-slate-500 font-medium">Sauda Rate: ₹{saudaRateQtl.toLocaleString()} / Quintal</p>
+                <p className="text-[9px] text-slate-500 font-medium">
+                  Sauda Rate: ₹{saudaRateQtl.toLocaleString()} | Base: ₹{saudaBaseRate.toLocaleString()}
+                </p>
               </div>
 
               {/* Box 2: Last Arrival Satta Market Rate */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase text-slate-500 flex items-center justify-between">
                   <span>B. Last Arrival Satta Rate</span>
-                  <span className="text-[9px] font-normal text-indigo-600 font-mono">({lastArrivalDate})</span>
+                  <span className="text-[9px] font-semibold text-indigo-600 font-mono">
+                    ({formatDisplayDate(lastArrivalDate)})
+                  </span>
                 </label>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-slate-400 font-sans">₹</span>
@@ -985,7 +1148,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   />
                   <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">/ Qtl</span>
                 </div>
-                <p className="text-[9px] text-slate-500 font-medium">Satta Rate: ₹{sattaRateQtl.toLocaleString()} / Quintal</p>
+                <p className="text-[9px] text-slate-500 font-medium">
+                  Satta Rate: ₹{sattaRateQtl.toLocaleString()} | Base: ₹{arrivalBaseRate.toLocaleString()}
+                </p>
               </div>
 
               {/* Box 3: Applicable Policy Rate (A - B) */}
@@ -1029,7 +1194,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   >
                     <span>
                       {tolerance.isUnderDelivery 
-                        ? `Short Under Tolerance (-${tolerance.shortUnderToleranceMt.toFixed(3)} MT / ${(tolerance.shortUnderToleranceMt * 10).toFixed(2)} Qtl)` 
+                        ? `Short Under Tolerance (${Math.abs(tolerance.shortUnderToleranceMt).toFixed(3)} MT / ${(Math.abs(tolerance.shortUnderToleranceMt) * 10).toFixed(2)} Qtl)` 
                         : `Excess Over Tolerance (+${tolerance.excessOverToleranceMt.toFixed(3)} MT / ${(tolerance.excessOverToleranceMt * 10).toFixed(2)} Qtl)`}
                     </span>
                   </button>
@@ -1047,7 +1212,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   >
                     <span>
                       {tolerance.isUnderDelivery 
-                        ? `Short Under Contract (-${Math.max(0, contractMt - totalReceivedMt).toFixed(3)} MT / ${(Math.max(0, contractMt - totalReceivedMt) * 10).toFixed(2)} Qtl)` 
+                        ? `Short Under Contract (${Math.abs(contractMt - totalReceivedMt).toFixed(3)} MT / ${(Math.abs(contractMt - totalReceivedMt) * 10).toFixed(2)} Qtl)` 
                         : `Excess Over Contract (+${tolerance.excessOverContractMt.toFixed(3)} MT / ${(tolerance.excessOverContractMt * 10).toFixed(2)} Qtl)`}
                     </span>
                   </button>
