@@ -1098,7 +1098,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }, 0);
     const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
-    let defaultQty = 1;
+    let defaultQty = 0;
     if (isBaleRule && autoCalc.totalBales > 0) {
       defaultQty = autoCalc.totalBales;
     } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
