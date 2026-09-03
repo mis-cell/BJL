@@ -3987,18 +3987,18 @@ export default function MaterialInspection({
                                         <tbody className="divide-y divide-slate-100">
                                           {expandedDetails[row.mr_no].map((d) => (
                                             <tr key={d.id || d.srl_no} className="hover:bg-slate-105/50 font-medium">
-                                              <td className="p-1 px-2 font-mono text-[10px] text-slate-450">{d.srl_no}</td>
-                                              <td className="p-1 text-indigo-700 font-bold uppercase">{d.arrival_grade || "N/A"}</td>
-                                              <td className="p-1 font-mono text-emerald-800 font-black">{d.stock_grade_code || "-"}</td>
-                                              <td className="p-1 uppercase text-slate-600">{d.stock_grade_name || "-"}</td>
-                                              <td className="p-1 uppercase text-slate-650">{d.area || "-"}</td>
-                                              <td className="p-1 uppercase text-slate-650">{d.agency || "-"}</td>
-                                              <td className="p-1 font-mono text-stone-605">{d.marka || "-"}</td>
-                                              <td className="p-1 font-mono text-slate-500">{d.crop_year || "-"}</td>
-                                              <td className="p-1 font-mono text-slate-700">{d.lot || "-"}</td>
-                                              <td className="p-1 font-mono text-right font-bold text-sky-905">{d.quantity}</td>
-                                              <td className="p-1 text-slate-500">{d.unit || "BALES"}</td>
-                                              <td className="p-1 font-mono text-right font-medium text-slate-600">{d.challan_gross_wt}</td>
+                                              <td className="p-1 px-2 font-mono text-[10px] text-slate-450">{safeRenderText(d.srl_no)}</td>
+                                              <td className="p-1 text-indigo-700 font-bold uppercase">{safeRenderText(d.arrival_grade, "N/A")}</td>
+                                              <td className="p-1 font-mono text-emerald-800 font-black">{safeRenderText(d.stock_grade_code)}</td>
+                                              <td className="p-1 uppercase text-slate-600">{safeRenderText(d.stock_grade_name)}</td>
+                                              <td className="p-1 uppercase text-slate-650">{safeRenderText(d.area)}</td>
+                                              <td className="p-1 uppercase text-slate-650">{safeRenderText(d.agency)}</td>
+                                              <td className="p-1 font-mono text-stone-605">{safeRenderText(d.marka)}</td>
+                                              <td className="p-1 font-mono text-slate-500">{safeRenderText(d.crop_year)}</td>
+                                              <td className="p-1 font-mono text-slate-700">{safeRenderText(d.lot)}</td>
+                                              <td className="p-1 font-mono text-right font-bold text-sky-905">{safeRenderText(d.quantity)}</td>
+                                              <td className="p-1 text-slate-500">{safeRenderText(d.unit, "BALES")}</td>
+                                              <td className="p-1 font-mono text-right font-medium text-slate-600">{safeRenderText(d.challan_gross_wt)}</td>
                                             </tr>
                                           ))}
                                         </tbody>
@@ -4337,7 +4337,7 @@ export default function MaterialInspection({
                 >
                   <option value={masterData.mr_no}>{masterData.mr_no || 'MRRC-2026-0001'}</option>
                   {savedInspections.map((insp, idx) => (
-                    <option key={idx} value={insp.mr_no}>{insp.mr_no} - {insp.supplier_name || 'Inspection'}</option>
+                    <option key={idx} value={insp.mr_no}>{insp.mr_no} - {safeRenderText(insp.supplier_name || insp.supplier, 'Inspection')}</option>
                   ))}
                 </select>
                 <ChevronDown className="w-4 h-4 text-amber-300 absolute right-2.5 top-2.5 pointer-events-none" />
@@ -4624,9 +4624,10 @@ export default function MaterialInspection({
                                   onChange={(e) => handleDetailChange(idx, 'unit', e.target.value)}
                                   className="bg-[#0e2746] text-white border border-blue-600/60 rounded px-2 py-1 text-center font-bold text-xs cursor-pointer focus:ring-1 focus:ring-blue-400"
                                 >
-                                  {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
-                                    <option key={u} value={u}>{u}</option>
-                                  ))}
+                                  {Array.from(new Set([...unitList, safeRenderText(row.unit, "BALES")].filter(Boolean))).map((u: any) => {
+                                    const uStr = safeRenderText(u, "BALES");
+                                    return <option key={uStr} value={uStr}>{uStr}</option>;
+                                  })}
                                 </select>
                               </td>
                               <td className="p-1 text-right border-r border-blue-900/60 bg-blue-950/40">
@@ -6007,9 +6008,10 @@ export default function MaterialInspection({
                         }
                         className="w-full bg-transparent py-0.5 text-center font-bold text-[10px] cursor-pointer"
                       >
-                        {Array.from(new Set([...unitList, row.unit].filter(Boolean))).map((u: string) => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
+                        {Array.from(new Set([...unitList, safeRenderText(row.unit, "BALES")].filter(Boolean))).map((u: any) => {
+                          const uStr = safeRenderText(u, "BALES");
+                          return <option key={uStr} value={uStr}>{uStr}</option>;
+                        })}
                       </select>
                     </td>
 

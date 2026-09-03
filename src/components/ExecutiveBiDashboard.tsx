@@ -57,6 +57,24 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 
+function safeStr(val: any, fallback = 'N/A'): string {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+    return String(val);
+  }
+  if (typeof val === 'object') {
+    if (typeof val.name === 'string') return val.name;
+    if (typeof val.supp_name === 'string') return val.supp_name;
+    if (typeof val.brok_name === 'string') return val.brok_name;
+    if (typeof val.supplier_name === 'string') return val.supplier_name;
+    if (typeof val.broker_name === 'string') return val.broker_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 interface ExecutiveBiDashboardProps {
   arrivals: any[];
   saudas: any[];
@@ -1898,10 +1916,10 @@ export default function ExecutiveBiDashboard({
                   <tr key={row.id} className="hover:bg-[#FAF7F0]/60 transition-colors">
                     <td className="p-3 font-mono font-bold text-[#1E331B]">{row.chalan}</td>
                     <td className="p-3 text-[#556952]">{row.date}</td>
-                    <td className="p-3 font-medium text-[#1E331B]">{row.supplier}</td>
-                    <td className="p-3 text-[#556952]">{row.broker}</td>
+                    <td className="p-3 font-medium text-[#1E331B]">{safeStr(row.supplier)}</td>
+                    <td className="p-3 text-[#556952]">{safeStr(row.broker)}</td>
                     <td className="p-3 font-mono text-xs">{row.vehicle}</td>
-                    <td className="p-3 font-bold text-emerald-900">{row.grade}</td>
+                    <td className="p-3 font-bold text-emerald-900">{safeStr(row.grade)}</td>
                     <td className="p-3 text-right font-bold text-[#1E331B]">{row.netWt}</td>
                     <td className="p-3 text-center font-mono">
                       <span className={cn(

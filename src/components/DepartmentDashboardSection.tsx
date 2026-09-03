@@ -14,6 +14,24 @@ import {
 import { LorryRecord, DepartmentType, UserRole } from "../pages/LorryDispatchSystem";
 import { cn } from "../lib/utils";
 
+function safeStr(val: any, fallback = "N/A"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (typeof val === "object") {
+    if (typeof val.name === "string") return val.name;
+    if (typeof val.supp_name === "string") return val.supp_name;
+    if (typeof val.brok_name === "string") return val.brok_name;
+    if (typeof val.supplier_name === "string") return val.supplier_name;
+    if (typeof val.broker_name === "string") return val.broker_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 interface DepartmentDashboardSectionProps {
   lorries: LorryRecord[];
   currentUserRole: UserRole;
@@ -190,7 +208,7 @@ export default function DepartmentDashboardSection({
                   <tr key={l.id} className="hover:bg-[#FAF7F0] transition-colors">
                     <td className="py-3 px-3 font-black text-[#1E331B] font-mono">{l.lorryNo}</td>
                     <td className="py-3 px-3 font-mono text-[#5A6E54]">{l.gatePassNo}</td>
-                    <td className="py-3 px-3 font-medium text-[#1E331B]">{l.broker}</td>
+                    <td className="py-3 px-3 font-medium text-[#1E331B]">{safeStr(l.broker)}</td>
                     <td className="py-3 px-3 font-mono text-[#5A6E54] text-[11px]">{new Date(l.inTime).toLocaleTimeString("en-IN")}</td>
                     <td className="py-3 px-3">
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[10px] font-bold uppercase">
@@ -263,7 +281,7 @@ export default function DepartmentDashboardSection({
               </div>
               <div>
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Supplier / Party</span>
-                <span className="font-extrabold text-[#1E331B]">{activeLorry.broker}</span>
+                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.broker)}</span>
               </div>
               <div>
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Category / Quality</span>
@@ -377,7 +395,7 @@ export default function DepartmentDashboardSection({
                 </div>
                 <div>
                   <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Broker / Party</span>
-                  <span className="font-bold">{selectedLorryForModal.broker}</span>
+                  <span className="font-bold">{safeStr(selectedLorryForModal.broker)}</span>
                 </div>
               </div>
 

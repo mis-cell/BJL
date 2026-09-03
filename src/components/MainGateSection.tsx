@@ -24,6 +24,24 @@ import {
 import { LorryRecord, DepartmentType, LorryStatus, UserRole } from "../pages/LorryDispatchSystem";
 import { cn } from "../lib/utils";
 
+function safeStr(val: any, fallback = "N/A"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (typeof val === "object") {
+    if (typeof val.name === "string") return val.name;
+    if (typeof val.supp_name === "string") return val.supp_name;
+    if (typeof val.brok_name === "string") return val.brok_name;
+    if (typeof val.supplier_name === "string") return val.supplier_name;
+    if (typeof val.broker_name === "string") return val.broker_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 interface MainGateSectionProps {
   lorries: LorryRecord[];
   masters: {
@@ -703,7 +721,7 @@ export default function MainGateSection({
                   <p><strong>Lorry No:</strong> {inspectLorryModal.lorryNo}</p>
                   <p><strong>Gate Pass:</strong> {inspectLorryModal.gatePassNo}</p>
                   <p><strong>Department:</strong> {inspectLorryModal.department}</p>
-                  <p><strong>Party / Broker:</strong> {inspectLorryModal.broker || inspectLorryModal.partyName || "N/A"}</p>
+                  <p><strong>Party / Broker:</strong> {safeStr(inspectLorryModal.broker || inspectLorryModal.partyName, "N/A")}</p>
                   <p><strong>Chalan No:</strong> {inspectLorryModal.chalanNo || "N/A"}</p>
                   <p><strong>Driver Phone:</strong> {inspectLorryModal.driverPhone || "N/A"}</p>
                 </div>
@@ -723,8 +741,8 @@ export default function MainGateSection({
                   <p><strong>Description / Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
                   <p><strong>Quantity & Unit:</strong> {inspectLorryModal.quantity ? `${inspectLorryModal.quantity} ${inspectLorryModal.unit || 'BALES'}` : "N/A"}</p>
                   <p><strong>Mokam / Origin:</strong> {inspectLorryModal.mokam || "N/A"}</p>
-                  <p><strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
-                  <p><strong>Grade:</strong> {inspectLorryModal.grade || "N/A"}</p>
+                  <p><strong>Marka:</strong> {safeStr(inspectLorryModal.marka, "N/A")}</p>
+                  <p><strong>Grade:</strong> {safeStr(inspectLorryModal.grade, "N/A")}</p>
                 </div>
 
                 <div className="bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C5BA9E] space-y-2">
@@ -747,9 +765,9 @@ export default function MainGateSection({
                 <p><strong>Date/Out-Time:</strong> {inspectLorryModal.outDate || ""} {inspectLorryModal.outTime || "Active"}</p>
                 <p><strong>Driver Phone:</strong> {inspectLorryModal.driverPhone || "N/A"}</p>
                 <p><strong>Department:</strong> {inspectLorryModal.department}</p>
-                <p><strong>Broker:</strong> {inspectLorryModal.broker || "N/A"}</p>
+                <p><strong>Broker:</strong> {safeStr(inspectLorryModal.broker, "N/A")}</p>
                 <p><strong>Quality:</strong> {inspectLorryModal.quality || inspectLorryModal.description || "N/A"}</p>
-                <p><strong>Mokam:</strong> {inspectLorryModal.mokam || "N/A"} | <strong>Marka:</strong> {inspectLorryModal.marka || "N/A"}</p>
+                <p><strong>Mokam:</strong> {inspectLorryModal.mokam || "N/A"} | <strong>Marka:</strong> {safeStr(inspectLorryModal.marka, "N/A")}</p>
                 <div className="border-t border-[#C5BA9E] pt-2 space-y-1">
                   <p className="font-bold uppercase">WEIGHMENT BREAKDOWN (KG)</p>
                   <p className="font-extrabold text-sm text-[#1E331B]">

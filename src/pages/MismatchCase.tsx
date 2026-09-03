@@ -20,6 +20,27 @@ import { comparePoInspection, compareSaudaTempArrival, PoMismatchDetail } from '
 import LegacyLayout from '../components/LegacyLayout';
 import { getCurrentUserContext } from '../lib/permissions';
 
+function safeStr(val: any, fallback = ''): string {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+    return String(val);
+  }
+  if (typeof val === 'object') {
+    if (typeof val.name === 'string') return val.name;
+    if (typeof val.supp_name === 'string') return val.supp_name;
+    if (typeof val.brok_name === 'string') return val.brok_name;
+    if (typeof val.supplier_name === 'string') return val.supplier_name;
+    if (typeof val.broker_name === 'string') return val.broker_name;
+    if (typeof val.area_name === 'string') return val.area_name;
+    if (typeof val.agency_name === 'string') return val.agency_name;
+    if (typeof val.grade_name === 'string') return val.grade_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    return fallback;
+  }
+  return fallback;
+}
+
 const inMemorySattaResolutions: Record<string, any> = {};
 
 // Excel Seed Data for Satta differentials
@@ -378,14 +399,14 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             id: `MIS-${poNo}`,
             poNo: poNo,
             saudaNo: po.po_contract || po.contract_no || po.sauda_no || 'N/A',
-            supplierName: po.supplier || po.supplier_name || 'N/A',
-            brokerName: po.broker || po.broker_name || 'N/A',
-            area: po.area || 'N/A',
-            grade: po.grade || po.quality || 'N/A',
-            agency: po.agency || po.agency_name || 'N/A',
+            supplierName: safeStr(po.supplier || po.supplier_name, 'N/A'),
+            brokerName: safeStr(po.broker || po.broker_name, 'N/A'),
+            area: safeStr(po.area, 'N/A'),
+            grade: safeStr(po.grade || po.quality, 'N/A'),
+            agency: safeStr(po.agency || po.agency_name, 'N/A'),
             ptfMode: po.ptf_mode || po.po_type || 'N/A',
             poContract: po.po_contract || po.contract_no || 'N/A',
-            challanSupplier: po.challan_supplier || 'N/A',
+            challanSupplier: safeStr(po.challan_supplier, 'N/A'),
             ratePerMt: po.b_rate ? `₹ ${po.b_rate}` : (poDetails[0]?.rate_qntl ? `₹ ${poDetails[0].rate_qntl * 10}` : 'N/A'),
             lorryNumber: enrichedInsp.lorry_number || enrichedInsp.lorry_no || 'N/A',
             lorryProgress: matchRes.lorryProgress || { totalLorries: 1, receivedLorries: 1, remainingLorries: 0 },
@@ -412,14 +433,14 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             id: r.mismatch_id || `MIS-${poNo}`,
             poNo: poNo,
             saudaNo: 'N/A',
-            supplierName: r.supplier || 'N/A',
-            brokerName: r.broker || 'N/A',
-            area: r.area || 'N/A',
-            grade: r.grade || 'N/A',
-            agency: r.agency || 'N/A',
+            supplierName: safeStr(r.supplier, 'N/A'),
+            brokerName: safeStr(r.broker, 'N/A'),
+            area: safeStr(r.area, 'N/A'),
+            grade: safeStr(r.grade, 'N/A'),
+            agency: safeStr(r.agency, 'N/A'),
             ptfMode: r.ptf_mode || 'N/A',
             poContract: 'N/A',
-            challanSupplier: r.challan_supplier || 'N/A',
+            challanSupplier: safeStr(r.challan_supplier, 'N/A'),
             ratePerMt: r.rate_per_mt || 'N/A',
             lorryNumber: r.lorry_number || 'N/A',
             lorryProgress: { totalLorries: 1, receivedLorries: 1, remainingLorries: 0 },
@@ -619,8 +640,8 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           poNo,
           saudaNo: header.po_contract || header.sauda_no || header.contract_no || poNo,
           poDate,
-          supplierName: header.supplier || header.supplier_name || 'UNKNOWN SUPPLIER',
-          brokerName: header.broker || header.broker_name || 'UNKNOWN BROKER',
+          supplierName: safeStr(header.supplier || header.supplier_name, 'UNKNOWN SUPPLIER'),
+          brokerName: safeStr(header.broker || header.broker_name, 'UNKNOWN BROKER'),
           area: poArea,
           grade: poGrade,
           poRateMt,
@@ -670,10 +691,10 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                 poNo: formattedNo,
                 saudaNo: entry.sauda_no || formattedNo,
                 poDate: bDate,
-                supplierName: entry.supplier || 'UNKNOWN SUPPLIER',
-                brokerName: entry.broker || 'UNKNOWN BROKER',
-                area: entry.area || 'NORTHERN',
-                grade: entry.grade || 'TD6',
+                supplierName: safeStr(entry.supplier, 'UNKNOWN SUPPLIER'),
+                brokerName: safeStr(entry.broker, 'UNKNOWN BROKER'),
+                area: safeStr(entry.area, 'NORTHERN'),
+                grade: safeStr(entry.grade, 'TD6'),
                 poRateMt: entryRate * 10,
                 poRateQtl: entryRate,
                 sattaBaseRateQtl: refRate,
@@ -720,10 +741,10 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                 poNo: poNo || 'N/A',
                 saudaNo: entry.contract_po_no || poNo || 'N/A',
                 poDate: sDate,
-                supplierName: entry.supplier || 'UNKNOWN SUPPLIER',
-                brokerName: entry.broker || 'UNKNOWN BROKER',
-                area: entry.area || 'NORTHERN',
-                grade: entry.grade || 'TD6',
+                supplierName: safeStr(entry.supplier, 'UNKNOWN SUPPLIER'),
+                brokerName: safeStr(entry.broker, 'UNKNOWN BROKER'),
+                area: safeStr(entry.area, 'NORTHERN'),
+                grade: safeStr(entry.grade, 'TD6'),
                 poRateMt: entryRate * 10,
                 poRateQtl: entryRate,
                 sattaBaseRateQtl: refRate,
