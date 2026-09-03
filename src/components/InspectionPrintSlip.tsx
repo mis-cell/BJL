@@ -128,12 +128,11 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
     }
   ];
 
-  // Exclude rows where quantity is 0 or empty (unless it has positive gross weight)
+  // Exclude rows where quantity is 0 or empty (User requirement: if quantity is 0, do not show row in print preview)
   const effectiveDetails: InspectionDetailPrintRow[] = rawDetails.filter((r) => {
     if (!r) return false;
     const qty = Number(r.quantity);
-    const gross = Number(r.challan_gross_wt ?? r.gross_weight_batch ?? r.receipt_gross_wt ?? r.weight_mt ?? 0);
-    return qty > 0 || gross > 0;
+    return !isNaN(qty) && qty > 0;
   });
 
   // Helper calculation for detail row deductions & weights
@@ -490,19 +489,19 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Settlement Grade */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.settlement_grade_down || ''}
+                          {row.settlement_grade_down && String(row.settlement_grade_down).trim() !== '0' && String(row.settlement_grade_down).trim() !== '-' ? row.settlement_grade_down : ''}
                         </td>
                         {/* Settlement Moisture */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.settlement_moisture || ''}
+                          {row.settlement_moisture && String(row.settlement_moisture).trim() !== '0' && String(row.settlement_moisture).trim() !== '-' ? row.settlement_moisture : ''}
                         </td>
                         {/* Settlement Dust */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.settlement_dust || ''}
+                          {row.settlement_dust && String(row.settlement_dust).trim() !== '0' && String(row.settlement_dust).trim() !== '-' ? row.settlement_dust : ''}
                         </td>
                         {/* Settlement Prem./Less */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.premium || ''}
+                          {row.premium && String(row.premium).trim() !== '0' && String(row.premium).trim() !== 'No' && String(row.premium).trim() !== '-' ? row.premium : ''}
                         </td>
                         {/* Rate */}
                         <td className="px-1 font-mono">

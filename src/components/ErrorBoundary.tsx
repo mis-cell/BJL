@@ -49,15 +49,31 @@ export class ErrorBoundary extends React.Component<Props, State> {
                   </p>
                   
                   <div className="bg-slate-100 p-3 border border-slate-300 rounded text-xs font-mono text-slate-800 mb-6 overflow-auto max-h-32 shadow-inner">
-                    {this.state.error?.message || 'Unknown error occurred'}
+                    {typeof this.state.error?.message === 'string'
+                      ? this.state.error.message
+                      : typeof this.state.error === 'object'
+                        ? JSON.stringify(this.state.error)
+                        : String(this.state.error || 'Unknown error occurred')}
                   </div>
                 </div>
               </div>
               
-              <div className="flex justify-end pt-4 border-t border-slate-200">
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
                 <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem("bjl_audit_logs");
+                    localStorage.removeItem("bjl_alerts");
+                    window.location.reload();
+                  }}
+                  className="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2 font-bold text-xs uppercase transition-colors"
+                >
+                  Reset Local State & Reload
+                </button>
+                <button
+                  type="button"
                   onClick={() => window.location.reload()}
-                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 font-bold text-sm uppercase transition-colors"
+                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 font-bold text-xs uppercase transition-colors"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Restart Terminal
