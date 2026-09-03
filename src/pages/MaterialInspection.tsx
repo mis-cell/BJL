@@ -41,7 +41,7 @@ import { comparePoInspection } from "../lib/poMatch";
 import { sanitizeCsvData } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
-import { sanitizeInspectionMaster, safeRender } from "../utils/sanitizeRecord";
+import { sanitizeInspectionMaster, sanitizeInspectionDetailRow, safeRender } from "../utils/sanitizeRecord";
 
 // Helper function to parse date string without timezone offset shifts
 function parseDateOnly(dateStr: string | null | undefined): Date | null {
@@ -283,16 +283,18 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed)) {
             parsed.forEach((item: any) => {
-              const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
+              const sanitizedItem = sanitizeInspectionMaster(item);
+              const key = sanitizedItem?.mr_no || sanitizedItem?.id || sanitizedItem?.mill_po_no || sanitizedItem?.po_no;
               if (key && !data.some(d => d.mr_no === key || d.mill_po_no === key)) {
-                data.unshift(item);
+                data.unshift(sanitizedItem);
               }
             });
           }
         }
       } catch (e) {}
 
-      setDbRecords(data);
+      const sanitizedData = data.map(rec => sanitizeInspectionMaster(rec)).filter(Boolean);
+      setDbRecords(sanitizedData);
     } catch (err: any) {
       console.error(`Error fetching inspection records for ${name}:`, err);
       setFetchError("Unable to connect to database");
@@ -1671,25 +1673,16 @@ export default function MaterialInspection({
         : Array.isArray((insp as any).deduction_types) ? (insp as any).deduction_types : [];
       setSelectedDeductionTypes(dedArr);
 
-      // Fetch corresponding details rows from all detail tables
+      // Fetch corresponding details rows from material_inspection_details
       let { data, error } = await supabase
-        .from("inspection_checklist_details")
+        .from("material_inspection_details")
         .select("*")
         .eq("mr_no", insp.mr_no)
         .order("srl_no", { ascending: true });
 
       if (error || !data || data.length === 0) {
-        const fallback1 = await supabase
-          .from("inspection_details")
-          .select("*")
-          .eq("mr_no", insp.mr_no)
-          .order("srl_no", { ascending: true });
-        data = fallback1.data;
-      }
-
-      if (!data || data.length === 0) {
         const fallback = await supabase
-          .from("mill_inspection_detail")
+          .from("inspection_details")
           .select("*")
           .eq("mr_no", insp.mr_no)
           .order("srl_no", { ascending: true });
@@ -1698,13 +1691,11 @@ export default function MaterialInspection({
 
       if (data && data.length > 0) {
         const enrichedData = data.map((row: any) => {
-          if ((row.quantity === 0 || row.quantity === "" || row.quantity == null) && Number(row.challan_gross_wt) > 0) {
-            return {
-              ...row,
-              quantity: Math.round(Number(row.challan_gross_wt))
-            };
+          const sanitizedRow = sanitizeInspectionDetailRow(row, insp.mr_no);
+          if ((sanitizedRow.quantity === 0 || sanitizedRow.quantity === "" || sanitizedRow.quantity == null) && Number(sanitizedRow.challan_gross_wt) > 0) {
+            sanitizedRow.quantity = Math.round(Number(sanitizedRow.challan_gross_wt));
           }
-          return row;
+          return sanitizedRow;
         });
         setDetailsList(enrichedData);
 
