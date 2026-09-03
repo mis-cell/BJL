@@ -4442,7 +4442,7 @@ export default function MaterialInspection({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="w-24 font-semibold text-slate-700">Date <span className="text-red-500">*</span></label>
+                  <label className="w-24 font-semibold text-slate-700">P.O Date <span className="text-red-500">*</span></label>
                   <input
  id="po_date_3221" aria-label="po date"                    type="date"
                     name="po_date"

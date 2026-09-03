@@ -5607,7 +5607,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   )}
                 </div>
                 <div className="col-span-12 sm:col-span-6 lg:col-span-2 flex items-center gap-1">
-                  <label htmlFor="date_3456" className="ml-0 sm:ml-2 min-w-[30px]">PO Date</label>
+                  <label htmlFor="date_3456" className="ml-0 sm:ml-2 min-w-[30px]">P.O Date</label>
                   <input  id="date_3456" name="date" aria-label="Date"type="date" className="flex-1 bg-white border border-slate-400 p-0.5 outline-none text-black" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
                 </div>
 

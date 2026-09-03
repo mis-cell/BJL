@@ -841,6 +841,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         final_arrival_no: formData.arrival_no,
         arrival_no: formData.arrival_no,
         final_arrival_date: formData.date || null,
+        arrival_date: formData.date || null,
         mr_no: formData.mr_no || null,
         po_no: formData.po_no || null,
         po_date: formData.po_date || null,
@@ -1211,7 +1212,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
             {/* Date */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary Date <span className="text-rose-600 font-black">*</span></label>
               <input
                 type="date"
                 value={formData.temporary_arrival_date || ''}
@@ -1238,7 +1239,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
             {/* Date */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival Date</label>
               <input
                 type="date"
                 value={formData.date || ''}
@@ -1317,7 +1318,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
 
             {/* Date */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">P.O Date</label>
               <input
                 type="date"
                 value={formData.po_date || ''}

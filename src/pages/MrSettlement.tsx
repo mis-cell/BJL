@@ -4277,8 +4277,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     </div>
 
                     <div className="flex flex-col">
-                      <label htmlFor="p_o_date_2952" className="text-gray-500 text-[8px] uppercase">P.O. Date</label>
-                      <input  id="p_o_date_2952" name="p_o_date" aria-label="P.O. Date"
+                      <label htmlFor="p_o_date_2952" className="text-gray-500 text-[8px] uppercase">P.O Date</label>
+                      <input  id="p_o_date_2952" name="p_o_date" aria-label="P.O Date"
                         type="date" 
                         disabled
                         className="bg-slate-150 border border-gray-400 p-1 font-mono text-center"
