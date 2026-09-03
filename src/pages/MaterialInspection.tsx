@@ -479,7 +479,7 @@ const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
                 >
                   <div className="flex flex-col">
                     <span className="font-bold text-blue-900 shrink-0">
-                      {opt.val}
+                      {safeRenderText(opt.val)}
                     </span>
                     {opt.labelType && (
                       <span className="text-[9px] font-semibold text-emerald-700">
@@ -1682,11 +1682,11 @@ export default function MaterialInspection({
       const mappedInsp = {
         ...insp,
         settlement_amount: resolvedPayableAmt > 0 ? resolvedPayableAmt : (Number((insp as any).settlement_amount) || 0),
-        unloading_date: insp.unloading_date || (insp as any).date || (insp as any).mr_date || (voucher as any)?.unloading_date || (voucher as any)?.date || insp.arrival_date || "",
-        po_no: poNo,
-        broker_name: (insp.broker_name || "").toUpperCase(),
-        supplier_name: (insp.supplier_name || "").toUpperCase(),
-        lorry_number: insp.lorry_number || (voucher as any)?.lorry_number || (voucher as any)?.lorry_no || (voucher as any)?.vehicle_no || "",
+        unloading_date: safeRenderText(insp.unloading_date || (insp as any).date || (insp as any).mr_date || (voucher as any)?.unloading_date || (voucher as any)?.date || insp.arrival_date, ""),
+        po_no: safeRenderText(poNo, ""),
+        broker_name: safeRenderText(insp.broker_name || (insp as any).broker || "", "").toUpperCase(),
+        supplier_name: safeRenderText(insp.supplier_name || (insp as any).supplier || "", "").toUpperCase(),
+        lorry_number: safeRenderText(insp.lorry_number || (voucher as any)?.lorry_number || (voucher as any)?.lorry_no || (voucher as any)?.vehicle_no, ""),
       };
       setMasterData(mappedInsp);
 
@@ -1819,22 +1819,23 @@ export default function MaterialInspection({
 
       return {
         ...prev,
-        arrival_no: voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no,
-        arrival_date: voucherArrivalDate,
-        unloading_date: voucherUnloadingDate,
-        consignment_date: voucher.consignment_date || voucher.date || voucher.arrival_date || prev.consignment_date,
-        mr_print_date: voucher.mr_print_date || voucher.date || prev.mr_print_date,
-        po_no: selectedPoNo || prev.po_no,
-        po_date: voucher.mill_po_date || voucher.po_date || voucher.lorry_date || voucher.date || prev.po_date,
-        broker_name: (voucher.broker || voucher.broker_name || prev.broker_name || "").toUpperCase(),
-        supplier_name: (
-          voucher.supplier ||
-          voucher.supplier_name ||
-          prev.supplier_name ||
+        arrival_no: safeRenderText(voucher.temporary_arrival_no || voucher.arrival_no || voucher.amad_no || prev.arrival_no, ""),
+        arrival_date: safeRenderText(voucherArrivalDate, ""),
+        unloading_date: safeRenderText(voucherUnloadingDate, ""),
+        consignment_date: safeRenderText(voucher.consignment_date || voucher.date || voucher.arrival_date || prev.consignment_date, ""),
+        mr_print_date: safeRenderText(voucher.mr_print_date || voucher.date || prev.mr_print_date, ""),
+        po_no: safeRenderText(selectedPoNo || prev.po_no, ""),
+        po_date: safeRenderText(voucher.mill_po_date || voucher.po_date || voucher.lorry_date || voucher.date || prev.po_date, ""),
+        broker_name: safeRenderText(
+          voucher.broker_name || voucher.broker || prev.broker_name || "",
           ""
         ).toUpperCase(),
-        lorry_number: voucher.lorry_number || voucher.lorry_no || voucher.vehicle_no || prev.lorry_number || "",
-        remarks: voucher.remarks || prev.remarks,
+        supplier_name: safeRenderText(
+          voucher.supplier_name || voucher.supplier || prev.supplier_name || "",
+          ""
+        ).toUpperCase(),
+        lorry_number: safeRenderText(voucher.lorry_number || voucher.lorry_no || voucher.vehicle_no || prev.lorry_number, ""),
+        remarks: safeRenderText(voucher.remarks || prev.remarks, ""),
         arival_apmc_fees: Number(voucher.apmc_fees || 0),
       };
     });

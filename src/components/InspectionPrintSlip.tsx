@@ -1,5 +1,27 @@
 import React from 'react';
 
+function safeStr(val: any, fallback = ''): string {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+    return String(val);
+  }
+  if (typeof val === 'object') {
+    if (typeof val.name === 'string') return val.name;
+    if (typeof val.supp_name === 'string') return val.supp_name;
+    if (typeof val.brok_name === 'string') return val.brok_name;
+    if (typeof val.supplier_name === 'string') return val.supplier_name;
+    if (typeof val.broker_name === 'string') return val.broker_name;
+    if (typeof val.area_name === 'string') return val.area_name;
+    if (val.supplier) return safeStr(val.supplier, fallback);
+    if (val.broker) return safeStr(val.broker, fallback);
+    if (val.mr_no) return String(val.mr_no);
+    if (val.arrival_no) return String(val.arrival_no);
+    if (val.po_no) return String(val.po_no);
+    return fallback;
+  }
+  return fallback;
+}
+
 export interface InspectionDetailPrintRow {
   crop_year?: string;
   marka?: string;
@@ -265,15 +287,15 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
 
   const stationsDisplay = stationParts.length > 0 
     ? stationParts.join(' / ') 
-    : (master.station || master.area || (master as any)?.agency || 'BALLY MILL');
+    : safeStr(master.station || master.area || (master as any)?.agency, 'BALLY MILL');
 
-  const orderNo = master.po_no || master.mill_po_no || '';
+  const orderNo = safeStr(master.po_no || master.mill_po_no, '');
   const orderDate = master.po_date || master.mill_po_date || master.mr_date || master.arrival_date;
   const mrDate = master.mr_date || master.arrival_date;
-  const mrNo = master.mr_no || master.arrival_no || '';
+  const mrNo = safeStr(master.mr_no || master.arrival_no, '');
   const challanDisplay = master.challan_no 
-    ? `${master.challan_no} ${master.challan_date ? `& ${formatDate(master.challan_date)}` : ''}`
-    : (master.arrival_no ? `${master.arrival_no} ${master.arrival_date ? `& ${formatDate(master.arrival_date)}` : ''}` : '');
+    ? `${safeStr(master.challan_no)} ${master.challan_date ? `& ${formatDate(master.challan_date)}` : ''}`
+    : (master.arrival_no ? `${safeStr(master.arrival_no)} ${master.arrival_date ? `& ${formatDate(master.arrival_date)}` : ''}` : '');
 
   return (
     <div className="bg-[#525659] p-3 sm:p-5 flex justify-center items-center print:block print:bg-white print:p-0 font-sans select-text w-full overflow-x-auto">
@@ -366,7 +388,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
               <div className="flex items-end">
                 <span className="shrink-0 font-black mr-2 text-[12px]">From :</span>
                 <span className="flex-1 border-b border-[#d60000] pb-0.5 px-2 font-black text-[12.5px] uppercase text-[#d60000] whitespace-normal">
-                  {master.supplier_name || ''}
+                  {safeStr(master.supplier_name || (master as any).supplier, '')}
                 </span>
               </div>
 
@@ -577,7 +599,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
             <div className="mt-2 flex items-start text-[11.5px] font-bold text-[#d60000]">
               <span className="shrink-0 font-black mr-2 text-[12px]">Remarks:</span>
               <p className="flex-1 font-semibold text-xs text-[#d60000] min-h-[16px] leading-snug">
-                {master.remarks || ''}
+                {safeStr(master.remarks, '')}
               </p>
             </div>
 
@@ -594,7 +616,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                 <div className="col-span-4 flex items-center">
                   <span className="shrink-0 font-black mr-1.5">Vehicle :</span>
                   <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-mono uppercase whitespace-nowrap overflow-visible">
-                    {master.lorry_number || master.vehicle_no || ''}
+                    {safeStr(master.lorry_number || master.vehicle_no, '')}
                   </span>
                 </div>
 
