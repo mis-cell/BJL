@@ -60,7 +60,7 @@ async function runImapSync() {
     
     const searchCriteria = ['ALL'];
     const fetchOptions = {
-      bodies: ['HEADER', 'TEXT', 'RFC822', ''],
+      bodies: [''],
       markSeen: false,
       struct: true
     };
@@ -72,7 +72,7 @@ async function runImapSync() {
     const sortedResults = results.sort((a, b) => b.attributes.uid - a.attributes.uid).slice(0, 50);
     
     const emails = await Promise.all(sortedResults.map(async (res) => {
-      const fullPart = res.parts.find(part => part.which === '' || part.which === 'RFC822' || part.which === 'BODY[]');
+      const fullPart = res.parts.find(part => part.which === '' || part.which === 'BODY[]' || part.which === 'TEXT');
       const id = res.attributes.uid;
       
       let parsed: any;
@@ -80,10 +80,8 @@ async function runImapSync() {
         if (fullPart && fullPart.body) {
           parsed = await simpleParser(fullPart.body);
         } else {
-          const headerPart = res.parts.find(part => part.which === 'HEADER');
-          const textPart = res.parts.find(part => part.which === 'TEXT');
-          const rawEmail = (headerPart ? headerPart.body : '') + '\r\n\r\n' + (textPart ? textPart.body : '');
-          parsed = await simpleParser(rawEmail);
+          const rawEmail = res.parts.map(p => p.body || '').join('\r\n\r\n');
+          parsed = await simpleParser(rawEmail || 'No content');
         }
       } catch (parseErr) {
         console.error(`[Sync] Error parsing email UID ${id}:`, parseErr);
