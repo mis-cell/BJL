@@ -14,12 +14,18 @@ export interface InspectionDetailPrintRow {
   gross_weight_batch?: number | string;
   receipt_gross_wt?: number | string;
   weight_mt?: number | string;
+  moisture_claim?: number | string;
+  claim_moisture?: number | string;
   moisture_act?: number | string;
   actual_moisture?: number | string;
   moisture_deduction_kg?: number | string;
+  dust_claim?: number | string;
+  claim_dust?: number | string;
   dust_act?: number | string;
   actual_dust?: number | string;
   dust_deduction_kg?: number | string;
+  ncv_claim?: number | string;
+  claim_ncv?: number | string;
   ncv_act?: number | string;
   actual_ncv?: number | string;
   ncv_deduction_kg?: number | string;
@@ -89,18 +95,20 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
   };
 
   // If details are empty, create default rows
-  const effectiveDetails: InspectionDetailPrintRow[] = details.length > 0 ? details : [
+  const rawDetails: InspectionDetailPrintRow[] = details.length > 0 ? details : [
     {
       crop_year: '2026-27',
       marka: master.area || 'NO MARK',
       stock_grade_name: 'TD6',
       quantity: 122,
       challan_gross_wt: 4.92,
+      moisture_claim: master.claim_moisture || master.actual_moisture || 5,
       actual_moisture: master.actual_moisture || 5,
       actual_dust: master.actual_dust || 0,
       actual_ncv: master.actual_ncv || 0,
+      moisture_deduction_kg: 246.0,
       final_receipt_wt: 4.67,
-      settlement_moisture: 5,
+      settlement_moisture: '',
       rate: ''
     },
     {
@@ -109,26 +117,89 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       stock_grade_name: 'TD7',
       quantity: 123,
       challan_gross_wt: 4.96,
+      moisture_claim: master.claim_moisture || master.actual_moisture || 5,
       actual_moisture: master.actual_moisture || 5,
       actual_dust: master.actual_dust || 0,
       actual_ncv: master.actual_ncv || 0,
+      moisture_deduction_kg: 248.0,
       final_receipt_wt: 4.71,
-      settlement_moisture: 5,
-      rate: ''
-    },
-    {
-      crop_year: '2026-27',
-      marka: master.area || 'NO MARK',
-      stock_grade_name: 'TD8',
-      quantity: 0,
-      challan_gross_wt: '',
-      actual_moisture: '',
-      actual_dust: '',
-      actual_ncv: '',
-      final_receipt_wt: '',
+      settlement_moisture: '',
       rate: ''
     }
   ];
+
+  // Exclude rows where quantity is 0 or empty (unless it has positive gross weight)
+  const effectiveDetails: InspectionDetailPrintRow[] = rawDetails.filter((r) => {
+    if (!r) return false;
+    const qty = Number(r.quantity);
+    const gross = Number(r.challan_gross_wt ?? r.gross_weight_batch ?? r.receipt_gross_wt ?? r.weight_mt ?? 0);
+    return qty > 0 || gross > 0;
+  });
+
+  // Helper calculation for detail row deductions & weights
+  const getRowCalculations = (r: InspectionDetailPrintRow | null) => {
+    if (!r) {
+      return {
+        grossWt: 0,
+        moistNum: 0,
+        moistPctRaw: '',
+        moistureKg: 0,
+        dustNum: 0,
+        dustPctRaw: '',
+        dustKg: 0,
+        ncvNum: 0,
+        ncvPctRaw: '',
+        ncvKg: 0,
+        netWt: 0
+      };
+    }
+
+    const grossWt = Number(r.challan_gross_wt ?? r.gross_weight_batch ?? r.receipt_gross_wt ?? r.weight_mt ?? 0);
+    
+    // Moisture % priority: moisture_claim -> claim_moisture -> settlement_moisture -> moisture_act -> actual_moisture -> master
+    const moistPctRaw = r.moisture_claim ?? r.claim_moisture ?? r.settlement_moisture ?? r.moisture_act ?? r.actual_moisture ?? master.claim_moisture ?? master.actual_moisture ?? '';
+    const moistNum = typeof moistPctRaw === 'number' ? moistPctRaw : parseFloat(String(moistPctRaw || '').replace(/[^0-9.]/g, '')) || 0;
+
+    const dustPctRaw = r.dust_claim ?? r.claim_dust ?? r.settlement_dust ?? r.dust_act ?? r.actual_dust ?? master.claim_dust ?? master.actual_dust ?? '';
+    const dustNum = typeof dustPctRaw === 'number' ? dustPctRaw : parseFloat(String(dustPctRaw || '').replace(/[^0-9.]/g, '')) || 0;
+
+    const ncvPctRaw = r.ncv_claim ?? r.claim_ncv ?? r.settlement_ncv ?? r.ncv_act ?? r.actual_ncv ?? master.claim_ncv ?? master.actual_ncv ?? '';
+    const ncvNum = typeof ncvPctRaw === 'number' ? ncvPctRaw : parseFloat(String(ncvPctRaw || '').replace(/[^0-9.]/g, '')) || 0;
+
+    // Moisture Kg calculation: Gross Wt (in MT) * 1000 * (Moisture % / 100) = Gross Wt * 10 * Moisture %
+    const moistureKg = r.moisture_deduction_kg !== undefined && r.moisture_deduction_kg !== '' && Number(r.moisture_deduction_kg) > 0
+      ? Number(r.moisture_deduction_kg)
+      : (grossWt > 0 && moistNum > 0 ? (grossWt * 1000 * (moistNum / 100)) : 0);
+
+    const dustKg = r.dust_deduction_kg !== undefined && r.dust_deduction_kg !== '' && Number(r.dust_deduction_kg) > 0
+      ? Number(r.dust_deduction_kg)
+      : (grossWt > 0 && dustNum > 0 ? (grossWt * 1000 * (dustNum / 100)) : 0);
+
+    const ncvKg = r.ncv_deduction_kg !== undefined && r.ncv_deduction_kg !== '' && Number(r.ncv_deduction_kg) > 0
+      ? Number(r.ncv_deduction_kg)
+      : (grossWt > 0 && ncvNum > 0 ? (grossWt * 1000 * (ncvNum / 100)) : 0);
+
+    const calculatedNetWt = grossWt > 0 ? Math.max(0, grossWt - ((moistureKg + dustKg + ncvKg) / 1000)) : 0;
+    const netWt = r.final_receipt_wt !== undefined && r.final_receipt_wt !== '' && Number(r.final_receipt_wt) > 0
+      ? Number(r.final_receipt_wt)
+      : (r.net_wt !== undefined && r.net_wt !== '' && Number(r.net_wt) > 0
+          ? Number(r.net_wt)
+          : calculatedNetWt);
+
+    return {
+      grossWt,
+      moistNum,
+      moistPctRaw,
+      moistureKg,
+      dustNum,
+      dustPctRaw,
+      dustKg,
+      ncvNum,
+      ncvPctRaw,
+      ncvKg,
+      netWt
+    };
+  };
 
   // In landscape mode, 8-9 rows fits the pre-printed dot-matrix height cleanly
   const targetRowCount = Math.max(8, effectiveDetails.length);
@@ -140,17 +211,28 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
   // Calculate totals
   const totalQuantity = effectiveDetails.reduce((sum, r) => sum + (Number(r?.quantity) || 0), 0);
   const totalGrossWt = effectiveDetails.reduce((sum, r) => {
-    const wt = Number(r?.challan_gross_wt ?? r?.gross_weight_batch ?? r?.receipt_gross_wt ?? r?.weight_mt ?? 0);
-    return sum + wt;
+    const calcs = getRowCalculations(r);
+    return sum + calcs.grossWt;
   }, 0);
 
-  const totalMoistureKg = effectiveDetails.reduce((sum, r) => sum + (Number(r?.moisture_deduction_kg) || 0), 0);
-  const totalDustKg = effectiveDetails.reduce((sum, r) => sum + (Number(r?.dust_deduction_kg) || 0), 0);
-  const totalNcvKg = effectiveDetails.reduce((sum, r) => sum + (Number(r?.ncv_deduction_kg) || 0), 0);
+  const totalMoistureKg = effectiveDetails.reduce((sum, r) => {
+    const calcs = getRowCalculations(r);
+    return sum + calcs.moistureKg;
+  }, 0);
+
+  const totalDustKg = effectiveDetails.reduce((sum, r) => {
+    const calcs = getRowCalculations(r);
+    return sum + calcs.dustKg;
+  }, 0);
+
+  const totalNcvKg = effectiveDetails.reduce((sum, r) => {
+    const calcs = getRowCalculations(r);
+    return sum + calcs.ncvKg;
+  }, 0);
 
   const totalNetWt = effectiveDetails.reduce((sum, r) => {
-    const net = Number(r?.final_receipt_wt ?? r?.net_wt ?? (r?.challan_gross_wt ?? 0));
-    return sum + net;
+    const calcs = getRowCalculations(r);
+    return sum + calcs.netWt;
   }, 0);
 
   const orderNo = master.po_no || master.mill_po_no || '';
@@ -349,11 +431,8 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                       );
                     }
 
-                    const grossWt = Number(row.challan_gross_wt ?? row.gross_weight_batch ?? row.receipt_gross_wt ?? row.weight_mt ?? 0);
-                    const netWt = Number(row.final_receipt_wt ?? row.net_wt ?? (grossWt > 0 ? grossWt : 0));
-                    const moistPct = row.moisture_act ?? row.actual_moisture ?? (master.actual_moisture ? `${master.actual_moisture}%` : '');
-                    const dustPct = row.dust_act ?? row.actual_dust ?? (master.actual_dust ? `${master.actual_dust}%` : '');
-                    const ncvPct = row.ncv_act ?? row.actual_ncv ?? (master.actual_ncv ? `${master.actual_ncv}%` : '');
+                    const calcs = getRowCalculations(row);
+                    const { grossWt, moistNum, moistPctRaw, moistureKg, dustNum, dustPctRaw, dustKg, ncvNum, ncvPctRaw, ncvKg, netWt } = calcs;
 
                     return (
                       <tr key={idx} className="h-6.5 text-[10px]">
@@ -383,27 +462,27 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Moisture % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {moistPct ? `${moistPct}${typeof moistPct === 'number' ? '%' : ''}` : ''}
+                          {moistNum > 0 ? `${moistNum}%` : (moistPctRaw ? `${moistPctRaw}${typeof moistPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* Moisture Kg. */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.moisture_deduction_kg ? Number(row.moisture_deduction_kg).toFixed(1) : ''}
+                          {moistureKg > 0 ? moistureKg.toFixed(1) : ''}
                         </td>
                         {/* Dust % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {dustPct ? `${dustPct}${typeof dustPct === 'number' ? '%' : ''}` : ''}
+                          {dustNum > 0 ? `${dustNum}%` : (dustPctRaw ? `${dustPctRaw}${typeof dustPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* Dust Kg. */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.dust_deduction_kg ? Number(row.dust_deduction_kg).toFixed(1) : ''}
+                          {dustKg > 0 ? dustKg.toFixed(1) : ''}
                         </td>
                         {/* NCV % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {ncvPct ? `${ncvPct}${typeof ncvPct === 'number' ? '%' : ''}` : ''}
+                          {ncvNum > 0 ? `${ncvNum}%` : (ncvPctRaw ? `${ncvPctRaw}${typeof ncvPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* NCV Kg. */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {row.ncv_deduction_kg ? Number(row.ncv_deduction_kg).toFixed(1) : ''}
+                          {ncvKg > 0 ? ncvKg.toFixed(1) : ''}
                         </td>
                         {/* Net Wt. */}
                         <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">

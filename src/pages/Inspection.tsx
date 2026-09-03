@@ -1676,7 +1676,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     let loadedDetails: any[] = [];
 
-    if (supabase) {
+    // If currently editing this record in form view, prioritize the in-memory detailRows
+    if (headerForm.mr_no === rec.mr_no && detailRows.length > 0) {
+      loadedDetails = detailRows.filter(r => Number(r.quantity) > 0 || Number(r.challan_gross_wt) > 0);
+    }
+
+    if (loadedDetails.length === 0 && supabase) {
       try {
         const [midRes, inspRes, millDetRes] = await Promise.all([
           supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true }),
@@ -1702,17 +1707,29 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
       }
       if (Array.isArray(rawGrid) && rawGrid.length > 0) {
-        loadedDetails = rawGrid.map((item: any) => ({
-          crop_year: item.crop_year || "2026-27",
-          marka: item.challan_marka_name || item.marka_name || item.marka || item.marks || (rec as any).area || "BJC",
-          stock_grade_name: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "TD-5",
-          quantity: item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales || 1,
-          challan_gross_wt: item.netto_pnto || item.weight_mt || item.challan_gross_wt || item.gross_weight || item.weight || "",
-          actual_moisture: item.moisture_act || item.actual_moisture || rec.actual_moisture || 0,
-          actual_dust: item.dust_act || item.actual_dust || rec.actual_dust || 0,
-          actual_ncv: item.ncv_act || item.actual_ncv || rec.actual_ncv || 0,
-          rate: item.rate || item.rate_qntl || ""
-        }));
+        loadedDetails = rawGrid
+          .filter((item: any) => Number(item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales || 0) > 0 || Number(item.netto_pnto || item.weight_mt || item.challan_gross_wt || item.gross_weight || item.weight || 0) > 0)
+          .map((item: any) => ({
+            crop_year: item.crop_year || "2026-27",
+            marka: item.challan_marka_name || item.marka_name || item.marka || item.marks || (rec as any).area || "BJC",
+            stock_grade_name: item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || "TD-5",
+            quantity: item.quantity_rcpt || item.quantity_chln || item.quantity || item.bales || 1,
+            challan_gross_wt: item.netto_pnto || item.weight_mt || item.challan_gross_wt || item.gross_weight || item.weight || "",
+            moisture_claim: item.moisture_claim ?? item.claim_moisture ?? item.moisture_act ?? item.actual_moisture ?? rec.claim_moisture ?? rec.actual_moisture ?? 5,
+            actual_moisture: item.moisture_act || item.actual_moisture || rec.actual_moisture || 5,
+            moisture_act: item.moisture_act || item.actual_moisture || rec.actual_moisture || 5,
+            dust_claim: item.dust_claim ?? item.claim_dust ?? item.dust_act ?? item.actual_dust ?? rec.claim_dust ?? rec.actual_dust ?? 0,
+            actual_dust: item.dust_act || item.actual_dust || rec.actual_dust || 0,
+            dust_act: item.dust_act || item.actual_dust || rec.actual_dust || 0,
+            ncv_claim: item.ncv_claim ?? item.claim_ncv ?? item.ncv_act ?? item.actual_ncv ?? rec.claim_ncv ?? rec.actual_ncv ?? 0,
+            actual_ncv: item.ncv_act || item.actual_ncv || rec.actual_ncv || 0,
+            ncv_act: item.ncv_act || item.actual_ncv || rec.actual_ncv || 0,
+            settlement_moisture: item.settlement_moisture || '',
+            settlement_dust: item.settlement_dust || '',
+            settlement_ncv: item.settlement_ncv || '',
+            final_receipt_wt: item.final_receipt_wt || item.net_wt || item.netto_pnto || "",
+            rate: item.rate || item.rate_qntl || ""
+          }));
       }
     }
 
@@ -4225,6 +4242,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   >
                     <Plus className="w-4 h-4" />
                     <span>＋ Add New Inspection Row</span>
+                  </button>
+                  <button
+                    onClick={() => handlePrintRecord(headerForm)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                    title="Print Marks & Quality Received Mill Copy"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Slip</span>
                   </button>
                   <button
                     onClick={handleSaveForm}
