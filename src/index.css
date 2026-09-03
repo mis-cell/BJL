@@ -24,10 +24,10 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    min-height: 100%;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    overflow-x: hidden;
   }
 
   *, ::before, ::after {
@@ -471,10 +471,29 @@
   max-width: 100% !important;
 }
 
+/* Dashboard and main container overflow handling */
+.main-content {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.sidebar {
+  height: 100% !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  min-width: 0 !important;
+}
+
 /* Modal containment for zoom and small viewports */
 .fixed.inset-0 > div:not(.absolute) {
   max-width: min(96vw, 100%);
   max-height: min(92vh, 100%);
+  overflow-y: auto;
+  overflow-x: auto;
 }
 
 /* Prevent image and canvas overflow */
@@ -485,6 +504,25 @@ img, canvas, svg {
 /* Ensure form controls scale within their grid cells */
 input, select, textarea {
   max-width: 100%;
+}
+
+/* Scrollbar polish for zoomed viewports */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(30, 51, 27, 0.35);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 51, 27, 0.6);
 }
 
 

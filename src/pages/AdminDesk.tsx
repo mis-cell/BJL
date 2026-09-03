@@ -2623,7 +2623,7 @@ export default function AdminDesk({
         <div className="flex-1 flex min-h-0 min-w-0">
           
           {/* Left Navigation Sidebar designed with precise modern Material layouts */}
-          <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 overflow-y-auto  py-4">
+          <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-auto h-full max-h-full py-4 sidebar">
             <div className="space-y-6">
               
               {/* Category Group 1 */}
@@ -2762,7 +2762,7 @@ export default function AdminDesk({
           </aside>
 
           {/* Right Side Main Area Container */}
-          <main className="flex-1 bg-slate-50/50 p-6 overflow-y-auto pr-8">
+          <main className="flex-1 bg-slate-50/50 p-4 sm:p-6 overflow-y-auto overflow-x-auto min-w-0 min-h-0 main-content">
             {activeMaterialPage === "dashboard" && (
               <DashboardTab dbStats={{ poCount: data.length || 118, saudaCount: 42, activeUsers: 5 }} />
             )}

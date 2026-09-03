@@ -343,7 +343,7 @@ export default function LegacyLayout({
   return (
     <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-visible">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-hidden">
         
         {/* Top Control Bar (Yellow/Black Hazard Striped Sub-header & Window Controls) */}
         <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30 w-full min-w-0 gap-2">
@@ -646,7 +646,7 @@ export default function LegacyLayout({
         </header>
 
         {/* Form Body */}
-        <div className="flex-1 overflow-auto p-2 sm:p-4 bg-[#F4EFE6]/70 w-full max-w-full min-w-0">
+        <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 min-w-0 p-2 sm:p-4 bg-[#F4EFE6]/70 w-full max-w-full main-content">
           {children}
           <NotificationCenter
             isOpen={isNotifOpen}

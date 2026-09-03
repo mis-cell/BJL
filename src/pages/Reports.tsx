@@ -2736,7 +2736,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
                     {/* Grid Table Container */}
                     <div className="bg-white border border-slate-300 shadow-inner overflow-x-auto min-h-[350px]">
-                       <table className="w-full text-left text-[10px] font-bold border-collapse">
+                       <table className="w-full text-left text-[10px] font-bold border-collapse min-w-[800px]">
                           <thead className="bg-[#c0c0c0] border-b border-black/30 text-slate-800 uppercase tracking-wider sticky top-0">
                              <tr>
                                 {computedAggReport.headers.map((h, idx) => (

@@ -1877,7 +1877,7 @@ export default function ExecutiveBiDashboard({
 
         {/* Matrix Table */}
         <div className="overflow-x-auto rounded-xl border border-[#E5DEC9]">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs min-w-[850px]">
             <thead>
               <tr className="bg-[#FAF7F0] border-b border-[#E5DEC9] text-[#1E331B] font-mono text-[11px] uppercase tracking-wider">
                 <th className="p-3 font-bold">Chalan / Pass</th>

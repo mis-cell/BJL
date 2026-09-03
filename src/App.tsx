@@ -1623,8 +1623,8 @@ export default function App() {
           {/* Sidebar removed per user request */}
 
           {/* Dynamic Page Rendering */}
-          <div className="flex-1 flex flex-col overflow-auto w-full max-w-full min-w-0">
-            <div className="flex-1 flex flex-col overflow-auto relative w-full max-w-full min-w-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto w-full max-w-full main-content">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto relative w-full max-w-full">
               <div
                 className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
@@ -1968,47 +1968,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Center Section: Company Branding */}
-          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 bg-[#103A20] rounded-md border border-[#235E39] shrink-0">
-            <span className="text-[11px] font-extrabold text-amber-300 font-serif tracking-wider uppercase">
-              BALLY JUTE COMPANY LIMITED • MAIN DESK CONSOLE
-            </span>
-            <span className="text-[9px] font-mono text-emerald-300/80">v2.4.0</span>
-          </div>
-
-          {/* Right Section: Time, Locks, Fiscal Year, Logout */}
+          {/* Right Section: Logout */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Clock */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-amber-300 font-mono font-bold text-xs shrink-0">
-              <Clock className="h-3.5 w-3.5 text-amber-300" />
-              <span className="tabular-nums">{currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-
-            {/* Key Indicators */}
-            <div className="hidden sm:flex gap-1 shrink-0">
-              {[
-                { id: 'NUM', active: keyState.num },
-                { id: 'CAPS', active: keyState.caps },
-                { id: 'SCRL', active: keyState.scrl }
-              ].map(item => (
-                <div 
-                  key={item.id} 
-                  className={cn(
-                    "px-1.5 py-0.5 text-[9px] border border-[#235E39] font-mono rounded transition-colors",
-                    item.active ? "bg-emerald-700 text-white font-bold" : "bg-[#103A20] text-[#A2C49D]"
-                  )}
-                >
-                  {item.id}
-                </div>
-              ))}
-            </div>
-
-            {/* Fiscal Year */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-emerald-200 font-mono font-bold text-[10px] shrink-0">
-              <Calendar className="h-3.5 w-3.5 text-amber-300" />
-              <span>F.Y: {selectedYear}</span>
-            </div>
-
             {/* Logout Button */}
             <button
               onClick={() => {
