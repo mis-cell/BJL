@@ -253,7 +253,7 @@ export const mapItemsToDetailCols = (
   const markaList = masters?.markaMasters || [];
 
   const resolveGrade = (item: any) => {
-    const rawCode = item.grade_code || item.stock_grade_code || item.receipt_grade_code || item.grade_name || item.grade || item.arrival_grade || item.quality || poHeader?.grade_code || poHeader?.grade;
+    const rawCode = item.stock_grade_name || item.grade_name || item.grade || item.arrival_grade || item.quality || item.grade_code || item.stock_grade_code || item.receipt_grade_code || poHeader?.grade_code || poHeader?.grade;
     if (rawCode !== undefined && rawCode !== null && String(rawCode).trim() !== '') {
       const codeStr = String(rawCode).trim();
       const codeUpper = codeStr.toUpperCase();
@@ -271,7 +271,7 @@ export const mapItemsToDetailCols = (
   };
 
   const resolveAgency = (item: any) => {
-    const rawCode = item.agency_code || item.agency_name || item.agency || poHeader?.agency_code || poHeader?.agency || poHeader?.agency_name || poHeader?.purchase_unit_name;
+    const rawCode = item.agency_name || item.agency || item.agency_code || poHeader?.agency_name || poHeader?.agency || poHeader?.agency_code || poHeader?.purchase_unit_name;
     if (rawCode !== undefined && rawCode !== null && String(rawCode).trim() !== '') {
       const codeStr = String(rawCode).trim();
       const codeUpper = codeStr.toUpperCase();
@@ -289,7 +289,7 @@ export const mapItemsToDetailCols = (
   };
 
   const resolveArea = (item: any) => {
-    const rawCode = item.area_code || item.area_name || item.area || poHeader?.area_code || poHeader?.area || poHeader?.area_name;
+    const rawCode = item.area_name || item.area || item.area_code || poHeader?.area_code || poHeader?.area || poHeader?.area_name;
     if (rawCode !== undefined && rawCode !== null && String(rawCode).trim() !== '') {
       const codeStr = String(rawCode).trim();
       const codeUpper = codeStr.toUpperCase();
