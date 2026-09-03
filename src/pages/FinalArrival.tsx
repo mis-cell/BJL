@@ -1314,7 +1314,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
         </div>
 
         {/* Ledger Table Container */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-hidden min-h-[350px]">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-x-auto overflow-y-auto min-h-[350px] w-full max-w-full">
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 py-24">
               <RefreshCw className="h-8 w-8 text-[#1E4D2B] animate-spin mb-3" />
@@ -1329,7 +1329,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
               </p>
             </div>
           ) : (
-            <table className="w-full border-collapse text-xs font-sans">
+            <table className="w-full border-collapse text-xs font-sans min-w-[1100px]">
               <thead className="bg-[#1E4D2B] text-white font-serif sticky top-0 z-10">
                 <tr className="border-b border-[#163E21] h-10 text-emerald-50">
                   <th className="px-3 border-r border-[#163E21] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>

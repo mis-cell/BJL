@@ -4483,8 +4483,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             </div>
 
             {/* PO Grid Table */}
-            <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden min-h-[360px]">
-               <table className="w-full border-collapse text-xs text-black">
+            <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-x-auto overflow-y-auto min-h-[360px] w-full max-w-full">
+               <table className={cn("w-full border-collapse text-xs text-black", isTempPo ? "min-w-[1380px]" : "min-w-[1200px]")}>
                   <thead className="bg-slate-100/90 sticky top-0 z-10 font-bold border-b border-slate-200">
                      <tr className="h-10 text-slate-700">
                         <th 
@@ -4580,7 +4580,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                         {isTempPo && (
                           <th 
                             onClick={() => handleSort('pass_mismatch')}
-                            className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                            className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[150px]"
                             title="Sort by Pass / Mismatch"
                           >
                             <div className="flex items-center justify-center gap-1">
@@ -4589,7 +4589,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             </div>
                           </th>
                         )}
-                        <th className="px-3 text-center whitespace-nowrap text-[10px] font-bold uppercase tracking-wider">Actions</th>
+                        <th className="px-3 text-center whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[100px]">Actions</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-normal">
@@ -4743,7 +4743,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                               })()}
                            </td>
                            {isTempPo && (
-                           <td className="px-3 text-center border-r border-slate-200/60">
+                           <td className="px-3 text-center border-r border-slate-200/60 min-w-[150px] whitespace-nowrap">
                               {(() => {
                                  const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
                                  if (isFinalized) {
@@ -4861,7 +4861,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                               })()}
                            </td>
                            )}
-                           <td className="px-3 text-center">
+                           <td className="px-3 text-center min-w-[100px] whitespace-nowrap">
                               {isVoid ? (
                                  <div className="flex items-center justify-center gap-2">
                                    <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">VOID</span>

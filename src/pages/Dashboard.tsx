@@ -2210,8 +2210,8 @@ export default function Dashboard({
                             </div>
                           </div>
 
-                          <div className="border border-slate-350 rounded bg-white overflow-hidden shadow-sm">
-                            <table className="w-full text-left text-[9px] border-collapse">
+                          <div className="border border-slate-350 rounded bg-white overflow-x-auto shadow-sm">
+                            <table className="w-full text-left text-[9px] border-collapse min-w-[450px]">
                               <thead className="bg-[#c0c0c0] border-b border-slate-400 uppercase text-slate-800 font-black italic font-mono size-fit">
                                 <tr className="h-7 border-b border-[#808080]/30 text-[9px]">
                                   <th className="px-3 border-r border-[#808080]/35 uppercase">Grade Component</th>
@@ -2768,8 +2768,8 @@ export default function Dashboard({
 
                   {/* Registered Saudas Table list */}
                   <div className="flex-1 overflow-auto p-5 bg-slate-50/50">
-                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                      <table className="w-full text-left text-xs border-collapse">
+                    <div className="border border-slate-200 rounded-xl overflow-x-auto overflow-y-auto bg-white shadow-sm w-full max-w-full">
+                      <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
                         <thead className="bg-slate-900 border-b border-slate-800 uppercase text-white font-mono h-10 sticky top-0 z-10">
                           <tr>
                             <th className="px-4 border-r border-slate-800 text-[10px] tracking-wider">Date</th>

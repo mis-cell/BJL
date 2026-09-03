@@ -2626,7 +2626,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             {/* REGISTER TABLE */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                <table className="w-full text-left text-xs text-slate-700 border-collapse min-w-[1100px]">
                   <thead>
                     <tr className="bg-[#174C2C] text-white font-extrabold uppercase tracking-wider text-[11px] border-b border-[#0F351E]">
                       <th 

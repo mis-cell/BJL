@@ -3039,7 +3039,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             {/* List Table Grid of settlements */}
             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse font-sans">
+                <table className="w-full text-left border-collapse font-sans min-w-[1100px]">
 
                   <thead>
                     <tr className="bg-[#174C2C] text-[10px] font-black uppercase text-white tracking-wide">

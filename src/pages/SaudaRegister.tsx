@@ -1041,7 +1041,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         {/* 4. Data Table */}
         <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
           <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full border-collapse text-xs">
+            <table className="w-full border-collapse text-xs min-w-[1050px]">
               <thead className="bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10">
                 <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                   <th className="px-3 py-2 text-center">Date</th>
