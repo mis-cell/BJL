@@ -1217,11 +1217,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const keys = [fa.mr_no, fa.final_arrival_no, fa.temporary_arrival_no, fa.arrival_no].filter(Boolean);
           for (const k of keys) {
             await Promise.all([
-              supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("mill_inspection_detail").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("inspection_details").update({ unit: uName }).eq("mr_no", k),
-              supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k),
-              supabase.from("mill_inspection_master").update({ unit_name: uName }).eq("mr_no", k)
+              supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k).then(() => {}, () => {}),
+              supabase.from("mill_inspection_detail").update({ unit: uName }).eq("mr_no", k).then(() => {}, () => {}),
+              supabase.from("inspection_details").update({ unit: uName }).eq("mr_no", k).then(() => {}, () => {}),
+              supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k).then(() => {}, () => {})
             ]).catch(() => {});
           }
         }
@@ -1924,7 +1923,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         supabase.from("material_inspection_details").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
         supabase.from("mill_inspection_detail").update({ unit: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
         supabase.from("material_inspection").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
-        supabase.from("mill_inspection_master").update({ unit_name: targetUnit }).eq("mr_no", rec.mr_no).then(() => {}, () => {});
       }
     }
 

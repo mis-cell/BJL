@@ -950,11 +950,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         const keys = [formData.arrival_no, formData.mr_no, formData.temporary_arrival_no, formData.po_no].filter(Boolean);
         for (const k of keys) {
           Promise.all([
-            supabase.from('material_inspection_details').update({ unit: u }).eq('mr_no', k),
-            supabase.from('mill_inspection_detail').update({ unit: u }).eq('mr_no', k),
-            supabase.from('inspection_details').update({ unit: u }).eq('mr_no', k),
-            supabase.from('material_inspection').update({ unit_name: u }).eq('mr_no', k),
-            supabase.from('mill_inspection_master').update({ unit_name: u }).eq('mr_no', k)
+            supabase.from('material_inspection_details').update({ unit: u }).eq('mr_no', k).then(() => {}, () => {}),
+            supabase.from('mill_inspection_detail').update({ unit: u }).eq('mr_no', k).then(() => {}, () => {}),
+            supabase.from('inspection_details').update({ unit: u }).eq('mr_no', k).then(() => {}, () => {}),
+            supabase.from('material_inspection').update({ unit_name: u }).eq('mr_no', k).then(() => {}, () => {})
           ]).catch(() => {});
         }
       }

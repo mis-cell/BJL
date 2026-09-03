@@ -101,6 +101,7 @@ import { supabase } from "./lib/supabase";
         BEGIN 
           ALTER TABLE IF EXISTS user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;
+          ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS unit_name TEXT DEFAULT 'BALES';
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS inspection_checklist ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;

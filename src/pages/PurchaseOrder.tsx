@@ -3889,9 +3889,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     // Section split by status. Temporary P.O (Sauda Check Point) = NOT yet final; Final P.O = final.
     // A P.O appears in exactly ONE section — never both — so the two are fully
     // independent. Clicking "Pass" flips status to 'final', moving it from Sauda Check Point to Final P.O.
-    const isFinalizedPo = p.status !== 'temp';
+    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
+    if (!isTempPo && p.status === 'temp') return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4060,9 +4060,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
     if (isCancelled) return false;
 
-    const isFinalizedPo = p.status !== 'temp';
+    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
+    if (!isTempPo && p.status === 'temp') return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4294,11 +4294,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                     </button>
                   </div>
                 </div>
-                <div className="w-16 h-12 relative flex justify-center items-center shrink-0">
+                <div className="w-24 h-16 relative flex justify-center items-center shrink-0">
                   {scopedPos.length === 0 ? (
                     <div className="text-slate-400 text-[9px] font-bold">No Data</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={10} minHeight={10} initialDimension={{ width: 96, height: 64 }}>
                       <PieChart>
                         <Pie
                           data={statusPieData}
