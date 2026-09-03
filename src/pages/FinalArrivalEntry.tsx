@@ -412,7 +412,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
           temporary_arrival_date: matchedAmad.date || matchedAmad.temporary_arrival_date || prev.temporary_arrival_date,
           po_no: matchedAmad.po_no || prev.po_no,
-          po_date: matchedAmad.po_date || matchedAmad.date || matchedPo?.po_date || matchedPo?.date || prev.po_date,
+          po_date: matchedPo?.po_date || matchedPo?.s_date || matchedAmad.po_date || matchedAmad.date || prev.po_date,
           jci: matchedAmad.jci || prev.jci,
           supplier: (matchedAmad.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
           challan_supplier: (matchedAmad.challan_supplier || matchedAmad.supplier || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
@@ -531,7 +531,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           ...prev,
           mr_no: matchedInspection.mr_no,
           po_no: finalPoNo || prev.po_no || '',
-          po_date: matchedInspection.po_date || matchedPo?.po_date || matchedPo?.date || amadData?.date || amadData?.lorry_date || prev.po_date || '',
+          po_date: matchedPo?.po_date || matchedPo?.s_date || matchedInspection.po_date || amadData?.date || amadData?.lorry_date || prev.po_date || '',
           jci: matchedInspection.jci || amadData?.jci || prev.jci || 'No',
           supplier: (matchedInspection.supplier_name || amadData?.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
           challan_supplier: (matchedInspection.challan_supplier || amadData?.challan_supplier || matchedInspection.supplier_name || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
@@ -737,7 +737,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         const valUpper = String(val).trim().toUpperCase();
         const matched = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === valUpper);
         if (matched) {
-          next.po_date = matched.po_date || matched.date || next.po_date;
+          next.po_date = matched.po_date || matched.s_date || matched.date || next.po_date;
           next.supplier = (matched.supplier || matched.merchant || next.supplier || '').toUpperCase();
           next.challan_supplier = (matched.challan_supplier || matched.supplier || matched.merchant || next.challan_supplier || '').toUpperCase();
           next.broker = (matched.broker || next.broker || '').toUpperCase();

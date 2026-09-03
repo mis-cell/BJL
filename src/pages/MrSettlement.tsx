@@ -1242,6 +1242,45 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       if (!poData) {
+        const { data: scpPo } = await supabase
+          .from('sauda_check_point')
+          .select('*')
+          .eq('po_no', cleanPoNo)
+          .maybeSingle();
+        if (scpPo) {
+          poData = {
+            ...scpPo,
+            po_date: scpPo.po_date || scpPo.s_date,
+            supplier: scpPo.supplier_name || scpPo.supplier,
+            broker: scpPo.broker_name || scpPo.broker,
+            total_contract_mt: scpPo.total_contract_mt || scpPo.quantity || 0,
+            pending: scpPo.pending ?? true,
+            status: scpPo.status || 'temp'
+          };
+        }
+      }
+
+      if (!poData) {
+        const { data: scpPoMatches } = await supabase
+          .from('sauda_check_point')
+          .select('*')
+          .ilike('po_no', cleanPoNo)
+          .limit(1);
+        if (scpPoMatches && scpPoMatches.length > 0) {
+          const scp = scpPoMatches[0];
+          poData = {
+            ...scp,
+            po_date: scp.po_date || scp.s_date,
+            supplier: scp.supplier_name || scp.supplier,
+            broker: scp.broker_name || scp.broker,
+            total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
+            pending: scp.pending ?? true,
+            status: scp.status || 'temp'
+          };
+        }
+      }
+
+      if (!poData) {
         setSelectedPoData(null);
         setErrorMessage(`Could not resolve details for P.O No. ${poNo}`);
         setLoading(false);

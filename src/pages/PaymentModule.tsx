@@ -1445,7 +1445,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       setMasterData(prev => ({
         ...prev,
         po_no: po.po_no,
-        po_date: po.po_date || po.created_at || prev.po_date,
+        po_date: po.po_date || po.s_date || po.created_at || prev.po_date,
         po_type: po.po_type || 'Standard',
         supplier: po.supplier || po.party_name || prev.supplier,
         party_name: po.party_name || po.supplier || prev.party_name,
@@ -1575,7 +1575,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         ...prev,
         mr_no: arrival.mr_no || arrival.final_arrival_no || mrNo,
         po_no: poNo || prev.po_no,
-        po_date: po?.po_date || arrival.date || prev.po_date,
+        po_date: po?.po_date || po?.s_date || arrival.po_date || arrival.date || prev.po_date,
         supplier: arrival.supplier || po?.supplier || prev.supplier,
         party_name: arrival.supplier || po?.supplier || prev.party_name,
         broker: arrival.broker || po?.broker || prev.broker,

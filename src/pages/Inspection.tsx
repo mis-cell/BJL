@@ -1353,14 +1353,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       let pmData: any = null;
 
       if (supabase) {
-        const [pdmRes, scpRes, midRes, pmRes, gradesRes, agenciesRes, markasRes] = await Promise.all([
+        const [pdmRes, scpRes, midRes, pmRes, gradesRes, agenciesRes, markasRes, scpHeaderRes] = await Promise.all([
           supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('material_inspection_details').select('*').or(`mr_no.eq.${poClean},mr_no.ilike.${poUpper},po_no.eq.${poClean}`),
           supabase.from('purchase_master').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`),
           supabase.from('grade_master').select('*'),
           supabase.from('agency_master').select('*'),
-          supabase.from('marka_master').select('*')
+          supabase.from('marka_master').select('*'),
+          supabase.from('sauda_check_point').select('*').or(`po_no.eq.${poClean},po_no.ilike.${poUpper}`)
         ]);
 
         if (gradesRes.data) {
@@ -1385,10 +1386,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           setHeaderForm(prev => ({
             ...prev,
             po_no: pm.po_no || prev.po_no,
-            po_date: pm.date || pm.po_date || prev.po_date,
+            po_date: pm.po_date || pm.date || prev.po_date,
             supplier_name: pm.supplier || pm.challan_supplier || prev.supplier_name,
             broker_name: pm.broker || prev.broker_name,
             lorry_number: pm.lorry_no || pm.lorry_number || prev.lorry_number
+          }));
+        } else if (scpHeaderRes.data && scpHeaderRes.data.length > 0) {
+          const scp = scpHeaderRes.data[0];
+          pmData = scp;
+          setHeaderForm(prev => ({
+            ...prev,
+            po_no: scp.po_no || prev.po_no,
+            po_date: scp.po_date || scp.s_date || prev.po_date,
+            supplier_name: scp.supplier_name || scp.supplier || prev.supplier_name,
+            broker_name: scp.broker_name || scp.broker || prev.broker_name,
+            lorry_number: scp.lorry_number || prev.lorry_number
           }));
         }
 
