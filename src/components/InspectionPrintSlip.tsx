@@ -512,7 +512,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Gross Wt. */}
                         <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
-                          {grossWt > 0 ? grossWt.toFixed(3)*1000 : ''}
+                          {grossWt > 0 ? (grossWt * 1000).toFixed(0) : ''}
                         </td>
                         {/* Moisture % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
@@ -540,7 +540,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Net Wt. */}
                         <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
-                          {netWt > 0 ? netWt.toFixed(3)*1000 : (grossWt > 0 ? grossWt.toFixed(3)*1000 : '')}
+                          {netWt > 0 ? (netWt * 1000).toFixed(0) : (grossWt > 0 ? (grossWt * 1000).toFixed(0) : '')}
                         </td>
                         {/* Settlement Grade - Blank in Mill Inspection Slip */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
@@ -568,7 +568,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                     </td>
                     <td className="border-r border-[#d60000] px-1 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
-                      {totalGrossWt > 0 ? totalGrossWt.toFixed(3)*1000 : ''}
+                      {totalGrossWt > 0 ? (totalGrossWt * 1000).toFixed(0) : ''}
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">
@@ -583,7 +583,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                       {totalNcvKg > 0 ? totalNcvKg.toFixed(1) : ''}
                     </td>
                     <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
-                        {totalNetWt > 0 ? totalNetWt.toFixed(3)*1000 : (totalGrossWt > 0 ? totalGrossWt.toFixed(3)*1000 : '')}
+                      {totalNetWt > 0 ? (totalNetWt * 1000).toFixed(0) : (totalGrossWt > 0 ? (totalGrossWt * 1000).toFixed(0) : '')}
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
