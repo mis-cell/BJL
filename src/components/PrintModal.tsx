@@ -40,8 +40,8 @@ interface PrintModalProps {
   title: string;
   children: React.ReactNode;
   showTip?: boolean;
-  copyType?:string;
-  setCopyType?:setCopyType;
+  copyType?: string | null;
+  setCopyType?: (val: any) => void;
 }
 
 export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType}: PrintModalProps) {
@@ -209,7 +209,17 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
             <div></div>
           )}
           <div className="flex gap-1.5 ml-auto">
-            <select value={copyType} onChange={(e) => setCopyType(e.target.value)} className="h-8 border border-gray-400 bg-white px-2 text-xs font-bold text-gray-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500" > <option value="1">Mill Copy</option> <option value="2">Original Copy</option> <option value="3">Not for Bill</option> </select>
+            {setCopyType && (
+              <select 
+                value={copyType || "1"} 
+                onChange={(e) => setCopyType?.(e.target.value)} 
+                className="h-8 border border-gray-400 bg-white px-2 text-xs font-bold text-gray-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="1">Mill Copy</option>
+                <option value="2">Original Copy</option>
+                <option value="3">Not for Bill</option>
+              </select>
+            )}
             <button 
               type="button"
               onClick={() => setShowEmailPanel(!showEmailPanel)}

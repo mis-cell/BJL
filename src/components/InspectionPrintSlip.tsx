@@ -71,10 +71,10 @@ export interface InspectionMasterPrintData {
 interface Props {
   master: InspectionMasterPrintData;
   details?: InspectionDetailPrintRow[];
-  copyType?: copyType
+  copyType?: string | null;
 }
 
-export default function InspectionPrintSlip({ master, details = [], copyType }: Props) {
+export default function InspectionPrintSlip({ master, details = [], copyType = '1' }: Props) {
   //console.log(copyType)
   // Format date helper: DD/MM/YYYY
   const formatDate = (dateStr?: string) => {

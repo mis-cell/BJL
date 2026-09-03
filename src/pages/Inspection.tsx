@@ -368,6 +368,10 @@ interface InspectionMasterRecord {
   claim_dust?: number;
   actual_ncv?: number;
   claim_ncv?: number;
+  settlement_moisture?: number;
+  settlement_grade_down?: number;
+  settlement_dust?: number;
+  settlement_ncv?: number;
   detention_days?: number;
   unloading_date?: string;
   mill_po_no?: string;
