@@ -2466,6 +2466,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       };
 
       if (supabase) {
+        // Enforce Sauda Check Point PO Date as single source of truth dynamically
+        if (payload.po_no) {
+          try {
+            const { data: scpData } = await supabase
+              .from('purchase_master')
+              .select('po_date')
+              .eq('po_no', payload.po_no.trim())
+              .maybeSingle();
+            if (scpData && scpData.po_date) {
+              payload.po_date = scpData.po_date;
+            } else {
+              const { data: scpViewData } = await supabase
+                .from('sauda_check_point')
+                .select('po_date, s_date')
+                .eq('po_no', payload.po_no.trim())
+                .maybeSingle();
+              if (scpViewData) {
+                payload.po_date = scpViewData.po_date || scpViewData.s_date || payload.po_date;
+              }
+            }
+          } catch (poErr) {
+            console.warn("Error resolving PO Date source of truth:", poErr);
+          }
+        }
+
         try {
           const { error: masterErr } = await supabase.from("material_inspection").upsert([payload]);
           if (masterErr) {
@@ -2500,7 +2525,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             arrival_date: headerForm.arrival_date || null,
             date: headerForm.arrival_date || headerForm.mr_date || null,
             po_no: headerForm.po_no,
-            po_date: headerForm.po_date || null,
+            po_date: payload.po_date || null,
             broker: headerForm.broker_name,
             supplier: headerForm.supplier_name,
             lorry_number: headerForm.lorry_number,
@@ -3065,8 +3090,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   <input
                     type="date"
                     value={headerForm.po_date || ""}
-                    onChange={(e) => handleHeaderChange("po_date", e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    readOnly
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500 cursor-not-allowed focus:outline-none"
+                    title="P.O. Date is loaded automatically from Sauda Check Point"
                   />
                 </div>
 

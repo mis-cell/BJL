@@ -2591,6 +2591,36 @@ export default function MaterialInspection({
         status: 'Completed'
       };
 
+      // Enforce Sauda Check Point PO Date as single source of truth dynamically
+      if (masterPayload.po_no) {
+        try {
+          const { data: scpData } = await supabase
+            .from('purchase_master')
+            .select('po_date')
+            .eq('po_no', masterPayload.po_no.trim())
+            .maybeSingle();
+          if (scpData && scpData.po_date) {
+            masterPayload.po_date = scpData.po_date;
+            masterPayload.mill_po_date = scpData.po_date;
+          } else {
+            const { data: scpViewData } = await supabase
+              .from('sauda_check_point')
+              .select('po_date, s_date')
+              .eq('po_no', masterPayload.po_no.trim())
+              .maybeSingle();
+            if (scpViewData) {
+              const matchedPoDate = scpViewData.po_date || scpViewData.s_date;
+              if (matchedPoDate) {
+                masterPayload.po_date = matchedPoDate;
+                masterPayload.mill_po_date = matchedPoDate;
+              }
+            }
+          }
+        } catch (poErr) {
+          console.warn("Error resolving PO Date source of truth:", poErr);
+        }
+      }
+
       // 1. Save or Update Master into active material_inspection table
       const { error: masterErr } = await supabase.from("material_inspection").upsert(masterPayload);
       if (masterErr) {
@@ -2745,6 +2775,7 @@ export default function MaterialInspection({
             arrival_date: masterData.arrival_date || null,
             date: masterData.arrival_date || masterData.mr_date || null,
             po_no: masterData.po_no,
+            po_date: masterPayload.po_date || null,
             broker: masterData.broker_name,
             broker_name: masterData.broker_name,
             supplier: masterData.supplier_name,
@@ -4444,12 +4475,14 @@ export default function MaterialInspection({
                 <div className="flex items-center gap-2">
                   <label className="w-24 font-semibold text-slate-700">P.O Date <span className="text-red-500">*</span></label>
                   <input
- id="po_date_3221" aria-label="po date"                    type="date"
+                    id="po_date_3221"
+                    aria-label="po date"
+                    type="date"
                     name="po_date"
                     value={masterData.po_date || ''}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium focus:border-blue-500 disabled:bg-slate-100"
+                    readOnly
+                    className="flex-1 h-8 rounded border border-slate-300 px-2.5 font-medium bg-slate-100 text-slate-500 cursor-not-allowed focus:outline-none"
+                    title="P.O. Date is loaded automatically from Sauda Check Point"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -5400,9 +5433,9 @@ export default function MaterialInspection({
                     type="date"
                     name="po_date"
                     value={masterData.po_date}
-                    disabled={!isEditMode}
-                    onChange={handleMasterChange}
-                    className="flex-1 bg-white border border-gray-400 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
+                    readOnly
+                    className="flex-1 bg-slate-100 border border-gray-400 rounded px-2 py-0.5 text-xs font-semibold text-slate-500 cursor-not-allowed focus:outline-none"
+                    title="P.O. Date is loaded automatically from Sauda Check Point"
                   />
                 </div>
               </div>
