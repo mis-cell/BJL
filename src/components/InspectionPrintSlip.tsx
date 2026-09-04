@@ -326,9 +326,8 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
   const resolvedChallanNo = dbChallan?.no || master.challan_no || master.arrival_no || '';
   const resolvedChallanDate = dbChallan?.date || master.challan_date || master.arrival_date || '';
 
-  const challanDisplay = resolvedChallanNo 
-    ? `${safeStr(resolvedChallanNo)} ${resolvedChallanDate ? `& ${formatDate(resolvedChallanDate)}` : ''}`
-    : '';
+  //const challanDisplay = resolvedChallanNo ? `${safeStr(resolvedChallanNo)} ${resolvedChallanDate ? `& ${formatDate(resolvedChallanDate)}` : ''}`: '';
+  const challanDisplay = resolvedChallanNo ? `${safeStr(resolvedChallanNo)}`: '';
 
   return (
     <div className="bg-[#525659] p-3 sm:p-5 flex justify-center items-center print:block print:bg-white print:p-0 font-sans select-text w-full overflow-x-auto">
@@ -553,7 +552,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Moisture Kg. */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {moistureKg > 0 ? moistureKg.toFixed(1) : ''}
+                          {moistureKg > 0 ? Math.round(moistureKg.toFixed(1)) : ''}
                         </td>
                         {/* Dust % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
@@ -605,7 +604,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">
-                      {totalMoistureKg > 0 ? totalMoistureKg.toFixed(1) : ''}
+                      {totalMoistureKg > 0 ? Math.round(totalMoistureKg.toFixed(1)) : ''}
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">
