@@ -561,21 +561,37 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         } catch (e) {}
       }
 
-      // Check inspection table if deduction list is still empty or single generic
+      // Check inspection table or mill_inspection_deduction table if deduction list is still empty or single generic
       if (deductionsList.length === 0 || (deductionsList.length === 1 && !deductionsList[0].deduction_type)) {
         try {
           if (supabase) {
-            const { data: inspData } = await supabase
-              .from('material_inspection')
-              .select('deductions, deduction_types, summary_deduction_type, summary_deduction_rate, summary_deduction_qty, summary_deduction_amount')
-              .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo}`)
-              .maybeSingle();
-            
-            if (inspData) {
-              if (Array.isArray(inspData.deductions) && inspData.deductions.length > 0) {
-                deductionsList = inspData.deductions;
-              } else if (Array.isArray(inspData.deduction_types) && inspData.deduction_types.length > 0) {
-                deductionsList = inspData.deduction_types;
+            // First check mill_inspection_deduction
+            const { data: millDedList } = await supabase
+              .from('mill_inspection_deduction')
+              .select('*')
+              .or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`)
+              .order('created_at', { ascending: true });
+
+            if (millDedList && millDedList.length > 0) {
+              deductionsList = millDedList.map((d: any) => ({
+                deduction_type: d.deduction_type || '',
+                deduction_rate: Number(d.deduction_rate) || 0,
+                deduction_qty: Number(d.deduction_qty) || 0,
+                deduction_amount: Number(d.deduction_amount) || 0
+              }));
+            } else {
+              const { data: inspData } = await supabase
+                .from('material_inspection')
+                .select('deductions, deduction_types, summary_deduction_type, summary_deduction_rate, summary_deduction_qty, summary_deduction_amount')
+                .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo}`)
+                .maybeSingle();
+              
+              if (inspData) {
+                if (Array.isArray(inspData.deductions) && inspData.deductions.length > 0) {
+                  deductionsList = inspData.deductions;
+                } else if (Array.isArray(inspData.deduction_types) && inspData.deduction_types.length > 0) {
+                  deductionsList = inspData.deduction_types;
+                }
               }
             }
           }

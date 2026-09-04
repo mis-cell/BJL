@@ -16,6 +16,8 @@ export type EntityType =
   | 'sauda_check_point'
   | 'sauda_check_point_details'
   | 'sauda_check_point_deductions'
+  | 'mill_inspection_deduction'
+  | 'material_inspection_deductions'
   | 'temporary_po'
   | 'temporary_po_details'
   | 'godown_master'
