@@ -2805,7 +2805,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 />
               </div>
 
-              <div style={{display:'none'}}>
+              <div >
                 <label className="block text-[10px] font-black uppercase text-purple-900 mb-1 flex items-center justify-between">
                   <span>Advance Payment Done? *</span>
                   <span className={cn(
@@ -2826,8 +2826,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                       : "bg-white text-slate-800 border-slate-300 focus:ring-2 focus:ring-purple-500"
                   )}
                 >
-                  <option value="No">No - Advance Payment Pending</option>
-                  <option value="Yes">Yes - Advance Payment Released / Done</option>
+                  <option value="No">No </option>
+                  <option value="Yes">Yes </option>
                 </select>
               </div>
             </div>
