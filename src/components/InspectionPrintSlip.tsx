@@ -1,4 +1,5 @@
 import React from 'react';
+import { supabase } from '../lib/supabase';
 
 function safeStr(val: any, fallback = ''): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -150,6 +151,35 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
     }
   ];
 
+  const [dbChallan, setDbChallan] = React.useState<{ no: string; date: string } | null>(null);
+
+  React.useEffect(() => {
+    async function loadChallan() {
+      const poNo = master.po_no || master.mill_po_no;
+      if (!poNo) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("final_arrival")
+          .select("challan_rr_no, challan_rr_date")
+          .eq("po_no", poNo.trim())
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const row = data[0];
+          setDbChallan({
+            no: row.challan_rr_no || '',
+            date: row.challan_rr_date || ''
+          });
+        }
+      } catch (err) {
+        console.warn("Error fetching challan details for print preview:", err);
+      }
+    }
+    loadChallan();
+  }, [master.po_no, master.mill_po_no]);
+
   // Exclude rows where quantity is 0 or empty (User requirement: if quantity is 0, do not show row in print preview)
   const effectiveDetails: InspectionDetailPrintRow[] = rawDetails.filter((r) => {
     if (!r) return false;
@@ -293,9 +323,12 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
   const orderDate = master.po_date || master.mill_po_date || master.mr_date || master.arrival_date;
   const mrDate = master.mr_date || master.arrival_date;
   const mrNo = safeStr(master.mr_no || master.arrival_no, '');
-  const challanDisplay = master.challan_no 
-    ? `${safeStr(master.challan_no)} ${master.challan_date ? `& ${formatDate(master.challan_date)}` : ''}`
-    : (master.arrival_no ? `${safeStr(master.arrival_no)} ${master.arrival_date ? `& ${formatDate(master.arrival_date)}` : ''}` : '');
+  const resolvedChallanNo = dbChallan?.no || master.challan_no || master.arrival_no || '';
+  const resolvedChallanDate = dbChallan?.date || master.challan_date || master.arrival_date || '';
+
+  const challanDisplay = resolvedChallanNo 
+    ? `${safeStr(resolvedChallanNo)} ${resolvedChallanDate ? `& ${formatDate(resolvedChallanDate)}` : ''}`
+    : '';
 
   return (
     <div className="bg-[#525659] p-3 sm:p-5 flex justify-center items-center print:block print:bg-white print:p-0 font-sans select-text w-full overflow-x-auto">
