@@ -2147,9 +2147,16 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
 
       const dedMap: Record<string, any> = {};
+      const cleanKeyFormat = (v: any) => String(v || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       (scpDeductions || []).forEach((d: any) => {
-        if (d?.po_no) dedMap[String(d.po_no).trim().toUpperCase()] = d;
-        if (d?.sauda_no) dedMap[String(d.sauda_no).trim().toUpperCase()] = d;
+        if (d?.po_no) {
+          dedMap[String(d.po_no).trim().toUpperCase()] = d;
+          dedMap[cleanKeyFormat(d.po_no)] = d;
+        }
+        if (d?.sauda_no) {
+          dedMap[String(d.sauda_no).trim().toUpperCase()] = d;
+          dedMap[cleanKeyFormat(d.sauda_no)] = d;
+        }
       });
       setSettledDeductions(dedMap);
 

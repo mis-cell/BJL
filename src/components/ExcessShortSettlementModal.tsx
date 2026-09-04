@@ -343,12 +343,30 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return tolerance.shortUnderToleranceMt;
   });
 
+  const cleanPoVal = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const cleanKey = cleanPoVal(poNo);
+  const cleanSaudaKey = cleanPoVal(saudaNo);
+
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isSettled, setIsSettled] = useState<boolean>(() => {
-    return po.excess_short_status === 'settled' || po.status === 'settled' || po.is_settled === true;
+    const localSettled = localStorage.getItem(`sauda_settled_${cleanKey}`) || 
+                         (cleanSaudaKey ? localStorage.getItem(`sauda_settled_${cleanSaudaKey}`) : null) ||
+                         localStorage.getItem(`sauda_settlement_${cleanKey}`) ||
+                         (cleanSaudaKey ? localStorage.getItem(`sauda_settlement_${cleanSaudaKey}`) : null);
+
+    return Boolean(
+      localSettled ||
+      po.excess_short_status === 'settled' || 
+      po.excess_short_status === 'within_bounds' ||
+      po.status === 'settled' || 
+      po.status === 'final' || 
+      po.is_settled === true ||
+      po.has_settlement_done === true ||
+      (po.excess_short_deduction != null && po.excess_short_deduction !== '')
+    );
   });
   const [settledAt, setSettledAt] = useState<string | null>(null);
   const [settledBy, setSettledBy] = useState<string | null>(null);
@@ -372,26 +390,65 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   useEffect(() => {
     const loadSaved = async () => {
       try {
-        if (!supabase) return;
-        const { data } = await supabase
-          .from('sauda_check_point_deductions')
-          .select('*')
-          .eq('po_no', poNo)
-          .maybeSingle();
+        const clean = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        const targetCleanKey = clean(poNo);
+        const targetCleanSaudaKey = clean(saudaNo);
 
-        if (data) {
-          setExistingRecordId(data.id);
-          if (data.remarks) setRemarks(data.remarks);
-          if (data.deduction_qty_mt != null) {
-            setCustomWeightMt(Number(data.deduction_qty_mt));
-          }
-          if (data.basis_mode) {
-            setBasisMode(data.basis_mode as DeductionBasis);
-          }
-          if (data.status === 'settled' || data.is_locked === true || data.is_final === true) {
+        // 1. Check local storage cache
+        const localSavedStr = localStorage.getItem(`sauda_settlement_${targetCleanKey}`) || 
+                              (targetCleanSaudaKey ? localStorage.getItem(`sauda_settlement_${targetCleanSaudaKey}`) : null);
+        if (localSavedStr) {
+          try {
+            const parsed = JSON.parse(localSavedStr);
+            if (parsed) {
+              if (parsed.id) setExistingRecordId(parsed.id);
+              if (parsed.remarks) setRemarks(parsed.remarks);
+              if (parsed.deduction_qty_mt != null) setCustomWeightMt(Number(parsed.deduction_qty_mt));
+              if (parsed.basis_mode) setBasisMode(parsed.basis_mode as DeductionBasis);
+              setIsSettled(true);
+              setSettledAt(parsed.settled_at || new Date().toISOString());
+              setSettledBy(parsed.settled_by || 'Authorized User');
+            }
+          } catch (e) {}
+        }
+
+        if (!supabase) return;
+
+        // 2. Fetch from sauda_check_point_deductions
+        const { data: list } = await supabase
+          .from('sauda_check_point_deductions')
+          .select('*');
+
+        if (list && list.length > 0) {
+          const match = list.find((item: any) => {
+            const itemPoClean = clean(item.po_no);
+            const itemSaudaClean = clean(item.sauda_no || item.po_contract);
+            return (itemPoClean && itemPoClean === targetCleanKey) ||
+                   (targetCleanSaudaKey && itemPoClean === targetCleanSaudaKey) ||
+                   (targetCleanSaudaKey && itemSaudaClean === targetCleanSaudaKey) ||
+                   (item.po_no && String(item.po_no).trim().toUpperCase() === String(poNo).trim().toUpperCase()) ||
+                   (item.sauda_no && targetCleanSaudaKey && String(item.sauda_no).trim().toUpperCase() === String(saudaNo).trim().toUpperCase());
+          });
+
+          if (match) {
+            setExistingRecordId(match.id);
+            if (match.remarks) setRemarks(match.remarks);
+            if (match.deduction_qty_mt != null) {
+              setCustomWeightMt(Number(match.deduction_qty_mt));
+            }
+            if (match.basis_mode) {
+              setBasisMode(match.basis_mode as DeductionBasis);
+            }
             setIsSettled(true);
-            setSettledAt(data.settled_at || data.updated_at || data.created_at);
-            setSettledBy(data.settled_by || data.approved_by || 'Authorized User');
+            setSettledAt(match.settled_at || match.updated_at || match.created_at);
+            setSettledBy(match.settled_by || match.approved_by || 'Authorized User');
+
+            localStorage.setItem(`sauda_settled_${targetCleanKey}`, 'true');
+            localStorage.setItem(`sauda_settlement_${targetCleanKey}`, JSON.stringify(match));
+            if (targetCleanSaudaKey) {
+              localStorage.setItem(`sauda_settled_${targetCleanSaudaKey}`, 'true');
+              localStorage.setItem(`sauda_settlement_${targetCleanSaudaKey}`, JSON.stringify(match));
+            }
           }
         }
       } catch (e) {
@@ -399,7 +456,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     };
     loadSaved();
-  }, [poNo]);
+  }, [poNo, saudaNo]);
 
   // Selected Weight MT & Qtl according to basisMode
   const activeWeightMt = useMemo(() => {
@@ -510,7 +567,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             final_payable_amount: totalFinalPayable,
             is_settled: true
           })
-          .eq('po_no', poNo);
+          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
 
         await supabase
           .from('sauda_check_point')
@@ -520,15 +577,35 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             final_payable_amount: totalFinalPayable,
             is_settled: true
           })
-          .eq('po_no', poNo);
+          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
+
+        if (saudaNo) {
+          await supabase
+            .from('sauda_master')
+            .update({
+              excess_short_deduction: totalCalculatedAmount,
+              excess_short_status: 'settled',
+              final_payable_amount: totalFinalPayable,
+              is_settled: true
+            })
+            .eq('sauda_no', saudaNo);
+        }
       } else {
         await dbModule.insert('sauda_check_point_deductions', payload);
+      }
+
+      // Store in localStorage immediately so it's permanently locked in read-only mode
+      localStorage.setItem(`sauda_settled_${cleanKey}`, 'true');
+      localStorage.setItem(`sauda_settlement_${cleanKey}`, JSON.stringify(payload));
+      if (cleanSaudaKey) {
+        localStorage.setItem(`sauda_settled_${cleanSaudaKey}`, 'true');
+        localStorage.setItem(`sauda_settlement_${cleanSaudaKey}`, JSON.stringify(payload));
       }
 
       setIsSettled(true);
       setSettledAt(nowIso);
       setSettledBy('Authorized User');
-      setSaveMessage("✓ Settlement record saved and permanently locked into ledger!");
+      setSaveMessage("✓ Settlement record saved and permanently locked into ledger (Read-Only Mode)!");
       if (onSaveSuccess) onSaveSuccess();
       setTimeout(() => setSaveMessage(null), 5000);
     } catch (err: any) {
