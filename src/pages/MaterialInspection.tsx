@@ -615,6 +615,50 @@ export default function MaterialInspection({
         const master = savedInspections.find((item) => item.mr_no === mrNo);
         if (!master) continue;
 
+        const poNo = master.po_no || master.mill_po_no;
+        if (poNo && supabase) {
+          try {
+            const poClean = String(poNo).trim();
+            const { data: scp } = await supabase
+              .from('sauda_check_point')
+              .select('*')
+              .eq('po_no', poClean)
+              .maybeSingle();
+
+            if (scp) {
+              const isClosed = scp.status === 'closed' || scp.is_closed === true || scp.status === 'final' || scp.status === 'moved_to_final' || scp.status === 'settled';
+              
+              const { data: matMismatches } = await supabase
+                .from('material_mismatch')
+                .select('*')
+                .eq('po_no', poClean);
+              const { data: satMismatches } = await supabase
+                .from('satta_mismatch')
+                .select('*')
+                .eq('po_no', poClean);
+
+              const hasActiveMatMismatch = (matMismatches || []).some(m => {
+                const st = String(m.status || m.resolution_status || '').toLowerCase();
+                return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+              });
+              const hasActiveSatMismatch = (satMismatches || []).some(m => {
+                const st = String(m.status || m.resolution_status || '').toLowerCase();
+                return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+              });
+
+              const isCleared = scp.mismatch_cleared === true || scp.mismatch_cleared === 'true' || scp.satta_dispute_approved === true || scp.satta_dispute_approved === 'true';
+              const isMismatch = !isCleared && (hasActiveMatMismatch || hasActiveSatMismatch || scp.pass_status === 'mismatch');
+
+              if (!isClosed || isMismatch) {
+                alert(`M.R. No. ${mrNo} (P.O. ${poClean}) skipped: Sauda Check Point is not CLOSED or has an unresolved mismatch.`);
+                continue;
+              }
+            }
+          } catch (err) {
+            console.warn("Error validating print permissions in batch:", err);
+          }
+        }
+
         let details: any[] = [];
         if (supabase) {
           const { data, error } = await supabase
@@ -666,6 +710,51 @@ export default function MaterialInspection({
     if (e) {
       e.stopPropagation();
     }
+
+    const poNo = insp.po_no || insp.mill_po_no;
+    if (poNo && supabase) {
+      try {
+        const poClean = String(poNo).trim();
+        const { data: scp } = await supabase
+          .from('sauda_check_point')
+          .select('*')
+          .eq('po_no', poClean)
+          .maybeSingle();
+
+        if (scp) {
+          const isClosed = scp.status === 'closed' || scp.is_closed === true || scp.status === 'final' || scp.status === 'moved_to_final' || scp.status === 'settled';
+          
+          const { data: matMismatches } = await supabase
+            .from('material_mismatch')
+            .select('*')
+            .eq('po_no', poClean);
+          const { data: satMismatches } = await supabase
+            .from('satta_mismatch')
+            .select('*')
+            .eq('po_no', poClean);
+
+          const hasActiveMatMismatch = (matMismatches || []).some(m => {
+            const st = String(m.status || m.resolution_status || '').toLowerCase();
+            return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+          });
+          const hasActiveSatMismatch = (satMismatches || []).some(m => {
+            const st = String(m.status || m.resolution_status || '').toLowerCase();
+            return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
+          });
+
+          const isCleared = scp.mismatch_cleared === true || scp.mismatch_cleared === 'true' || scp.satta_dispute_approved === true || scp.satta_dispute_approved === 'true';
+          const isMismatch = !isCleared && (hasActiveMatMismatch || hasActiveSatMismatch || scp.pass_status === 'mismatch');
+
+          if (!isClosed || isMismatch) {
+            alert(`Mill Inspection Print Not Allowed!\n\nThis Purchase Order (${poClean}) does not satisfy the required conditions:\n- Sauda Check Point Status must be CLOSED (Current: ${isClosed ? 'CLOSED' : 'OPEN'})\n- Pass/Mismatch must be PASS (Current: ${isMismatch ? 'MISMATCH' : 'PASS'})\n\nPlease ensure Sauda Check Point is Closed and there are no unresolved mismatches before printing.`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Error validating print permissions:", err);
+      }
+    }
+
     setLoading(true);
     try {
       let details: any[] = [];

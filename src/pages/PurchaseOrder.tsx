@@ -4858,16 +4858,26 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           </div>
                         </th>
                         {isTempPo && (
-                          <th 
-                            onClick={() => handleSort('pass_mismatch')}
-                            className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[150px]"
-                            title="Sort by Pass / Mismatch"
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              <span>Pass / Mismatch</span>
-                              {renderSortIndicator('pass_mismatch')}
-                            </div>
-                          </th>
+                          <>
+                            <th 
+                              onClick={() => handleSort('pass_mismatch')}
+                              className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[120px]"
+                              title="Sort by Pass / Mismatch"
+                            >
+                              <div className="flex items-center justify-center gap-1">
+                                <span>Pass / Mismatch</span>
+                                {renderSortIndicator('pass_mismatch')}
+                              </div>
+                            </th>
+                            <th 
+                              className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[150px]"
+                              title="Current Process Stage"
+                            >
+                              <div className="flex items-center justify-center gap-1">
+                                <span>Stage</span>
+                              </div>
+                            </th>
+                          </>
                         )}
                         <th className="px-3 text-center whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[100px]">Actions</th>
                      </tr>
@@ -5092,147 +5102,170 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                               })()}
                            </td>
                            {isTempPo && (
-                           <td className="px-3 text-center border-r border-slate-200/60 min-w-[150px] whitespace-nowrap">
-                              {(() => {
-                                 const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
-                                 if (isFinalized) {
-                                    return <span className="text-[9px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase" title="Passed to Final P.O">Pass ✓</span>;
-                                 }
-                                 const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
-                                 const isResolved = isPoMismatchResolved(item);
-                                 const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments) || item.has_payment_done;
-                                 const isSettlementDone = checkIsSettlementDone(item, allSettlements) || item.has_settlement_done || item.status === 'settled';
+                              <>
+                                {/* Pass / Mismatch Column */}
+                                <td className="px-3 text-center border-r border-slate-200/60 min-w-[120px] whitespace-nowrap">
+                                  {(() => {
+                                    const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
+                                    const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
+                                    const isResolved = isPoMismatchResolved(item);
+                                    
+                                    const isMismatch = (stage === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0));
+                                    const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved || (!isMismatch && stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending');
 
-                                 // Stage 1: Temporary Arrival Pending (Material has not arrived at mill gate yet)
-                                 if (stage === 'temp_arrival_pending') {
-                                    return (
-                                      <span 
-                                        className="text-[8.5px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 uppercase whitespace-nowrap shadow-2xs" 
-                                        title="Temporary Arrival Pending — Material has not arrived at mill gate yet"
-                                      >
-                                        Temp Arrival Pending
-                                      </span>
-                                    );
-                                 }
-
-                                 // Stage 2: Final Arrival Pending (Temporary Arrival completed, Final Arrival missing)
-                                 if (stage === 'final_arrival_pending') {
-                                    return (
-                                      <span 
-                                        className="text-[8.5px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 uppercase whitespace-nowrap shadow-2xs" 
-                                        title="Temporary Arrival Completed — Final Arrival (Final M.R) is Pending"
-                                      >
-                                        Final Arrival Pending
-                                      </span>
-                                    );
-                                 }
-
-                                 // Stage 3: Mismatch (Final Arrival exists, but mismatch found with P.O / Sauda specs)
-                                 // User instruction: "if After Received Mismatch Show Then Its not eligable For Advance payment or Settelment ."
-                                 if (stage === 'mismatch') {
-                                    const diffFields = item.mismatch_fields?.length 
-                                      ? item.mismatch_fields.join(', ') 
-                                      : 'Fields differ';
-                                    return (
-                                      <div className="flex flex-col items-center gap-1">
-                                        <span
-                                           className="text-[9px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase cursor-help shadow-2xs whitespace-nowrap inline-flex items-center gap-1"
-                                           title={`Mismatch in: ${diffFields}. Resolve dispute in Mismatch Section.`}
-                                        >
+                                    if (isMismatch) {
+                                      return (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 uppercase tracking-wider shadow-2xs">
                                           <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
-                                          <span>Mismatch</span>
+                                          MISMATCH
                                         </span>
-                                        <span 
-                                          className="text-[7.5px] font-black text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 uppercase whitespace-nowrap shadow-2xs"
-                                          title="Not eligible for Advance Payment or Settlement until mismatch dispute is resolved in Mismatch Section"
-                                        >
-                                          Not Eligible for Adv/Settle
+                                      );
+                                    } else if (isPass) {
+                                      return (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase tracking-wider shadow-2xs">
+                                          PASS ✓
                                         </span>
+                                      );
+                                    } else {
+                                      return (
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider shadow-2xs">
+                                          PENDING
+                                        </span>
+                                      );
+                                    }
+                                  })()}
+                                </td>
+
+                                {/* Stage Column */}
+                                <td className="px-3 text-center border-r border-slate-200/60 min-w-[160px] whitespace-nowrap">
+                                  {(() => {
+                                    const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
+                                    const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
+                                    const isResolved = isPoMismatchResolved(item);
+                                    const isPaymentDone = checkIsAdvancePaymentDone(item, allPayments) || item.has_payment_done;
+                                    const isSettlementDone = checkIsSettlementDone(item, allSettlements) || item.has_settlement_done || item.status === 'settled';
+
+                                    // Determine completed stage
+                                    let completedStage = 'Sauda Check Point';
+                                    let stageColor = 'bg-slate-100 text-slate-700 border-slate-300';
+                                    if (isSettlementDone || isFinalized) {
+                                      completedStage = 'Settlement';
+                                      stageColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                                    } else if (stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending' && stage !== 'mismatch') {
+                                      completedStage = 'Mill Inspection';
+                                      stageColor = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+                                    } else if (stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending') {
+                                      completedStage = 'Final Arrival';
+                                      stageColor = 'bg-teal-100 text-teal-800 border-teal-300';
+                                    }
+
+                                    return (
+                                      <div className="flex flex-col items-center gap-1.5">
+                                        {/* Stage Badge */}
+                                        <span className="text-[10px] font-black px-2 py-0.5 rounded border uppercase shadow-2xs tracking-wide bg-slate-100 text-slate-700 border-slate-300" style={{
+                                          backgroundColor: isSettlementDone || isFinalized ? '#E6F4EA' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending' && stage !== 'mismatch' ? '#E8EAF6' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' ? '#E0F2F1' : '#F1F3F4',
+                                          color: isSettlementDone || isFinalized ? '#137333' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending' && stage !== 'mismatch' ? '#3F51B5' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' ? '#00796B' : '#5F6368',
+                                          borderColor: isSettlementDone || isFinalized ? '#A3E635' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending' && stage !== 'mismatch' ? '#C5CAE9' : stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' ? '#B2DFDB' : '#D1D5DB'
+                                        }}>
+                                          {completedStage}
+                                        </span>
+
+                                        {/* Existing Actions/Alerts matching current Stage */}
+                                        {isFinalized && (
+                                          <span className="text-[8.5px] font-bold text-emerald-800 uppercase" title="Passed to Final P.O">
+                                            Passed to Final P.O
+                                          </span>
+                                        )}
+
+                                        {!isFinalized && stage === 'temp_arrival_pending' && (
+                                          <span 
+                                            className="text-[8.5px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 uppercase whitespace-nowrap" 
+                                            title="Temporary Arrival Pending — Material has not arrived at mill gate yet"
+                                          >
+                                            Temp Arrival Pending
+                                          </span>
+                                        )}
+
+                                        {!isFinalized && stage === 'final_arrival_pending' && (
+                                          <span 
+                                            className="text-[8.5px] font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 uppercase whitespace-nowrap" 
+                                            title="Temporary Arrival Completed — Final Arrival (Final M.R) is Pending"
+                                          >
+                                            Final Arrival Pending
+                                          </span>
+                                        )}
+
+                                        {!isFinalized && stage === 'mismatch' && (
+                                          <span 
+                                            className="text-[7.5px] font-black text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 uppercase whitespace-nowrap"
+                                            title="Not eligible for Advance Payment or Settlement until mismatch dispute is resolved in Mismatch Section"
+                                          >
+                                            Ineligible for Adv/Settle
+                                          </span>
+                                        )}
+
+                                        {!isFinalized && stage === 'inspection_pending' && (
+                                          <span 
+                                            className="text-[8.5px] font-extrabold text-indigo-700 bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-200 uppercase whitespace-nowrap" 
+                                            title="Final Arrival exists with no mismatch — Mill Inspection data is Pending"
+                                          >
+                                            Inspection Pending
+                                          </span>
+                                        )}
+
+                                        {!isFinalized && stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'mismatch' && stage !== 'inspection_pending' && !isPaymentDone && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setEmailNotification({
+                                                type: 'warning',
+                                                title: 'Advance Payment Required',
+                                                message: `Advance Payment is not completed yet for PO #${item.po_no || item.ptf_no}. Please record Advance Payment in Payment Dashboard before moving to Final P.O.`
+                                              });
+                                            }}
+                                            title="Advance Payment is not done yet. Please complete Advance Payment in Payment Dashboard first."
+                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 uppercase cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
+                                          >
+                                            <AlertCircle className="w-2.5 h-2.5 text-amber-700" />
+                                            <span>Adv. Payment Pending</span>
+                                          </button>
+                                        )}
+
+                                        {!isFinalized && stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'mismatch' && stage !== 'inspection_pending' && isPaymentDone && !isSettlementDone && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              setEmailNotification({
+                                                type: 'info',
+                                                title: 'Settlement Pending',
+                                                message: `Advance Payment is completed. Account Settlement is pending in MR Settlement section for PO #${item.po_no || item.ptf_no}.`
+                                              });
+                                            }}
+                                            title="Advance Payment completed. Account Settlement is pending in MR Settlement."
+                                            className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 uppercase cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
+                                          >
+                                            <Clock className="w-2.5 h-2.5 text-blue-700" />
+                                            <span>Settlement Pending</span>
+                                          </button>
+                                        )}
+
+                                        {!isFinalized && isSettlementDone && (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
+                                            title="Settlement Completed! Click to Move this P.O to Final P.O"
+                                            className="text-[8.5px] font-black px-2.5 py-1 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
+                                          >
+                                            Pass → Final P.O
+                                          </button>
+                                        )}
                                       </div>
                                     );
-                                 }
-
-                                 // Stage 4: Inspection Pending (Final Arrival completed without mismatch, Mill Inspection pending)
-                                 if (stage === 'inspection_pending') {
-                                    return (
-                                      <span 
-                                        className="text-[8.5px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 uppercase whitespace-nowrap shadow-2xs" 
-                                        title="Final Arrival exists with no mismatch — Mill Inspection data is Pending"
-                                      >
-                                        Inspection Pending
-                                      </span>
-                                    );
-                                 }
-
-                                 // 5. Advance Payment Not Done:
-                                 // User instruction: "Just Delete 'Eligable for Advance payment' Here Here Sho Advance payment not Done its Ok"
-                                 if (!isPaymentDone) {
-                                    return (
-                                       <button
-                                          type="button"
-                                          onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            setEmailNotification({
-                                              type: 'warning',
-                                              title: 'Advance Payment Required',
-                                              message: `Advance Payment is not completed yet for PO #${item.po_no || item.ptf_no}. Please record Advance Payment in Payment Dashboard before moving to Final P.O.`
-                                            });
-                                          }}
-                                          title="Advance Payment is not done yet. Please complete Advance Payment in Payment Dashboard first."
-                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
-                                       >
-                                          <AlertCircle className="w-2.5 h-2.5 text-amber-700" />
-                                          <span>Advance payment not Done</span>
-                                       </button>
-                                    );
-                                 }
-
-                                 // 6. Advance Payment Done, but Settlement Pending:
-                                 // User instruction: "When In payment Section Advance payment done Then Here Show Settement Pending"
-                                 if (!isSettlementDone) {
-                                    return (
-                                       <button
-                                          type="button"
-                                          onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            setEmailNotification({
-                                              type: 'info',
-                                              title: 'Settlement Pending',
-                                              message: `Advance Payment is completed. Account Settlement is pending in MR Settlement section for PO #${item.po_no || item.ptf_no}.`
-                                            });
-                                          }}
-                                          title="Advance Payment completed. Account Settlement is pending in MR Settlement."
-                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 uppercase shadow-2xs cursor-pointer flex items-center gap-1 whitespace-nowrap transition-colors"
-                                       >
-                                          <Clock className="w-2.5 h-2.5 text-blue-700" />
-                                          <span>Settlement Pending</span>
-                                       </button>
-                                    );
-                                 }
-
-                                 // 7. Settlement Done:
-                                 // User instruction: "if Settelment done Then Data Full move To Final P.O"
-                                 return (
-                                    <div className="flex flex-col items-center gap-1">
-                                       <span 
-                                         className="text-[8.5px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-400 uppercase whitespace-nowrap shadow-2xs flex items-center gap-1 font-mono tracking-tight"
-                                         title="Settlement Done in MR Settlement — Ready to Move to Final P.O"
-                                       >
-                                         <Check className="w-2.5 h-2.5 text-emerald-800 stroke-[3]" />
-                                         <span>Settlement Done</span>
-                                       </span>
-                                       <button
-                                          onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                          title="Settlement Completed! Click to Move this P.O to Final P.O"
-                                          className="text-[8.5px] font-black px-2.5 py-1 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
-                                       >
-                                         Pass → Final P.O
-                                       </button>
-                                    </div>
-                                 );
-                              })()}
-                           </td>
-                           )}
+                                  })()}
+                                </td>
+                              </>
+                            )}
                            <td className="px-3 text-center min-w-[100px] whitespace-nowrap">
                               {isVoid ? (
                                  <div className="flex items-center justify-center gap-2">

@@ -151,30 +151,37 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
     }
   ];
 
-  const [dbChallan, setDbChallan] = React.useState<{ no: string; date: string } | null>(null);
+  const [dbChallan, setDbChallan] = React.useState<{ no: string; date: string; found: boolean } | null>(null);
 
   React.useEffect(() => {
     async function loadChallan() {
       const poNo = master.po_no || master.mill_po_no;
-      if (!poNo) return;
+      if (!poNo) {
+        setDbChallan({ no: '', date: '', found: false });
+        return;
+      }
       
       try {
         const { data, error } = await supabase
           .from("final_arrival")
-          .select("challan_rr_no, challan_rr_date")
-          .eq("po_no", poNo.trim())
+          .select("challan_railway_receipt_no, challan_rr_no, challan_rr_date")
+          .ilike("po_no", poNo.trim())
           .order("created_at", { ascending: false })
           .limit(1);
 
         if (data && data.length > 0) {
           const row = data[0];
           setDbChallan({
-            no: row.challan_rr_no || '',
-            date: row.challan_rr_date || ''
+            no: row.challan_railway_receipt_no || row.challan_rr_no || '',
+            date: row.challan_rr_date || '',
+            found: true
           });
+        } else {
+          setDbChallan({ no: '', date: '', found: false });
         }
       } catch (err) {
         console.warn("Error fetching challan details for print preview:", err);
+        setDbChallan({ no: '', date: '', found: false });
       }
     }
     loadChallan();
@@ -323,8 +330,12 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
   const orderDate = master.po_date || master.mill_po_date || master.mr_date || master.arrival_date;
   const mrDate = master.mr_date || master.arrival_date;
   const mrNo = safeStr(master.mr_no || master.arrival_no, '');
-  const resolvedChallanNo = dbChallan?.no || master.challan_no || master.arrival_no || '';
-  const resolvedChallanDate = dbChallan?.date || master.challan_date || master.arrival_date || '';
+  const resolvedChallanNo = dbChallan && dbChallan.found 
+    ? dbChallan.no 
+    : (master.challan_no || master.arrival_no || '');
+  const resolvedChallanDate = dbChallan && dbChallan.found 
+    ? dbChallan.date 
+    : (master.challan_date || master.arrival_date || '');
 
   //const challanDisplay = resolvedChallanNo ? `${safeStr(resolvedChallanNo)} ${resolvedChallanDate ? `& ${formatDate(resolvedChallanDate)}` : ''}`: '';
   const challanDisplay = resolvedChallanNo ? `${safeStr(resolvedChallanNo)}`: '';
