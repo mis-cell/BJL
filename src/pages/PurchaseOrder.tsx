@@ -2106,6 +2106,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         satMismatchesRes,
         dbMatMismatches,
         dbSatMismatches,
+        scpDeductions,
         payments,
         mrSettlementsRes,
         mrSettlementAltRes
@@ -2146,23 +2147,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
 
       const dedMap: Record<string, any> = {};
-      (arguments[arguments.length - 1] || []).forEach?.((d: any) => {
+      (scpDeductions || []).forEach((d: any) => {
         if (d?.po_no) dedMap[String(d.po_no).trim().toUpperCase()] = d;
         if (d?.sauda_no) dedMap[String(d.sauda_no).trim().toUpperCase()] = d;
       });
-      // Also fetch direct if needed
-      if (supabase) {
-        supabase.from('sauda_check_point_deductions').select('*').then(({ data }) => {
-          if (data && data.length > 0) {
-            const map: Record<string, any> = {};
-            data.forEach((d: any) => {
-              if (d.po_no) map[String(d.po_no).trim().toUpperCase()] = d;
-              if (d.sauda_no) map[String(d.sauda_no).trim().toUpperCase()] = d;
-            });
-            setSettledDeductions(map);
-          }
-        });
-      }
+      setSettledDeductions(dedMap);
 
       const allMergedInspections = [...(matInspections || []), ...(inspections || [])];
       const pos = initialPos;
@@ -2278,7 +2267,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const pPoClean = cleanVal(p.po_no);
         const pContractClean = cleanVal(p.contract_po_no);
         const pPtfClean = cleanVal(p.ptf_no);
-        const pSaudaClean = cleanVal(p.sauda_no);
+        const pSaudaClean = cleanVal(p.sauda_no || p.po_contract || p.contract_no);
 
         // 1. Check Temporary Arrival Dashboard (temporary_material_received)
         const hasTempArrival = (arrivals || []).some((ar: any) => matchPoRecord(p, ar)) ||
@@ -2365,23 +2354,31 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         // Check Payment Status in payment_master
         const matchingPayments = (payments || []).filter((pay: any) => {
           const payPoClean = cleanVal(pay.po_no);
+          const paySaudaClean = cleanVal(pay.sauda_no);
           return exactPo(p.po_no, pay.po_no) || 
                  exactPo(p.contract_po_no, pay.po_no) ||
                  matchPoRecord(p, pay) ||
                  (pPoClean && pPoClean === payPoClean) ||
-                 (pContractClean && pContractClean === payPoClean);
+                 (pContractClean && pContractClean === payPoClean) ||
+                 (pPtfClean && pPtfClean === payPoClean) ||
+                 (pSaudaClean && paySaudaClean && pSaudaClean === paySaudaClean);
         });
         const hasPaymentDone = matchingPayments.some((pay: any) => {
-          const payable = Number(pay.payable_amt || pay.total_amount || 0);
+          const advDone = String(pay.advance_payment_done || pay.advance_done || '').trim().toLowerCase();
           const paid = Number(pay.paid_amount || 0);
-          const pending = payable > 0 ? Math.max(0, payable - paid) : 0;
-          const pStatus = String(pay.payment_status || pay.status || '').toLowerCase();
-          const isPendingStatus = pStatus === 'partially settled' || pStatus === 'pending' || pStatus === 'draft' || pStatus === 'unpaid';
-          if (isPendingStatus || pending > 1) {
-            return false;
+          const pStatus = String(pay.payment_status || pay.status || '').toLowerCase().trim();
+
+          if (advDone === 'yes' || advDone === 'y' || advDone === 'true') {
+            return true;
           }
-          return paid > 0 && (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled');
-        }) || Boolean(p.has_payment_done && !p.pending_payment);
+          if (paid > 0) {
+            return true;
+          }
+          if (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled' || pStatus === 'partially settled') {
+            return true;
+          }
+          return false;
+        }) || Boolean(p.has_payment_done || (p.advance_payment_done && String(p.advance_payment_done).toLowerCase() === 'yes'));
 
         // Check Settlement Status in mr_settlement_master / m_r_settlement
         const matchingSettlements = (combinedSettlements || []).filter((s: any) => {
@@ -3277,6 +3274,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   // Helper function to check if advance payment has been completed for a PO
   const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]) => {
     if (!item) return false;
+    if (item.has_payment_done === true || item.advance_payment_done === 'Yes' || item.advance_payment_done === 'yes') return true;
+
     const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
     const pPoClean = cleanPoVal(item.po_no);
     const pContractClean = cleanPoVal(item.contract_po_no);
@@ -3284,48 +3283,71 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
     
     const poPayments = (paymentsList || []).filter((pay: any) => {
-      const payPoClean = cleanPoVal(pay.po_no);
+      const payPo = String(pay.po_no || pay.po_contract || pay.contract_po_no || pay.m_r_no || '').trim().toUpperCase();
+      const payPoClean = cleanPoVal(payPo);
+      const payMrClean = cleanPoVal(pay.mr_no);
+      const paySaudaClean = cleanPoVal(pay.sauda_no);
+
       return (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.po_no).trim().toUpperCase()) ||
              (pay.po_no && String(pay.po_no).trim().toUpperCase() === String(item.contract_po_no).trim().toUpperCase()) ||
              (pay.po_no && item.ptf_no && String(pay.po_no).trim().toUpperCase() === String(item.ptf_no).trim().toUpperCase()) ||
              (pPoClean && pPoClean === payPoClean) ||
              (pContractClean && pContractClean === payPoClean) ||
              (ptfClean && ptfClean === payPoClean) ||
-             (saudaClean && saudaClean === payPoClean);
+             (saudaClean && saudaClean === payPoClean) ||
+             (saudaClean && saudaClean === paySaudaClean);
     });
 
     if (poPayments.length === 0) {
       return Boolean(item.has_payment_done && !item.pending_payment);
     }
 
-    // A payment is truly completed only when all payment requirements/conditions are satisfied:
-    // 1. Paid amount is greater than 0
-    // 2. Pending amount is 0 (or paid_amount >= payable_amt)
-    // 3. Payment status is NOT 'Partially Settled', 'Pending', or 'Draft'
+    // Advance Payment is done if:
+    // 1. advance_payment_done is 'Yes' (as marked in Payment Master)
+    // 2. Or paid_amount > 0
+    // 3. Or payment_status is 'Paid', 'Completed', 'Settled', or 'Partially Settled'
     return poPayments.some((pay: any) => {
-      const payable = Number(pay.payable_amt || pay.total_amount || 0);
+      const advDone = String(pay.advance_payment_done || pay.advance_done || '').trim().toLowerCase();
       const paid = Number(pay.paid_amount || 0);
-      const pending = payable > 0 ? Math.max(0, payable - paid) : 0;
-      const pStatus = String(pay.payment_status || pay.status || '').toLowerCase();
-      
-      const isPendingStatus = pStatus === 'partially settled' || pStatus === 'pending' || pStatus === 'draft' || pStatus === 'unpaid';
-      if (isPendingStatus || pending > 1) {
-        return false;
-      }
+      const pStatus = String(pay.payment_status || pay.status || '').toLowerCase().trim();
 
-      return paid > 0 && (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled');
+      if (advDone === 'yes' || advDone === 'y' || advDone === 'true') {
+        return true;
+      }
+      if (paid > 0) {
+        return true;
+      }
+      if (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled' || pStatus === 'partially settled') {
+        return true;
+      }
+      return false;
     });
   };
 
   // Helper function to check if account settlement has been recorded for a PO
   const checkIsSettlementDone = (item: any, settlementsList: any[]) => {
     if (!item) return false;
-    if (item.status === 'settled' || item.has_settlement_done) return true;
+    if (
+      item.status === 'settled' || 
+      item.status === 'final' || 
+      item.status === 'moved_to_final' || 
+      item.has_settlement_done === true || 
+      item.is_settled === true || 
+      item.excess_short_status === 'settled' ||
+      item.excess_short_status === 'within_bounds' ||
+      item.is_within_bounds === true
+    ) return true;
+
     const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
     const pPoClean = cleanPoVal(item.po_no);
     const pContractClean = cleanPoVal(item.contract_po_no);
     const ptfClean = cleanPoVal(item.ptf_no);
     const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
+
+    const key = String(item.po_no || '').trim().toUpperCase();
+    if (settledDeductions && (settledDeductions[key] || (item.sauda_no && settledDeductions[String(item.sauda_no).trim().toUpperCase()]))) {
+      return true;
+    }
 
     return (settlementsList || []).some((s: any) => {
       const sPo = String(s.po_no || s.po_contract || s.contract_po_no || '').trim().toUpperCase();
@@ -6384,6 +6406,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 >
                   <Edit className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>{actionMenu.item.is_closed ? 'View Sauda' : 'Edit / View'}</span>
+                </button>
+                <button 
+                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePassToFinal(it); }} 
+                  className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-800 font-bold text-xs transition-colors cursor-pointer"
+                  title="Move this P.O from Sauda Check Point to Final P.O"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Pass → Final P.O</span>
                 </button>
                 {actionMenu.item.is_closed ? (
                   (() => {
