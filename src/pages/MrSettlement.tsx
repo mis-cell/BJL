@@ -832,73 +832,91 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const col = emptyDetailColumn(idx);
     if (!item && !pDet && !inspItem) return col;
 
-    // 1. Grade
+    // 1. Grade (Primary from Mill Inspection Item)
     const rawGrade = 
-      item?.grade || item?.grade_name || item?.stock_grade_name || item?.receipt_grade_name || item?.arrival_grade || 
+      inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
+      inspItem?.stock_grade_code || inspItem?.grade_code ||
+      item?.stock_grade_name || item?.arrival_grade || item?.grade || item?.grade_name || item?.receipt_grade_name || 
       item?.grade_code || item?.stock_grade_code || item?.receipt_grade_code || item?.challan_grade_name || 
       item?.quality || item?.stock_grade ||
-      inspItem?.grade || inspItem?.grade_name || inspItem?.stock_grade_name || inspItem?.arrival_grade ||
       pDet?.grade_name || pDet?.grade_code || pDet?.grade || pDet?.quality || '';
     
     col.grade = resolveGradeName(rawGrade, gList) || rawGrade || '';
 
-    // 2. Area
+    // 2. Area (Primary from Mill Inspection Item)
     const rawArea = 
-      item?.area || item?.arrival_area_name || faMaster?.arrival_area_name || inspMaster?.arrival_area_name || 
-      inspItem?.area || pDet?.area || poData?.area || '';
+      inspItem?.area || inspMaster?.arrival_area_name || 
+      item?.area || item?.arrival_area_name || faMaster?.arrival_area_name || 
+      pDet?.area || poData?.area || '';
     
     col.area = resolveAreaName(rawArea, arList) || rawArea || '';
 
-    // 3. Agency
+    // 3. Agency (Primary from Mill Inspection Item)
     const rawAgency = 
+      inspItem?.agency_name || inspItem?.agency || inspItem?.agency_code || 
       item?.agency_name || item?.agency || item?.agency_code || 
-      inspItem?.agency_name || inspItem?.agency ||
       pDet?.agency_name || pDet?.agency_code || pDet?.agency || poData?.agency || '';
     
     col.agency = resolveAgencyName(rawAgency, agList) || rawAgency || '';
 
-    // 4. Marka / Crop
+    // 4. Marka / Crop (Primary from Mill Inspection Item)
     const rawMarka = 
+      inspItem?.marka_name || inspItem?.marka || inspItem?.marka_code || 
       item?.marka_name || item?.challan_marka_name || item?.marka || item?.marka_code || item?.challan_marka_code || 
-      inspItem?.marka_name || inspItem?.marka ||
       pDet?.marka_name || pDet?.marka_code || pDet?.marka || '';
     const resolvedMarka = resolveMarkaName(rawMarka, mList) || rawMarka || '';
 
     const rawCrop = 
-      item?.crop_year || item?.crop || inspItem?.crop_year || faMaster?.crop_year || inspMaster?.crop_year || pDet?.crop_year || poData?.crop_year || '';
+      inspItem?.crop_year || inspItem?.crop || inspMaster?.crop_year || faMaster?.crop_year || item?.crop_year || item?.crop || pDet?.crop_year || poData?.crop_year || '';
 
     col.marka_crop = (resolvedMarka ? resolvedMarka : '') + 
       (rawCrop ? (resolvedMarka ? ` / ${rawCrop}` : rawCrop) : '');
 
-    // 5. Quantity
+    // 5. Quantity (Bales) (Primary from Mill Inspection Item)
     const rawQty = 
+      inspItem?.quantity || inspItem?.bales ||
       item?.quantity || item?.quantity_rcpt || item?.quantity_chln || item?.qty || item?.packets || item?.total_packets || item?.bales || 
-      inspItem?.quantity ||
       pDet?.quantity || pDet?.qty || 0;
     
     col.quantity = Number(rawQty) || 0;
 
-    // 6. Arrival Quantity / Weight (Arr Qty Wt)
-    const rawWt = 
-      item?.weight || item?.weight_qtl || item?.arr_qty_wt || item?.challan_gross_wt || item?.netto_pnto || 
-      inspItem?.final_receipt_wt || inspItem?.weight || inspItem?.weight_qtl ||
-      pDet?.weight_mt || pDet?.weight_qtl || 0;
+    // 6. Arrival Quantity / Weight (Arr Qty Wt) -> EXACTLY Final Receipt Wt. (Claim) from Mill Inspection
+    let rawWt = 0;
+    if (inspItem?.final_receipt_wt !== undefined && inspItem?.final_receipt_wt !== null && Number(inspItem.final_receipt_wt) > 0) {
+      rawWt = Number(inspItem.final_receipt_wt);
+    } else if (item?.final_receipt_wt !== undefined && item?.final_receipt_wt !== null && Number(item.final_receipt_wt) > 0) {
+      rawWt = Number(item.final_receipt_wt);
+    } else if (inspItem?.receipt_gross_wt && Number(inspItem.receipt_gross_wt) > 0) {
+      rawWt = Number(inspItem.receipt_gross_wt);
+    } else if (inspItem?.challan_gross_wt && Number(inspItem.challan_gross_wt) > 0) {
+      rawWt = Number(inspItem.challan_gross_wt);
+    } else if (item?.receipt_gross_wt && Number(item.receipt_gross_wt) > 0) {
+      rawWt = Number(item.receipt_gross_wt);
+    } else if (item?.weight && Number(item.weight) > 0) {
+      rawWt = Number(item.weight);
+    } else if (item?.arr_qty_wt && Number(item.arr_qty_wt) > 0) {
+      rawWt = Number(item.arr_qty_wt);
+    } else if (inspItem?.weight && Number(inspItem.weight) > 0) {
+      rawWt = Number(inspItem.weight);
+    } else if (pDet?.weight_mt && Number(pDet.weight_mt) > 0) {
+      rawWt = Number(pDet.weight_mt);
+    }
     
-    col.arr_qty_wt = col.quantity > 0 || item?.weight || item?.arr_qty_wt || inspItem?.final_receipt_wt ? (Number(rawWt) || 0) : 0;
+    col.arr_qty_wt = col.quantity > 0 || rawWt > 0 ? (Number(rawWt) || 0) : 0;
     // Min.Qty/Wt is "Arr. Qty/Wt" with 3% acceptable (97% of Arr. Qty/Wt)
     col.min_qty_wt = col.arr_qty_wt > 0 ? Number((col.arr_qty_wt * 0.97).toFixed(3)) : 0;
 
     // 7. Rate
     const rawRate = 
-      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 
       inspItem?.rate || inspItem?.rate_qntl ||
+      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 
       pDet?.rate_qntl || pDet?.rate || poData?.rate_qntl || 0;
     
     col.rate_value = Number(rawRate) || 0;
 
     // 8. Wt/Quantity calculation: Round "Arr. Qty/Wt" convert in kg / Quantity (B)
     const rawWtKg = col.arr_qty_wt > 0 ? (col.arr_qty_wt <= 50 ? col.arr_qty_wt * 1000 : col.arr_qty_wt) : 0;
-    col.wt_quantity = col.quantity > 0 && rawWtKg > 0 ? Math.round(rawWtKg / col.quantity) : (Number(item?.marks_phota || inspItem?.marks_phota) || 0);
+    col.wt_quantity = col.quantity > 0 && rawWtKg > 0 ? Math.round(rawWtKg / col.quantity) : (Number(inspItem?.marks_phota || item?.marks_phota) || 0);
     col.wt_phota = col.wt_quantity;
 
     // 9. Active Deductions / Claims Audit Sheet mappings from Inspection Details:
@@ -992,8 +1010,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     tables: [
       'mr_settlement_master', 
       'm_r_settlement', 
+      'material_inspection',
+      'material_inspection_details',
+      'mill_inspection_master',
+      'mill_inspection_detail',
+      'mill_inspection_deduction',
       'final_arrival', 
-      'mill_inspection_master', 
       'purchase_master', 
       'payment_master', 
       'temporary_material_received', 
@@ -1030,22 +1052,53 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const payList = payRes.data && payRes.data.length > 0 ? payRes.data : await dbModule.fetchAll('payment_master').catch(() => []);
         setPaymentList(payList);
 
-        // 2. Fetch completed inspections from Final M.R (final_arrival & mill_inspection_master)
-        const { data: qData } = await supabase
-          .from('final_arrival')
-          .select('*')
-          .order('date', { ascending: false });
-
-        const { data: miData } = await supabase
-          .from('mill_inspection_master')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, mill_inspection_master, inspection_master, final_arrival)
+        const [matInspRes, millInspRes, inspMRes, faRes] = await Promise.all([
+          supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+          supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+          supabase.from('inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+          supabase.from('final_arrival').select('*').order('date', { ascending: false }).then(r => r.data || [], () => []),
+        ]);
 
         const combinedInspections: any[] = [];
         const seenMrNos = new Set<string>();
 
-        if (qData) {
-          for (const item of qData) {
+        // Priority 1: material_inspection (Mill Inspection primary)
+        if (matInspRes) {
+          for (const item of matInspRes) {
+            const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
+            if (mrKey && !seenMrNos.has(mrKey)) {
+              seenMrNos.add(mrKey);
+              combinedInspections.push(item);
+            }
+          }
+        }
+
+        // Priority 2: mill_inspection_master
+        if (millInspRes) {
+          for (const item of millInspRes) {
+            const mrKey = item.mr_no || item.arrival_no;
+            if (mrKey && !seenMrNos.has(mrKey)) {
+              seenMrNos.add(mrKey);
+              combinedInspections.push(item);
+            }
+          }
+        }
+
+        // Priority 3: inspection_master
+        if (inspMRes) {
+          for (const item of inspMRes) {
+            const mrKey = item.mr_no || item.arrival_no;
+            if (mrKey && !seenMrNos.has(mrKey)) {
+              seenMrNos.add(mrKey);
+              combinedInspections.push(item);
+            }
+          }
+        }
+
+        // Priority 4: final_arrival
+        if (faRes) {
+          for (const item of faRes) {
             const mrKey = item.mr_no || item.final_arrival_no;
             if (mrKey && !seenMrNos.has(mrKey)) {
               seenMrNos.add(mrKey);
@@ -1054,15 +1107,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
         }
 
-        if (miData) {
-          for (const item of miData) {
-            const mrKey = item.mr_no || item.arrival_no;
-            if (mrKey && !seenMrNos.has(mrKey)) {
-              seenMrNos.add(mrKey);
-              combinedInspections.push(item);
+        // Check local storage cache as well
+        try {
+          const cachedMat = localStorage.getItem("material_inspection_records");
+          if (cachedMat) {
+            const parsed = JSON.parse(cachedMat);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((item: any) => {
+                const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
+                if (mrKey && !seenMrNos.has(mrKey)) {
+                  seenMrNos.add(mrKey);
+                  combinedInspections.push(item);
+                }
+              });
             }
           }
-        }
+        } catch (e) {}
 
         setInspections(combinedInspections);
 
@@ -1082,13 +1142,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         if (rawCombined.length > 0) {
           const poReceivedMap = new Map<string, number>();
-          if (qData) {
-            qData.forEach((item: any) => {
+          if (combinedInspections && combinedInspections.length > 0) {
+            combinedInspections.forEach((item: any) => {
               if (item.po_no) {
                 let wtMt = 0;
-                if (item.weight_qtl && Number(item.weight_qtl) > 0) wtMt = Number(item.weight_qtl) / 10;
+                if (item.final_receipt_wt && Number(item.final_receipt_wt) > 0) wtMt = Number(item.final_receipt_wt);
+                else if (item.weight_qtl && Number(item.weight_qtl) > 0) wtMt = Number(item.weight_qtl) / 10;
                 else if (item.electronic_net_weight && Number(item.electronic_net_weight) > 0) {
                   const val = Number(item.electronic_net_weight);
+                  wtMt = val > 50 ? val / 10 : val;
+                } else if (item.challan_material_weight && Number(item.challan_material_weight) > 0) {
+                  const val = Number(item.challan_material_weight);
                   wtMt = val > 50 ? val / 10 : val;
                 } else if (item.chalan_wt && Number(item.chalan_wt) > 0) {
                   const val = Number(item.chalan_wt);
@@ -1124,27 +1188,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             });
           });
 
-          if (qData) {
-            qData.forEach((item: any) => {
+          if (combinedInspections && combinedInspections.length > 0) {
+            combinedInspections.forEach((item: any) => {
               if (item.po_no && !existingPoNos.has(item.po_no) && !item.po_no.endsWith('T') && !item.po_no.includes('TEMP')) {
                 existingPoNos.add(item.po_no);
                 processedList.push({
                   po_no: item.po_no,
-                  supplier: item.supplier || 'Final Arrival PO',
-                  status: item.status || 'completed',
-                  isCompleted: true
-                });
-              }
-            });
-          }
-
-          if (miData) {
-            miData.forEach((item: any) => {
-              if (item.po_no && !existingPoNos.has(item.po_no) && !item.po_no.endsWith('T') && !item.po_no.includes('TEMP')) {
-                existingPoNos.add(item.po_no);
-                processedList.push({
-                  po_no: item.po_no,
-                  supplier: item.supplier_name || 'Inspection PO',
+                  supplier: item.supplier_name || item.supplier || 'Inspection PO',
                   status: item.status || 'completed',
                   isCompleted: true
                 });
@@ -1309,18 +1359,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       // 2. Fetch all mill inspections & final arrivals for this P.O to sum total received quantity in Metric Tons (MT)
-      const { data: inspectionsForPo } = await supabase
-        .from('mill_inspection_master')
-        .select('*')
-        .eq('po_no', poData.po_no || cleanPoNo);
+      const [matInspForPoRes, millInspForPoRes, inspMForPoRes, finalArrivalsForPoRes] = await Promise.all([
+        supabase.from('material_inspection').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
+        supabase.from('mill_inspection_master').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
+        supabase.from('inspection_master').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
+        supabase.from('final_arrival').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => [])
+      ]);
 
-      const { data: finalArrivalsForPo } = await supabase
-        .from('final_arrival')
-        .select('*')
-        .eq('po_no', poData.po_no || cleanPoNo);
+      const inspectionsForPo = [...(matInspForPoRes || []), ...(millInspForPoRes || []), ...(inspMForPoRes || [])];
+      const finalArrivalsForPo = finalArrivalsForPoRes || [];
 
       // Merge newly fetched arrivals into state so FA dropdown is always complete
-      const incomingList: any[] = [...(finalArrivalsForPo || []), ...(inspectionsForPo || [])];
+      const incomingList: any[] = [...(inspectionsForPo || []), ...(finalArrivalsForPo || [])];
       if (incomingList.length > 0) {
         setInspections(prev => {
           const existingMap = new Map(prev.map(i => [(i.mr_no || i.final_arrival_no || i.arrival_no), i]));
@@ -1774,8 +1824,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             // Fill columns up to 4, backfilling missing fields if necessary
             const newCols = [1, 2, 3, 4].map(idx => {
               const dbMatch = existingDetails.find(d => d.col_index === idx);
-              const srcItem = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
               const inspItem = inspDetails[idx - 1] || null;
+              const srcItem = inspItem || faGridArr[idx - 1] || null;
               const pDet = poDetails[idx - 1] || null;
               const fallbackCol = buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
 
@@ -1811,8 +1861,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             setDetailCols(newCols);
           } else {
             const newCols = [1, 2, 3, 4].map(idx => {
-              const srcItem = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
               const inspItem = inspDetails[idx - 1] || null;
+              const srcItem = inspItem || faGridArr[idx - 1] || null;
               const pDet = poDetails[idx - 1] || null;
               return buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
             });
@@ -1827,27 +1877,27 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      // 2. Build new settlement from final_arrival
-      if (faMaster) {
+      // 2. Build new settlement from final_arrival / mill_inspection_master
+      if (faMaster || inspMaster) {
         setIsEdit(false);
-        const resolvedMrNo = faMaster.mr_no || faMaster.final_arrival_no || targetMrNo;
+        const resolvedMrNo = faMaster?.mr_no || faMaster?.final_arrival_no || inspMaster?.mr_no || inspMaster?.arrival_no || targetMrNo;
 
         const prefilledMaster: SettlementMaster = {
           ...initialMaster(),
           mr_no: resolvedMrNo,
           po_type: 'MILL_PO',
-          broker: faMaster.broker || inspMaster?.broker_name || '',
-          supplier: faMaster.supplier || inspMaster?.supplier_name || '',
-          chn_supplier: faMaster.challan_supplier || faMaster.supplier || inspMaster?.supplier_name || '',
-          po_no: faMaster.po_no || inspMaster?.po_no || '',
-          po_date: faMaster.po_date || inspMaster?.po_date || '',
-          lorry_number: faMaster.lorry_number || faMaster.final_arrival_no || inspMaster?.lorry_number || '',
-          arrival_no: faMaster.final_arrival_no || inspMaster?.arrival_no || '',
-          arrival_date: formatToInputDate(faMaster.date || faMaster.arrival_date || inspMaster?.arrival_date) || '',
-          remarks: faMaster.remarks || inspMaster?.remarks || '',
-          challan_weight: Number(faMaster.challan_material_weight || faMaster.weight_qtl) || 0,
-          supplier_net_wt: Number(faMaster.supplier_net_weight || faMaster.weight_qtl) || 0,
-          electronic_scale_net: Number(faMaster.electronic_net_weight || faMaster.weight_qtl) || 0,
+          broker: faMaster?.broker || inspMaster?.broker_name || inspMaster?.broker || '',
+          supplier: faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || '',
+          chn_supplier: faMaster?.challan_supplier || faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || '',
+          po_no: faMaster?.po_no || inspMaster?.po_no || '',
+          po_date: faMaster?.po_date || inspMaster?.po_date || '',
+          lorry_number: faMaster?.lorry_number || faMaster?.final_arrival_no || inspMaster?.lorry_number || inspMaster?.arrival_no || '',
+          arrival_no: faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || '',
+          arrival_date: formatToInputDate(faMaster?.date || faMaster?.arrival_date || inspMaster?.arrival_date) || '',
+          remarks: faMaster?.remarks || inspMaster?.remarks || '',
+          challan_weight: Number(faMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.challan_material_weight || inspMaster?.weight_qtl) || 0,
+          supplier_net_wt: Number(faMaster?.supplier_net_weight || faMaster?.weight_qtl || inspMaster?.supplier_net_weight || inspMaster?.weight_qtl) || 0,
+          electronic_scale_net: Number(faMaster?.electronic_net_weight || faMaster?.weight_qtl || inspMaster?.electronic_net_weight || inspMaster?.weight_qtl) || 0,
           summary_deduction_type: deductionSummaryText || '',
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -1863,8 +1913,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         };
 
         const populatedCols = [1, 2, 3, 4].map(idx => {
-          const item = faGridArr[idx - 1] || inspDetails[idx - 1] || null;
           const inspItem = inspDetails[idx - 1] || null;
+          const item = inspItem || faGridArr[idx - 1] || null;
           const pDet = poDetails[idx - 1] || null;
           return buildSettlementCol(idx, item, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
         });
@@ -3488,9 +3538,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   </div>
                 </div>
 
-                {/* FA (Final Arrival / MR) Searchable Dropdown - Filtered strictly by selected P.O */}
+                {/* Inspection Searchable Dropdown - Filtered strictly by selected P.O */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
-                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight shrink-0">Final M.R:</span>
+                  <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight shrink-0">Inspection:</span>
                   <div className="w-[220px] sm:w-[280px]">
                     <SearchableSelect
                       id="masterdata_mr_no_2258"
@@ -3501,7 +3551,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         handleProceedWithMrNo(mrVal);
                       }}
                       options={faOptionsForSelectedPo}
-                      placeholder={selectedPoNo ? "-- CHOOSE M.R --" : "-- SELECT P.O FIRST --"}
+                      placeholder={selectedPoNo ? "-- CHOOSE INSPECTION --" : "-- SELECT P.O FIRST --"}
                       disabled={!selectedPoNo}
                       compact={true}
                       inputClassName="font-mono text-xs font-bold text-rose-800 bg-white border-0 py-0.5"
@@ -3515,12 +3565,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     if (masterData.mr_no) {
                       handleProceedWithMrNo(masterData.mr_no, true);
                     } else {
-                      setErrorMessage("Please select a Final Arrival (M.R) first to sync.");
+                      setErrorMessage("Please select an Inspection (M.R) first to sync.");
                     }
                   }}
                   className="bg-[#d4d0c8] hover:bg-white text-[10px] uppercase font-black px-4 py-2 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px rounded"
                 >
-                  Force Sync MR
+                  Force Sync Inspection
                 </button>
 
                 <button 
@@ -3528,7 +3578,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   onClick={handleManualRefresh}
                   disabled={loading}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold uppercase px-3.5 py-2 border border-emerald-500 shadow-sm active:translate-y-px flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 rounded"
-                  title="Refresh all database records, Final P.O. dropdown, Final M.R. list & payment vouchers without hard browser reloading"
+                  title="Refresh all database records, Final P.O. dropdown, Inspection list & payment vouchers without hard browser reloading"
                 >
                   <RefreshCcw className={`h-3.5 w-3.5 text-emerald-200 ${loading ? 'animate-spin' : ''}`} />
                   <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
@@ -3583,7 +3633,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     <div className="flex flex-wrap items-center justify-between text-[9px] text-slate-300 font-mono pt-0.5">
                       <span>Contract: <strong className="text-white">{poStats.contractQty.toFixed(3)} MT</strong></span>
-                      <span>Delivered (Final M.R): <strong className="text-emerald-300">{(poStats.customReceivedQty + poStats.receivedQty).toFixed(3)} MT</strong></span>
+                      <span>Delivered (Inspection): <strong className="text-emerald-300">{(poStats.customReceivedQty + poStats.receivedQty).toFixed(3)} MT</strong></span>
                       <span>Pending Balance: <strong className="text-amber-300">{poStats.pendingReceivedQty.toFixed(3)} MT</strong></span>
                       <span className="text-cyan-300 font-bold">
                         Linked Consignments: {inspections.filter(i => i.po_no === selectedPoNo).length} Truckloads
@@ -4249,7 +4299,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                     )}
                     
                     <div className="flex flex-col">
-                      <label htmlFor="m_r_no_from_final_m_r_2855" className="text-gray-500 text-[8px] uppercase font-black text-rose-900">M.R. No (From Final M.R)</label>
+                      <label htmlFor="m_r_no_from_final_m_r_2855" className="text-gray-500 text-[8px] uppercase font-black text-rose-900">Inspection No (From Mill Inspection)</label>
                       <SearchableSelect
                         id="m_r_no_from_final_m_r_2855"
                         name="m_r_no_from_final_m_r"
@@ -4259,7 +4309,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           handleProceedWithMrNo(mrVal);
                         }}
                         options={faOptionsForSelectedPo}
-                        placeholder={selectedPoNo ? "-- Select Final M.R --" : "-- Select P.O First --"}
+                        placeholder={selectedPoNo ? "-- Select Inspection --" : "-- Select P.O First --"}
                         disabled={!selectedPoNo}
                         compact={true}
                         inputClassName="font-mono font-bold text-rose-800 text-[11px] py-1"
