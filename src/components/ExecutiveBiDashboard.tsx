@@ -117,14 +117,7 @@ export default function ExecutiveBiDashboard({
   currentTab
 }: ExecutiveBiDashboardProps) {
 
-  // Global Filters State
-  const [dateRange, setDateRange] = useState<'today' | 'yesterday' | 'week' | 'month' | 'quarter' | 'year' | 'all'>('month');
-  const [supplierFilter, setSupplierFilter] = useState<string>('all');
-  const [brokerFilter, setBrokerFilter] = useState<string>('all');
-  const [deptFilter, setDeptFilter] = useState<string>('all');
-  const [godownFilter, setGodownFilter] = useState<string>('all');
-  const [gradeFilter, setGradeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Global Filters State (Removed)
   
   // Card Sub-Toggles (Total / Sauda / P.T.F)
   const [saudaViewMode, setSaudaViewMode] = useState<'all' | 'sauda' | 'ptf'>('all');
@@ -175,20 +168,7 @@ export default function ExecutiveBiDashboard({
   }, [arrivals, saudas]);
 
   // Filtered arrivals & dataset
-  const filteredArrivals = useMemo(() => {
-    return arrivals.filter(item => {
-      const sName = item.supplier_name || item.supplier || '';
-      const bName = item.broker_name || item.broker || '';
-      const gName = item.godown || item.godown_code || '';
-      const grade = item.jute_grade || item.grade || '';
-
-      if (supplierFilter !== 'all' && sName !== supplierFilter) return false;
-      if (brokerFilter !== 'all' && bName !== brokerFilter) return false;
-      if (godownFilter !== 'all' && !gName.includes(godownFilter)) return false;
-      if (gradeFilter !== 'all' && grade !== gradeFilter) return false;
-      return true;
-    });
-  }, [arrivals, supplierFilter, brokerFilter, godownFilter, gradeFilter]);
+  const filteredArrivals = arrivals;
 
   // Key Aggregated Metrics
   const metrics = useMemo(() => {
@@ -969,138 +949,7 @@ export default function ExecutiveBiDashboard({
         </div>
       </div>
 
-      {/* 2. GLOBAL FILTERS TOOLBAR */}
-      <div className="bg-white border border-[#E5DEC9] rounded-2xl p-3 sm:p-4 shadow-sm space-y-3 w-full max-w-full min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E5DEC9] pb-2.5 gap-2 w-full min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <Filter className="w-4 h-4 text-[#1E331B] shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1E331B] font-mono truncate">
-              Global BI Enterprise Filters
-            </h3>
-          </div>
-          <span className="text-[11px] text-[#556952] font-mono break-words max-w-full">
-            Showing filtered view for <strong className="text-[#1E331B]">{filteredArrivals.length}</strong> records
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-2.5 w-full min-w-0">
-          {/* Date Filter */}
-          <div>
-            <label htmlFor="date_range_695" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Date Range</label>
-            <select
- id="date_range_695" name="date_range" aria-label="Date Range"              value={dateRange}
-              onChange={(e: any) => setDateRange(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-              <option value="all">All Time</option>
-            </select>
-          </div>
-
-          {/* Supplier Filter */}
-          <div>
-            <label htmlFor="supplier_713" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Supplier</label>
-            <select
- id="supplier_713" name="supplier" aria-label="Supplier"              value={supplierFilter}
-              onChange={(e) => setSupplierFilter(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="all">All Suppliers</option>
-              {uniqueSuppliers.map(sup => (
-                <option key={sup} value={sup}>{sup}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Broker Filter */}
-          <div>
-            <label htmlFor="broker_728" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Broker</label>
-            <select
- id="broker_728" name="broker" aria-label="Broker"              value={brokerFilter}
-              onChange={(e) => setBrokerFilter(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="all">All Brokers</option>
-              {uniqueBrokers.map(brk => (
-                <option key={brk} value={brk}>{brk}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Department Filter */}
-          <div>
-            <label htmlFor="department_743" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Department</label>
-            <select
- id="department_743" name="department" aria-label="Department"              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="all">All Depts</option>
-              <option value="batching">Batching</option>
-              <option value="carding">Carding</option>
-              <option value="spinning">Spinning</option>
-              <option value="loom_s4">S4 Loom</option>
-              <option value="loom_victor">Victor Loom</option>
-              <option value="finishing">Finishing</option>
-              <option value="dispatch">Dispatch</option>
-            </select>
-          </div>
-
-          {/* Godown Filter */}
-          <div>
-            <label htmlFor="godown_762" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Godown</label>
-            <select
- id="godown_762" name="godown" aria-label="Godown"              value={godownFilter}
-              onChange={(e) => setGodownFilter(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="all">All Godowns</option>
-              {uniqueGodowns.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Grade Filter */}
-          <div>
-            <label htmlFor="quality_grade_777" className="text-[10px] font-bold uppercase text-[#556952] block mb-1">Quality Grade</label>
-            <select
- id="quality_grade_777" name="quality_grade" aria-label="Quality Grade"              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="w-full h-8 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2 text-xs font-medium text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B]"
-            >
-              <option value="all">All Grades</option>
-              {uniqueGrades.map(grd => (
-                <option key={grd} value={grd}>{grd}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Reset Filters */}
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setDateRange('month');
-                setSupplierFilter('all');
-                setBrokerFilter('all');
-                setDeptFilter('all');
-                setGodownFilter('all');
-                setGradeFilter('all');
-                setStatusFilter('all');
-              }}
-              className="w-full h-8 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <RefreshCw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* 2. GLOBAL FILTERS TOOLBAR (Removed) */}
 
       {/* 4. TOP EXECUTIVE KPI SCORECARDS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full min-w-0">
