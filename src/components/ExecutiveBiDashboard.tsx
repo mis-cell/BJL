@@ -135,7 +135,7 @@ export default function ExecutiveBiDashboard({
   const [selectedChartTab, setSelectedChartTab] = useState<'overview' | 'suppliers' | 'quality' | 'factory' | 'finance'>('overview');
 
   // Colors Palette for Enterprise BI
-  const COLORS = ['#1F4D2B', '#2E6B3E', '#C5A059', '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#6366F1'];
+  const COLORS = ['#1E331B', '#2E6B3E', '#3D8B55', '#4E9F67', '#C5A059', '#15803D', '#059669', '#10B981', '#65A30D'];
 
   // Extract unique filter lists from real database arrays
   const uniqueSuppliers = useMemo(() => {
@@ -924,7 +924,7 @@ export default function ExecutiveBiDashboard({
 
             <button
               onClick={handleExportCsv}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-amber-600/80 hover:bg-amber-500 border border-amber-400/50 rounded-xl text-[10px] sm:text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer max-w-full"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-emerald-800/80 hover:bg-emerald-700 border border-emerald-600/50 rounded-xl text-[10px] sm:text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer max-w-full"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Export CSV</span>
@@ -932,7 +932,7 @@ export default function ExecutiveBiDashboard({
 
             <button
               onClick={handlePrintPdf}
-              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 rounded-xl text-[10px] sm:text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer max-w-full"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/60 rounded-xl text-[10px] sm:text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer max-w-full"
             >
               <Printer className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Print BI</span>
@@ -1071,16 +1071,16 @@ export default function ExecutiveBiDashboard({
         {/* CARD 2: PENDING SAUDA */}
         <div 
           onClick={() => onNavigate && onNavigate('po')}
-          className="bg-white border-2 border-amber-800/30 hover:border-amber-600 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           title="Click to view Pending Saudas in Check Point"
         >
           <div>
             <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span className="text-[11px] font-bold uppercase text-amber-900 tracking-wider flex items-center gap-1">
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
                 <span>⏳</span> Pending Sauda
               </span>
-              <div className="p-1.5 rounded-xl bg-amber-100/80 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
-                <Clock className="w-3.5 h-3.5 text-amber-800" />
+              <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Clock className="w-3.5 h-3.5 text-emerald-800" />
               </div>
             </div>
 
@@ -1091,7 +1091,7 @@ export default function ExecutiveBiDashboard({
                 onClick={() => setPendingSaudaViewMode('all')}
                 className={cn(
                   "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  pendingSaudaViewMode === 'all' ? "bg-amber-900 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  pendingSaudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
                 )}
               >
                 TOTAL
@@ -1176,7 +1176,7 @@ export default function ExecutiveBiDashboard({
             </div>
           </div>
 
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-amber-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Pending Sauda</span>
             <span className="text-xs font-bold">→</span>
           </div>
@@ -1185,15 +1185,15 @@ export default function ExecutiveBiDashboard({
         {/* CARD 3: TOTAL PAYMENT */}
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-blue-800/30 hover:border-blue-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           title="Click to open Payment Module (Payable Net Amount)"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
               <span>💳</span> Total Payment
             </span>
-            <div className="p-2 rounded-xl bg-blue-100/80 text-blue-900 border border-blue-300 group-hover:bg-blue-200 transition-colors">
-              <Coins className="w-4 h-4 text-blue-800" />
+            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+              <Coins className="w-4 h-4 text-emerald-800" />
             </div>
           </div>
 
@@ -1201,7 +1201,7 @@ export default function ExecutiveBiDashboard({
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
               ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
-            <div className="text-[11px] text-blue-800 font-bold mt-0.5">
+            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
               Payable Net Amount (₹)
             </div>
           </div>
@@ -1209,11 +1209,11 @@ export default function ExecutiveBiDashboard({
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Payment Records</span>
-              <span className="text-blue-800 font-bold font-numeric">{metrics.totalPaymentCount} Vouchers</span>
+              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.totalPaymentCount} Vouchers</span>
             </div>
           </div>
 
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-blue-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>Open Payment Module</span>
             <span className="text-xs font-bold">→</span>
           </div>
@@ -1222,15 +1222,15 @@ export default function ExecutiveBiDashboard({
         {/* CARD 4: ADVANCE PAYMENT (PAID AMOUNT) */}
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-purple-800/30 hover:border-purple-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           title="Click to view Paid Amount (Advance / Disbursed)"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-purple-900 tracking-wider flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
               <span>💸</span> Advance Payment
             </span>
-            <div className="p-2 rounded-xl bg-purple-100/80 text-purple-900 border border-purple-300 group-hover:bg-purple-200 transition-colors">
-              <Wallet className="w-4 h-4 text-purple-800" />
+            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+              <Wallet className="w-4 h-4 text-emerald-800" />
             </div>
           </div>
 
@@ -1238,7 +1238,7 @@ export default function ExecutiveBiDashboard({
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
               ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
             </div>
-            <div className="text-[11px] text-purple-800 font-bold mt-0.5">
+            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
               Paid Amount (₹)
             </div>
           </div>
@@ -1246,11 +1246,11 @@ export default function ExecutiveBiDashboard({
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
-              <span className="text-purple-800 font-bold font-numeric">{metrics.paidVouchersCount} Vouchers</span>
+              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.paidVouchersCount} Vouchers</span>
             </div>
           </div>
 
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-purple-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Advance Vouchers</span>
             <span className="text-xs font-bold">→</span>
           </div>
@@ -1259,15 +1259,15 @@ export default function ExecutiveBiDashboard({
         {/* CARD 5: REST PAYMENT (PENDING AMOUNT) */}
         <div 
           onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-rose-800/30 hover:border-rose-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           title="Click to view Pending Amount Balance"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-rose-900 tracking-wider flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
               <span>⚖️</span> Rest Payment
             </span>
-            <div className="p-2 rounded-xl bg-rose-100/80 text-rose-900 border border-rose-300 group-hover:bg-rose-200 transition-colors">
-              <Scale className="w-4 h-4 text-rose-800" />
+            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+              <Scale className="w-4 h-4 text-emerald-800" />
             </div>
           </div>
 
@@ -1287,7 +1287,7 @@ export default function ExecutiveBiDashboard({
             </div>
           </div>
 
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-rose-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>View Outstanding Dues</span>
             <span className="text-xs font-bold">→</span>
           </div>
@@ -1296,15 +1296,15 @@ export default function ExecutiveBiDashboard({
         {/* CARD 6: GODOWN STOCK (FROM STOCK INVENTORY: CURRENT STOCK BALANCE & WEIGHT) */}
         <div 
           onClick={() => onNavigate && onNavigate('stock')}
-          className="bg-white border-2 border-teal-800/30 hover:border-teal-600 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
           title="Click to open Stock Inventory (Current Stock Balance & Weight)"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
               <span>🏢</span> Godown Stock
             </span>
-            <div className="p-2 rounded-xl bg-teal-100/80 text-teal-900 border border-teal-300 group-hover:bg-teal-200 transition-colors">
-              <Warehouse className="w-4 h-4 text-teal-800" />
+            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+              <Warehouse className="w-4 h-4 text-emerald-800" />
             </div>
           </div>
 
@@ -1312,7 +1312,7 @@ export default function ExecutiveBiDashboard({
             <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
               {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
             </div>
-            <div className="text-[11px] text-teal-800 font-bold mt-0.5 font-numeric">
+            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
               {metrics.godownStockBales.toLocaleString('en-IN')} Bales
             </div>
           </div>
@@ -1320,11 +1320,11 @@ export default function ExecutiveBiDashboard({
           <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[#1E331B] font-bold">Current Stock Balance</span>
-              <span className="text-teal-800 font-bold font-numeric">{metrics.godownStockBales.toLocaleString('en-IN')} Bales</span>
+              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.godownStockBales.toLocaleString('en-IN')} Bales</span>
             </div>
           </div>
 
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-teal-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
             <span>Open Stock Inventory</span>
             <span className="text-xs font-bold">→</span>
           </div>

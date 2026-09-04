@@ -1425,13 +1425,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const saudaNo = String(item.sauda_no || item.po_contract || item.contract_no || '').trim().toUpperCase();
     const ptfNo = String(item.ptf_no || '').trim().toUpperCase();
     
-    // Suffix extraction (e.g. 0153 from BJCL/2026-2027/0153 or BJC0153/26-27)
+    // Suffix extraction (e.g. 0153 from BJCL/2026-2027/0153 or BJC0153/26-27 or 0237 from BJCL/2026-2027/0237)
     const poSuffix = poNo.split('/').pop() || '';
     const saudaSuffix = saudaNo.split('/').pop() || '';
     const tokens = [poNo, contractPoNo, saudaNo, ptfNo, poSuffix, saudaSuffix].filter(t => t && t !== 'N/A' && t !== 'UNDEFINED');
 
     // 1. Direct record flags on item
     if (
+      item.pass_status === 'pass' ||
+      item.is_pass === true ||
       item.mismatch_cleared === true || 
       item.mismatch_cleared === 'true' || 
       item.satta_dispute_approved === true || 
@@ -1439,17 +1441,25 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       item.status === 'resolved' ||
       item.status === 'cleared' ||
       item.status === 'final' ||
-      item.status === 'approved'
+      item.status === 'approved' ||
+      item.status === 'moved_to_final' ||
+      item.is_resolved === true ||
+      item.is_mismatch_resolved === true
     ) {
       return true;
     }
 
     // 2. Check localStorage tokens
     for (const token of tokens) {
-      const matCache = localStorage.getItem(`material_resolved_${token.toUpperCase()}`);
-      const satCache = localStorage.getItem(`satta_resolved_${token.toUpperCase()}`);
-      const misCache = localStorage.getItem(`material_resolved_MIS-${token.toUpperCase()}`);
-      if (matCache || satCache || misCache) {
+      const tu = token.toUpperCase();
+      const matCache = localStorage.getItem(`material_resolved_${tu}`);
+      const satCache = localStorage.getItem(`satta_resolved_${tu}`);
+      const misCache = localStorage.getItem(`material_resolved_MIS-${tu}`);
+      const genCache = localStorage.getItem(`mismatch_resolved_${tu}`);
+      const clrCache = localStorage.getItem(`mismatch_cleared_${tu}`);
+      const passCache = localStorage.getItem(`pass_status_${tu}`);
+      const saudaClrCache = localStorage.getItem(`sauda_resolved_${tu}`);
+      if (matCache || satCache || misCache || genCache || clrCache || passCache || saudaClrCache) {
         return true;
       }
     }
@@ -1458,7 +1468,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const hasMaterialResolved = dbMaterialMismatches.some((m: any) => {
       const mPo = String(m.po_no || '').trim().toUpperCase();
       const mId = String(m.mismatch_id || m.id || '').toUpperCase();
-      const isResolvedStatus = m.status === 'resolved' || m.status === 'approved' || m.status === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
+      const st = String(m.status || m.resolution_status || '').toLowerCase();
+      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
       if (!isResolvedStatus) return false;
       
       return tokens.some(t => {
@@ -1474,7 +1485,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const sPo = String(s.po_no || '').trim().toUpperCase();
       const sSauda = String(s.sauda_no || '').trim().toUpperCase();
       const sId = String(s.mismatch_id || s.id || '').toUpperCase();
-      const isResolvedStatus = s.status === 'resolved' || s.status === 'approved' || s.status === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
+      const st = String(s.status || s.resolution_status || '').toLowerCase();
+      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
       if (!isResolvedStatus) return false;
 
       return tokens.some(t => {
@@ -1541,6 +1553,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           });
 
           const res = comparePoInspection(po, poDetails, matchInsp || null, allReceipts);
+          if (isPoMismatchResolved(po)) {
+            res.status = 'match';
+            res.mismatches = [];
+          }
           if (po.po_no) results[po.po_no] = res;
           if (po.contract_po_no) results[po.contract_po_no] = res;
           if (po.ptf_no) results[po.ptf_no] = res;
@@ -2281,6 +2297,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           p.mismatch_cleared === 'true' || 
           p.satta_dispute_approved === true || 
           p.satta_dispute_approved === 'true' || 
+          p.pass_status === 'pass' ||
+          p.is_pass === true ||
+          p.status === 'final' ||
+          p.status === 'moved_to_final' ||
           isPoMismatchResolved(p);
 
         const hasDbMismatch = (combinedMatMismatches || []).some((m: any) => {
@@ -2294,16 +2314,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         });
 
         const mismatchFields: string[] = [];
-        const poDetails = (allScpDetails || []).filter((d: any) => matchPoRecord(p, d));
-        const activeArrival = matchingTemp[0] || (arrivals || []).find((ar: any) => matchPoRecord(p, ar));
-        if (activeArrival || matchingInsp) {
-          const tempMatchRes = compareSaudaTempArrival(p, poDetails, activeArrival || matchingInsp, matchingInsp ? [matchingInsp] : []);
-          if (tempMatchRes.hasInspection && tempMatchRes.status === 'mismatch') {
-            tempMatchRes.mismatches.forEach(m => mismatchFields.push(m.mismatchLabel || m.field));
+        if (!isCleared) {
+          const poDetails = (allScpDetails || []).filter((d: any) => matchPoRecord(p, d));
+          const activeArrival = matchingTemp[0] || (arrivals || []).find((ar: any) => matchPoRecord(p, ar));
+          if (activeArrival || matchingInsp) {
+            const tempMatchRes = compareSaudaTempArrival(p, poDetails, activeArrival || matchingInsp, matchingInsp ? [matchingInsp] : []);
+            if (tempMatchRes.hasInspection && tempMatchRes.status === 'mismatch') {
+              tempMatchRes.mismatches.forEach(m => mismatchFields.push(m.mismatchLabel || m.field));
+            }
           }
         }
 
-        const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || p.pass_status === 'mismatch');
+        const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || (p.pass_status === 'mismatch' && !isCleared));
 
         // Matching Temporary Arrivals count (each entry in temporary_material_received is 1 lorry arrival)
         const matchingTempArrivals = (arrivals || []).filter((ar: any) =>
@@ -2349,12 +2371,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                  (pPoClean && pPoClean === payPoClean) ||
                  (pContractClean && pContractClean === payPoClean);
         });
-        const hasPaymentDone = matchingPayments.some((pay: any) =>
-          (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
-          Number(pay.paid_amount || 0) > 0 ||
-          String(pay.payment_status || '').toLowerCase() === 'paid' ||
-          String(pay.status || '').toLowerCase() === 'completed'
-        ) || Boolean(p.has_payment_done);
+        const hasPaymentDone = matchingPayments.some((pay: any) => {
+          const payable = Number(pay.payable_amt || pay.total_amount || 0);
+          const paid = Number(pay.paid_amount || 0);
+          const pending = payable > 0 ? Math.max(0, payable - paid) : 0;
+          const pStatus = String(pay.payment_status || pay.status || '').toLowerCase();
+          const isPendingStatus = pStatus === 'partially settled' || pStatus === 'pending' || pStatus === 'draft' || pStatus === 'unpaid';
+          if (isPendingStatus || pending > 1) {
+            return false;
+          }
+          return paid > 0 && (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled');
+        }) || Boolean(p.has_payment_done && !p.pending_payment);
 
         // Check Settlement Status in mr_settlement_master / m_r_settlement
         const matchingSettlements = (combinedSettlements || []).filter((s: any) => {
@@ -2421,8 +2448,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           has_temp_arrival: hasTempArrival,
           has_final_arrival: hasFinalArrival,
           has_inspection: hasInspection,
-          pass_status: workflowStage === 'final_po' ? 'pass' : (isMismatch ? 'mismatch' : workflowStage),
-          mismatch_fields: mismatchFields,
+          pass_status: isCleared ? 'pass' : (workflowStage === 'final_po' ? 'pass' : (isMismatch ? 'mismatch' : workflowStage)),
+          mismatch_fields: isCleared ? [] : mismatchFields,
           has_payment_done: hasPaymentDone,
           is_fully_completed: isFullyComplete
         };
@@ -3247,9 +3274,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
   };
 
-  // Helper function to check if advance payment has been recorded for a PO
+  // Helper function to check if advance payment has been completed for a PO
   const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]) => {
-    if (item.has_payment_done) return true;
+    if (!item) return false;
     const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
     const pPoClean = cleanPoVal(item.po_no);
     const pContractClean = cleanPoVal(item.contract_po_no);
@@ -3267,12 +3294,27 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
              (saudaClean && saudaClean === payPoClean);
     });
 
-    return poPayments.some((pay: any) =>
-      (pay.advance_payment_done && String(pay.advance_payment_done).toLowerCase() === 'yes') ||
-      Number(pay.paid_amount || 0) > 0 ||
-      String(pay.payment_status || '').toLowerCase() === 'paid' ||
-      String(pay.status || '').toLowerCase() === 'completed'
-    );
+    if (poPayments.length === 0) {
+      return Boolean(item.has_payment_done && !item.pending_payment);
+    }
+
+    // A payment is truly completed only when all payment requirements/conditions are satisfied:
+    // 1. Paid amount is greater than 0
+    // 2. Pending amount is 0 (or paid_amount >= payable_amt)
+    // 3. Payment status is NOT 'Partially Settled', 'Pending', or 'Draft'
+    return poPayments.some((pay: any) => {
+      const payable = Number(pay.payable_amt || pay.total_amount || 0);
+      const paid = Number(pay.paid_amount || 0);
+      const pending = payable > 0 ? Math.max(0, payable - paid) : 0;
+      const pStatus = String(pay.payment_status || pay.status || '').toLowerCase();
+      
+      const isPendingStatus = pStatus === 'partially settled' || pStatus === 'pending' || pStatus === 'draft' || pStatus === 'unpaid';
+      if (isPendingStatus || pending > 1) {
+        return false;
+      }
+
+      return paid > 0 && (pStatus === 'paid' || pStatus === 'completed' || pStatus === 'settled');
+    });
   };
 
   // Helper function to check if account settlement has been recorded for a PO
@@ -5110,7 +5152,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
                                     const isResolved = isPoMismatchResolved(item);
                                     
-                                    const isMismatch = (stage === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0));
+                                    const isMismatch = !isResolved && (stage === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0));
                                     const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved || (!isMismatch && stage !== 'temp_arrival_pending' && stage !== 'final_arrival_pending' && stage !== 'inspection_pending');
 
                                     if (isMismatch) {
@@ -5251,10 +5293,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                           </button>
                                         )}
 
-                                        {!isFinalized && isSettlementDone && (
+                                        {!isFinalized && isPaymentDone && isSettlementDone && (
                                           <button
                                             onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                            title="Settlement Completed! Click to Move this P.O to Final P.O"
+                                            title="Advance Payment & Settlement Completed! Click to Move this P.O to Final P.O"
                                             className="text-[8.5px] font-black px-2.5 py-1 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
                                           >
                                             Pass → Final P.O

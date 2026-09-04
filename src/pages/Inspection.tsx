@@ -23,7 +23,8 @@ import {
   Save,
   RotateCcw,
   Sparkles,
-  Lock
+  Lock,
+  Edit3
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
@@ -38,6 +39,7 @@ export interface DeductionRow {
   deduction_rate: number;
   deduction_qty: number;
   deduction_amount: number;
+  remarks?: string;
 }
 
 export const DEFAULT_DEDUCTION_TYPES = [
@@ -1225,6 +1227,38 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       setFinalArrivalList(faList);
 
+      // Fetch dedicated deduction detail items from Supabase if table exists
+      const dbDeductionsMap = new Map<string, DeductionRow[]>();
+      if (supabase) {
+        try {
+          const { data: dedData } = await supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true });
+          if (dedData && Array.isArray(dedData)) {
+            dedData.forEach((d: any) => {
+              const k1 = (d.mr_no || "").trim().toUpperCase();
+              const k2 = (d.arrival_no || "").trim().toUpperCase();
+              const row: DeductionRow = {
+                id: d.id ? String(d.id) : String(Math.random()),
+                deduction_type: d.deduction_type || "",
+                deduction_rate: Number(d.deduction_rate) || 0,
+                deduction_qty: Number(d.deduction_qty) || 0,
+                deduction_amount: Number(d.deduction_amount) || 0,
+                remarks: d.remarks || ""
+              };
+              if (k1) {
+                const list = dbDeductionsMap.get(k1) || [];
+                list.push(row);
+                dbDeductionsMap.set(k1, list);
+              }
+              if (k2 && k2 !== k1) {
+                const list = dbDeductionsMap.get(k2) || [];
+                list.push(row);
+                dbDeductionsMap.set(k2, list);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
       // 3. Enrich existing saved inspection records if missing details, but do NOT auto-create unsaved rows
       const map = new Map<string, InspectionMasterRecord>();
 
@@ -1253,7 +1287,87 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
       });
 
-      const displayList = Array.from(map.values());
+      const displayList = Array.from(map.values()).map(rec => {
+        const mrK = (rec.mr_no || "").trim().toUpperCase();
+        const arrK = (rec.arrival_no || "").trim().toUpperCase();
+        let attachedDeductions: DeductionRow[] = [];
+
+        if (mrK && dbDeductionsMap.has(mrK)) {
+          attachedDeductions = dbDeductionsMap.get(mrK)!;
+        } else if (arrK && dbDeductionsMap.has(arrK)) {
+          attachedDeductions = dbDeductionsMap.get(arrK)!;
+        } else if (rec.deductions) {
+          if (Array.isArray(rec.deductions) && rec.deductions.length > 0) {
+            attachedDeductions = rec.deductions;
+          } else if (typeof rec.deductions === 'string') {
+            try {
+              const p = JSON.parse(rec.deductions);
+              if (Array.isArray(p) && p.length > 0) attachedDeductions = p;
+            } catch (e) {}
+          }
+        }
+
+        if (attachedDeductions.length === 0 && (rec as any).deduction_rows) {
+          const dr = (rec as any).deduction_rows;
+          if (Array.isArray(dr) && dr.length > 0) attachedDeductions = dr;
+          else if (typeof dr === 'string') {
+            try {
+              const p = JSON.parse(dr);
+              if (Array.isArray(p) && p.length > 0) attachedDeductions = p;
+            } catch (e) {}
+          }
+        }
+
+        if (attachedDeductions.length === 0 && (rec as any).deductions_json) {
+          try {
+            const p = JSON.parse((rec as any).deductions_json);
+            if (Array.isArray(p) && p.length > 0) attachedDeductions = p;
+          } catch (e) {}
+        }
+
+        if (attachedDeductions.length === 0 && rec.mr_no) {
+          try {
+            const c = localStorage.getItem(`inspection_deductions_${rec.mr_no}`);
+            if (c) {
+              const p = JSON.parse(c);
+              if (Array.isArray(p) && p.length > 0) attachedDeductions = p;
+            }
+          } catch (e) {}
+        }
+
+        if (attachedDeductions.length === 0 && rec.arrival_no) {
+          try {
+            const c = localStorage.getItem(`inspection_deductions_${rec.arrival_no}`);
+            if (c) {
+              const p = JSON.parse(c);
+              if (Array.isArray(p) && p.length > 0) attachedDeductions = p;
+            }
+          } catch (e) {}
+        }
+
+        if (attachedDeductions.length === 0 && (rec.deduction_type || Number(rec.deduction_amount) > 0)) {
+          attachedDeductions = [
+            {
+              id: "1",
+              deduction_type: rec.deduction_type || "General Deduction",
+              deduction_rate: Number(rec.deduction_rate) || 0,
+              deduction_qty: Number(rec.deduction_qty) || 0,
+              deduction_amount: Number(rec.deduction_amount) || 0
+            }
+          ];
+        }
+
+        if (attachedDeductions.length > 0) {
+          rec.deductions = attachedDeductions;
+          (rec as any).deduction_rows = attachedDeductions;
+          if (!rec.deduction_amount || Number(rec.deduction_amount) === 0) {
+            rec.deduction_amount = attachedDeductions.reduce((sum, d) => sum + (Number(d.deduction_amount) || 0), 0);
+          }
+        }
+
+        return rec;
+      });
+
       setRecords(displayList);
 
       try {
@@ -1722,8 +1836,30 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setDetailRows(prev => prev.map(r => ({ ...r, area: r.area || voucherArea })));
     }
 
-    if (fa.deductions && Array.isArray(fa.deductions) && fa.deductions.length > 0) {
-      setDeductionRows(fa.deductions);
+    // Resolve existing deductions if already saved
+    const mrToCheck = (fa.mr_no || fa.final_arrival_no || displayMrNo || "").trim().toUpperCase();
+    const existingRec = records.find(r => 
+      (r.mr_no && (r.mr_no.toUpperCase() === mrToCheck || r.mr_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase())) ||
+      (r.arrival_no && (r.arrival_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase() || r.arrival_no.toUpperCase() === (fa.temporary_arrival_no || "").toUpperCase()))
+    );
+
+    let loadedDeductions: DeductionRow[] = [];
+    if (existingRec && existingRec.deductions && Array.isArray(existingRec.deductions) && existingRec.deductions.length > 0) {
+      loadedDeductions = existingRec.deductions;
+    } else if (fa.deductions && Array.isArray(fa.deductions) && fa.deductions.length > 0) {
+      loadedDeductions = fa.deductions;
+    } else if (existingRec?.mr_no || mrToCheck) {
+      try {
+        const cached = localStorage.getItem(`inspection_deductions_${existingRec?.mr_no || mrToCheck}`);
+        if (cached) {
+          const p = JSON.parse(cached);
+          if (Array.isArray(p) && p.length > 0) loadedDeductions = p;
+        }
+      } catch (e) {}
+    }
+
+    if (loadedDeductions.length > 0) {
+      setDeductionRows(loadedDeductions);
     } else if (fa.deduction_type || (fa.deduction_amount && Number(fa.deduction_amount) > 0)) {
       setDeductionRows([
         {
@@ -1734,10 +1870,36 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           deduction_amount: Number(fa.deduction_amount) || 0
         }
       ]);
+    } else if (existingRec && (existingRec.deduction_type || (existingRec.deduction_amount && Number(existingRec.deduction_amount) > 0))) {
+      setDeductionRows([
+        {
+          id: "1",
+          deduction_type: existingRec.deduction_type || "",
+          deduction_rate: Number(existingRec.deduction_rate) || 0,
+          deduction_qty: Number(existingRec.deduction_qty) || 0,
+          deduction_amount: Number(existingRec.deduction_amount) || 0
+        }
+      ]);
     } else {
       setDeductionRows([
         { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ]);
+    }
+
+    if (supabase && (mrToCheck || existingRec?.mr_no)) {
+      supabase.from("material_inspection_deductions").select("*")
+        .or(`mr_no.eq.${existingRec?.mr_no || mrToCheck},arrival_no.eq.${fa.final_arrival_no || ''}`)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setDeductionRows(data.map((d: any, idx: number) => ({
+              id: d.id || String(idx + 1),
+              deduction_type: d.deduction_type || "",
+              deduction_rate: Number(d.deduction_rate) || 0,
+              deduction_qty: Number(d.deduction_qty) || 0,
+              deduction_amount: Number(d.deduction_amount) || 0
+            })));
+          }
+        }, () => {});
     }
 
     showToast(`Loaded Final Arrival ${fa.final_arrival_no || displayMrNo} into inspection form.`);
@@ -1903,13 +2065,59 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     setHeaderForm(rec);
     setDetailRows([]);
 
-    if (rec.deductions && Array.isArray(rec.deductions) && rec.deductions.length > 0) {
-      setDeductionRows(rec.deductions);
+    let parsedDeductions: DeductionRow[] = [];
+    if (rec.deductions) {
+      if (Array.isArray(rec.deductions) && rec.deductions.length > 0) {
+        parsedDeductions = rec.deductions;
+      } else if (typeof rec.deductions === 'string') {
+        try {
+          const parsed = JSON.parse(rec.deductions);
+          if (Array.isArray(parsed) && parsed.length > 0) parsedDeductions = parsed;
+        } catch (e) {}
+      }
+    }
+    if (parsedDeductions.length === 0 && (rec as any).deduction_rows) {
+      const dr = (rec as any).deduction_rows;
+      if (Array.isArray(dr) && dr.length > 0) parsedDeductions = dr;
+      else if (typeof dr === 'string') {
+        try {
+          const parsed = JSON.parse(dr);
+          if (Array.isArray(parsed) && parsed.length > 0) parsedDeductions = parsed;
+        } catch (e) {}
+      }
+    }
+    if (parsedDeductions.length === 0 && (rec as any).deductions_json) {
+      try {
+        const parsed = JSON.parse((rec as any).deductions_json);
+        if (Array.isArray(parsed) && parsed.length > 0) parsedDeductions = parsed;
+      } catch (e) {}
+    }
+    if (parsedDeductions.length === 0 && rec.mr_no) {
+      try {
+        const cached = localStorage.getItem(`inspection_deductions_${rec.mr_no}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) parsedDeductions = parsed;
+        }
+      } catch (e) {}
+    }
+    if (parsedDeductions.length === 0 && rec.arrival_no) {
+      try {
+        const cached = localStorage.getItem(`inspection_deductions_${rec.arrival_no}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) parsedDeductions = parsed;
+        }
+      } catch (e) {}
+    }
+
+    if (parsedDeductions.length > 0) {
+      setDeductionRows(parsedDeductions);
     } else if (rec.deduction_type || (rec.deduction_amount && Number(rec.deduction_amount) > 0)) {
       setDeductionRows([
         {
           id: "1",
-          deduction_type: rec.deduction_type || "",
+          deduction_type: rec.deduction_type || "General Deduction",
           deduction_rate: Number(rec.deduction_rate) || 0,
           deduction_qty: Number(rec.deduction_qty) || 0,
           deduction_amount: Number(rec.deduction_amount) || 0
@@ -1919,6 +2127,24 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setDeductionRows([
         { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ]);
+    }
+
+    if (supabase && (rec.mr_no || rec.arrival_no)) {
+      const keys = [rec.mr_no, rec.arrival_no].filter(Boolean);
+      const orFilter = keys.map(k => `mr_no.eq.${k},arrival_no.eq.${k}`).join(',');
+      supabase.from("material_inspection_deductions").select("*").or(orFilter).order("created_at", { ascending: true })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setDeductionRows(data.map((d: any, idx: number) => ({
+              id: d.id ? String(d.id) : String(idx + 1),
+              deduction_type: d.deduction_type || "",
+              deduction_rate: Number(d.deduction_rate) || 0,
+              deduction_qty: Number(d.deduction_qty) || 0,
+              deduction_amount: Number(d.deduction_amount) || 0,
+              remarks: d.remarks || ""
+            })));
+          }
+        }, () => {});
     }
 
     setViewMode("form");
@@ -2499,6 +2725,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         deduction_qty: primaryDeduction.deduction_qty || 0,
         deduction_amount: totalDeductionAmt,
         deductions: deductionRows,
+        deduction_rows: deductionRows,
+        deductions_json: JSON.stringify(deductionRows),
         deduction_types: deductionRows,
         date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
         broker: headerForm.broker_name || (headerForm as any).broker || "",
@@ -2543,6 +2771,34 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } catch (mErr) {
           console.warn("Exception upserting material_inspection:", mErr);
         }
+
+        // Also update fallback inspection master tables for legacy queries
+        try {
+          await supabase.from("mill_inspection_master").upsert([payload]);
+          await supabase.from("inspection_master").upsert([payload]);
+        } catch (e) {}
+
+        // Persist dedicated deduction detail items in material_inspection_deductions
+        try {
+          await supabase.from("material_inspection_deductions").delete().eq("mr_no", headerForm.mr_no);
+          const midRows = deductionRows
+            .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0)
+            .map(r => ({
+              mr_no: headerForm.mr_no,
+              po_no: headerForm.po_no || null,
+              arrival_no: headerForm.arrival_no || null,
+              deduction_type: r.deduction_type || '',
+              deduction_rate: Number(r.deduction_rate) || 0,
+              deduction_qty: Number(r.deduction_qty) || 0,
+              deduction_amount: Number(r.deduction_amount) || 0,
+              remarks: (r as any).remarks || ''
+            }));
+          if (midRows.length > 0) {
+            await supabase.from("material_inspection_deductions").insert(midRows);
+          }
+        } catch (midErr) {
+          console.warn("Error saving to material_inspection_deductions:", midErr);
+        }
         
         // Clean out old detail rows
         try {
@@ -2582,6 +2838,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       // Update local storage cache
       try {
+        localStorage.setItem(`inspection_deductions_${headerForm.mr_no}`, JSON.stringify(deductionRows));
         const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
         let list: InspectionMasterRecord[] = cached ? JSON.parse(cached) : [];
         list = [payload, ...list.filter((r: any) => r.mr_no !== payload.mr_no)];
@@ -2611,11 +2868,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
           supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
           supabase.from("material_inspection").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("material_inspection_deductions").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
           supabase.from("mill_inspection_print_logs").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
         ]);
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       try {
+        localStorage.removeItem(`inspection_deductions_${mr_no}`);
         const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
         if (cached) {
           const list = JSON.parse(cached).filter((r: any) => r.mr_no !== mr_no);
@@ -2938,11 +3197,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                       filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((rec) => (
                         <tr
                           key={rec.mr_no}
-                          onDoubleClick={() => handleEditRecord(rec)}
-                          className="hover:bg-emerald-50/50 transition-colors cursor-pointer select-none"
-                          title="Double-click to open edit form for this record"
+                          onClick={() => handleEditRecord(rec)}
+                          className="hover:bg-emerald-50/60 transition-colors cursor-pointer select-none"
+                          title="Click to view and edit inspection & deduction details"
                         >
-                          <td className="py-3 px-4 font-black text-emerald-950 font-mono">{rec.mr_no}</td>
+                          <td className="py-3 px-4 font-black text-emerald-950 font-mono flex items-center gap-1.5">
+                            <span>{rec.mr_no}</span>
+                            {rec.deductions && Array.isArray(rec.deductions) && rec.deductions.filter((d: any) => d.deduction_type || Number(d.deduction_amount) > 0).length > 0 && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 font-bold px-1.5 py-0.2 rounded" title="Contains deduction details">
+                                Ded: {rec.deductions.filter((d: any) => d.deduction_type || Number(d.deduction_amount) > 0).length}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-slate-600">
                             {rec.mr_date ? new Date(rec.mr_date).toLocaleDateString("en-GB") : (rec.arrival_date ? new Date(rec.arrival_date).toLocaleDateString("en-GB") : "-")}
                           </td>
@@ -2968,6 +3234,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           </td>
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleEditRecord(rec)}
+                                className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white rounded font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                                title="Open Inspection and View Deductions"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
                               <button
                                 onClick={() => handlePrintRecord(rec)}
                                 className="px-2.5 py-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all cursor-pointer"
@@ -3414,6 +3688,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             className="bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 rounded-md px-2 py-1 font-sans text-xs font-bold text-slate-800 w-full shadow-2xs outline-none"
                           >
                             <option value="">-- SELECT DEDUCTION TYPE --</option>
+                            {dRow.deduction_type && !deductionMasterList.some(d => d.deduction === dRow.deduction_type) && (
+                              <option value={dRow.deduction_type}>
+                                {dRow.deduction_type}
+                              </option>
+                            )}
                             {deductionMasterList.map((d, dIdx) => (
                               <option key={dIdx} value={d.deduction}>
                                 {d.deduction} {d.rate_per_unit ? `(₹${d.rate_per_unit}/Unit)` : d.rate_per_qntl ? `(₹${d.rate_per_qntl}/Qtl)` : ""}

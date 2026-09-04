@@ -563,7 +563,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                         </td>
                         {/* Moisture Kg. */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
-                          {moistureKg > 0 ? Math.round(moistureKg.toFixed(1)) : ''}
+                          {moistureKg > 0 ? Math.round(moistureKg) : ''}
                         </td>
                         {/* Dust % */}
                         <td className="border-r border-[#d60000] px-0.5 font-mono">
@@ -615,7 +615,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">
-                      {totalMoistureKg > 0 ? Math.round(totalMoistureKg.toFixed(1)) : ''}
+                      {totalMoistureKg > 0 ? Math.round(totalMoistureKg) : ''}
                     </td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
                     <td className="border-r border-[#d60000] px-0.5 font-mono">

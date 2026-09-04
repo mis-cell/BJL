@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   ArrowRight,
   DollarSign,
-  Info
+  Info,
+  Lock,
+  FileCheck
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
@@ -345,9 +347,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
+  const [isSettled, setIsSettled] = useState<boolean>(() => {
+    return po.excess_short_status === 'settled' || po.status === 'settled' || po.is_settled === true;
+  });
+  const [settledAt, setSettledAt] = useState<string | null>(null);
+  const [settledBy, setSettledBy] = useState<string | null>(null);
 
-  // Sync default basisMode if tolerance changes
+  // Sync default basisMode if tolerance changes and NOT already settled
   useEffect(() => {
+    if (isSettled) return;
     if (isWithinTolerance) {
       setBasisMode('within_bounds');
       setCustomWeightMt(0);
@@ -358,7 +366,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       setBasisMode('short_under_tolerance');
       setCustomWeightMt(tolerance.shortUnderToleranceMt);
     }
-  }, [isWithinTolerance, isOverDelivery, isUnderDelivery, tolerance]);
+  }, [isWithinTolerance, isOverDelivery, isUnderDelivery, tolerance, isSettled]);
 
   // Load existing saved settlement record if available
   useEffect(() => {
@@ -379,6 +387,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           }
           if (data.basis_mode) {
             setBasisMode(data.basis_mode as DeductionBasis);
+          }
+          if (data.status === 'settled' || data.is_locked === true || data.is_final === true) {
+            setIsSettled(true);
+            setSettledAt(data.settled_at || data.updated_at || data.created_at);
+            setSettledBy(data.settled_by || data.approved_by || 'Authorized User');
           }
         }
       } catch (e) {
@@ -426,11 +439,18 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
   }, [activeVariationType, existingSaudaAmount, totalCalculatedAmount]);
 
-  // Direct Save to database tables (No Approval Workflow)
+  // Direct Save to database tables with locking enforcement (No duplicate saves)
   const handleSaveSettlement = async () => {
+    // Backend/Frontend Lock check: Prevent duplicate submissions
+    if (isSettled) {
+      setSaveMessage("🔒 This settlement record is finalized and locked. Edits or duplicate submissions are disabled.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
 
+    const nowIso = new Date().toISOString();
     const payload = {
       po_no: poNo,
       sauda_no: saudaNo,
@@ -453,12 +473,16 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       final_payable_amount: totalFinalPayable,
       rate_basis: 'rate_difference',
       status: 'settled',
+      is_locked: true,
+      is_final: true,
+      settled_at: nowIso,
+      settled_by: 'Authorized User',
       remarks: remarks || (
         activeVariationType === 'within_bounds'
           ? `Consignment within tolerance bounds (${tolerance.formattedRange}). Passes Sauda Specs (0.00 MT adjustment).`
           : `${activeVariationType.toUpperCase()} Weight ${activeWeightMt.toFixed(3)} MT (${activeWeightQtl.toFixed(2)} Qtl) settled at ₹${rateDifference}/Qtl. Final Payable: ₹${totalFinalPayable.toLocaleString()}`
       ),
-      updated_at: new Date().toISOString()
+      updated_at: nowIso
     };
 
     try {
@@ -482,8 +506,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           .from('purchase_master')
           .update({
             excess_short_deduction: totalCalculatedAmount,
-            excess_short_status: activeVariationType === 'within_bounds' ? 'within_bounds' : 'settled',
-            final_payable_amount: totalFinalPayable
+            excess_short_status: 'settled',
+            final_payable_amount: totalFinalPayable,
+            is_settled: true
           })
           .eq('po_no', poNo);
 
@@ -491,17 +516,21 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           .from('sauda_check_point')
           .update({
             excess_short_deduction: totalCalculatedAmount,
-            excess_short_status: activeVariationType === 'within_bounds' ? 'within_bounds' : 'settled',
-            final_payable_amount: totalFinalPayable
+            excess_short_status: 'settled',
+            final_payable_amount: totalFinalPayable,
+            is_settled: true
           })
           .eq('po_no', poNo);
       } else {
         await dbModule.insert('sauda_check_point_deductions', payload);
       }
 
-      setSaveMessage("✓ Calculation and settlement values saved successfully to database tables!");
+      setIsSettled(true);
+      setSettledAt(nowIso);
+      setSettledBy('Authorized User');
+      setSaveMessage("✓ Settlement record saved and permanently locked into ledger!");
       if (onSaveSuccess) onSaveSuccess();
-      setTimeout(() => setSaveMessage(null), 4000);
+      setTimeout(() => setSaveMessage(null), 5000);
     } catch (err: any) {
       console.error("Error saving settlement calculation:", err);
       setSaveMessage("Error saving settlement: " + (err.message || 'Database error'));
@@ -645,8 +674,38 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         {/* Modal Body Container */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/60">
           
+          {/* Locked Status Notification Banner */}
+          {isSettled && (
+            <div className="p-3.5 bg-emerald-950 text-emerald-100 border-2 border-emerald-500/80 rounded-xl shadow-md flex items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500 text-slate-950 font-black shrink-0 shadow-sm">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                      SETTLEMENT RECORD FINALIZED &amp; LOCKED (READ-ONLY)
+                    </span>
+                    <span className="px-2 py-0.2 rounded text-[9px] font-black bg-emerald-400 text-emerald-950 uppercase">
+                      FINAL
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
+                    This settlement record has been successfully recorded and permanently locked into the ledger. All calculations, rate differences, and adjustments are preserved in read-only mode to prevent duplicate submissions or repeated settlement actions.
+                  </p>
+                </div>
+              </div>
+              {settledAt && (
+                <div className="text-right shrink-0 hidden sm:block border-l border-emerald-700/60 pl-3">
+                  <span className="text-[9px] uppercase tracking-wider text-emerald-400 block font-bold">LOCKED AT</span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-100">{formatDisplayDate(settledAt)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Notification banner if saving */}
-          {saveMessage && (
+          {saveMessage && !isSettled && (
             <div className={`p-3.5 rounded-xl text-xs font-bold flex items-center gap-2 border shadow-xs animate-in fade-in duration-200 ${
               saveMessage.startsWith('✓') 
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
@@ -897,12 +956,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 {isWithinTolerance && (
                   <button
                     type="button"
+                    disabled={isSettled}
                     onClick={() => {
+                      if (isSettled) return;
                       setBasisMode('within_bounds');
                       setCustomWeightMt(0);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                      "px-4 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-1.5",
+                      isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                       basisMode === 'within_bounds'
                         ? "bg-emerald-600 text-white shadow-xs"
                         : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -917,12 +979,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <>
                     <button
                       type="button"
+                      disabled={isSettled}
                       onClick={() => {
+                        if (isSettled) return;
                         setBasisMode('excess_over_tolerance');
                         setCustomWeightMt(tolerance.excessOverToleranceMt);
                       }}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-1.5",
+                        isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                         basisMode === 'excess_over_tolerance'
                           ? "bg-purple-700 text-white shadow-xs"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -934,12 +999,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
                     <button
                       type="button"
+                      disabled={isSettled}
                       onClick={() => {
+                        if (isSettled) return;
                         setBasisMode('excess_over_contract');
                         setCustomWeightMt(Math.max(0, totalReceivedMt - contractMt));
                       }}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition",
+                        isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                         basisMode === 'excess_over_contract'
                           ? "bg-purple-700 text-white shadow-xs"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -954,12 +1022,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <>
                     <button
                       type="button"
+                      disabled={isSettled}
                       onClick={() => {
+                        if (isSettled) return;
                         setBasisMode('short_under_tolerance');
                         setCustomWeightMt(tolerance.shortUnderToleranceMt);
                       }}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer flex items-center gap-1.5",
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition flex items-center gap-1.5",
+                        isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                         basisMode === 'short_under_tolerance'
                           ? "bg-amber-600 text-white shadow-xs"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -971,12 +1042,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
                     <button
                       type="button"
+                      disabled={isSettled}
                       onClick={() => {
+                        if (isSettled) return;
                         setBasisMode('short_under_contract');
                         setCustomWeightMt(Math.max(0, contractMt - totalReceivedMt));
                       }}
                       className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                        "px-4 py-2 rounded-lg text-xs font-black uppercase transition",
+                        isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                         basisMode === 'short_under_contract'
                           ? "bg-amber-600 text-white shadow-xs"
                           : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -989,9 +1063,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
                 <button
                   type="button"
-                  onClick={() => setBasisMode('custom')}
+                  disabled={isSettled}
+                  onClick={() => {
+                    if (isSettled) return;
+                    setBasisMode('custom');
+                  }}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-xs font-black uppercase transition cursor-pointer",
+                    "px-4 py-2 rounded-lg text-xs font-black uppercase transition",
+                    isSettled ? "cursor-default opacity-80" : "cursor-pointer",
                     basisMode === 'custom'
                       ? "bg-slate-800 text-white shadow-xs"
                       : "bg-slate-100 hover:bg-slate-200 text-slate-700"
@@ -1008,9 +1087,10 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <input
                     type="number"
                     step="0.001"
+                    disabled={isSettled}
                     value={customWeightMt || ''}
                     onChange={(e) => setCustomWeightMt(Math.max(0, Number(e.target.value)))}
-                    className="w-28 px-3 py-1 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                    className="w-28 px-3 py-1 text-sm font-black font-mono border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
                   />
                   <span className="text-xs font-bold text-slate-500">MT ({(customWeightMt * 10).toFixed(2)} Qtl)</span>
                 </div>
@@ -1056,6 +1136,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
               </label>
               <input 
                 type="text"
+                disabled={isSettled}
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder={
@@ -1063,7 +1144,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     ? "Consignment within tolerance bounds (Passes Sauda Specs). No adjustment required." 
                     : `Settling ${activeWeightMt.toFixed(3)} MT at ₹${rateDifference}/Qtl rate difference.`
                 }
-                className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white border-slate-300 font-medium"
+                className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white border-slate-300 font-medium disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -1074,8 +1155,13 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         {/* Modal Footer with Actions */}
         <div className="px-5 py-3 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 select-none">
           <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
-            <span className={cn("w-2 h-2 rounded-full inline-block", isWithinTolerance ? "bg-emerald-500" : "bg-amber-500")}></span>
-            <span>Auto-calculated from Sauda Desk ({formatDisplayDate(saudaDate)}) &amp; Temporary Arrival ({formatDisplayDate(lastArrivalDate)})</span>
+            <span className={cn("w-2 h-2 rounded-full inline-block", isSettled ? "bg-emerald-600" : (isWithinTolerance ? "bg-emerald-500" : "bg-amber-500"))}></span>
+            <span>
+              {isSettled 
+                ? 'Settlement record is locked & stored permanently in database' 
+                : `Auto-calculated from Sauda Desk (${formatDisplayDate(saudaDate)}) & Temporary Arrival (${formatDisplayDate(lastArrivalDate)})`
+              }
+            </span>
           </div>
           
           <div className="flex items-center gap-2.5">
@@ -1084,22 +1170,33 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
               onClick={onClose}
               className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition cursor-pointer"
             >
-              Cancel / Close
+              {isSettled ? 'Close (View Only)' : 'Cancel / Close'}
             </button>
-            <button
-              type="button"
-              onClick={handleSaveSettlement}
-              disabled={isSaving}
-              className={cn(
-                "px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50",
-                isWithinTolerance 
-                  ? "bg-emerald-700 hover:bg-emerald-800" 
-                  : (isOverDelivery ? "bg-purple-700 hover:bg-purple-800" : "bg-amber-600 hover:bg-amber-700")
-              )}
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? 'Saving Settlement...' : (isWithinTolerance ? 'Save & Record (Within Bounds)' : 'Save & Record Settlement')}
-            </button>
+            
+            {isSettled ? (
+              <div 
+                title="This record has been finalized and locked into database. Edits or duplicate submissions are disabled."
+                className="px-4 py-2 rounded-xl bg-emerald-900 text-emerald-100 text-xs font-black shadow-xs flex items-center gap-2 border border-emerald-700 cursor-not-allowed select-none"
+              >
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <span>Settlement Finalized &amp; Locked</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSaveSettlement}
+                disabled={isSaving}
+                className={cn(
+                  "px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50",
+                  isWithinTolerance 
+                    ? "bg-emerald-700 hover:bg-emerald-800" 
+                    : (isOverDelivery ? "bg-purple-700 hover:bg-purple-800" : "bg-amber-600 hover:bg-amber-700")
+                )}
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving Settlement...' : (isWithinTolerance ? 'Save & Lock (Within Bounds)' : 'Save & Lock Settlement')}
+              </button>
+            )}
           </div>
         </div>
 

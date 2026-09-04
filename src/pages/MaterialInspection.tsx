@@ -2770,6 +2770,15 @@ export default function MaterialInspection({
 
           const rowRate = Number(qmPoRateDept ?? row.rate ?? row.rate_qntl ?? 0) || 0;
 
+          const rowGrossWtVal = row.challan_gross_wt === "" ? 0 : Number(row.challan_gross_wt);
+          const rowMoistPctVal = rowMoistureClaim || rowMoistureAct || rowMoistureSett || 0;
+          const rowDustPctVal = rowDustClaim || rowDustAct || rowDustSett || 0;
+          const rowNcvPctVal = rowNcvClaim || rowNcvAct || rowNcvSett || 0;
+
+          const rowMoistureDeductionKg = rowGrossWtVal > 0 && rowMoistPctVal > 0 ? Math.round(rowGrossWtVal * 1000 * (rowMoistPctVal / 100)) : 0;
+          const rowDustDeductionKg = rowGrossWtVal > 0 && rowDustPctVal > 0 ? Math.round(rowGrossWtVal * 1000 * (rowDustPctVal / 100)) : 0;
+          const rowNcvDeductionKg = rowGrossWtVal > 0 && rowNcvPctVal > 0 ? Math.round(rowGrossWtVal * 1000 * (rowNcvPctVal / 100)) : 0;
+
           return {
             mr_no: masterData.mr_no,
             srl_no: row.srl_no || idx + 1,
@@ -2817,6 +2826,9 @@ export default function MaterialInspection({
             claim_ncv: rowNcvClaim,
             actual_grade_down: rowGradeDownAct,
             claim_grade_down: rowGradeDownClaim,
+            moisture_deduction_kg: rowMoistureDeductionKg,
+            dust_deduction_kg: rowDustDeductionKg,
+            ncv_deduction_kg: rowNcvDeductionKg,
             final_receipt_wt: Number((row as any).final_receipt_wt) || 0,
             settlement_moisture: rowMoistureSett,
             settlement_grade_down: rowGradeDownSett,
