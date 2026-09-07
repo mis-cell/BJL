@@ -119,6 +119,10 @@ export interface PaymentMaster {
   status: string;
   payment_status: string;
   advance_payment_done?: string;
+  advance_payment_from?:string;
+  payment_settlementdate?:string;
+  tenor?:string;
+  repayment_date?:string;
 }
 
 // 4-Column specifications entry for Payment
@@ -468,7 +472,11 @@ const initialMaster = (): PaymentMaster => ({
   electronic_scale_net: 0,
   status: 'completed',
   payment_status: 'Paid',
-  advance_payment_done: 'No'
+  advance_payment_done: 'No',
+  advance_payment_from:'1',
+  payment_settlementdate:'',
+  tenor:'',
+  repayment_date:''
 });
 
 /* Searchable P.O Dropdown Component */
@@ -1016,10 +1024,18 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             status TEXT DEFAULT 'completed',
             payment_status TEXT DEFAULT 'Paid',
             advance_payment_done TEXT DEFAULT 'No',
+            advance_payment_from TEXT Default '1',
+            payment_settlementdate DATE,
+            tenor TEXT DEFAULT 0,
+            repayment_date DATE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
           ALTER TABLE IF EXISTS payment_master DISABLE ROW LEVEL SECURITY;
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_done TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_from TEXT DEFAULT '1';
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS payment_settlementdate DATE DEFAULT '';
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS tenor TEXT DEFAULT '';
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS repayment_date DATE DEFAULT '';
 
           CREATE TABLE IF NOT EXISTS payment_details (
             detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1648,7 +1664,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         remarks: masterData.remarks || '',
         status: 'completed',
         payment_status: 'Paid',
-        advance_payment_done: masterData.advance_payment_done || 'No'
+        advance_payment_done: masterData.advance_payment_done || 'No',
+        advance_payment_from: masterData.advance_payment_from || '1',
+        payment_settlementdate: masterData.payment_settlementdate ||'',
+        tenor: masterData.tenor ||'',
+        repayment_date: masterData.repayment_date ||''
       };
 
       let savedMaster: any = null;
@@ -1817,6 +1837,31 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   };
 
   // Edit / Load existing Payment Record
+
+  const handelTnordate = (e, masterData) => {
+    const tenor = Number(e.target.value);
+
+    if (masterData.payment_settlementdate) {
+      const paysettledate = new Date(
+        masterData.payment_settlementdate
+      );
+
+      paysettledate.setDate(paysettledate.getDate() + tenor);
+
+      const year = paysettledate.getFullYear();
+      const month = String(paysettledate.getMonth() + 1).padStart(2, "0");
+      const day = String(paysettledate.getDate()).padStart(2, "0");
+
+      const repaymentDate = `${year}-${month}-${day}`;
+
+      setMasterData({
+        ...masterData,
+        tenor: e.target.value,
+        repayment_date: repaymentDate
+      });
+    }
+  };
+  
   const handleEditPayment = async (item: PaymentMaster) => {
     setMasterData(item);
     setIsEdit(true);
@@ -2817,7 +2862,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {(masterData.advance_payment_done || 'No') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
                   </span>
                 </label>
-                <select id="masterdata_advance_paymen_2069" name="masterdata_advance_paymen" aria-label="masterdata advance paymen"                  value={masterData.advance_payment_done || 'No'}
+                <select id="masterdata_advance_paymen_2069" name="masterdata_advance_paymen" aria-label="masterdata advance paymen" value={masterData.advance_payment_done || 'No'}
                   onChange={e => setMasterData({ ...masterData, advance_payment_done: e.target.value })}
                   className={cn(
                     "w-full p-2 border rounded font-black text-xs transition-colors",
@@ -2830,6 +2875,62 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   <option value="Yes">Yes </option>
                 </select>
               </div>
+              <div >
+                <label className="block text-[10px] font-black uppercase text-purple-900 mb-1 flex items-center justify-between">
+                  <span>Payment from</span>
+                  {/* <span className={cn(
+                    "text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase",
+                    (masterData.advance_payment_done || 'No') === 'Yes'
+                      ? "bg-green-100 text-green-800"
+                      : "bg-slate-200 text-slate-700"
+                  )}>
+                    {(masterData.advance_payment_done || 'No') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
+                  </span> */}
+                </label>
+                <select id="masterdata_advance_paymen_from" name="masterdata_advance_paymen_from" aria-label="masterdata advance paymen"value={masterData.advance_payment_from || '1'}
+                  onChange={e => setMasterData({ ...masterData, advance_payment_from: e.target.value })}
+                  className="w-full p-2 border rounded font-black text-xs transition-colors"
+                >
+                  <option value="1">From Bank </option>
+                  <option value="2">RXIL </option>
+                  <option value="3">TReDS </option>
+                  <option value="4">Invoice Mart </option>
+                </select>
+              </div>
+              {masterData.advance_payment_from!=='1' &&(
+                <>
+                <div>
+                  <label htmlFor="payment_settle_date_1973" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Settlement Date *</label>
+                  <input id="payment_settle_date_1973" name="payment_settle_date" aria-label="Payment settle Date *"type="date"
+                    value={masterData.payment_settlementdate}
+                    onChange={e => setMasterData({ ...masterData, payment_settlementdate: e.target.value })}
+                    className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="tenor_2048" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Tenor</label>
+                  <input id="tenor_2048" name="ref_utr_cheque_no" aria-label="tenor" type="text"
+                    value={masterData.tenor}
+                    //onChange={e => setMasterData({ ...masterData, tenor: e.target.value })}
+                    onChange={(e) => handelTnordate(e, masterData)}
+                    placeholder="Transaction Reference No"
+                    className="w-full p-2 border border-slate-300 rounded font-mono"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="repayment_date_1973" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Repayment Date </label>
+                  <input
+                    id="repayment_date_1973"
+                    name="repayment_date"
+                    aria-label="Repayment Date"
+                    type="date"
+                    value={masterData.repayment_date || ""}
+                    className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-purple-500"
+                    readOnly={true}
+                  />
+                </div>
+                </>
+              )}
             </div>
 
             {/* Financial Amounts & Settlement Panel */}
