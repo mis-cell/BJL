@@ -430,8 +430,8 @@
 .overflow-x-auto::-webkit-scrollbar,
 .overflow-y-auto::-webkit-scrollbar,
 .table-scroll-container::-webkit-scrollbar {
-  height: 5px;
-  width: 5px;
+  height: 14px;
+  width: 12px;
 }
 .touch-overflow-container::-webkit-scrollbar-track,
 .overflow-x-auto::-webkit-scrollbar-track,
@@ -508,8 +508,8 @@ input, select, textarea {
 
 /* Scrollbar polish for zoomed viewports */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 12px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track {

@@ -1867,450 +1867,1108 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
         {/* --- 2. SAUDA ANALYZE (OUT) --- */}
         {reportType === 'sauda_analyze' && (
-          <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4" id="report-sauda-container">
-             
-             {/* Sub navigation bar */}
-             <div className="flex border-b border-gray-400  pb-1 mb-2 items-center justify-between">
-                <div className="flex gap-2">
-                   <button 
-                     onClick={() => setSaudaViewMode('dashboard')}
-                     className={cn(
-                       "px-3 py-1.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider border border-gray-400 shadow-[1px_1px_0_0_white] rounded-t transition-all",
-                       saudaViewMode === 'dashboard' ? "bg-amber-100 text-slate-900 font-extrabold border-b-[#d4d0c8]" : "bg-[#c0c0c0] hover:bg-white text-slate-700"
-                     )}
-                   >
-                     📊 Sauda Metrics Dashboard
-                   </button>
-                   <button 
-                     onClick={() => setSaudaViewMode('advanced_reports')}
-                     className={cn(
-                       "px-3 py-1.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider border border-gray-400 shadow-[1px_1px_0_0_white] rounded-t transition-all",
-                       saudaViewMode === 'advanced_reports' ? "bg-amber-100 text-slate-900 font-extrabold border-b-[#d4d0c8]" : "bg-[#c0c0c0] hover:bg-white text-slate-700"
-                     )}
-                   >
-                     📋 Month & Year Wise Advanced Reports (10 Presets)
-                   </button>
-                </div>
-                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest font-mono hidden sm:inline">Advanced Sauda Engine</span>
-             </div>
+        <div
+          className="bg-gradient-to-br from-emerald-50 via-white to-green-50 border border-emerald-200 rounded-2xl shadow-lg p-3 sm:p-4 space-y-4"
+          id="report-sauda-container"
+        >
+          {/* ==================== SUB NAVIGATION ==================== */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-emerald-200">
+            <div className="flex flex-wrap gap-2">
 
-             {saudaViewMode === 'dashboard' && (
-               <React.Fragment>
-                 {/* Styled micro KPI belts */}
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-               <div className="bg-white border border-slate-300 p-2.5 shadow-sm flex items-center justify-between">
-                 <div>
-                   <p className="text-sm font-black text-blue-950 tracking-tight leading-none mb-1">{saudaAggregates.count}</p>
-                   <p className="text-[7.5px] font-extrabold text-slate-400 uppercase tracking-widest">Sauda Contracts</p>
-                 </div>
-                 <div className="bg-blue-50 p-1.5 border border-blue-100 rounded">
-                   <ClipboardList className="h-4 w-4 text-blue-900" />
-                 </div>
-               </div>
+              <button
+                onClick={() => setSaudaViewMode('dashboard')}
+                className={cn(
+                  "px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
+                  "rounded-xl border transition-all duration-200",
+                  "shadow-sm hover:shadow-md hover:-translate-y-[1px]",
+                  saudaViewMode === 'dashboard'
+                    ? "bg-emerald-700 text-white border-emerald-800 shadow-emerald-200"
+                    : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                )}
+              >
+                📊 Sauda Dashboard
+              </button>
 
-               <div className="bg-white border border-slate-300 p-2.5 shadow-sm flex items-center justify-between">
-                 <div>
-                   <p className="text-sm font-black text-indigo-900 tracking-tight leading-none mb-1">{saudaAggregates.totalWeight.toLocaleString()} T</p>
-                   <p className="text-[7.5px] font-extrabold text-slate-400 uppercase tracking-widest">Total Weight Out</p>
-                 </div>
-                 <div className="bg-indigo-50 p-1.5 border border-indigo-100 rounded">
-                   <Scale className="h-4 w-4 text-indigo-900" />
-                 </div>
-               </div>
+              <button
+                onClick={() => setSaudaViewMode('advanced_reports')}
+                className={cn(
+                  "px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
+                  "rounded-xl border transition-all duration-200",
+                  "shadow-sm hover:shadow-md hover:-translate-y-[1px]",
+                  saudaViewMode === 'advanced_reports'
+                    ? "bg-emerald-700 text-white border-emerald-800 shadow-emerald-200"
+                    : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                )}
+              >
+                📋 Advanced Reports
+              </button>
 
-               <div className="bg-white border border-slate-300 p-2.5 shadow-sm flex items-center justify-between">
-                 <div>
-                   <p className="text-sm font-black text-emerald-850 tracking-tight leading-none mb-1">{saudaAggregates.totalUnits.toLocaleString()}</p>
-                   <p className="text-[7.5px] font-extrabold text-slate-400 uppercase tracking-widest">Aggregate Units</p>
-                 </div>
-                 <div className="bg-emerald-50 p-1.5 border border-emerald-100 rounded">
-                   <Layers className="h-4 w-4 text-emerald-800" />
-                 </div>
-               </div>
+            </div>
 
-               <div className="bg-white border border-slate-305 p-2.5 shadow-sm flex items-center justify-between">
-                 <div>
-                   <p className="text-sm font-black text-amber-900 tracking-tight leading-none mb-1">₹ {saudaAggregates.avgRate.toLocaleString()}</p>
-                   <p className="text-[7.5px] font-extrabold text-slate-400 uppercase tracking-widest">Weighted Avg Rate / Ql</p>
-                 </div>
-                 <div className="bg-amber-50 p-1.5 border border-amber-100 rounded">
-                   <TrendingUp className="h-4 w-4 text-amber-700" />
-                 </div>
-               </div>
-             </div>
+            <span className="text-[9px] font-black text-emerald-800 uppercase tracking-[0.18em] font-mono">
+              JUTE MIS • ADVANCED SAUDA ENGINE
+            </span>
+          </div>
 
-             {/* Interactive charts and layout */}
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                
-                {/* Recharts Bar Chart Container */}
-                <div className="lg:col-span-2 bg-white border border-gray-400 p-3 rounded-sm space-y-2 flex flex-col justify-between shadow-sm">
-                   <div>
-                     <h4 className="text-[10px] font-black uppercase text-slate-800 tracking-wider">Top Brokers by Contract Weight (Metric Tons)</h4>
-                     <p className="text-[8px] text-gray-400 italic">Distribution metrics based on live registered sauda logs</p>
-                   </div>
-                   
-                   <div className="h-56 mt-2 font-mono text-[9px] ">
-                     {saudaChartData.length === 0 ? (
-                       <div className="h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 border border-dashed border-gray-200">
-                          <span>No transaction records found</span>
-                       </div>
-                     ) : (
-                       <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                         <BarChart data={saudaChartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                           <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
-                           <YAxis tick={{ fontSize: 7.5 }} />
-                           <RechartsTooltip contentStyle={{ fontSize: 9 }} />
-                           <Bar dataKey="weight" fill="#4f46e5" radius={[2, 2, 0, 0]}>
-                             {saudaChartData.map((entry, index) => {
-                               const colors = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
-                               return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                             })}
-                           </Bar>
-                         </BarChart>
-                       </ResponsiveContainer>
-                     )}
-                   </div>
+
+          {/* ==================== DASHBOARD ==================== */}
+          {saudaViewMode === 'dashboard' && (
+            <React.Fragment>
+
+              {/* KPI CARDS */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+                <div className="bg-white border border-emerald-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-black text-emerald-900 leading-none mb-1">
+                        {saudaAggregates.count}
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                        Sauda Contracts
+                      </p>
+                    </div>
+
+                    <div className="h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                      <ClipboardList className="h-4 w-4 text-emerald-700" />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Right side helper summary panel for Sauda */}
-                <div className="lg:col-span-1 bg-white border border-gray-400 p-3 rounded-sm flex flex-col justify-between shadow-sm">
-                   <div className="space-y-3">
-                      <div>
-                        <h4 className="text-[10px] font-black uppercase text-slate-800 tracking-wider">Sauda Sourcing Statistics</h4>
-                        <p className="text-[8px] text-gray-400 italic">Analytical summary of contract registry</p>
-                      </div>
 
-                      <div className="bg-slate-50 border p-2 space-y-2 text-[9px]">
-                         <div>
-                            <span className="text-[7.5px] font-bold text-slate-400 uppercase block">Prime Broker</span>
-                            <span className="font-extrabold text-slate-800 text-[10px] block truncate">
-                               {saudaChartData[0]?.name || 'DIRECT'} ({saudaChartData[0]?.weight || 0} MT)
-                            </span>
-                         </div>
-                         <div className="border-t pt-1.5 flex justify-between gap-1">
-                            <div>
-                               <span className="text-[7.5px] font-bold text-slate-400 uppercase block">Brokers count</span>
-                               <span className="font-extrabold text-slate-700 block">{saudaChartData.length} active</span>
-                            </div>
-                            <div className="text-right">
-                               <span className="text-[7.5px] font-bold text-slate-400 uppercase block">Scale sum mass</span>
-                               <span className="font-extrabold text-indigo-900 block">{saudaAggregates.totalWeight.toLocaleString()} MT</span>
-                            </div>
-                         </div>
-                      </div>
+                <div className="bg-white border border-blue-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-black text-blue-900 leading-none mb-1">
+                        {saudaAggregates.totalWeight.toLocaleString()} T
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                        Total Weight Out
+                      </p>
+                    </div>
 
-                      <div className="bg-amber-50 border border-amber-200 p-2 text-[8.5px] text-amber-900 leading-normal rounded-sm">
-                         💡 <strong>Sourcing Insight:</strong> Sauda contracts are fully mapped against live buyer commitments. Keep tracking weight discrepancies periodically.
-                      </div>
-                   </div>
-
-                   <button 
-                     id="download-sauda-ins"
-                     onClick={() => {
-                        window.print();
-                     }}
-                     className="w-full mt-2 bg-[#d4d0c8] py-1 border border-white hover:bg-white text-[9.5px] font-black uppercase shadow-[1px_1px_0_0_black]"
-                   >
-                     🖨️ Print Active sauda screen
-                   </button>
+                    <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                      <Scale className="h-4 w-4 text-blue-700" />
+                    </div>
+                  </div>
                 </div>
-             </div>
-               </React.Fragment>
-             )}
 
-             {/* Sauda Advanced Reports View Mode */}
-             {saudaViewMode === 'advanced_reports' && (
-               <div className="space-y-4">
-                  {/* Outer Grid */}
-                  <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-                     
-                     {/* Left Preset Panel */}
-                     <div className="xl:col-span-1 bg-white border border-gray-400 p-3 rounded-sm space-y-3 flex flex-col justify-between shadow-sm">
-                        <div className="space-y-3">
-                           <div>
-                              <h4 className="text-[10px] font-black uppercase text-slate-800 tracking-wider">Reports Preset Deck</h4>
-                              <p className="text-[8px] text-gray-400 italic">Select one of our 10 discrete report formats</p>
-                           </div>
 
-                           {/* Keyword search filter */}
-                           <div className="space-y-1">
-                              <label htmlFor="keyword_search_filter_2017" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Keyword Search Filter</label>
-                              <div className="relative">
-                                 <input  id="keyword_search_filter_2017" name="keyword_search_filter" aria-label="Keyword Search Filter"
-                                   type="text" 
-                                   value={saudaReportSearch}
-                                   onChange={(e) => setSaudaReportSearch(e.target.value)}
-                                   placeholder="Search Broker, Supplier, Area..."
-                                   className="w-full text-[10px] pl-6 pr-2 py-1 bg-slate-50 border border-gray-400 focus:bg-white text-slate-900 focus:outline-none"
-                                 />
-                                 <Search className="absolute left-2 top-1.5 h-3 w-3 text-slate-400" />
-                              </div>
-                           </div>
+                <div className="bg-white border border-teal-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-black text-teal-900 leading-none mb-1">
+                        {saudaAggregates.totalUnits.toLocaleString()}
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                        Aggregate Units
+                      </p>
+                    </div>
 
-                           {/* Months & Years select dropdown */}
-                           <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                 <label htmlFor="target_month_2032" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Target Month</label>
-                                 <select
- id="target_month_2032" name="target_month" aria-label="Target Month"                                   value={saudaReportMonth}
-                                   onChange={(e) => setSaudaReportMonth(e.target.value)}
-                                   className="w-full text-[10px] py-1.5 px-1 bg-slate-50 border border-gray-400 focus:bg-white text-slate-900 font-bold focus:outline-none"
-                                 >
-                                   {MONTH_LABELS.map(m => (
-                                     <option key={m.value} value={m.value}>{m.label}</option>
-                                   ))}
-                                 </select>
-                              </div>
-                              <div className="space-y-1">
-                                 <label htmlFor="financial_year_2044" className="text-[8.5px] font-black text-slate-700 uppercase tracking-tight">Financial Year</label>
-                                 <select
- id="financial_year_2044" name="financial_year" aria-label="Financial Year"                                   value={saudaReportYear}
-                                   onChange={(e) => setSaudaReportYear(e.target.value)}
-                                   className="w-full text-[10px] py-1.5 px-1 bg-slate-50 border border-gray-400 focus:bg-white text-slate-900 font-bold focus:outline-none"
-                                 >
-                                   <option value="ALL">-- ALL YEARS --</option>
-                                   {saudaYears.map(yr => (
-                                     <option key={yr} value={yr}>{yr}</option>
-                                   ))}
-                                 </select>
-                              </div>
-                           </div>
+                    <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center">
+                      <Layers className="h-4 w-4 text-teal-700" />
+                    </div>
+                  </div>
+                </div>
 
-                           {/* 10 report lists scrolling container */}
-                           <div className="border border-gray-300 divide-y divide-gray-200 block max-h-[300px] overflow-y-auto">
-                              {SAUDA_REPORTS.map((r, i) => {
-                                 const isActive = activeSaudaReportKey === r.key;
-                                 return (
-                                    <button
-                                      key={r.key}
-                                      onClick={() => setActiveSaudaReportKey(r.key)}
-                                      className={cn(
-                                        "w-full text-left p-2 transition-all block",
-                                        isActive ? "bg-indigo-50 border-l-4 border-indigo-700" : "bg-white hover:bg-slate-50 border-l-4 border-transparent"
-                                      )}
-                                    >
-                                       <span className={cn("text-[9.5px] font-black uppercase block leading-tight", isActive ? "text-indigo-950" : "text-slate-800")}>
-                                          {r.name}
-                                       </span>
-                                       <span className="text-[7.5px] text-slate-400 font-medium block truncate leading-tight mt-1" title={r.description}>
-                                          {r.description}
-                                       </span>
-                                    </button>
-                                 );
-                              })}
-                           </div>
-                        </div>
 
-                        <div className="bg-slate-50 border p-2 text-[8px] text-slate-500 leading-normal font-mono block rounded-sm mt-2">
-                           * Calculated indexes are fully generated on client with live SQLite data dynamically.
-                        </div>
-                     </div>
+                <div className="bg-white border border-amber-100 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-black text-amber-900 leading-none mb-1">
+                        ₹ {saudaAggregates.avgRate.toLocaleString()}
+                      </p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+                        Weighted Avg Rate / Ql
+                      </p>
+                    </div>
 
-                     {/* Right Visualization & Table Area */}
-                     <div className="xl:col-span-3 space-y-4">
-                        
-                        {/* Selected Report Deck header and CSV Action Button */}
-                        <div className="bg-white border border-gray-400 p-3 rounded-sm flex flex-col md:flex-row md:items-center md:justify-between shadow-sm gap-2">
-                           <div className="space-y-1">
-                              <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
-                                 <span>{SAUDA_REPORTS.find(r => r.key === activeSaudaReportKey)?.name}</span>
-                                 <span className="bg-indigo-100 text-indigo-950 text-[7px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                   Dynamic Query
-                                 </span>
-                              </h3>
-                              <p className="text-[9px] text-gray-500 max-w-xl leading-normal font-medium">
-                                 {SAUDA_REPORTS.find(r => r.key === activeSaudaReportKey)?.description}
-                              </p>
-                           </div>
+                    <div className="h-9 w-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-amber-700" />
+                    </div>
+                  </div>
+                </div>
 
-                           <div className="flex items-center gap-2">
-                              <button
-                                onClick={handleExportSaudaCSV}
-                                className="bg-emerald-805 text-white hover:bg-emerald-999 border border-emerald-950 px-3 py-1.5 text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] transition-colors"
-                              >
-                                 <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-100" />
-                                 Export Report as CSV
-                              </button>
-                           </div>
-                        </div>
+              </div>
 
-                        {/* Direct KPI Belt */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                           <div className="bg-white border border-slate-300 p-2 text-center rounded-sm">
-                              <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-widest block">ACTIVE DEALS</span>
-                              <span className="text-xs font-black text-slate-900 block">{saudaReportOutput.totalCount} completed</span>
-                           </div>
-                           <div className="bg-white border border-slate-300 p-2 text-center rounded-sm">
-                              <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-widest block">MASS DISPATCHED</span>
-                              <span className="text-xs font-black text-indigo-900 block">{saudaReportOutput.totalMT.toLocaleString()} MT</span>
-                           </div>
-                           <div className="bg-white border border-slate-300 p-2 text-center rounded-sm">
-                              <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-widest block">REPORT MONTH</span>
-                              <span className="text-xs font-black text-amber-900 block uppercase font-mono">
-                                 {saudaReportMonth === 'ALL' ? 'ALL MONTHS' : MONTH_LABELS.find(m => m.value === saudaReportMonth)?.label.substring(0, 3)}
-                              </span>
-                           </div>
-                           <div className="bg-white border border-slate-300 p-2 text-center rounded-sm">
-                              <span className="text-[7px] font-extrabold text-slate-400 uppercase tracking-widest block">REPORT YEAR</span>
-                              <span className="text-xs font-black text-teal-900 block uppercase font-mono">
-                                 {saudaReportYear === 'ALL' ? 'ALL YEARS' : saudaReportYear}
-                              </span>
-                           </div>
-                        </div>
 
-                        {/* Chart Visualization board */}
-                        <div className="bg-white border border-gray-400 p-3 rounded-sm shadow-sm space-y-2">
-                           <div>
-                              <h4 className="text-[8.5px] font-black uppercase text-slate-800 tracking-wider">Dynamic Graphical Distribution Indices</h4>
-                              <p className="text-[7.5px] text-gray-400 italic">Visual correlation based on structured database segments</p>
-                           </div>
+              {/* CHART + SUMMARY */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-                           <div className="h-48 font-mono text-[8px] ">
-                              {saudaReportOutput.chartData.length === 0 ? (
-                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 border border-dashed border-gray-200 rounded-sm">
-                                    <span>No analytical dimensions to map with current filters</span>
-                                 </div>
-                              ) : (
-                                 <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                                    {saudaReportOutput.chartType === 'area' ? (
-                                       <AreaChart data={saudaReportOutput.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                                          <defs>
-                                             <linearGradient id="saudaPrGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.05}/>
-                                             </linearGradient>
-                                          </defs>
-                                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                          <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
-                                          <YAxis tick={{ fontSize: 7.5 }} />
-                                          <RechartsTooltip />
-                                          <Area type="monotone" dataKey="weight" stroke="#4f46e5" fillOpacity={1} fill="url(#saudaPrGrad)" name="Dispatched Mass (MT)" />
-                                       </AreaChart>
-                                    ) : saudaReportOutput.chartType === 'line' ? (
-                                       <LineChart data={saudaReportOutput.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                          <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
-                                          <YAxis tick={{ fontSize: 7.5 }} />
-                                          <RechartsTooltip />
-                                          <Legend wrapperStyle={{ fontSize: 7.5 }} />
-                                          <Line type="monotone" dataKey="mClaim" stroke="#ea580c" strokeWidth={2} name="Quality Marks Claims (INR)" />
-                                          <Line type="monotone" dataKey="qClaim" stroke="#3b82f6" strokeWidth={2} name="Packaging Deficit Claims (INR)" />
-                                       </LineChart>
-                                    ) : saudaReportOutput.chartType === 'pie' || saudaReportOutput.chartType === 'half_circle' ? (
-                                       <PieChart>
-                                          <Pie
-                                            data={saudaReportOutput.chartData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={saudaReportOutput.chartType === 'half_circle' ? 35 : 0}
-                                            outerRadius={70}
-                                            fill="#8884d8"
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            label={({ name, percent }: any) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                                          >
-                                             {saudaReportOutput.chartData.map((entry, index) => {
-                                                const clrs = ['#1e3a8a', '#0f766e', '#312e81', '#0891b2', '#4f46e5', '#1d4ed8', '#0d9488', '#2563eb'];
-                                                return <Cell key={`cell-${index}`} fill={clrs[index % clrs.length]} />;
-                                             })}
-                                          </Pie>
-                                          <RechartsTooltip />
-                                       </PieChart>
-                                    ) : saudaReportOutput.chartType === 'composed' ? (
-                                       <ComposedChart data={saudaReportOutput.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                                          <CartesianGrid stroke="#f1f5f9" />
-                                          <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
-                                          <YAxis tick={{ fontSize: 7.5 }} />
-                                          <RechartsTooltip />
-                                          <Legend wrapperStyle={{ fontSize: 7.5 }} />
-                                          <Bar dataKey="lorries" name="Lorry Dispatches (Trips)" fill="#1e3b8a" barSize={20} />
-                                          <Line type="monotone" dataKey="payload" name="Payload Capacity Specs (MT)" stroke="#0d9488" strokeWidth={2.5} />
-                                       </ComposedChart>
-                                    ) : saudaReportOutput.chartType === 'hbar' ? (
-                                       <BarChart data={saudaReportOutput.chartData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                          <XAxis type="number" tick={{ fontSize: 7.5 }} />
-                                          <YAxis dataKey="name" type="category" tick={{ fontSize: 7.5 }} width={80} />
-                                          <RechartsTooltip />
-                                          <Bar dataKey="weight" name="Weighed Tons (MT)" fill="#0d9488" />
-                                       </BarChart>
-                                    ) : (
-                                       <BarChart data={saudaReportOutput.chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                          <XAxis dataKey="name" tick={{ fontSize: 7.5 }} />
-                                          <YAxis tick={{ fontSize: 7.5 }} />
-                                          <RechartsTooltip />
-                                          <Bar dataKey="weight" name="Outward Volume (MT)" fill="#1d4ed8" radius={[2, 2, 0, 0]}>
-                                             {saudaReportOutput.chartData.map((entry, index) => {
-                                                const clrs = ['#1e3a8a', '#0f766e', '#312e81', '#0891b2', '#4f46e5', '#1d4ed8', '#0d9488', '#2563eb'];
-                                                return <Cell key={`cell-${index}`} fill={clrs[index % clrs.length]} />;
-                                             })}
-                                          </Bar>
-                                       </BarChart>
-                                    )}
-                                 </ResponsiveContainer>
-                              )}
-                           </div>
-                        </div>
+                {/* CHART */}
+                <div className="lg:col-span-2 bg-white border border-emerald-100 rounded-xl p-4 shadow-sm">
 
-                        {/* Advanced Ledger Grid Panel */}
-                        <div className="bg-white border border-gray-400 p-3 rounded-sm shadow-sm space-y-2">
-                           <div className="flex items-center justify-between">
-                              <div>
-                                 <h4 className="text-[8.5px] font-black uppercase text-slate-800 tracking-wider">Consolidated Outbound Ledger Grid</h4>
-                                 <p className="text-[7.5px] text-gray-400 italic">Audit values and generated records satisfying filter parameters</p>
-                              </div>
-                              <span className="text-[8px] text-slate-500 font-mono">Mapped: {saudaReportOutput.rows.length} records</span>
-                           </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-emerald-950 tracking-wider">
+                        Top Brokers by Contract Weight
+                      </h4>
 
-                           <div className="border border-gray-400 rounded-sm overflow-x-auto">
-                              <table className="w-full text-left font-mono text-[9px] border-collapse" id="sauda-advanced-ledger">
-                                 <thead>
-                                    <tr className="bg-slate-800 text-white border-b border-gray-400">
-                                       {saudaReportOutput.headers.map((h, i) => (
-                                          <th key={i} className="p-2 font-black uppercase text-[8.5px] border-r border-slate-700">{h}</th>
-                                       ))}
-                                    </tr>
-                                 </thead>
-                                 <tbody className="divide-y divide-gray-300">
-                                    {saudaReportOutput.rows.map((row, rindex) => (
-                                       <tr key={rindex} className="hover:bg-slate-50 odd:bg-slate-50/50">
-                                          {row.map((cell, cindex) => (
-                                             <td key={cindex} className={cn(
-                                               "p-2 border-r border-gray-200 font-mono tracking-tight text-slate-800",
-                                               cindex === 0 ? "font-bold text-slate-900 text-[9.5px]" : ""
-                                             )}>
-                                                {cell}
-                                             </td>
-                                          ))}
-                                       </tr>
-                                    ))}
-                                    {saudaReportOutput.rows.length === 0 && (
-                                       <tr className="h-20">
-                                          <td colSpan={saudaReportOutput.headers.length || 6} className="text-center font-bold text-gray-405 italic">
-                                             No active transactional database logs satisfying filters.
-                                          </td>
-                                       </tr>
-                                    )}
-                                 </tbody>
-                              </table>
-                           </div>
-                        </div>
+                      <p className="text-[8px] text-slate-400 italic">
+                        Distribution based on registered Sauda logs
+                      </p>
+                    </div>
 
-                     </div>
+                    <span className="text-[8px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg">
+                      LIVE DATA
+                    </span>
+                  </div>
+
+                  <div className="h-56 mt-2 font-mono text-[9px]">
+
+                    {saudaChartData.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                        <span>No transaction records found</span>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                        minWidth={100}
+                        minHeight={100}
+                      >
+                        <BarChart
+                          data={saudaChartData}
+                          margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#d1fae5"
+                          />
+
+                          <XAxis
+                            dataKey="name"
+                            tick={{ fontSize: 7.5 }}
+                          />
+
+                          <YAxis
+                            tick={{ fontSize: 7.5 }}
+                          />
+
+                          <RechartsTooltip
+                            contentStyle={{
+                              fontSize: 9,
+                              borderRadius: 10,
+                              border: "1px solid #d1fae5"
+                            }}
+                          />
+
+                          <Bar
+                            dataKey="weight"
+                            fill="#047857"
+                            radius={[5, 5, 0, 0]}
+                          >
+                            {saudaChartData.map((entry, index) => {
+                              const colors = [
+                                '#047857',
+                                '#0f766e',
+                                '#15803d',
+                                '#059669',
+                                '#16a34a'
+                              ];
+
+                              return (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={colors[index % colors.length]}
+                                />
+                              );
+                            })}
+                          </Bar>
+
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
 
                   </div>
-               </div>
-             )}
-          </div>
+                </div>
+
+
+                {/* SUMMARY PANEL */}
+                <div className="bg-white border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col justify-between">
+
+                  <div className="space-y-3">
+
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-emerald-950 tracking-wider">
+                        Sauda Sourcing Statistics
+                      </h4>
+
+                      <p className="text-[8px] text-slate-400 italic">
+                        Analytical summary of contract registry
+                      </p>
+                    </div>
+
+
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 space-y-3">
+
+                      <div>
+                        <span className="text-[7px] font-bold text-emerald-600 uppercase block">
+                          Prime Broker
+                        </span>
+
+                        <span className="font-black text-emerald-950 text-[10px] block truncate">
+                          {saudaChartData[0]?.name || 'DIRECT'}
+                          {' '}
+                          ({saudaChartData[0]?.weight || 0} MT)
+                        </span>
+                      </div>
+
+
+                      <div className="border-t border-emerald-100 pt-2 flex justify-between gap-2">
+
+                        <div>
+                          <span className="text-[7px] font-bold text-slate-400 uppercase block">
+                            Brokers Count
+                          </span>
+
+                          <span className="font-black text-slate-800 block">
+                            {saudaChartData.length} active
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <span className="text-[7px] font-bold text-slate-400 uppercase block">
+                            Total Mass
+                          </span>
+
+                          <span className="font-black text-emerald-800 block">
+                            {saudaAggregates.totalWeight.toLocaleString()} MT
+                          </span>
+                        </div>
+
+                      </div>
+                    </div>
+
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[8.5px] text-amber-900 leading-normal">
+                      💡 <strong>Sourcing Insight:</strong> Sauda contracts are mapped against
+                      live buyer commitments. Track weight discrepancies periodically.
+                    </div>
+
+                  </div>
+
+
+                  <button
+                    id="download-sauda-ins"
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="
+                      w-full mt-3
+                      bg-emerald-700
+                      hover:bg-emerald-800
+                      text-white
+                      py-2
+                      rounded-xl
+                      border border-emerald-800
+                      text-[9px]
+                      font-black
+                      uppercase
+                      tracking-wider
+                      shadow-sm
+                      hover:shadow-md
+                      transition-all
+                    "
+                  >
+                    🖨️ Print Active Sauda
+                  </button>
+
+                </div>
+
+              </div>
+
+            </React.Fragment>
+          )}
+
+
+          {/* ==================== ADVANCED REPORTS ==================== */}
+          {saudaViewMode === 'advanced_reports' && (
+            <div className="space-y-4">
+
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+
+                {/* LEFT FILTER PANEL */}
+                <div className="xl:col-span-1 bg-white border border-emerald-100 rounded-xl p-4 shadow-sm">
+
+                  <div className="space-y-3">
+
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase text-emerald-950 tracking-wider">
+                        Reports Preset Deck
+                      </h4>
+
+                      <p className="text-[8px] text-slate-400 italic">
+                        Select from available report formats
+                      </p>
+                    </div>
+
+
+                    {/* SEARCH */}
+                    <div className="space-y-1">
+
+                      <label
+                        htmlFor="keyword_search_filter_2017"
+                        className="text-[8px] font-black text-slate-700 uppercase tracking-tight"
+                      >
+                        Keyword Search Filter
+                      </label>
+
+                      <div className="relative">
+
+                        <input
+                          id="keyword_search_filter_2017"
+                          name="keyword_search_filter"
+                          aria-label="Keyword Search Filter"
+                          type="text"
+                          value={saudaReportSearch}
+                          onChange={(e) => setSaudaReportSearch(e.target.value)}
+                          placeholder="Search Broker, Supplier, Area..."
+                          className="
+                            w-full
+                            text-[10px]
+                            pl-7
+                            pr-2
+                            py-2
+                            bg-slate-50
+                            border border-emerald-100
+                            rounded-lg
+                            focus:bg-white
+                            focus:border-emerald-500
+                            focus:ring-2
+                            focus:ring-emerald-100
+                            focus:outline-none
+                            text-slate-900
+                          "
+                        />
+
+                        <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-emerald-600" />
+
+                      </div>
+                    </div>
+
+
+                    {/* MONTH YEAR */}
+                    <div className="grid grid-cols-2 gap-2">
+
+                      <div className="space-y-1">
+
+                        <label
+                          htmlFor="target_month_2032"
+                          className="text-[8px] font-black text-slate-700 uppercase"
+                        >
+                          Target Month
+                        </label>
+
+                        <select
+                          id="target_month_2032"
+                          name="target_month"
+                          aria-label="Target Month"
+                          value={saudaReportMonth}
+                          onChange={(e) => setSaudaReportMonth(e.target.value)}
+                          className="
+                            w-full
+                            text-[10px]
+                            py-2
+                            px-2
+                            bg-slate-50
+                            border border-emerald-100
+                            rounded-lg
+                            focus:border-emerald-500
+                            focus:outline-none
+                            text-slate-900
+                            font-bold
+                          "
+                        >
+                          {MONTH_LABELS.map(m => (
+                            <option key={m.value} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
+
+                      </div>
+
+
+                      <div className="space-y-1">
+
+                        <label
+                          htmlFor="financial_year_2044"
+                          className="text-[8px] font-black text-slate-700 uppercase"
+                        >
+                          Financial Year
+                        </label>
+
+                        <select
+                          id="financial_year_2044"
+                          name="financial_year"
+                          aria-label="Financial Year"
+                          value={saudaReportYear}
+                          onChange={(e) => setSaudaReportYear(e.target.value)}
+                          className="
+                            w-full
+                            text-[10px]
+                            py-2
+                            px-2
+                            bg-slate-50
+                            border border-emerald-100
+                            rounded-lg
+                            focus:border-emerald-500
+                            focus:outline-none
+                            text-slate-900
+                            font-bold
+                          "
+                        >
+                          <option value="ALL">-- ALL YEARS --</option>
+
+                          {saudaYears.map(yr => (
+                            <option key={yr} value={yr}>
+                              {yr}
+                            </option>
+                          ))}
+
+                        </select>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* REPORT LIST */}
+                    <div className="border border-emerald-100 rounded-xl overflow-hidden max-h-[320px] overflow-y-auto">
+
+                      {SAUDA_REPORTS.map((r, i) => {
+
+                        const isActive = activeSaudaReportKey === r.key;
+
+                        return (
+                          <button
+                            key={r.key}
+                            onClick={() => setActiveSaudaReportKey(r.key)}
+                            className={cn(
+                              "w-full text-left p-3 transition-all border-b last:border-b-0",
+                              isActive
+                                ? "bg-emerald-700 text-white border-emerald-800"
+                                : "bg-white hover:bg-emerald-50 border-emerald-50"
+                            )}
+                          >
+
+                            <span
+                              className={cn(
+                                "text-[9.5px] font-black uppercase block leading-tight",
+                                isActive
+                                  ? "text-white"
+                                  : "text-slate-800"
+                              )}
+                            >
+                              {r.name}
+                            </span>
+
+                            <span
+                              className={cn(
+                                "text-[7.5px] block truncate leading-tight mt-1",
+                                isActive
+                                  ? "text-emerald-100"
+                                  : "text-slate-400"
+                              )}
+                              title={r.description}
+                            >
+                              {r.description}
+                            </span>
+
+                          </button>
+                        );
+
+                      })}
+
+                    </div>
+
+                  </div>
+
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[8px] text-slate-500 leading-normal font-mono mt-3">
+                    * Calculated indexes are generated dynamically from live MIS data.
+                  </div>
+
+                </div>
+
+
+                {/* RIGHT AREA */}
+                <div className="xl:col-span-3 space-y-4">
+
+                  {/* REPORT HEADER */}
+                  <div className="bg-white border border-emerald-100 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+                    <div className="space-y-1">
+
+                      <h3 className="text-xs font-black text-emerald-950 uppercase tracking-widest flex items-center gap-2">
+
+                        <span>
+                          {SAUDA_REPORTS.find(
+                            r => r.key === activeSaudaReportKey
+                          )?.name}
+                        </span>
+
+                        <span className="bg-emerald-100 text-emerald-800 text-[7px] font-black px-2 py-1 rounded-full uppercase">
+                          Dynamic Query
+                        </span>
+
+                      </h3>
+
+                      <p className="text-[9px] text-slate-500 max-w-xl leading-normal">
+                        {SAUDA_REPORTS.find(
+                          r => r.key === activeSaudaReportKey
+                        )?.description}
+                      </p>
+
+                    </div>
+
+
+                    <button
+                      onClick={handleExportSaudaCSV}
+                      className="
+                        bg-emerald-700
+                        hover:bg-emerald-800
+                        text-white
+                        border border-emerald-800
+                        px-4
+                        py-2
+                        rounded-xl
+                        text-[9px]
+                        font-black
+                        uppercase
+                        tracking-wider
+                        flex
+                        items-center
+                        justify-center
+                        gap-1.5
+                        shadow-sm
+                        hover:shadow-md
+                        transition-all
+                      "
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5" />
+                      Export CSV
+                    </button>
+
+                  </div>
+
+
+                  {/* KPI BELT */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+                    <div className="bg-white border border-emerald-100 rounded-xl p-3 text-center shadow-sm">
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block">
+                        ACTIVE DEALS
+                      </span>
+
+                      <span className="text-sm font-black text-emerald-900 block mt-1">
+                        {saudaReportOutput.totalCount} completed
+                      </span>
+                    </div>
+
+
+                    <div className="bg-white border border-blue-100 rounded-xl p-3 text-center shadow-sm">
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block">
+                        MASS DISPATCHED
+                      </span>
+
+                      <span className="text-sm font-black text-blue-900 block mt-1">
+                        {saudaReportOutput.totalMT.toLocaleString()} MT
+                      </span>
+                    </div>
+
+
+                    <div className="bg-white border border-amber-100 rounded-xl p-3 text-center shadow-sm">
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block">
+                        REPORT MONTH
+                      </span>
+
+                      <span className="text-sm font-black text-amber-900 block mt-1 uppercase font-mono">
+                        {saudaReportMonth === 'ALL'
+                          ? 'ALL MONTHS'
+                          : MONTH_LABELS.find(
+                              m => m.value === saudaReportMonth
+                            )?.label.substring(0, 3)}
+                      </span>
+                    </div>
+
+
+                    <div className="bg-white border border-teal-100 rounded-xl p-3 text-center shadow-sm">
+                      <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block">
+                        REPORT YEAR
+                      </span>
+
+                      <span className="text-sm font-black text-teal-900 block mt-1 uppercase font-mono">
+                        {saudaReportYear === 'ALL'
+                          ? 'ALL YEARS'
+                          : saudaReportYear}
+                      </span>
+                    </div>
+
+                  </div>
+
+
+                  {/* GRAPH */}
+                  <div className="bg-white border border-emerald-100 rounded-xl p-4 shadow-sm">
+
+                    <div className="mb-2">
+
+                      <h4 className="text-[9px] font-black uppercase text-emerald-950 tracking-wider">
+                        Dynamic Graphical Distribution
+                      </h4>
+
+                      <p className="text-[7.5px] text-slate-400 italic">
+                        Visual correlation based on structured database segments
+                      </p>
+
+                    </div>
+
+
+                    <div className="h-52 font-mono text-[8px]">
+
+                      {saudaReportOutput.chartData.length === 0 ? (
+
+                        <div className="h-full flex items-center justify-center text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                          No analytical dimensions to map with current filters
+                        </div>
+
+                      ) : (
+
+                        <ResponsiveContainer
+                          width="100%"
+                          height="100%"
+                          minWidth={100}
+                          minHeight={100}
+                        >
+
+                          {saudaReportOutput.chartType === 'area' ? (
+
+                            <AreaChart
+                              data={saudaReportOutput.chartData}
+                              margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
+                            >
+                              <defs>
+                                <linearGradient
+                                  id="saudaPrGrad"
+                                  x1="0"
+                                  y1="0"
+                                  x2="0"
+                                  y2="1"
+                                >
+                                  <stop
+                                    offset="5%"
+                                    stopColor="#047857"
+                                    stopOpacity={0.75}
+                                  />
+                                  <stop
+                                    offset="95%"
+                                    stopColor="#047857"
+                                    stopOpacity={0.05}
+                                  />
+                                </linearGradient>
+                              </defs>
+
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#d1fae5"
+                              />
+
+                              <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <YAxis
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <RechartsTooltip />
+
+                              <Area
+                                type="monotone"
+                                dataKey="weight"
+                                stroke="#047857"
+                                fillOpacity={1}
+                                fill="url(#saudaPrGrad)"
+                                name="Dispatched Mass (MT)"
+                              />
+
+                            </AreaChart>
+
+                          ) : saudaReportOutput.chartType === 'line' ? (
+
+                            <LineChart
+                              data={saudaReportOutput.chartData}
+                              margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
+                            >
+
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#d1fae5"
+                              />
+
+                              <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <YAxis
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <RechartsTooltip />
+
+                              <Legend wrapperStyle={{ fontSize: 7.5 }} />
+
+                              <Line
+                                type="monotone"
+                                dataKey="mClaim"
+                                stroke="#ea580c"
+                                strokeWidth={2}
+                                name="Quality Marks Claims (INR)"
+                              />
+
+                              <Line
+                                type="monotone"
+                                dataKey="qClaim"
+                                stroke="#2563eb"
+                                strokeWidth={2}
+                                name="Packaging Deficit Claims (INR)"
+                              />
+
+                            </LineChart>
+
+                          ) : saudaReportOutput.chartType === 'pie' ||
+                            saudaReportOutput.chartType === 'half_circle' ? (
+
+                            <PieChart>
+
+                              <Pie
+                                data={saudaReportOutput.chartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={
+                                  saudaReportOutput.chartType === 'half_circle'
+                                    ? 35
+                                    : 0
+                                }
+                                outerRadius={70}
+                                paddingAngle={2}
+                                dataKey="value"
+                                label={({ name, percent }: any) =>
+                                  `${name} (${((percent || 0) * 100).toFixed(0)}%)`
+                                }
+                              >
+
+                                {saudaReportOutput.chartData.map(
+                                  (entry, index) => {
+
+                                    const clrs = [
+                                      '#047857',
+                                      '#0f766e',
+                                      '#15803d',
+                                      '#059669',
+                                      '#16a34a',
+                                      '#0d9488',
+                                      '#065f46',
+                                      '#166534'
+                                    ];
+
+                                    return (
+                                      <Cell
+                                        key={`cell-${index}`}
+                                        fill={clrs[index % clrs.length]}
+                                      />
+                                    );
+
+                                  }
+                                )}
+
+                              </Pie>
+
+                              <RechartsTooltip />
+
+                            </PieChart>
+
+                          ) : saudaReportOutput.chartType === 'composed' ? (
+
+                            <ComposedChart
+                              data={saudaReportOutput.chartData}
+                              margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
+                            >
+
+                              <CartesianGrid stroke="#d1fae5" />
+
+                              <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <YAxis
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <RechartsTooltip />
+
+                              <Legend wrapperStyle={{ fontSize: 7.5 }} />
+
+                              <Bar
+                                dataKey="lorries"
+                                name="Lorry Dispatches (Trips)"
+                                fill="#047857"
+                                barSize={20}
+                              />
+
+                              <Line
+                                type="monotone"
+                                dataKey="payload"
+                                name="Payload Capacity Specs (MT)"
+                                stroke="#0f766e"
+                                strokeWidth={2.5}
+                              />
+
+                            </ComposedChart>
+
+                          ) : saudaReportOutput.chartType === 'hbar' ? (
+
+                            <BarChart
+                              data={saudaReportOutput.chartData}
+                              layout="vertical"
+                              margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                            >
+
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#d1fae5"
+                              />
+
+                              <XAxis
+                                type="number"
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <YAxis
+                                dataKey="name"
+                                type="category"
+                                tick={{ fontSize: 7.5 }}
+                                width={80}
+                              />
+
+                              <RechartsTooltip />
+
+                              <Bar
+                                dataKey="weight"
+                                name="Weighed Tons (MT)"
+                                fill="#0f766e"
+                                radius={[0, 5, 5, 0]}
+                              />
+
+                            </BarChart>
+
+                          ) : (
+
+                            <BarChart
+                              data={saudaReportOutput.chartData}
+                              margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
+                            >
+
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#d1fae5"
+                              />
+
+                              <XAxis
+                                dataKey="name"
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <YAxis
+                                tick={{ fontSize: 7.5 }}
+                              />
+
+                              <RechartsTooltip />
+
+                              <Bar
+                                dataKey="weight"
+                                name="Outward Volume (MT)"
+                                fill="#047857"
+                                radius={[5, 5, 0, 0]}
+                              >
+
+                                {saudaReportOutput.chartData.map(
+                                  (entry, index) => {
+
+                                    const clrs = [
+                                      '#047857',
+                                      '#0f766e',
+                                      '#15803d',
+                                      '#059669',
+                                      '#16a34a',
+                                      '#0d9488',
+                                      '#065f46',
+                                      '#166534'
+                                    ];
+
+                                    return (
+                                      <Cell
+                                        key={`cell-${index}`}
+                                        fill={clrs[index % clrs.length]}
+                                      />
+                                    );
+
+                                  }
+                                )}
+
+                              </Bar>
+
+                            </BarChart>
+
+                          )}
+
+                        </ResponsiveContainer>
+
+                      )}
+
+                    </div>
+
+                  </div>
+
+
+                  {/* LEDGER TABLE */}
+                  <div className="bg-white border border-emerald-100 rounded-xl p-4 shadow-sm">
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+
+                      <div>
+
+                        <h4 className="text-[9px] font-black uppercase text-emerald-950 tracking-wider">
+                          Consolidated Outbound Ledger
+                        </h4>
+
+                        <p className="text-[7.5px] text-slate-400 italic">
+                          Audit values and generated records satisfying filter parameters
+                        </p>
+
+                      </div>
+
+                      <span className="text-[8px] text-emerald-700 font-mono font-bold bg-emerald-50 px-2 py-1 rounded-lg">
+                        Mapped: {saudaReportOutput.rows.length} records
+                      </span>
+
+                    </div>
+
+
+                    <div className="border border-emerald-100 rounded-xl overflow-x-auto overflow-y-auto max-h-[420px]">
+
+                      <table
+                        className="w-full min-w-max text-left font-mono text-[9px] border-collapse"
+                        id="sauda-advanced-ledger"
+                      >
+
+                        <thead className="sticky top-0 z-10">
+
+                          <tr className="bg-emerald-800 text-white border-b border-emerald-900">
+
+                            {saudaReportOutput.headers.map((h, i) => (
+
+                              <th
+                                key={i}
+                                className="
+                                  p-2.5
+                                  font-black
+                                  uppercase
+                                  text-[8px]
+                                  border-r
+                                  border-emerald-700
+                                  whitespace-nowrap
+                                "
+                              >
+                                {h}
+                              </th>
+
+                            ))}
+
+                          </tr>
+
+                        </thead>
+
+
+                        <tbody className="divide-y divide-slate-100">
+
+                          {saudaReportOutput.rows.map((row, rindex) => (
+
+                            <tr
+                              key={rindex}
+                              className="
+                                hover:bg-emerald-50
+                                odd:bg-slate-50/40
+                                transition-colors
+                              "
+                            >
+
+                              {row.map((cell, cindex) => (
+
+                                <td
+                                  key={cindex}
+                                  className={cn(
+                                    "p-2 border-r border-slate-100 font-mono tracking-tight text-slate-800 whitespace-nowrap",
+                                    cindex === 0
+                                      ? "font-bold text-emerald-900 text-[9.5px]"
+                                      : ""
+                                  )}
+                                >
+                                  {cell}
+                                </td>
+
+                              ))}
+
+                            </tr>
+
+                          ))}
+
+
+                          {saudaReportOutput.rows.length === 0 && (
+
+                            <tr className="h-24">
+
+                              <td
+                                colSpan={
+                                  saudaReportOutput.headers.length || 6
+                                }
+                                className="text-center font-bold text-slate-400 italic"
+                              >
+                                No active transactional database logs satisfying filters.
+                              </td>
+
+                            </tr>
+
+                          )}
+
+                        </tbody>
+
+                      </table>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
         )}
 
         {/* --- 3. MAP WISE P.O --- */}
          {reportType === 'po_summary' && (
-           <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 rounded-sm">
+            <div className="bg-emerald-800 border-2 border-emerald-950 shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 rounded-sm">
               <PurchaseOrderSummary refreshTrigger={refreshTrigger} />
-           </div>
+            </div>
           )}
 
           {reportType === 'map_wise_po' && (

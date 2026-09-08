@@ -1254,7 +1254,7 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
     <div className="space-y-4" id="purchase-order-summary-report">
       
       {/* Dynamic Sub-tab selector bar inside card header */}
-      <div className="flex border-b-[2px] border-[#808080] pb-1 mb-2 items-center justify-between ">
+      {/* <div className="flex border-b-[2px] border-[#808080] pb-1 mb-2 items-center justify-between ">
         <div className="flex gap-1.5">
           <button 
             onClick={() => setViewMode('dashboard')}
@@ -1276,27 +1276,98 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
           </button>
         </div>
         <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest font-mono hidden sm:inline">Advanced PO Audit Engine</span>
+      </div> */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+
+        {/* View Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-emerald-950 rounded-xl shadow-sm w-fit">
+
+          <button
+            onClick={() => setViewMode('dashboard')}
+            className={cn(
+              "px-3 sm:px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
+              "rounded-lg transition-all duration-200 flex items-center gap-1.5",
+              viewMode === 'dashboard'
+                ? "bg-white text-emerald-900 shadow-md"
+                : "text-emerald-100 hover:bg-emerald-800 hover:text-white"
+            )}
+          >
+            <span className="text-sm">📊</span>
+            <span>PO Metrics Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('advanced_reports')}
+            className={cn(
+              "px-3 sm:px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
+              "rounded-lg transition-all duration-200 flex items-center gap-1.5",
+              viewMode === 'advanced_reports'
+                ? "bg-white text-emerald-900 shadow-md"
+                : "text-emerald-100 hover:bg-emerald-800 hover:text-white"
+            )}
+          >
+            <span className="text-sm">📋</span>
+            <span>Advanced Reports</span>
+            <span className="hidden sm:inline bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded-full text-[8px] font-black">
+              10
+            </span>
+          </button>
+
+        </div>
+
+        {/* Engine Status */}
+        {/* <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white border border-emerald-200 rounded-lg shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+
+          <span className="text-[9px] font-black text-emerald-900 uppercase tracking-widest">
+            Advanced PO Audit Engine
+          </span>
+        </div> */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 
+          bg-gradient-to-r from-emerald-50 to-green-50 
+          border border-emerald-300 rounded-full shadow-sm">
+
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full rounded-full 
+              bg-emerald-400 opacity-75 animate-ping"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full 
+              bg-emerald-600"></span>
+          </span>
+
+          <span className="text-[9px] font-black text-emerald-800 
+            uppercase tracking-widest whitespace-nowrap">
+            Advanced PO Audit Engine
+          </span>
+        </div>
+
       </div>
 
       {/* --- RENDER 1: STANDARD DASHBOARD MODE --- */}
       {viewMode === 'dashboard' && (
         <React.Fragment>
           {/* Upper Control Bar */}
-          <div className="flex flex-wrap gap-3 items-end bg-[#c0c0c0] p-3 border border-black/10 shadow-[inset_1px_1px_1.5px_rgba(0,0,0,0.1)] rounded-sm">
-            
+          <div className="flex flex-wrap gap-3 items-end bg-gradient-to-r from-emerald-50 via-white to-slate-50 p-3 border border-emerald-200 shadow-sm rounded-xl">
+
             {/* Financial Year Filter */}
             <div className="space-y-1">
-              <label htmlFor="financial_year_1293" className="text-[10px] font-bold text-gray-700 uppercase italic leading-none block ml-1">
+              <label
+                htmlFor="financial_year_1293"
+                className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wide leading-none block ml-1"
+              >
                 Financial Year
               </label>
-              <div className="flex bg-white border border-gray-400 p-px">
-                <select  id="financial_year_1293" name="financial_year" aria-label="Financial Year"
+
+              <div className="flex bg-white border border-emerald-300 rounded-lg overflow-hidden shadow-sm">
+                <select
+                  id="financial_year_1293"
+                  name="financial_year"
+                  aria-label="Financial Year"
                   value={financialYearFilter}
                   onChange={(e) => {
                     setFinancialYearFilter(e.target.value);
                     setSelectedSupplier(null);
                   }}
-                  className="p-1 text-[11px] font-black outline-none w-36 bg-white"
+                  className="p-2 text-[11px] font-bold outline-none w-36 bg-white text-slate-700 cursor-pointer"
                 >
                   <option value="ALL">-- ALL YEARS --</option>
                   {financialYears.filter(y => y.includes('-')).map(yr => (
@@ -1307,29 +1378,35 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
             </div>
 
             {/* Global Keyword Filter */}
-            <div className="flex-1 space-y-1">
-              <label className="text-[10px] font-bold text-gray-700 uppercase italic leading-none block ml-1">
+            <div className="flex-1 space-y-1 min-w-[240px]">
+              <label className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wide leading-none block ml-1">
                 Active Query Radar (Supplier, Broker, Contract No.)
               </label>
-              <div className="flex bg-white border border-gray-400 p-px">
-                <span className="bg-gray-105 px-2 flex items-center border-r border-gray-300 text-gray-500">
-                  <Search className="h-3 w-3" />
+
+              <div className="flex bg-white border border-emerald-300 rounded-lg overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-emerald-200">
+                <span className="bg-emerald-50 px-2.5 flex items-center border-r border-emerald-200 text-emerald-700">
+                  <Search className="h-3.5 w-3.5" />
                 </span>
-                <input  id="search_supplier_broker_na_1318" name="search_supplier_broker_na" aria-label="Search supplier, broker name, PO numbers..."
-                  className="flex-1 p-1 text-[11px] font-black outline-none tracking-tight" 
-                  placeholder="Search supplier, broker name, PO numbers..." 
+
+                <input
+                  id="search_supplier_broker_na_1318"
+                  name="search_supplier_broker_na"
+                  aria-label="Search supplier, broker name, PO numbers..."
+                  className="flex-1 px-2.5 py-2 text-[11px] font-bold outline-none tracking-tight text-slate-700 placeholder:text-slate-400"
+                  placeholder="Search supplier, broker name, PO numbers..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setSelectedSupplier(null);
                   }}
                 />
+
                 {selectedSupplier && (
-                  <button 
+                  <button
                     onClick={() => setSelectedSupplier(null)}
-                    className="bg-rose-50 text-rose-700 px-2 font-bold text-[9px] hover:bg-rose-100 border-l border-gray-300 flex items-center gap-1 animate-pulse"
+                    className="bg-rose-50 text-rose-700 px-3 font-bold text-[9px] hover:bg-rose-100 border-l border-rose-200 flex items-center gap-1 transition-colors"
                   >
-                    Clear Drill-down Selection
+                    Clear Selection
                   </button>
                 )}
               </div>
@@ -1337,10 +1414,10 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
 
             {/* Action Button */}
             <div className="flex gap-1 shrink-0">
-              <button 
-                onClick={fetchPurchaseOrders} 
+              <button
+                onClick={fetchPurchaseOrders}
                 disabled={loading}
-                className="bg-[#d4d0c8] border border-white hover:bg-white active:shadow-inner px-3 py-1.5 text-[10px] font-bold uppercase flex items-center gap-1.5 shadow-[1px_1px_0_0_black]"
+                className="bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg px-3.5 py-2 text-[10px] font-extrabold uppercase flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-60"
               >
                 <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
                 <span>{loading ? "Reloading..." : "Reload Data"}</span>
@@ -1348,100 +1425,129 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
             </div>
           </div>
 
-          {/* Retro Bento KPI Grid */}
+          {/* KPI Grid */}
           <div className="grid grid-cols-12 gap-3">
+
             {/* KPI 1 */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] p-3 flex items-center justify-between">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 flex items-center justify-between hover:shadow-md transition-shadow">
               <div className="space-y-1">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Aggregate Contract Weight</span>
-                <span className="text-xl font-mono font-black italic text-indigo-900 tracking-tight block">
-                  {stats.totalWeight.toLocaleString('en-IN', { minimumFractionDigits: 3 })} <span className="text-xs">MT</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Aggregate Contract Weight
+                </span>
+
+                <span className="text-xl font-mono font-black text-emerald-800 tracking-tight block">
+                  {stats.totalWeight.toLocaleString('en-IN', {
+                    minimumFractionDigits: 3
+                  })}
+                  <span className="text-xs text-slate-500 ml-1">MT</span>
                 </span>
               </div>
-              <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-sm">
-                <Scale className="h-5 w-5 text-indigo-900" />
+
+              <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-lg">
+                <Scale className="h-5 w-5 text-emerald-700" />
               </div>
             </div>
 
             {/* KPI 2 */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] p-3 flex items-center justify-between">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 flex items-center justify-between hover:shadow-md transition-shadow">
               <div className="space-y-1">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Active Purchase Vouchers</span>
-                <span className="text-xl font-mono font-black italic text-teal-800 tracking-tight block">
-                  {stats.totalCount} <span className="text-xs text-gray-500">PO CONTRACTS</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Active Purchase Vouchers
+                </span>
+
+                <span className="text-xl font-mono font-black text-teal-700 tracking-tight block">
+                  {stats.totalCount}
+                  <span className="text-[9px] text-slate-500 ml-1">PO CONTRACTS</span>
                 </span>
               </div>
-              <div className="p-2.5 bg-teal-50 border border-teal-100 rounded-sm">
-                <FileText className="h-5 w-5 text-teal-800" />
+
+              <div className="p-2.5 bg-teal-50 border border-teal-100 rounded-lg">
+                <FileText className="h-5 w-5 text-teal-700" />
               </div>
             </div>
 
             {/* KPI 3 */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] p-3 flex items-center justify-between">
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 flex items-center justify-between hover:shadow-md transition-shadow">
               <div className="space-y-1">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Avg Contract Lot Size</span>
-                <span className="text-xl font-mono font-black italic text-cyan-800 tracking-tight block">
-                  {stats.averageWeight.toLocaleString('en-IN', { minimumFractionDigits: 3 })} <span className="text-xs">MT</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Avg Contract Lot Size
+                </span>
+
+                <span className="text-xl font-mono font-black text-cyan-700 tracking-tight block">
+                  {stats.averageWeight.toLocaleString('en-IN', {
+                    minimumFractionDigits: 3
+                  })}
+                  <span className="text-xs text-slate-500 ml-1">MT</span>
                 </span>
               </div>
-              <div className="p-2.5 bg-cyan-50 border border-cyan-100 rounded-sm">
-                <Calculator className="h-5 w-5 text-cyan-800" />
+
+              <div className="p-2.5 bg-cyan-50 border border-cyan-100 rounded-lg">
+                <Calculator className="h-5 w-5 text-cyan-700" />
               </div>
             </div>
 
             {/* KPI 4 */}
-            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.4)] p-3 flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Primary Supplier Lead</span>
+            <div className="col-span-12 sm:col-span-6 lg:col-span-3 bg-white border border-slate-200 rounded-xl shadow-sm p-3.5 flex items-center justify-between hover:shadow-md transition-shadow">
+              <div className="space-y-1 min-w-0">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Primary Supplier Lead
+                </span>
+
                 <span className="text-[12px] font-black text-slate-800 tracking-tight block uppercase truncate max-w-[180px]">
                   {stats.maxSupplier}
                 </span>
-                <span className="text-[8px] font-bold text-rose-700 bg-rose-50 px-1 py-0.5 border border-rose-100 inline-block uppercase">
+
+                <span className="text-[8px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 border border-rose-100 rounded inline-block uppercase">
                   Max single: {stats.maxWeight} MT
                 </span>
               </div>
-              <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-sm shrink-0">
+
+              <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg shrink-0">
                 <UserCheck className="h-5 w-5 text-rose-700" />
               </div>
             </div>
           </div>
 
-          {/* Main Content Layout with Bar Chart & Supplier List */}
+          {/* Main Content Layout */}
           <div className="grid grid-cols-12 gap-4">
-            {/* Interactive Bar Chart Block */}
-            <div className="col-span-12 lg:col-span-8 bg-white border border-gray-400 rounded-sm p-4 shadow-sm space-y-3">
-              <div className="flex justify-between items-center ">
+
+            {/* Interactive Bar Chart */}
+            <div className="col-span-12 lg:col-span-8 bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+
+              <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-indigo-900" />
+                    <TrendingUp className="h-4 w-4 text-emerald-700" />
                     <span>Supplier Contract Distribution Metric Chart</span>
                   </h3>
-                  <p className="text-[9px] text-gray-400 italic">
-                    {selectedSupplier 
-                      ? `Filtering details for selected supplier: "${selectedSupplier}"` 
+
+                  <p className="text-[9px] text-slate-400 italic mt-0.5">
+                    {selectedSupplier
+                      ? `Filtering details for selected supplier: "${selectedSupplier}"`
                       : 'Click on a bar to filter individual transaction vouchers below.'}
                   </p>
                 </div>
+
                 {selectedSupplier && (
-                  <button 
+                  <button
                     onClick={() => setSelectedSupplier(null)}
-                    className="text-[9px] font-black border-2 border-red-800 hover:border-red-900 text-red-800 uppercase px-2 py-0.5 bg-red-50"
+                    className="text-[9px] font-black border border-emerald-600 hover:bg-emerald-700 hover:text-white text-emerald-700 uppercase px-2.5 py-1 bg-emerald-50 rounded-md transition-colors"
                   >
                     Show All Suppliers
                   </button>
                 )}
               </div>
 
-              <div className="h-72 w-full font-mono text-[9px] ">
+              <div className="h-72 w-full font-mono text-[9px]">
                 {groupedChartData.length === 0 ? (
-                  <div className="h-full flex flex-col justify-center items-center text-gray-400 bg-slate-50 border border-dashed border-gray-200">
+                  <div className="h-full flex flex-col justify-center items-center text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
                     <Layers className="h-8 w-8 text-slate-300 mb-2" />
                     <span>No purchase master records exist following current filters.</span>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                    <BarChart 
-                      data={groupedChartData} 
+                    <BarChart
+                      data={groupedChartData}
                       margin={{ top: 15, right: 10, left: -25, bottom: 10 }}
                       onMouseMove={(state) => {
                         if (state && state.activeTooltipIndex !== undefined) {
@@ -1452,38 +1558,54 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                       }}
                       onMouseLeave={() => setHoveredBar(null)}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="supplier" 
-                        tickFormatter={(val) => val.length > 12 ? `${val.substring(0,10)}...` : val}
-                        stroke="#475569" 
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+
+                      <XAxis
+                        dataKey="supplier"
+                        tickFormatter={(val) =>
+                          val.length > 12 ? `${val.substring(0, 10)}...` : val
+                        }
+                        stroke="#475569"
                         fontWeight="bold"
                       />
-                      <YAxis stroke="#475569" fontWeight="bold" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1e293b', 
-                          borderColor: '#475569', 
-                          borderRadius: '2px', 
+
+                      <YAxis
+                        stroke="#475569"
+                        fontWeight="bold"
+                      />
+
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#0f172a',
+                          borderColor: '#334155',
+                          borderRadius: '8px',
                           color: '#f8fafc',
                           fontFamily: '"JetBrains Mono", monospace',
                           fontSize: '11px'
                         }}
-                        cursor={{ fill: 'rgba(203, 213, 225, 0.2)' }}
+                        cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }}
                         formatter={(value: any, name: string, props: any) => [
-                          `${value.toFixed(3)} M.Ton`, 
+                          `${value.toFixed(3)} M.Ton`,
                           props.payload.supplier
                         ]}
                       />
-                      <Bar 
-                        dataKey="total_contract_mt" 
-                        radius={[2, 2, 0, 0]}
+
+                      <Bar
+                        dataKey="total_contract_mt"
+                        radius={[5, 5, 0, 0]}
                         onClick={(data: any) => {
                           if (!data) return;
+
                           if ('supplier' in data) {
                             handleBarClick(data as GroupedSupplier);
-                          } else if (data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
-                            handleBarClick(data.activePayload[0].payload as GroupedSupplier);
+                          } else if (
+                            data.activePayload &&
+                            data.activePayload[0] &&
+                            data.activePayload[0].payload
+                          ) {
+                            handleBarClick(
+                              data.activePayload[0].payload as GroupedSupplier
+                            );
                           } else if (data.payload) {
                             handleBarClick(data.payload as GroupedSupplier);
                           }
@@ -1494,20 +1616,21 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
                           const baseColor = barColors[index % barColors.length];
                           const isSelected = selectedSupplier === entry.supplier;
                           const isHovered = hoveredBar === index;
+
                           let fill = baseColor;
-                          
+
                           if (selectedSupplier) {
-                            fill = isSelected ? baseColor : `${baseColor}33`; 
+                            fill = isSelected ? baseColor : `${baseColor}33`;
                           } else if (hoveredBar !== null) {
                             fill = isHovered ? baseColor : `${baseColor}cc`;
                           }
 
                           return (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={fill} 
-                              stroke={isSelected ? '#000000' : 'none'}
-                              strokeWidth={isSelected ? 1.5 : 0}
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={fill}
+                              stroke={isSelected ? '#047857' : 'none'}
+                              strokeWidth={isSelected ? 2 : 0}
                             />
                           );
                         })}
@@ -1518,48 +1641,77 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
               </div>
             </div>
 
-            {/* Sidebar supplier tabular registry */}
-            <div className="col-span-12 lg:col-span-4 bg-white border border-gray-400 rounded-sm p-4 overflow-hidden flex flex-col shadow-sm max-h-[352px]">
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2  border-b border-gray-200 pb-1.5 flex items-center justify-between">
+            {/* Supplier Summary Registry */}
+            <div className="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-xl p-4 overflow-hidden flex flex-col shadow-sm max-h-[352px]">
+
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2 flex items-center justify-between">
                 <span>Supplier Summary Registry</span>
-                <span className="text-[9px] font-bold text-gray-400 font-mono tracking-tighter">({groupedChartData.length} active)</span>
+
+                <span className="text-[9px] font-bold text-slate-400 font-mono tracking-tighter bg-slate-50 px-2 py-1 rounded">
+                  ({groupedChartData.length} active)
+                </span>
               </h3>
-              <div className="flex-1 overflow-auto bg-slate-50 border border-gray-200 ">
+
+              <div className="flex-1 overflow-auto bg-slate-50 border border-slate-200 rounded-lg">
                 <table className="w-full text-[10px] border-collapse">
-                  <thead className="bg-[#e4e0d8] font-bold sticky top-0 border-b border-gray-300">
+
+                  <thead className="bg-emerald-50 text-emerald-900 font-bold sticky top-0 border-b border-emerald-200">
                     <tr>
-                      <th className="p-1 px-2 text-left border-r border-gray-300">SUPPLIER</th>
-                      <th className="p-1 text-center border-r border-gray-300 w-16">VOUCHERS</th>
-                      <th className="p-1 text-right w-24">CONTRACT WT (MT)</th>
+                      <th className="p-2 px-2.5 text-left border-r border-emerald-200">
+                        SUPPLIER
+                      </th>
+                      <th className="p-2 text-center border-r border-emerald-200 w-16">
+                        VOUCHERS
+                      </th>
+                      <th className="p-2 text-right w-24">
+                        CONTRACT WT (MT)
+                      </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+
+                  <tbody className="divide-y divide-slate-200">
                     {groupedChartData.map((item, idx) => {
                       const isSelected = selectedSupplier === item.supplier;
+
                       return (
-                        <tr 
-                          key={idx} 
+                        <tr
+                          key={idx}
                           onClick={() => handleBarClick(item)}
                           className={cn(
-                            "hover:bg-[#ffffd0]/60 cursor-pointer font-bold transition-all text-[9.5px]",
-                            isSelected ? "bg-amber-100 text-amber-955 border-l-[3px] border-l-amber-600 font-black" : "even:bg-white"
+                            "hover:bg-emerald-50 cursor-pointer font-bold transition-all text-[9.5px]",
+                            isSelected
+                              ? "bg-emerald-100 text-emerald-900 border-l-[3px] border-l-emerald-600 font-black"
+                              : "even:bg-white"
                           )}
                         >
-                          <td className="p-1.5 px-2 font-black truncate max-w-[140px]" title={item.supplier}>
+                          <td
+                            className="p-1.5 px-2.5 font-black truncate max-w-[140px]"
+                            title={item.supplier}
+                          >
                             {item.supplier}
                           </td>
-                          <td className="p-1 text-center font-mono tabular-nums text-slate-400">
+
+                          <td className="p-1.5 text-center font-mono tabular-nums text-slate-500">
                             {item.orderCount} POs
                           </td>
-                          <td className="p-1 px-2 text-right font-mono tabular-nums text-indigo-950">
-                            {item.total_contract_mt.toLocaleString('en-IN', { minimumFractionDigits: 3 })}
+
+                          <td className="p-1.5 px-2.5 text-right font-mono tabular-nums text-emerald-800 font-black">
+                            {item.total_contract_mt.toLocaleString('en-IN', {
+                              minimumFractionDigits: 3
+                            })}
                           </td>
                         </tr>
                       );
                     })}
+
                     {groupedChartData.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="p-4 text-center text-gray-400 italic">No suppliers found.</td>
+                        <td
+                          colSpan={3}
+                          className="p-4 text-center text-slate-400 italic"
+                        >
+                          No suppliers found.
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -1569,89 +1721,145 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
           </div>
 
           {/* Bottom Ledger Vouchers Grid */}
-          <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-3">
-            <div className="flex justify-between items-center ">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-3">
+
+            <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
-                  <span className="font-extrabold mr-1">📁</span>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="font-extrabold">📁</span>
                   <span>Purchase Orders Transaction Audit Log</span>
                 </h3>
+
                 {selectedSupplier && (
-                  <span className="text-[10px] text-gray-600 bg-amber-50 px-2 py-0.5 border border-amber-200 rounded-sm font-bold mt-1 inline-block">
-                    Currently Drilling Down: <span className="font-black text-amber-955">{selectedSupplier}</span>
+                  <span className="text-[10px] text-slate-600 bg-emerald-50 px-2 py-1 border border-emerald-200 rounded-md font-bold mt-1 inline-block">
+                    Currently Drilling Down:
+                    <span className="font-black text-emerald-800 ml-1">
+                      {selectedSupplier}
+                    </span>
                   </span>
                 )}
               </div>
-              <span className="text-[9.5px] text-slate-700 italic bg-gray-100 border border-gray-300 font-bold px-2 py-0.5">
+
+              <span className="text-[9.5px] text-slate-600 italic bg-slate-50 border border-slate-200 font-bold px-2.5 py-1 rounded-md">
                 Showing {displayedDetails.length} of {originalData.length} records
               </span>
             </div>
 
-            <div className="bg-white border border-gray-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)] overflow-x-auto">
+            <div className="bg-white border border-slate-200 rounded-lg shadow-inner overflow-x-auto">
+
               <table className="w-full border-collapse text-[10px]">
-                <thead className="bg-[#c0c0c0] font-bold text-center border-b border-gray-400 ">
-                  <tr className="h-8">
-                    <th className="px-4 text-left border-r border-gray-300 w-24">DATE</th>
-                    <th className="px-3 border-r border-gray-300 w-28">PO CONTRACT #</th>
-                    <th className="px-3 border-r border-gray-300 w-20">FIN YEAR</th>
-                    <th className="px-5 text-left border-r border-gray-300">SUPPLIER (PARTY) IDENTITY</th>
-                    <th className="px-5 text-left border-r border-gray-300">BROKER CODE</th>
-                    <th className="px-3 border-r border-gray-300 w-28">PO TYPE</th>
-                    <th className="px-3 border-r border-gray-300 w-20">STATUS</th>
-                    <th className="px-4 text-right w-36">CONTRACT WT. (MT)</th>
+
+                <thead className="bg-emerald-700 text-white font-bold text-center border-b border-emerald-800">
+                  <tr className="h-9">
+                    <th className="px-4 text-left border-r border-emerald-600 w-24">
+                      DATE
+                    </th>
+
+                    <th className="px-3 border-r border-emerald-600 w-28">
+                      PO CONTRACT #
+                    </th>
+
+                    <th className="px-3 border-r border-emerald-600 w-20">
+                      FIN YEAR
+                    </th>
+
+                    <th className="px-5 text-left border-r border-emerald-600">
+                      SUPPLIER (PARTY) IDENTITY
+                    </th>
+
+                    <th className="px-5 text-left border-r border-emerald-600">
+                      BROKER CODE
+                    </th>
+
+                    <th className="px-3 border-r border-emerald-600 w-28">
+                      PO TYPE
+                    </th>
+
+                    <th className="px-3 border-r border-emerald-600 w-20">
+                      STATUS
+                    </th>
+
+                    <th className="px-4 text-right w-36">
+                      CONTRACT WT. (MT)
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 font-bold">
+
+                <tbody className="divide-y divide-slate-100 font-bold">
+
                   {displayedDetails.map((po, index) => {
                     const wt = Number(po.total_contract_mt) || 0;
+
                     return (
-                      <tr 
-                        key={po.po_id || index} 
-                        className="h-10 hover:bg-[#ffffd0]/30 transition-colors group cursor-default border-b border-gray-50"
+                      <tr
+                        key={po.po_id || index}
+                        className="h-10 hover:bg-emerald-50 transition-colors group cursor-default border-b border-slate-100"
                       >
-                        <td className="px-4 text-gray-500 font-mono italic">
-                          {po.po_date ? new Date(po.po_date).toLocaleDateString('en-GB') : 'N/A'}
+                        <td className="px-4 text-slate-500 font-mono italic">
+                          {po.po_date
+                            ? new Date(po.po_date).toLocaleDateString('en-GB')
+                            : 'N/A'}
                         </td>
-                        <td className="px-3 text-center bg-blue-50/10 text-blue-900 border-r border-gray-100 font-mono">
+
+                        <td className="px-3 text-center bg-blue-50/30 text-blue-900 border-r border-slate-100 font-mono">
                           {po.po_no}
                         </td>
-                        <td className="px-3 text-center text-gray-500">
+
+                        <td className="px-3 text-center text-slate-500">
                           {po.financial_year}
                         </td>
-                        <td className="px-5 text-slate-900 max-w-[200px] truncate" title={po.supplier}>
+
+                        <td
+                          className="px-5 text-slate-900 max-w-[200px] truncate"
+                          title={po.supplier}
+                        >
                           {po.supplier || 'DIRECT'}
                         </td>
-                        <td className="px-5 text-gray-600 font-medium">
+
+                        <td className="px-5 text-slate-600 font-medium">
                           {po.broker || 'DIRECT'}
                         </td>
-                        <td className="px-3 text-center text-gray-500 font-medium tracking-tight">
-                          <span className="border border-slate-200 px-1 py-0.5 bg-slate-100 text-[9px] uppercase font-black">
+
+                        <td className="px-3 text-center text-slate-500 font-medium tracking-tight">
+                          <span className="border border-slate-200 px-1.5 py-0.5 bg-slate-50 text-[9px] uppercase font-black rounded">
                             {po.po_type || 'RAW JUTE'}
                           </span>
                         </td>
+
                         <td className="px-3 text-center">
-                          <span className={cn(
-                            "px-1.5 py-0.5 text-[8.5px] font-black uppercase rounded-sm border",
-                            po.pending !== false 
-                              ? "bg-amber-50 text-amber-700 border-amber-200" 
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          )}>
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 text-[8.5px] font-black uppercase rounded-full border",
+                              po.pending !== false
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            )}
+                          >
                             {po.pending !== false ? 'Pending' : 'Completed'}
                           </span>
                         </td>
-                        <td className="px-4 text-right tabular-nums text-indigo-900 font-black italic">
-                          {wt.toLocaleString('en-IN', { minimumFractionDigits: 3 })} MT
+
+                        <td className="px-4 text-right tabular-nums text-emerald-800 font-black italic">
+                          {wt.toLocaleString('en-IN', {
+                            minimumFractionDigits: 3
+                          })}{' '}
+                          MT
                         </td>
                       </tr>
                     );
                   })}
+
                   {displayedDetails.length === 0 && (
                     <tr className="h-16">
-                      <td colSpan={8} className="text-center text-gray-400 italic">
+                      <td
+                        colSpan={8}
+                        className="text-center text-slate-400 italic"
+                      >
                         No individual transactions match the filter setup.
                       </td>
                     </tr>
                   )}
+
                 </tbody>
               </table>
             </div>
