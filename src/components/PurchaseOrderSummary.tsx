@@ -1251,7 +1251,9 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
   };
 
   return (
-    <div className="space-y-4" id="purchase-order-summary-report">
+    <div className="space-y-4 p-4 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 border border-slate-200 rounded-2xl shadow-sm"
+      id="purchase-order-summary-report"
+    >
       
       {/* Dynamic Sub-tab selector bar inside card header */}
       {/* <div className="flex border-b-[2px] border-[#808080] pb-1 mb-2 items-center justify-between ">

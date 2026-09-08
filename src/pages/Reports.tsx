@@ -1633,7 +1633,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
 
   return (
-    <LegacyLayout title="P.O Automation" subtitle="General Information & Analytical Reports" onClose={onClose}>
+    <>
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
         <div className="flex flex-wrap items-end gap-1 px-2 pt-1 bg-green-800 border-b-2 border-green-950">
@@ -2974,82 +2974,116 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
           {reportType === 'map_wise_po' && (
           <div className="space-y-4">
              {/* Map Page Header Option Bar - All Options in Single Bar, no text */}
-             <div className="bg-[#c0c0c0] p-1.5 border border-gray-400 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm flex items-center justify-start gap-4 flex-wrap">
+              <div className="bg-white p-2 border border-slate-200 shadow-sm rounded-lg flex items-center justify-start gap-3 flex-wrap">
                 {/* Sourcing Stats Box on Left Side */}
-                <div className="bg-slate-800 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.5)] border border-slate-700 px-2.5 py-1 text-white font-mono text-[8.5px] font-black tracking-wider flex items-center gap-2">
-                  <span>ACTIVE {sourcingGroupMode === 'area' ? 'AREAS' : sourcingGroupMode === 'agency' ? 'AGENCIES' : 'REGIONS'}: <span className="text-amber-400">{areaGroupedPo.length}</span></span>
-                  <span className="text-slate-500">//</span>
-                  <span>GLOBAL MT TONS: <span className="text-sky-400">{poData.reduce((acc,p) => acc + (Number(p.total_contract_mt)||0), 0).toFixed(2)} MT</span></span>
+                <div className="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-md shadow-sm text-white font-mono text-[8.5px] font-black tracking-wider flex items-center gap-2">
+                  <span>
+                    ACTIVE {sourcingGroupMode === 'area' ? 'AREAS' : sourcingGroupMode === 'agency' ? 'AGENCIES' : 'REGIONS'}:
+                    <span className="text-emerald-400 ml-1">
+                      {areaGroupedPo.length}
+                    </span>
+                  </span>
+
+                  <span className="text-slate-500">•</span>
+
+                  <span>
+                    GLOBAL MT TONS:
+                    <span className="text-cyan-400 ml-1">
+                      {poData.reduce((acc,p) => acc + (Number(p.total_contract_mt)||0), 0).toFixed(2)} MT
+                    </span>
+                  </span>
                 </div>
 
-                {/* Aesthetic spacing divider */}
-                <span className="text-gray-400 font-normal  hidden lg:inline">|</span>
+                {/* Divider */}
+                <span className="text-slate-300 hidden lg:inline">|</span>
 
                 {/* Map Modes */}
                 <div className="flex items-center gap-1.5 flex-wrap font-sans">
-                   <button 
-                     onClick={() => setMapMode('street')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       mapMode === 'street' ? "bg-indigo-900 text-white border-indigo-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      🗺️ OPENSTREETMAP STD
-                   </button>
-                   <button 
-                     onClick={() => setMapMode('voyager')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       mapMode === 'voyager' ? "bg-indigo-900 text-white border-indigo-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      🎨 VOYAGER ACCENT
-                   </button>
-                   <button 
-                     onClick={() => setMapMode('cyber')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       mapMode === 'cyber' ? "bg-slate-900 text-teal-400 border-slate-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      📡 CYBER RADAR
-                   </button>
+
+                  <button
+                    onClick={() => setMapMode('street')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      mapMode === 'street'
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800"
+                    )}
+                  >
+                    🗺️ OPENSTREETMAP STD
+                  </button>
+
+                  <button
+                    onClick={() => setMapMode('voyager')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      mapMode === 'voyager'
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800"
+                    )}
+                  >
+                    🎨 VOYAGER ACCENT
+                  </button>
+
+                  <button
+                    onClick={() => setMapMode('cyber')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      mapMode === 'cyber'
+                        ? "bg-slate-900 text-cyan-400 border-slate-900 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                    )}
+                  >
+                    📡 CYBER RADAR
+                  </button>
+
                 </div>
 
-                {/* Aesthetic spacing divider */}
-                <span className="text-gray-400 font-normal  hidden md:inline">|</span>
+                {/* Divider */}
+                <span className="text-slate-300 hidden md:inline">|</span>
 
                 {/* Sourcing Category Modes */}
                 <div className="flex items-center gap-1.5 flex-wrap font-sans">
-                   <button 
-                     onClick={() => setSourcingGroupMode('area')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       sourcingGroupMode === 'area' ? "bg-emerald-900 text-white border-emerald-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      🗺️ AREA WISE
-                   </button>
-                   <button 
-                     onClick={() => setSourcingGroupMode('agency')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       sourcingGroupMode === 'agency' ? "bg-emerald-900 text-white border-emerald-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      🏢 AGENCY WISE
-                   </button>
-                   <button 
-                     onClick={() => setSourcingGroupMode('both')}
-                     className={cn(
-                       "px-2 py-0.5 text-[8.5px] font-bold uppercase border border-gray-400 shadow-[1px_1px_0_0_white]",
-                       sourcingGroupMode === 'both' ? "bg-emerald-900 text-white border-emerald-950 shadow-none font-black" : "bg-[#d4d0c8] hover:bg-white text-slate-800"
-                     )}
-                   >
-                      🏷️ ALL (COMBINED)
-                   </button>
+
+                  <button
+                    onClick={() => setSourcingGroupMode('area')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      sourcingGroupMode === 'area'
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800"
+                    )}
+                  >
+                    🗺️ AREA WISE
+                  </button>
+
+                  <button
+                    onClick={() => setSourcingGroupMode('agency')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      sourcingGroupMode === 'agency'
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800"
+                    )}
+                  >
+                    🏢 AGENCY WISE
+                  </button>
+
+                  <button
+                    onClick={() => setSourcingGroupMode('both')}
+                    className={cn(
+                      "px-3 py-1.5 text-[8.5px] font-bold uppercase border rounded-md transition-all duration-150 cursor-pointer",
+                      sourcingGroupMode === 'both'
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm font-black"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800"
+                    )}
+                  >
+                    🏷️ ALL (COMBINED)
+                  </button>
+
                 </div>
-             </div>
+
+              </div>
+             
 
              <div className="flex flex-col gap-4">
                 
@@ -3335,121 +3369,172 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
           </div>
         )}
 
-         {reportType === 'data_aggregation' && (
-           <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4 rounded-sm">
-              {/* Header Bar */}
-              <div className="flex flex-wrap gap-3 items-center justify-between bg-[#c0c0c0] p-3 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm">
-                 <div>
-                    <h3 className="text-xs font-black uppercase text-indigo-900 tracking-wider">Multi-Module ERP Historical Data Aggregator</h3>
-                    <p className="text-[9px] text-gray-700 font-bold uppercase mt-0.5">Queries real-time data from Supabase, aggregates master lists, and formats 10 specialized reports.</p>
-                 </div>
-                 
-                 <div className="flex items-center gap-3">
-                    {/* Search Box */}
-                    <div className="flex flex-col">
-                       <label htmlFor="agg-report-search" className="text-[8px] font-bold text-gray-700 uppercase italic block ml-1 mb-0.5">Filter Records</label>
-                       <input  name="filter_records" aria-label="Filter Records"
-                         id="agg-report-search"
-                         type="text" 
-                         placeholder="Search result rows..." 
-                         value={aggSearchTerm}
-                         onChange={(e) => setAggSearchTerm(e.target.value)}
-                         className="bg-white text-xs border border-gray-400 px-2 py-1 w-44 font-bold rounded-sm text-slate-800"
-                       />
-                    </div>
-                    
-                    {/* Export CSV Button */}
-                    <div className="pt-3">
-                       <button 
-                         id="download-agg-csv"
-                         onClick={handleExportAggCSV}
-                         className="bg-[#d4d0c8] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 text-[10px] font-black uppercase px-4 py-1.5 flex items-center gap-2 tracking-wide cursor-pointer"
-                       >
-                          📥 Export Active to CSV
-                       </button>
-                    </div>
-                 </div>
+        {reportType === 'data_aggregation' && (
+          <div className="bg-slate-50 border border-slate-200 shadow-sm p-4 space-y-4 rounded-xl">
+
+            {/* Header Bar */}
+            <div className="flex flex-wrap gap-4 items-center justify-between bg-white p-4 border border-slate-200 shadow-sm rounded-lg">
+
+              <div>
+                <h3 className="text-sm font-black uppercase text-emerald-800 tracking-wide">
+                  Multi-Module ERP Historical Data Aggregator
+                </h3>
+
+                <p className="text-[9px] text-slate-500 font-bold uppercase mt-1 tracking-wide">
+                  Queries real-time data from Supabase, aggregates master lists, and formats 10 specialized reports.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                 {/* Reports List Left Sidebar */}
-                 <div className="md:col-span-1 space-y-1.5 bg-[#c0c0c0] p-2 border border-black/15 shadow-sm rounded-sm">
-                    <p className="text-[9px] font-black uppercase text-indigo-950 tracking-wider mb-2 border-b border-black/10 pb-1 italic">Suite 10 Aggregated Reports</p>
-                    
-                    {[
-                      { key: 'monthly_po_summary', label: '1. PO Month-Wise Summary' },
-                      { key: 'yearly_po_summary', label: '2. PO Year-Wise Summary' },
-                      { key: 'monthly_sauda_summary', label: '3. Sauda Month-Wise Summary' },
-                      { key: 'yearly_sauda_summary', label: '4. Sauda Year-Wise Summary' },
-                      { key: 'po_broker_distribution', label: '5. PO Broker Share' },
-                      { key: 'po_supplier_distribution', label: '6. PO Supplier Share' },
-                      { key: 'sauda_broker_distribution', label: '7. Sauda Broker Share' },
-                      { key: 'sauda_supplier_distribution', label: '8. Sauda Supplier Share' },
-                      { key: 'po_area_sourcing', label: '9. PO Sourcing Regions' },
-                      { key: 'sauda_transport_logistics', label: '10. Sauda Transit Logistics' }
-                    ].map((it) => (
-                       <button
-                         id={`agg-report-btn-${it.key}`}
-                         key={it.key}
-                         onClick={() => {
-                            setActiveAggReportKey(it.key);
-                            setAggSearchTerm('');
-                         }}
-                         className={cn(
-                           "w-full text-left font-black uppercase tracking-wide text-[9px] px-2 py-1.5 transition-all rounded-sm border cursor-pointer",
-                           activeAggReportKey === it.key 
-                             ? "bg-indigo-900 border-indigo-900 text-white shadow-inner" 
-                             : "bg-[#d4d0c8] border-white border-r-gray-700 border-b-gray-700 active:border-t-slate-800 active:border-l-slate-800 hover:bg-slate-100 text-gray-800"
-                         )}
-                       >
-                          {it.label}
-                       </button>
-                    ))}
-                 </div>
+              <div className="flex items-end gap-3">
 
-                 {/* Active Report Table Right Column */}
-                 <div className="md:col-span-3 space-y-3">
-                    {/* Meta Statement */}
-                    <div className="bg-white border border-slate-300 px-3 py-2 text-[10px] font-bold text-slate-700 italic flex justify-between items-center rounded-sm">
-                       <span>{computedAggReport.summary}</span>
-                       <span className="text-[8px] font-mono tracking-tighter bg-indigo-50 text-indigo-800 px-1.5 py-0.5 border border-indigo-200">ACTIVE REPORT STATUS: LIVE</span>
-                    </div>
+                {/* Search Box */}
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="agg-report-search"
+                    className="text-[8px] font-black text-slate-500 uppercase tracking-wider ml-1 mb-1"
+                  >
+                    Filter Records
+                  </label>
 
-                    {/* Grid Table Container */}
-                    <div className="bg-white border border-slate-300 shadow-inner overflow-x-auto min-h-[350px]">
-                       <table className="w-full text-left text-[10px] font-bold border-collapse min-w-[800px]">
-                          <thead className="bg-[#c0c0c0] border-b border-black/30 text-slate-800 uppercase tracking-wider sticky top-0">
-                             <tr>
-                                {computedAggReport.headers.map((h, idx) => (
-                                   <th key={idx} className="px-3 py-2.5 border-r border-black/10 font-bold uppercase text-[9px]">{h}</th>
-                                ))}
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-black/5">
-                             {computedAggReport.rows.length > 0 ? (
-                                computedAggReport.rows.map((row, rIdx) => (
-                                   <tr key={rIdx} className="hover:bg-indigo-50/50 transition-colors">
-                                      {row.map((cell, cIdx) => (
-                                         <td key={cIdx} className="px-3 py-2 border-r border-black/5 font-mono text-slate-700 whitespace-nowrap">
-                                            {cell}
-                                         </td>
-                                      ))}
-                                   </tr>
-                                ))
-                             ) : (
-                                <tr>
-                                   <td colSpan={computedAggReport.headers.length} className="px-3 py-16 text-center text-gray-400 italic">
-                                      No matching aggregates found. Make sure data is seeded in purchase_master and sauda_master.
-                                   </td>
-                                </tr>
-                             )}
-                          </tbody>
-                       </table>
-                    </div>
-                 </div>
+                  <input
+                    name="filter_records"
+                    aria-label="Filter Records"
+                    id="agg-report-search"
+                    type="text"
+                    placeholder="Search result rows..."
+                    value={aggSearchTerm}
+                    onChange={(e) => setAggSearchTerm(e.target.value)}
+                    className="bg-slate-50 text-[10px] border border-slate-300 px-3 py-2 w-48 font-semibold rounded-md text-slate-800 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Export CSV Button */}
+                <div>
+                  <button
+                    id="download-agg-csv"
+                    onClick={handleExportAggCSV}
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-800 shadow-sm text-[10px] font-black uppercase px-4 py-2 flex items-center gap-2 tracking-wide cursor-pointer rounded-md transition-all active:scale-[0.98]"
+                  >
+                    📥 Export Active to CSV
+                  </button>
+                </div>
+
               </div>
-           </div>
-         )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+              {/* Reports List Left Sidebar */}
+              <div className="md:col-span-1 space-y-1.5 bg-white p-3 border border-slate-200 shadow-sm rounded-lg">
+
+                <p className="text-[9px] font-black uppercase text-emerald-800 tracking-wider mb-3 border-b border-slate-200 pb-2">
+                  Suite 10 Aggregated Reports
+                </p>
+
+                {[
+                  { key: 'monthly_po_summary', label: '1. PO Month-Wise Summary' },
+                  { key: 'yearly_po_summary', label: '2. PO Year-Wise Summary' },
+                  { key: 'monthly_sauda_summary', label: '3. Sauda Month-Wise Summary' },
+                  { key: 'yearly_sauda_summary', label: '4. Sauda Year-Wise Summary' },
+                  { key: 'po_broker_distribution', label: '5. PO Broker Share' },
+                  { key: 'po_supplier_distribution', label: '6. PO Supplier Share' },
+                  { key: 'sauda_broker_distribution', label: '7. Sauda Broker Share' },
+                  { key: 'sauda_supplier_distribution', label: '8. Sauda Supplier Share' },
+                  { key: 'po_area_sourcing', label: '9. PO Sourcing Regions' },
+                  { key: 'sauda_transport_logistics', label: '10. Sauda Transit Logistics' }
+                ].map((it) => (
+                  <button
+                    id={`agg-report-btn-${it.key}`}
+                    key={it.key}
+                    onClick={() => {
+                      setActiveAggReportKey(it.key);
+                      setAggSearchTerm('');
+                    }}
+                    className={cn(
+                      "w-full text-left font-black uppercase tracking-wide text-[9px] px-3 py-2 transition-all rounded-md border cursor-pointer",
+                      activeAggReportKey === it.key
+                        ? "bg-emerald-700 border-emerald-700 text-white shadow-sm"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-800"
+                    )}
+                  >
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active Report Table Right Column */}
+              <div className="md:col-span-3 space-y-3">
+
+                {/* Meta Statement */}
+                <div className="bg-white border border-slate-200 px-3 py-2.5 text-[10px] font-bold text-slate-600 flex justify-between items-center rounded-lg shadow-sm">
+
+                  <span>
+                    {computedAggReport.summary}
+                  </span>
+
+                  <span className="text-[8px] font-black tracking-wide bg-emerald-50 text-emerald-700 px-2 py-1 border border-emerald-200 rounded-md">
+                    ACTIVE REPORT STATUS: LIVE
+                  </span>
+
+                </div>
+
+                {/* Grid Table Container */}
+                <div className="bg-white border border-slate-200 shadow-sm overflow-x-auto min-h-[350px] rounded-lg">
+
+                  <table className="w-full text-left text-[10px] font-bold border-collapse min-w-[800px]">
+
+                    <thead className="bg-emerald-700 text-white uppercase tracking-wider sticky top-0">
+                      <tr>
+                        {computedAggReport.headers.map((h, idx) => (
+                          <th
+                            key={idx}
+                            className="px-3 py-2.5 border-r border-emerald-600 font-black uppercase text-[9px] whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100">
+
+                      {computedAggReport.rows.length > 0 ? (
+                        computedAggReport.rows.map((row, rIdx) => (
+                          <tr
+                            key={rIdx}
+                            className="hover:bg-emerald-50/60 transition-colors"
+                          >
+                            {row.map((cell, cIdx) => (
+                              <td
+                                key={cIdx}
+                                className="px-3 py-2 border-r border-slate-100 font-mono text-slate-700 whitespace-nowrap"
+                              >
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={computedAggReport.headers.length}
+                            className="px-3 py-16 text-center text-slate-400 italic"
+                          >
+                            No matching aggregates found. Make sure data is seeded in purchase_master and sauda_master.
+                          </td>
+                        </tr>
+                      )}
+
+                    </tbody>
+
+                  </table>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        )}
          {reportType === 'payment_report' && (
            <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4 rounded-sm">
               {/* Header Bar */}
@@ -3577,6 +3662,6 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
            </span>
         </div>
       </div>
-    </LegacyLayout>
+    </>
   );
 }
