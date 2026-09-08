@@ -44,7 +44,8 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
-import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
+import PurchaseOrderSummary from '../components/PurchaseOrderSummary';PaymentReport
+import PaymentReport from '../components/PaymentReport';
 import { dbModule } from '../services/dbModule';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -3536,119 +3537,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
           </div>
         )}
          {reportType === 'payment_report' && (
-           <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4 rounded-sm">
-              {/* Header Bar */}
-              <div className="flex flex-wrap gap-3 items-center justify-between bg-[#c0c0c0] p-3 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm">
-                 <div>
-                    <h3 className="text-xs font-black uppercase text-indigo-900 tracking-wider"></h3>
-                    <p className="text-[9px] text-gray-700 font-bold uppercase mt-0.5"></p>
-                 </div>
-                 
-                 <div className="flex items-center gap-3">
-                    {/* Search Box */}
-                    <div className="flex flex-col">
-                       <label htmlFor="agg-report-search" className="text-[8px] font-bold text-gray-700 uppercase italic block ml-1 mb-0.5">Filter Records</label>
-                       <input  name="filter_records" aria-label="Filter Records"
-                         id="agg-report-search"
-                         type="text" 
-                         placeholder="Search result rows..." 
-                         value={aggSearchTerm}
-                         onChange={(e) => setAggSearchTerm(e.target.value)}
-                         className="bg-white text-xs border border-gray-400 px-2 py-1 w-44 font-bold rounded-sm text-slate-800"
-                       />
-                    </div>
-                    
-                    {/* Export CSV Button */}
-                    <div className="pt-3">
-                       <button 
-                         id="download-agg-csv"
-                         onClick={handleExportAggCSV}
-                         className="bg-[#d4d0c8] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 text-[10px] font-black uppercase px-4 py-1.5 flex items-center gap-2 tracking-wide cursor-pointer"
-                       >
-                          📥 Export Active to CSV
-                       </button>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                 {/* Reports List Left Sidebar */}
-                 <div className="md:col-span-1 space-y-1.5 bg-[#c0c0c0] p-2 border border-black/15 shadow-sm rounded-sm">
-                    <p className="text-[9px] font-black uppercase text-indigo-950 tracking-wider mb-2 border-b border-black/10 pb-1 italic">Suite 10 Aggregated Reports</p>
-                    
-                    {[
-                      { key: 'monthly_po_summary', label: '1. PO Month-Wise Summary' },
-                      { key: 'yearly_po_summary', label: '2. PO Year-Wise Summary' },
-                      { key: 'monthly_sauda_summary', label: '3. Sauda Month-Wise Summary' },
-                      { key: 'yearly_sauda_summary', label: '4. Sauda Year-Wise Summary' },
-                      { key: 'po_broker_distribution', label: '5. PO Broker Share' },
-                      { key: 'po_supplier_distribution', label: '6. PO Supplier Share' },
-                      { key: 'sauda_broker_distribution', label: '7. Sauda Broker Share' },
-                      { key: 'sauda_supplier_distribution', label: '8. Sauda Supplier Share' },
-                      { key: 'po_area_sourcing', label: '9. PO Sourcing Regions' },
-                      { key: 'sauda_transport_logistics', label: '10. Sauda Transit Logistics' }
-                    ].map((it) => (
-                       <button
-                         id={`agg-report-btn-${it.key}`}
-                         key={it.key}
-                         onClick={() => {
-                            setActiveAggReportKey(it.key);
-                            setAggSearchTerm('');
-                         }}
-                         className={cn(
-                           "w-full text-left font-black uppercase tracking-wide text-[9px] px-2 py-1.5 transition-all rounded-sm border cursor-pointer",
-                           activeAggReportKey === it.key 
-                             ? "bg-indigo-900 border-indigo-900 text-white shadow-inner" 
-                             : "bg-[#d4d0c8] border-white border-r-gray-700 border-b-gray-700 active:border-t-slate-800 active:border-l-slate-800 hover:bg-slate-100 text-gray-800"
-                         )}
-                       >
-                          {it.label}
-                       </button>
-                    ))}
-                 </div>
-
-                 {/* Active Report Table Right Column */}
-                 <div className="md:col-span-3 space-y-3">
-                    {/* Meta Statement */}
-                    <div className="bg-white border border-slate-300 px-3 py-2 text-[10px] font-bold text-slate-700 italic flex justify-between items-center rounded-sm">
-                       <span>{computedAggReport.summary}</span>
-                       <span className="text-[8px] font-mono tracking-tighter bg-indigo-50 text-indigo-800 px-1.5 py-0.5 border border-indigo-200">ACTIVE REPORT STATUS: LIVE</span>
-                    </div>
-
-                    {/* Grid Table Container */}
-                    <div className="bg-white border border-slate-300 shadow-inner overflow-x-auto min-h-[350px]">
-                       <table className="w-full text-left text-[10px] font-bold border-collapse min-w-[800px]">
-                          <thead className="bg-[#c0c0c0] border-b border-black/30 text-slate-800 uppercase tracking-wider sticky top-0">
-                             <tr>
-                                {computedAggReport.headers.map((h, idx) => (
-                                   <th key={idx} className="px-3 py-2.5 border-r border-black/10 font-bold uppercase text-[9px]">{h}</th>
-                                ))}
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-black/5">
-                             {computedAggReport.rows.length > 0 ? (
-                                computedAggReport.rows.map((row, rIdx) => (
-                                   <tr key={rIdx} className="hover:bg-indigo-50/50 transition-colors">
-                                      {row.map((cell, cIdx) => (
-                                         <td key={cIdx} className="px-3 py-2 border-r border-black/5 font-mono text-slate-700 whitespace-nowrap">
-                                            {cell}
-                                         </td>
-                                      ))}
-                                   </tr>
-                                ))
-                             ) : (
-                                <tr>
-                                   <td colSpan={computedAggReport.headers.length} className="px-3 py-16 text-center text-gray-400 italic">
-                                      No matching aggregates found. Make sure data is seeded in purchase_master and sauda_master.
-                                   </td>
-                                </tr>
-                             )}
-                          </tbody>
-                       </table>
-                    </div>
-                 </div>
-              </div>
-           </div>
+           <PaymentReport></PaymentReport>
          )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-2 py-1  text-gray-450 border-t border-gray-300 mt-2">
