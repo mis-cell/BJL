@@ -1633,7 +1633,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
 
   return (
-    <>
+    <LegacyLayout >
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
         <div className="flex flex-wrap items-end gap-1 px-2 pt-1 bg-green-800 border-b-2 border-green-950">
@@ -3662,6 +3662,6 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
            </span>
         </div>
       </div>
-    </>
+    </LegacyLayout>
   );
 }
