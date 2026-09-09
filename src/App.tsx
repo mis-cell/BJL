@@ -1862,64 +1862,75 @@ export default function App() {
           <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto w-full max-w-full main-content">
             <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto relative w-full max-w-full">
               {!hasModulePermission(currentPage, allowedModules, isAdmin) ? (
-                <div className="flex-1 flex items-center justify-center p-8 bg-[#F4EFE6]">
-                  <div className="bg-[#FAF7F0] border-2 border-red-300 rounded-xl p-8 max-w-lg text-center shadow-lg">
-                    <div className="w-14 h-14 rounded-full bg-red-100 border border-red-200 text-red-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
-                      <Lock className="w-7 h-7" />
-                    </div>
-                    <h3 className="text-lg font-bold text-[#1E331B] uppercase tracking-wide">Access Restricted</h3>
-                    <p className="text-sm text-[#5A6E54] mt-2">
-                      Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">[{ALL_SYSTEM_MODULES.find(x => x.id === currentPage || x.pageId === currentPage || x.aliases.includes(currentPage))?.label || currentPage}]</span>.
-                    </p>
-                    {allowedModules && allowedModules.length > 0 && !allowedModules.includes("*") && (
+                <LegacyLayout
+                  title="ACCESS CONTROL RESTRICTION"
+                  allowedModules={allowedModules}
+                  isAdmin={isAdmin}
+                  onNavClick={(page) => globalNavigate(page as Page)}
+                >
+                  <div className="flex-1 flex items-center justify-center p-8 bg-[#F4EFE6] min-h-[500px]">
+                    <div className="bg-[#FAF7F0] border-2 border-red-300 rounded-xl p-8 max-w-lg text-center shadow-lg">
+                      <div className="w-14 h-14 rounded-full bg-red-100 border border-red-200 text-red-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                        <Lock className="w-7 h-7" />
+                      </div>
+                      <h3 className="text-lg font-bold text-[#1E331B] uppercase tracking-wide">Access Restricted</h3>
+                      <p className="text-sm text-[#5A6E54] mt-2">
+                        Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">[{ALL_SYSTEM_MODULES.find(x => x.id === currentPage || x.pageId === currentPage || x.aliases.includes(currentPage))?.label || currentPage}]</span>.
+                      </p>
+                      
                       <div className="mt-4 p-3 bg-white/80 rounded-lg border border-slate-200 text-left">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                           Your Permitted Modules:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {allowedModules.map((m) => (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => {
-                                const target = (ALL_SYSTEM_MODULES.find(x => x.id === m || x.aliases.includes(m))?.pageId || m) as Page;
-                                setCurrentPage(target);
-                              }}
-                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-xs font-semibold uppercase tracking-wide transition-colors cursor-pointer flex items-center gap-1"
-                            >
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              {ALL_SYSTEM_MODULES.find(x => x.id === m || x.aliases.includes(m))?.label || m}
-                            </button>
-                          ))}
+                          {(allowedModules && allowedModules.length > 0 && !allowedModules.includes("*") ? allowedModules : ['dashboard']).map((m) => {
+                            const def = ALL_SYSTEM_MODULES.find(x => x.id === m || x.aliases.includes(m));
+                            const label = def?.label || m;
+                            const pageId = (def?.pageId || m) as Page;
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => globalNavigate(pageId)}
+                                className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-xs font-semibold uppercase tracking-wide transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                {label}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                    )}
-                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-                      <button
-                        onClick={() => {
-                          const firstAllowed = getFirstAllowedPage(allowedModules, isAdmin) as Page;
-                          setCurrentPage(firstAllowed);
-                        }}
-                        className="w-full sm:w-auto px-5 py-2.5 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        Go to Permitted Module
-                      </button>
-                      <button
-                        onClick={() => {
-                          localStorage.removeItem("bally_auth_session");
-                          localStorage.removeItem("bally_user_context");
-                          setIsLoggedIn(false);
-                          setIsAdmin(false);
-                          setAllowedModules(["*"]);
-                        }}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-all cursor-pointer"
-                      >
-                        Logout / Switch User
-                      </button>
+
+                      <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const firstAllowed = getFirstAllowedPage(allowedModules, isAdmin) as Page;
+                            globalNavigate(firstAllowed);
+                          }}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          Go to Permitted Module
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.removeItem("bally_auth_session");
+                            localStorage.removeItem("bally_user_context");
+                            setIsLoggedIn(false);
+                            setIsAdmin(false);
+                            setAllowedModules(["*"]);
+                          }}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-all cursor-pointer"
+                        >
+                          Logout / Switch User
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </LegacyLayout>
               ) : (
                 <>
                   <div
