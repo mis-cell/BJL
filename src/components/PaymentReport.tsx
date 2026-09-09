@@ -2079,10 +2079,10 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
     if (!searchFilter.trim()) return true;
     const term = searchFilter.toLowerCase().trim();
     return (
-      (p.voucher_no && p.voucher_no.toLowerCase().includes(term)) ||
       (p.party_name && p.party_name.toLowerCase().includes(term)) ||
       (p.supplier && p.supplier.toLowerCase().includes(term)) ||
-      (p.mr_no && p.mr_no.toLowerCase().includes(term)) 
+      (p.mr_no && p.mr_no.toLowerCase().includes(term)) ||
+      (p.advance_payment_from.includes(term))
     );
   });
 
@@ -2327,6 +2327,21 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                 onChange={e => setSearchFilter(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
+            </div>
+            <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
+              <select
+                id="search_by_voucher_no_part_1467"
+                name="search_by_voucher_no_part"
+                value={searchFilter}
+                onChange={e => setSearchFilter(e.target.value)}
+                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select Payment From</option>
+                <option value="1">FROM BANK</option>
+                <option value="2">RXIL</option>
+                <option value="3">TReDS </option>
+                <option value="4">Invoice Mart</option>
+              </select>
             </div>
 
             <div className="flex items-center gap-2">
