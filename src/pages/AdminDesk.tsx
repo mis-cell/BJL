@@ -1091,6 +1091,16 @@ export default function AdminDesk({
         if (!cleanedRow.marka_code && cleanedRow.marka_name) {
           cleanedRow.marka_code = `MRK-${Math.floor(100 + Math.random() * 900)}`;
         }
+      } else if (selectedTable.name === "user_master") {
+        if (!cleanedRow.user_id && cleanedRow.username) {
+          cleanedRow.user_id = cleanedRow.username.toLowerCase().trim().replace(/\s+/g, "_");
+        }
+        if (!cleanedRow.status) {
+          cleanedRow.status = "Active";
+        }
+        if (!cleanedRow.role) {
+          cleanedRow.role = "OPERATOR";
+        }
       }
 
       if (currentColumns.some((c) => c.name === "created_at") && !cleanedRow.created_at) {

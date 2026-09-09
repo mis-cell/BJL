@@ -1245,7 +1245,7 @@ export default function App() {
             ? sess.allowed_modules === "*"
               ? ["*"]
               : String(sess.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-            : ["*"];
+            : isAdminUser ? ["*"] : [];
           setAllowedModules(mods);
           setIsLoggedIn(true);
           if (sess.year) setSelectedYear(sess.year);
@@ -1751,15 +1751,21 @@ export default function App() {
     }
 
     try {
+      const trimmedUser = user.trim();
       const { data, error } = await supabase
         .from("user_master")
         .select("*")
-        .or(`user_id.eq.${user},username.eq.${user.toUpperCase()}`)
-        .eq("status", "Active")
-        .single();
+        .or(`user_id.ilike.${trimmedUser},username.ilike.${trimmedUser}`)
+        .limit(1)
+        .maybeSingle();
 
       if (error || !data) {
-        alert("Invalid system credentials or account inactive.");
+        alert("Invalid system credentials. User not found.");
+        return;
+      }
+
+      if (data.status && data.status.toLowerCase() !== "active") {
+        alert("Access denied: Your account is currently inactive. Please contact Administrator.");
         return;
       }
 
@@ -1775,7 +1781,7 @@ export default function App() {
           ? data.allowed_modules === "*"
             ? ["*"]
             : String(data.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-          : ["*"];
+          : isAdminUser ? ["*"] : [];
         setAllowedModules(modules);
         setIsLoggedIn(true);
         setSelectedYear(year);
