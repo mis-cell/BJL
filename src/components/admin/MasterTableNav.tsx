@@ -40,17 +40,17 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
   return (
     <div className="bg-white border border-slate-200/90 rounded-xl shadow-xs flex flex-col h-full overflow-hidden">
       {/* Header with Title & Stats */}
-      <div className="p-3 bg-slate-50/80 border-b border-slate-200 shrink-0 space-y-2.5">
+      <div className="p-3 bg-slate-100 border-b border-slate-300 shrink-0 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-emerald-600/10 text-emerald-700 rounded-lg">
-              <Database className="h-4 w-4" />
+            <div className="p-1.5 bg-emerald-700 text-white rounded-lg shadow-2xs">
+              <Database className="h-4 w-4 stroke-[2.5]" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+              <h2 className="text-xs font-black text-slate-950 uppercase tracking-wide">
                 Master Tables
               </h2>
-              <span className="text-[10px] text-slate-500 font-medium">
+              <span className="text-[11px] text-slate-700 font-bold">
                 {tables.length} schema entities registered
               </span>
             </div>
@@ -58,7 +58,7 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
           <button
             onClick={onRefreshTables}
             title="Reload schema list"
-            className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
+            className="p-1.5 text-slate-700 hover:text-slate-950 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -66,18 +66,18 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search master tables..."
-            className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
+            className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-950 font-bold placeholder:text-slate-500 focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2 top-2 text-slate-500 hover:text-slate-800"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -88,12 +88,12 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
       {/* Tables List */}
       <div className="flex-1 overflow-y-auto p-1.5 space-y-1 divide-y divide-slate-100/50">
         {filteredTables.length === 0 ? (
-          <div className="p-6 text-center text-slate-400 space-y-2">
-            <Database className="h-8 w-8 mx-auto opacity-30 text-slate-400" />
-            <p className="text-xs font-medium">No tables found matching &quot;{searchQuery}&quot;</p>
+          <div className="p-6 text-center text-slate-500 space-y-2">
+            <Database className="h-8 w-8 mx-auto opacity-40 text-slate-500" />
+            <p className="text-xs font-bold text-slate-700">No tables found matching &quot;{searchQuery}&quot;</p>
             <button
               onClick={() => setSearchQuery("")}
-              className="text-[11px] text-emerald-700 font-semibold hover:underline"
+              className="text-xs text-emerald-800 font-black hover:underline"
             >
               Clear search filter
             </button>
@@ -112,25 +112,25 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
                   onClick={() => onSelectTable(table)}
                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
                     isSelected
-                      ? "bg-emerald-50 text-emerald-950 font-bold border border-emerald-300 shadow-xs"
-                      : "text-slate-700 hover:bg-slate-100/80 hover:text-slate-900 border border-transparent"
+                      ? "bg-emerald-100 text-emerald-950 font-black border border-emerald-400 shadow-xs"
+                      : "text-slate-800 hover:bg-slate-100 hover:text-slate-950 border border-transparent"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 overflow-hidden pr-6">
                     <div
                       className={`p-1 rounded-md shrink-0 transition-colors ${
                         isSelected
-                          ? "bg-emerald-600 text-white"
-                          : "bg-slate-100 text-slate-500 group-hover/item:bg-slate-200 group-hover/item:text-slate-700"
+                          ? "bg-emerald-800 text-white"
+                          : "bg-slate-200 text-slate-700 group-hover/item:bg-slate-300 group-hover/item:text-slate-950"
                       }`}
                     >
                       <IconComponent className="h-3.5 w-3.5" />
                     </div>
                     <div className="overflow-hidden text-left">
-                      <p className={`text-xs truncate ${isSelected ? "font-bold text-emerald-950" : "font-medium"}`}>
+                      <p className={`text-xs truncate ${isSelected ? "font-black text-emerald-950" : "font-bold text-slate-900"}`}>
                         {table.label}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-mono truncate">
+                      <p className={`text-[11px] font-mono truncate ${isSelected ? "text-emerald-800 font-bold" : "text-slate-600 font-semibold"}`}>
                         {table.name}
                       </p>
                     </div>
@@ -139,7 +139,7 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
                   {/* Active Indicator or Delete Button */}
                   <div className="flex items-center gap-1 shrink-0">
                     {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
                     )}
                     {canDelete && (
                       <button
@@ -151,7 +151,7 @@ export const MasterTableNav: React.FC<MasterTableNavProps> = ({
                           }
                         }}
                         title={`Drop ${table.name}`}
-                        className="opacity-0 group-hover/item:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all ml-1 cursor-pointer"
+                        className="opacity-0 group-hover/item:opacity-100 p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-100 rounded transition-all ml-1 cursor-pointer"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

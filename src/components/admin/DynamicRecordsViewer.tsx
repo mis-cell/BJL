@@ -320,13 +320,13 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
       </div>
 
       {/* Main Table Container */}
-      <div className="flex-1 bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs flex flex-col min-h-0">
+      <div className="flex-1 bg-white border border-slate-300 rounded-xl overflow-hidden shadow-xs flex flex-col min-h-0">
         <div className="flex-1 overflow-auto relative">
           {loading && (
             <div className="absolute inset-0 bg-white/70 backdrop-blur-2xs z-20 flex items-center justify-center">
-              <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-md">
-                <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />
-                <span className="text-xs font-semibold text-slate-700">
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-lg border border-slate-300 shadow-md">
+                <RefreshCw className="h-4 w-4 animate-spin text-emerald-700" />
+                <span className="text-xs font-black text-slate-900">
                   Loading records...
                 </span>
               </div>
@@ -335,13 +335,13 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
 
           {paginatedData.length === 0 ? (
             <div className="h-full min-h-[260px] flex flex-col items-center justify-center p-8 text-center">
-              <div className="p-3 bg-slate-100 rounded-full text-slate-400 mb-3">
+              <div className="p-3 bg-slate-100 rounded-full text-slate-500 mb-3">
                 <FileSpreadsheet className="h-8 w-8" />
               </div>
-              <h4 className="text-sm font-bold text-slate-800 mb-1">
+              <h4 className="text-sm font-black text-slate-900 mb-1">
                 {searchQuery ? "No matching records found" : "No records in this table yet"}
               </h4>
-              <p className="text-xs text-slate-500 max-w-sm mb-4">
+              <p className="text-xs text-slate-600 max-w-sm mb-4 font-medium">
                 {searchQuery
                   ? `No entries matched your filter "${searchQuery}". Try a different keyword or clear search.`
                   : `This table currently has 0 rows. Click below to add the first record.`}
@@ -349,26 +349,26 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
               {searchQuery ? (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors cursor-pointer"
                 >
                   Clear Search Filter
                 </button>
               ) : (
                 <button
                   onClick={onAddNewRow}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4 stroke-[3]" />
                   <span>Create First Record</span>
                 </button>
               )}
             </div>
           ) : (
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/95 sticky top-0 z-10 border-b border-slate-200 backdrop-blur-xs">
+              <thead className="bg-slate-900 sticky top-0 z-10 border-b border-slate-800 text-white">
                 <tr>
                   {/* Actions column */}
-                  <th className="py-2.5 px-3 text-center w-[120px] font-bold text-slate-700 uppercase tracking-wider text-[10.5px] border-r border-slate-200/80">
+                  <th className="py-3 px-3 text-center w-[130px] font-black text-white uppercase tracking-wider text-xs border-r border-slate-800 sticky left-0 bg-slate-900 z-20">
                     Actions
                   </th>
 
@@ -376,11 +376,11 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                   {displayColumns.map((col) => (
                     <th
                       key={col.name}
-                      className="py-2.5 px-3 font-bold text-slate-700 uppercase tracking-wider text-[10.5px] border-r border-slate-200/80 whitespace-nowrap"
+                      className="py-3 px-3 font-black text-white uppercase tracking-wider text-xs border-r border-slate-800 whitespace-nowrap"
                     >
-                      <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
                         <span>{col.name.replace(/_/g, " ")}</span>
-                        <span className="text-[9px] font-mono text-slate-400 lowercase font-normal">
+                        <span className="text-[9.5px] font-mono text-emerald-300 lowercase font-bold bg-slate-800 px-1 py-0.5 rounded border border-slate-700">
                           {col.type}
                         </span>
                       </div>
@@ -388,7 +388,7 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200 bg-white font-semibold">
                 {paginatedData.map((row, idx) => {
                   const pkVal = row[selectedTable.pk] ?? row.id ?? idx;
                   return (
@@ -396,11 +396,11 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                       key={pkVal ?? idx}
                       onClick={() => onEditRow(row)}
                       title="Click row to edit record"
-                      className="hover:bg-emerald-50/40 cursor-pointer transition-colors group"
+                      className="hover:bg-emerald-50/70 cursor-pointer transition-colors group text-slate-900"
                     >
                       {/* Action buttons cell */}
                       <td
-                        className="py-2 px-3 text-center border-r border-slate-200/60 whitespace-nowrap bg-white group-hover:bg-transparent"
+                        className="py-2.5 px-3 text-center border-r border-slate-300 whitespace-nowrap sticky left-0 bg-white group-hover:bg-emerald-50 z-10"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center justify-center gap-1.5">
@@ -408,9 +408,9 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                             type="button"
                             onClick={() => onEditRow(row)}
                             title="Edit record"
-                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-900 border border-emerald-200/80 rounded-md transition-colors cursor-pointer"
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-black text-white bg-emerald-700 hover:bg-emerald-800 rounded shadow-2xs transition-colors cursor-pointer"
                           >
-                            <Edit2 className="h-3 w-3" />
+                            <Edit2 className="h-3 w-3 stroke-[2.5]" />
                             <span>Edit</span>
                           </button>
                           <button
@@ -421,9 +421,9 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                               }
                             }}
                             title="Delete record"
-                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-800 border border-rose-200/80 rounded-md transition-colors cursor-pointer"
+                            className="flex items-center gap-1 px-2 py-1 text-[11px] font-black text-white bg-rose-700 hover:bg-rose-800 rounded shadow-2xs transition-colors cursor-pointer"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3 w-3 stroke-[2.5]" />
                             <span>Del</span>
                           </button>
                         </div>
@@ -433,7 +433,7 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
                       {displayColumns.map((col) => (
                         <td
                           key={col.name}
-                          className="py-2 px-3 border-r border-slate-200/60 max-w-[240px]"
+                          className="py-2.5 px-3 border-r border-slate-200 max-w-[240px]"
                         >
                           {renderCellContent(row, col)}
                         </td>
@@ -447,30 +447,30 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
         </div>
 
         {/* Pagination & Summary Footer */}
-        <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+        <div className="p-2.5 bg-slate-100 border-t border-slate-300 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 font-bold text-slate-800">
           <div className="flex items-center gap-3">
-            <span className="text-slate-600 font-medium">
+            <span className="text-slate-800 font-bold">
               Showing{" "}
-              <strong className="text-slate-800">
+              <strong className="text-slate-950 font-black">
                 {totalRecords === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1}
               </strong>{" "}
               to{" "}
-              <strong className="text-slate-800">
+              <strong className="text-slate-950 font-black">
                 {pageSize === -1 ? totalRecords : Math.min(validCurrentPage * pageSize, totalRecords)}
               </strong>{" "}
-              of <strong className="text-slate-800">{totalRecords}</strong> records
+              of <strong className="text-slate-950 font-black">{totalRecords}</strong> records
             </span>
 
             {/* Page size select */}
-            <div className="flex items-center gap-1.5 text-slate-500">
-              <span className="text-[11px]">Per page:</span>
+            <div className="flex items-center gap-1.5 text-slate-700">
+              <span className="text-[11px] font-bold">Per page:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-emerald-600 cursor-pointer"
+                className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-emerald-700 cursor-pointer"
               >
                 <option value={15}>15</option>
                 <option value={25}>25</option>

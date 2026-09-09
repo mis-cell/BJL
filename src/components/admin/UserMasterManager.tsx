@@ -160,118 +160,74 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden flex flex-col font-sans transition-all">
-      {/* Header Bar */}
-      <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-[#1E331B] to-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden flex flex-col font-sans h-full min-h-0">
+      {/* Header Bar with integrated Title & KPI chips */}
+      <div className="p-3 sm:p-4 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-300 shadow-inner">
-            <User className="h-5 w-5" />
+          <div className="h-9 w-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+            <User className="h-5 w-5 stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
-                USER MASTER DIRECTORY
+              <h2 className="text-sm sm:text-base font-black tracking-wide text-white uppercase">
+                User Master Directory
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500 text-slate-950">
                 Live Records
               </span>
             </div>
-            <p className="text-xs text-slate-300 font-medium">
+            <p className="text-[11px] text-slate-300 font-medium">
               Enterprise security credentials, role assignments, and granular operational permissions
             </p>
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="flex items-center gap-2">
+        {/* Action Button & Quick Stats Badges */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5 bg-slate-800 p-1 rounded-lg border border-slate-700 text-[11px] font-bold text-white">
+            <span className="px-2 py-0.5 bg-slate-700 rounded text-slate-200">
+              Total: <strong className="text-white">{stats.total}</strong>
+            </span>
+            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 rounded border border-emerald-800">
+              Active: <strong className="text-white">{stats.active}</strong>
+            </span>
+            <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 rounded border border-indigo-800">
+              Admins: <strong className="text-white">{stats.admins}</strong>
+            </span>
+            <span className="px-2 py-0.5 bg-amber-950 text-amber-300 rounded border border-amber-800">
+              Operators: <strong className="text-white">{stats.operators}</strong>
+            </span>
+          </div>
+
           <button
             id="btn_add_new_user"
             type="button"
             onClick={onAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer border border-emerald-400/40"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-lg shadow-sm transition-all cursor-pointer border border-emerald-400"
           >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>New Row Item / Add User</span>
+            <Plus className="h-4 w-4 stroke-[3]" />
+            <span>+ New Row Item / Add User</span>
           </button>
         </div>
       </div>
 
-      {/* Stats KPI Chips */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-slate-50 border-b border-slate-200/80">
-        <div className="bg-white border border-slate-200 p-2.5 rounded-xl shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Total Accounts
-            </span>
-            <span className="text-base sm:text-lg font-extrabold text-slate-800 font-mono">
-              {stats.total}
-            </span>
-          </div>
-          <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-            <User className="h-3.5 w-3.5" />
-          </div>
-        </div>
-
-        <div className="bg-white border border-emerald-200 p-2.5 rounded-xl shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
-              Active Users
-            </span>
-            <span className="text-base sm:text-lg font-extrabold text-emerald-700 font-mono">
-              {stats.active}
-            </span>
-          </div>
-          <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <UserCheck className="h-3.5 w-3.5" />
-          </div>
-        </div>
-
-        <div className="bg-white border border-indigo-200 p-2.5 rounded-xl shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
-              Administrators
-            </span>
-            <span className="text-base sm:text-lg font-extrabold text-indigo-800 font-mono">
-              {stats.admins}
-            </span>
-          </div>
-          <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-            <Shield className="h-3.5 w-3.5" />
-          </div>
-        </div>
-
-        <div className="bg-white border border-amber-200 p-2.5 rounded-xl shadow-2xs flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
-              Operators & Desk
-            </span>
-            <span className="text-base sm:text-lg font-extrabold text-amber-800 font-mono">
-              {stats.operators}
-            </span>
-          </div>
-          <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-            <Layers className="h-3.5 w-3.5" />
-          </div>
-        </div>
-      </div>
-
       {/* Search & Filters Toolbar */}
-      <div className="p-3 sm:p-4 bg-white border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-2.5 sm:p-3 bg-slate-100 border-b border-slate-300 flex flex-col md:flex-row md:items-center justify-between gap-2.5 shrink-0">
         {/* Search input */}
         <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="h-4 w-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             id="user_master_search_input"
             type="text"
             placeholder="Search by User ID, username, role, module..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30 transition-all"
+            className="w-full bg-white border-2 border-slate-300 focus:border-emerald-700 rounded-lg pl-9 pr-8 py-1.5 text-xs font-bold text-slate-950 placeholder-slate-500 outline-none transition-all"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 p-0.5 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -280,16 +236,16 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
 
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-[11px] font-bold">
-            <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Role:</span>
+          <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-300 text-xs font-bold">
+            <span className="text-[10px] font-black text-slate-600 uppercase px-2">Role:</span>
             {["ALL", "ADMIN", "SUPER USER", "OPERATOR", "USER"].map((role) => (
               <button
                 key={role}
                 onClick={() => setRoleFilter(role)}
-                className={`px-2.5 py-1 rounded-lg uppercase tracking-tight transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded text-[11px] uppercase tracking-tight transition-all cursor-pointer ${
                   roleFilter === role
-                    ? "bg-white text-emerald-950 font-black shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-slate-900 text-white font-black shadow-xs"
+                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                 }`}
               >
                 {role}
@@ -297,16 +253,16 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
             ))}
           </div>
 
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-[11px] font-bold">
-            <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Status:</span>
+          <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-300 text-xs font-bold">
+            <span className="text-[10px] font-black text-slate-600 uppercase px-2">Status:</span>
             {["ALL", "Active", "Inactive"].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded-lg uppercase tracking-tight transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded text-[11px] uppercase tracking-tight transition-all cursor-pointer ${
                   statusFilter === st
-                    ? "bg-white text-emerald-950 font-black shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-slate-900 text-white font-black shadow-xs"
+                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                 }`}
               >
                 {st}
@@ -316,45 +272,45 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
         </div>
       </div>
 
-      {/* Main Table Content */}
-      <div className="overflow-x-auto">
+      {/* Main Table Content - Scrollable Table with Full Height */}
+      <div className="flex-1 overflow-auto min-h-0 bg-white">
         <table className="w-full text-left border-collapse text-xs font-sans">
-          <thead>
-            <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-600 font-extrabold text-[10px] uppercase tracking-wider">
-              <th className="py-3 px-3 text-center w-[120px] sticky left-0 bg-slate-100 z-10 border-r border-slate-200 shadow-2xs">
+          <thead className="sticky top-0 z-20 bg-slate-900 text-white border-b border-slate-800 font-black text-xs uppercase tracking-wider shadow-sm">
+            <tr>
+              <th className="py-3 px-3 text-center w-[130px] sticky left-0 bg-slate-900 z-30 border-r border-slate-800">
                 Actions
               </th>
-              <th className="py-3 px-3 w-[80px]">User ID</th>
-              <th className="py-3 px-4 min-w-[140px]">Username</th>
-              <th className="py-3 px-3 min-w-[110px]">Password</th>
+              <th className="py-3 px-3 w-[85px]">User ID</th>
+              <th className="py-3 px-4 min-w-[150px]">Username</th>
+              <th className="py-3 px-3 min-w-[120px]">Password</th>
               <th className="py-3 px-3 min-w-[110px]">Role</th>
-              <th className="py-3 px-3 min-w-[90px]">Status</th>
-              <th className="py-3 px-4 min-w-[240px]">Allowed Modules</th>
-              <th className="py-3 px-3 w-[70px]">Level</th>
+              <th className="py-3 px-3 min-w-[95px]">Status</th>
+              <th className="py-3 px-4 min-w-[220px]">Allowed Modules</th>
+              <th className="py-3 px-3 w-[75px]">Level</th>
               <th className="py-3 px-4 min-w-[150px]">Created At</th>
               <th className="py-3 px-4 min-w-[150px]">Last Login</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700">
+          <tbody className="divide-y divide-slate-200 text-slate-900 bg-white font-medium">
             {loading ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-slate-400 font-semibold">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <RefreshCw className="h-6 w-6 text-emerald-600 animate-spin" />
-                    <span>Loading User Master records...</span>
+                <td colSpan={10} className="py-16 text-center text-slate-800 font-bold">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <RefreshCw className="h-8 w-8 text-emerald-700 animate-spin" />
+                    <span className="text-sm">Loading User Master records from database...</span>
                   </div>
                 </td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-slate-400">
-                  <div className="max-w-xs mx-auto space-y-2">
-                    <UserX className="h-8 w-8 mx-auto text-slate-300" />
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">
+                <td colSpan={10} className="py-16 text-center text-slate-800">
+                  <div className="max-w-md mx-auto space-y-3">
+                    <UserX className="h-10 w-10 mx-auto text-slate-400" />
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-wide">
                       No matching user accounts found
                     </p>
-                    <p className="text-[11px] text-slate-400">
-                      Try clearing search filters or click "New Row Item / Add User" to register an operator.
+                    <p className="text-xs text-slate-600 font-semibold">
+                      Try clearing search filters or click "+ New Row Item / Add User" to register an operator.
                     </p>
                   </div>
                 </td>
@@ -388,11 +344,11 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                     key={rowId}
                     onClick={() => onEdit(row)}
                     title="Click row to edit account metadata"
-                    className="hover:bg-emerald-50/40 transition-colors cursor-pointer group"
+                    className="hover:bg-emerald-50/70 transition-colors cursor-pointer group"
                   >
                     {/* Actions Column */}
                     <td
-                      className="py-2.5 px-3 text-center sticky left-0 bg-white group-hover:bg-emerald-50/40 z-10 border-r border-slate-200/80"
+                      className="py-2.5 px-3 text-center sticky left-0 bg-white group-hover:bg-emerald-50 z-10 border-r border-slate-300"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-center gap-1.5">
@@ -401,7 +357,7 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                           id={`btn_edit_user_${rowId}`}
                           onClick={() => onEdit(row)}
                           title="Edit User Metadata"
-                          className="flex items-center gap-1 px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase rounded-md border border-emerald-200 transition-colors cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[11px] uppercase rounded shadow-2xs transition-colors cursor-pointer"
                         >
                           <Edit2 className="h-3 w-3 stroke-[2.5]" />
                           <span>Edit</span>
@@ -415,7 +371,7 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                             }
                           }}
                           title="Delete User Record"
-                          className="flex items-center gap-1 px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase rounded-md border border-rose-200 transition-colors cursor-pointer"
+                          className="flex items-center gap-1 px-2.5 py-1 bg-rose-700 hover:bg-rose-800 text-white font-black text-[11px] uppercase rounded shadow-2xs transition-colors cursor-pointer"
                         >
                           <Trash2 className="h-3 w-3 stroke-[2.5]" />
                           <span>Del</span>
@@ -425,7 +381,7 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
 
                     {/* User ID */}
                     <td className="py-2.5 px-3">
-                      <span className="font-mono text-[11px] font-extrabold text-slate-900 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                      <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
                         #{String(row.user_id || "—").padStart(3, "0")}
                       </span>
                     </td>
@@ -433,28 +389,26 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                     {/* Username */}
                     <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center font-black text-xs shrink-0 uppercase shadow-2xs">
+                        <div className="h-7 w-7 rounded-full bg-emerald-700 text-white font-black text-xs flex items-center justify-center shrink-0 uppercase shadow-2xs">
                           {String(row.username || "U").charAt(0)}
                         </div>
-                        <div className="min-w-0">
-                          <span className="font-bold text-slate-900 text-xs tracking-tight block truncate uppercase">
-                            {row.username || "—"}
-                          </span>
-                        </div>
+                        <span className="font-black text-slate-950 text-xs tracking-tight uppercase">
+                          {row.username || "—"}
+                        </span>
                       </div>
                     </td>
 
                     {/* Password with Show/Hide toggle */}
                     <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1.5 font-mono text-xs">
-                        <span className="text-slate-700 font-bold tracking-wider select-all">
+                        <span className="text-slate-950 font-black tracking-wider select-all">
                           {isPasswordVisible ? rawPassword || "(blank)" : "••••••••"}
                         </span>
                         <button
                           type="button"
                           onClick={() => togglePasswordVisibility(rowId)}
                           title={isPasswordVisible ? "Hide password" : "Show password"}
-                          className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer rounded"
+                          className="text-slate-500 hover:text-slate-900 p-1 cursor-pointer rounded hover:bg-slate-200"
                         >
                           {isPasswordVisible ? (
                             <EyeOff className="h-3.5 w-3.5" />
@@ -468,22 +422,22 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                     {/* Role */}
                     <td className="py-2.5 px-3">
                       {roleName === "ADMIN" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          <Shield className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-black uppercase bg-indigo-700 text-white shadow-2xs">
+                          <Shield className="h-3 w-3 stroke-[2.5]" />
                           ADMIN
                         </span>
                       ) : roleName === "SUPER USER" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                          <Sparkles className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-black uppercase bg-blue-700 text-white shadow-2xs">
+                          <Sparkles className="h-3 w-3 stroke-[2.5]" />
                           SUPER USER
                         </span>
                       ) : roleName === "OPERATOR" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200">
-                          <User className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-black uppercase bg-amber-600 text-white shadow-2xs">
+                          <User className="h-3 w-3 stroke-[2.5]" />
                           OPERATOR
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-black uppercase bg-slate-700 text-white shadow-2xs">
                           {roleName}
                         </span>
                       )}
@@ -492,38 +446,38 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
                     {/* Status */}
                     <td className="py-2.5 px-3">
                       {isStatusActive ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-700 text-white shadow-2xs">
+                          <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-700 text-white shadow-2xs">
+                          <span className="h-2 w-2 rounded-full bg-rose-300" />
                           Inactive
                         </span>
                       )}
                     </td>
 
-                    {/* Allowed Modules (Pills / Badges) */}
+                    {/* Allowed Modules */}
                     <td className="py-2.5 px-4 max-w-[280px]">
                       {isFullAccess ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight bg-purple-50 text-purple-800 border border-purple-200 shadow-2xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-black uppercase bg-purple-700 text-white shadow-2xs">
                           ★ Full Access (*)
                         </span>
                       ) : moduleTokens.length === 0 ? (
-                        <span className="text-[10px] text-slate-400 italic">No modules granted</span>
+                        <span className="text-xs text-slate-500 font-bold italic">No modules granted</span>
                       ) : (
                         <div className="flex flex-wrap gap-1 items-center" title={allowedModulesRaw}>
                           {moduleTokens.slice(0, 3).map((token) => (
                             <span
                               key={token}
-                              className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9.5px] font-semibold border border-slate-200 truncate max-w-[110px]"
+                              className="px-2 py-0.5 bg-slate-100 text-slate-900 rounded text-[11px] font-bold border border-slate-300 truncate max-w-[120px]"
                             >
                               {getModuleFriendlyName(token)}
                             </span>
                           ))}
                           {moduleTokens.length > 3 && (
-                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[9.5px] font-extrabold border border-emerald-200">
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded text-[11px] font-black border border-emerald-300">
                               +{moduleTokens.length - 3} more
                             </span>
                           )}
@@ -533,28 +487,28 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
 
                     {/* Level */}
                     <td className="py-2.5 px-3">
-                      <span className="font-mono text-[10.5px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                      <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                         {levelName}
                       </span>
                     </td>
 
                     {/* Created At */}
                     <td className="py-2.5 px-4" title={createdAtInfo.full}>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium">
-                        <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-slate-900 text-xs font-bold">
+                        <Calendar className="h-3 w-3 text-slate-600 shrink-0" />
                         <span className="truncate">{createdAtInfo.formatted}</span>
                       </div>
                     </td>
 
                     {/* Last Login */}
                     <td className="py-2.5 px-4" title={lastLoginInfo.full}>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium">
-                        <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-slate-900 text-xs font-bold">
+                        <Clock className="h-3 w-3 text-slate-600 shrink-0" />
                         <span
                           className={`truncate ${
                             lastLoginInfo.formatted === "Never"
-                              ? "italic text-slate-400"
-                              : "text-slate-700 font-semibold"
+                              ? "italic text-slate-500"
+                              : "text-slate-950 font-extrabold"
                           }`}
                         >
                           {lastLoginInfo.formatted}
@@ -570,12 +524,12 @@ export const UserMasterTableView: React.FC<UserMasterTableViewProps> = ({
       </div>
 
       {/* Footer count indicator */}
-      <div className="p-3 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500 font-semibold">
+      <div className="p-2.5 px-4 bg-slate-100 border-t border-slate-300 flex items-center justify-between text-xs text-slate-800 font-bold shrink-0">
         <span>
-          Showing <strong className="text-slate-800">{filteredData.length}</strong> of{" "}
-          <strong className="text-slate-800">{data.length}</strong> user records
+          Showing <strong className="text-slate-950 font-black">{filteredData.length}</strong> of{" "}
+          <strong className="text-slate-950 font-black">{data.length}</strong> user records
         </span>
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[11px] text-slate-600 font-semibold">
           Click any row to view & update account permissions
         </span>
       </div>

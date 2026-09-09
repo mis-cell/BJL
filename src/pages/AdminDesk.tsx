@@ -2642,8 +2642,9 @@ export default function AdminDesk({
         {/* Right Main Area: Workspace & Dynamic Viewers */}
         <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full min-h-0 flex flex-col space-y-3 overflow-hidden">
           
-          {/* Top Tabs Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 bg-slate-100/90 border border-slate-200/90 rounded-xl shadow-2xs shrink-0">
+          {/* Top Tabs & Admin Actions Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-100/95 border border-slate-300 rounded-xl shadow-xs shrink-0">
+            {/* View Switcher Tabs */}
             <div className="flex flex-wrap items-center gap-1">
               {[
                 { id: "row", label: "Rows View", icon: Layers },
@@ -2659,141 +2660,73 @@ export default function AdminDesk({
                     onClick={() => setActiveSchemaTab(id as any)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                       isActive
-                        ? "bg-white text-emerald-950 shadow-xs border border-slate-200"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                        ? "bg-slate-900 text-white shadow-sm border border-slate-900"
+                        : "text-slate-800 bg-white/70 hover:bg-white hover:text-slate-950 border border-slate-200"
                     }`}
                   >
-                    <TabIcon className={`h-3.5 w-3.5 ${isActive ? "text-emerald-700" : "text-slate-400"}`} />
+                    <TabIcon className={`h-3.5 w-3.5 ${isActive ? "text-emerald-400" : "text-slate-600"}`} />
                     <span>{label}</span>
                   </button>
                 );
               })}
             </div>
+
+            {/* Quick Action Shortcuts */}
+            <div className="flex items-center gap-1.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  const tblName = prompt("Enter new PostgreSQL table name (lowercase, alphanumeric, no spaces):");
+                  if (tblName && tblName.trim()) {
+                    const sanitized = tblName.toLowerCase().trim().replace(/\s+/g, "_");
+                    setNewTableName(sanitized);
+                    setTimeout(() => {
+                      handleCreateTable();
+                    }, 50);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Create New PostgreSQL Table"
+              >
+                <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                <span>Create Table</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDatabaseExport}
+                disabled={isExporting}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                title="Export Database Snapshot (JSON)"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-700" />
+                <span>{isExporting ? "Exporting..." : "DB Export"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate?.("settings")}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="System Configuration Center"
+              >
+                <Settings className="h-3.5 w-3.5 text-slate-700" />
+                <span className="hidden sm:inline">Config</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate?.("ai_assistant")}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Open Jarves AI Assistant"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="hidden sm:inline">Jarves AI</span>
+              </button>
+            </div>
           </div>
 
-          {/* Tab Content Container */}
-          <div className="flex-1 overflow-auto bg-white border border-slate-200/90 rounded-xl p-4 space-y-4 shadow-xs flex flex-col min-h-0">
-            
-            {/* Quick Launchers / System Action Cards */}
-            <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 shadow-2xs shrink-0">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Admin Tools & Launchers
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Quick operational shortcuts
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {/* Create Table / Schema */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const tblName = prompt("Enter new PostgreSQL table name (lowercase, alphanumeric, no spaces):");
-                    if (tblName && tblName.trim()) {
-                      const sanitized = tblName.toLowerCase().trim().replace(/\s+/g, "_");
-                      setNewTableName(sanitized);
-                      setTimeout(() => {
-                        handleCreateTable();
-                      }, 50);
-                    }
-                  }}
-                  className="flex items-center gap-2 p-2 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
-                >
-                  <div className="p-1.5 bg-emerald-100 group-hover:bg-emerald-600 text-emerald-800 group-hover:text-white rounded-md transition-colors">
-                    <Plus className="h-4 w-4" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-950 truncate">Create Table</p>
-                    <p className="text-[10px] text-slate-500 truncate">New schema entity</p>
-                  </div>
-                </button>
-
-                {/* Config Center */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.("settings")}
-                  className="flex items-center gap-2 p-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
-                >
-                  <div className="p-1.5 bg-slate-100 group-hover:bg-slate-700 text-slate-700 group-hover:text-white rounded-md transition-colors">
-                    <Settings className="h-4 w-4" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-slate-800 truncate">Config Center</p>
-                    <p className="text-[10px] text-slate-500 truncate">System preferences</p>
-                  </div>
-                </button>
-
-                {/* Jarves AI 2.0 */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.("ai_assistant")}
-                  className="flex items-center gap-2 p-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
-                >
-                  <div className="p-1.5 bg-indigo-100 group-hover:bg-indigo-600 text-indigo-700 group-hover:text-white rounded-md transition-colors">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-950 truncate">Jarves AI 2.0</p>
-                    <p className="text-[10px] text-slate-500 truncate">Smart Assistant</p>
-                  </div>
-                </button>
-
-                {/* DB Export */}
-                <button
-                  type="button"
-                  onClick={handleDatabaseExport}
-                  disabled={isExporting}
-                  className="flex items-center gap-2 p-2 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs disabled:opacity-50"
-                >
-                  <div className="p-1.5 bg-purple-100 group-hover:bg-purple-600 text-purple-700 group-hover:text-white rounded-md transition-colors">
-                    <Download className="h-4 w-4" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-slate-800 group-hover:text-purple-950 truncate">
-                      {isExporting ? "Exporting..." : "DB Export"}
-                    </p>
-                    <p className="text-[10px] text-slate-500 truncate">Offline JSON dump</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Statistics / Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-lg">
-                  <Database className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Database Schema</p>
-                  <p className="text-sm font-bold text-slate-900 font-mono">{tables.length} Registered Tables</p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-800 rounded-lg">
-                  <ClipboardList className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Telemetry Stream</p>
-                  <p className="text-sm font-bold text-slate-900 font-mono">{(systemLogs && systemLogs.length) || 104} Triggers</p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
-                <div className="p-2 bg-purple-100 text-purple-800 rounded-lg">
-                  <FileSpreadsheet className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Table Data</p>
-                  <p className="text-sm font-bold text-slate-900 font-mono">
-                    {selectedTable ? `${data.length} Records Loaded` : "No Table Selected"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
+          {/* Tab Content Container - Full Height Active Table View */}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {/* Active Tab View Body */}
             <div className="flex-1 min-h-0 flex flex-col">
               {activeSchemaTab === "row" && (
