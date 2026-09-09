@@ -1241,12 +1241,12 @@ export default function App() {
           setIsAdmin(isAdminUser);
           setUserRole(sess.role?.toUpperCase() || "L1");
           setUserLevel(sess.level?.toUpperCase() || "L1");
-          const mods = (sess.allowed_modules !== undefined && sess.allowed_modules !== null && String(sess.allowed_modules).trim() !== "")
-            ? sess.allowed_modules === "*"
-              ? ["*"]
-              : normalizeAllowedModules(sess.allowed_modules)
+          const rawMods = sess.allowed_modules;
+          const mods = (rawMods !== undefined && rawMods !== null && String(rawMods).trim() !== "" && String(rawMods).trim() !== "[]")
+            ? normalizeAllowedModules(rawMods)
             : ["*"];
-          setAllowedModules(mods);
+          const finalMods = mods.length === 0 ? ["*"] : mods;
+          setAllowedModules(finalMods);
           setIsLoggedIn(true);
           if (sess.year) setSelectedYear(sess.year);
           setCurrentUserContext({
@@ -1255,16 +1255,16 @@ export default function App() {
             userName: sess.username,
             userRole: sess.role?.toUpperCase() || "L1",
             userLevel: sess.level?.toUpperCase() || "L1",
-            allowedModules: mods,
+            allowedModules: finalMods,
           });
 
           // Check if URL specifies a target page
           const urlParams = new URLSearchParams(window.location.search);
           const qPage = urlParams.get('page') || (window.location.hash ? window.location.hash.replace('#', '') : null);
-          if (qPage && hasModulePermission(qPage, mods, isAdminUser)) {
+          if (qPage && hasModulePermission(qPage, finalMods, isAdminUser)) {
             setCurrentPage(qPage as Page);
           } else {
-            const firstAllowed = getFirstAllowedPage(mods, isAdminUser) as Page;
+            const firstAllowed = getFirstAllowedPage(finalMods, isAdminUser) as Page;
             setCurrentPage(firstAllowed);
           }
         }
@@ -1778,16 +1778,16 @@ export default function App() {
         setIsAdmin(isAdminUser);
         setUserRole(data.role?.toUpperCase() || "L1");
         setUserLevel(data.level?.toUpperCase() || "L1");
-        const modules = (data.allowed_modules !== undefined && data.allowed_modules !== null && String(data.allowed_modules).trim() !== "")
-          ? data.allowed_modules === "*"
-            ? ["*"]
-            : normalizeAllowedModules(data.allowed_modules)
+        const rawMods = data.allowed_modules;
+        const modules = (rawMods !== undefined && rawMods !== null && String(rawMods).trim() !== "" && String(rawMods).trim() !== "[]")
+          ? normalizeAllowedModules(rawMods)
           : ["*"];
-        setAllowedModules(modules);
+        const finalMods = modules.length === 0 ? ["*"] : modules;
+        setAllowedModules(finalMods);
         setIsLoggedIn(true);
         setSelectedYear(year);
 
-        const firstLanding = getFirstAllowedPage(modules, isAdminUser) as Page;
+        const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
         setCurrentPage(firstLanding);
 
         setCurrentUserContext({
@@ -1796,7 +1796,7 @@ export default function App() {
           userName: data.username,
           userRole: data.role?.toUpperCase() || "L1",
           userLevel: data.level?.toUpperCase() || "L1",
-          allowedModules: modules,
+          allowedModules: finalMods,
         });
 
         // Persist session

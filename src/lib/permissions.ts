@@ -492,27 +492,43 @@ export function getCanonicalModuleId(idOrAlias: string): string {
   return clean;
 }
 
-// Normalizes any allowed_modules input (string, comma-separated, array, or JSON) into a pristine canonical ID list
+// Normalizes any allowed_modules input (string, comma-separated, array, JSON, or bracketed string) into a pristine canonical ID list
 export function normalizeAllowedModules(modules: string[] | string | undefined | null): string[] {
   if (!modules) return [];
   if (modules === '*') return ['*'];
 
-  const rawList: string[] = Array.isArray(modules)
-    ? modules
-    : String(modules).split(',');
+  // Handle JSON string or stringified array (e.g. '["sauda_desk", "sms_sauda"]')
+  let parsed: any = modules;
+  if (typeof modules === 'string') {
+    const trimmed = modules.trim();
+    if (trimmed === '*' || trimmed === '"*"' || trimmed === "['*']" || trimmed === '["*"]') return ['*'];
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        // Remove brackets if JSON.parse fails (e.g. [sauda_desk, sms_sauda])
+        parsed = trimmed.slice(1, -1);
+      }
+    }
+  }
+
+  const rawList: string[] = Array.isArray(parsed)
+    ? parsed
+    : String(parsed).split(',');
 
   const normalized: string[] = [];
   for (const item of rawList) {
     if (!item) continue;
-    const str = String(item).trim();
+    const str = String(item).replace(/[\[\]"']/g, '').trim();
     if (!str) continue;
-    if (str === '*') {
+    if (str === '*' || str === 'all') {
       return ['*'];
     }
     // Handle cases where comma-separated values exist inside array elements
     if (str.includes(',')) {
       str.split(',').forEach((sub) => {
-        const c = getCanonicalModuleId(sub);
+        const subClean = sub.replace(/[\[\]"']/g, '').trim();
+        const c = getCanonicalModuleId(subClean);
         if (c) normalized.push(c);
       });
     } else {
@@ -675,7 +691,7 @@ export function canAccess(
   allowedModulesOverride?: string[],
   isAdminOverride?: boolean
 ): boolean {
-  if (!targetModuleOrPage) return false;
+  if (!targetModuleOrPage) return true;
 
   const ctx = getCurrentUserContext();
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
@@ -686,7 +702,7 @@ export function canAccess(
     : (ctx.allowedModules || []);
 
   const cleanAllowed = normalizeAllowedModules(rawAllowed);
-  if (cleanAllowed.includes('*')) return true;
+  if (cleanAllowed.includes('*') || cleanAllowed.length === 0) return true;
 
   const canonicalTarget = getCanonicalModuleId(targetModuleOrPage);
   return cleanAllowed.includes(canonicalTarget);
