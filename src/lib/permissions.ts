@@ -222,33 +222,236 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
   },
 ];
 
+// Canonical Alias Direct Mapping Table (Strict Normalization Engine)
+const EXACT_CANONICAL_MAP: Record<string, string> = {
+  // Sauda aliases -> strictly 'sauda'
+  'sauda': 'sauda',
+  'sauda_desk': 'sauda',
+  'sauda desk': 'sauda',
+  'saudadesk': 'sauda',
+  'sauda_entry': 'sauda',
+  'sauda entry': 'sauda',
+  'saudaentry': 'sauda',
+  'sauda_master': 'sauda',
+  'sauda master': 'sauda',
+  'saudamaster': 'sauda',
+  'sauda_bookings': 'sauda',
+  'sauda bookings': 'sauda',
+  'saudabookings': 'sauda',
+  'sauda_contracts': 'sauda',
+  'sauda contracts': 'sauda',
+  'saudacontracts': 'sauda',
+  'sauda_module': 'sauda',
+  'sauda module': 'sauda',
+  'saudamodule': 'sauda',
+  'sauda_book': 'sauda',
+  'saudabook': 'sauda',
+  'sauda_deal': 'sauda',
+  'saudadeal': 'sauda',
+
+  // SMS Sauda aliases -> strictly 'sms_sauda'
+  'sms_sauda': 'sms_sauda',
+  'sms sauda': 'sms_sauda',
+  'smssauda': 'sms_sauda',
+  'sms_sauda_desk': 'sms_sauda',
+  'sms sauda desk': 'sms_sauda',
+  'smssaudadesk': 'sms_sauda',
+  'sms_desk': 'sms_sauda',
+  'sms desk': 'sms_sauda',
+  'smsdesk': 'sms_sauda',
+  'sms_interfaces': 'sms_sauda',
+  'sms_contracts': 'sms_sauda',
+  'sms_contract': 'sms_sauda',
+  'sms': 'sms_sauda',
+
+  // Satta aliases -> strictly 'satta'
+  'satta': 'satta',
+  'satta_desk': 'satta',
+  'satta desk': 'satta',
+  'sattadesk': 'satta',
+  'satta_entry': 'satta',
+  'satta entry': 'satta',
+  'sattaentry': 'satta',
+  'satta_master': 'satta',
+  'satta master': 'satta',
+  'sattamaster': 'satta',
+  'satta_chart': 'satta',
+  'satta chart': 'satta',
+  'sattachart': 'satta',
+  'satta_rate_chart': 'satta',
+  'satta rate chart': 'satta',
+  'sattaratechart': 'satta',
+  'rate_chart': 'satta',
+  'rate chart': 'satta',
+  'ratechart': 'satta',
+  'satta_rates': 'satta',
+  'satta rates': 'satta',
+  'sattarates': 'satta',
+
+  // Sauda Check Point (PO) -> strictly 'po'
+  'po': 'po',
+  'sauda_check': 'po',
+  'sauda check': 'po',
+  'saudacheck': 'po',
+  'sauda_check_point': 'po',
+  'sauda check point': 'po',
+  'saudacheckpoint': 'po',
+  'sauda_po_check': 'po',
+  'purchase_order': 'po',
+  'purchase order': 'po',
+  'purchaseorder': 'po',
+  'temp_po': 'po',
+  'po_temp': 'po',
+  'temp po': 'po',
+
+  // Final PO -> strictly 'final_po'
+  'final_po': 'final_po',
+  'final po': 'final_po',
+  'finalpo': 'final_po',
+  'final_purchase_order': 'final_po',
+  'final purchase order': 'final_po',
+  'po_final': 'final_po',
+  'po final': 'final_po',
+  'pofinal': 'final_po',
+
+  // Gate Operations
+  'main_gate': 'main_gate',
+  'main gate': 'main_gate',
+  'maingate': 'main_gate',
+  'lorry_entry': 'main_gate',
+  'lorry entry': 'main_gate',
+  'lorryentry': 'main_gate',
+  'gate_module': 'main_gate',
+  'gate module': 'main_gate',
+  'dispatch': 'main_gate',
+
+  // Temporary Arrival (Amad)
+  'amad': 'amad',
+  'amad_entry': 'amad',
+  'amad entry': 'amad',
+  'amadentry': 'amad',
+  'temporary_arrival': 'amad',
+  'temporary arrival': 'amad',
+  'temporaryarrival': 'amad',
+  'temporary_mr': 'amad',
+  'temporary mr': 'amad',
+  'temporarymr': 'amad',
+  'tmr': 'amad',
+
+  // Final Arrival
+  'final_arrival': 'final_arrival',
+  'final arrival': 'final_arrival',
+  'finalarrival': 'final_arrival',
+  'final_mr': 'final_arrival',
+  'final mr': 'final_arrival',
+  'finalmr': 'final_arrival',
+  'final_arrival_entry': 'final_arrival',
+
+  // Mill Inspection
+  'inspection': 'inspection',
+  'mill_inspection': 'inspection',
+  'mill inspection': 'inspection',
+  'millinspection': 'inspection',
+  'mill_inspection_master': 'inspection',
+  'final_mr_inspection': 'inspection',
+
+  // Inspection Checklist
+  'material_inspection': 'material_inspection',
+  'material inspection': 'material_inspection',
+  'materialinspection': 'material_inspection',
+  'inspection_checklist': 'material_inspection',
+  'inspection checklist': 'material_inspection',
+  'quality_inspection': 'material_inspection',
+  'quality inspection': 'material_inspection',
+
+  // Mismatch Cases
+  'mismatch': 'mismatch',
+  'satta_mismatch': 'mismatch',
+  'satta mismatch': 'mismatch',
+  'mismatch_case': 'mismatch',
+  'mismatch case': 'mismatch',
+  'material_mismatch': 'material_mismatch',
+  'material mismatch': 'material_mismatch',
+  'materialmismatch': 'material_mismatch',
+  'mat_mismatch': 'material_mismatch',
+
+  // Financial & Management
+  'dashboard': 'dashboard',
+  'operational_hub': 'dashboard',
+  'operational hub': 'dashboard',
+  'operationalhub': 'dashboard',
+  'home': 'dashboard',
+  'hub': 'dashboard',
+  'club_po_mr': 'club_po_mr',
+  'club po mr': 'club_po_mr',
+  'club_po': 'club_po_mr',
+  'club po': 'club_po_mr',
+  'club_mr': 'club_po_mr',
+  'club mr': 'club_po_mr',
+  'club': 'club_po_mr',
+  'payment': 'payment',
+  'payment_module': 'payment',
+  'payment module': 'payment',
+  'payments': 'payment',
+  'mr_settlement': 'mr_settlement',
+  'mr settlement': 'mr_settlement',
+  'settlement': 'mr_settlement',
+  'mr_claim': 'mr_settlement',
+  'claim_settlement': 'mr_settlement',
+  'issue': 'issue',
+  'closing_stock': 'closing_stock',
+  'closing stock': 'closing_stock',
+  'stock': 'closing_stock',
+  'inventory': 'closing_stock',
+  'requisition_desk': 'requisition_desk',
+  'requisition': 'requisition_desk',
+  'bardana': 'bardana',
+  'weight_bridge': 'weight_bridge',
+  'weighbridge': 'weight_bridge',
+  'reports': 'reports',
+  'vyapari': 'vyapari',
+  'admindesk': 'admindesk',
+  'admin': 'admindesk',
+  'settings': 'settings',
+  'ai_assistant': 'ai_assistant',
+};
+
 // Resolves any page name, route alias, label, or legacy ID to its exact primary Module ID
 export function getCanonicalModuleId(idOrAlias: string): string {
   if (!idOrAlias) return '';
   const clean = String(idOrAlias).toLowerCase().trim();
   if (clean === '*' || clean === 'all') return '*';
 
-  // 1. Direct ID / pageId match
+  // 1. Direct fast lookup in exact alias map
+  if (EXACT_CANONICAL_MAP[clean]) {
+    return EXACT_CANONICAL_MAP[clean];
+  }
+
+  // 2. Direct ID / pageId match in master modules
   const directMatch = ALL_SYSTEM_MODULES.find(
     (m) => m.id.toLowerCase() === clean || m.pageId.toLowerCase() === clean
   );
   if (directMatch) return directMatch.id;
 
-  // 2. Direct label match
+  // 3. Direct label match
   const labelMatch = ALL_SYSTEM_MODULES.find(
     (m) => m.label.toLowerCase() === clean
   );
   if (labelMatch) return labelMatch.id;
 
-  // 3. Exact alias match
+  // 4. Exact alias match
   const aliasMatch = ALL_SYSTEM_MODULES.find((m) =>
     m.aliases.some((a) => a.toLowerCase() === clean)
   );
   if (aliasMatch) return aliasMatch.id;
 
-  // 4. Normalized alphanumeric match (stripping all spaces, dashes, dots, underscores)
+  // 5. Normalized alphanumeric match (stripping all spaces, dashes, dots, underscores)
   const alphaClean = clean.replace(/[^a-z0-9]/g, '');
   if (!alphaClean) return clean;
+
+  if (EXACT_CANONICAL_MAP[alphaClean]) {
+    return EXACT_CANONICAL_MAP[alphaClean];
+  }
 
   const alphaMatch = ALL_SYSTEM_MODULES.find((m) => {
     if (m.id.replace(/[^a-z0-9]/g, '').toLowerCase() === alphaClean) return true;
@@ -260,7 +463,7 @@ export function getCanonicalModuleId(idOrAlias: string): string {
   });
   if (alphaMatch) return alphaMatch.id;
 
-  // 5. Semantic keyword mapping for user-entered terms
+  // 6. Semantic keyword mapping for user-entered terms
   if (alphaClean.includes('smssauda') || alphaClean.includes('smsdesk') || (alphaClean.startsWith('sms') && alphaClean.includes('sauda'))) return 'sms_sauda';
   if (alphaClean.includes('saudadesk') || alphaClean.includes('saudabook') || alphaClean.includes('saudacontract') || alphaClean === 'sauda' || alphaClean === 'saudaentry' || (alphaClean.includes('sauda') && !alphaClean.includes('check') && !alphaClean.includes('checkpoint'))) return 'sauda';
   if (alphaClean.includes('sattachart') || alphaClean.includes('sattarate') || alphaClean.includes('satta')) return 'satta';
