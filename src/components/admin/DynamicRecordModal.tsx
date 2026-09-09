@@ -22,7 +22,7 @@ interface ColumnDef {
 interface DynamicRecordModalProps {
   isOpen: boolean;
   isNew: boolean;
-  selectedTable: TableDef;
+  selectedTable?: TableDef | null;
   columns: ColumnDef[];
   editingRow: any;
   setEditingRow: React.Dispatch<React.SetStateAction<any>>;
@@ -105,7 +105,7 @@ export const DynamicRecordModal: React.FC<DynamicRecordModalProps> = ({
           colType.includes("identity") ||
           col === "id";
 
-        if (isUuidOrAuto && selectedTable.name !== "user_master") {
+        if (isUuidOrAuto && selectedTable?.name !== "user_master") {
           return (
             <div className="relative">
               <input
@@ -398,12 +398,12 @@ export const DynamicRecordModal: React.FC<DynamicRecordModalProps> = ({
                   {isNew ? "Create New Record" : "Edit Record Details"}
                 </h3>
                 <span className="font-mono text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-300">
-                  {selectedTable.label}
+                  {selectedTable?.label || "Entity"}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Table: <span className="font-mono text-slate-700">{selectedTable.name}</span> • Primary Key:{" "}
-                <span className="font-mono text-slate-700">{selectedTable.pk}</span>
+                Table: <span className="font-mono text-slate-700">{selectedTable?.name || "entity"}</span> • Primary Key:{" "}
+                <span className="font-mono text-slate-700">{selectedTable?.pk || "id"}</span>
               </p>
             </div>
           </div>

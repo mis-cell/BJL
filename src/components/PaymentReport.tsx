@@ -263,6 +263,7 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = gradeList.find(g => {
+        if (!g) return false;
         const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
         const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
         return gCode === codeUpper || gName === codeUpper || String(g.id || '') === codeStr;
@@ -281,6 +282,7 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = agencyList.find(a => {
+        if (!a) return false;
         const aCode = String(a.agency_code || a.code || a.id || '').trim().toUpperCase();
         const aName = String(a.agency_name || a.name || '').trim().toUpperCase();
         return aCode === codeUpper || aName === codeUpper || String(a.id || '') === codeStr;
@@ -299,6 +301,7 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = areaList.find(a => {
+        if (!a) return false;
         const aCode = String(a.area_code || a.code || a.id || '').trim().toUpperCase();
         const aName = String(a.area_name || a.name || '').trim().toUpperCase();
         return aCode === codeUpper || aName === codeUpper || String(a.id || '') === codeStr;
@@ -317,6 +320,7 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = markaList.find(m => {
+        if (!m) return false;
         const mCode = String(m.marka_code || m.code || m.id || '').trim().toUpperCase();
         const mName = String(m.marka_name || m.name || '').trim().toUpperCase();
         return mCode === codeUpper || mName === codeUpper || String(m.id || '') === codeStr;

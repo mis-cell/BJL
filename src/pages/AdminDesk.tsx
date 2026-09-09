@@ -190,8 +190,8 @@ export default function AdminDesk({
   const [error, setError] = useState("");
 
   // Database core state variables
-  const [tables, setTables] = useState<TableDef[]>([]);
-  const [selectedTable, setSelectedTable] = useState<TableDef | null>(null);
+  const [tables, setTables] = useState<TableDef[]>(TABLES);
+  const [selectedTable, setSelectedTable] = useState<TableDef | null>(TABLES[0] || null);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -2814,7 +2814,7 @@ export default function AdminDesk({
                   />
                 ) : (
                   <DynamicRecordsViewer
-                    selectedTable={selectedTable || tables[0]}
+                    selectedTable={selectedTable || tables[0] || TABLES[0]}
                     columns={currentColumns}
                     data={data}
                     loading={loading}
@@ -2908,7 +2908,7 @@ export default function AdminDesk({
           <DynamicRecordModal
             isOpen={Boolean(editingRow)}
             isNew={isNewRow}
-            selectedTable={selectedTable || tables[0]}
+            selectedTable={selectedTable || tables[0] || TABLES[0]}
             columns={currentColumns}
             editingRow={editingRow}
             setEditingRow={setEditingRow}

@@ -26,7 +26,7 @@ interface ColumnDef {
 }
 
 interface DynamicRecordsViewerProps {
-  selectedTable: TableDef;
+  selectedTable?: TableDef | null;
   columns: ColumnDef[];
   data: any[];
   loading: boolean;
@@ -81,10 +81,20 @@ export const DynamicRecordsViewer: React.FC<DynamicRecordsViewerProps> = ({
     });
   }, [data, searchQuery]);
 
-  // Reset to first page when search changes
+  // Reset to first page when search changes or selected table changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedTable.name]);
+  }, [searchQuery, selectedTable?.name]);
+
+  // If no table is selected yet, render friendly loading/placeholder state
+  if (!selectedTable) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-slate-400 bg-slate-50/50 rounded-xl border border-slate-200/80 min-h-[300px]">
+        <Database className="w-8 h-8 mb-2 animate-pulse text-slate-400" />
+        <p className="text-xs font-semibold text-slate-600">Loading master table records...</p>
+      </div>
+    );
+  }
 
   // Pagination calculations
   const totalRecords = filteredData.length;
