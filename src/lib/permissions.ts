@@ -246,8 +246,27 @@ let currentUserContext: UserContext = {
 };
 
 // Listeners for live permission change notifications
-type PermissionListener = (context: UserContext) => void;
+type PermissionListener = (context: UserContext | any) => void;
 const permissionListeners = new Set<PermissionListener>();
+
+// Cross-tab synchronization via localStorage storage event
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'bally_last_permission_broadcast' && e.newValue) {
+      try {
+        const detail = JSON.parse(e.newValue);
+        permissionListeners.forEach((fn) => {
+          try {
+            fn(detail);
+          } catch (err) {
+            console.warn('Cross-tab listener error:', err);
+          }
+        });
+        window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
+      } catch {}
+    }
+  });
+}
 
 export function subscribeToPermissions(listener: PermissionListener): () => void {
   permissionListeners.add(listener);
@@ -369,10 +388,18 @@ export function hasModulePermission(
 ): boolean {
   if (!targetModuleOrPage) return false;
 
-  const ctx = getCurrentUserContext();
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return true;
 
+  const target = targetModuleOrPage.toLowerCase().trim();
+
+  // 1. Universal Hub Access: The operational Dashboard is the landing hub and home for all authenticated operators.
+  // The Dashboard component itself dynamically filters and displays ONLY the module cards permitted for this operator.
+  if (target === 'dashboard' || target === 'hub' || target === 'operational_hub' || target === 'home') {
+    return true;
+  }
+
+  const ctx = getCurrentUserContext();
   const rawList = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
@@ -387,14 +414,26 @@ export function hasModulePermission(
 
   if (cleanAllowed.includes('*')) return true;
 
-  const target = targetModuleOrPage.toLowerCase().trim();
-
-  // 1. Direct match
+  // 2. Direct match
   if (cleanAllowed.includes(target)) {
     return true;
   }
 
-  // 2. Check aliases of target against cleanAllowed
+  // 3. Match against module definition labels, ids, or aliases
+  for (const mod of ALL_SYSTEM_MODULES) {
+    if (mod.id.toLowerCase() === target || mod.pageId.toLowerCase() === target) {
+      if (cleanAllowed.includes(mod.id.toLowerCase()) || cleanAllowed.includes(mod.label.toLowerCase())) {
+        return true;
+      }
+      for (const alias of mod.aliases) {
+        if (cleanAllowed.includes(alias.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 4. Check aliases of target against cleanAllowed
   const targetAliases = MODULE_ALIAS_MAP[target] || [target];
   for (const alias of targetAliases) {
     if (cleanAllowed.includes(alias.toLowerCase())) {
@@ -402,7 +441,7 @@ export function hasModulePermission(
     }
   }
 
-  // 3. Check if any allowed item lists target as an alias
+  // 5. Check if any allowed item lists target as an alias
   for (const allowedItem of cleanAllowed) {
     const aliasesOfAllowed = MODULE_ALIAS_MAP[allowedItem] || [];
     if (aliasesOfAllowed.map(a => a.toLowerCase()).includes(target)) {
@@ -511,7 +550,25 @@ export function broadcastPermissionsUpdated(detail: {
   level?: string;
 }): void {
   if (typeof window !== 'undefined') {
+    // 1. Notify in-memory listeners
+    permissionListeners.forEach((fn) => {
+      try {
+        fn(detail);
+      } catch (e) {
+        console.warn('Listener notification error:', e);
+      }
+    });
+
+    // 2. Dispatch window event
     window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
+
+    // 3. Multi-tab synchronization via localStorage
+    try {
+      localStorage.setItem('bally_last_permission_broadcast', JSON.stringify({
+        ...detail,
+        _timestamp: Date.now()
+      }));
+    } catch {}
   }
 }
 
