@@ -1209,6 +1209,7 @@ export default function App() {
   const [dashboardTab, setDashboardTab] = useState<
     "menu" | "mismatch" | "reports"
   >("menu");
+  const [activeReportSubTab, setActiveReportSubTab] = useState<string | undefined>(undefined);
   const [allowedModules, setAllowedModules] = useState<string[]>(["*"]);
   const [runningPages, setRunningPages] = useState<Page[]>([]);
   const [selectedAmadForFinalMr, setSelectedAmadForFinalMr] = useState<any>(null);
@@ -1464,7 +1465,16 @@ export default function App() {
 
   const globalNavigate = async (targetPage: Page, subId?: string): Promise<boolean> => {
     let actualTarget = targetPage;
-    if (subId === 'po_final' || targetPage === 'po_final' as any) {
+    if (String(targetPage).startsWith('reports:')) {
+      const reportSub = String(targetPage).split(':')[1];
+      actualTarget = 'reports';
+      subId = reportSub;
+      setActiveReportSubTab(reportSub);
+      window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab: reportSub } }));
+    } else if (actualTarget === 'reports' && subId) {
+      setActiveReportSubTab(subId);
+      window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab: subId } }));
+    } else if (subId === 'po_final' || targetPage === 'po_final' as any) {
       actualTarget = 'final_po';
     } else if (subId === 'po_temp') {
       actualTarget = 'po';
@@ -2111,7 +2121,10 @@ export default function App() {
               <div
                 className={currentPage === "reports" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
-                <Reports onClose={() => closePage("reports", "dashboard")} />
+                <Reports
+                  onClose={() => closePage("reports", "dashboard")}
+                  initialReportType={activeReportSubTab}
+                />
               </div>
               <div
                 className={currentPage === "payment" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}

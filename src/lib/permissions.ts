@@ -176,7 +176,7 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Godown Master',
     category: 'Inventory & Issue',
     pageId: 'bardana',
-    aliases: ['bardana', 'godown_master', 'godown']
+    aliases: ['bardana', 'godown_master', 'godown', 'bardana_master']
   },
   {
     id: 'weight_bridge',
@@ -186,39 +186,90 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     aliases: ['weight_bridge', 'weigh_bridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
   },
 
-  // 7. System & Reports
+  // 7. Reports & Analytics (Individual sub-modules under Report Section)
+  {
+    id: 'sauda_analyze',
+    label: 'Sauda Analyze (OUT)',
+    category: 'Reports & Analytics',
+    pageId: 'reports:sauda_analyze',
+    aliases: ['sauda_analyze', 'sauda_analyze_out', 'sauda_out', 'analyze_sauda']
+  },
+  {
+    id: 'po_summary',
+    label: 'P.O. Summary',
+    category: 'Reports & Analytics',
+    pageId: 'reports:po_summary',
+    aliases: ['po_summary', 'purchase_order_summary', 'po_sum']
+  },
+  {
+    id: 'map_wise_po',
+    label: 'Map Wise P.O',
+    category: 'Reports & Analytics',
+    pageId: 'reports:map_wise_po',
+    aliases: ['map_wise_po', 'map_wise', 'map_po', 'po_map']
+  },
+  {
+    id: 'global_analytics',
+    label: 'Global Analytics',
+    category: 'Reports & Analytics',
+    pageId: 'reports:global_analytics',
+    aliases: ['global_analytics', 'global_reports', 'analytics']
+  },
+  {
+    id: 'data_aggregation',
+    label: 'Data Aggregator (P.O. & Sauda)',
+    category: 'Reports & Analytics',
+    pageId: 'reports:data_aggregation',
+    aliases: ['data_aggregation', 'data_aggregator', 'aggregator', 'po_sauda_aggregator']
+  },
+  {
+    id: 'trade_report',
+    label: 'Trade',
+    category: 'Reports & Analytics',
+    pageId: 'reports:trade_report',
+    aliases: ['trade_report', 'trade', 'trades', 'commercial_trade', 'trade_analysis']
+  },
+  {
+    id: 'payment_report',
+    label: 'Payment Report',
+    category: 'Reports & Analytics',
+    pageId: 'reports:payment_report',
+    aliases: ['payment_report', 'pay_report', 'reports:payment_report']
+  },
   {
     id: 'reports',
-    label: 'System Reports',
-    category: 'Reports & Management',
+    label: 'Reports Hub (All Reports)',
+    category: 'Reports & Analytics',
     pageId: 'reports',
     aliases: ['reports', 'system_reports', 'analytical_reports']
   },
+
+  // 8. System & Utilities
   {
     id: 'vyapari',
     label: 'Traders Directory',
-    category: 'Reports & Management',
+    category: 'System & Utilities',
     pageId: 'vyapari',
     aliases: ['vyapari', 'traders_directory', 'trader_directory']
   },
   {
     id: 'settings',
     label: 'Config Center / Settings',
-    category: 'Reports & Management',
+    category: 'System & Utilities',
     pageId: 'settings',
     aliases: ['settings', 'config_center', 'config_guide']
   },
   {
     id: 'admindesk',
     label: 'Admin Desk',
-    category: 'Reports & Management',
+    category: 'System & Utilities',
     pageId: 'admindesk',
     aliases: ['admindesk', 'admin_desk', 'admin_vault']
   },
   {
     id: 'ai_assistant',
     label: 'Jarves AI 2.0',
-    category: 'Reports & Management',
+    category: 'System & Utilities',
     pageId: 'ai_assistant',
     aliases: ['ai_assistant', 'jarves_ai', 'ai_portal']
   },
@@ -306,13 +357,34 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
 }
 
 export function getCurrentUserContext(): UserContext {
-  if (typeof window !== 'undefined' && (!currentUserContext.allowedModules || currentUserContext.allowedModules.length === 0)) {
+  if (typeof window !== 'undefined') {
     try {
       const saved = window.localStorage.getItem('bally_user_context');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           currentUserContext = { ...currentUserContext, ...parsed };
+        }
+      } else {
+        const authSess = window.localStorage.getItem('bally_auth_session');
+        if (authSess) {
+          const sess = JSON.parse(authSess);
+          if (sess && (sess.username || sess.userId)) {
+            const mods = sess.allowed_modules
+              ? sess.allowed_modules === '*'
+                ? ['*']
+                : String(sess.allowed_modules).split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+              : ['*'];
+            currentUserContext = {
+              ...currentUserContext,
+              userId: sess.userId || 'op_1',
+              username: sess.username,
+              userName: sess.username,
+              userRole: sess.role?.toUpperCase() || 'L1',
+              userLevel: sess.level?.toUpperCase() || 'L1',
+              allowedModules: mods,
+            };
+          }
         }
       }
     } catch {
@@ -417,6 +489,34 @@ export function hasModulePermission(
   // 2. Direct match
   if (cleanAllowed.includes(target)) {
     return true;
+  }
+
+  // 2b. Handle compound report module IDs like reports:sauda_analyze or reports:trade
+  if (target.startsWith('reports:')) {
+    const subTarget = target.replace('reports:', '').trim().toLowerCase();
+    if (cleanAllowed.includes('reports') || cleanAllowed.includes(subTarget)) {
+      return true;
+    }
+    const subAliases = MODULE_ALIAS_MAP[subTarget] || [subTarget];
+    for (const alias of subAliases) {
+      if (cleanAllowed.includes(alias.toLowerCase())) {
+        return true;
+      }
+    }
+  }
+
+  // 2c. If checking parent 'reports', permit if user has access to ANY report submodule
+  if (target === 'reports') {
+    if (cleanAllowed.includes('reports')) return true;
+    const REPORT_SUB_MODULES = [
+      'sauda_analyze', 'po_summary', 'map_wise_po', 'global_analytics', 
+      'data_aggregation', 'trade_report', 'trade', 'payment_report'
+    ];
+    for (const sub of REPORT_SUB_MODULES) {
+      if (cleanAllowed.includes(sub)) return true;
+      const subAliases = MODULE_ALIAS_MAP[sub] || [];
+      if (subAliases.some(a => cleanAllowed.includes(a.toLowerCase()))) return true;
+    }
   }
 
   // 3. Match against module definition labels, ids, or aliases
@@ -550,24 +650,74 @@ export function broadcastPermissionsUpdated(detail: {
   level?: string;
 }): void {
   if (typeof window !== 'undefined') {
+    const parsedMods = detail.allowed_modules
+      ? detail.allowed_modules === '*'
+        ? ['*']
+        : String(detail.allowed_modules).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+      : ['*'];
+
+    const normalizedContext: UserContext = {
+      userId: detail.userId || currentUserContext.userId,
+      username: detail.username || currentUserContext.username,
+      userName: detail.username || currentUserContext.userName,
+      userRole: detail.role || currentUserContext.userRole,
+      userLevel: detail.level || currentUserContext.userLevel,
+      allowedModules: parsedMods,
+      permissions: currentUserContext.permissions || ['ALL', 'EDIT', 'DELETE', 'VIEW']
+    };
+
+    // If currently logged in user matches, update in-memory context and local storage immediately
+    const currentUsername = currentUserContext.username || currentUserContext.userName;
+    if (
+      !currentUsername ||
+      !detail.username ||
+      currentUsername.toLowerCase() === detail.username.toLowerCase()
+    ) {
+      setCurrentUserContext(normalizedContext);
+      try {
+        const authSess = window.localStorage.getItem('bally_auth_session');
+        if (authSess) {
+          const sess = JSON.parse(authSess);
+          if (sess && sess.username && sess.username.toLowerCase() === (detail.username || '').toLowerCase()) {
+            sess.allowed_modules = detail.allowed_modules;
+            sess.role = detail.role || sess.role;
+            sess.level = detail.level || sess.level;
+            window.localStorage.setItem('bally_auth_session', JSON.stringify(sess));
+          }
+        }
+      } catch {}
+    }
+
     // 1. Notify in-memory listeners
     permissionListeners.forEach((fn) => {
       try {
-        fn(detail);
+        fn(normalizedContext);
       } catch (e) {
         console.warn('Listener notification error:', e);
       }
     });
 
-    // 2. Dispatch window event
-    window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
+    // 2. Dispatch window event with both raw and parsed format for compatibility
+    window.dispatchEvent(
+      new CustomEvent('bally-permissions-updated', {
+        detail: {
+          ...detail,
+          allowedModules: parsedMods,
+          normalizedContext,
+        },
+      })
+    );
 
     // 3. Multi-tab synchronization via localStorage
     try {
-      localStorage.setItem('bally_last_permission_broadcast', JSON.stringify({
-        ...detail,
-        _timestamp: Date.now()
-      }));
+      localStorage.setItem(
+        'bally_last_permission_broadcast',
+        JSON.stringify({
+          ...detail,
+          allowedModules: parsedMods,
+          _timestamp: Date.now(),
+        })
+      );
     } catch {}
   }
 }

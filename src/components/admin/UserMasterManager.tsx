@@ -996,6 +996,24 @@ export const UserMasterEditModal: React.FC<UserMasterEditModalProps> = ({
                   </button>
                   <button
                     type="button"
+                    onClick={() =>
+                      handleApplyPreset([
+                        "sauda_analyze",
+                        "po_summary",
+                        "map_wise_po",
+                        "global_analytics",
+                        "data_aggregation",
+                        "trade_report",
+                        "payment_report",
+                        "reports",
+                      ])
+                    }
+                    className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-900 rounded-lg text-[10.5px] font-bold uppercase transition-colors cursor-pointer border border-teal-200"
+                  >
+                    Reports Only
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setEditingRow((prev: any) => ({ ...prev, allowed_modules: "" }))}
                     className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-[10.5px] font-bold uppercase transition-colors cursor-pointer border border-rose-200"
                   >

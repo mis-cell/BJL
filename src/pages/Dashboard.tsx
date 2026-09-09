@@ -95,6 +95,19 @@ export default function Dashboard({
   const currentTab = propCurrentTab !== undefined ? propCurrentTab : localCurrentTab;
   const setCurrentTab = propSetCurrentTab !== undefined ? propSetCurrentTab : setLocalCurrentTab;
   const [activeSectionIndex, setActiveSectionIndex] = React.useState<number>(0);
+  const [reportsInitialTab, setReportsInitialTab] = React.useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    const handleTabChange = (e: any) => {
+      const tab = e.detail?.tab || e.detail?.reportType;
+      if (tab) {
+        setReportsInitialTab(tab);
+        setCurrentTab('reports');
+      }
+    };
+    window.addEventListener('reports-tab-change', handleTabChange);
+    return () => window.removeEventListener('reports-tab-change', handleTabChange);
+  }, [setCurrentTab]);
 
   const [emailHealthWarning, setEmailHealthWarning] = React.useState(false);
 
@@ -1402,9 +1415,17 @@ export default function Dashboard({
       title="P.O Automation" 
       subtitle="Operational Hub"
       activeNavTab={currentTab === 'reports' ? 'reports' : 'dashboard'}
+      isAdmin={isAdmin}
+      allowedModules={allowedModules}
       onNavClick={(pageId) => {
         if (pageId === 'reports') {
+          setReportsInitialTab(undefined);
           setCurrentTab('reports');
+        } else if (pageId.startsWith('reports:')) {
+          const tab = pageId.split(':')[1];
+          setReportsInitialTab(tab);
+          setCurrentTab('reports');
+          window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab } }));
         } else if (pageId === 'dashboard') {
           setCurrentTab('menu');
         } else {
@@ -2079,7 +2100,7 @@ export default function Dashboard({
 
         {currentTab === 'reports' && (
           <div className="bg-white border border-slate-250 shadow-sm rounded-xl p-1">
-            <Reports onClose={() => setCurrentTab('menu')} />
+            <Reports onClose={() => setCurrentTab('menu')} initialReportType={reportsInitialTab} />
           </div>
         )}
 

@@ -44,8 +44,9 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
-import PurchaseOrderSummary from '../components/PurchaseOrderSummary';PaymentReport
+import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
 import PaymentReport from '../components/PaymentReport';
+import TradeReport from '../components/TradeReport';
 import { dbModule } from '../services/dbModule';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -149,8 +150,46 @@ function getAreaCoordinates(areaName: string): { lat: number; lng: number } {
   return { lat, lng };
 }
 
-export default function Reports({ onClose }: { onClose?: () => void }) {
-  const [reportType, setReportType] = useState<'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report'>('po_summary');
+export default function Reports({ onClose, initialReportType }: { onClose?: () => void; initialReportType?: string }) {
+  const [reportType, setReportType] = useState<
+    'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report' | 'trade'
+  >(() => {
+    if (initialReportType) {
+      const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
+      if (clean === 'trade_report' || clean === 'trade') return 'trade';
+      if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
+        return clean as any;
+      }
+    }
+    return 'po_summary';
+  });
+
+  useEffect(() => {
+    if (initialReportType) {
+      const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
+      if (clean === 'trade_report' || clean === 'trade') {
+        setReportType('trade');
+      } else if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
+        setReportType(clean as any);
+      }
+    }
+  }, [initialReportType]);
+
+  useEffect(() => {
+    const handleTabChange = (e: any) => {
+      const tab = e.detail?.tab || e.detail?.reportType;
+      if (tab) {
+        const clean = String(tab).toLowerCase().replace('reports:', '').trim();
+        if (clean === 'trade_report' || clean === 'trade') {
+          setReportType('trade');
+        } else if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
+          setReportType(clean as any);
+        }
+      }
+    };
+    window.addEventListener('reports-tab-change', handleTabChange);
+    return () => window.removeEventListener('reports-tab-change', handleTabChange);
+  }, []);
   const [mapMode, setMapMode] = useState<'street' | 'voyager' | 'cyber'>('street');
   const [sourcingGroupMode, setSourcingGroupMode] = useState<'area' | 'agency' | 'both'>('agency');
   const [center, setCenter] = useState<[number, number]>([24.5, 84.5]);
@@ -1732,6 +1771,20 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
             )}
           >
             Treds
+          </button>
+
+          <button
+            id="tab-trade-report"
+            onClick={() => setReportType('trade')}
+            className={cn(
+              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
+              "rounded-lg border transition-all duration-150",
+              reportType === 'trade'
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+            )}
+          >
+            Trade
           </button>
 
         </div>
@@ -3545,6 +3598,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
         )}
          {reportType === 'payment_report' && (
            <PaymentReport></PaymentReport>
+         )}
+         {reportType === 'trade' && (
+           <TradeReport
+             saudaData={saudaData}
+             saudaDetails={saudaDetails}
+             amadData={amadData}
+             onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
+           />
          )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-2 py-1  text-gray-450 border-t border-gray-300 mt-2">

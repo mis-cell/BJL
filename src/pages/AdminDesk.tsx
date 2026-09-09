@@ -19,6 +19,7 @@ import {
   Save,
   X,
   FileSpreadsheet,
+  Columns,
   Terminal,
   Monitor,
   Archive,
@@ -57,14 +58,14 @@ import Papa from "papaparse";
 import { cn, canDeleteData } from "../lib/utils";
 import { getCurrentUserContext, ALL_SYSTEM_MODULES, broadcastPermissionsUpdated } from "../lib/permissions";
 
-// Import our beautiful modular material design subpages
-import DashboardTab from "../components/material/DashboardTab";
-import UIElementsTab from "../components/material/UIElementsTab";
-import DatabaseTab from "../components/material/DatabaseTab";
-import FormsChartsTab from "../components/material/FormsChartsTab";
-import ExtraPagesTab from "../components/material/ExtraPagesTab";
-import EmailActivityTab from "../components/material/EmailActivityTab";
-import SMTPDiagnosticTab from "../components/material/SMTPDiagnosticTab";
+import { MasterTableNav } from "../components/admin/MasterTableNav";
+import { DynamicRecordsViewer } from "../components/admin/DynamicRecordsViewer";
+import { DynamicRecordModal } from "../components/admin/DynamicRecordModal";
+import {
+  ColumnStructureTab,
+  SqlCommandShellTab,
+  WeightReconciliationTab,
+} from "../components/admin/SchemaToolTabs";
 import { UserMasterTableView, UserMasterEditModal } from "../components/admin/UserMasterManager";
 
 interface TableDef {
@@ -188,9 +189,6 @@ export default function AdminDesk({
   const [loginPass, setLoginPass] = useState("");
   const [error, setError] = useState("");
 
-  // Administrative theme styles toggler
-  const [useMaterialTheme, setUseMaterialTheme] = useState(false);
-
   // Database core state variables
   const [tables, setTables] = useState<TableDef[]>([]);
   const [selectedTable, setSelectedTable] = useState<TableDef | null>(null);
@@ -302,9 +300,6 @@ export default function AdminDesk({
       loadReconRecords();
     }
   }, [activeSchemaTab]);
-
-  // Modern Material Tab selected
-  const [activeMaterialPage, setActiveMaterialPage] = useState<string>("db_console");
 
   // System Event Log UI states
   const [logFilter, setLogFilter] = useState("");
@@ -503,7 +498,7 @@ export default function AdminDesk({
     };
 
     loadPrintLogs();
-  }, [activeSchemaTab, activeMaterialPage]);
+  }, [activeSchemaTab]);
 
   const handleClearPrintLogs = () => {
     if (confirm("Are you sure you want to purge the print logs history?")) {
@@ -2621,950 +2616,282 @@ export default function AdminDesk({
     );
   };
 
-  // RENDER DYNAMIC THEMES:
-  // OPTION A: REACT MATERIAL ADMIN FULL (DEFAULT & REQUESTED GORGEOUS SIDEBAR TYPE)
-  if (useMaterialTheme) {
-    return (
-      <div className="h-screen w-full flex flex-col bg-[#f5f7fb] font-sans text-slate-800 overflow-hidden relative selection:bg-pink-100">
-        
-        {/* Pink Modern Material Header Bar */}
-        <header className="h-14 bg-[#ec407a] text-white px-4 flex items-center justify-between shadow-md shrink-0 z-50">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-white/10 rounded-full transition-all flex items-center justify-center text-white"
-              title="Return to Operational Hub"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold tracking-wide uppercase font-display ">
-                React Material Admin Full
-              </span>
-              <span className="hidden md:inline-block bg-white/20 text-[8px] font-black px-2 py-0.5 rounded tracking-widest">
-                AUTOMATED CONSOLE
-              </span>
-            </div>
-          </div>
-
-          {/* Right hand layout icons matching screenshot */}
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-white/10 border border-white/5 rounded-full px-3 py-1 text-xs">
-              <Search className="h-4 w-4 text-white/70" />
-              <input
- id="search_console_2388" name="search_console" aria-label="Search console..."                className="bg-transparent border-none outline-none text-white text-xs placeholder:text-white/40 max-w-[120px]"
-                placeholder="Search console..."
-              />
-            </div>
-
-            <button className="relative p-1.5 hover:bg-white/10 rounded-full transition-all">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-4 w-4 bg-amber-500 text-white font-black text-[8px] rounded-full flex items-center justify-center border border-[#ec407a]">
-                4
-              </span>
-            </button>
-
-            <button className="relative p-1.5 hover:bg-white/10 rounded-full transition-all">
-              <Mail className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-4 w-4 bg-[#3f51b5] text-white font-black text-[8px] rounded-full flex items-center justify-center border border-[#ec407a]">
-                4
-              </span>
-            </button>
-
-            <div className="h-6 w-px bg-white/15" />
-
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-slate-900 border-2 border-white/20 overflow-hidden flex items-center justify-center shrink-0">
-                <img
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&auto=format&fit=crop"
-                  referrerPolicy="no-referrer"
-                  alt="Robert profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="text-xs font-bold hidden sm:inline ">Hi, Robert Cotton</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Master Body section with Sidebar + Dynamic View Container */}
-        <div className="flex-1 flex min-h-0 min-w-0">
-          
-          {/* Left Navigation Sidebar designed with precise modern Material layouts */}
-          <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-auto h-full max-h-full py-4 sidebar">
-            <div className="space-y-6">
-              
-              {/* Category Group 1 */}
-              <div className="space-y-1 px-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block px-3 mb-2">Main Components</span>
-                <button
-                  onClick={() => setActiveMaterialPage("dashboard")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "dashboard"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Monitor className="h-4 w-4" />
-                  <span>Dashboard Hub</span>
-                </button>
-                <button
-                  onClick={() => setActiveMaterialPage("e_commerce")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "e_commerce"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Briefcase className="h-4 w-4" />
-                  <span>E-Commerce Log</span>
-                </button>
-                <button
-                  onClick={() => setActiveMaterialPage("documentation")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "documentation"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span>Documentation</span>
-                </button>
-              </div>
-
-              {/* Category Group 2 */}
-              <div className="space-y-1 px-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block px-3 mb-2">Visual Template</span>
-                
-                <button
-                  onClick={() => setActiveMaterialPage("ui_elements")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "ui_elements"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Layers className="h-4 w-4" />
-                  <span>UI Elements Play</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveMaterialPage("forms")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "forms"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Forms & Checks</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveMaterialPage("extra_pages")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "extra_pages"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Archive className="h-4 w-4" />
-                  <span>Extra Pages</span>
-                </button>
-              </div>
-
-              {/* System Admin utilities section */}
-              <div className="space-y-1 px-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block px-3 mb-2">Database Admin</span>
-                <button
-                  onClick={() => setActiveMaterialPage("db_console")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "db_console"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Database className="h-4 w-4" />
-                  <span>Table Manager</span>
-                </button>
-                <button
-                  onClick={() => setActiveMaterialPage("event_log")}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase ${
-                    activeMaterialPage === "event_log"
-                      ? "bg-pink-50 text-pink-600 font-extrabold"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Terminal className="h-4 w-4" />
-                  <span>System Event Log</span>
-                </button>
-              </div>
-
-              {/* System Admin shortcuts section */}
-              <div className="space-y-1 px-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#ec407a] block px-3 mb-2">Operational Apps</span>
-                <button
-                  onClick={() => onNavigate?.("settings")}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                >
-                  <Settings className="h-4 w-4 text-slate-400" />
-                  <span>Config Center</span>
-                </button>
-                <button
-                  onClick={() => onNavigate?.("ai_assistant")}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2.5 rounded-lg text-xs font-black transition-all uppercase text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                >
-                  <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
-                  <span>Jarves AI 2.0</span>
-                </button>
-              </div>
-
-            </div>
-
-            {/* Sidebar bottom indicator */}
-            <div className="px-5 border-t border-slate-100 pt-4 pb-2">
-              <div className="text-[8px] font-black uppercase text-slate-300 text-center tracking-[0.2em]">
-                STATION OVERRIDE ACTIVE
-              </div>
-            </div>
-          </aside>
-
-          {/* Right Side Main Area Container */}
-          <main className="flex-1 bg-slate-50/50 p-4 sm:p-6 overflow-y-auto overflow-x-auto min-w-0 min-h-0 main-content">
-            {activeMaterialPage === "dashboard" && (
-              <DashboardTab dbStats={{ poCount: data.length || 118, saudaCount: 42, activeUsers: 5 }} />
-            )}
-
-            {activeMaterialPage === "e_commerce" && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-800">Operational Jute Commerce Ledger</h3>
-                    <p className="text-xs text-slate-400 mt-1">Real-time ledger entries derived directly from purchase_master database</p>
-                  </div>
-                  <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase rounded-full">
-                    ● ACTIVE STREAM
-                  </span>
-                </div>
-
-                <div className="bg-white rounded-xl border border-slate-100 shadow-md overflow-hidden">
-                  <table className="w-full text-left text-xs text-slate-600">
-                    <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
-                      <tr>
-                        <th className="p-3">PO Reference</th>
-                        <th className="p-3">Supplier Name</th>
-                        <th className="p-3">Broker Code</th>
-                        <th className="p-3">Volume Area</th>
-                        <th className="p-3 text-right">Total Contract MT</th>
-                        <th className="p-3 text-right">Valuation Price</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-semibold font-mono text-[10px] text-slate-700">
-                      {purchaseOrders?.slice(0, 15).map((po: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-slate-5 w-full hover:bg-slate-50/60 font-semibold">
-                          <td className="p-3 text-indigo-700 font-extrabold">{po.po_no}</td>
-                          <td className="p-3 uppercase font-sans font-bold">{po.supplier || "VARIOUS SUPPLIER"}</td>
-                          <td className="p-3 uppercase font-sans font-bold">{po.broker}</td>
-                          <td className="p-3 uppercase font-sans">{po.area}</td>
-                          <td className="p-3 text-right">{po.total_contract_mt} MT</td>
-                          <td className="p-3 text-right text-pink-600 font-extrabold font-mono">₹{(Number(po.b_rate) || 17200).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeMaterialPage === "documentation" && (
-              <div className="max-w-2xl bg-white border border-slate-100 p-8 rounded-2xl shadow-sm space-y-6">
-                <div className="space-y-2">
-                  <span className="px-2.5 py-0.5 bg-pink-100 text-pink-800 text-[10px] font-black uppercase tracking-widest rounded-full">Guides Center</span>
-                  <h3 className="text-xl font-bold tracking-tight text-[#1a237e]">PO-Automation Enterprise Module Pipeline</h3>
-                </div>
-                <hr className="border-slate-100" />
-                <div className="space-y-4 text-xs text-slate-600 leading-relaxed font-semibold">
-                  <p>
-                    Welcome to the central documentation module. The Jute Mill automation pipeline coordinate transactional workflows in accordance with standard mill regulatory directives:
-                  </p>
-                  <ul className="list-decimal pl-5 space-y-2">
-                    <li>
-                      <strong>Sauda Registrations:</strong> Standard pre-arranged commercial bookings with verified Raw Jute brokers mapping regional target rates.
-                    </li>
-                    <li>
-                      <strong>Purchase Orders allocation:</strong> Automatic distribution of deliveries tied directly to active Saudas.
-                    </li>
-                    <li>
-                      <strong>Physical Scales Recording (AMAD):</strong> Direct entry of trucklorry shipment weighments at Bored road transit warehouses.
-                    </li>
-                    <li>
-                      <strong>Quality inspection audits:</strong> Mandatory testing of incoming fiber moisture ratings that locks release values on the system account ledgers.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {activeMaterialPage === "ui_elements" && <UIElementsTab />}
-
-            {activeMaterialPage === "forms" && <FormsChartsTab />}
-
-            {activeMaterialPage === "extra_pages" && <ExtraPagesTab purchaseOrders={purchaseOrders} />}
-
-            {activeMaterialPage === "db_console" && (
-              <DatabaseTab
-                tables={tables}
-                selectedTable={selectedTable ?? tables[0]}
-                setSelectedTable={setSelectedTable}
-                data={data}
-                loading={loading}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                setEditingRow={setEditingRow}
-                activeSchemaTab={activeSchemaTab}
-                setActiveSchemaTab={setActiveSchemaTab}
-                sqlQuery={sqlQuery}
-                setSqlQuery={setSqlQuery}
-                sqlResult={sqlResult}
-                sqlExecuting={sqlExecuting}
-                runSqlQuery={runSqlQuery}
-                currentColumns={currentColumns}
-                handleDelete={handleDelete}
-                handleDeleteColumn={handleDeleteColumn}
-                newFieldName={newFieldName}
-                setNewFieldName={setNewFieldName}
-                newFieldType={newFieldType}
-                setNewFieldType={setNewFieldType}
-                handleAddField={handleAddField}
-                newTableName={newTableName}
-                setNewTableName={setNewTableName}
-                handleCreateTable={handleCreateTable}
-                initializeDatabase={initializeDatabase}
-                confirmDeleteTable={confirmDeleteTable}
-                setConfirmDeleteTable={setConfirmDeleteTable}
-                handleDropTable={handleDropTable}
-                handleCsvImport={handleCsvImport}
-                onDatabaseExport={handleDatabaseExport}
-                isExporting={isExporting}
-              />
-            )}
-
-            {activeMaterialPage === "email_activity" && <EmailActivityTab />}
-            {activeMaterialPage === "smtp_diagnostic" && <SMTPDiagnosticTab />}
-
-            {activeMaterialPage === "event_log" && (
-              <div className="flex-1 overflow-y-auto p-6">
-                {renderSystemLogs()}
-              </div>
-            )}
-          </main>
-        </div>
-
-        {/* Row inline Dialog Modal drawer */}
-        {editingRow && (
-          selectedTable?.name === "user_master" ? (
-            <UserMasterEditModal
-              isOpen={Boolean(editingRow)}
-              isNew={isNewRow}
-              editingRow={editingRow}
-              setEditingRow={setEditingRow}
-              onClose={() => setEditingRow(null)}
-              onSave={handleSave}
-              allRows={data}
-              loading={loading}
-            />
-          ) : (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-                <div className="bg-[#ec407a] p-4 text-white flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
-                    <Edit className="h-4 w-4" />
-                    Editor: {selectedTable?.label || "Row Update"}
-                  </span>
-                  <button onClick={() => setEditingRow(null)}>
-                    <X className="h-4.5 w-4.5" />
-                  </button>
-                </div>
-
-                <div className="p-6 overflow-y-auto space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {editorColumns.map((col) => (
-                      <div key={col} className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400">
-                          {col.replace(/_/g, " ")}
-                        </label>
-                        {renderEditField(col)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 text-xs font-bold">
-                  <button
-                    onClick={() => setEditingRow(null)}
-                    className="px-4 py-2 bg-slate-200 text-slate-700 font-bold uppercase rounded-lg text-[10px] tracking-wider hover:bg-slate-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="px-4 py-2 bg-pink-600 text-white font-black uppercase rounded-lg text-[10px] tracking-wider hover:bg-pink-700"
-                  >
-                    Save Record Value
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        )}
-      </div>
-    );
-  }
-
-  // OPTION B: ORIGINAL CLASSIC RETRO G01 DATABASE SYSTEM PANEL (SKINNED ACCORDING TO SAVED localStorage)
+    // Modernized Enterprise Admin Desk
   return (
     <LegacyLayout
-      title="P.O Automation - Vintage Master Desk"
-      subtitle="Administrative Schema Control Panel"
+      title="Admin Desk - Master Tables"
+      subtitle="Enterprise Schema & Master Data Administration"
       onClose={onClose}
     >
       <div className="grid grid-cols-12 gap-4 h-full min-h-0">
-        
-        {/* Left Column table choices */}
-        <div className="col-span-3 bg-[#c0c0c0] border border-black/20 overflow-y-auto pixel-scroll shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] flex flex-col">
-          <div className="bg-[#000080] text-white px-2 py-1 flex items-center justify-between sticky top-0 z-10">
-            <div className="flex items-center gap-2">
-              <Database className="h-3 w-3" />
-              <span className="text-[10px] font-black uppercase italic tracking-widest">
-                Master Tables list
-              </span>
-            </div>
-            <button onClick={fetchTables}>
-              <Plus className="h-3 w-3 rotate-45" />
-            </button>
-          </div>
+        {/* Left Navigation: Master Tables Panel */}
+        <div className="col-span-12 md:col-span-4 lg:col-span-3 h-full min-h-0 flex flex-col">
+          <MasterTableNav
+            tables={tables}
+            selectedTable={selectedTable}
+            onSelectTable={(table) => {
+              setSelectedTable(table);
+              setActiveSchemaTab("row");
+            }}
+            onRefreshTables={fetchTables}
+            onDropTable={handleDropTable}
+            canDelete={canDeleteData()}
+          />
+        </div>
 
-          <div className="flex-1 p-1 space-y-1 overflow-y-auto">
-            {tables.map((table) => (
-              <div key={table.name} className="w-full relative group/item">
-                <div className="w-full flex items-center justify-between">
+        {/* Right Main Area: Workspace & Dynamic Viewers */}
+        <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full min-h-0 flex flex-col space-y-3 overflow-hidden">
+          
+          {/* Top Tabs Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-1.5 bg-slate-100/90 border border-slate-200/90 rounded-xl shadow-2xs shrink-0">
+            <div className="flex flex-wrap items-center gap-1">
+              {[
+                { id: "row", label: "Rows View", icon: Layers },
+                { id: "column", label: "Columns Structure", icon: Columns },
+                { id: "sql", label: "SQL Command Shell", icon: Terminal },
+                { id: "event_log", label: "System Event Log", icon: ClipboardList },
+                { id: "reconciliation_log", label: "Weight Reconciliation Log", icon: Scale },
+              ].map(({ id, label, icon: TabIcon }) => {
+                const isActive = activeSchemaTab === id;
+                return (
                   <button
-                    onClick={() => { setSelectedTable(table); setActiveSchemaTab("row"); }}
-                    className={`flex-1 text-left px-2 py-1.5 flex items-center gap-2 border ${
-                      selectedTable?.name === table.name
-                        ? "bg-indigo-900 text-white border-black shadow-[inset_1px_1px_2px_rgba(0,0,0,0.3)]"
-                        : "hover:bg-white border-transparent"
+                    key={id}
+                    onClick={() => setActiveSchemaTab(id as any)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-white text-emerald-950 shadow-xs border border-slate-200"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                     }`}
                   >
-                    {React.createElement(table.icon || Database, { className: "h-3 w-3" })}
-                    <span className="text-[11px] font-bold uppercase truncate">{table.label}</span>
+                    <TabIcon className={`h-3.5 w-3.5 ${isActive ? "text-emerald-700" : "text-slate-400"}`} />
+                    <span>{label}</span>
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Drop ${table.name}?`)) handleDropTable(table.name);
-                    }}
-                    className="p-1 text-red-600 hover:bg-slate-200 hidden group-hover/item:block absolute right-1 bg-white border rounded"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Quick theme toggler */}
-          <div className="p-2 border-t border-black/10 bg-slate-200 text-center">
-            <span className="text-[8px] font-black uppercase text-slate-400 block mb-1.5">Classic UI Panel Mode</span>
-            <button
-              onClick={() => setUseMaterialTheme(true)}
-              className="w-full bg-[#000080] hover:bg-black text-white text-[9px] font-black uppercase tracking-wider py-1 rounded"
-            >
-              🎨 Switch Material Desk
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic content tab grids */}
-        <div className="col-span-9 space-y-4 flex flex-col overflow-hidden">
-          <div className="flex gap-1">
-            {(["row", "column", "sql", "event_log", "reconciliation_log"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveSchemaTab(tab)}
-                className={`px-4 py-1.5 text-[10px] font-black uppercase italic tracking-widest border-t-2 border-x border-black/10 transition-all ${
-                  activeSchemaTab === tab
-                    ? "bg-white border-t-indigo-600 shadow-sm"
-                    : "bg-slate-300 opacity-60"
-                }`}
-              >
-                {tab === "row" && "Rows view"}
-                {tab === "column" && "Columns structure"}
-                {tab === "sql" && "SQL command shell"}
-                {tab === "event_log" && "System event log"}
-                {tab === "reconciliation_log" && "Weight Reconciliation Log"}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 overflow-auto bg-white border border-black/10 p-4 space-y-4">
+          {/* Tab Content Container */}
+          <div className="flex-1 overflow-auto bg-white border border-slate-200/90 rounded-xl p-4 space-y-4 shadow-xs flex flex-col min-h-0">
             
-            {/* Archive Management & Admin Apps Section */}
-            <div className="border border-dashed border-indigo-400 p-2.5 text-xs bg-slate-50 relative rounded">
-              <span className="absolute -top-2.5 left-2 bg-white px-2 text-[9px] font-black uppercase text-[#000080] tracking-wider">
-                Archive Management & System Launchers
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-2 pt-1.5">
-                 {/* Create Card */}
-                 <button
-                   onClick={() => {
-                     setActiveSchemaTab("row");
-                     const targetTbl = tables[0];
-                     if (targetTbl) setSelectedTable(targetTbl);
-                   }}
-                   className="bg-amber-50 border-2 border-amber-300 hover:border-amber-800 active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer group"
-                 >
-                   <div className="p-1 px-1.5 bg-amber-600 text-white shrink-0 group-hover:bg-amber-700">
-                     <Plus className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <p className="text-[10px] font-black uppercase tracking-wider text-amber-950 truncate">Create</p>
-                     <p className="text-[8px] text-amber-700 font-bold uppercase tracking-tight truncate">New Table / Schema</p>
-                   </div>
-                 </button>
-
-
-
-                 <button
-                   onClick={() => onNavigate?.("settings")}
-                   className="bg-[#d4d0c8] border-2 border-white hover:border-black active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer"
-                 >
-                   <div className="p-1 px-1.5 bg-[#000080] text-white shrink-0">
-                     <Settings className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <p className="text-[10px] font-black uppercase tracking-wider text-black truncate">Config Center</p>
-                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight truncate">System Config</p>
-                   </div>
-                 </button>
-
-                 <button
-                   onClick={() => onNavigate?.("ai_assistant")}
-                   className="bg-[#d4d0c8] border-2 border-white hover:border-black active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer"
-                 >
-                   <div className="p-1 px-1.5 bg-amber-500 text-white animate-pulse shrink-0">
-                     <Sparkles className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <p className="text-[10px] font-black uppercase tracking-wider text-black truncate">Jarves AI 2.0</p>
-                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight truncate">Smart AI Bot</p>
-                   </div>
-                 </button>
-
-                 <button
-                   onClick={handleDatabaseExport}
-                   disabled={isExporting}
-                   className="bg-[#d4d0c8] border-2 border-white hover:border-black active:translate-x-[0.5px] active:translate-y-[0.5px] p-2 text-left shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] flex items-center gap-2 w-full cursor-pointer"
-                 >
-                   <div className="p-1 px-1.5 bg-purple-700 text-white hover:bg-purple-800 shrink-0">
-                     <Download className="h-4 w-4" />
-                   </div>
-                   <div className="overflow-hidden">
-                     <p className="text-[10px] font-black uppercase tracking-wider text-black truncate">
-                       {isExporting ? "EXPORTING..." : "DB EXPORT"}
-                     </p>
-                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tight truncate">Offline JSON</p>
-                   </div>
-                 </button>
+            {/* Quick Launchers / System Action Cards */}
+            <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 shadow-2xs shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  Admin Tools & Launchers
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Quick operational shortcuts
+                </span>
               </div>
-            </div>
-
-            {/* Admin Stats Panel at the top of Schema desk */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-               <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col justify-center">
-                  <p className="text-[9px] font-black uppercase text-gray-500 leading-none mb-1">Database Schema Tables</p>
-                  <p className="text-base font-mono font-black text-indigo-900">{tables.length} Registered</p>
-               </div>
-               <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col justify-center">
-                  <p className="text-[9px] font-black uppercase text-gray-500 leading-none mb-1">Telemetry Event Log Stream</p>
-                  <p className="text-base font-mono font-black text-emerald-800">{(systemLogs && systemLogs.length) || 104} Triggers</p>
-               </div>
-               <div className="bg-[#d4d0c8] border border-white border-b-gray-600 border-r-gray-600 p-2 shadow-sm flex flex-col justify-center">
-                  <p className="text-[9px] font-black uppercase text-gray-500 leading-none mb-1">Table Loaded Records</p>
-                  <p className="text-base font-mono font-black text-rose-800">{selectedTable ? `${data.length} rows` : "No table selected"}</p>
-               </div>
-            </div>
-
-            {activeSchemaTab === "row" && (
-              selectedTable?.name === "user_master" ? (
-                <UserMasterTableView
-                  data={data}
-                  loading={loading}
-                  onEdit={(row) => { setEditingRow(row); setIsNewRow(false); }}
-                  onDelete={(id) => handleDelete(id)}
-                  onAddNew={() => { setEditingRow({}); setIsNewRow(true); }}
-                  pk={selectedTable?.pk || "user_id"}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-100 p-2 border border-slate-200">
-                    <span className="text-xs font-bold uppercase">Dynamic records viewer</span>
-                    <button
-                      onClick={() => { setEditingRow({}); setIsNewRow(true); }}
-                      className="bg-indigo-900 text-white font-black text-[9px] uppercase px-4 py-1 border border-black/10 cursor-pointer"
-                    >
-                      New Row Item
-                    </button>
-                  </div>
-
-                  <div className="overflow-auto border border-slate-200 bg-white">
-                    <table className="w-full text-left text-xs ">
-                      <thead className="bg-[#000080] text-white font-extrabold uppercase text-[9px]">
-                        <tr>
-                          <th className="p-2 border-r border-[#ffffff20] text-center w-[110px]">Actions</th>
-                          {currentColumns.map((c) => {
-                            let label = c.name;
-                            if (selectedTable?.name === "user_master") {
-                              if (c.name === "password_hash" || c.name === "password") label = "PASSWORD";
-                              else if (c.name === "user_id") label = "USER ID";
-                              else if (c.name === "is_active" || c.name === "status") label = "STATUS";
-                              else if (c.name === "created_at") label = "CREATED_AT";
-                            }
-                            return (
-                              <th key={c.name} className="p-2 uppercase border-r border-[#ffffff20]">
-                                {label}
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 font-mono text-[9px]">
-                        {data.map((row, i) => (
-                          <tr 
-                            key={i} 
-                            title="Click row to directly edit record details"
-                            className="hover:bg-indigo-50 border-b border-slate-200 cursor-pointer transition-colors"
-                            onClick={() => { setEditingRow(row); setIsNewRow(false); }}
-                          >
-                            <td className="p-1.5 flex gap-2 justify-center items-center" onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => { setEditingRow(row); setIsNewRow(false); }} className="text-indigo-700 hover:text-indigo-900 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
-                                [Edit]
-                              </button>
-                              <button onClick={() => handleDelete(row[selectedTable?.pk || "id"])} className="text-rose-600 hover:text-rose-800 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
-                                [Del]
-                              </button>
-                            </td>
-                            {currentColumns.map((c) => {
-                              let cellVal = row[c.name];
-                              let displayVal = cellVal !== null ? String(cellVal) : "NULL";
-
-                              if (selectedTable?.name === "user_master") {
-                                if (c.name === "is_active" || c.name.toLowerCase() === "is_active" || c.name === "status") {
-                                  const activeVal = String(cellVal).toLowerCase() === "true" || cellVal === "1" || cellVal === 1 || cellVal === "active" || cellVal === "Active" || cellVal === true;
-                                  displayVal = activeVal ? "Active" : "Inactive";
-                                }
-                              }
-
-                              return (
-                                <td key={c.name} className="p-2 truncate max-w-[150px] border-r border-slate-200 text-slate-800">
-                                  {displayVal}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )
-            )}
-
-            {activeSchemaTab === "column" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black uppercase">Field structure catalog</span>
-                    <div className="border border-slate-200 divide-y divide-slate-100 p-2 bg-slate-50">
-                      {currentColumns.map((c) => (
-                        <div key={c.name} className="py-2 flex justify-between items-center text-xs">
-                          <span className="font-mono font-bold">{c.name} ({c.type})</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-slate-100 border border-slate-200 space-y-4">
-                    <span className="text-[10px] font-black uppercase block">Add Column Field</span>
-                    <input
- id="e_g_tracking_id_3041" name="e_g_tracking_id" aria-label="e.g. tracking_id"                      className="w-full bg-white border border-slate-350 p-2 text-xs font-bold font-mono outline-none uppercase"
-                      placeholder="e.g. tracking_id"
-                      value={newFieldName}
-                      onChange={(e) => setNewFieldName(e.target.value)}
-                    />
-                    <button
-                      onClick={handleAddField}
-                      className="w-full py-2 bg-indigo-950 text-white font-black uppercase text-[10px]"
-                    >
-                      Deploy Field Column
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSchemaTab === "sql" && (
-              <div className="space-y-4">
-                <textarea
- id="enter_sql_command_here_3060" name="enter_sql_command_here" aria-label="-- ENTER SQL COMMAND HERE..."                  className="w-full h-40 bg-slate-900 text-emerald-400 font-mono text-xs p-3 rounded"
-                  value={sqlQuery}
-                  onChange={(e) => setSqlQuery(e.target.value)}
-                  placeholder="-- ENTER SQL COMMAND HERE..."
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {/* Create Table / Schema */}
                 <button
-                  onClick={runSqlQuery}
-                  className="px-6 py-2 bg-[#000080] text-white font-black text-xs uppercase"
+                  type="button"
+                  onClick={() => {
+                    const tblName = prompt("Enter new PostgreSQL table name (lowercase, alphanumeric, no spaces):");
+                    if (tblName && tblName.trim()) {
+                      const sanitized = tblName.toLowerCase().trim().replace(/\s+/g, "_");
+                      setNewTableName(sanitized);
+                      setTimeout(() => {
+                        handleCreateTable();
+                      }, 50);
+                    }
+                  }}
+                  className="flex items-center gap-2 p-2 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
                 >
-                  Execute SQL Statement
+                  <div className="p-1.5 bg-emerald-100 group-hover:bg-emerald-600 text-emerald-800 group-hover:text-white rounded-md transition-colors">
+                    <Plus className="h-4 w-4" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-950 truncate">Create Table</p>
+                    <p className="text-[10px] text-slate-500 truncate">New schema entity</p>
+                  </div>
                 </button>
-                {sqlResult && (
-                  <pre className="bg-slate-50 border p-3 rounded text-[10px] font-mono whitespace-pre max-h-[150px] overflow-auto">
-                    {JSON.stringify(sqlResult, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
 
-            {activeSchemaTab === "event_log" && (
-              <div className="h-full overflow-y-auto">
-                {renderSystemLogs()}
-              </div>
-            )}
-
-            {activeSchemaTab === "reconciliation_log" && (
-              <div className="space-y-4 font-sans text-xs">
-                <div className="bg-slate-100 p-3 border border-black/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                  <div>
-                    <h3 className="font-black text-[12px] uppercase text-[#000080]">Weight Deduction Reconciliations</h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-0.5">Audit-trace math breakdown of gross vs net weights with DAISEE limits.</p>
+                {/* Config Center */}
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.("settings")}
+                  className="flex items-center gap-2 p-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
+                >
+                  <div className="p-1.5 bg-slate-100 group-hover:bg-slate-700 text-slate-700 group-hover:text-white rounded-md transition-colors">
+                    <Settings className="h-4 w-4" />
                   </div>
-                  <button
-                    onClick={async () => {
-                      setReconLoading(true);
-                      try {
-                        if (supabase) {
-                          const { data, error } = await supabase.from('final_arrival').select('*').order('date', { ascending: false });
-                          if (!error && data) setReconRecords(data);
-                        }
-                      } catch (e) {}
-                      setReconLoading(false);
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-800 truncate">Config Center</p>
+                    <p className="text-[10px] text-slate-500 truncate">System preferences</p>
+                  </div>
+                </button>
+
+                {/* Jarves AI 2.0 */}
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.("ai_assistant")}
+                  className="flex items-center gap-2 p-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs"
+                >
+                  <div className="p-1.5 bg-indigo-100 group-hover:bg-indigo-600 text-indigo-700 group-hover:text-white rounded-md transition-colors">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-950 truncate">Jarves AI 2.0</p>
+                    <p className="text-[10px] text-slate-500 truncate">Smart Assistant</p>
+                  </div>
+                </button>
+
+                {/* DB Export */}
+                <button
+                  type="button"
+                  onClick={handleDatabaseExport}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 p-2 bg-white hover:bg-purple-50 border border-slate-200 hover:border-purple-300 rounded-lg text-left transition-all cursor-pointer group shadow-2xs disabled:opacity-50"
+                >
+                  <div className="p-1.5 bg-purple-100 group-hover:bg-purple-600 text-purple-700 group-hover:text-white rounded-md transition-colors">
+                    <Download className="h-4 w-4" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-800 group-hover:text-purple-950 truncate">
+                      {isExporting ? "Exporting..." : "DB Export"}
+                    </p>
+                    <p className="text-[10px] text-slate-500 truncate">Offline JSON dump</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Statistics / Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-lg">
+                  <Database className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Database Schema</p>
+                  <p className="text-sm font-bold text-slate-900 font-mono">{tables.length} Registered Tables</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
+                <div className="p-2 bg-blue-100 text-blue-800 rounded-lg">
+                  <ClipboardList className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Telemetry Stream</p>
+                  <p className="text-sm font-bold text-slate-900 font-mono">{(systemLogs && systemLogs.length) || 104} Triggers</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 shadow-2xs flex items-center gap-3">
+                <div className="p-2 bg-purple-100 text-purple-800 rounded-lg">
+                  <FileSpreadsheet className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Table Data</p>
+                  <p className="text-sm font-bold text-slate-900 font-mono">
+                    {selectedTable ? `${data.length} Records Loaded` : "No Table Selected"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Tab View Body */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              {activeSchemaTab === "row" && (
+                selectedTable?.name === "user_master" ? (
+                  <UserMasterTableView
+                    data={data}
+                    loading={loading}
+                    onEdit={(row) => {
+                      setEditingRow(row);
+                      setIsNewRow(false);
                     }}
-                    className="p-1 px-3.5 bg-[#000080] text-white font-black uppercase text-[10px]"
-                  >
-                    Refresh Logs
-                  </button>
+                    onDelete={(id) => handleDelete(id)}
+                    onAddNew={() => {
+                      setEditingRow({});
+                      setIsNewRow(true);
+                    }}
+                    pk={selectedTable?.pk || "user_id"}
+                  />
+                ) : (
+                  <DynamicRecordsViewer
+                    selectedTable={selectedTable || tables[0]}
+                    columns={currentColumns}
+                    data={data}
+                    loading={loading}
+                    onEditRow={(row) => {
+                      setEditingRow(row);
+                      setIsNewRow(false);
+                    }}
+                    onDeleteRow={(pkVal) => handleDelete(pkVal)}
+                    onAddNewRow={() => {
+                      setEditingRow({});
+                      setIsNewRow(true);
+                    }}
+                    onRefreshData={() => {
+                      fetchData();
+                    }}
+                    onCsvImport={handleCsvImport}
+                  />
+                )
+              )}
+
+              {activeSchemaTab === "column" && (
+                <ColumnStructureTab
+                  selectedTable={selectedTable}
+                  columns={currentColumns}
+                  newFieldName={newFieldName}
+                  setNewFieldName={setNewFieldName}
+                  newFieldType={newFieldType}
+                  setNewFieldType={setNewFieldType}
+                  onAddField={handleAddField}
+                  onDeleteColumn={handleDeleteColumn}
+                  canDelete={canDeleteData()}
+                />
+              )}
+
+              {activeSchemaTab === "sql" && (
+                <SqlCommandShellTab
+                  sqlQuery={sqlQuery}
+                  setSqlQuery={setSqlQuery}
+                  onExecute={runSqlQuery}
+                  sqlResult={sqlResult}
+                  sqlExecuting={sqlExecuting}
+                />
+              )}
+
+              {activeSchemaTab === "event_log" && (
+                <div className="flex-1 overflow-y-auto">
+                  {renderSystemLogs()}
                 </div>
+              )}
 
-                <div className="grid grid-cols-12 gap-4">
-                  {/* Left: selectable records list */}
-                  <div className="col-span-12 md:col-span-4 flex flex-col space-y-1.5">
-                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Select Final Arrival Slip</span>
-                    <div className="bg-white border border-gray-400 p-1.5 max-h-[380px] overflow-y-auto divide-y divide-gray-200">
-                      {reconRecords.map((r, i) => {
-                        const isSel = r.final_arrival_id === selectedReconId;
-                        return (
-                          <div
-                            key={r.final_arrival_id || i}
-                            onClick={() => setSelectedReconId(r.final_arrival_id)}
-                            className={`p-2.5 cursor-pointer text-left transition-colors ${
-                              isSel ? 'bg-[#000080] text-white font-black' : 'hover:bg-slate-100'
-                            }`}
-                          >
-                            <p className="font-mono text-[10.5px] font-black">FA-#{r.final_arrival_no || r.final_arrival_id}</p>
-                            <p className="text-[9.5px] font-semibold truncate mt-0.5 opacity-80 uppercase">{r.supplier || 'DIRECT SUPPLIER'}</p>
-                            <div className="flex justify-between items-center text-[8.5px] mt-1.5 opacity-60">
-                              <span>Lorry: {r.lorry_number || '--'}</span>
-                              <span>{r.date ? new Date(r.date).toLocaleDateString('en-GB') : '--'}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right: Specific Math Breakdown card */}
-                  <div className="col-span-12 md:col-span-8">
-                    {(() => {
-                      const selRec = reconRecords.find(r => r.final_arrival_id === selectedReconId);
-                      if (!selRec) {
-                        return (
-                          <div className="bg-slate-50/50 border border-slate-350 p-8 text-center uppercase text-slate-400 italic">
-                            No final arrival record selected for mathematical Audit.
-                          </div>
-                        );
+              {activeSchemaTab === "reconciliation_log" && (
+                <WeightReconciliationTab
+                  reconRecords={reconRecords}
+                  selectedReconId={selectedReconId}
+                  setSelectedReconId={setSelectedReconId}
+                  reconLoading={reconLoading}
+                  onRefresh={async () => {
+                    setReconLoading(true);
+                    try {
+                      if (supabase) {
+                        const { data, error } = await supabase
+                          .from("final_arrival")
+                          .select("*")
+                          .order("date", { ascending: false });
+                        if (!error && data) setReconRecords(data);
                       }
-
-                      // Math parameters extraction
-                      const grossRaw = Number(selRec.weight_qtl || 0) / 10;
-                      let moisture = 16;
-                      let dust = 0;
-                      let ncv = 0;
-                      if (selRec.grid_details) {
-                        try {
-                          const parsed = typeof selRec.grid_details === 'string' ? (selRec.grid_details === 'undefined' || selRec.grid_details === 'null' ? [] : JSON.parse(selRec.grid_details === "undefined" ? "null" : selRec.grid_details)) : selRec.grid_details;
-                          if (Array.isArray(parsed) && parsed.length > 0) {
-                            moisture = Number(parsed[0].moisture_pct || parsed[0].moisture || parsed[0].actual_moisture || 16);
-                            dust = Number(parsed[0].dust_pct || parsed[0].dust || parsed[0].actual_dust || 0);
-                            ncv = Number(parsed[0].ncv_pct || parsed[0].ncv || parsed[0].actual_ncv || 0);
-                          }
-                        } catch (e) {}
-                      } else {
-                        moisture = Number(selRec.actual_moisture || 16);
-                        dust = Number(selRec.actual_dust || 0);
-                        ncv = Number(selRec.actual_ncv || 0);
-                      }
-
-                      const area = String(selRec.arrival_area_name || '').toLowerCase();
-                      const isDaisee = area.includes("daisee");
-                      let month = 0;
-                      if (selRec.po_date || selRec.date) {
-                        const d = new Date(selRec.po_date || selRec.date);
-                        if (!isNaN(d.getTime())) {
-                          month = d.getMonth();
-                        }
-                      }
-                      const isJanToJune = month >= 0 && month <= 5;
-
-                      let moistureLimit = 16;
-                      if (isJanToJune) {
-                        moistureLimit = isDaisee ? 18 : 16;
-                      } else {
-                        moistureLimit = isDaisee ? 20 : 18;
-                      }
-
-                      const moistureExcess = moisture > moistureLimit ? (moisture - moistureLimit) : 0;
-                      const totalDeductions = moistureExcess + dust + ncv;
-                      const reconciledNet = grossRaw * (1 - totalDeductions / 100);
-                      const weighedNet = Number(selRec.electronic_net_weight || selRec.supplier_net_weight || grossRaw);
-                      const totalDeductionWeight = grossRaw * (totalDeductions / 100);
-                      const discrepancy = Math.abs(weighedNet - reconciledNet);
-
-                      return (
-                        <div className="bg-white border-2 border-slate-300 p-4 space-y-4 shadow-sm text-left">
-                          <div className="border-b border-gray-200 pb-2 flex justify-between items-center bg-indigo-50/40 p-2 border">
-                            <div>
-                              <p className="text-[12px] font-black text-indigo-950 uppercase">Audit Sheet: Slip #{selRec.final_arrival_no}</p>
-                              <p className="text-[9.5px] font-semibold text-slate-500 uppercase mt-0.5">Supplier: {selRec.supplier || 'DIRECT'}</p>
-                            </div>
-                            <span className="font-mono text-xs font-black bg-indigo-950 text-white rounded px-2.5 py-1 uppercase tracking-wide">
-                              ID: {selRec.final_arrival_id.substring(0,6)}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                            <div className="bg-slate-50 border p-2 text-center rounded space-y-0.5">
-                              <p className="text-[9px] font-bold text-slate-500 uppercase">Gross Weight</p>
-                              <p className="text-[11.5px] font-black text-slate-800 font-mono">{grossRaw.toFixed(3)} MT</p>
-                              <p className="text-[8px] text-slate-400 font-semibold italic uppercase">({selRec.weight_qtl || 0} QTL)</p>
-                            </div>
-                            <div className="bg-slate-50 border p-2 text-center rounded space-y-0.5">
-                              <p className="text-[9px] font-bold text-slate-500 uppercase font-sans">Weighed Net (WB)</p>
-                              <p className="text-[11.5px] font-black text-slate-800 font-mono">{weighedNet.toFixed(3)} MT</p>
-                              <p className="text-[8px] text-slate-400 font-semibold italic uppercase">Certified Net</p>
-                            </div>
-                            <div className="bg-blue-50 border border-blue-200 p-2 text-center rounded space-y-0.5">
-                              <p className="text-[9px] font-bold text-blue-900 uppercase">Audit Match Net</p>
-                              <p className="text-[11.5px] font-black text-blue-950 font-mono">{reconciledNet.toFixed(3)} MT</p>
-                              <p className="text-[8px] text-blue-400 font-semibold italic uppercase">After Deductions</p>
-                            </div>
-                            <div className={`p-2 text-center rounded border space-y-0.5 ${discrepancy > 0.15 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-green-50 border-green-200 text-green-950'}`}>
-                              <p className="text-[9px] font-bold uppercase">Discrepancy</p>
-                              <p className="text-[11.5px] font-black font-mono">{discrepancy.toFixed(3)} MT</p>
-                              <span className="text-[8.5px] uppercase font-bold tracking-tighter block leading-none">
-                                {discrepancy > 0.15 ? '⚠️ Exceeds Limit' : '✓ Reconciled'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Mathematical Steps List */}
-                          <div className="space-y-2 border border-slate-350 p-2.5 rounded bg-slate-50/50">
-                            <h4 className="text-[10px] font-black uppercase text-slate-700 tracking-wider flex items-center gap-1">
-                              <span>➕</span> Reconciliation Formula Flow & Seasonal Limits
-                            </h4>
-
-                            <div className="divide-y divide-dashed divide-gray-300 font-sans text-[10.5px] space-y-1 pt-1.5">
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-slate-600">1. Operating Area & DAISEE Status</span>
-                                <span className="font-mono bg-white px-1.5 border uppercase font-extrabold text-slate-800">
-                                  {selRec.arrival_area_name || "CENTRAL STATION"} &rarr; {isDaisee ? "DAISEE STATION [YES]" : "STANDARD STATION [NO]"}
-                                </span>
-                              </div>
-
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-slate-600">2. Arrival Season & Month Check</span>
-                                <span className="font-mono bg-white px-1.5 border uppercase font-bold text-indigo-950">
-                                  Month: {new Date(selRec.po_date || selRec.date || '2026-01-01').toLocaleString('default', { month: 'long' })} ({isJanToJune ? 'Jan-June Season' : 'July-Dec Season'})
-                                </span>
-                              </div>
-
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-slate-600">3. Moisture Permissible Allowance Limit</span>
-                                <span className="font-mono bg-white px-1.5 border uppercase font-black text-amber-900">
-                                  {moistureLimit}% Permissible Limit
-                                </span>
-                              </div>
-
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-slate-600">4. Recorded Moisture vs Limit Excess</span>
-                                <span className="font-mono bg-white px-1.5 border font-semibold text-slate-800">
-                                  Recorded: {moisture}% | Excess Offset: <span className="font-black text-red-600">{(moistureExcess).toFixed(2)}%</span>
-                                </span>
-                              </div>
-
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-slate-600 font-sans">5. Dust Allowance & NCV Allowances</span>
-                                <span className="font-mono bg-white px-1.5 border text-slate-800">
-                                  Dust: {dust}% | NCV: {ncv}%
-                                </span>
-                              </div>
-
-                              <div className="py-1 flex justify-between">
-                                <span className="font-bold text-indigo-950 uppercase tracking-tight">6. Combined Deduction Percentage</span>
-                                <span className="font-mono bg-indigo-50 px-1.5 border font-black text-red-600">
-                                  {totalDeductions.toFixed(2)}% Cumulative Deduction
-                                </span>
-                              </div>
-
-                              <div className="bg-white p-2 border-2 border-dashed border-slate-300 mt-2 font-mono text-[10.5px]">
-                                <p className="font-bold text-slate-900 uppercase underline text-[9.5px]">Calculation Breakdown Formula:</p>
-                                <p className="mt-1 leading-relaxed text-indigo-950">
-                                  W_net = W_gross * (1 - Total_Deduction / 100)
-                                </p>
-                                <p className="text-slate-800 font-semibold mt-1">
-                                  W_net = {grossRaw.toFixed(3)} MT * (1 - {totalDeductions.toFixed(2)} / 100)
-                                </p>
-                                <p className="text-red-700 font-black text-[12px] mt-1.5">
-                                  W_reconciled = {reconciledNet.toFixed(3)} MT
-                                </p>
-                                <p className="text-slate-500 font-sans font-bold uppercase text-[8px] tracking-wide mt-1 italic">
-                                  Deduction Weight Loss equivalent: {totalDeductionWeight.toFixed(3)} MT
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-            )}
+                    } catch (e) {}
+                    setReconLoading(false);
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
-
       </div>
 
-      {/* Row modal edit fallback */}
+      {/* Row modal edit */}
       {editingRow && (
         selectedTable?.name === "user_master" ? (
           <UserMasterEditModal
@@ -3578,57 +2905,17 @@ export default function AdminDesk({
             loading={loading}
           />
         ) : (
-          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-            <div className="bg-[#E8E6E1] border-2 border-white shadow-2xl w-full max-w-lg p-5 space-y-4">
-              <div className="bg-[#000080] text-white p-1.5 flex justify-between items-center">
-                <span className="text-xs font-black uppercase">Edit Row metadata</span>
-                <button onClick={() => setEditingRow(null)}>X</button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
-                {editorColumns.map((col) => {
-                  let labelName = col;
-                  if (selectedTable?.name === "user_master") {
-                    if (col === "password_hash") {
-                      labelName = "FULL NAME";
-                    } else if (col === "user_id") {
-                      labelName = "USER ID (SYSTEM AUTO)";
-                    } else if (col === "is_active") {
-                      labelName = "STATUS (IS ACTIVE)";
-                    } else if (col === "created_at") {
-                      labelName = "CREATED AT (AUTO)";
-                    }
-                  } else if (selectedTable?.name === "user_activity_logs") {
-                    if (col === "log_id") {
-                      labelName = "LOG ID (SYSTEM AUTO)";
-                    } else if (col === "username") {
-                      labelName = "USERNAME / ACTOR";
-                    } else if (col === "activity_type") {
-                      labelName = "ACTIVITY / EVENT TYPE";
-                    } else if (col === "module_name") {
-                      labelName = "MODULE ACCESSED";
-                    } else if (col === "action_details") {
-                      labelName = "ACTION DETAIL SUMMARY";
-                    } else if (col === "ip_address") {
-                      labelName = "IP ADDRESS / SOURCE";
-                    } else if (col === "created_at") {
-                      labelName = "OCCURRED AT (AUTO)";
-                    }
-                  }
-                  const isFullWidth = col === "allowed_modules" || col === "action_details";
-                  return (
-                    <div key={col} className={`space-y-1 text-xs font-bold ${isFullWidth ? "col-span-2" : ""}`}>
-                      <label className="text-slate-500 uppercase text-[9px] block font-black leading-none">{labelName}</label>
-                      {renderEditField(col)}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-end gap-2 text-xs font-bold">
-                <button onClick={() => setEditingRow(null)} className="px-4 py-1.5 bg-slate-300">Cancel</button>
-                <button onClick={handleSave} className="px-4 py-1.5 bg-[#000080] text-white">Save Item</button>
-              </div>
-            </div>
-          </div>
+          <DynamicRecordModal
+            isOpen={Boolean(editingRow)}
+            isNew={isNewRow}
+            selectedTable={selectedTable || tables[0]}
+            columns={currentColumns}
+            editingRow={editingRow}
+            setEditingRow={setEditingRow}
+            onClose={() => setEditingRow(null)}
+            onSave={handleSave}
+            loading={loading}
+          />
         )
       )}
     </LegacyLayout>
