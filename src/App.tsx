@@ -1241,11 +1241,11 @@ export default function App() {
           setIsAdmin(isAdminUser);
           setUserRole(sess.role?.toUpperCase() || "L1");
           setUserLevel(sess.level?.toUpperCase() || "L1");
-          const mods = sess.allowed_modules
+          const mods = (sess.allowed_modules !== undefined && sess.allowed_modules !== null && String(sess.allowed_modules).trim() !== "")
             ? sess.allowed_modules === "*"
               ? ["*"]
               : normalizeAllowedModules(sess.allowed_modules)
-            : isAdminUser ? ["*"] : [];
+            : ["*"];
           setAllowedModules(mods);
           setIsLoggedIn(true);
           if (sess.year) setSelectedYear(sess.year);
@@ -1778,11 +1778,11 @@ export default function App() {
         setIsAdmin(isAdminUser);
         setUserRole(data.role?.toUpperCase() || "L1");
         setUserLevel(data.level?.toUpperCase() || "L1");
-        const modules = data.allowed_modules
+        const modules = (data.allowed_modules !== undefined && data.allowed_modules !== null && String(data.allowed_modules).trim() !== "")
           ? data.allowed_modules === "*"
             ? ["*"]
             : normalizeAllowedModules(data.allowed_modules)
-          : isAdminUser ? ["*"] : [];
+          : ["*"];
         setAllowedModules(modules);
         setIsLoggedIn(true);
         setSelectedYear(year);
@@ -1869,7 +1869,7 @@ export default function App() {
                     </div>
                     <h3 className="text-lg font-bold text-[#1E331B] uppercase tracking-wide">Access Restricted</h3>
                     <p className="text-sm text-[#5A6E54] mt-2">
-                      Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">[{currentPage}]</span>.
+                      Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">[{ALL_SYSTEM_MODULES.find(x => x.id === currentPage || x.pageId === currentPage || x.aliases.includes(currentPage))?.label || currentPage}]</span>.
                     </p>
                     {allowedModules && allowedModules.length > 0 && !allowedModules.includes("*") && (
                       <div className="mt-4 p-3 bg-white/80 rounded-lg border border-slate-200 text-left">

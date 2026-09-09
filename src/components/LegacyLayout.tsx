@@ -330,8 +330,8 @@ export default function LegacyLayout({
       icon: ShoppingCart,
       subItems: [
         { id: 'satta', label: 'Satta', icon: Sparkles, pageId: 'satta' },
-        { id: 'sms_sauda', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
-        { id: 'sauda', label: 'SAUDA', icon: HandCoins, pageId: 'sauda' },
+        { id: 'sms_sauda', label: 'SMS Sauda Desk', icon: MessageSquare, pageId: 'sms_sauda' },
+        { id: 'sauda', label: 'Sauda Desk', icon: HandCoins, pageId: 'sauda' },
         { id: 'po', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },
         { id: 'final_po', label: 'Final P.O', icon: FileText, pageId: 'final_po' },
       ]

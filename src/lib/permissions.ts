@@ -44,14 +44,19 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'SMS Sauda Desk',
     category: 'Sauda & Procurement',
     pageId: 'sms_sauda',
-    aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms desk', 'sms_interfaces', 'sms sauda', 'smssauda', 'sms sauda desk', 'smssaudadesk', 'sms_contracts']
+    aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms desk', 'sms_interfaces', 'sms sauda', 'smssauda', 'sms sauda desk', 'smssaudadesk', 'sms_contracts', 'sms_contract']
   },
   {
     id: 'sauda',
     label: 'Sauda Desk',
     category: 'Sauda & Procurement',
     pageId: 'sauda',
-    aliases: ['sauda', 'sauda_desk', 'sauda desk', 'saudadesk', 'sauda_entry', 'sauda entry', 'saudaentry', 'sauda_master', 'sauda master', 'saudamaster', 'sauda_bookings', 'sauda bookings', 'sauda_module', 'sauda module', 'sauda_contracts']
+    aliases: [
+      'sauda', 'sauda_desk', 'sauda desk', 'saudadesk', 'sauda_entry', 'sauda entry', 'saudaentry',
+      'sauda_master', 'sauda master', 'saudamaster', 'sauda_bookings', 'sauda bookings',
+      'saudabookings', 'sauda_module', 'sauda module', 'sauda_contracts', 'sauda contracts',
+      'saudacontracts', 'sauda_book', 'saudabook', 'sauda_deal', 'saudadeal'
+    ]
   },
   {
     id: 'satta',
@@ -256,8 +261,8 @@ export function getCanonicalModuleId(idOrAlias: string): string {
   if (alphaMatch) return alphaMatch.id;
 
   // 5. Semantic keyword mapping for user-entered terms
-  if (alphaClean.includes('smssauda') || alphaClean.includes('smsdesk')) return 'sms_sauda';
-  if (alphaClean.includes('saudadesk') || alphaClean === 'sauda' || alphaClean === 'saudaentry') return 'sauda';
+  if (alphaClean.includes('smssauda') || alphaClean.includes('smsdesk') || (alphaClean.startsWith('sms') && alphaClean.includes('sauda'))) return 'sms_sauda';
+  if (alphaClean.includes('saudadesk') || alphaClean.includes('saudabook') || alphaClean.includes('saudacontract') || alphaClean === 'sauda' || alphaClean === 'saudaentry' || (alphaClean.includes('sauda') && !alphaClean.includes('check') && !alphaClean.includes('checkpoint'))) return 'sauda';
   if (alphaClean.includes('sattachart') || alphaClean.includes('sattarate') || alphaClean.includes('satta')) return 'satta';
   if (alphaClean.includes('saudacheck') || alphaClean === 'po' || alphaClean === 'potemp') return 'po';
   if (alphaClean.includes('finalpo') || alphaClean === 'pofinal') return 'final_po';

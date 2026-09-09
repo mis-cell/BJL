@@ -1194,7 +1194,7 @@ export default function Dashboard({
         { 
           id: 'sms_sauda', 
           mappedId: 'sms_sauda',
-          label: 'SMS Sauda', 
+          label: 'SMS Sauda Desk', 
           icon: MessageSquare, 
           desc: 'SMS Sauda Contracts Log', 
           step: '1.2',
@@ -1204,7 +1204,7 @@ export default function Dashboard({
         { 
           id: 'sauda', 
           mappedId: 'sauda',
-          label: 'Sauda', 
+          label: 'Sauda Desk', 
           icon: HandCoins, 
           desc: 'Sauda Contract Bookings', 
           step: '1.3',
