@@ -1520,11 +1520,12 @@ export default function Dashboard({
 
 
 
-        {false ? (
-            <div className="space-y-8 pt-4 border-t border-[#D6CAA8]">
+        {currentTab === 'menu' ? (
+            <div className="space-y-6 pt-4 border-t border-[#D6CAA8]">
               <div className="flex items-center justify-between">
                 <h3 className="font-serif text-lg font-bold text-[#1E331B] flex items-center gap-2">
-                  <span>Detailed Process Modules</span>
+                  <Layers className="w-5 h-5 text-emerald-800" />
+                  <span>Permitted Process Workstations & Modules</span>
                 </h3>
               </div>
 
