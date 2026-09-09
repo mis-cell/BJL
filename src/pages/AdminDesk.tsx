@@ -1699,6 +1699,13 @@ export default function AdminDesk({
               <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
               <button
                 type="button"
+                onClick={() => handleApplyPreset(['sms_sauda', 'sauda'])}
+                className="px-2 py-0.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-indigo-300"
+              >
+                SMS + Sauda Desk
+              </button>
+              <button
+                type="button"
                 onClick={() => handleApplyPreset(['sauda'])}
                 className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-amber-300"
               >
