@@ -1637,7 +1637,9 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
     <LegacyLayout title="Reports & Analytics" onClose={onClose}>
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
-        <div className="flex flex-wrap items-end gap-1 px-2 pt-1 bg-green-800 border-b-2 border-green-950">
+        <div className="flex flex-wrap items-center gap-1.5 px-2 py-2 bg-green-900 border-2 border-green-950 rounded-xl">
+
+          {/* Sauda Analyze */}
           <button
             id="tab-sauda-analyze"
             onClick={() => setReportType('sauda_analyze')}
@@ -1645,13 +1647,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'sauda_analyze'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
             Sauda Analyze (OUT)
           </button>
 
+          {/* PO Summary */}
           <button
             id="tab-po-summary"
             onClick={() => setReportType('po_summary')}
@@ -1659,13 +1662,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'po_summary'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
             P.O. Summary
           </button>
 
+          {/* Map Wise PO */}
           <button
             id="tab-map-wise"
             onClick={() => {
@@ -1678,13 +1682,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'map_wise_po'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
             Map Wise P.O
           </button>
 
+          {/* Global Analytics */}
           <button
             id="tab-global-analytics"
             onClick={() => setReportType('global_analytics')}
@@ -1692,13 +1697,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'global_analytics'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
             Global Analytics
           </button>
 
+          {/* Data Aggregator */}
           <button
             id="tab-data-aggregation"
             onClick={() => setReportType('data_aggregation')}
@@ -1706,13 +1712,14 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'data_aggregation'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
             Data Aggregator (P.O. & Sauda)
           </button>
 
+          {/* Trades Report */}
           <button
             id="tab-data-Paymentreport"
             onClick={() => setReportType('payment_report')}
@@ -1720,11 +1727,11 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'payment_report'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
-            Payment Report
+            Trade
           </button>
 
         </div>
