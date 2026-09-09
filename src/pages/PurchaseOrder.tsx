@@ -1958,6 +1958,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const weightUnitKgs = isDrums ? '50' : '147.5';
     const unitWtVal = parseFloat(weightUnitKgs);
 
+    if (formData.is_ptf) {
+      // In PTF Mode: Pure manual entry preservation
+      setFormData(prev => ({
+        ...prev,
+        purchase_unit_name: name,
+        purchase_unit_code: code,
+        weight_unit_kgs: weightUnitKgs
+      }));
+      return;
+    }
+
     const lorries = parseFloat(formData.total_no_of_lorries) || 0;
     const unitsPerLorry = parseFloat(formData.units_per_lorry) || 0;
     const totalUnits = lorries * unitsPerLorry;
@@ -3064,6 +3075,42 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleCalculateOk = () => {
+    if (formData.is_ptf) {
+      // In PTF Mode: Manual Entry transferred directly without forced formula overrides
+      const manualLorries = calcData.total_lorries;
+      const manualUnitsPerLorry = calcData.units_per_lorry;
+      const manualTotalUnits = calcData.total_units;
+      const manualWeightPerLorry = calcData.weight_per_lorry;
+      
+      const lorriesNum = parseFloat(manualLorries) || 1;
+      const wtLorryNum = parseFloat(manualWeightPerLorry) || 0;
+      const manualTotalContractMt = lorriesNum > 1
+        ? (lorriesNum * wtLorryNum).toFixed(3)
+        : (manualWeightPerLorry || (formData.total_contract_mt || '0.000'));
+
+      let updatedItems = [...formData.items];
+      if (updatedItems.length === 1) {
+        updatedItems[0] = {
+          ...updatedItems[0],
+          qty: parseFloat(manualTotalUnits) || updatedItems[0].qty || 0,
+          weight: parseFloat(manualTotalContractMt) || parseFloat(manualWeightPerLorry) || updatedItems[0].weight || 0
+        };
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        total_no_of_lorries: manualLorries,
+        units_per_lorry: manualUnitsPerLorry,
+        total_units: manualTotalUnits,
+        weight_per_lorry: manualWeightPerLorry,
+        total_contract_mt: manualTotalContractMt,
+        items: updatedItems
+      }));
+      setIsCalcOpen(false);
+      return;
+    }
+
+    // In Non-PTF Mode: Standard automatic formula calculation
     const lorries = parseFloat(calcData.total_lorries) || 0;
     const unitsPerLorry = parseFloat(calcData.units_per_lorry) || 0;
     const totalUnits = parseFloat(calcData.total_units) || (lorries * unitsPerLorry);
@@ -5494,7 +5541,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             {/* Form Body */}
             <div ref={poFormRef} className="space-y-5 w-full">
             
-            {/* Optional Calculator Modal */}
+             {/* Optional Calculator Modal */}
             {isCalcOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in animate-duration-100">
                 <div className="bg-[#a8a8a8] border-2 border-white shadow-xl p-4 w-[500px] text-[11px] font-bold text-black flex gap-4 border-r-gray-500 border-b-gray-500">
@@ -5508,19 +5555,21 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                              checked={formData.purchase_unit_name === unit}
                              onChange={() => {
                                handlePurchaseUnitChange(unit, formData.purchase_unit_code || '1');
-                               const isDrums = unit === 'DRUMS';
-                               const unitWt = isDrums ? 50 : 147.5;
-                               const wtMt = parseFloat(calcData.weight_per_lorry) || 0;
-                               const lorries = parseFloat(calcData.total_lorries) || 1;
-                               if (wtMt > 0) {
-                                 const totUnits = Math.round((wtMt * 1000) / unitWt);
-                                 const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                                 const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                 setCalcData(prev => ({
-                                   ...prev,
-                                   total_units: totUnits.toString(),
-                                   units_per_lorry: unitsPerLorryStr
-                                 }));
+                               if (!formData.is_ptf) {
+                                 const isDrums = unit === 'DRUMS';
+                                 const unitWt = isDrums ? 50 : 147.5;
+                                 const wtMt = parseFloat(calcData.weight_per_lorry) || 0;
+                                 const lorries = parseFloat(calcData.total_lorries) || 1;
+                                 if (wtMt > 0) {
+                                   const totUnits = Math.round((wtMt * 1000) / unitWt);
+                                   const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
+                                   const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
+                                   setCalcData(prev => ({
+                                     ...prev,
+                                     total_units: totUnits.toString(),
+                                     units_per_lorry: unitsPerLorryStr
+                                   }));
+                                 }
                                }
                              }}
                            />
@@ -5541,6 +5590,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             value={calcData.total_lorries}
                             onChange={(e) => {
                               const lorriesVal = e.target.value;
+                              if (formData.is_ptf) {
+                                setCalcData(prev => ({ ...prev, total_lorries: lorriesVal }));
+                                return;
+                              }
                               const lorries = parseFloat(lorriesVal) || 0;
                               const totUnits = parseFloat(calcData.total_units) || 0;
                               const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
@@ -5584,6 +5637,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             value={calcData.units_per_lorry}
                             onChange={(e) => {
                               const unitsVal = e.target.value;
+                              if (formData.is_ptf) {
+                                setCalcData(prev => ({ ...prev, units_per_lorry: unitsVal }));
+                                return;
+                              }
                               const unitsPerLorry = parseFloat(unitsVal) || 0;
                               const lorries = parseFloat(calcData.total_lorries) || 0;
                               const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
@@ -5617,6 +5674,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             value={calcData.total_units}
                             onChange={(e) => {
                               const totUnitsVal = e.target.value;
+                              if (formData.is_ptf) {
+                                setCalcData(prev => ({ ...prev, total_units: totUnitsVal }));
+                                return;
+                              }
                               const totUnits = parseFloat(totUnitsVal) || 0;
                               const lorries = parseFloat(calcData.total_lorries) || 0;
                               const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
@@ -5651,6 +5712,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             value={calcData.weight_per_lorry}
                             onChange={(e) => {
                               const wtVal = e.target.value;
+                              if (formData.is_ptf) {
+                                setCalcData(prev => ({ ...prev, weight_per_lorry: wtVal }));
+                                return;
+                              }
                               const wtMt = parseFloat(wtVal) || 0;
                               const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
                               const unitWt = isDrums ? 50 : 147.5;
