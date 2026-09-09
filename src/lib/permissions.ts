@@ -256,7 +256,9 @@ export function subscribeToPermissions(listener: PermissionListener): () => void
   };
 }
 
-export function setCurrentUserContext(context: Partial<UserContext> | null | undefined): void {
+let isNotifyingListeners = false;
+
+export function setCurrentUserContext(context: Partial<UserContext> | null | undefined, notify: boolean = true): void {
   if (context) {
     const updatedUser = context.username || context.userName || currentUserContext.username || currentUserContext.userName;
     currentUserContext = {
@@ -275,14 +277,21 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
       console.warn("Could not save user context to localStorage:", e);
     }
 
-    // Notify all subscribers
-    permissionListeners.forEach((fn) => {
+    // Notify all subscribers (safely without recursive loops)
+    if (notify && !isNotifyingListeners) {
+      isNotifyingListeners = true;
       try {
-        fn(currentUserContext);
-      } catch (err) {
-        console.error("Error in permission listener:", err);
+        permissionListeners.forEach((fn) => {
+          try {
+            fn(currentUserContext);
+          } catch (err) {
+            console.error("Error in permission listener:", err);
+          }
+        });
+      } finally {
+        isNotifyingListeners = false;
       }
-    });
+    }
   }
 }
 

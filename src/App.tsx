@@ -1300,7 +1300,7 @@ export default function App() {
           allowedModules: newMods,
           userRole: detail.role ? detail.role.toUpperCase() : currentCtx.userRole,
           userLevel: detail.level ? detail.level.toUpperCase() : currentCtx.userLevel,
-        });
+        }, false);
 
         try {
           const raw = localStorage.getItem("bally_auth_session");
