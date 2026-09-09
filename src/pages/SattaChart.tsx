@@ -1029,15 +1029,36 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
     { name: 'Critical Discount (<-1000)', value: metrics.criticalDiscountCount, color: '#C62828' },
   ].filter(d => d.value > 0), [metrics]);
 
-  // Grade Range Filtered Table Rows
+  // Combined and Search-Filtered Table Rows
+  const allAreaRows = useMemo(() => {
+    const areaMap = new Map<string, Record<string, number>>();
+    // Seed standard base market areas including PURNEA (LOOSE)
+    EXCEL_SEED_DATA.forEach(item => {
+      areaMap.set(item.area, { ...item.diffs });
+    });
+    // Overlay dynamic differentials and additional regions from database
+    Object.entries(dbDifferentials).forEach(([areaName, diffs]) => {
+      if (areaMap.has(areaName)) {
+        areaMap.set(areaName, { ...areaMap.get(areaName), ...diffs });
+      } else {
+        areaMap.set(areaName, { ...diffs });
+      }
+    });
+
+    return Array.from(areaMap.entries()).map(([area, diffs]) => ({
+      area,
+      diffs
+    }));
+  }, [dbDifferentials]);
+
   const filteredSeedRows = useMemo(() => {
-    return EXCEL_SEED_DATA.filter(row => {
+    return allAreaRows.filter(row => {
       if (searchTerm && !row.area.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       return true;
     });
-  }, [searchTerm]);
+  }, [allAreaRows, searchTerm]);
 
   const visibleGrades = useMemo(() => {
     if (selectedGradeFilter === 'TD') {
