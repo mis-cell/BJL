@@ -44,9 +44,8 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
-import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
+import PurchaseOrderSummary from '../components/PurchaseOrderSummary';PaymentReport
 import PaymentReport from '../components/PaymentReport';
-import TradeReport from '../components/TradeReport';
 import { dbModule } from '../services/dbModule';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -150,46 +149,8 @@ function getAreaCoordinates(areaName: string): { lat: number; lng: number } {
   return { lat, lng };
 }
 
-export default function Reports({ onClose, initialReportType }: { onClose?: () => void; initialReportType?: string }) {
-  const [reportType, setReportType] = useState<
-    'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report' | 'trade'
-  >(() => {
-    if (initialReportType) {
-      const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
-      if (clean === 'trade_report' || clean === 'trade') return 'trade';
-      if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
-        return clean as any;
-      }
-    }
-    return 'po_summary';
-  });
-
-  useEffect(() => {
-    if (initialReportType) {
-      const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
-      if (clean === 'trade_report' || clean === 'trade') {
-        setReportType('trade');
-      } else if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
-        setReportType(clean as any);
-      }
-    }
-  }, [initialReportType]);
-
-  useEffect(() => {
-    const handleTabChange = (e: any) => {
-      const tab = e.detail?.tab || e.detail?.reportType;
-      if (tab) {
-        const clean = String(tab).toLowerCase().replace('reports:', '').trim();
-        if (clean === 'trade_report' || clean === 'trade') {
-          setReportType('trade');
-        } else if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
-          setReportType(clean as any);
-        }
-      }
-    };
-    window.addEventListener('reports-tab-change', handleTabChange);
-    return () => window.removeEventListener('reports-tab-change', handleTabChange);
-  }, []);
+export default function Reports({ onClose }: { onClose?: () => void }) {
+  const [reportType, setReportType] = useState<'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics'>('po_summary');
   const [mapMode, setMapMode] = useState<'street' | 'voyager' | 'cyber'>('street');
   const [sourcingGroupMode, setSourcingGroupMode] = useState<'area' | 'agency' | 'both'>('agency');
   const [center, setCenter] = useState<[number, number]>([24.5, 84.5]);
@@ -1673,12 +1634,10 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
 
 
   return (
-    <LegacyLayout title="Reports & Analytics" onClose={onClose}>
+    <LegacyLayout >
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
-        <div className="flex flex-wrap items-center gap-1.5 px-2 py-2 bg-green-900 border-2 border-green-950 rounded-xl">
-
-          {/* Sauda Analyze */}
+        <div className="flex flex-wrap items-end gap-1 px-2 pt-1 bg-green-800 border-b-2 border-green-950">
           <button
             id="tab-sauda-analyze"
             onClick={() => setReportType('sauda_analyze')}
@@ -1686,14 +1645,13 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'sauda_analyze'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
             Sauda Analyze (OUT)
           </button>
 
-          {/* PO Summary */}
           <button
             id="tab-po-summary"
             onClick={() => setReportType('po_summary')}
@@ -1701,14 +1659,13 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'po_summary'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
             P.O. Summary
           </button>
 
-          {/* Map Wise PO */}
           <button
             id="tab-map-wise"
             onClick={() => {
@@ -1721,14 +1678,13 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'map_wise_po'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
             Map Wise P.O
           </button>
 
-          {/* Global Analytics */}
           <button
             id="tab-global-analytics"
             onClick={() => setReportType('global_analytics')}
@@ -1736,14 +1692,13 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'global_analytics'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
             Global Analytics
           </button>
 
-          {/* Data Aggregator */}
           <button
             id="tab-data-aggregation"
             onClick={() => setReportType('data_aggregation')}
@@ -1751,14 +1706,13 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'data_aggregation'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                ? "bg-white text-green-800 border-green-400 shadow-md"
+                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
             Data Aggregator (P.O. & Sauda)
           </button>
 
-          {/* Trades Report */}
           <button
             id="tab-data-Paymentreport"
             onClick={() => setReportType('payment_report')}
@@ -1766,25 +1720,11 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
               "rounded-lg border transition-all duration-150",
               reportType === 'payment_report'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            Treds
-          </button>
-
-          <button
-            id="tab-trade-report"
-            onClick={() => setReportType('trade')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'trade'
                 ? "bg-white text-green-800 border-green-400 shadow-md"
                 : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
             )}
           >
-            Trade
+            Payment Report
           </button>
 
         </div>
@@ -3598,14 +3538,6 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
         )}
          {reportType === 'payment_report' && (
            <PaymentReport></PaymentReport>
-         )}
-         {reportType === 'trade' && (
-           <TradeReport
-             saudaData={saudaData}
-             saudaDetails={saudaDetails}
-             amadData={amadData}
-             onRefresh={() => setRefreshTrigger((prev) => prev + 1)}
-           />
          )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 px-2 py-1  text-gray-450 border-t border-gray-300 mt-2">

@@ -33,16 +33,7 @@ import {
   DoorClosed,
   Truck,
   Menu,
-  ClipboardCheck,
-  FileSpreadsheet,
-  MapPin,
-  Globe,
-  Database,
-  Sliders,
-  Bot,
-  UserCheck,
-  Shield,
-  Settings
+  ClipboardCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -334,8 +325,11 @@ export default function LegacyLayout({
       label: 'Sauda To P.O',
       icon: ShoppingCart,
       subItems: [
+        { id: 'satta', label: 'Satta', icon: Sparkles, pageId: 'satta' },
         { id: 'sms', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
-        { id: 'sauda', label: 'SAUDA', icon: HandCoins, pageId: 'sauda' },
+        { id: 'sauda', label: 'Sauda', icon: HandCoins, pageId: 'sauda' },
+        { id: 'sauda_check', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },
+        { id: 'final_po', label: 'Final P.O', icon: FileText, pageId: 'final_po' },
       ]
     },
     {
@@ -369,35 +363,13 @@ export default function LegacyLayout({
         { id: 'issue', label: 'Material Issue', icon: PackageCheck, pageId: 'issue' },
         { id: 'stock_inventory', label: 'Stock Inventory', icon: Layers, pageId: 'closing_stock' },
         { id: 'requisition', label: 'Requisition Desk', icon: ClipboardList, pageId: 'requisition_desk' },
-        { id: 'bardana', label: 'Godown Master', icon: Archive, pageId: 'bardana' },
-        { id: 'weight_bridge', label: 'Weight Bridge', icon: Scale, pageId: 'weight_bridge' },
       ]
     },
     {
       id: 'reports',
       label: 'Reports',
       icon: BarChart3,
-      pageId: 'reports',
-      subItems: [
-        { id: 'sauda_analyze', label: 'Sauda Analyze (OUT)', icon: FileText, pageId: 'reports:sauda_analyze' },
-        { id: 'po_summary', label: 'P.O. Summary', icon: FileSpreadsheet, pageId: 'reports:po_summary' },
-        { id: 'map_wise_po', label: 'Map Wise P.O', icon: MapPin, pageId: 'reports:map_wise_po' },
-        { id: 'global_analytics', label: 'Global Analytics', icon: Globe, pageId: 'reports:global_analytics' },
-        { id: 'data_aggregation', label: 'Data Aggregator (P.O. & Sauda)', icon: Database, pageId: 'reports:data_aggregation' },
-        { id: 'trade_report', label: 'Trade', icon: HandCoins, pageId: 'reports:trade_report' },
-        { id: 'payment_report', label: 'Payment Report', icon: Wallet, pageId: 'reports:payment_report' },
-      ]
-    },
-    {
-      id: 'system_menu',
-      label: 'System & Masters',
-      icon: Settings,
-      subItems: [
-        { id: 'admindesk', label: 'Admin Desk', icon: Shield, pageId: 'admindesk' },
-        { id: 'vyapari', label: 'Traders Directory', icon: UserCheck, pageId: 'vyapari' },
-        { id: 'settings', label: 'Config Center / Settings', icon: Sliders, pageId: 'settings' },
-        { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Bot, pageId: 'ai_assistant' },
-      ]
+      pageId: 'reports'
     }
   ];
 

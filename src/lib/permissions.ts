@@ -176,7 +176,7 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Godown Master',
     category: 'Inventory & Issue',
     pageId: 'bardana',
-    aliases: ['bardana', 'godown_master', 'godown', 'bardana_master']
+    aliases: ['bardana', 'godown_master', 'godown']
   },
   {
     id: 'weight_bridge',
@@ -186,90 +186,39 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     aliases: ['weight_bridge', 'weigh_bridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
   },
 
-  // 7. Reports & Analytics (Individual sub-modules under Report Section)
-  {
-    id: 'sauda_analyze',
-    label: 'Sauda Analyze (OUT)',
-    category: 'Reports & Analytics',
-    pageId: 'reports:sauda_analyze',
-    aliases: ['sauda_analyze', 'sauda_analyze_out', 'sauda_out', 'analyze_sauda']
-  },
-  {
-    id: 'po_summary',
-    label: 'P.O. Summary',
-    category: 'Reports & Analytics',
-    pageId: 'reports:po_summary',
-    aliases: ['po_summary', 'purchase_order_summary', 'po_sum']
-  },
-  {
-    id: 'map_wise_po',
-    label: 'Map Wise P.O',
-    category: 'Reports & Analytics',
-    pageId: 'reports:map_wise_po',
-    aliases: ['map_wise_po', 'map_wise', 'map_po', 'po_map']
-  },
-  {
-    id: 'global_analytics',
-    label: 'Global Analytics',
-    category: 'Reports & Analytics',
-    pageId: 'reports:global_analytics',
-    aliases: ['global_analytics', 'global_reports', 'analytics']
-  },
-  {
-    id: 'data_aggregation',
-    label: 'Data Aggregator (P.O. & Sauda)',
-    category: 'Reports & Analytics',
-    pageId: 'reports:data_aggregation',
-    aliases: ['data_aggregation', 'data_aggregator', 'aggregator', 'po_sauda_aggregator']
-  },
-  {
-    id: 'trade_report',
-    label: 'Trade',
-    category: 'Reports & Analytics',
-    pageId: 'reports:trade_report',
-    aliases: ['trade_report', 'trade', 'trades', 'commercial_trade', 'trade_analysis']
-  },
-  {
-    id: 'payment_report',
-    label: 'Payment Report',
-    category: 'Reports & Analytics',
-    pageId: 'reports:payment_report',
-    aliases: ['payment_report', 'pay_report', 'reports:payment_report']
-  },
+  // 7. System & Reports
   {
     id: 'reports',
-    label: 'Reports Hub (All Reports)',
-    category: 'Reports & Analytics',
+    label: 'System Reports',
+    category: 'Reports & Management',
     pageId: 'reports',
     aliases: ['reports', 'system_reports', 'analytical_reports']
   },
-
-  // 8. System & Utilities
   {
     id: 'vyapari',
     label: 'Traders Directory',
-    category: 'System & Utilities',
+    category: 'Reports & Management',
     pageId: 'vyapari',
     aliases: ['vyapari', 'traders_directory', 'trader_directory']
   },
   {
     id: 'settings',
     label: 'Config Center / Settings',
-    category: 'System & Utilities',
+    category: 'Reports & Management',
     pageId: 'settings',
     aliases: ['settings', 'config_center', 'config_guide']
   },
   {
     id: 'admindesk',
     label: 'Admin Desk',
-    category: 'System & Utilities',
+    category: 'Reports & Management',
     pageId: 'admindesk',
     aliases: ['admindesk', 'admin_desk', 'admin_vault']
   },
   {
     id: 'ai_assistant',
     label: 'Jarves AI 2.0',
-    category: 'System & Utilities',
+    category: 'Reports & Management',
     pageId: 'ai_assistant',
     aliases: ['ai_assistant', 'jarves_ai', 'ai_portal']
   },
@@ -297,27 +246,8 @@ let currentUserContext: UserContext = {
 };
 
 // Listeners for live permission change notifications
-type PermissionListener = (context: UserContext | any) => void;
+type PermissionListener = (context: UserContext) => void;
 const permissionListeners = new Set<PermissionListener>();
-
-// Cross-tab synchronization via localStorage storage event
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'bally_last_permission_broadcast' && e.newValue) {
-      try {
-        const detail = JSON.parse(e.newValue);
-        permissionListeners.forEach((fn) => {
-          try {
-            fn(detail);
-          } catch (err) {
-            console.warn('Cross-tab listener error:', err);
-          }
-        });
-        window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
-      } catch {}
-    }
-  });
-}
 
 export function subscribeToPermissions(listener: PermissionListener): () => void {
   permissionListeners.add(listener);
@@ -357,34 +287,13 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
 }
 
 export function getCurrentUserContext(): UserContext {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && (!currentUserContext.allowedModules || currentUserContext.allowedModules.length === 0)) {
     try {
       const saved = window.localStorage.getItem('bally_user_context');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           currentUserContext = { ...currentUserContext, ...parsed };
-        }
-      } else {
-        const authSess = window.localStorage.getItem('bally_auth_session');
-        if (authSess) {
-          const sess = JSON.parse(authSess);
-          if (sess && (sess.username || sess.userId)) {
-            const mods = sess.allowed_modules
-              ? sess.allowed_modules === '*'
-                ? ['*']
-                : String(sess.allowed_modules).split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-              : ['*'];
-            currentUserContext = {
-              ...currentUserContext,
-              userId: sess.userId || 'op_1',
-              username: sess.username,
-              userName: sess.username,
-              userRole: sess.role?.toUpperCase() || 'L1',
-              userLevel: sess.level?.toUpperCase() || 'L1',
-              allowedModules: mods,
-            };
-          }
         }
       }
     } catch {
@@ -413,7 +322,7 @@ export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
   }
 
   if (allowed.includes('*')) return true;
-  return role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER USER' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
+  return role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
 }
 
 export function isL5OrAdmin(): boolean {
@@ -455,85 +364,30 @@ export function canViewCompletedData(): boolean {
  */
 export function hasModulePermission(
   targetModuleOrPage: string,
-  allowedModulesOverride?: string[] | string,
+  allowedModulesOverride?: string[],
   isAdminOverride?: boolean
 ): boolean {
   if (!targetModuleOrPage) return false;
 
+  const ctx = getCurrentUserContext();
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return true;
 
-  const target = targetModuleOrPage.toLowerCase().trim();
-
-  // 1. Universal Hub Access: The operational Dashboard is the landing hub and home for all authenticated operators.
-  // The Dashboard component itself dynamically filters and displays ONLY the module cards permitted for this operator.
-  if (target === 'dashboard' || target === 'hub' || target === 'operational_hub' || target === 'home') {
-    return true;
-  }
-
-  const ctx = getCurrentUserContext();
-  const rawList = allowedModulesOverride !== undefined
+  const allowedList = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
 
-  const cleanAllowed = (
-    Array.isArray(rawList)
-      ? rawList
-      : typeof rawList === 'string'
-        ? String(rawList).split(',')
-        : []
-  ).map((m) => String(m).toLowerCase().trim()).filter(Boolean);
+  if (allowedList.includes('*')) return true;
 
-  if (cleanAllowed.includes('*')) return true;
+  const target = targetModuleOrPage.toLowerCase().trim();
+  const cleanAllowed = allowedList.map((m) => m.toLowerCase().trim()).filter(Boolean);
 
-  // 2. Direct match
+  // 1. Direct match
   if (cleanAllowed.includes(target)) {
     return true;
   }
 
-  // 2b. Handle compound report module IDs like reports:sauda_analyze or reports:trade
-  if (target.startsWith('reports:')) {
-    const subTarget = target.replace('reports:', '').trim().toLowerCase();
-    if (cleanAllowed.includes('reports') || cleanAllowed.includes(subTarget)) {
-      return true;
-    }
-    const subAliases = MODULE_ALIAS_MAP[subTarget] || [subTarget];
-    for (const alias of subAliases) {
-      if (cleanAllowed.includes(alias.toLowerCase())) {
-        return true;
-      }
-    }
-  }
-
-  // 2c. If checking parent 'reports', permit if user has access to ANY report submodule
-  if (target === 'reports') {
-    if (cleanAllowed.includes('reports')) return true;
-    const REPORT_SUB_MODULES = [
-      'sauda_analyze', 'po_summary', 'map_wise_po', 'global_analytics', 
-      'data_aggregation', 'trade_report', 'trade', 'payment_report'
-    ];
-    for (const sub of REPORT_SUB_MODULES) {
-      if (cleanAllowed.includes(sub)) return true;
-      const subAliases = MODULE_ALIAS_MAP[sub] || [];
-      if (subAliases.some(a => cleanAllowed.includes(a.toLowerCase()))) return true;
-    }
-  }
-
-  // 3. Match against module definition labels, ids, or aliases
-  for (const mod of ALL_SYSTEM_MODULES) {
-    if (mod.id.toLowerCase() === target || mod.pageId.toLowerCase() === target) {
-      if (cleanAllowed.includes(mod.id.toLowerCase()) || cleanAllowed.includes(mod.label.toLowerCase())) {
-        return true;
-      }
-      for (const alias of mod.aliases) {
-        if (cleanAllowed.includes(alias.toLowerCase())) {
-          return true;
-        }
-      }
-    }
-  }
-
-  // 4. Check aliases of target against cleanAllowed
+  // 2. Check aliases of target against cleanAllowed
   const targetAliases = MODULE_ALIAS_MAP[target] || [target];
   for (const alias of targetAliases) {
     if (cleanAllowed.includes(alias.toLowerCase())) {
@@ -541,7 +395,7 @@ export function hasModulePermission(
     }
   }
 
-  // 5. Check if any allowed item lists target as an alias
+  // 3. Check if any allowed item lists target as an alias
   for (const allowedItem of cleanAllowed) {
     const aliasesOfAllowed = MODULE_ALIAS_MAP[allowedItem] || [];
     if (aliasesOfAllowed.map(a => a.toLowerCase()).includes(target)) {
@@ -562,7 +416,7 @@ export function hasModulePermission(
  */
 export function filterMenuByPermissions<T extends { id: string; pageId?: string; subItems?: any[] }>(
   menus: T[],
-  allowedModulesOverride?: string[] | string,
+  allowedModulesOverride?: string[],
   isAdminOverride?: boolean
 ): T[] {
   const result: T[] = [];
@@ -598,45 +452,38 @@ export function filterMenuByPermissions<T extends { id: string; pageId?: string;
  * Determine the default/first landing page for a user based on their allowed modules.
  */
 export function getFirstAllowedPage(
-  allowedModulesOverride?: string[] | string,
+  allowedModulesOverride?: string[],
   isAdminOverride?: boolean
 ): string {
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return 'dashboard';
 
   const ctx = getCurrentUserContext();
-  const rawList = allowedModulesOverride !== undefined
+  const allowedList = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
-
-  const allowedList = (
-    Array.isArray(rawList)
-      ? rawList
-      : typeof rawList === 'string'
-        ? String(rawList).split(',')
-        : []
-  ).map((m) => String(m).toLowerCase().trim()).filter(Boolean);
 
   if (allowedList.includes('*')) return 'dashboard';
   if (hasModulePermission('dashboard', allowedList, false)) return 'dashboard';
 
   // Find the first registered module that is permitted
   for (const mod of ALL_SYSTEM_MODULES) {
-    if (mod.id !== 'dashboard' && hasModulePermission(mod.id, allowedList, false)) {
+    if (hasModulePermission(mod.id, allowedList, false)) {
       return mod.pageId;
     }
   }
 
-  // If nothing matched in ALL_SYSTEM_MODULES, check if any item in allowedList matches a page
-  for (const item of allowedList) {
-    if (item && item !== '*') {
-      const found = ALL_SYSTEM_MODULES.find(m => m.id === item || m.aliases.includes(item));
+  // If nothing matched, check if any string in allowedList matches a page
+  if (allowedList.length > 0) {
+    const first = allowedList[0].trim();
+    if (first && first !== '*') {
+      const found = ALL_SYSTEM_MODULES.find(m => m.id === first || m.aliases.includes(first));
       if (found) return found.pageId;
+      return first;
     }
   }
 
-  // Universal safe fallback is ALWAYS dashboard, NEVER 'sauda'
-  return 'dashboard';
+  return 'sauda';
 }
 
 /**
@@ -650,75 +497,7 @@ export function broadcastPermissionsUpdated(detail: {
   level?: string;
 }): void {
   if (typeof window !== 'undefined') {
-    const parsedMods = detail.allowed_modules
-      ? detail.allowed_modules === '*'
-        ? ['*']
-        : String(detail.allowed_modules).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
-      : ['*'];
-
-    const normalizedContext: UserContext = {
-      userId: detail.userId || currentUserContext.userId,
-      username: detail.username || currentUserContext.username,
-      userName: detail.username || currentUserContext.userName,
-      userRole: detail.role || currentUserContext.userRole,
-      userLevel: detail.level || currentUserContext.userLevel,
-      allowedModules: parsedMods,
-      permissions: currentUserContext.permissions || ['ALL', 'EDIT', 'DELETE', 'VIEW']
-    };
-
-    // If currently logged in user matches, update in-memory context and local storage immediately
-    const currentUsername = currentUserContext.username || currentUserContext.userName;
-    if (
-      !currentUsername ||
-      !detail.username ||
-      currentUsername.toLowerCase() === detail.username.toLowerCase()
-    ) {
-      setCurrentUserContext(normalizedContext);
-      try {
-        const authSess = window.localStorage.getItem('bally_auth_session');
-        if (authSess) {
-          const sess = JSON.parse(authSess);
-          if (sess && sess.username && sess.username.toLowerCase() === (detail.username || '').toLowerCase()) {
-            sess.allowed_modules = detail.allowed_modules;
-            sess.role = detail.role || sess.role;
-            sess.level = detail.level || sess.level;
-            window.localStorage.setItem('bally_auth_session', JSON.stringify(sess));
-          }
-        }
-      } catch {}
-    }
-
-    // 1. Notify in-memory listeners
-    permissionListeners.forEach((fn) => {
-      try {
-        fn(normalizedContext);
-      } catch (e) {
-        console.warn('Listener notification error:', e);
-      }
-    });
-
-    // 2. Dispatch window event with both raw and parsed format for compatibility
-    window.dispatchEvent(
-      new CustomEvent('bally-permissions-updated', {
-        detail: {
-          ...detail,
-          allowedModules: parsedMods,
-          normalizedContext,
-        },
-      })
-    );
-
-    // 3. Multi-tab synchronization via localStorage
-    try {
-      localStorage.setItem(
-        'bally_last_permission_broadcast',
-        JSON.stringify({
-          ...detail,
-          allowedModules: parsedMods,
-          _timestamp: Date.now(),
-        })
-      );
-    } catch {}
+    window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
   }
 }
 

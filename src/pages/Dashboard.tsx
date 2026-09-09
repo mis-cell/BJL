@@ -95,19 +95,6 @@ export default function Dashboard({
   const currentTab = propCurrentTab !== undefined ? propCurrentTab : localCurrentTab;
   const setCurrentTab = propSetCurrentTab !== undefined ? propSetCurrentTab : setLocalCurrentTab;
   const [activeSectionIndex, setActiveSectionIndex] = React.useState<number>(0);
-  const [reportsInitialTab, setReportsInitialTab] = React.useState<string | undefined>(undefined);
-
-  React.useEffect(() => {
-    const handleTabChange = (e: any) => {
-      const tab = e.detail?.tab || e.detail?.reportType;
-      if (tab) {
-        setReportsInitialTab(tab);
-        setCurrentTab('reports');
-      }
-    };
-    window.addEventListener('reports-tab-change', handleTabChange);
-    return () => window.removeEventListener('reports-tab-change', handleTabChange);
-  }, [setCurrentTab]);
 
   const [emailHealthWarning, setEmailHealthWarning] = React.useState(false);
 
@@ -1415,17 +1402,9 @@ export default function Dashboard({
       title="P.O Automation" 
       subtitle="Operational Hub"
       activeNavTab={currentTab === 'reports' ? 'reports' : 'dashboard'}
-      isAdmin={isAdmin}
-      allowedModules={allowedModules}
       onNavClick={(pageId) => {
         if (pageId === 'reports') {
-          setReportsInitialTab(undefined);
           setCurrentTab('reports');
-        } else if (pageId.startsWith('reports:')) {
-          const tab = pageId.split(':')[1];
-          setReportsInitialTab(tab);
-          setCurrentTab('reports');
-          window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab } }));
         } else if (pageId === 'dashboard') {
           setCurrentTab('menu');
         } else {
@@ -1520,12 +1499,11 @@ export default function Dashboard({
 
 
 
-        {currentTab === 'menu' ? (
-            <div className="space-y-6 pt-4 border-t border-[#D6CAA8]">
+        {false ? (
+            <div className="space-y-8 pt-4 border-t border-[#D6CAA8]">
               <div className="flex items-center justify-between">
                 <h3 className="font-serif text-lg font-bold text-[#1E331B] flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-emerald-800" />
-                  <span>Permitted Process Workstations & Modules</span>
+                  <span>Detailed Process Modules</span>
                 </h3>
               </div>
 
@@ -2101,7 +2079,7 @@ export default function Dashboard({
 
         {currentTab === 'reports' && (
           <div className="bg-white border border-slate-250 shadow-sm rounded-xl p-1">
-            <Reports onClose={() => setCurrentTab('menu')} initialReportType={reportsInitialTab} />
+            <Reports onClose={() => setCurrentTab('menu')} />
           </div>
         )}
 

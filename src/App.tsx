@@ -1209,7 +1209,6 @@ export default function App() {
   const [dashboardTab, setDashboardTab] = useState<
     "menu" | "mismatch" | "reports"
   >("menu");
-  const [activeReportSubTab, setActiveReportSubTab] = useState<string | undefined>(undefined);
   const [allowedModules, setAllowedModules] = useState<string[]>(["*"]);
   const [runningPages, setRunningPages] = useState<Page[]>([]);
   const [selectedAmadForFinalMr, setSelectedAmadForFinalMr] = useState<any>(null);
@@ -1231,107 +1230,48 @@ export default function App() {
     }
   }, []);
 
-  // Restore authenticated session & module permissions from localStorage, and sync with database
+  // Restore authenticated session & module permissions from localStorage
   React.useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const rawSession = localStorage.getItem("bally_auth_session");
-        if (rawSession) {
-          const sess = JSON.parse(rawSession);
-          if (sess && (sess.username || sess.userId)) {
-            const isAdminUser = sess.role?.toUpperCase() === "ADMIN" || sess.role?.toUpperCase() === "ADMINISTRATOR";
-            setIsAdmin(isAdminUser);
-            setUserRole(sess.role?.toUpperCase() || "L1");
-            setUserLevel(sess.level?.toUpperCase() || "L1");
-            const mods = sess.allowed_modules
-              ? sess.allowed_modules === "*"
-                ? ["*"]
-                : String(sess.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-              : ["*"];
-            setAllowedModules(mods);
-            setIsLoggedIn(true);
-            if (sess.year) setSelectedYear(sess.year);
-            setCurrentUserContext({
-              userId: sess.userId || 'op_1',
-              username: sess.username,
-              userName: sess.username,
-              userRole: sess.role?.toUpperCase() || "L1",
-              userLevel: sess.level?.toUpperCase() || "L1",
-              allowedModules: mods,
-            });
+    try {
+      const rawSession = localStorage.getItem("bally_auth_session");
+      if (rawSession) {
+        const sess = JSON.parse(rawSession);
+        if (sess && sess.username) {
+          const isAdminUser = sess.role?.toUpperCase() === "ADMIN" || sess.role?.toUpperCase() === "ADMINISTRATOR";
+          setIsAdmin(isAdminUser);
+          setUserRole(sess.role?.toUpperCase() || "L1");
+          setUserLevel(sess.level?.toUpperCase() || "L1");
+          const mods = sess.allowed_modules
+            ? sess.allowed_modules === "*"
+              ? ["*"]
+              : String(sess.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+            : ["*"];
+          setAllowedModules(mods);
+          setIsLoggedIn(true);
+          if (sess.year) setSelectedYear(sess.year);
+          setCurrentUserContext({
+            userId: sess.userId || 'op_1',
+            username: sess.username,
+            userName: sess.username,
+            userRole: sess.role?.toUpperCase() || "L1",
+            userLevel: sess.level?.toUpperCase() || "L1",
+            allowedModules: mods,
+          });
 
-            // Target page check from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const qPage = urlParams.get('page') || (window.location.hash ? window.location.hash.replace('#', '') : null);
-            if (qPage && hasModulePermission(qPage, mods, isAdminUser)) {
-              setCurrentPage(qPage as Page);
-            } else {
-              const firstAllowed = (hasModulePermission('dashboard', mods, isAdminUser)
-                ? 'dashboard'
-                : getFirstAllowedPage(mods, isAdminUser)) as Page;
-              setCurrentPage(firstAllowed);
-            }
-
-            // Real-time synchronization: Fetch fresh permissions from Supabase user_master
-            if (supabase && sess.username) {
-              try {
-                const { data: dbUser } = await supabase
-                  .from("user_master")
-                  .select("user_id, username, role, level, allowed_modules, status")
-                  .or(`username.eq.${sess.username.toUpperCase()},username.eq.${sess.username},user_id.eq.${sess.userId}`)
-                  .eq("status", "Active")
-                  .maybeSingle();
-
-                if (dbUser) {
-                  const freshIsAdmin = dbUser.role?.toUpperCase() === "ADMIN" || dbUser.role?.toUpperCase() === "ADMINISTRATOR";
-                  const freshMods = dbUser.allowed_modules
-                    ? dbUser.allowed_modules === "*"
-                      ? ["*"]
-                      : String(dbUser.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-                    : ["*"];
-                  
-                  setIsAdmin(freshIsAdmin);
-                  setUserRole(dbUser.role?.toUpperCase() || "L1");
-                  setUserLevel(dbUser.level?.toUpperCase() || "L1");
-                  setAllowedModules(freshMods);
-                  setCurrentUserContext({
-                    userId: dbUser.user_id,
-                    username: dbUser.username,
-                    userName: dbUser.username,
-                    userRole: dbUser.role?.toUpperCase() || "L1",
-                    userLevel: dbUser.level?.toUpperCase() || "L1",
-                    allowedModules: freshMods,
-                  });
-
-                  // Update localStorage with fresh permissions
-                  localStorage.setItem("bally_auth_session", JSON.stringify({
-                    ...sess,
-                    userId: dbUser.user_id,
-                    username: dbUser.username,
-                    role: dbUser.role?.toUpperCase() || "L1",
-                    level: dbUser.level?.toUpperCase() || "L1",
-                    allowed_modules: dbUser.allowed_modules || "*",
-                  }));
-
-                  // If current page is not permitted under fresh permissions, safely navigate to first allowed
-                  if (qPage && !hasModulePermission(qPage, freshMods, freshIsAdmin)) {
-                    const fallback = (hasModulePermission('dashboard', freshMods, freshIsAdmin)
-                      ? 'dashboard'
-                      : getFirstAllowedPage(freshMods, freshIsAdmin)) as Page;
-                    setCurrentPage(fallback);
-                  }
-                }
-              } catch (fetchErr) {
-                console.warn("Real-time permission sync error:", fetchErr);
-              }
-            }
+          // Check if URL specifies a target page
+          const urlParams = new URLSearchParams(window.location.search);
+          const qPage = urlParams.get('page') || (window.location.hash ? window.location.hash.replace('#', '') : null);
+          if (qPage && hasModulePermission(qPage, mods, isAdminUser)) {
+            setCurrentPage(qPage as Page);
+          } else {
+            const firstAllowed = getFirstAllowedPage(mods, isAdminUser) as Page;
+            setCurrentPage(firstAllowed);
           }
         }
-      } catch (e) {
-        console.warn("Session restore error:", e);
       }
-    };
-    restoreSession();
+    } catch (e) {
+      console.warn("Session restore error:", e);
+    }
   }, []);
 
   // Subscribe to live permission updates (e.g. when Admin updates allowed modules in Admin Desk)
@@ -1465,16 +1405,7 @@ export default function App() {
 
   const globalNavigate = async (targetPage: Page, subId?: string): Promise<boolean> => {
     let actualTarget = targetPage;
-    if (String(targetPage).startsWith('reports:')) {
-      const reportSub = String(targetPage).split(':')[1];
-      actualTarget = 'reports';
-      subId = reportSub;
-      setActiveReportSubTab(reportSub);
-      window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab: reportSub } }));
-    } else if (actualTarget === 'reports' && subId) {
-      setActiveReportSubTab(subId);
-      window.dispatchEvent(new CustomEvent('reports-tab-change', { detail: { tab: subId } }));
-    } else if (subId === 'po_final' || targetPage === 'po_final' as any) {
+    if (subId === 'po_final' || targetPage === 'po_final' as any) {
       actualTarget = 'final_po';
     } else if (subId === 'po_temp') {
       actualTarget = 'po';
@@ -1483,55 +1414,8 @@ export default function App() {
     }
 
     // Strict Permission Guard: Verify user has permission for the target module
-    let isPermitted = hasModulePermission(actualTarget, allowedModules, isAdmin) ||
+    const isPermitted = hasModulePermission(actualTarget, allowedModules, isAdmin) ||
       (subId ? hasModulePermission(subId, allowedModules, isAdmin) : false);
-
-    // Dynamic Live Fallback: If memory state was stale, check currentUserContext and Supabase in real-time
-    if (!isPermitted && supabase) {
-      try {
-        const ctx = getCurrentUserContext();
-        const checkUser = ctx.username || ctx.userName;
-        if (checkUser) {
-          const { data: dbUser } = await supabase
-            .from("user_master")
-            .select("user_id, username, role, level, allowed_modules, status")
-            .ilike("username", checkUser)
-            .eq("status", "Active")
-            .maybeSingle();
-
-          if (dbUser) {
-            const freshIsAdmin = dbUser.role?.toUpperCase() === "ADMIN" || 
-              dbUser.role?.toUpperCase() === "ADMINISTRATOR" || 
-              dbUser.role?.toUpperCase() === "SUPER USER" ||
-              dbUser.level?.toUpperCase() === "ADMIN" ||
-              dbUser.level?.toUpperCase() === "L5";
-            const freshMods = dbUser.allowed_modules
-              ? dbUser.allowed_modules === "*"
-                ? ["*"]
-                : String(dbUser.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-              : ["*"];
-
-            setIsAdmin(freshIsAdmin);
-            setUserRole(dbUser.role?.toUpperCase() || "L1");
-            setUserLevel(dbUser.level?.toUpperCase() || "L1");
-            setAllowedModules(freshMods);
-            setCurrentUserContext({
-              userId: dbUser.user_id,
-              username: dbUser.username,
-              userName: dbUser.username,
-              userRole: dbUser.role?.toUpperCase() || "L1",
-              userLevel: dbUser.level?.toUpperCase() || "L1",
-              allowedModules: freshMods,
-            });
-
-            isPermitted = hasModulePermission(actualTarget, freshMods, freshIsAdmin) ||
-              (subId ? hasModulePermission(subId, freshMods, freshIsAdmin) : false);
-          }
-        }
-      } catch (e) {
-        console.warn("Live permission check error:", e);
-      }
-    }
 
     if (!isPermitted) {
       alert(`Access Denied: Your account does not have permission to access module [${subId || actualTarget}].`);
@@ -1779,14 +1663,6 @@ export default function App() {
           "Session ended - operator exited login screen",
         );
         setIsLoggedIn(false);
-        try {
-          localStorage.removeItem("bally_auth_session");
-          const url = new URL(window.location.href);
-          url.searchParams.delete("page");
-          window.history.replaceState(null, "", url.pathname);
-        } catch (e) {}
-        setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
-        setCurrentPage("dashboard");
       }
     };
     const handleClose = () => {
@@ -1804,14 +1680,6 @@ export default function App() {
           "Session ended - operator exited login screen",
         );
         setIsLoggedIn(false);
-        try {
-          localStorage.removeItem("bally_auth_session");
-          const url = new URL(window.location.href);
-          url.searchParams.delete("page");
-          window.history.replaceState(null, "", url.pathname);
-        } catch (e) {}
-        setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
-        setCurrentPage("dashboard");
       }
     };
 
@@ -1899,17 +1767,7 @@ export default function App() {
         setIsLoggedIn(true);
         setSelectedYear(year);
 
-        // Clean any stale URL query params on fresh login
-        try {
-          const url = new URL(window.location.href);
-          url.searchParams.delete("page");
-          window.history.replaceState(null, "", url.pathname);
-        } catch {}
-
-        // Land on dashboard if permitted, or first allowed page
-        const firstLanding = (hasModulePermission('dashboard', modules, isAdminUser)
-          ? 'dashboard'
-          : getFirstAllowedPage(modules, isAdminUser)) as Page;
+        const firstLanding = getFirstAllowedPage(modules, isAdminUser) as Page;
         setCurrentPage(firstLanding);
 
         setCurrentUserContext({
@@ -1993,39 +1851,15 @@ export default function App() {
                     <p className="text-xs text-[#5A6E54] mt-2">
                       Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700">[{currentPage}]</span>.
                     </p>
-                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                      <button
-                        onClick={() => {
-                          const firstAllowed = (hasModulePermission('dashboard', allowedModules, isAdmin)
-                            ? 'dashboard'
-                            : getFirstAllowedPage(allowedModules, isAdmin)) as Page;
-                          try {
-                            const url = new URL(window.location.href);
-                            url.searchParams.set("page", firstAllowed);
-                            window.history.replaceState(null, "", url.toString());
-                          } catch {}
-                          setCurrentPage(firstAllowed);
-                        }}
-                        className="px-4 py-2 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-colors cursor-pointer shadow-sm"
-                      >
-                        Go to Permitted Module
-                      </button>
-                      {hasModulePermission('dashboard', allowedModules, isAdmin) && currentPage !== 'dashboard' && (
-                        <button
-                          onClick={() => {
-                            try {
-                              const url = new URL(window.location.href);
-                              url.searchParams.set("page", "dashboard");
-                              window.history.replaceState(null, "", url.toString());
-                            } catch {}
-                            setCurrentPage('dashboard');
-                          }}
-                          className="px-4 py-2 bg-[#FAF7F0] border-2 border-[#1E331B] text-[#1E331B] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#EBE5D8] transition-colors cursor-pointer"
-                        >
-                          Go to Dashboard
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => {
+                        const firstAllowed = getFirstAllowedPage(allowedModules, isAdmin) as Page;
+                        setCurrentPage(firstAllowed);
+                      }}
+                      className="mt-6 px-4 py-2 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-colors cursor-pointer"
+                    >
+                      Go to Permitted Module
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -2168,10 +2002,7 @@ export default function App() {
               <div
                 className={currentPage === "reports" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
-                <Reports
-                  onClose={() => closePage("reports", "dashboard")}
-                  initialReportType={activeReportSubTab}
-                />
+                <Reports onClose={() => closePage("reports", "dashboard")} />
               </div>
               <div
                 className={currentPage === "payment" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
@@ -2393,9 +2224,6 @@ export default function App() {
                 setIsLoggedIn(false);
                 try {
                   localStorage.removeItem("bally_auth_session");
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete("page");
-                  window.history.replaceState(null, "", url.pathname);
                 } catch (e) {}
                 setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
                 setCurrentPage("dashboard");

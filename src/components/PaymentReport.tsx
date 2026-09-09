@@ -263,7 +263,6 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = gradeList.find(g => {
-        if (!g) return false;
         const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
         const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
         return gCode === codeUpper || gName === codeUpper || String(g.id || '') === codeStr;
@@ -282,7 +281,6 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = agencyList.find(a => {
-        if (!a) return false;
         const aCode = String(a.agency_code || a.code || a.id || '').trim().toUpperCase();
         const aName = String(a.agency_name || a.name || '').trim().toUpperCase();
         return aCode === codeUpper || aName === codeUpper || String(a.id || '') === codeStr;
@@ -301,7 +299,6 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = areaList.find(a => {
-        if (!a) return false;
         const aCode = String(a.area_code || a.code || a.id || '').trim().toUpperCase();
         const aName = String(a.area_name || a.name || '').trim().toUpperCase();
         return aCode === codeUpper || aName === codeUpper || String(a.id || '') === codeStr;
@@ -320,7 +317,6 @@ export const mapItemsToDetailCols = (
       const codeUpper = codeStr.toUpperCase();
 
       const match = markaList.find(m => {
-        if (!m) return false;
         const mCode = String(m.marka_code || m.code || m.id || '').trim().toUpperCase();
         const mName = String(m.marka_name || m.name || '').trim().toUpperCase();
         return mCode === codeUpper || mName === codeUpper || String(m.id || '') === codeStr;
@@ -1902,71 +1898,24 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
     }
     const doc = new jsPDF();
     doc.setFontSize(14);
-    doc.text("Treds Report", 14, 15);
+    doc.text("PAYMENT MASTER RECORDS", 14, 15);
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
 
-    /* const payablep = Number(p.payable_amt || p.total_amount || 0);
-    const paidp = Number(p.paid_amount || 0);
-    const pendingp = payable - paid;
-    const isAdvanceYesp = (p.advance_payment_done || 'No').toLowerCase() === 'yes';
-    const advance_payment_fromp = p.advance_payment_from || '';
-
     const tableData = filteredPayments.map(p => [
-      p.mr_no,
+      p.voucher_no,
+      p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN') : '',
       p.party_name || p.supplier || '',
-      isAdvanceYesp ? 'YES' : 'NO',
-      payablep.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-      paidp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-      pendingp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-      (advance_payment_from === '' || advance_payment_from === '1') ? 'FROM BANK': advance_payment_from === '2' ? 'RXIL' : advance_payment_from === '3'? 'TReDS' : advance_payment_from === '4' ? 'Invoice Mart' : '',
-      p.payment_settlementdate ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN') : '',
-      p.tenor || '',
-      p.repayment_date ? new Date(p.repayment_date).toLocaleDateString('en-IN') : '',
-    ]); */
-    const tableData = filteredPayments.map(p => {
-      const payablep = Number(p.payable_amt || p.total_amount || 0);
-      const paidp = Number(p.paid_amount || 0);
-      const pendingp = payablep - paidp;
-
-      const isAdvanceYesp =
-        (p.advance_payment_done || 'No').toLowerCase() === 'yes';
-
-      const advance_payment_fromp = p.advance_payment_from || '';
-
-      return [
-        p.mr_no,
-        p.party_name || p.supplier || '',
-        isAdvanceYesp ? 'YES' : 'NO',
-        payablep.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        paidp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        pendingp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-
-        advance_payment_fromp === '' || advance_payment_fromp === '1'
-          ? 'FROM BANK'
-          : advance_payment_fromp === '2'
-          ? 'RXIL'
-          : advance_payment_fromp === '3'
-          ? 'TReDS'
-          : advance_payment_fromp === '4'
-          ? 'Invoice Mart'
-          : '',
-
-        p.payment_settlementdate
-          ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN')
-          : '',
-
-        p.tenor || '',
-
-        p.repayment_date
-          ? new Date(p.repayment_date).toLocaleDateString('en-IN')
-          : '',
-      ];
-    });
+      p.mr_no || '',
+      p.po_no || '',
+      `₹ ${Number(p.paid_amount || p.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      p.payment_mode || 'Bank Transfer',
+      p.status || 'completed'
+    ]);
 
     autoTable(doc, {
       startY: 28,
-      head: [['M.R No', 'Party Name', 'Advance Done', 'Payable Amt', 'Paid Amount', 'Pending', 'Payment From', 'Payment Settle date','Tenor','Re-Payment Date']],
+      head: [['Voucher No', 'Date', 'Party Name', 'M.R No', 'P.O No', 'Paid Amount', 'Mode', 'Status']],
       body: tableData,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2 },
@@ -2176,109 +2125,72 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
       {viewMode === 'dashboard' && (
         <div className="space-y-4">
           {/* Dashboard Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 auto-rows-fr">
-
-            {/* Total Vouchers */}
-            <div className="h-full min-w-0 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-3 rounded-xl border border-blue-400/40 shadow-md flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-100">
-                  Total Vouchers
-                </p>
-
-                <h3 className="text-xl font-black mt-0.5">
-                  {paymentList.length}
-                </h3>
-
-                {/* <p className="text-[9px] text-blue-200 mt-0.5 truncate">
-                  Records in `payment_master`
-                </p> */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3 rounded-xl border border-indigo-700/50 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
+                <h3 className="text-xl font-black mt-0.5">{paymentList.length}</h3>
+                <p className="text-[9px] text-indigo-300 mt-0.5">Records in `payment_master`</p>
               </div>
-
-              <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+              <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-300">
                 <Wallet className="w-5 h-5" />
               </div>
             </div>
 
-
-            {/* Total Paid Amount */}
-            <div className="h-full min-w-0 bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-3 rounded-xl border border-emerald-400/40 shadow-md flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">
-                  Total Paid Amount
-                </p>
-
-                <h3 className="text-lg font-black mt-0.5 truncate">
-                  ₹ {totalPaidSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
-                </h3>
-
-                <p className="text-[9px] text-emerald-200 mt-0.5 truncate">
-                  {completedCount} Vouchers Cleared
-                </p>
+            <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Total Paid Amount</p>
+                <h3 className="text-lg font-black mt-0.5">₹ {totalPaidSum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                <p className="text-[9px] text-emerald-300 mt-0.5">{completedCount} Vouchers Cleared</p>
               </div>
-
-              <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+              <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300">
                 <DollarSign className="w-5 h-5" />
               </div>
             </div>
 
-
-            {/* Total Payable Value */}
-            <div className="h-full min-w-0 bg-gradient-to-br from-violet-600 to-violet-800 text-white p-3 rounded-xl border border-violet-400/40 shadow-md flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-violet-100">
-                  Total Payable Value
-                </p>
-
-                <h3 className="text-lg font-black mt-0.5 truncate">
-                  ₹ {totalPayableSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
-                </h3>
-
-                <p className="text-[9px] text-violet-200 mt-0.5 truncate">
-                  Total Gross Invoice Value
-                </p>
+            <div className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">Total Payable Value</p>
+                <h3 className="text-lg font-black mt-0.5">₹ {totalPayableSum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                <p className="text-[9px] text-purple-300 mt-0.5">Total Gross Invoice Value</p>
               </div>
-
-              <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+              <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300">
                 <TrendingUp className="w-5 h-5" />
               </div>
             </div>
 
-
-            {/* Pending / Retention */}
-            <div className="h-full min-w-0 bg-gradient-to-br from-orange-500 to-orange-700 text-white p-3 rounded-xl border border-orange-300/50 shadow-md flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-orange-100 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+            <div className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-400" />
                   Pending / Retention
                 </p>
-
-                <h3 className="text-lg font-black mt-0.5 text-white truncate">
-                  ₹ {totalPendingSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
-                </h3>
-
-                <p className="text-[9px] text-orange-100 mt-0.5 font-semibold truncate">
-                  {pendingCount} Outstanding / Retention
-                </p>
+                <h3 className="text-lg font-black mt-0.5 text-amber-300">₹ {totalPendingSum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+                <p className="text-[9px] text-amber-200 mt-0.5 font-semibold">{pendingCount} Outstanding / Retention</p>
               </div>
-
-              <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
-                <Clock className="w-5 h-5" />
+              <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300">
+                <Clock className="w-5 h-5 text-amber-400" />
               </div>
             </div>
 
+            <div className="bg-gradient-to-br from-slate-800 to-slate-950 text-white p-3 rounded-xl border border-slate-700/50 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Verified Arrivals</p>
+                <h3 className="text-xl font-black mt-0.5">{verifiedArrivals.length}</h3>
+                <p className="text-[9px] text-slate-400 mt-0.5">Ready for Payment</p>
+              </div>
+              <div className="p-2 bg-slate-700/40 rounded-lg text-slate-300">
+                <FileCheck className="w-5 h-5" />
+              </div>
+            </div>
           </div>
 
           {/* Search Bar & Toolbar */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
             <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input id="search_by_voucher_no_part_1467" name="search_by_voucher_no_part" aria-label="Search by Voucher No, Party Name, M.R No, P.O No, Reference..." type="text"
+              <input
+ id="search_by_voucher_no_part_1467" name="search_by_voucher_no_part" aria-label="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."                type="text"
                 placeholder="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."
                 value={searchFilter}
                 onChange={e => setSearchFilter(e.target.value)}
@@ -2317,7 +2229,7 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
             <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-purple-600" />
-                Payment Records ({filteredPayments.length})
+                Payment Master Records ({filteredPayments.length})
               </h3>
               {/* <span className="text-[10px] text-slate-500 font-semibold">
                 Real-Time Database Sync (`payment_master`)
@@ -2390,16 +2302,16 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                           </td>
                           <td className="p-2.5 text-center">
                             {(advance_payment_from === '' || advance_payment_from ==='1') &&(
-                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">FROM BANK</span>
+                              <span>FROM BANK1</span>
                             )}
                             {advance_payment_from ==='2' &&(
-                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">RXIL</span>
+                              <span>RXIL</span>
                             )}
                             {advance_payment_from ==='3' &&(
-                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">TReDS</span>
+                              <span>TReDS</span>
                             )}
                             {advance_payment_from ==='4' &&(
-                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Invoice Mart</span>
+                               <span>Invoice Mart</span>
                             )} 
                           </td>
                           <td className="p-2.5 font-medium text-slate-600">
@@ -2478,7 +2390,8 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                 <label htmlFor="select_party_supplier_led_1661" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
                   Select Party / Supplier Ledger Account
                 </label>
-                <select id="select_party_supplier_led_1661" name="select_party_supplier_led" aria-label="Select Party / Supplier Ledger Account"                  value={selectedLedgerParty}
+                <select
+ id="select_party_supplier_led_1661" name="select_party_supplier_led" aria-label="Select Party / Supplier Ledger Account"                  value={selectedLedgerParty}
                   onChange={e => setSelectedLedgerParty(e.target.value)}
                   className="w-full text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-600 bg-slate-50 text-slate-800"
                 >
