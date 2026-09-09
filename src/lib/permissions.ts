@@ -413,7 +413,7 @@ export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
   }
 
   if (allowed.includes('*')) return true;
-  return role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
+  return role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER USER' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
 }
 
 export function isL5OrAdmin(): boolean {

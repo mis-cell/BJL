@@ -33,9 +33,7 @@ import {
   Clock,
   Briefcase,
   Lock,
-  Wallet,
-  MessageSquare,
-  HandCoins
+  Wallet
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -892,27 +890,8 @@ export default function ExecutiveBiDashboard({
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 relative z-10 w-full max-w-full min-w-0">
 
-          {/* Action Buttons & Module Quick Jump */}
+          {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full max-w-full min-w-0">
-            {/* Quick Desks Launchers */}
-            <button
-              onClick={() => onNavigate && onNavigate('sms_sauda')}
-              className="h-8 sm:h-9 px-3 sm:px-4 bg-emerald-600/90 hover:bg-emerald-500 text-white font-extrabold text-[11px] sm:text-xs uppercase tracking-wider rounded-xl border border-emerald-400/60 transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
-              title="Open SMS Sauda Contracts Desk"
-            >
-              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 shrink-0" />
-              <span className="truncate">SMS Sauda Desk</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate && onNavigate('sauda')}
-              className="h-8 sm:h-9 px-3 sm:px-4 bg-[#6DE195]/20 hover:bg-[#6DE195]/30 text-emerald-300 font-extrabold text-[11px] sm:text-xs uppercase tracking-wider rounded-xl border border-emerald-500/50 transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
-              title="Open Sauda Contract Bookings Register"
-            >
-              <HandCoins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300 shrink-0" />
-              <span className="truncate">Sauda Desk</span>
-            </button>
-
             <button
               onClick={() => setcurrentTab('reports')}
               className={cn(

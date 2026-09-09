@@ -1483,8 +1483,55 @@ export default function App() {
     }
 
     // Strict Permission Guard: Verify user has permission for the target module
-    const isPermitted = hasModulePermission(actualTarget, allowedModules, isAdmin) ||
+    let isPermitted = hasModulePermission(actualTarget, allowedModules, isAdmin) ||
       (subId ? hasModulePermission(subId, allowedModules, isAdmin) : false);
+
+    // Dynamic Live Fallback: If memory state was stale, check currentUserContext and Supabase in real-time
+    if (!isPermitted && supabase) {
+      try {
+        const ctx = getCurrentUserContext();
+        const checkUser = ctx.username || ctx.userName;
+        if (checkUser) {
+          const { data: dbUser } = await supabase
+            .from("user_master")
+            .select("user_id, username, role, level, allowed_modules, status")
+            .ilike("username", checkUser)
+            .eq("status", "Active")
+            .maybeSingle();
+
+          if (dbUser) {
+            const freshIsAdmin = dbUser.role?.toUpperCase() === "ADMIN" || 
+              dbUser.role?.toUpperCase() === "ADMINISTRATOR" || 
+              dbUser.role?.toUpperCase() === "SUPER USER" ||
+              dbUser.level?.toUpperCase() === "ADMIN" ||
+              dbUser.level?.toUpperCase() === "L5";
+            const freshMods = dbUser.allowed_modules
+              ? dbUser.allowed_modules === "*"
+                ? ["*"]
+                : String(dbUser.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+              : ["*"];
+
+            setIsAdmin(freshIsAdmin);
+            setUserRole(dbUser.role?.toUpperCase() || "L1");
+            setUserLevel(dbUser.level?.toUpperCase() || "L1");
+            setAllowedModules(freshMods);
+            setCurrentUserContext({
+              userId: dbUser.user_id,
+              username: dbUser.username,
+              userName: dbUser.username,
+              userRole: dbUser.role?.toUpperCase() || "L1",
+              userLevel: dbUser.level?.toUpperCase() || "L1",
+              allowedModules: freshMods,
+            });
+
+            isPermitted = hasModulePermission(actualTarget, freshMods, freshIsAdmin) ||
+              (subId ? hasModulePermission(subId, freshMods, freshIsAdmin) : false);
+          }
+        }
+      } catch (e) {
+        console.warn("Live permission check error:", e);
+      }
+    }
 
     if (!isPermitted) {
       alert(`Access Denied: Your account does not have permission to access module [${subId || actualTarget}].`);
