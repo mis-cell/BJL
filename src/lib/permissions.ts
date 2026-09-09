@@ -58,14 +58,7 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Satta Desk',
     category: 'Sauda & Procurement',
     pageId: 'satta',
-    aliases: ['satta', 'satta_desk', 'satta desk', 'sattadesk', 'satta_entry', 'satta entry', 'sattaentry', 'satta_master']
-  },
-  {
-    id: 'satta_chart',
-    label: 'Satta Rate Chart',
-    category: 'Sauda & Procurement',
-    pageId: 'satta_chart',
-    aliases: ['satta_chart', 'satta chart', 'sattachart', 'rate_chart', 'rate chart', 'ratechart', 'satta_rates', 'satta rates', 'sattarates', 'satta_rate_chart']
+    aliases: ['satta', 'satta_desk', 'satta desk', 'sattadesk', 'satta_entry', 'satta entry', 'sattaentry', 'satta_master', 'satta_chart', 'satta chart', 'sattachart', 'rate_chart', 'rate chart', 'ratechart', 'satta_rates', 'satta rates', 'sattarates', 'satta_rate_chart']
   },
   {
     id: 'po',
@@ -265,8 +258,7 @@ export function getCanonicalModuleId(idOrAlias: string): string {
   // 5. Semantic keyword mapping for user-entered terms
   if (alphaClean.includes('smssauda') || alphaClean.includes('smsdesk')) return 'sms_sauda';
   if (alphaClean.includes('saudadesk') || alphaClean === 'sauda' || alphaClean === 'saudaentry') return 'sauda';
-  if (alphaClean.includes('sattachart') || alphaClean.includes('sattarate')) return 'satta_chart';
-  if (alphaClean.includes('satta')) return 'satta';
+  if (alphaClean.includes('sattachart') || alphaClean.includes('sattarate') || alphaClean.includes('satta')) return 'satta';
   if (alphaClean.includes('saudacheck') || alphaClean === 'po' || alphaClean === 'potemp') return 'po';
   if (alphaClean.includes('finalpo') || alphaClean === 'pofinal') return 'final_po';
   if (alphaClean.includes('maingate') || alphaClean.includes('lorryentry')) return 'main_gate';

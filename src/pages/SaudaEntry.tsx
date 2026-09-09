@@ -234,8 +234,14 @@ export default function SaudaEntry({
     }
 
     if (cleanArea.includes('PURNEA') || cleanArea.includes('BIHAR')) {
-      if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
-      if (!lookupAreas.includes('PURNEA (BIHAR)')) lookupAreas.push('PURNEA (BIHAR)');
+      if (cleanArea.includes('LOOSE')) {
+        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.unshift('PURNEA (LOOSE)');
+        if (!lookupAreas.includes('PURNEA LOOSE')) lookupAreas.push('PURNEA LOOSE');
+      } else {
+        if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
+        if (!lookupAreas.includes('PURNEA (BIHAR)')) lookupAreas.push('PURNEA (BIHAR)');
+        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.push('PURNEA (LOOSE)');
+      }
     }
 
     let diffVal: number | undefined;

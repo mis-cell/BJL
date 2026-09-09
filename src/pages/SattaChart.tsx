@@ -164,6 +164,10 @@ const EXCEL_SEED_DATA: AreaDifferential[] = [
     diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
   },
   {
+    area: "PURNEA (LOOSE)",
+    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
+  },
+  {
     area: "ASSAM",
     diffs: { "M.MID": -2000, BOT: -2100, "B.BOT": -2200, "X.X.BOT": -2350, "X.BOT": -2300 }
   },
@@ -347,6 +351,44 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
           }
           cache[item.area][item.grade] = val;
         });
+
+        // Check if any seed area from EXCEL_SEED_DATA (such as PURNEA (LOOSE)) is missing in database
+        const missingSeedRows: any[] = [];
+        EXCEL_SEED_DATA.forEach(row => {
+          if (!cache[row.area]) {
+            cache[row.area] = {};
+            Object.keys(row.diffs).forEach(grade => {
+              const diffVal = row.diffs[grade];
+              cache[row.area][grade] = diffVal;
+              missingSeedRows.push({
+                area: row.area,
+                grade: grade,
+                differential: diffVal
+              });
+            });
+          }
+        });
+
+        if (missingSeedRows.length > 0 && supabase) {
+          supabase.from('satta_differentials').upsert(missingSeedRows, { onConflict: 'area,grade' }).then();
+        }
+
+        // Also ensure PURNEA (LOOSE) and other areas exist in area_master
+        if (supabase) {
+          supabase.rpc('exec_sql', {
+            query: `
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='area_master') THEN
+                  IF NOT EXISTS (SELECT 1 FROM area_master WHERE UPPER(TRIM(area_name)) = 'PURNEA (LOOSE)' OR UPPER(TRIM(area_name)) = 'PURNEA LOOSE') THEN
+                    INSERT INTO area_master (area_code, area_name) VALUES ('PURNEA_LOOSE', 'PURNEA (LOOSE)');
+                  END IF;
+                END IF;
+              END $$;
+            `
+          }).then();
+        }
+
         setDbDifferentials(cache);
       } else {
         // Seed initial differentials if database empty
@@ -1461,7 +1503,7 @@ export default function SattaChart({ onClose, isEmbedded = false }: { onClose?: 
                 </div>
                 <div className="flex justify-between items-center bg-[#FAF8F5] p-2 rounded-xl">
                   <span className="font-bold text-slate-600">Registered Areas</span>
-                  <span className="font-mono font-bold text-[#1E331B]">24 Regions</span>
+                  <span className="font-mono font-bold text-[#1E331B]">{filteredSeedRows.length} Regions</span>
                 </div>
               </div>
             </div>

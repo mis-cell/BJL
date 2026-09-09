@@ -106,6 +106,10 @@ const EXCEL_SEED_DATA = [
     diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
   },
   {
+    area: "PURNEA (LOOSE)",
+    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
+  },
+  {
     area: "ASSAM",
     diffs: { "M.MID": -2000, BOT: -2100, "B.BOT": -2200, "X.X.BOT": -2350, "X.BOT": -2300 }
   },
@@ -503,10 +507,16 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       lookupAreas.push('SEMI NORTHERN');
     }
 
-    // PURNEA and BIHAR are synonyms under Satta charts matching PURNEA(BIHAR)
+    // PURNEA and BIHAR synonyms under Satta charts matching PURNEA(BIHAR) or PURNEA (LOOSE)
     if (cleanArea.includes('PURNEA') || cleanArea.includes('BIHAR')) {
-      if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
-      if (!lookupAreas.includes('PURNEA (BIHAR)')) lookupAreas.push('PURNEA (BIHAR)');
+      if (cleanArea.includes('LOOSE')) {
+        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.unshift('PURNEA (LOOSE)');
+        if (!lookupAreas.includes('PURNEA LOOSE')) lookupAreas.push('PURNEA LOOSE');
+      } else {
+        if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
+        if (!lookupAreas.includes('PURNEA (BIHAR)')) lookupAreas.push('PURNEA (BIHAR)');
+        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.push('PURNEA (LOOSE)');
+      }
       if (!lookupAreas.includes('PURNEA')) lookupAreas.push('PURNEA');
       if (!lookupAreas.includes('BIHAR')) lookupAreas.push('BIHAR');
     }

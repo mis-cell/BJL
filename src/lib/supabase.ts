@@ -2389,6 +2389,53 @@ if (supabase) {
       `ALTER TABLE IF EXISTS inspection_checklist DISABLE ROW LEVEL SECURITY;`,
       `DO $$
        BEGIN
+         IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='area_master') THEN
+           -- Ensure PURNEA (LOOSE) is seeded
+           IF NOT EXISTS (SELECT 1 FROM area_master WHERE UPPER(TRIM(area_name)) = 'PURNEA (LOOSE)' OR UPPER(TRIM(area_name)) = 'PURNEA LOOSE') THEN
+             INSERT INTO area_master (area_code, area_name) VALUES ('PURNEA_LOOSE', 'PURNEA (LOOSE)');
+           END IF;
+           -- Ensure other standard areas exist
+           INSERT INTO area_master (area_code, area_name)
+           SELECT code, name FROM (VALUES
+             ('DAISEE', 'DAISEE'),
+             ('TULSIHATTA', 'TULSIHATTA'),
+             ('BANGLADESH', 'BANGLADESH'),
+             ('GRP_LOOSE', 'GRP LOOSE'),
+             ('LA_TARABARI', 'L/A TARABARI'),
+             ('U_ASSAM', 'U/ASSAM'),
+             ('KANKI', 'KANKI'),
+             ('RAIGANJ', 'RAIGANJ'),
+             ('DHULIYAAN', 'DHULIYAAN'),
+             ('SAMSI_JUNGLE', 'SAMSI JUNGLE'),
+             ('RAIGANJ_LOOSE', 'RAIGANJ Loose'),
+             ('NORTHERN', 'NORTHERN'),
+             ('GAJAL_LOOSE', 'GAJAL LOOSE'),
+             ('BADURIA', 'BADURIA'),
+             ('BASIRHAT', 'BASIRHAT'),
+             ('GOLABRI_DD', 'GOLABRI D/D'),
+             ('HARIPAL', 'HARIPAL'),
+             ('MAYNA_DS', 'MAYNA D/S'),
+             ('SN_ISLAMPUR', 'S/N ISLAMPUR'),
+             ('SHEORAPHULLY', 'SHEORAPHULLY'),
+             ('GRP_MESTA_LOOSE', 'GRP MESTA LOOSE'),
+             ('PURNEA_BIHAR', 'PURNEA(BIHAR)'),
+             ('PURNEA_LOOSE', 'PURNEA (LOOSE)'),
+             ('ASSAM', 'ASSAM'),
+             ('SN_MESTA', 'S/N MESTA')
+           ) AS t(code, name)
+           WHERE NOT EXISTS (SELECT 1 FROM area_master WHERE UPPER(TRIM(area_master.area_name)) = UPPER(TRIM(t.name)));
+         END IF;
+
+         IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='satta_differentials') THEN
+           INSERT INTO satta_differentials (area, grade, differential)
+           VALUES
+             ('PURNEA (LOOSE)', 'TD5', 100),
+             ('PURNEA (LOOSE)', 'TD6', -300),
+             ('PURNEA (LOOSE)', 'TD7', -700),
+             ('PURNEA (LOOSE)', 'TD8', -1200)
+           ON CONFLICT (area, grade) DO NOTHING;
+         END IF;
+
          IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='purchase_master') THEN
            INSERT INTO "p.o_archive" SELECT * FROM purchase_master WHERE status = 'settled' ON CONFLICT DO NOTHING;
            INSERT INTO po_archive SELECT * FROM purchase_master WHERE status = 'settled' ON CONFLICT DO NOTHING;

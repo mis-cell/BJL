@@ -330,7 +330,6 @@ export default function LegacyLayout({
       icon: ShoppingCart,
       subItems: [
         { id: 'satta', label: 'Satta', icon: Sparkles, pageId: 'satta' },
-        { id: 'satta_chart', label: 'Satta Rate Chart', icon: TrendingUp, pageId: 'satta_chart' },
         { id: 'sms_sauda', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
         { id: 'sauda', label: 'SAUDA', icon: HandCoins, pageId: 'sauda' },
         { id: 'po', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },

@@ -128,6 +128,10 @@ const EXCEL_SEED_DATA = [
   {
     area: "PURNEA(BIHAR)",
     diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
+  },
+  {
+    area: "PURNEA (LOOSE)",
+    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
   }
 ];
 

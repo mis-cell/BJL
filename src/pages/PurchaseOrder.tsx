@@ -156,6 +156,10 @@ const EXCEL_SEED_DATA: AreaDifferential[] = [
     diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
   },
   {
+    area: "PURNEA (LOOSE)",
+    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
+  },
+  {
     area: "ASSAM",
     diffs: { "M.MID": -2000, BOT: -2100, "B.BOT": -2200, "X.X.BOT": -2350, "X.BOT": -2300 }
   },

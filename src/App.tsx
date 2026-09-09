@@ -46,6 +46,7 @@ import {
   Truck,
   ClipboardCheck,
   Wallet,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "./lib/utils";
@@ -1067,8 +1068,7 @@ const allSidebarItems = [
   { id: "reports", label: "Reports", icon: TrendingUp },
   { id: "settings", label: "Config Center", icon: Settings },
   { id: "admindesk", label: "Admin Desk", icon: Lock },
-  { id: "satta", label: "Satta Desk", icon: HandCoins },
-  { id: "satta_chart", label: "Satta Rate Chart", icon: TrendingUp },
+  { id: "satta", label: "Satta", icon: Sparkles },
   { id: "requisition_desk", label: "Requisition Desk", icon: ClipboardList },
   { id: "vyapari", label: "Traders Directory", icon: Users },
   { id: "ai_assistant", label: "Jarves AI 2.0", icon: Bot },
