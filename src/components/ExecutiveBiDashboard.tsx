@@ -56,6 +56,7 @@ import {
   ComposedChart 
 } from 'recharts';
 import { cn } from '../lib/utils';
+import { hasModulePermission } from '../lib/permissions';
 
 function safeStr(val: any, fallback = 'N/A'): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -94,6 +95,8 @@ interface ExecutiveBiDashboardProps {
   onNavigate?: (pageId: string) => void;
   setcurrentTab?: (tab: string) => void;
   currentTab?: string;
+  allowedModules?: string[];
+  isAdmin?: boolean;
 }
 
 export default function ExecutiveBiDashboard({
@@ -114,7 +117,9 @@ export default function ExecutiveBiDashboard({
   onRefresh,
   onNavigate,
   setcurrentTab,
-  currentTab
+  currentTab,
+  allowedModules,
+  isAdmin
 }: ExecutiveBiDashboardProps) {
 
   // Global Filters State (Removed)
@@ -955,380 +960,392 @@ export default function ExecutiveBiDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 w-full min-w-0">
         
         {/* CARD 1: TOTAL SAUDA (SAUDA CHECK POINT) */}
-        <div 
-          onClick={() => onNavigate && onNavigate('po')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Sauda Check Point / Purchase Order"
-        >
-          <div>
-            <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
-                <span>📦</span> Sauda Check Point
-              </span>
-              <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                <Package className="w-3.5 h-3.5 text-emerald-800" />
-              </div>
-            </div>
-
-            {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
-            <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                onClick={() => setSaudaViewMode('all')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  saudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                TOTAL
-              </button>
-              <button
-                type="button"
-                onClick={() => setSaudaViewMode('sauda')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  saudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                SAUDA
-              </button>
-              <button
-                type="button"
-                onClick={() => setSaudaViewMode('ptf')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  saudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                P.T.F
-              </button>
-            </div>
-
-            <div className="my-1.5">
-              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-                {(saudaViewMode === 'ptf' 
-                  ? metrics.scpBreakup.ptf.weightMT 
-                  : saudaViewMode === 'sauda' 
-                    ? metrics.scpBreakup.sauda.weightMT 
-                    : metrics.scpBreakup.total.weightMT
-                ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric flex items-center justify-between">
-                <span>
-                  ₹ {(saudaViewMode === 'ptf' 
-                    ? metrics.scpBreakup.ptf.valueLakhs 
-                    : saudaViewMode === 'sauda' 
-                      ? metrics.scpBreakup.sauda.valueLakhs 
-                      : metrics.scpBreakup.total.valueLakhs
-                  ).toLocaleString('en-IN')} Lakhs
+        {(isAdmin || hasModulePermission('po', allowedModules, isAdmin) || hasModulePermission('sauda', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('po')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to open Sauda Check Point / Purchase Order"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                  <span>📦</span> Sauda Check Point
                 </span>
-                <span className="text-[10px] text-[#556952]">
+                <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                  <Package className="w-3.5 h-3.5 text-emerald-800" />
+                </div>
+              </div>
+
+              {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
+              <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setSaudaViewMode('all')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    saudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  TOTAL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSaudaViewMode('sauda')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    saudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  SAUDA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSaudaViewMode('ptf')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    saudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  P.T.F
+                </button>
+              </div>
+
+              <div className="my-1.5">
+                <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
                   {(saudaViewMode === 'ptf' 
-                    ? metrics.scpBreakup.ptf.count 
+                    ? metrics.scpBreakup.ptf.weightMT 
                     : saudaViewMode === 'sauda' 
-                      ? metrics.scpBreakup.sauda.count 
-                      : metrics.scpBreakup.total.count
-                  )} Contracts
-                </span>
+                      ? metrics.scpBreakup.sauda.weightMT 
+                      : metrics.scpBreakup.total.weightMT
+                  ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric flex items-center justify-between">
+                  <span>
+                    ₹ {(saudaViewMode === 'ptf' 
+                      ? metrics.scpBreakup.ptf.valueLakhs 
+                      : saudaViewMode === 'sauda' 
+                        ? metrics.scpBreakup.sauda.valueLakhs 
+                        : metrics.scpBreakup.total.valueLakhs
+                    ).toLocaleString('en-IN')} Lakhs
+                  </span>
+                  <span className="text-[10px] text-[#556952]">
+                    {(saudaViewMode === 'ptf' 
+                      ? metrics.scpBreakup.ptf.count 
+                      : saudaViewMode === 'sauda' 
+                        ? metrics.scpBreakup.sauda.count 
+                        : metrics.scpBreakup.total.count
+                    )} Contracts
+                  </span>
+                </div>
+              </div>
+
+              {/* Sum Breakup: P.T.F & Sauda & Total */}
+              <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-[#1E331B]">
+                  <span className="font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                    P.T.F:
+                  </span>
+                  <span className="font-extrabold font-numeric text-amber-900">
+                    {metrics.scpBreakup.ptf.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.count} Cont.)</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#1E331B]">
+                  <span className="font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    Sauda:
+                  </span>
+                  <span className="font-extrabold font-numeric text-[#2E6B3E]">
+                    {metrics.scpBreakup.sauda.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.count} Cont.)</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
+                  <span className="font-extrabold">Total:</span>
+                  <span className="font-extrabold font-numeric text-[#1E331B]">
+                    {metrics.scpBreakup.total.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.count} Total)</span>
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Sum Breakup: P.T.F & Sauda & Total */}
-            <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between text-[#1E331B]">
-                <span className="font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                  P.T.F:
-                </span>
-                <span className="font-extrabold font-numeric text-amber-900">
-                  {metrics.scpBreakup.ptf.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.count} Cont.)</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[#1E331B]">
-                <span className="font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  Sauda:
-                </span>
-                <span className="font-extrabold font-numeric text-[#2E6B3E]">
-                  {metrics.scpBreakup.sauda.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.count} Cont.)</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
-                <span className="font-extrabold">Total:</span>
-                <span className="font-extrabold font-numeric text-[#1E331B]">
-                  {metrics.scpBreakup.total.weightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.count} Total)</span>
-                </span>
-              </div>
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>Open Sauda Check Point</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Open Sauda Check Point</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
         {/* CARD 2: PENDING SAUDA */}
-        <div 
-          onClick={() => onNavigate && onNavigate('po')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Pending Saudas in Check Point"
-        >
-          <div>
-            <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
-                <span>⏳</span> Pending Sauda
-              </span>
-              <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                <Clock className="w-3.5 h-3.5 text-emerald-800" />
-              </div>
-            </div>
-
-            {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
-            <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
-              <button
-                type="button"
-                onClick={() => setPendingSaudaViewMode('all')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  pendingSaudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                TOTAL
-              </button>
-              <button
-                type="button"
-                onClick={() => setPendingSaudaViewMode('sauda')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  pendingSaudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                SAUDA
-              </button>
-              <button
-                type="button"
-                onClick={() => setPendingSaudaViewMode('ptf')}
-                className={cn(
-                  "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
-                  pendingSaudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
-                )}
-              >
-                P.T.F
-              </button>
-            </div>
-
-            <div className="my-1.5">
-              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-                {(pendingSaudaViewMode === 'ptf' 
-                  ? metrics.scpBreakup.ptf.pendingWeightMT 
-                  : pendingSaudaViewMode === 'sauda' 
-                    ? metrics.scpBreakup.sauda.pendingWeightMT 
-                    : metrics.scpBreakup.total.pendingWeightMT
-                ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric flex items-center justify-between">
-                <span>
-                  ₹ {(pendingSaudaViewMode === 'ptf' 
-                    ? metrics.scpBreakup.ptf.pendingValueLakhs 
-                    : pendingSaudaViewMode === 'sauda' 
-                      ? metrics.scpBreakup.sauda.pendingValueLakhs 
-                      : metrics.scpBreakup.total.pendingValueLakhs
-                  ).toLocaleString('en-IN')} L
+        {(isAdmin || hasModulePermission('sauda', allowedModules, isAdmin) || hasModulePermission('sms_sauda', allowedModules, isAdmin) || hasModulePermission('po', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('po')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to view Pending Saudas in Check Point"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                  <span>⏳</span> Pending Sauda
                 </span>
-                <span className="text-[10px] text-[#556952]">
+                <div className="p-1.5 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                  <Clock className="w-3.5 h-3.5 text-emerald-800" />
+                </div>
+              </div>
+
+              {/* Sub-view switcher: TOTAL / SAUDA / P.T.F */}
+              <div className="flex items-center gap-1 bg-[#F4F0E4] p-0.5 rounded-lg mb-2 text-[10px] font-bold" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setPendingSaudaViewMode('all')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    pendingSaudaViewMode === 'all' ? "bg-[#1E331B] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  TOTAL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingSaudaViewMode('sauda')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    pendingSaudaViewMode === 'sauda' ? "bg-[#2E6B3E] text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  SAUDA
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingSaudaViewMode('ptf')}
+                  className={cn(
+                    "flex-1 py-0.5 rounded text-center transition-all cursor-pointer",
+                    pendingSaudaViewMode === 'ptf' ? "bg-amber-800 text-white shadow-xs" : "text-[#556952] hover:text-[#1E331B]"
+                  )}
+                >
+                  P.T.F
+                </button>
+              </div>
+
+              <div className="my-1.5">
+                <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
                   {(pendingSaudaViewMode === 'ptf' 
-                    ? metrics.scpBreakup.ptf.pendingCount 
+                    ? metrics.scpBreakup.ptf.pendingWeightMT 
                     : pendingSaudaViewMode === 'sauda' 
-                      ? metrics.scpBreakup.sauda.pendingCount 
-                      : metrics.scpBreakup.total.pendingCount
-                  )} Pending
-                </span>
+                      ? metrics.scpBreakup.sauda.pendingWeightMT 
+                      : metrics.scpBreakup.total.pendingWeightMT
+                  ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-[11px] text-amber-800 font-bold mt-0.5 font-numeric flex items-center justify-between">
+                  <span>
+                    ₹ {(pendingSaudaViewMode === 'ptf' 
+                      ? metrics.scpBreakup.ptf.pendingValueLakhs 
+                      : pendingSaudaViewMode === 'sauda' 
+                        ? metrics.scpBreakup.sauda.pendingValueLakhs 
+                        : metrics.scpBreakup.total.pendingValueLakhs
+                    ).toLocaleString('en-IN')} L
+                  </span>
+                  <span className="text-[10px] text-[#556952]">
+                    {(pendingSaudaViewMode === 'ptf' 
+                      ? metrics.scpBreakup.ptf.pendingCount 
+                      : pendingSaudaViewMode === 'sauda' 
+                        ? metrics.scpBreakup.sauda.pendingCount 
+                        : metrics.scpBreakup.total.pendingCount
+                    )} Pending
+                  </span>
+                </div>
+              </div>
+
+              {/* Sum Breakup: P.T.F & Sauda & Total */}
+              <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between text-[#1E331B]">
+                  <span className="font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                    P.T.F:
+                  </span>
+                  <span className="font-extrabold font-numeric text-amber-900">
+                    {metrics.scpBreakup.ptf.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.pendingCount} Pend.)</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#1E331B]">
+                  <span className="font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    Sauda:
+                  </span>
+                  <span className="font-extrabold font-numeric text-[#2E6B3E]">
+                    {metrics.scpBreakup.sauda.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.pendingCount} Pend.)</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
+                  <span className="font-extrabold">Total:</span>
+                  <span className="font-extrabold font-numeric text-[#1E331B]">
+                    {metrics.scpBreakup.total.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.pendingCount} Total)</span>
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Sum Breakup: P.T.F & Sauda & Total */}
-            <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between text-[#1E331B]">
-                <span className="font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                  P.T.F:
-                </span>
-                <span className="font-extrabold font-numeric text-amber-900">
-                  {metrics.scpBreakup.ptf.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.ptf.pendingCount} Pend.)</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[#1E331B]">
-                <span className="font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  Sauda:
-                </span>
-                <span className="font-extrabold font-numeric text-[#2E6B3E]">
-                  {metrics.scpBreakup.sauda.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.sauda.pendingCount} Pend.)</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[#1E331B] pt-0.5 border-t border-dashed border-[#E5DEC9]">
-                <span className="font-extrabold">Total:</span>
-                <span className="font-extrabold font-numeric text-[#1E331B]">
-                  {metrics.scpBreakup.total.pendingWeightMT.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="font-normal text-[#556952]">({metrics.scpBreakup.total.pendingCount} Total)</span>
-                </span>
-              </div>
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>View Pending Sauda</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>View Pending Sauda</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
         {/* CARD 3: TOTAL PAYMENT */}
-        <div 
-          onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Payment Module (Payable Net Amount)"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
-              <span>💳</span> Total Payment
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-              <Coins className="w-4 h-4 text-emerald-800" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
-            </div>
-            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
-              Payable Net Amount (₹)
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+        {(isAdmin || hasModulePermission('payment', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('payment')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to open Payment Module (Payable Net Amount)"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Payment Records</span>
-              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.totalPaymentCount} Vouchers</span>
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
+                <span>💳</span> Total Payment
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Coins className="w-4 h-4 text-emerald-800" />
+              </div>
+            </div>
+
+            <div className="my-2.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                ₹ {metrics.totalPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              </div>
+              <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
+                Payable Net Amount (₹)
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[#1E331B] font-bold">Payment Records</span>
+                <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.totalPaymentCount} Vouchers</span>
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>Open Payment Module</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Open Payment Module</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
         {/* CARD 4: ADVANCE PAYMENT (PAID AMOUNT) */}
-        <div 
-          onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Paid Amount (Advance / Disbursed)"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
-              <span>💸</span> Advance Payment
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-              <Wallet className="w-4 h-4 text-emerald-800" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
-            </div>
-            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
-              Paid Amount (₹)
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+        {(isAdmin || hasModulePermission('payment', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('payment')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to view Paid Amount (Advance / Disbursed)"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
-              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.paidVouchersCount} Vouchers</span>
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
+                <span>💸</span> Advance Payment
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Wallet className="w-4 h-4 text-emerald-800" />
+              </div>
+            </div>
+
+            <div className="my-2.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                ₹ {metrics.advancePaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              </div>
+              <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5">
+                Paid Amount (₹)
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[#1E331B] font-bold">Adjusted / Paid</span>
+                <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.paidVouchersCount} Vouchers</span>
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>View Advance Vouchers</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>View Advance Vouchers</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
         {/* CARD 5: REST PAYMENT (PENDING AMOUNT) */}
-        <div 
-          onClick={() => onNavigate && onNavigate('payment')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to view Pending Amount Balance"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
-              <span>⚖️</span> Rest Payment
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-              <Scale className="w-4 h-4 text-emerald-800" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
-            </div>
-            <div className="text-[11px] text-rose-800 font-bold mt-0.5">
-              Pending Amount (₹)
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+        {(isAdmin || hasModulePermission('payment', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('payment')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to view Pending Amount Balance"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Net Due Payment</span>
-              <span className="text-rose-800 font-bold font-numeric">{metrics.pendingVouchersCount} Pending</span>
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
+                <span>⚖️</span> Rest Payment
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Scale className="w-4 h-4 text-emerald-800" />
+              </div>
+            </div>
+
+            <div className="my-2.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                ₹ {metrics.restPaymentLakhs.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs font-sans font-semibold text-[#556952]">Lakhs</span>
+              </div>
+              <div className="text-[11px] text-rose-800 font-bold mt-0.5">
+                Pending Amount (₹)
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[#1E331B] font-bold">Net Due Payment</span>
+                <span className="text-rose-800 font-bold font-numeric">{metrics.pendingVouchersCount} Pending</span>
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>View Outstanding Dues</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>View Outstanding Dues</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
         {/* CARD 6: GODOWN STOCK (FROM STOCK INVENTORY: CURRENT STOCK BALANCE & WEIGHT) */}
-        <div 
-          onClick={() => onNavigate && onNavigate('stock')}
-          className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
-          title="Click to open Stock Inventory (Current Stock Balance & Weight)"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
-              <span>🏢</span> Godown Stock
-            </span>
-            <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-              <Warehouse className="w-4 h-4 text-emerald-800" />
-            </div>
-          </div>
-
-          <div className="my-2.5">
-            <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
-              {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
-            </div>
-            <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
-              {metrics.godownStockBales.toLocaleString('en-IN')} Bales
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+        {(isAdmin || hasModulePermission('closing_stock', allowedModules, isAdmin) || hasModulePermission('bardana', allowedModules, isAdmin) || hasModulePermission('issue', allowedModules, isAdmin)) && (
+          <div 
+            onClick={() => onNavigate && onNavigate('stock')}
+            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            title="Click to open Stock Inventory (Current Stock Balance & Weight)"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[#1E331B] font-bold">Current Stock Balance</span>
-              <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.godownStockBales.toLocaleString('en-IN')} Bales</span>
+              <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1.5">
+                <span>🏢</span> Godown Stock
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
+                <Warehouse className="w-4 h-4 text-emerald-800" />
+              </div>
+            </div>
+
+            <div className="my-2.5">
+              <div className="text-2xl font-numeric font-extrabold text-[#1E331B] tracking-tight">
+                {metrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+              </div>
+              <div className="text-[11px] text-[#2E6B3E] font-bold mt-0.5 font-numeric">
+                {metrics.godownStockBales.toLocaleString('en-IN')} Bales
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#F2EDE0] text-[10px] space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[#1E331B] font-bold">Current Stock Balance</span>
+                <span className="text-[#2E6B3E] font-bold font-numeric">{metrics.godownStockBales.toLocaleString('en-IN')} Bales</span>
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+              <span>Open Stock Inventory</span>
+              <span className="text-xs font-bold">→</span>
             </div>
           </div>
-
-          <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[10px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-            <span>Open Stock Inventory</span>
-            <span className="text-xs font-bold">→</span>
-          </div>
-        </div>
+        )}
 
       </div>
 

@@ -1402,6 +1402,8 @@ export default function Dashboard({
       title="P.O Automation" 
       subtitle="Operational Hub"
       activeNavTab={currentTab === 'reports' ? 'reports' : 'dashboard'}
+      allowedModules={allowedModules}
+      isAdmin={isAdmin}
       onNavClick={(pageId) => {
         if (pageId === 'reports') {
           setCurrentTab('reports');
@@ -1494,6 +1496,8 @@ export default function Dashboard({
             onNavigate={onNavigate}
             setcurrentTab ={setCurrentTab}
             currentTab = {currentTab}
+            allowedModules={allowedModules}
+            isAdmin={isAdmin}
           />
         )}
 

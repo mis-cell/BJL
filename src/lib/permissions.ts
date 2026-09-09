@@ -544,10 +544,10 @@ let currentUserContext: UserContext = {
   userId: 'default_operator',
   userName: 'Operator',
   username: 'Operator',
-  userRole: 'ADMIN',
-  userLevel: 'L5',
-  allowedModules: ['*'],
-  permissions: ['ALL', 'EDIT', 'DELETE', 'VIEW'],
+  userRole: 'USER',
+  userLevel: 'L1',
+  allowedModules: [],
+  permissions: ['VIEW'],
 };
 
 // Listeners for live permission change notifications
@@ -598,6 +598,9 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
             console.error("Error in permission listener:", err);
           }
         });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail: currentUserContext }));
+        }
       } finally {
         isNotifyingListeners = false;
       }
@@ -606,7 +609,7 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
 }
 
 export function getCurrentUserContext(): UserContext {
-  if (typeof window !== 'undefined' && (!currentUserContext.allowedModules || currentUserContext.allowedModules.length === 0)) {
+  if (typeof window !== 'undefined') {
     try {
       const saved = window.localStorage.getItem('bally_user_context');
       if (saved) {
@@ -615,7 +618,7 @@ export function getCurrentUserContext(): UserContext {
           currentUserContext = {
             ...currentUserContext,
             ...parsed,
-            allowedModules: normalizeAllowedModules(parsed.allowedModules || parsed.allowed_modules || ['*']),
+            allowedModules: normalizeAllowedModules(parsed.allowedModules || parsed.allowed_modules || []),
           };
         }
       }
@@ -644,8 +647,13 @@ export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
     allowed = normalizeAllowedModules(ctx?.allowedModules || []);
   }
 
-  if (allowed.includes('*')) return true;
-  return role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
+  // If specific modules are assigned and '*' is NOT included, the user is NOT an admin with global bypass
+  if (allowed.length > 0 && !allowed.includes('*')) {
+    return false;
+  }
+
+  const isRoleAdmin = role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
+  return isRoleAdmin || allowed.includes('*');
 }
 
 export function isL5OrAdmin(): boolean {
@@ -694,18 +702,24 @@ export function canAccess(
   if (!targetModuleOrPage) return true;
 
   const ctx = getCurrentUserContext();
-  const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
-  if (isAdmin) return true;
-
   const rawAllowed = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
 
   const cleanAllowed = normalizeAllowedModules(rawAllowed);
-  if (cleanAllowed.includes('*') || cleanAllowed.length === 0) return true;
 
-  const canonicalTarget = getCanonicalModuleId(targetModuleOrPage);
-  return cleanAllowed.includes(canonicalTarget);
+  // If specific modules are passed (e.g. ['dashboard', 'sms_sauda', 'sauda']), enforce them strictly!
+  if (cleanAllowed.length > 0) {
+    if (cleanAllowed.includes('*')) return true;
+    const canonicalTarget = getCanonicalModuleId(targetModuleOrPage);
+    return cleanAllowed.includes(canonicalTarget);
+  }
+
+  // If no allowed modules were provided, fallback to admin check
+  const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin(ctx);
+  if (isAdmin) return true;
+
+  return false;
 }
 
 // Alias hasModulePermission to canAccess for seamless backwards compatibility

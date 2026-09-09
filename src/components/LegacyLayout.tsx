@@ -176,8 +176,12 @@ export default function LegacyLayout({
     };
   }, []);
 
-  const effectiveAllowedModules = propAllowedModules || userContext.allowedModules || ['*'];
-  const effectiveIsAdmin = propIsAdmin !== undefined ? propIsAdmin : isUserAdmin(userContext);
+  const effectiveAllowedModules = propAllowedModules !== undefined
+    ? propAllowedModules
+    : (userContext.allowedModules || []);
+  const effectiveIsAdmin = propIsAdmin !== undefined
+    ? propIsAdmin
+    : isUserAdmin(userContext);
 
   const currentUser = userContext.username || userContext.userName || "Operator";
 
