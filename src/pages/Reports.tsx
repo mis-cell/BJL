@@ -150,7 +150,7 @@ function getAreaCoordinates(areaName: string): { lat: number; lng: number } {
 }
 
 export default function Reports({ onClose }: { onClose?: () => void }) {
-  const [reportType, setReportType] = useState<'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics'>('po_summary');
+  const [reportType, setReportType] = useState<'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report'>('po_summary');
   const [mapMode, setMapMode] = useState<'street' | 'voyager' | 'cyber'>('street');
   const [sourcingGroupMode, setSourcingGroupMode] = useState<'area' | 'agency' | 'both'>('agency');
   const [center, setCenter] = useState<[number, number]>([24.5, 84.5]);
@@ -1634,7 +1634,7 @@ export default function Reports({ onClose }: { onClose?: () => void }) {
 
 
   return (
-    <LegacyLayout >
+    <LegacyLayout title="Reports & Analytics" onClose={onClose}>
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
         <div className="flex flex-wrap items-end gap-1 px-2 pt-1 bg-green-800 border-b-2 border-green-950">

@@ -364,7 +364,7 @@ export function canViewCompletedData(): boolean {
  */
 export function hasModulePermission(
   targetModuleOrPage: string,
-  allowedModulesOverride?: string[],
+  allowedModulesOverride?: string[] | string,
   isAdminOverride?: boolean
 ): boolean {
   if (!targetModuleOrPage) return false;
@@ -373,14 +373,21 @@ export function hasModulePermission(
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return true;
 
-  const allowedList = allowedModulesOverride !== undefined
+  const rawList = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
 
-  if (allowedList.includes('*')) return true;
+  const cleanAllowed = (
+    Array.isArray(rawList)
+      ? rawList
+      : typeof rawList === 'string'
+        ? String(rawList).split(',')
+        : []
+  ).map((m) => String(m).toLowerCase().trim()).filter(Boolean);
+
+  if (cleanAllowed.includes('*')) return true;
 
   const target = targetModuleOrPage.toLowerCase().trim();
-  const cleanAllowed = allowedList.map((m) => m.toLowerCase().trim()).filter(Boolean);
 
   // 1. Direct match
   if (cleanAllowed.includes(target)) {
@@ -416,7 +423,7 @@ export function hasModulePermission(
  */
 export function filterMenuByPermissions<T extends { id: string; pageId?: string; subItems?: any[] }>(
   menus: T[],
-  allowedModulesOverride?: string[],
+  allowedModulesOverride?: string[] | string,
   isAdminOverride?: boolean
 ): T[] {
   const result: T[] = [];
@@ -452,38 +459,45 @@ export function filterMenuByPermissions<T extends { id: string; pageId?: string;
  * Determine the default/first landing page for a user based on their allowed modules.
  */
 export function getFirstAllowedPage(
-  allowedModulesOverride?: string[],
+  allowedModulesOverride?: string[] | string,
   isAdminOverride?: boolean
 ): string {
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return 'dashboard';
 
   const ctx = getCurrentUserContext();
-  const allowedList = allowedModulesOverride !== undefined
+  const rawList = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
+
+  const allowedList = (
+    Array.isArray(rawList)
+      ? rawList
+      : typeof rawList === 'string'
+        ? String(rawList).split(',')
+        : []
+  ).map((m) => String(m).toLowerCase().trim()).filter(Boolean);
 
   if (allowedList.includes('*')) return 'dashboard';
   if (hasModulePermission('dashboard', allowedList, false)) return 'dashboard';
 
   // Find the first registered module that is permitted
   for (const mod of ALL_SYSTEM_MODULES) {
-    if (hasModulePermission(mod.id, allowedList, false)) {
+    if (mod.id !== 'dashboard' && hasModulePermission(mod.id, allowedList, false)) {
       return mod.pageId;
     }
   }
 
-  // If nothing matched, check if any string in allowedList matches a page
-  if (allowedList.length > 0) {
-    const first = allowedList[0].trim();
-    if (first && first !== '*') {
-      const found = ALL_SYSTEM_MODULES.find(m => m.id === first || m.aliases.includes(first));
+  // If nothing matched in ALL_SYSTEM_MODULES, check if any item in allowedList matches a page
+  for (const item of allowedList) {
+    if (item && item !== '*') {
+      const found = ALL_SYSTEM_MODULES.find(m => m.id === item || m.aliases.includes(item));
       if (found) return found.pageId;
-      return first;
     }
   }
 
-  return 'sauda';
+  // Universal safe fallback is ALWAYS dashboard, NEVER 'sauda'
+  return 'dashboard';
 }
 
 /**
