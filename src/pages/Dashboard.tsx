@@ -52,7 +52,7 @@ import { Mail,
   ClipboardCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { getCurrentUserContext } from '../lib/permissions';
+import { getCurrentUserContext, hasModulePermission } from '../lib/permissions';
 import LegacyLayout, { LegacyFieldset } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
@@ -1170,14 +1170,8 @@ export default function Dashboard({
     }
   ];
 
-  const isModuleAllowed = (id: string) => {
-    if (id === 'admindesk' || id === 'sms_sauda') return true;
-    if (!allowedModules) return true;
-    if (allowedModules.includes('*')) return true;
-    if (isAdmin) return true;
-    if (id === 'final_po' && allowedModules.includes('po')) return true;
-    if (id === 'sms_sauda' && allowedModules.includes('sauda')) return true;
-    return allowedModules.includes(id);
+  const isModuleAllowed = (id: string, altId?: string) => {
+    return hasModulePermission(id, allowedModules, isAdmin) || (altId ? hasModulePermission(altId, allowedModules, isAdmin) : false);
   };
 
   const dashboardSections = [
@@ -1515,51 +1509,66 @@ export default function Dashboard({
 
               {!isAdmin ? (
                 <div className="space-y-4">
-                  <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl shadow-xs p-2 flex flex-wrap gap-2 w-full justify-start items-center">
-                    {dashboardSections.filter(section => section.title !== "System Administration").map((section, secIdx) => {
-                      const allowedItems = section.items.filter(item => isModuleAllowed(item.mappedId));
-                      if (allowedItems.length === 0) return null;
-                      return (
-                        <button 
-                          key={secIdx} 
-                          onClick={() => setActiveSectionIndex(secIdx)}
-                          className={cn(
-                            "px-4 py-2 border font-bold text-[10px] uppercase tracking-widest rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer",
-                            activeSectionIndex === secIdx
-                              ? "bg-[#1E331B] border-[#1E331B] text-[#FAF7F0] shadow-xs"
-                              : "bg-[#FAF7F0] hover:bg-[#EAE2D2] border-[#D6CAA8] text-[#5A6E54] hover:text-[#1E331B]"
-                          )}
-                        >
-                          <Layers className="h-3.5 w-3.5" />
-                          {section.title}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Selected Section Content */}
                   {(() => {
-                    const filteredSections = dashboardSections.filter(section => section.title !== "System Administration");
-                    const activeSection = filteredSections[activeSectionIndex] || filteredSections[0];
-                    if (!activeSection) return null;
-                    const allowedItems = activeSection.items.filter(item => isModuleAllowed(item.mappedId));
-                    if (allowedItems.length === 0) return null;
-                    
-                    return (
-                      <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="bg-gradient-to-r from-[#1C3119] to-[#2A4426] text-[#FAF7F0] px-5 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#314E28]">
-                          <div>
-                            <h2 className="text-xs font-black uppercase tracking-wider italic flex items-center gap-2 text-[#E2EDDE]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                              {activeSection.title}
-                            </h2>
-                            <p className="text-[10px] text-[#A2C49D] font-bold uppercase tracking-wider mt-0.5 font-sans">
-                              {activeSection.desc}
-                            </p>
-                          </div>
+                    const permittedSections = dashboardSections
+                      .filter(section => section.title !== "System Administration")
+                      .map(section => ({
+                        ...section,
+                        allowedItems: section.items.filter(item => isModuleAllowed(item.mappedId, item.id))
+                      }))
+                      .filter(section => section.allowedItems.length > 0);
+
+                    if (permittedSections.length === 0) {
+                      return (
+                        <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-8 text-center text-[#5A6E54]">
+                          <p className="text-sm font-semibold">No dashboard modules are currently assigned to your account.</p>
+                          <p className="text-xs text-[#5A6E54]/80 mt-1">Please contact your system administrator to assign module access.</p>
                         </div>
-                        <div className="p-5 bg-[#F4EFE6]/50">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      );
+                    }
+
+                    const safeActiveIndex = Math.min(activeSectionIndex, permittedSections.length - 1);
+                    const activeSection = permittedSections[safeActiveIndex] || permittedSections[0];
+                    const allowedItems = activeSection.allowedItems;
+
+                    return (
+                      <>
+                        <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl shadow-xs p-2 flex flex-wrap gap-2 w-full justify-start items-center">
+                          {permittedSections.map((section, secIdx) => (
+                            <button 
+                              key={secIdx} 
+                              onClick={() => setActiveSectionIndex(secIdx)}
+                              className={cn(
+                                "px-4 py-2 border font-bold text-[10px] uppercase tracking-widest rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer",
+                                safeActiveIndex === secIdx
+                                  ? "bg-[#1E331B] border-[#1E331B] text-[#FAF7F0] shadow-xs"
+                                  : "bg-[#FAF7F0] hover:bg-[#EAE2D2] border-[#D6CAA8] text-[#5A6E54] hover:text-[#1E331B]"
+                              )}
+                            >
+                              <Layers className="h-3.5 w-3.5" />
+                              {section.title}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Selected Section Content */}
+                        <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          <div className="bg-gradient-to-r from-[#1C3119] to-[#2A4426] text-[#FAF7F0] px-5 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#314E28]">
+                            <div>
+                              <h2 className="text-xs font-black uppercase tracking-wider italic flex items-center gap-2 text-[#E2EDDE]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                {activeSection.title}
+                              </h2>
+                              <p className="text-[10px] text-[#A2C49D] font-bold uppercase tracking-wider mt-0.5 font-sans">
+                                {activeSection.desc}
+                              </p>
+                            </div>
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-widest bg-[#274024] text-[#E2EDDE] border border-[#486343] px-2.5 py-0.5 rounded-md">
+                              {allowedItems.length} PERMITTED MODULES
+                            </span>
+                          </div>
+                          <div className="p-5 bg-[#F4EFE6]/50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {allowedItems.map((item, itemIdx) => {
                               const stepItem = Object.values(processSteps).find(s => s.id === item.id) || 
                                               { step: '00', label: item.label, desc: item.desc, start: '#2e7d32', end: '#1b5e20' };
@@ -1651,12 +1660,14 @@ export default function Dashboard({
                           </div>
                         </div>
                       </div>
+                      </>
                     );
                   })()}
                 </div>
               ) : (
                 dashboardSections.filter(section => isAdmin || section.title !== "System Administration").map((section, secIdx) => {
-                  const allowedItems = section.items.filter(item => isModuleAllowed(item.mappedId));
+                  const allowedItems = section.items.filter(item => isModuleAllowed(item.mappedId, item.id));
+                  if (!isAdmin && allowedItems.length === 0) return null;
                   
                   return (
                     <div key={secIdx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl shadow-xs overflow-hidden">

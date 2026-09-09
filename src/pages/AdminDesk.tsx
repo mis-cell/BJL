@@ -55,7 +55,7 @@ import LegacyLayout, {
 } from "../components/LegacyLayout";
 import Papa from "papaparse";
 import { cn, canDeleteData } from "../lib/utils";
-import { getCurrentUserContext } from "../lib/permissions";
+import { getCurrentUserContext, ALL_SYSTEM_MODULES, broadcastPermissionsUpdated } from "../lib/permissions";
 
 // Import our beautiful modular material design subpages
 import DashboardTab from "../components/material/DashboardTab";
@@ -1177,6 +1177,17 @@ export default function AdminDesk({
         window.dispatchEvent(new CustomEvent("app-data-updated", { detail: { table: selectedTable.name } }));
       }
 
+      // If user_master updated, broadcast live permission changes
+      if (selectedTable.name === "user_master") {
+        broadcastPermissionsUpdated({
+          userId: cleanedRow.user_id || rowToSave.user_id,
+          username: cleanedRow.username || rowToSave.username,
+          allowed_modules: cleanedRow.allowed_modules !== undefined ? cleanedRow.allowed_modules : rowToSave.allowed_modules,
+          role: cleanedRow.role || rowToSave.role,
+          level: cleanedRow.level || rowToSave.level,
+        });
+      }
+
       // Update local data state immediately
       setData((prev) => {
         if (isNew) {
@@ -1629,43 +1640,21 @@ export default function AdminDesk({
     }
 
     if (col === "allowed_modules") {
-      const allModulesList = [
-        { id: 'sauda', label: 'Sauda Desk' },
-        { id: 'po', label: 'Sauda Check Point' },
-        { id: 'amad', label: 'Arrival / Amad' },
-        { id: 'inspection', label: 'MILL INSPECTION' },
-        { id: 'material_inspection', label: 'INSPECTION CHECKLIST' },
-        { id: 'mismatch', label: 'Mismatch Case' },
-        { id: 'club_po_mr', label: 'Club P.O & M.R' },
-        { id: 'mr_settlement', label: 'M.R. Settlement' },
-        { id: 'issue', label: 'Material Issue' },
-        { id: 'bardana', label: 'Godown Master' },
-        { id: 'ledger', label: 'Accounting / Ledger' },
-        { id: 'closing_stock', label: 'Stock Inventory' },
-        { id: 'reports', label: 'Reports' },
-        { id: 'satta', label: 'Satta Desk' },
-        { id: 'satta_chart', label: 'Satta Chart' },
-        { id: 'ai_assistant', label: 'Jarves AI 2.0' },
-        { id: 'weight_bridge', label: '4.4 – Weight Bridge (Overall)' },
-        { id: 'wb_view_dashboard', label: 'WB: View Dashboards' },
-        { id: 'wb_stage1_create', label: 'WB: Create Stage 1' },
-        { id: 'wb_stage2_create', label: 'WB: Complete Stage 2' },
-        { id: 'wb_stage3_create', label: 'WB: Complete Stage 3' },
-        { id: 'wb_view_final', label: 'WB: View Final Weight' },
-      ];
+      const allModulesList = ALL_SYSTEM_MODULES;
 
       const currentVal = (String(val) || "").trim();
       const isAll = currentVal === "*";
       const selectedList = isAll 
         ? allModulesList.map(m => m.id) 
-        : currentVal.split(",").map(s => s.trim()).filter(Boolean);
+        : currentVal.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
       const handleToggle = (id: string) => {
+        const lowerId = id.toLowerCase();
         let newList: string[];
-        if (selectedList.includes(id)) {
-          newList = selectedList.filter(x => x !== id);
+        if (selectedList.includes(lowerId)) {
+          newList = selectedList.filter(x => x !== lowerId);
         } else {
-          newList = [...selectedList, id];
+          newList = [...selectedList, lowerId];
         }
         const valToSave = newList.length === allModulesList.length ? "*" : newList.join(",");
         setEditingRow((prev: any) => ({ ...prev, [col]: valToSave }));
@@ -1679,41 +1668,119 @@ export default function AdminDesk({
         }
       };
 
+      const handleApplyPreset = (presetModules: string[]) => {
+        const valToSave = presetModules.join(",");
+        setEditingRow((prev: any) => ({ ...prev, [col]: valToSave }));
+      };
+
+      // Group modules by category for pristine scannability
+      const categories = Array.from(new Set(allModulesList.map(m => m.category)));
+
       return (
-        <div className="border border-slate-300 p-2.5 rounded bg-slate-50 space-y-2 max-h-[140px] overflow-y-auto w-full text-left font-sans shadow-inner col-span-2">
-          <div className="flex items-center gap-2 pb-1.5 border-b border-slate-200">
-            <input
- name="checkbox" aria-label="checkbox"              type="checkbox"
-              id="module-all"
-              checked={isAll}
-              onChange={handleToggleAll}
-              className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-600"
-            />
-            <label htmlFor="module-all" className="text-xs font-black text-indigo-950 uppercase cursor-pointer ">
-              ★ * (Full Access to All Modules)
-            </label>
+        <div className="border border-slate-300 p-3 rounded-lg bg-slate-50 space-y-3 max-h-[320px] overflow-y-auto w-full text-left font-sans shadow-inner col-span-2">
+          {/* Quick Select Presets Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <input
+                name="checkbox"
+                aria-label="Full access"
+                type="checkbox"
+                id="module-all"
+                checked={isAll}
+                onChange={handleToggleAll}
+                className="rounded text-emerald-700 focus:ring-emerald-600 h-4 w-4 cursor-pointer accent-emerald-700"
+              />
+              <label htmlFor="module-all" className="text-xs font-black text-emerald-950 uppercase cursor-pointer">
+                ★ * (Full Access to All Modules)
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Presets:</span>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(['sauda'])}
+                className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-amber-300"
+              >
+                Sauda Only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(['main_gate'])}
+                className="px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-blue-300"
+              >
+                Main Gate Only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(['sms_sauda'])}
+                className="px-2 py-0.5 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-purple-300"
+              >
+                SMS Only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPreset(['sauda', 'main_gate', 'sms_sauda'])}
+                className="px-2 py-0.5 bg-teal-100 hover:bg-teal-200 text-teal-900 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-teal-300"
+              >
+                Sauda + Gate + SMS
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingRow((prev: any) => ({ ...prev, [col]: "" }))}
+                className="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-[10px] font-bold uppercase transition-colors cursor-pointer border border-rose-300"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1">
-            {allModulesList.map((item) => {
-              const isChecked = isAll || selectedList.includes(item.id);
+
+          {/* Current Selection Summary */}
+          <div className="bg-white border border-slate-200 p-2 rounded text-[11px] text-slate-700 flex items-center justify-between">
+            <span className="font-semibold text-slate-600">
+              Active Permissions: <strong className="text-emerald-800 font-mono">{isAll ? "FULL ACCESS (*)" : `${selectedList.length} permitted module(s)`}</strong>
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              DB Value: {currentVal || "(none)"}
+            </span>
+          </div>
+
+          {/* Grouped Categorized Checkboxes */}
+          <div className="space-y-3">
+            {categories.map((category) => {
+              const items = allModulesList.filter(m => m.category === category);
               return (
-                <div key={item.id} className="flex items-center gap-1.5">
-                  <input
- name="checkbox" aria-label="checkbox"                    type="checkbox"
-                    id={`module-${item.id}`}
-                    checked={isChecked}
-                    disabled={isAll}
-                    onChange={() => handleToggle(item.id)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-600 disabled:opacity-50"
-                  />
-                  <label
-                    htmlFor={`module-${item.id}`}
-                    className={`text-[10px] font-bold uppercase truncate cursor-pointer  ${
-                      isAll ? 'text-slate-400' : 'text-slate-700 hover:text-slate-900'
-                    }`}
-                  >
-                    {item.label}
-                  </label>
+                <div key={category} className="bg-white border border-slate-200 rounded-md p-2.5 shadow-xs">
+                  <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 pb-1 border-b border-slate-100">
+                    {category}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                    {items.map((item) => {
+                      const isChecked = isAll || selectedList.includes(item.id.toLowerCase());
+                      return (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <input
+                            name="checkbox"
+                            aria-label={item.label}
+                            type="checkbox"
+                            id={`module-${item.id}`}
+                            checked={isChecked}
+                            disabled={isAll}
+                            onChange={() => handleToggle(item.id)}
+                            className="rounded text-emerald-700 focus:ring-emerald-600 h-3.5 w-3.5 cursor-pointer accent-emerald-700 disabled:opacity-50"
+                          />
+                          <label
+                            htmlFor={`module-${item.id}`}
+                            className={`text-[11px] font-semibold tracking-tight truncate cursor-pointer ${
+                              isAll ? 'text-slate-400' : isChecked ? 'text-emerald-950 font-bold' : 'text-slate-700 hover:text-slate-900'
+                            }`}
+                          >
+                            {item.label}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}

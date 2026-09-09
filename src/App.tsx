@@ -82,7 +82,7 @@ import RequisitionDesk from "./pages/RequisitionDesk";
 import PaymentModule from "./pages/PaymentModule";
 import LorryDispatchSystem from "./pages/LorryDispatchSystem";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
-import { setCurrentUserContext, getCurrentUserContext } from "./lib/permissions";
+import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions } from "./lib/permissions";
 
 import { supabase } from "./lib/supabase";
 
@@ -1070,6 +1070,7 @@ const allSidebarItems = [
   { id: "satta", label: "Satta Desk", icon: HandCoins },
   { id: "satta_chart", label: "Satta Rate Chart", icon: TrendingUp },
   { id: "requisition_desk", label: "Requisition Desk", icon: ClipboardList },
+  { id: "vyapari", label: "Traders Directory", icon: Users },
   { id: "ai_assistant", label: "Jarves AI 2.0", icon: Bot },
 ];
 
@@ -1229,6 +1230,110 @@ export default function App() {
     }
   }, []);
 
+  // Restore authenticated session & module permissions from localStorage
+  React.useEffect(() => {
+    try {
+      const rawSession = localStorage.getItem("bally_auth_session");
+      if (rawSession) {
+        const sess = JSON.parse(rawSession);
+        if (sess && sess.username) {
+          const isAdminUser = sess.role?.toUpperCase() === "ADMIN" || sess.role?.toUpperCase() === "ADMINISTRATOR";
+          setIsAdmin(isAdminUser);
+          setUserRole(sess.role?.toUpperCase() || "L1");
+          setUserLevel(sess.level?.toUpperCase() || "L1");
+          const mods = sess.allowed_modules
+            ? sess.allowed_modules === "*"
+              ? ["*"]
+              : String(sess.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+            : ["*"];
+          setAllowedModules(mods);
+          setIsLoggedIn(true);
+          if (sess.year) setSelectedYear(sess.year);
+          setCurrentUserContext({
+            userId: sess.userId || 'op_1',
+            username: sess.username,
+            userName: sess.username,
+            userRole: sess.role?.toUpperCase() || "L1",
+            userLevel: sess.level?.toUpperCase() || "L1",
+            allowedModules: mods,
+          });
+
+          // Check if URL specifies a target page
+          const urlParams = new URLSearchParams(window.location.search);
+          const qPage = urlParams.get('page') || (window.location.hash ? window.location.hash.replace('#', '') : null);
+          if (qPage && hasModulePermission(qPage, mods, isAdminUser)) {
+            setCurrentPage(qPage as Page);
+          } else {
+            const firstAllowed = getFirstAllowedPage(mods, isAdminUser) as Page;
+            setCurrentPage(firstAllowed);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Session restore error:", e);
+    }
+  }, []);
+
+  // Subscribe to live permission updates (e.g. when Admin updates allowed modules in Admin Desk)
+  React.useEffect(() => {
+    return subscribeToPermissions((detail) => {
+      const currentCtx = getCurrentUserContext();
+      if (
+        detail.userId === currentCtx.userId ||
+        detail.username?.toLowerCase() === currentCtx.username?.toLowerCase() ||
+        detail.username?.toLowerCase() === currentCtx.userName?.toLowerCase() ||
+        detail.userId === 'all'
+      ) {
+        const newMods = detail.allowed_modules === "*"
+          ? ["*"]
+          : (detail.allowed_modules || "").split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+        setAllowedModules(newMods);
+        const isAdm = detail.role?.toUpperCase() === "ADMIN" || detail.role?.toUpperCase() === "ADMINISTRATOR";
+        if (detail.role) {
+          setIsAdmin(isAdm);
+          setUserRole(detail.role.toUpperCase());
+        }
+        if (detail.level) {
+          setUserLevel(detail.level.toUpperCase());
+        }
+        setCurrentUserContext({
+          allowedModules: newMods,
+          userRole: detail.role ? detail.role.toUpperCase() : currentCtx.userRole,
+          userLevel: detail.level ? detail.level.toUpperCase() : currentCtx.userLevel,
+        });
+
+        try {
+          const raw = localStorage.getItem("bally_auth_session");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            localStorage.setItem("bally_auth_session", JSON.stringify({
+              ...parsed,
+              allowed_modules: detail.allowed_modules,
+              role: detail.role || parsed.role,
+              level: detail.level || parsed.level,
+            }));
+          }
+        } catch {}
+
+        // Auto-redirect if currently open page is no longer permitted
+        if (!hasModulePermission(currentPage, newMods, isAdm)) {
+          const fallback = getFirstAllowedPage(newMods, isAdm) as Page;
+          setCurrentPage(fallback);
+        }
+      }
+    });
+  }, [currentPage]);
+
+  // Sync current page to URL for bookmarking and page refresh preservation
+  React.useEffect(() => {
+    if (!isLoggedIn) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("page", currentPage);
+      window.history.replaceState(null, "", url.toString());
+    } catch {}
+  }, [currentPage, isLoggedIn]);
+
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -1299,6 +1404,24 @@ export default function App() {
   const [showGlobalSattaWarning, setShowGlobalSattaWarning] = useState(false);
 
   const globalNavigate = async (targetPage: Page, subId?: string): Promise<boolean> => {
+    let actualTarget = targetPage;
+    if (subId === 'po_final' || targetPage === 'po_final' as any) {
+      actualTarget = 'final_po';
+    } else if (subId === 'po_temp') {
+      actualTarget = 'po';
+    } else if (targetPage === 'main_gate' as any || targetPage === 'maingate' as any) {
+      actualTarget = 'main_gate';
+    }
+
+    // Strict Permission Guard: Verify user has permission for the target module
+    const isPermitted = hasModulePermission(actualTarget, allowedModules, isAdmin) ||
+      (subId ? hasModulePermission(subId, allowedModules, isAdmin) : false);
+
+    if (!isPermitted) {
+      alert(`Access Denied: Your account does not have permission to access module [${subId || actualTarget}].`);
+      return false;
+    }
+
     // Determine if we need to block this target page.
     // Dashboard and Satta modules should always be accessible.
     const isRestrictedPage = targetPage !== "dashboard" && targetPage !== "satta" && targetPage !== "satta_chart";
@@ -1384,15 +1507,6 @@ export default function App() {
           setShowGlobalSattaWarning(true);
           return false; // Prevent navigation
         }
-    }
-
-    let actualTarget = targetPage;
-    if (subId === 'po_final' || targetPage === 'po_final' as any) {
-      actualTarget = 'final_po';
-    } else if (subId === 'po_temp') {
-      actualTarget = 'po';
-    } else if (targetPage === 'main_gate' as any || targetPage === 'maingate' as any) {
-      actualTarget = 'main_gate';
     }
 
     setCurrentPage(actualTarget);
@@ -1598,9 +1712,19 @@ export default function App() {
       setUserLevel("ADMIN");
       setIsLoggedIn(true);
       setSelectedYear(year);
-      globalNavigate("dashboard");
       setAllowedModules(["*"]);
-      setCurrentUserContext({ username: "ADMIN", userRole: "ADMIN", userLevel: "ADMIN" });
+      setCurrentPage("dashboard");
+      setCurrentUserContext({ userId: "admin", username: "ADMIN", userName: "ADMIN", userRole: "ADMIN", userLevel: "ADMIN", allowedModules: ["*"] });
+      try {
+        localStorage.setItem("bally_auth_session", JSON.stringify({
+          userId: "admin",
+          username: "ADMIN",
+          role: "ADMIN",
+          level: "ADMIN",
+          allowed_modules: "*",
+          year: year
+        }));
+      } catch (e) {}
       logEvent(
         "LOGIN_HISTORY",
         `Administrator login verified under session year: ${year}`,
@@ -1628,30 +1752,48 @@ export default function App() {
 
       // Check password (assume plain text for this legacy demo or user preference)
       if (data.password === pass) {
-        setIsAdmin(
+        const isAdminUser =
           data.role?.toUpperCase() === "ADMIN" ||
-            data.role?.toUpperCase() === "ADMINISTRATOR",
-        );
+          data.role?.toUpperCase() === "ADMINISTRATOR";
+        setIsAdmin(isAdminUser);
         setUserRole(data.role?.toUpperCase() || "L1");
         setUserLevel(data.level?.toUpperCase() || "L1");
-        setAllowedModules(
-          data.allowed_modules
-            ? data.allowed_modules === "*"
-              ? ["*"]
-              : data.allowed_modules.split(",")
-            : ["*"],
-        );
+        const modules = data.allowed_modules
+          ? data.allowed_modules === "*"
+            ? ["*"]
+            : String(data.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+          : ["*"];
+        setAllowedModules(modules);
         setIsLoggedIn(true);
         setSelectedYear(year);
-        globalNavigate("dashboard");
+
+        const firstLanding = getFirstAllowedPage(modules, isAdminUser) as Page;
+        setCurrentPage(firstLanding);
+
+        setCurrentUserContext({
+          userId: data.user_id,
+          username: data.username,
+          userName: data.username,
+          userRole: data.role?.toUpperCase() || "L1",
+          userLevel: data.level?.toUpperCase() || "L1",
+          allowedModules: modules,
+        });
+
+        // Persist session
+        try {
+          localStorage.setItem("bally_auth_session", JSON.stringify({
+            userId: data.user_id,
+            username: data.username,
+            role: data.role?.toUpperCase() || "L1",
+            level: data.level?.toUpperCase() || "L1",
+            allowed_modules: data.allowed_modules || "*",
+            year: year
+          }));
+        } catch (e) {}
+
         // Update last login
         supabase.from('user_master').update({ last_login: new Date().toISOString() }).eq('user_id', data.user_id).then(res => console.log("Login Update:", res));
         
-        setCurrentUserContext({
-          username: data.username,
-          userRole: data.role?.toUpperCase() || "L1",
-          userLevel: data.level?.toUpperCase() || "L1"
-        });
         logEvent(
           "LOGIN_HISTORY",
           `Operator account: ${data.username} [Role: ${data.role || "USER"}] successfully logged in under session year: ${year}`,
@@ -1685,7 +1827,7 @@ export default function App() {
     isAdmin || allowedModules.includes("*")
       ? allSidebarItems
       : allSidebarItems.filter(
-          (item) => allowedModules.includes(item.id) || item.id === "dashboard",
+          (item) => hasModulePermission(item.id, allowedModules, isAdmin),
         );
 
   return (
@@ -1699,9 +1841,32 @@ export default function App() {
           {/* Dynamic Page Rendering */}
           <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto w-full max-w-full main-content">
             <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-auto relative w-full max-w-full">
-              <div
-                className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
+              {!hasModulePermission(currentPage, allowedModules, isAdmin) ? (
+                <div className="flex-1 flex items-center justify-center p-8 bg-[#F4EFE6]">
+                  <div className="bg-[#FAF7F0] border-2 border-red-300 rounded-xl p-8 max-w-md text-center shadow-lg">
+                    <div className="w-12 h-12 rounded-full bg-red-100 border border-red-200 text-red-600 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#1E331B] uppercase tracking-wide">Access Restricted</h3>
+                    <p className="text-xs text-[#5A6E54] mt-2">
+                      Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700">[{currentPage}]</span>.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const firstAllowed = getFirstAllowedPage(allowedModules, isAdmin) as Page;
+                        setCurrentPage(firstAllowed);
+                      }}
+                      className="mt-6 px-4 py-2 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-colors cursor-pointer"
+                    >
+                      Go to Permitted Module
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+                  >
                 <Dashboard
                   isActive={currentPage === "dashboard"}
                   onNavigate={globalNavigate}
@@ -1958,6 +2123,8 @@ export default function App() {
                   onNavigate={(page) => globalNavigate(page as Page)}
                 />
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1981,11 +2148,18 @@ export default function App() {
               {/* Sequential Arrow-Wise Steps */}
               <div className="flex items-center gap-1 shrink-0">
                 {(() => {
-                  const activeStepIdx = JCI_WORKFLOW_STEPS.findIndex((step) =>
+                  const permittedWorkflowSteps = JCI_WORKFLOW_STEPS.filter((step) =>
+                    hasModulePermission(step.pageId, allowedModules, isAdmin) ||
+                    step.matchPages.some((p) => hasModulePermission(p, allowedModules, isAdmin))
+                  );
+
+                  if (permittedWorkflowSteps.length === 0) return null;
+
+                  const activeStepIdx = permittedWorkflowSteps.findIndex((step) =>
                     step.matchPages.includes(currentPage)
                   );
 
-                  return JCI_WORKFLOW_STEPS.map((step, idx) => {
+                  return permittedWorkflowSteps.map((step, idx) => {
                     const isCurrent = step.matchPages.includes(currentPage);
                     const isPast = activeStepIdx !== -1 && idx < activeStepIdx;
                     const IconComp = step.icon;
@@ -2029,7 +2203,7 @@ export default function App() {
                         </button>
 
                         {/* Arrow separator */}
-                        {idx < JCI_WORKFLOW_STEPS.length - 1 && (
+                        {idx < permittedWorkflowSteps.length - 1 && (
                           <div className="flex items-center text-amber-400 px-0.5 shrink-0">
                             <span className="text-[12px] font-black text-amber-400/90">➔</span>
                           </div>
@@ -2048,7 +2222,10 @@ export default function App() {
             <button
               onClick={() => {
                 setIsLoggedIn(false);
-                setCurrentUserContext({ username: 'ADMIN', userRole: 'ADMIN', userLevel: 'MAX' });
+                try {
+                  localStorage.removeItem("bally_auth_session");
+                } catch (e) {}
+                setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
                 setCurrentPage("dashboard");
               }}
               className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] hover:bg-rose-950/80 rounded-md border border-[#235E39] hover:border-rose-700 text-rose-300 hover:text-rose-100 transition-colors text-[10px] font-extrabold uppercase tracking-wider shrink-0 cursor-pointer"
@@ -2104,8 +2281,7 @@ export default function App() {
                         ? allSidebarItems
                         : allSidebarItems.filter(
                             (item) =>
-                              allowedModules.includes(item.id) ||
-                              item.id === "dashboard",
+                              hasModulePermission(item.id, allowedModules, isAdmin),
                           );
 
                     const results = activeModules.filter((item) => {
@@ -2159,8 +2335,7 @@ export default function App() {
                 ? allSidebarItems
                 : allSidebarItems.filter(
                     (item) =>
-                      allowedModules.includes(item.id) ||
-                      item.id === "dashboard",
+                      hasModulePermission(item.id, allowedModules, isAdmin),
                   )
               )
                 .filter((item) => {

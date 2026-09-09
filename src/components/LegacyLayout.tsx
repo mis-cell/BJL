@@ -38,7 +38,14 @@ import {
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
 import NotificationCenter from './NotificationCenter';
-import { getCurrentUserContext } from '../lib/permissions';
+import { 
+  getCurrentUserContext, 
+  hasModulePermission, 
+  filterMenuByPermissions, 
+  subscribeToPermissions, 
+  isUserAdmin,
+  getFirstAllowedPage
+} from '../lib/permissions';
 import { supabase } from '../lib/supabase';
 
 interface DisputeSummaryData {
@@ -122,6 +129,8 @@ interface LegacyLayoutProps {
   onBack?: () => void;
   activeNavTab?: string;
   onNavClick?: (pageId: string) => void;
+  allowedModules?: string[];
+  isAdmin?: boolean;
 }
 
 export default function LegacyLayout({ 
@@ -133,7 +142,9 @@ export default function LegacyLayout({
   onMaximize, 
   onBack,
   activeNavTab = "dashboard",
-  onNavClick
+  onNavClick,
+  allowedModules: propAllowedModules,
+  isAdmin: propIsAdmin
 }: LegacyLayoutProps) {
   const isOnline = useHeartbeat();
   const [currentTime, setCurrentTime] = React.useState(() => new Date());
@@ -142,7 +153,29 @@ export default function LegacyLayout({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const [activeMenuDropdown, setActiveMenuDropdown] = React.useState<string | null>(null);
 
-  const currentUser = getCurrentUserContext().username || "Admin User";
+  const [userContext, setUserContext] = React.useState(() => getCurrentUserContext());
+
+  React.useEffect(() => {
+    const unsub = subscribeToPermissions((updated) => {
+      setUserContext({ ...updated });
+    });
+
+    const handlePermUpdated = (e: any) => {
+      const latest = getCurrentUserContext();
+      setUserContext({ ...latest });
+    };
+
+    window.addEventListener('bally-permissions-updated', handlePermUpdated);
+    return () => {
+      unsub();
+      window.removeEventListener('bally-permissions-updated', handlePermUpdated);
+    };
+  }, []);
+
+  const effectiveAllowedModules = propAllowedModules || userContext.allowedModules || ['*'];
+  const effectiveIsAdmin = propIsAdmin !== undefined ? propIsAdmin : isUserAdmin(userContext);
+
+  const currentUser = userContext.username || userContext.userName || "Operator";
 
   const [disputeSummary, setDisputeSummary] = React.useState<{
     materialMismatchCount: number;
@@ -340,6 +373,17 @@ export default function LegacyLayout({
     }
   ];
 
+  const filteredNavMenuItems = React.useMemo(() => {
+    return filterMenuByPermissions(navMenuItems, effectiveAllowedModules, effectiveIsAdmin);
+  }, [navMenuItems, effectiveAllowedModules, effectiveIsAdmin]);
+
+  const handleBrandLogoClick = () => {
+    const defaultTarget = hasModulePermission('dashboard', effectiveAllowedModules, effectiveIsAdmin)
+      ? 'dashboard'
+      : getFirstAllowedPage(effectiveAllowedModules, effectiveIsAdmin);
+    handleNavNavigation(defaultTarget);
+  };
+
   return (
     <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col">
       {/* Window Wrapper */}
@@ -349,7 +393,7 @@ export default function LegacyLayout({
         <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30 w-full min-w-0 gap-2">
           {/* Left Brand Logo Area */}
           <div 
-            onClick={() => handleNavNavigation('dashboard')} 
+            onClick={handleBrandLogoClick} 
             className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none min-w-0 flex-1"
           >
             {/* BJ Monogram Badge */}
@@ -390,7 +434,7 @@ export default function LegacyLayout({
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
           <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 max-w-full">
-            {navMenuItems.map((menu) => {
+            {filteredNavMenuItems.map((menu) => {
               const IconComp = menu.icon;
               const hasSubItems = menu.subItems && menu.subItems.length > 0;
               const isDropdownOpen = activeMenuDropdown === menu.id;
@@ -620,23 +664,36 @@ export default function LegacyLayout({
                     <p className="font-bold">{currentUser}</p>
                     <p className="text-[10px] text-[#5A6E54]">Bally Jute Operator</p>
                   </div>
+                  {hasModulePermission('admindesk', effectiveAllowedModules, effectiveIsAdmin) && (
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleNavNavigation('admindesk');
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <span>⚙️ Admin Desk</span>
+                    </button>
+                  )}
+                  {hasModulePermission('reports', effectiveAllowedModules, effectiveIsAdmin) && (
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleNavNavigation('reports');
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <span>📊 System Reports</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setIsProfileMenuOpen(false);
-                      handleNavNavigation('admindesk');
+                      window.dispatchEvent(new CustomEvent('app-close'));
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                    className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-700 flex items-center gap-2 font-medium cursor-pointer border-t border-[#EAE2D2]"
                   >
-                    <span>⚙️ Admin Desk</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      handleNavNavigation('reports');
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
-                  >
-                    <span>📊 System Reports</span>
+                    <span>🚪 Logout</span>
                   </button>
                 </div>
               )}
