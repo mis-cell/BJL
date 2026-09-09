@@ -1368,6 +1368,7 @@ export default function App() {
     if (isLoggedIn) {
       setIsLoggedIn(false);
       window.alert("Session auto-locked due to 15 minutes of inactivity.");
+      localStorage.clear();
     }
   });
 
