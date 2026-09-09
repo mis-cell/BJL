@@ -82,7 +82,7 @@ import RequisitionDesk from "./pages/RequisitionDesk";
 import PaymentModule from "./pages/PaymentModule";
 import LorryDispatchSystem from "./pages/LorryDispatchSystem";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
-import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions } from "./lib/permissions";
+import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
 
 import { supabase } from "./lib/supabase";
 
@@ -1244,7 +1244,7 @@ export default function App() {
           const mods = sess.allowed_modules
             ? sess.allowed_modules === "*"
               ? ["*"]
-              : String(sess.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+              : normalizeAllowedModules(sess.allowed_modules)
             : isAdminUser ? ["*"] : [];
           setAllowedModules(mods);
           setIsLoggedIn(true);
@@ -1286,7 +1286,7 @@ export default function App() {
       ) {
         const newMods = detail.allowed_modules === "*"
           ? ["*"]
-          : (detail.allowed_modules || "").split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+          : normalizeAllowedModules(detail.allowed_modules || "");
         setAllowedModules(newMods);
         const isAdm = detail.role?.toUpperCase() === "ADMIN" || detail.role?.toUpperCase() === "ADMINISTRATOR";
         if (detail.role) {
@@ -1780,7 +1780,7 @@ export default function App() {
         const modules = data.allowed_modules
           ? data.allowed_modules === "*"
             ? ["*"]
-            : String(data.allowed_modules).split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+            : normalizeAllowedModules(data.allowed_modules)
           : isAdminUser ? ["*"] : [];
         setAllowedModules(modules);
         setIsLoggedIn(true);

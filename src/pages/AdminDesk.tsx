@@ -55,7 +55,7 @@ import LegacyLayout, {
 } from "../components/LegacyLayout";
 import Papa from "papaparse";
 import { cn, canDeleteData } from "../lib/utils";
-import { getCurrentUserContext, ALL_SYSTEM_MODULES, broadcastPermissionsUpdated } from "../lib/permissions";
+import { getCurrentUserContext, ALL_SYSTEM_MODULES, broadcastPermissionsUpdated, normalizeAllowedModules, getCanonicalModuleId } from "../lib/permissions";
 
 // Import our beautiful modular material design subpages
 import DashboardTab from "../components/material/DashboardTab";
@@ -1656,15 +1656,15 @@ export default function AdminDesk({
       const isAll = currentVal === "*";
       const selectedList = isAll 
         ? allModulesList.map(m => m.id) 
-        : currentVal.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        : normalizeAllowedModules(currentVal);
 
       const handleToggle = (id: string) => {
-        const lowerId = id.toLowerCase();
+        const canonicalId = getCanonicalModuleId(id);
         let newList: string[];
-        if (selectedList.includes(lowerId)) {
-          newList = selectedList.filter(x => x !== lowerId);
+        if (selectedList.includes(canonicalId)) {
+          newList = selectedList.filter(x => x !== canonicalId);
         } else {
-          newList = [...selectedList, lowerId];
+          newList = [...selectedList, canonicalId];
         }
         const valToSave = newList.length === allModulesList.length ? "*" : newList.join(",");
         setEditingRow((prev: any) => ({ ...prev, [col]: valToSave }));
@@ -1679,7 +1679,8 @@ export default function AdminDesk({
       };
 
       const handleApplyPreset = (presetModules: string[]) => {
-        const valToSave = presetModules.join(",");
+        const normalizedPresets = normalizeAllowedModules(presetModules);
+        const valToSave = normalizedPresets.join(",");
         setEditingRow((prev: any) => ({ ...prev, [col]: valToSave }));
       };
 

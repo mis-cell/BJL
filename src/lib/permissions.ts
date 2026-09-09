@@ -26,7 +26,7 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Dashboard (Operational Hub)',
     category: 'Overview',
     pageId: 'dashboard',
-    aliases: ['dashboard', 'operational_hub', 'hub', 'home']
+    aliases: ['dashboard', 'operational_hub', 'hub', 'home', 'operational hub', 'operationalhub']
   },
 
   // 2. Gate Operations
@@ -35,7 +35,7 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Main Gate',
     category: 'Gate Operations',
     pageId: 'main_gate',
-    aliases: ['main_gate', 'maingate', 'gate_module', 'lorry_entry', 'dispatch']
+    aliases: ['main_gate', 'maingate', 'main gate', 'gate_module', 'gate module', 'lorry_entry', 'lorry entry', 'dispatch']
   },
 
   // 3. Sauda & Procurement
@@ -44,42 +44,42 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'SMS Sauda Desk',
     category: 'Sauda & Procurement',
     pageId: 'sms_sauda',
-    aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms_interfaces']
+    aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms desk', 'sms_interfaces', 'sms sauda', 'smssauda', 'sms sauda desk', 'smssaudadesk', 'sms_contracts']
   },
   {
     id: 'sauda',
     label: 'Sauda Desk',
     category: 'Sauda & Procurement',
     pageId: 'sauda',
-    aliases: ['sauda', 'sauda_entry', 'sauda_desk', 'sauda_master']
+    aliases: ['sauda', 'sauda_desk', 'sauda desk', 'saudadesk', 'sauda_entry', 'sauda entry', 'saudaentry', 'sauda_master', 'sauda master', 'saudamaster', 'sauda_bookings', 'sauda bookings', 'sauda_module', 'sauda module', 'sauda_contracts']
   },
   {
     id: 'satta',
     label: 'Satta Desk',
     category: 'Sauda & Procurement',
     pageId: 'satta',
-    aliases: ['satta', 'satta_entry', 'satta_desk']
+    aliases: ['satta', 'satta_desk', 'satta desk', 'sattadesk', 'satta_entry', 'satta entry', 'sattaentry', 'satta_master']
   },
   {
     id: 'satta_chart',
     label: 'Satta Rate Chart',
     category: 'Sauda & Procurement',
     pageId: 'satta_chart',
-    aliases: ['satta_chart', 'rate_chart', 'satta_rates']
+    aliases: ['satta_chart', 'satta chart', 'sattachart', 'rate_chart', 'rate chart', 'ratechart', 'satta_rates', 'satta rates', 'sattarates', 'satta_rate_chart']
   },
   {
     id: 'po',
     label: 'Sauda Check Point',
     category: 'Sauda & Procurement',
     pageId: 'po',
-    aliases: ['po', 'sauda_check', 'sauda_po_check', 'purchase_order', 'temp_po', 'po_temp']
+    aliases: ['po', 'sauda_check', 'sauda check', 'saudacheck', 'sauda_check_point', 'sauda check point', 'saudacheckpoint', 'sauda_po_check', 'purchase_order', 'purchase order', 'temp_po', 'po_temp', 'temp po']
   },
   {
     id: 'final_po',
     label: 'Final P.O',
     category: 'Sauda & Procurement',
     pageId: 'final_po',
-    aliases: ['final_po', 'final_purchase_order', 'po_final']
+    aliases: ['final_po', 'final po', 'finalpo', 'final_purchase_order', 'final purchase order', 'po_final', 'po final', 'pofinal']
   },
 
   // 4. Arrival & Inspection
@@ -88,42 +88,42 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Temporary Arrival',
     category: 'Arrival & Inspection',
     pageId: 'amad',
-    aliases: ['amad', 'amad_entry', 'tmr', 'temporary_arrival', 'temporary_mr']
+    aliases: ['amad', 'amad_entry', 'amad entry', 'tmr', 'temporary_arrival', 'temporary arrival', 'temporary_mr', 'temporary mr', 'temp arrival']
   },
   {
     id: 'final_arrival',
     label: 'Final Arrival',
     category: 'Arrival & Inspection',
     pageId: 'final_arrival',
-    aliases: ['final_arrival', 'final_mr', 'final_arrival_entry']
+    aliases: ['final_arrival', 'final arrival', 'finalarrival', 'final_mr', 'final mr', 'finalmr', 'final_arrival_entry']
   },
   {
     id: 'inspection',
     label: 'Mill Inspection',
     category: 'Arrival & Inspection',
     pageId: 'inspection',
-    aliases: ['inspection', 'mill_inspection', 'mill_inspection_master', 'final_mr_inspection']
+    aliases: ['inspection', 'mill_inspection', 'mill inspection', 'millinspection', 'mill_inspection_master', 'final_mr_inspection']
   },
   {
     id: 'material_inspection',
     label: 'Inspection Checklist',
     category: 'Arrival & Inspection',
     pageId: 'material_inspection',
-    aliases: ['material_inspection', 'inspection_checklist', 'quality_inspection']
+    aliases: ['material_inspection', 'material inspection', 'materialinspection', 'inspection_checklist', 'inspection checklist', 'quality_inspection', 'quality inspection']
   },
   {
     id: 'mismatch',
     label: 'Satta Mismatch Case',
     category: 'Arrival & Inspection',
     pageId: 'mismatch',
-    aliases: ['mismatch', 'satta_mismatch', 'mismatch_case']
+    aliases: ['mismatch', 'satta_mismatch', 'satta mismatch', 'mismatch_case', 'mismatch case']
   },
   {
     id: 'material_mismatch',
     label: 'Material Mismatch Case',
     category: 'Arrival & Inspection',
     pageId: 'material_mismatch',
-    aliases: ['material_mismatch', 'mat_mismatch']
+    aliases: ['material_mismatch', 'material mismatch', 'materialmismatch', 'mat_mismatch']
   },
 
   // 5. Club & Financial
@@ -132,21 +132,21 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Club P.O & Arrival',
     category: 'Club & Financial',
     pageId: 'club_po_mr',
-    aliases: ['club_po_mr', 'club_po', 'club_mr', 'club']
+    aliases: ['club_po_mr', 'club po mr', 'club_po', 'club po', 'club_mr', 'club mr', 'club']
   },
   {
     id: 'payment',
     label: 'Payment Module',
     category: 'Club & Financial',
     pageId: 'payment',
-    aliases: ['payment', 'payment_module', 'payments']
+    aliases: ['payment', 'payment_module', 'payment module', 'payments']
   },
   {
     id: 'mr_settlement',
     label: 'Settlement',
     category: 'Club & Financial',
     pageId: 'mr_settlement',
-    aliases: ['mr_settlement', 'settlement', 'mr_claim']
+    aliases: ['mr_settlement', 'mr settlement', 'settlement', 'mr_claim', 'claim_settlement']
   },
 
   // 6. Inventory & Issue
@@ -155,35 +155,35 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'Material Issue',
     category: 'Inventory & Issue',
     pageId: 'issue',
-    aliases: ['issue', 'material_issue', 'material_issue_entry']
+    aliases: ['issue', 'material_issue', 'material issue', 'material_issue_entry']
   },
   {
     id: 'closing_stock',
     label: 'Stock Inventory',
     category: 'Inventory & Issue',
     pageId: 'closing_stock',
-    aliases: ['closing_stock', 'stock_inventory', 'stock', 'inventory']
+    aliases: ['closing_stock', 'closing stock', 'stock_inventory', 'stock inventory', 'stock', 'inventory']
   },
   {
     id: 'requisition_desk',
     label: 'Requisition Desk',
     category: 'Inventory & Issue',
     pageId: 'requisition_desk',
-    aliases: ['requisition_desk', 'requisition', 'req_desk']
+    aliases: ['requisition_desk', 'requisition desk', 'requisition', 'req_desk']
   },
   {
     id: 'bardana',
     label: 'Godown Master',
     category: 'Inventory & Issue',
     pageId: 'bardana',
-    aliases: ['bardana', 'godown_master', 'godown']
+    aliases: ['bardana', 'godown_master', 'godown master', 'godown']
   },
   {
     id: 'weight_bridge',
     label: 'Weight Bridge',
     category: 'Inventory & Issue',
     pageId: 'weight_bridge',
-    aliases: ['weight_bridge', 'weigh_bridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
+    aliases: ['weight_bridge', 'weight bridge', 'weigh_bridge', 'weighbridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
   },
 
   // 7. Reports & Administration
@@ -192,48 +192,136 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     label: 'System Reports',
     category: 'Reports & Administration',
     pageId: 'reports',
-    aliases: ['reports', 'system_reports', 'analytical_reports']
+    aliases: ['reports', 'system_reports', 'system reports', 'analytical_reports']
   },
   {
     id: 'vyapari',
     label: 'Traders Directory',
     category: 'Reports & Administration',
     pageId: 'vyapari',
-    aliases: ['vyapari', 'traders_directory', 'trader_directory']
+    aliases: ['vyapari', 'traders_directory', 'traders directory', 'trader_directory']
   },
   {
     id: 'admindesk',
     label: 'Admin Desk',
     category: 'Reports & Administration',
     pageId: 'admindesk',
-    aliases: ['admindesk', 'admin_desk', 'admin_vault']
+    aliases: ['admindesk', 'admin_desk', 'admin desk', 'admin_vault', 'admin']
   },
   {
     id: 'settings',
     label: 'Config Center / Settings',
     category: 'Reports & Administration',
     pageId: 'settings',
-    aliases: ['settings', 'config_center', 'config_guide']
+    aliases: ['settings', 'config_center', 'config center', 'config_guide']
   },
   {
     id: 'ai_assistant',
     label: 'Jarves AI 2.0',
     category: 'Reports & Administration',
     pageId: 'ai_assistant',
-    aliases: ['ai_assistant', 'jarves_ai', 'ai_portal']
+    aliases: ['ai_assistant', 'ai assistant', 'jarves_ai', 'jarves ai', 'ai_portal', 'jarves']
   },
 ];
 
-// Resolves any page name, route alias, or legacy ID to its exact primary Module ID
+// Resolves any page name, route alias, label, or legacy ID to its exact primary Module ID
 export function getCanonicalModuleId(idOrAlias: string): string {
   if (!idOrAlias) return '';
-  const clean = idOrAlias.toLowerCase().trim();
-  const match = ALL_SYSTEM_MODULES.find(m => 
-    m.id.toLowerCase() === clean || 
-    m.pageId.toLowerCase() === clean ||
-    m.aliases.some(a => a.toLowerCase() === clean)
+  const clean = String(idOrAlias).toLowerCase().trim();
+  if (clean === '*' || clean === 'all') return '*';
+
+  // 1. Direct ID / pageId match
+  const directMatch = ALL_SYSTEM_MODULES.find(
+    (m) => m.id.toLowerCase() === clean || m.pageId.toLowerCase() === clean
   );
-  return match ? match.id : clean;
+  if (directMatch) return directMatch.id;
+
+  // 2. Direct label match
+  const labelMatch = ALL_SYSTEM_MODULES.find(
+    (m) => m.label.toLowerCase() === clean
+  );
+  if (labelMatch) return labelMatch.id;
+
+  // 3. Exact alias match
+  const aliasMatch = ALL_SYSTEM_MODULES.find((m) =>
+    m.aliases.some((a) => a.toLowerCase() === clean)
+  );
+  if (aliasMatch) return aliasMatch.id;
+
+  // 4. Normalized alphanumeric match (stripping all spaces, dashes, dots, underscores)
+  const alphaClean = clean.replace(/[^a-z0-9]/g, '');
+  if (!alphaClean) return clean;
+
+  const alphaMatch = ALL_SYSTEM_MODULES.find((m) => {
+    if (m.id.replace(/[^a-z0-9]/g, '').toLowerCase() === alphaClean) return true;
+    if (m.pageId.replace(/[^a-z0-9]/g, '').toLowerCase() === alphaClean) return true;
+    if (m.label.replace(/[^a-z0-9]/g, '').toLowerCase() === alphaClean) return true;
+    return m.aliases.some(
+      (a) => a.replace(/[^a-z0-9]/g, '').toLowerCase() === alphaClean
+    );
+  });
+  if (alphaMatch) return alphaMatch.id;
+
+  // 5. Semantic keyword mapping for user-entered terms
+  if (alphaClean.includes('smssauda') || alphaClean.includes('smsdesk')) return 'sms_sauda';
+  if (alphaClean.includes('saudadesk') || alphaClean === 'sauda' || alphaClean === 'saudaentry') return 'sauda';
+  if (alphaClean.includes('sattachart') || alphaClean.includes('sattarate')) return 'satta_chart';
+  if (alphaClean.includes('satta')) return 'satta';
+  if (alphaClean.includes('saudacheck') || alphaClean === 'po' || alphaClean === 'potemp') return 'po';
+  if (alphaClean.includes('finalpo') || alphaClean === 'pofinal') return 'final_po';
+  if (alphaClean.includes('maingate') || alphaClean.includes('lorryentry')) return 'main_gate';
+  if (alphaClean.includes('finalarrival') || alphaClean.includes('finalmr')) return 'final_arrival';
+  if (alphaClean.includes('materialinspection') || alphaClean.includes('inspectionchecklist')) return 'material_inspection';
+  if (alphaClean.includes('inspection')) return 'inspection';
+  if (alphaClean.includes('materialmismatch')) return 'material_mismatch';
+  if (alphaClean.includes('mismatch')) return 'mismatch';
+  if (alphaClean.includes('clubpo')) return 'club_po_mr';
+  if (alphaClean.includes('payment')) return 'payment';
+  if (alphaClean.includes('settlement')) return 'mr_settlement';
+  if (alphaClean.includes('issue')) return 'issue';
+  if (alphaClean.includes('closingstock') || alphaClean.includes('stockinventory') || alphaClean === 'stock' || alphaClean === 'inventory') return 'closing_stock';
+  if (alphaClean.includes('requisition')) return 'requisition_desk';
+  if (alphaClean.includes('bardana') || alphaClean.includes('godown')) return 'bardana';
+  if (alphaClean.includes('weightbridge') || alphaClean.includes('weighbridge')) return 'weight_bridge';
+  if (alphaClean.includes('report')) return 'reports';
+  if (alphaClean.includes('vyapari') || alphaClean.includes('trader')) return 'vyapari';
+  if (alphaClean.includes('admindesk') || alphaClean === 'admin') return 'admindesk';
+  if (alphaClean.includes('setting') || alphaClean.includes('config')) return 'settings';
+  if (alphaClean.includes('jarves') || alphaClean.includes('aiassistant')) return 'ai_assistant';
+
+  return clean;
+}
+
+// Normalizes any allowed_modules input (string, comma-separated, array, or JSON) into a pristine canonical ID list
+export function normalizeAllowedModules(modules: string[] | string | undefined | null): string[] {
+  if (!modules) return [];
+  if (modules === '*') return ['*'];
+
+  const rawList: string[] = Array.isArray(modules)
+    ? modules
+    : String(modules).split(',');
+
+  const normalized: string[] = [];
+  for (const item of rawList) {
+    if (!item) continue;
+    const str = String(item).trim();
+    if (!str) continue;
+    if (str === '*') {
+      return ['*'];
+    }
+    // Handle cases where comma-separated values exist inside array elements
+    if (str.includes(',')) {
+      str.split(',').forEach((sub) => {
+        const c = getCanonicalModuleId(sub);
+        if (c) normalized.push(c);
+      });
+    } else {
+      const c = getCanonicalModuleId(str);
+      if (c) normalized.push(c);
+    }
+  }
+
+  return Array.from(new Set(normalized));
 }
 
 let currentUserContext: UserContext = {
@@ -262,11 +350,16 @@ let isNotifyingListeners = false;
 export function setCurrentUserContext(context: Partial<UserContext> | null | undefined, notify: boolean = true): void {
   if (context) {
     const updatedUser = context.username || context.userName || currentUserContext.username || currentUserContext.userName;
+    const normalizedMods = context.allowedModules !== undefined
+      ? normalizeAllowedModules(context.allowedModules)
+      : currentUserContext.allowedModules;
+
     currentUserContext = {
       ...currentUserContext,
       ...context,
       userName: updatedUser,
       username: updatedUser,
+      allowedModules: normalizedMods,
     };
     
     // Save to localStorage for persistence
@@ -303,7 +396,11 @@ export function getCurrentUserContext(): UserContext {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          currentUserContext = { ...currentUserContext, ...parsed };
+          currentUserContext = {
+            ...currentUserContext,
+            ...parsed,
+            allowedModules: normalizeAllowedModules(parsed.allowedModules || parsed.allowed_modules || ['*']),
+          };
         }
       }
     } catch {
@@ -323,12 +420,12 @@ export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
   } else if (roleOrContext && typeof roleOrContext === 'object') {
     role = (roleOrContext.userRole || '').toUpperCase();
     level = (roleOrContext.userLevel || '').toUpperCase();
-    allowed = roleOrContext.allowedModules || [];
+    allowed = normalizeAllowedModules(roleOrContext.allowedModules || (roleOrContext as any).allowed_modules || []);
   } else {
     const ctx = getCurrentUserContext();
     role = (ctx?.userRole || '').toUpperCase();
     level = (ctx?.userLevel || '').toUpperCase();
-    allowed = ctx?.allowedModules || [];
+    allowed = normalizeAllowedModules(ctx?.allowedModules || []);
   }
 
   if (allowed.includes('*')) return true;
@@ -371,6 +468,7 @@ export function canViewCompletedData(): boolean {
  * 1. Admin or full access ('*') returns TRUE for all modules.
  * 2. Every Module ID is independent. Parent groups do NOT grant permissions.
  * 3. Exact matching: canAccess("sms_sauda") verifies sms_sauda; canAccess("sauda") verifies sauda.
+ * 4. Aliases: "sauda_desk", "saudadesk", "Sauda Desk", "sauda" all resolve to "sauda".
  */
 export function canAccess(
   targetModuleOrPage: string,
@@ -383,15 +481,14 @@ export function canAccess(
   const isAdmin = isAdminOverride !== undefined ? isAdminOverride : isUserAdmin();
   if (isAdmin) return true;
 
-  const allowedList = allowedModulesOverride !== undefined
+  const rawAllowed = allowedModulesOverride !== undefined
     ? allowedModulesOverride
     : (ctx.allowedModules || []);
 
-  if (allowedList.includes('*')) return true;
+  const cleanAllowed = normalizeAllowedModules(rawAllowed);
+  if (cleanAllowed.includes('*')) return true;
 
   const canonicalTarget = getCanonicalModuleId(targetModuleOrPage);
-  const cleanAllowed = allowedList.map(m => getCanonicalModuleId(m)).filter(Boolean);
-
   return cleanAllowed.includes(canonicalTarget);
 }
 
