@@ -334,12 +334,8 @@ export default function LegacyLayout({
       label: 'Sauda To P.O',
       icon: ShoppingCart,
       subItems: [
-        { id: 'satta', label: 'Satta', icon: Sparkles, pageId: 'satta' },
-        { id: 'satta_chart', label: 'Satta Rate Chart', icon: BarChart3, pageId: 'satta_chart' },
         { id: 'sms', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
-        { id: 'sauda', label: 'Sauda', icon: HandCoins, pageId: 'sauda' },
-        { id: 'sauda_check', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },
-        { id: 'final_po', label: 'Final P.O', icon: FileText, pageId: 'final_po' },
+        { id: 'sauda', label: 'SAUDA', icon: HandCoins, pageId: 'sauda' },
       ]
     },
     {
