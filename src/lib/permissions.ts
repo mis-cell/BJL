@@ -18,222 +18,223 @@ export interface SystemModuleDef {
   description?: string;
 }
 
-// Complete Master Directory of every Module, Menu, Submenu, and Page in the application
+// Master Directory of every independent Module ID in the application
 export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
-  // 1. Dashboard
+  // 1. Dashboard (Operational Hub)
   {
     id: 'dashboard',
     label: 'Dashboard (Operational Hub)',
-    category: 'Overview & Hub',
+    category: 'Overview & Gate',
     pageId: 'dashboard',
     aliases: ['dashboard', 'operational_hub', 'hub', 'home']
   },
 
-  // 2. Gate Module
+  // 2. Main Gate
   {
     id: 'main_gate',
-    label: 'Main Gate (Gate Module)',
-    category: 'Gate Operations',
+    label: 'Main Gate',
+    category: 'Overview & Gate',
     pageId: 'main_gate',
     aliases: ['main_gate', 'maingate', 'gate_module', 'lorry_entry', 'dispatch']
   },
 
-  // 3. Sauda To P.O Group
-  {
-    id: 'satta',
-    label: 'Satta Desk',
-    category: 'Sauda & Procurement',
-    pageId: 'satta',
-    aliases: ['satta', 'satta_entry', 'satta_desk']
-  },
-  {
-    id: 'satta_chart',
-    label: 'Satta Rate Chart',
-    category: 'Sauda & Procurement',
-    pageId: 'satta_chart',
-    aliases: ['satta_chart', 'rate_chart', 'satta_rates']
-  },
+  // 3. Sauda To P.O Parent Group
   {
     id: 'sms_sauda',
     label: 'SMS Sauda Desk',
-    category: 'Sauda & Procurement',
+    category: 'Sauda To P.O',
     pageId: 'sms_sauda',
     aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms_interfaces']
   },
   {
     id: 'sauda',
     label: 'Sauda Desk',
-    category: 'Sauda & Procurement',
+    category: 'Sauda To P.O',
     pageId: 'sauda',
     aliases: ['sauda', 'sauda_entry', 'sauda_desk', 'sauda_master']
   },
   {
+    id: 'satta',
+    label: 'Satta Desk',
+    category: 'Sauda To P.O',
+    pageId: 'satta',
+    aliases: ['satta', 'satta_entry', 'satta_desk']
+  },
+  {
+    id: 'satta_chart',
+    label: 'Satta Rate Chart',
+    category: 'Sauda To P.O',
+    pageId: 'satta_chart',
+    aliases: ['satta_chart', 'rate_chart', 'satta_rates']
+  },
+  {
     id: 'po',
     label: 'Sauda Check Point',
-    category: 'Sauda & Procurement',
+    category: 'Sauda To P.O',
     pageId: 'po',
-    aliases: ['po', 'sauda_check', 'sauda_po_check', 'purchase_order', 'temp_po']
+    aliases: ['po', 'sauda_check', 'sauda_po_check', 'purchase_order', 'temp_po', 'po_temp']
   },
   {
     id: 'final_po',
     label: 'Final P.O',
-    category: 'Sauda & Procurement',
+    category: 'Sauda To P.O',
     pageId: 'final_po',
     aliases: ['final_po', 'final_purchase_order', 'po_final']
   },
 
-  // 4. Temporary Arrival To Final Arrival Group
+  // 4. Temporary Arrival To Final Arrival Parent Group
   {
     id: 'amad',
-    label: 'Temporary Arrival (Amad)',
-    category: 'Arrival & Inspection',
+    label: 'Temporary Arrival',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'amad',
     aliases: ['amad', 'amad_entry', 'tmr', 'temporary_arrival', 'temporary_mr']
   },
   {
     id: 'final_arrival',
     label: 'Final Arrival',
-    category: 'Arrival & Inspection',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'final_arrival',
     aliases: ['final_arrival', 'final_mr', 'final_arrival_entry']
   },
   {
     id: 'inspection',
-    label: 'MILL INSPECTION',
-    category: 'Arrival & Inspection',
+    label: 'Mill Inspection',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'inspection',
     aliases: ['inspection', 'mill_inspection', 'mill_inspection_master', 'final_mr_inspection']
   },
   {
     id: 'material_inspection',
-    label: 'INSPECTION CHECKLIST',
-    category: 'Arrival & Inspection',
+    label: 'Inspection Checklist',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'material_inspection',
     aliases: ['material_inspection', 'inspection_checklist', 'quality_inspection']
   },
   {
     id: 'mismatch',
     label: 'Satta Mismatch Case',
-    category: 'Arrival & Inspection',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'mismatch',
     aliases: ['mismatch', 'satta_mismatch', 'mismatch_case']
   },
   {
     id: 'material_mismatch',
     label: 'Material Mismatch Case',
-    category: 'Arrival & Inspection',
+    category: 'Temporary Arrival To Final Arrival',
     pageId: 'material_mismatch',
     aliases: ['material_mismatch', 'mat_mismatch']
   },
 
-  // 5. Club P.O To Payment Group
+  // 5. Club P.O To Payment Parent Group
   {
     id: 'club_po_mr',
     label: 'Club P.O & Arrival',
-    category: 'Club & Financial',
+    category: 'Club P.O To Payment',
     pageId: 'club_po_mr',
     aliases: ['club_po_mr', 'club_po', 'club_mr', 'club']
   },
   {
     id: 'payment',
     label: 'Payment Module',
-    category: 'Club & Financial',
+    category: 'Club P.O To Payment',
     pageId: 'payment',
     aliases: ['payment', 'payment_module', 'payments']
   },
   {
     id: 'mr_settlement',
-    label: 'Settlement (M.R.)',
-    category: 'Club & Financial',
+    label: 'Settlement',
+    category: 'Club P.O To Payment',
     pageId: 'mr_settlement',
     aliases: ['mr_settlement', 'settlement', 'mr_claim']
   },
 
-  // 6. Material Issue To Inventory Group
+  // 6. Material Issue To Inventory Parent Group
   {
     id: 'issue',
     label: 'Material Issue',
-    category: 'Inventory & Issue',
+    category: 'Material Issue To Inventory',
     pageId: 'issue',
     aliases: ['issue', 'material_issue', 'material_issue_entry']
   },
   {
     id: 'closing_stock',
     label: 'Stock Inventory',
-    category: 'Inventory & Issue',
+    category: 'Material Issue To Inventory',
     pageId: 'closing_stock',
     aliases: ['closing_stock', 'stock_inventory', 'stock', 'inventory']
   },
   {
     id: 'requisition_desk',
     label: 'Requisition Desk',
-    category: 'Inventory & Issue',
+    category: 'Material Issue To Inventory',
     pageId: 'requisition_desk',
     aliases: ['requisition_desk', 'requisition', 'req_desk']
   },
   {
     id: 'bardana',
     label: 'Godown Master',
-    category: 'Inventory & Issue',
+    category: 'Material Issue To Inventory',
     pageId: 'bardana',
     aliases: ['bardana', 'godown_master', 'godown']
   },
   {
     id: 'weight_bridge',
-    label: '4.4 – Weight Bridge',
-    category: 'Inventory & Issue',
+    label: 'Weight Bridge',
+    category: 'Material Issue To Inventory',
     pageId: 'weight_bridge',
     aliases: ['weight_bridge', 'weigh_bridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
   },
 
-  // 7. System & Reports
+  // 7. Reports / Administration Parent Group
   {
     id: 'reports',
     label: 'System Reports',
-    category: 'Reports & Management',
+    category: 'Reports / Administration',
     pageId: 'reports',
     aliases: ['reports', 'system_reports', 'analytical_reports']
   },
   {
     id: 'vyapari',
     label: 'Traders Directory',
-    category: 'Reports & Management',
+    category: 'Reports / Administration',
     pageId: 'vyapari',
     aliases: ['vyapari', 'traders_directory', 'trader_directory']
   },
   {
-    id: 'settings',
-    label: 'Config Center / Settings',
-    category: 'Reports & Management',
-    pageId: 'settings',
-    aliases: ['settings', 'config_center', 'config_guide']
-  },
-  {
     id: 'admindesk',
     label: 'Admin Desk',
-    category: 'Reports & Management',
+    category: 'Reports / Administration',
     pageId: 'admindesk',
     aliases: ['admindesk', 'admin_desk', 'admin_vault']
   },
   {
+    id: 'settings',
+    label: 'Config Center / Settings',
+    category: 'Reports / Administration',
+    pageId: 'settings',
+    aliases: ['settings', 'config_center', 'config_guide']
+  },
+  {
     id: 'ai_assistant',
     label: 'Jarves AI 2.0',
-    category: 'Reports & Management',
+    category: 'Reports / Administration',
     pageId: 'ai_assistant',
     aliases: ['ai_assistant', 'jarves_ai', 'ai_portal']
   },
 ];
 
-// Map of all aliases for fast lookup
-export const MODULE_ALIAS_MAP: Record<string, string[]> = {};
-ALL_SYSTEM_MODULES.forEach((mod) => {
-  MODULE_ALIAS_MAP[mod.id] = mod.aliases;
-  mod.aliases.forEach((alias) => {
-    if (!MODULE_ALIAS_MAP[alias]) {
-      MODULE_ALIAS_MAP[alias] = [mod.id, ...mod.aliases];
-    }
-  });
-});
+// Resolves any page name, route alias, or legacy ID to its exact primary Module ID
+export function getCanonicalModuleId(idOrAlias: string): string {
+  if (!idOrAlias) return '';
+  const clean = idOrAlias.toLowerCase().trim();
+  const match = ALL_SYSTEM_MODULES.find(m => 
+    m.id.toLowerCase() === clean || 
+    m.pageId.toLowerCase() === clean ||
+    m.aliases.some(a => a.toLowerCase() === clean)
+  );
+  return match ? match.id : clean;
+}
 
 let currentUserContext: UserContext = {
   userId: 'default_operator',
@@ -364,14 +365,14 @@ export function canViewCompletedData(): boolean {
 }
 
 /**
- * Checks if the current user has permission to view/access a given module, menu, or page.
+ * Strict Independent Module Permission Checker (canAccess)
  * 
  * Rules:
- * 1. Admin or full access ('*') returns TRUE for everything.
- * 2. If user has specific modules (e.g. ['sauda']), only matches to 'sauda' (and its known aliases) return TRUE.
- * 3. All other modules return FALSE.
+ * 1. Admin or full access ('*') returns TRUE for all modules.
+ * 2. Every Module ID is independent. Parent groups do NOT grant permissions.
+ * 3. Exact matching: canAccess("sms_sauda") verifies sms_sauda; canAccess("sauda") verifies sauda.
  */
-export function hasModulePermission(
+export function canAccess(
   targetModuleOrPage: string,
   allowedModulesOverride?: string[],
   isAdminOverride?: boolean
@@ -388,40 +389,24 @@ export function hasModulePermission(
 
   if (allowedList.includes('*')) return true;
 
-  const target = targetModuleOrPage.toLowerCase().trim();
-  const cleanAllowed = allowedList.map((m) => m.toLowerCase().trim()).filter(Boolean);
+  const canonicalTarget = getCanonicalModuleId(targetModuleOrPage);
+  const cleanAllowed = allowedList.map(m => getCanonicalModuleId(m)).filter(Boolean);
 
-  // 1. Direct match
-  if (cleanAllowed.includes(target)) {
-    return true;
-  }
-
-  // 2. Check aliases of target against cleanAllowed
-  const targetAliases = MODULE_ALIAS_MAP[target] || [target];
-  for (const alias of targetAliases) {
-    if (cleanAllowed.includes(alias.toLowerCase())) {
-      return true;
-    }
-  }
-
-  // 3. Check if any allowed item lists target as an alias
-  for (const allowedItem of cleanAllowed) {
-    const aliasesOfAllowed = MODULE_ALIAS_MAP[allowedItem] || [];
-    if (aliasesOfAllowed.map(a => a.toLowerCase()).includes(target)) {
-      return true;
-    }
-  }
-
-  return false;
+  return cleanAllowed.includes(canonicalTarget);
 }
+
+// Alias hasModulePermission to canAccess for seamless backwards compatibility
+export const hasModulePermission = canAccess;
 
 /**
  * Filter an array of navigation menus by user permissions.
  * 
  * Rules:
- * - If a menu has `subItems`, filter each subItem.
- * - If a parent menu has NO permitted subItems, COMPLETELY HIDE the parent menu.
- * - If a menu has no `subItems` (leaf menu like Dashboard or Reports), check its pageId/id.
+ * - Parent menus (e.g. "Sauda To P.O", "Temporary Arrival To Final Arrival", etc.) are navigation containers ONLY.
+ * - If a menu has `subItems`, each subItem is checked independently via canAccess.
+ * - If a parent menu has NO permitted subItems, the entire parent menu is HIDDEN.
+ * - If a parent menu has permitted subItems, ONLY the permitted subItems are shown.
+ * - Leaf menus (e.g. Dashboard) are checked via canAccess.
  */
 export function filterMenuByPermissions<T extends { id: string; pageId?: string; subItems?: any[] }>(
   menus: T[],
@@ -432,13 +417,13 @@ export function filterMenuByPermissions<T extends { id: string; pageId?: string;
 
   for (const menu of menus) {
     if (menu.subItems && menu.subItems.length > 0) {
-      // Filter child subItems
+      // Filter child subItems strictly
       const permittedSubItems = menu.subItems.filter((sub) => {
         const checkId = sub.pageId || sub.id;
-        return hasModulePermission(checkId, allowedModulesOverride, isAdminOverride);
+        return canAccess(checkId, allowedModulesOverride, isAdminOverride);
       });
 
-      // Only include parent menu if at least one child is permitted!
+      // A parent menu appears ONLY when at least one child module inside that group is assigned
       if (permittedSubItems.length > 0) {
         result.push({
           ...menu,
@@ -446,9 +431,9 @@ export function filterMenuByPermissions<T extends { id: string; pageId?: string;
         });
       }
     } else {
-      // Leaf menu (e.g. dashboard, reports)
+      // Leaf menu (e.g. dashboard)
       const checkId = menu.pageId || menu.id;
-      if (hasModulePermission(checkId, allowedModulesOverride, isAdminOverride)) {
+      if (canAccess(checkId, allowedModulesOverride, isAdminOverride)) {
         result.push(menu);
       }
     }
@@ -473,20 +458,21 @@ export function getFirstAllowedPage(
     : (ctx.allowedModules || []);
 
   if (allowedList.includes('*')) return 'dashboard';
-  if (hasModulePermission('dashboard', allowedList, false)) return 'dashboard';
+  if (canAccess('dashboard', allowedList, false)) return 'dashboard';
 
   // Find the first registered module that is permitted
   for (const mod of ALL_SYSTEM_MODULES) {
-    if (hasModulePermission(mod.id, allowedList, false)) {
+    if (canAccess(mod.id, allowedList, false)) {
       return mod.pageId;
     }
   }
 
-  // If nothing matched, check if any string in allowedList matches a page
+  // If nothing matched, check if any string in allowedList matches a module
   if (allowedList.length > 0) {
     const first = allowedList[0].trim();
     if (first && first !== '*') {
-      const found = ALL_SYSTEM_MODULES.find(m => m.id === first || m.aliases.includes(first));
+      const canonical = getCanonicalModuleId(first);
+      const found = ALL_SYSTEM_MODULES.find(m => m.id === canonical);
       if (found) return found.pageId;
       return first;
     }
@@ -509,4 +495,5 @@ export function broadcastPermissionsUpdated(detail: {
     window.dispatchEvent(new CustomEvent('bally-permissions-updated', { detail }));
   }
 }
+
 

@@ -33,7 +33,11 @@ import {
   DoorClosed,
   Truck,
   Menu,
-  ClipboardCheck
+  ClipboardCheck,
+  TrendingUp,
+  Warehouse,
+  Users,
+  Settings
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -326,9 +330,10 @@ export default function LegacyLayout({
       icon: ShoppingCart,
       subItems: [
         { id: 'satta', label: 'Satta', icon: Sparkles, pageId: 'satta' },
-        { id: 'sms', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
-        { id: 'sauda', label: 'Sauda', icon: HandCoins, pageId: 'sauda' },
-        { id: 'sauda_check', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },
+        { id: 'satta_chart', label: 'Satta Rate Chart', icon: TrendingUp, pageId: 'satta_chart' },
+        { id: 'sms_sauda', label: 'SMS', icon: MessageSquare, pageId: 'sms_sauda' },
+        { id: 'sauda', label: 'SAUDA', icon: HandCoins, pageId: 'sauda' },
+        { id: 'po', label: 'Sauda Check Point', icon: FileText, pageId: 'po' },
         { id: 'final_po', label: 'Final P.O', icon: FileText, pageId: 'final_po' },
       ]
     },
@@ -337,11 +342,11 @@ export default function LegacyLayout({
       label: 'Temporary Arrival To Final Arrival',
       icon: ShieldCheck,
       subItems: [
-        { id: 'tmr', label: 'TEMPORARY ARRIVAL', icon: Clock, pageId: 'amad' },
-        { id: 'final_mr', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
+        { id: 'amad', label: 'TEMPORARY ARRIVAL', icon: Clock, pageId: 'amad' },
+        { id: 'final_arrival', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
         { id: 'inspection', label: 'MILL INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
-        { id: 'satta_mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
+        { id: 'mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
         { id: 'material_mismatch', label: 'MATERIAL MISMATCH', icon: AlertTriangle, pageId: 'material_mismatch' },
       ]
     },
@@ -350,7 +355,7 @@ export default function LegacyLayout({
       label: 'Club P.O To Payment',
       icon: Wallet,
       subItems: [
-        { id: 'club_po', label: 'Club P.O & Arrival', icon: Link, pageId: 'club_po_mr' },
+        { id: 'club_po_mr', label: 'Club P.O & Arrival', icon: Link, pageId: 'club_po_mr' },
         { id: 'payment', label: 'Payment', icon: Wallet, pageId: 'payment' },
         { id: 'mr_settlement', label: 'Settlement', icon: FileCheck, pageId: 'mr_settlement' },
       ]
@@ -361,15 +366,23 @@ export default function LegacyLayout({
       icon: Boxes,
       subItems: [
         { id: 'issue', label: 'Material Issue', icon: PackageCheck, pageId: 'issue' },
-        { id: 'stock_inventory', label: 'Stock Inventory', icon: Layers, pageId: 'closing_stock' },
-        { id: 'requisition', label: 'Requisition Desk', icon: ClipboardList, pageId: 'requisition_desk' },
+        { id: 'closing_stock', label: 'Stock Inventory', icon: Layers, pageId: 'closing_stock' },
+        { id: 'requisition_desk', label: 'Requisition Desk', icon: ClipboardList, pageId: 'requisition_desk' },
+        { id: 'bardana', label: 'Godown Master', icon: Warehouse, pageId: 'bardana' },
+        { id: 'weight_bridge', label: 'Weight Bridge', icon: Scale, pageId: 'weight_bridge' },
       ]
     },
     {
-      id: 'reports',
-      label: 'Reports',
+      id: 'reports_admin',
+      label: 'Reports & Admin',
       icon: BarChart3,
-      pageId: 'reports'
+      subItems: [
+        { id: 'reports', label: 'System Reports', icon: BarChart3, pageId: 'reports' },
+        { id: 'vyapari', label: 'Traders Directory', icon: Users, pageId: 'vyapari' },
+        { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
+        { id: 'settings', label: 'Config Center', icon: Settings, pageId: 'settings' },
+        { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' },
+      ]
     }
   ];
 

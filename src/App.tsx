@@ -2446,8 +2446,7 @@ export default function App() {
                 ? allSidebarItems
                 : allSidebarItems.filter(
                     (item) =>
-                      allowedModules.includes(item.id) ||
-                      item.id === "dashboard",
+                      hasModulePermission(item.id, allowedModules, isAdmin),
                   )
               ).filter((item) => {
                 if (!commandSearchQuery) return true;
