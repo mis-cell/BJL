@@ -20,205 +20,205 @@ export interface SystemModuleDef {
 
 // Master Directory of every independent Module ID in the application
 export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
-  // 1. Dashboard (Operational Hub)
+  // 1. Overview
   {
     id: 'dashboard',
     label: 'Dashboard (Operational Hub)',
-    category: 'Overview & Gate',
+    category: 'Overview',
     pageId: 'dashboard',
     aliases: ['dashboard', 'operational_hub', 'hub', 'home']
   },
 
-  // 2. Main Gate
+  // 2. Gate Operations
   {
     id: 'main_gate',
     label: 'Main Gate',
-    category: 'Overview & Gate',
+    category: 'Gate Operations',
     pageId: 'main_gate',
     aliases: ['main_gate', 'maingate', 'gate_module', 'lorry_entry', 'dispatch']
   },
 
-  // 3. Sauda To P.O Parent Group
+  // 3. Sauda & Procurement
   {
     id: 'sms_sauda',
     label: 'SMS Sauda Desk',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'sms_sauda',
     aliases: ['sms_sauda', 'sms', 'sms_desk', 'sms_interfaces']
   },
   {
     id: 'sauda',
     label: 'Sauda Desk',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'sauda',
     aliases: ['sauda', 'sauda_entry', 'sauda_desk', 'sauda_master']
   },
   {
     id: 'satta',
     label: 'Satta Desk',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'satta',
     aliases: ['satta', 'satta_entry', 'satta_desk']
   },
   {
     id: 'satta_chart',
     label: 'Satta Rate Chart',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'satta_chart',
     aliases: ['satta_chart', 'rate_chart', 'satta_rates']
   },
   {
     id: 'po',
     label: 'Sauda Check Point',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'po',
     aliases: ['po', 'sauda_check', 'sauda_po_check', 'purchase_order', 'temp_po', 'po_temp']
   },
   {
     id: 'final_po',
     label: 'Final P.O',
-    category: 'Sauda To P.O',
+    category: 'Sauda & Procurement',
     pageId: 'final_po',
     aliases: ['final_po', 'final_purchase_order', 'po_final']
   },
 
-  // 4. Temporary Arrival To Final Arrival Parent Group
+  // 4. Arrival & Inspection
   {
     id: 'amad',
     label: 'Temporary Arrival',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'amad',
     aliases: ['amad', 'amad_entry', 'tmr', 'temporary_arrival', 'temporary_mr']
   },
   {
     id: 'final_arrival',
     label: 'Final Arrival',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'final_arrival',
     aliases: ['final_arrival', 'final_mr', 'final_arrival_entry']
   },
   {
     id: 'inspection',
     label: 'Mill Inspection',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'inspection',
     aliases: ['inspection', 'mill_inspection', 'mill_inspection_master', 'final_mr_inspection']
   },
   {
     id: 'material_inspection',
     label: 'Inspection Checklist',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'material_inspection',
     aliases: ['material_inspection', 'inspection_checklist', 'quality_inspection']
   },
   {
     id: 'mismatch',
     label: 'Satta Mismatch Case',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'mismatch',
     aliases: ['mismatch', 'satta_mismatch', 'mismatch_case']
   },
   {
     id: 'material_mismatch',
     label: 'Material Mismatch Case',
-    category: 'Temporary Arrival To Final Arrival',
+    category: 'Arrival & Inspection',
     pageId: 'material_mismatch',
     aliases: ['material_mismatch', 'mat_mismatch']
   },
 
-  // 5. Club P.O To Payment Parent Group
+  // 5. Club & Financial
   {
     id: 'club_po_mr',
     label: 'Club P.O & Arrival',
-    category: 'Club P.O To Payment',
+    category: 'Club & Financial',
     pageId: 'club_po_mr',
     aliases: ['club_po_mr', 'club_po', 'club_mr', 'club']
   },
   {
     id: 'payment',
     label: 'Payment Module',
-    category: 'Club P.O To Payment',
+    category: 'Club & Financial',
     pageId: 'payment',
     aliases: ['payment', 'payment_module', 'payments']
   },
   {
     id: 'mr_settlement',
     label: 'Settlement',
-    category: 'Club P.O To Payment',
+    category: 'Club & Financial',
     pageId: 'mr_settlement',
     aliases: ['mr_settlement', 'settlement', 'mr_claim']
   },
 
-  // 6. Material Issue To Inventory Parent Group
+  // 6. Inventory & Issue
   {
     id: 'issue',
     label: 'Material Issue',
-    category: 'Material Issue To Inventory',
+    category: 'Inventory & Issue',
     pageId: 'issue',
     aliases: ['issue', 'material_issue', 'material_issue_entry']
   },
   {
     id: 'closing_stock',
     label: 'Stock Inventory',
-    category: 'Material Issue To Inventory',
+    category: 'Inventory & Issue',
     pageId: 'closing_stock',
     aliases: ['closing_stock', 'stock_inventory', 'stock', 'inventory']
   },
   {
     id: 'requisition_desk',
     label: 'Requisition Desk',
-    category: 'Material Issue To Inventory',
+    category: 'Inventory & Issue',
     pageId: 'requisition_desk',
     aliases: ['requisition_desk', 'requisition', 'req_desk']
   },
   {
     id: 'bardana',
     label: 'Godown Master',
-    category: 'Material Issue To Inventory',
+    category: 'Inventory & Issue',
     pageId: 'bardana',
     aliases: ['bardana', 'godown_master', 'godown']
   },
   {
     id: 'weight_bridge',
     label: 'Weight Bridge',
-    category: 'Material Issue To Inventory',
+    category: 'Inventory & Issue',
     pageId: 'weight_bridge',
     aliases: ['weight_bridge', 'weigh_bridge', 'wb_view_dashboard', 'wb_stage1_create', 'wb_stage2_create', 'wb_stage3_create', 'wb_view_final']
   },
 
-  // 7. Reports / Administration Parent Group
+  // 7. Reports & Administration
   {
     id: 'reports',
     label: 'System Reports',
-    category: 'Reports / Administration',
+    category: 'Reports & Administration',
     pageId: 'reports',
     aliases: ['reports', 'system_reports', 'analytical_reports']
   },
   {
     id: 'vyapari',
     label: 'Traders Directory',
-    category: 'Reports / Administration',
+    category: 'Reports & Administration',
     pageId: 'vyapari',
     aliases: ['vyapari', 'traders_directory', 'trader_directory']
   },
   {
     id: 'admindesk',
     label: 'Admin Desk',
-    category: 'Reports / Administration',
+    category: 'Reports & Administration',
     pageId: 'admindesk',
     aliases: ['admindesk', 'admin_desk', 'admin_vault']
   },
   {
     id: 'settings',
     label: 'Config Center / Settings',
-    category: 'Reports / Administration',
+    category: 'Reports & Administration',
     pageId: 'settings',
     aliases: ['settings', 'config_center', 'config_guide']
   },
   {
     id: 'ai_assistant',
     label: 'Jarves AI 2.0',
-    category: 'Reports / Administration',
+    category: 'Reports & Administration',
     pageId: 'ai_assistant',
     aliases: ['ai_assistant', 'jarves_ai', 'ai_portal']
   },
