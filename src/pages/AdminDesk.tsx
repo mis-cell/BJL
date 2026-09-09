@@ -65,6 +65,7 @@ import FormsChartsTab from "../components/material/FormsChartsTab";
 import ExtraPagesTab from "../components/material/ExtraPagesTab";
 import EmailActivityTab from "../components/material/EmailActivityTab";
 import SMTPDiagnosticTab from "../components/material/SMTPDiagnosticTab";
+import { UserMasterTableView, UserMasterEditModal } from "../components/admin/UserMasterManager";
 
 interface TableDef {
   name: string;
@@ -2961,47 +2962,60 @@ export default function AdminDesk({
 
         {/* Row inline Dialog Modal drawer */}
         {editingRow && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-              <div className="bg-[#ec407a] p-4 text-white flex justify-between items-center">
-                <span className="text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
-                  <Edit className="h-4 w-4" />
-                  Editor: {selectedTable?.label || "Row Update"}
-                </span>
-                <button onClick={() => setEditingRow(null)}>
-                  <X className="h-4.5 w-4.5" />
-                </button>
-              </div>
+          selectedTable?.name === "user_master" ? (
+            <UserMasterEditModal
+              isOpen={Boolean(editingRow)}
+              isNew={isNewRow}
+              editingRow={editingRow}
+              setEditingRow={setEditingRow}
+              onClose={() => setEditingRow(null)}
+              onSave={handleSave}
+              allRows={data}
+              loading={loading}
+            />
+          ) : (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+                <div className="bg-[#ec407a] p-4 text-white flex justify-between items-center">
+                  <span className="text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <Edit className="h-4 w-4" />
+                    Editor: {selectedTable?.label || "Row Update"}
+                  </span>
+                  <button onClick={() => setEditingRow(null)}>
+                    <X className="h-4.5 w-4.5" />
+                  </button>
+                </div>
 
-              <div className="p-6 overflow-y-auto space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {editorColumns.map((col) => (
-                    <div key={col} className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400">
-                        {col.replace(/_/g, " ")}
-                      </label>
-                      {renderEditField(col)}
-                    </div>
-                  ))}
+                <div className="p-6 overflow-y-auto space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {editorColumns.map((col) => (
+                      <div key={col} className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400">
+                          {col.replace(/_/g, " ")}
+                        </label>
+                        {renderEditField(col)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 text-xs font-bold">
+                  <button
+                    onClick={() => setEditingRow(null)}
+                    className="px-4 py-2 bg-slate-200 text-slate-700 font-bold uppercase rounded-lg text-[10px] tracking-wider hover:bg-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-pink-600 text-white font-black uppercase rounded-lg text-[10px] tracking-wider hover:bg-pink-700"
+                  >
+                    Save Record Value
+                  </button>
                 </div>
               </div>
-
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 text-xs font-bold">
-                <button
-                  onClick={() => setEditingRow(null)}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 font-bold uppercase rounded-lg text-[10px] tracking-wider hover:bg-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-pink-600 text-white font-black uppercase rounded-lg text-[10px] tracking-wider hover:bg-pink-700"
-                >
-                  Save Record Value
-                </button>
-              </div>
             </div>
-          </div>
+          )
         )}
       </div>
     );
@@ -3182,77 +3196,88 @@ export default function AdminDesk({
             </div>
 
             {activeSchemaTab === "row" && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center bg-slate-100 p-2 border border-slate-200">
-                  <span className="text-xs font-bold uppercase">Dynamic records viewer</span>
-                  <button
-                    onClick={() => { setEditingRow({}); setIsNewRow(true); }}
-                    className="bg-indigo-900 text-white font-black text-[9px] uppercase px-4 py-1 border border-black/10 cursor-pointer"
-                  >
-                    New Row Item
-                  </button>
-                </div>
+              selectedTable?.name === "user_master" ? (
+                <UserMasterTableView
+                  data={data}
+                  loading={loading}
+                  onEdit={(row) => { setEditingRow(row); setIsNewRow(false); }}
+                  onDelete={(id) => handleDelete(id)}
+                  onAddNew={() => { setEditingRow({}); setIsNewRow(true); }}
+                  pk={selectedTable?.pk || "user_id"}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-slate-100 p-2 border border-slate-200">
+                    <span className="text-xs font-bold uppercase">Dynamic records viewer</span>
+                    <button
+                      onClick={() => { setEditingRow({}); setIsNewRow(true); }}
+                      className="bg-indigo-900 text-white font-black text-[9px] uppercase px-4 py-1 border border-black/10 cursor-pointer"
+                    >
+                      New Row Item
+                    </button>
+                  </div>
 
-                <div className="overflow-auto border border-slate-200 bg-white">
-                  <table className="w-full text-left text-xs ">
-                    <thead className="bg-[#000080] text-white font-extrabold uppercase text-[9px]">
-                      <tr>
-                        <th className="p-2 border-r border-[#ffffff20] text-center w-[110px]">Actions</th>
-                        {currentColumns.map((c) => {
-                          let label = c.name;
-                          if (selectedTable?.name === "user_master") {
-                            if (c.name === "password_hash" || c.name === "password") label = "PASSWORD";
-                            else if (c.name === "user_id") label = "USER ID";
-                            else if (c.name === "is_active" || c.name === "status") label = "STATUS";
-                            else if (c.name === "created_at") label = "CREATED_AT";
-                          }
-                          return (
-                            <th key={c.name} className="p-2 uppercase border-r border-[#ffffff20]">
-                              {label}
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 font-mono text-[9px]">
-                      {data.map((row, i) => (
-                        <tr 
-                          key={i} 
-                          title="Click row to directly edit record details"
-                          className="hover:bg-indigo-50 border-b border-slate-200 cursor-pointer transition-colors"
-                          onClick={() => { setEditingRow(row); setIsNewRow(false); }}
-                        >
-                          <td className="p-1.5 flex gap-2 justify-center items-center" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => { setEditingRow(row); setIsNewRow(false); }} className="text-indigo-700 hover:text-indigo-900 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
-                              [Edit]
-                            </button>
-                            <button onClick={() => handleDelete(row[selectedTable?.pk || "id"])} className="text-rose-600 hover:text-rose-800 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
-                              [Del]
-                            </button>
-                          </td>
+                  <div className="overflow-auto border border-slate-200 bg-white">
+                    <table className="w-full text-left text-xs ">
+                      <thead className="bg-[#000080] text-white font-extrabold uppercase text-[9px]">
+                        <tr>
+                          <th className="p-2 border-r border-[#ffffff20] text-center w-[110px]">Actions</th>
                           {currentColumns.map((c) => {
-                            let cellVal = row[c.name];
-                            let displayVal = cellVal !== null ? String(cellVal) : "NULL";
-
+                            let label = c.name;
                             if (selectedTable?.name === "user_master") {
-                              if (c.name === "is_active" || c.name.toLowerCase() === "is_active" || c.name === "status") {
-                                const activeVal = String(cellVal).toLowerCase() === "true" || cellVal === "1" || cellVal === 1 || cellVal === "active" || cellVal === "Active" || cellVal === true;
-                                displayVal = activeVal ? "Active" : "Inactive";
-                              }
+                              if (c.name === "password_hash" || c.name === "password") label = "PASSWORD";
+                              else if (c.name === "user_id") label = "USER ID";
+                              else if (c.name === "is_active" || c.name === "status") label = "STATUS";
+                              else if (c.name === "created_at") label = "CREATED_AT";
                             }
-
                             return (
-                              <td key={c.name} className="p-2 truncate max-w-[150px] border-r border-slate-200 text-slate-800">
-                                {displayVal}
-                              </td>
+                              <th key={c.name} className="p-2 uppercase border-r border-[#ffffff20]">
+                                {label}
+                              </th>
                             );
                           })}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 font-mono text-[9px]">
+                        {data.map((row, i) => (
+                          <tr 
+                            key={i} 
+                            title="Click row to directly edit record details"
+                            className="hover:bg-indigo-50 border-b border-slate-200 cursor-pointer transition-colors"
+                            onClick={() => { setEditingRow(row); setIsNewRow(false); }}
+                          >
+                            <td className="p-1.5 flex gap-2 justify-center items-center" onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => { setEditingRow(row); setIsNewRow(false); }} className="text-indigo-700 hover:text-indigo-900 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
+                                [Edit]
+                              </button>
+                              <button onClick={() => handleDelete(row[selectedTable?.pk || "id"])} className="text-rose-600 hover:text-rose-800 font-black cursor-pointer bg-slate-100 hover:bg-slate-200 px-1 py-0.5 rounded border border-slate-250">
+                                [Del]
+                              </button>
+                            </td>
+                            {currentColumns.map((c) => {
+                              let cellVal = row[c.name];
+                              let displayVal = cellVal !== null ? String(cellVal) : "NULL";
+
+                              if (selectedTable?.name === "user_master") {
+                                if (c.name === "is_active" || c.name.toLowerCase() === "is_active" || c.name === "status") {
+                                  const activeVal = String(cellVal).toLowerCase() === "true" || cellVal === "1" || cellVal === 1 || cellVal === "active" || cellVal === "Active" || cellVal === true;
+                                  displayVal = activeVal ? "Active" : "Inactive";
+                                }
+                              }
+
+                              return (
+                                <td key={c.name} className="p-2 truncate max-w-[150px] border-r border-slate-200 text-slate-800">
+                                  {displayVal}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )
             )}
 
             {activeSchemaTab === "column" && (
@@ -3541,57 +3566,70 @@ export default function AdminDesk({
 
       {/* Row modal edit fallback */}
       {editingRow && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#E8E6E1] border-2 border-white shadow-2xl w-full max-w-lg p-5 space-y-4">
-            <div className="bg-[#000080] text-white p-1.5 flex justify-between items-center">
-              <span className="text-xs font-black uppercase">Edit Row metadata</span>
-              <button onClick={() => setEditingRow(null)}>X</button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
-              {editorColumns.map((col) => {
-                let labelName = col;
-                if (selectedTable?.name === "user_master") {
-                  if (col === "password_hash") {
-                    labelName = "FULL NAME";
-                  } else if (col === "user_id") {
-                    labelName = "USER ID (SYSTEM AUTO)";
-                  } else if (col === "is_active") {
-                    labelName = "STATUS (IS ACTIVE)";
-                  } else if (col === "created_at") {
-                    labelName = "CREATED AT (AUTO)";
+        selectedTable?.name === "user_master" ? (
+          <UserMasterEditModal
+            isOpen={Boolean(editingRow)}
+            isNew={isNewRow}
+            editingRow={editingRow}
+            setEditingRow={setEditingRow}
+            onClose={() => setEditingRow(null)}
+            onSave={handleSave}
+            allRows={data}
+            loading={loading}
+          />
+        ) : (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-[#E8E6E1] border-2 border-white shadow-2xl w-full max-w-lg p-5 space-y-4">
+              <div className="bg-[#000080] text-white p-1.5 flex justify-between items-center">
+                <span className="text-xs font-black uppercase">Edit Row metadata</span>
+                <button onClick={() => setEditingRow(null)}>X</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
+                {editorColumns.map((col) => {
+                  let labelName = col;
+                  if (selectedTable?.name === "user_master") {
+                    if (col === "password_hash") {
+                      labelName = "FULL NAME";
+                    } else if (col === "user_id") {
+                      labelName = "USER ID (SYSTEM AUTO)";
+                    } else if (col === "is_active") {
+                      labelName = "STATUS (IS ACTIVE)";
+                    } else if (col === "created_at") {
+                      labelName = "CREATED AT (AUTO)";
+                    }
+                  } else if (selectedTable?.name === "user_activity_logs") {
+                    if (col === "log_id") {
+                      labelName = "LOG ID (SYSTEM AUTO)";
+                    } else if (col === "username") {
+                      labelName = "USERNAME / ACTOR";
+                    } else if (col === "activity_type") {
+                      labelName = "ACTIVITY / EVENT TYPE";
+                    } else if (col === "module_name") {
+                      labelName = "MODULE ACCESSED";
+                    } else if (col === "action_details") {
+                      labelName = "ACTION DETAIL SUMMARY";
+                    } else if (col === "ip_address") {
+                      labelName = "IP ADDRESS / SOURCE";
+                    } else if (col === "created_at") {
+                      labelName = "OCCURRED AT (AUTO)";
+                    }
                   }
-                } else if (selectedTable?.name === "user_activity_logs") {
-                  if (col === "log_id") {
-                    labelName = "LOG ID (SYSTEM AUTO)";
-                  } else if (col === "username") {
-                    labelName = "USERNAME / ACTOR";
-                  } else if (col === "activity_type") {
-                    labelName = "ACTIVITY / EVENT TYPE";
-                  } else if (col === "module_name") {
-                    labelName = "MODULE ACCESSED";
-                  } else if (col === "action_details") {
-                    labelName = "ACTION DETAIL SUMMARY";
-                  } else if (col === "ip_address") {
-                    labelName = "IP ADDRESS / SOURCE";
-                  } else if (col === "created_at") {
-                    labelName = "OCCURRED AT (AUTO)";
-                  }
-                }
-                const isFullWidth = col === "allowed_modules" || col === "action_details";
-                return (
-                  <div key={col} className={`space-y-1 text-xs font-bold ${isFullWidth ? "col-span-2" : ""}`}>
-                    <label className="text-slate-500 uppercase text-[9px] block font-black leading-none">{labelName}</label>
-                    {renderEditField(col)}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end gap-2 text-xs font-bold">
-              <button onClick={() => setEditingRow(null)} className="px-4 py-1.5 bg-slate-300">Cancel</button>
-              <button onClick={handleSave} className="px-4 py-1.5 bg-[#000080] text-white">Save Item</button>
+                  const isFullWidth = col === "allowed_modules" || col === "action_details";
+                  return (
+                    <div key={col} className={`space-y-1 text-xs font-bold ${isFullWidth ? "col-span-2" : ""}`}>
+                      <label className="text-slate-500 uppercase text-[9px] block font-black leading-none">{labelName}</label>
+                      {renderEditField(col)}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end gap-2 text-xs font-bold">
+                <button onClick={() => setEditingRow(null)} className="px-4 py-1.5 bg-slate-300">Cancel</button>
+                <button onClick={handleSave} className="px-4 py-1.5 bg-[#000080] text-white">Save Item</button>
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
     </LegacyLayout>
   );

@@ -1,5 +1,6 @@
 import React from "react";
 import { canEditOrDelete } from "../../lib/permissions";
+import { UserMasterTableView } from "../admin/UserMasterManager";
 import {
   Database,
   Plus,
@@ -278,57 +279,68 @@ export default function DatabaseTab({
               </div>
 
               {/* Table rendering panel */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-96 overflow-y-auto">
-                {loading ? (
-                  <div className="p-8 text-center text-xs font-bold text-slate-400">
-                    Retrieving master records from database...
-                  </div>
-                ) : filteredData.length === 0 ? (
-                  <div className="p-8 text-center text-xs font-black text-slate-400 uppercase tracking-widest">
-                    No matching records found.
-                  </div>
-                ) : (
-                  <table className="w-full border-collapse text-left text-xs bg-white">
-                    <thead className="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-600 font-extrabold uppercase text-[10px] tracking-wider">
-                      <tr>
-                        <th className="p-2.5">Actions</th>
-                        {currentColumns.map((col) => (
-                          <th key={col.name} className="p-2.5 truncate">{col.name}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                      {filteredData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/60 font-mono text-[10px]">
-                          <td className="p-2 flex gap-1.5 items-center">
-                            {canEditOrDelete() && (
-                              <>
-                                <button
-                                  onClick={() => setEditingRow(row)}
-                                  className="p-1 hover:bg-slate-200 text-indigo-700 rounded"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(row[selectedTable?.pk || "id"])}
-                                  className="p-1 hover:bg-slate-200 text-rose-600 rounded"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </td>
+              {selectedTable?.name === "user_master" ? (
+                <UserMasterTableView
+                  data={data}
+                  loading={loading}
+                  onEdit={(row) => setEditingRow(row)}
+                  onDelete={(id) => handleDelete(id)}
+                  onAddNew={() => setEditingRow({})}
+                  pk={selectedTable?.pk || "user_id"}
+                />
+              ) : (
+                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-96 overflow-y-auto">
+                  {loading ? (
+                    <div className="p-8 text-center text-xs font-bold text-slate-400">
+                      Retrieving master records from database...
+                    </div>
+                  ) : filteredData.length === 0 ? (
+                    <div className="p-8 text-center text-xs font-black text-slate-400 uppercase tracking-widest">
+                      No matching records found.
+                    </div>
+                  ) : (
+                    <table className="w-full border-collapse text-left text-xs bg-white">
+                      <thead className="bg-slate-100 sticky top-0 border-b border-slate-200 text-slate-600 font-extrabold uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="p-2.5">Actions</th>
                           {currentColumns.map((col) => (
-                            <td key={col.name} className="p-2.5 max-w-[150px] truncate">
-                              {row[col.name] !== null ? String(row[col.name]) : <span className="opacity-40 font-sans">NULL</span>}
-                            </td>
+                            <th key={col.name} className="p-2.5 truncate">{col.name}</th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                        {filteredData.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/60 font-mono text-[10px]">
+                            <td className="p-2 flex gap-1.5 items-center">
+                              {canEditOrDelete() && (
+                                <>
+                                  <button
+                                    onClick={() => setEditingRow(row)}
+                                    className="p-1 hover:bg-slate-200 text-indigo-700 rounded"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(row[selectedTable?.pk || "id"])}
+                                    className="p-1 hover:bg-slate-200 text-rose-600 rounded"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                            {currentColumns.map((col) => (
+                              <td key={col.name} className="p-2.5 max-w-[150px] truncate">
+                                {row[col.name] !== null ? String(row[col.name]) : <span className="opacity-40 font-sans">NULL</span>}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
