@@ -1318,7 +1318,7 @@ export default function App() {
         // Auto-redirect if currently open page is no longer permitted
         if (!hasModulePermission(currentPage, newMods, isAdm)) {
           const fallback = getFirstAllowedPage(newMods, isAdm) as Page;
-          setCurrentPage(fallback);
+          setCurrentPage('dashboard');
         }
       }
     });
