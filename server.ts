@@ -664,6 +664,57 @@ async function startServer() {
     }
   });
 
+  // Payment Validation & Duplicate Prevention Route
+  app.post(["/api/payments/check-duplicate", "/Jute-Purchase-Automation/api/payments/check-duplicate"], async (req, res) => {
+    const { mr_no, po_no, current_voucher_no } = req.body || {};
+    
+    if (!mr_no || String(mr_no).trim() === '') {
+      return res.json({ isDuplicate: false });
+    }
+
+    const cleanMr = String(mr_no).trim();
+    const cleanPo = po_no ? String(po_no).trim() : '';
+
+    try {
+      const { data, error } = await supabase
+        .from('payment_master')
+        .select('voucher_no, mr_no, arrival_no, po_no, supplier, party_name, status, payment_date')
+        .or(`mr_no.ilike.%${cleanMr}%,arrival_no.ilike.%${cleanMr}%`);
+
+      if (error) {
+        console.warn("[Backend Payment Check] Supabase query error:", error);
+        return res.json({ isDuplicate: false });
+      }
+
+      if (data && data.length > 0) {
+        const conflict = data.find((p: any) => {
+          if (current_voucher_no && String(p.voucher_no).trim().toUpperCase() === String(current_voucher_no).trim().toUpperCase()) {
+            return false;
+          }
+          const pStatus = String(p.status || '').toLowerCase().trim();
+          if (pStatus === 'cancelled' || pStatus === 'rejected') return false;
+
+          const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+          const targetMr = cleanMr.toUpperCase();
+          return pMr === targetMr;
+        });
+
+        if (conflict) {
+          return res.status(200).json({
+            isDuplicate: true,
+            conflictRecord: conflict,
+            message: `Payment has already been processed for M.R. ${cleanMr} against P.O. ${conflict.po_no || cleanPo || 'N/A'} (Voucher No: ${conflict.voucher_no}). This M.R. cannot be selected again.`
+          });
+        }
+      }
+
+      return res.json({ isDuplicate: false });
+    } catch (e: any) {
+      console.error("[Backend Payment Check] Server error:", e);
+      return res.status(200).json({ isDuplicate: false });
+    }
+  });
+
   // Health Check
   app.get(["/api/health", "/Jute-Purchase-Automation/api/health"], (req, res) => {
     res.json({ status: "ok" });

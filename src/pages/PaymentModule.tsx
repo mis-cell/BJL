@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
@@ -712,11 +712,77 @@ function SearchablePoSelect({
   );
 }
 
+/* Helper to verify if an M.R has already been processed in payment_master */
+export function isMrAlreadyProcessed(
+  mrNoOrArrival: string | any,
+  paymentList: any[],
+  currentVoucherNo?: string,
+  poNo?: string
+): { isPaid: boolean; paidPayment?: any } {
+  if (!mrNoOrArrival || !paymentList || paymentList.length === 0) {
+    return { isPaid: false };
+  }
+
+  const mrStr = typeof mrNoOrArrival === 'string'
+    ? mrNoOrArrival
+    : (mrNoOrArrival.mr_no || mrNoOrArrival.final_arrival_no || mrNoOrArrival.arrival_no || '');
+  
+  const cleanMr = String(mrStr).trim().toUpperCase();
+  if (!cleanMr || cleanMr === 'N/A') {
+    return { isPaid: false };
+  }
+
+  const cleanPo = poNo
+    ? String(poNo).trim().toUpperCase()
+    : (typeof mrNoOrArrival === 'object' ? String(mrNoOrArrival.po_no || mrNoOrArrival.mill_po_no || '').trim().toUpperCase() : '');
+
+  const matchedPayment = paymentList.find(p => {
+    // If editing, ignore current voucher
+    if (currentVoucherNo && String(p.voucher_no || '').trim().toUpperCase() === String(currentVoucherNo).trim().toUpperCase()) {
+      return false;
+    }
+
+    // Exclude cancelled or rejected payments
+    const pStatus = String(p.status || '').toLowerCase().trim();
+    if (pStatus === 'cancelled' || pStatus === 'rejected') {
+      return false;
+    }
+
+    const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+    if (!pMr) return false;
+
+    // Direct MR match
+    const isMrMatch = pMr === cleanMr;
+
+    if (isMrMatch) {
+      if (cleanPo) {
+        const pPo = String(p.po_no || '').trim().toUpperCase();
+        if (pPo) {
+          const pPoSuffix = pPo.split('/').pop() || '';
+          const cleanPoSuffix = cleanPo.split('/').pop() || '';
+          if (pPo === cleanPo || pPo.includes(cleanPo) || cleanPo.includes(pPo) || (cleanPoSuffix.length >= 3 && pPoSuffix === cleanPoSuffix)) {
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    return false;
+  });
+
+  return {
+    isPaid: Boolean(matchedPayment),
+    paidPayment: matchedPayment
+  };
+}
+
 /* Searchable Inspection / M.R Dropdown Component */
 interface SearchableMrSelectProps {
   selectedMrNo: string;
   onSelectMr: (mrNo: string) => void;
   verifiedArrivals: any[];
+  allArrivals?: any[];
   selectedPoNo: string;
 }
 
@@ -724,6 +790,7 @@ function SearchableMrSelect({
   selectedMrNo,
   onSelectMr,
   verifiedArrivals,
+  allArrivals,
   selectedPoNo
 }: SearchableMrSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -762,7 +829,8 @@ function SearchableMrSelect({
     return mrNo.includes(normalizedSearch) || supp.includes(normalizedSearch) || poNo.includes(normalizedSearch) || lorry.includes(normalizedSearch);
   });
 
-  const selectedArr = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo || a.arrival_no === selectedMrNo));
+  const masterListToFind = allArrivals || verifiedArrivals;
+  const selectedArr = masterListToFind.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo || a.arrival_no === selectedMrNo));
 
   const getLabel = () => {
     if (selectedArr) {
@@ -988,6 +1056,19 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       return false;
     });
   };
+
+  // Filter verified arrivals to strictly exclude already processed/paid M.R. records
+  const availableArrivals = useMemo(() => {
+    return verifiedArrivals.filter(arr => {
+      const { isPaid } = isMrAlreadyProcessed(
+        arr,
+        paymentList,
+        isEdit ? masterData.voucher_no : undefined,
+        selectedPoNo
+      );
+      return !isPaid;
+    });
+  }, [verifiedArrivals, paymentList, isEdit, masterData.voucher_no, selectedPoNo]);
 
   const ensurePaymentTablesExist = async () => {
     if (!supabase) return;
@@ -1474,10 +1555,23 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       setDetailCols(cols);
 
-      // Check if an arrival matches this PO
-      const matchingArrival = verifiedArrivals.find(a => a.po_no === poNo);
+      // Check if an UNPAID arrival matches this PO
+      const matchingArrival = availableArrivals.find(a => (a.po_no === poNo || a.mill_po_no === poNo));
       if (matchingArrival && !selectedMrNo) {
         handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no, po);
+      } else if (selectedMrNo) {
+        // If current selected MR is already paid or belongs to another PO, revalidate
+        const isCurrentPaid = isMrAlreadyProcessed(selectedMrNo, paymentList, isEdit ? masterData.voucher_no : undefined, poNo).isPaid;
+        const currentArr = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
+        const currentArrPo = currentArr?.po_no || currentArr?.mill_po_no;
+        if (isCurrentPaid || (currentArrPo && currentArrPo !== poNo)) {
+          if (matchingArrival) {
+            handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no, po);
+          } else {
+            setSelectedMrNo('');
+            setMasterData(prev => ({ ...prev, mr_no: '', arrival_no: '' }));
+          }
+        }
       }
     }
   };
@@ -1486,6 +1580,16 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const handleMrSelection = async (mrNo: string, overridePo?: any) => {
     setSelectedMrNo(mrNo);
     if (!mrNo) return;
+
+    // Strict duplicate check: If MR is already processed in payment_master, reject selection immediately
+    const checkPaid = isMrAlreadyProcessed(mrNo, paymentList, isEdit ? masterData.voucher_no : undefined, selectedPoNo);
+    if (checkPaid.isPaid && checkPaid.paidPayment) {
+      const p = checkPaid.paidPayment;
+      setErrorMessage(`Payment has already been processed for M.R. ${mrNo} against P.O. ${p.po_no || selectedPoNo || 'N/A'} (Voucher No: ${p.voucher_no}). This M.R. cannot be selected again.`);
+      setSelectedMrNo('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     const arrival = verifiedArrivals.find(a => (a.mr_no === mrNo || a.final_arrival_no === mrNo));
     if (arrival) {
@@ -1627,6 +1731,20 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       return;
     }
 
+    const checkMr = String(masterData.mr_no || selectedMrNo || masterData.arrival_no || '').trim().toUpperCase();
+    const checkPo = String(masterData.po_no || selectedPoNo || '').trim().toUpperCase();
+
+    // 1. Client-side duplicate validation against paymentList
+    if (checkMr && checkMr !== 'N/A') {
+      const localConflict = isMrAlreadyProcessed(checkMr, paymentList, isEdit ? masterData.voucher_no : undefined, checkPo);
+      if (localConflict.isPaid && localConflict.paidPayment) {
+        const p = localConflict.paidPayment;
+        setErrorMessage(`Payment has already been processed for M.R. ${checkMr} against P.O. ${p.po_no || checkPo || 'N/A'} (Voucher No: ${p.voucher_no}). This M.R. cannot be selected again.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     setLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
@@ -1635,6 +1753,62 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       if (!supabase) throw new Error("Supabase client not connected.");
 
       await ensurePaymentTablesExist();
+
+      // 2. Direct Live Database Duplicate Check (prevents race conditions)
+      if (checkMr && checkMr !== 'N/A') {
+        try {
+          const { data: liveConflicts } = await supabase
+            .from('payment_master')
+            .select('voucher_no, mr_no, arrival_no, po_no, supplier, party_name, status')
+            .or(`mr_no.ilike.%${checkMr}%,arrival_no.ilike.%${checkMr}%`);
+
+          if (liveConflicts && liveConflicts.length > 0) {
+            const conflict = liveConflicts.find((p: any) => {
+              if (isEdit && String(p.voucher_no).trim().toUpperCase() === String(masterData.voucher_no).trim().toUpperCase()) {
+                return false;
+              }
+              const pStatus = String(p.status || '').toLowerCase().trim();
+              if (pStatus === 'cancelled' || pStatus === 'rejected') return false;
+
+              const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+              return pMr === checkMr;
+            });
+
+            if (conflict) {
+              setErrorMessage(`Payment has already been processed for M.R. ${checkMr} against P.O. ${conflict.po_no || checkPo || 'N/A'} (Voucher No: ${conflict.voucher_no}). This M.R. cannot be selected again.`);
+              setLoading(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+          }
+        } catch (dbErr) {
+          console.warn("Live duplicate check notice:", dbErr);
+        }
+
+        // 3. Server API Duplicate Check
+        try {
+          const apiRes = await fetch('/api/payments/check-duplicate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mr_no: checkMr,
+              po_no: checkPo,
+              current_voucher_no: isEdit ? masterData.voucher_no : undefined
+            })
+          });
+          if (apiRes.ok) {
+            const apiData = await apiRes.json();
+            if (apiData.isDuplicate) {
+              setErrorMessage(apiData.message || `Payment has already been processed for M.R. ${checkMr} against P.O. ${checkPo}. This M.R. cannot be selected again.`);
+              setLoading(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("Backend API duplicate check notice:", apiErr);
+        }
+      }
 
       const initialPayload: Record<string, any> = {
         voucher_no: masterData.voucher_no,
@@ -2632,7 +2806,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     {purchaseOrders.filter(po => isPoEligibleForPayment(po)).length} Eligible P.O Records (Status: Completed & PASS)
                   </span>
                   <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
-                    {verifiedArrivals.length} Verified M.R & Inspection Records
+                    {availableArrivals.length} Unpaid M.R Records ({verifiedArrivals.length} Total Verified)
                   </span>
                 </div>
               </div>
@@ -2686,7 +2860,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         <SearchableMrSelect
                           selectedMrNo={selectedMrNo}
                           onSelectMr={handleMrSelection}
-                          verifiedArrivals={verifiedArrivals}
+                          verifiedArrivals={availableArrivals}
+                          allArrivals={verifiedArrivals}
                           selectedPoNo={selectedPoNo}
                         />
                       </div>
