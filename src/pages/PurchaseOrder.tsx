@@ -1514,16 +1514,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         return;
       }
       try {
-        const [inspRes, matInspRes, detailsRes] = await Promise.all([
-          supabase.from('mill_inspection_master').select('*').then(r => r, () => ({ data: [] as any[] })),
+        const [matInspRes, detailsRes] = await Promise.all([
           supabase.from('material_inspection').select('*').then(r => r, () => ({ data: [] as any[] })),
           supabase.from('sauda_check_point_details').select('*').then(r => r, () => ({ data: [] as any[] })),
         ]);
 
-        const inspList = [
-          ...((matInspRes as any)?.data || []),
-          ...((inspRes as any)?.data || [])
-        ];
+        const inspList = (matInspRes as any)?.data || [];
         const detailsList = (detailsRes as any)?.data || [];
 
         const clean = (v: any) => String(v ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();

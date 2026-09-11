@@ -1052,11 +1052,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const payList = payRes.data && payRes.data.length > 0 ? payRes.data : await dbModule.fetchAll('payment_master').catch(() => []);
         setPaymentList(payList);
 
-        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, mill_inspection_master, inspection_master, final_arrival)
-        const [matInspRes, millInspRes, inspMRes, faRes] = await Promise.all([
+        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival)
+        const [matInspRes, faRes] = await Promise.all([
           supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-          supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-          supabase.from('inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
           supabase.from('final_arrival').select('*').order('date', { ascending: false }).then(r => r.data || [], () => []),
         ]);
 
@@ -1074,29 +1072,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
         }
 
-        // Priority 2: mill_inspection_master
-        if (millInspRes) {
-          for (const item of millInspRes) {
-            const mrKey = item.mr_no || item.arrival_no;
-            if (mrKey && !seenMrNos.has(mrKey)) {
-              seenMrNos.add(mrKey);
-              combinedInspections.push(item);
-            }
-          }
-        }
-
-        // Priority 3: inspection_master
-        if (inspMRes) {
-          for (const item of inspMRes) {
-            const mrKey = item.mr_no || item.arrival_no;
-            if (mrKey && !seenMrNos.has(mrKey)) {
-              seenMrNos.add(mrKey);
-              combinedInspections.push(item);
-            }
-          }
-        }
-
-        // Priority 4: final_arrival
+        // Priority 2: final_arrival
         if (faRes) {
           for (const item of faRes) {
             const mrKey = item.mr_no || item.final_arrival_no;
@@ -1359,14 +1335,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       // 2. Fetch all mill inspections & final arrivals for this P.O to sum total received quantity in Metric Tons (MT)
-      const [matInspForPoRes, millInspForPoRes, inspMForPoRes, finalArrivalsForPoRes] = await Promise.all([
+      const [matInspForPoRes, finalArrivalsForPoRes] = await Promise.all([
         supabase.from('material_inspection').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
-        supabase.from('mill_inspection_master').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
-        supabase.from('inspection_master').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
         supabase.from('final_arrival').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => [])
       ]);
 
-      const inspectionsForPo = [...(matInspForPoRes || []), ...(millInspForPoRes || []), ...(inspMForPoRes || [])];
+      const inspectionsForPo = matInspForPoRes || [];
       const finalArrivalsForPo = finalArrivalsForPoRes || [];
 
       // Merge newly fetched arrivals into state so FA dropdown is always complete
@@ -1577,12 +1551,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       let inspMaster: any = null;
       try {
-        const [matInspRes, millInspRes, inspMRes] = await Promise.all([
-          supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
-          supabase.from('mill_inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
-          supabase.from('inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle()
-        ]);
-        inspMaster = matInspRes?.data || millInspRes?.data || inspMRes?.data || null;
+        const matInspRes = await supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle();
+        inspMaster = matInspRes?.data || null;
       } catch (e) {
         console.warn("Error fetching inspection master:", e);
       }
@@ -1601,12 +1571,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       if (inspDetails.length === 0) {
         try {
-          const [matDetRes, millDetRes, inspDetRes] = await Promise.all([
-            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true }),
-            supabase.from('mill_inspection_detail').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true }),
-            supabase.from('inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true })
-          ]);
-          const fetchedDet = matDetRes?.data || millDetRes?.data || inspDetRes?.data || [];
+          const matDetRes = await supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true });
+          const fetchedDet = matDetRes?.data || [];
           if (fetchedDet.length > 0) inspDetails = fetchedDet;
         } catch (e) {
           console.warn("Error fetching inspection details:", e);

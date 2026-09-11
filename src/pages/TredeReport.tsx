@@ -1347,13 +1347,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           console.warn("Supabase sauda_check_point fetch error:", err);
         }
 
-        // 3. Fetch Final Arrivals (final_arrival) & Inspection Module Register (inspection_master, mill_inspection_master, inspection_checklist)
+        // 3. Fetch Final Arrivals (final_arrival) & Material Inspection (material_inspection)
         try {
-          const [aRes, imRes, mimRes, icRes] = await Promise.all([
+          const [aRes, miRes] = await Promise.all([
             supabase.from('final_arrival').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-            supabase.from('inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-            supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-            supabase.from('inspection_checklist').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
           ]);
 
           const combinedMap = new Map<string, any>();
@@ -1363,7 +1361,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             if (key) combinedMap.set(key, { ...item, source_module: 'final_arrival' });
           });
 
-          (imRes || []).forEach((item: any) => {
+          (miRes || []).forEach((item: any) => {
             const key = item.mr_no || item.arrival_no || item.final_arrival_no;
             if (key) {
               const existing = combinedMap.get(key) || {};
@@ -1374,39 +1372,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 supplier: item.supplier_name || item.supplier || existing.supplier,
                 broker: item.broker_name || item.broker || existing.broker,
                 po_no: item.po_no || item.mill_po_no || existing.po_no,
-                source_module: 'inspection_master'
-              });
-            }
-          });
-
-          (mimRes || []).forEach((item: any) => {
-            const key = item.mr_no || item.arrival_no;
-            if (key) {
-              const existing = combinedMap.get(key) || {};
-              combinedMap.set(key, {
-                ...existing,
-                ...item,
-                mr_no: key,
-                supplier: item.supplier_name || item.supplier || existing.supplier,
-                broker: item.broker_name || item.broker || existing.broker,
-                po_no: item.po_no || item.mill_po_no || existing.po_no,
-                source_module: 'mill_inspection_master'
-              });
-            }
-          });
-
-          (icRes || []).forEach((item: any) => {
-            const key = item.mr_no || item.arrival_no;
-            if (key) {
-              const existing = combinedMap.get(key) || {};
-              combinedMap.set(key, {
-                ...existing,
-                ...item,
-                mr_no: key,
-                supplier: item.supplier_name || item.supplier || existing.supplier,
-                broker: item.broker_name || item.broker || existing.broker,
-                po_no: item.po_no || item.mill_po_no || existing.po_no,
-                source_module: 'inspection_checklist'
+                source_module: 'material_inspection'
               });
             }
           });
@@ -1737,14 +1703,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       if (supabase) {
         try {
           const targetMr = arrival.mr_no || arrival.final_arrival_no || mrNo;
-          const [midRes, idRes] = await Promise.all([
-            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMr),
-            supabase.from('inspection_details').select('*').eq('mr_no', targetMr)
-          ]);
+          const midRes = await supabase.from('material_inspection_details').select('*').eq('mr_no', targetMr);
           if (midRes.data && midRes.data.length > 0) {
             rawArrItems = midRes.data;
-          } else if (idRes.data && idRes.data.length > 0) {
-            rawArrItems = idRes.data;
           }
         } catch (e) {
           console.warn("Failed to fetch inspection details:", e);

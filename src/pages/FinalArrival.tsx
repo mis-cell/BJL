@@ -731,11 +731,11 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
             const currentUser = getCurrentUserContext().username || "prosunmajhi@gmail.com";
             try {
               const logDetails = `[AUTO-SYNC ENGINE] MATCH: ${record.final_arrival_no} | MR: ${match.mr_no} | ORIGINAL: ${JSON.stringify(origObj)} | UPDATED: ${JSON.stringify(upObj)}`;
-              await supabase.from("mill_inspection_print_logs").insert({
+              await supabase.from("system_logs").insert({
                 user_id: currentUser,
-                row_ids: [record.final_arrival_no],
+                action: 'AUTO_SYNC',
                 details: logDetails
-              });
+              }).then(() => {}, () => {});
             } catch (le) {
               console.warn("Log write error:", le);
             }
@@ -879,6 +879,15 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
 
     if (confirm(`Are you sure you want to completely delete Final Arrival Voucher #${code}? This will remove it from the database.`)) {
       try {
+        if (code && supabase) {
+          // Cascade clean linked inspection details & deductions
+          await Promise.all([
+            supabase.from('material_inspection_details').delete().or(`mr_no.eq.${code},arrival_no.eq.${code}`).then(() => {}, () => {}),
+            supabase.from('material_inspection_deductions').delete().or(`mr_no.eq.${code}`).then(() => {}, () => {}),
+            supabase.from('mill_inspection_deduction').delete().or(`mr_no.eq.${code}`).then(() => {}, () => {}),
+          ]);
+          await supabase.from('material_inspection').delete().or(`mr_no.eq.${code},arrival_no.eq.${code},final_arrival_no.eq.${code}`).then(() => {}, () => {});
+        }
         await dbModule.delete('final_arrival', 'final_arrival_id', id);
         alert(`Final Arrival Voucher #${code} deleted permanently.`);
         fetchRecords();

@@ -557,11 +557,11 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
       // Insert log audit history
       const currentUser = getCurrentUserContext().username || "prosunmajhi@gmail.com";
       try {
-        await supabase.from("mill_inspection_print_logs").insert({
+        await supabase.from("system_logs").insert({
           user_id: currentUser,
-          row_ids: [item.final_arrival_no || ''],
+          action: 'RECONCILIATION',
           details: `[RECONCILIATION REPORT] Resolved discrepancy for Final Arrival: ${item.final_arrival_no} linked to MR: ${item.mr_no}. Corrected to certified lab metrics.`
-        });
+        }).then(() => {}, () => {});
       } catch (err) {
         console.warn("Auditing sync write failed:", err);
       }

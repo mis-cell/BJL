@@ -200,3 +200,38 @@ export function canApproveMismatch(): boolean {
     level === 'ADMINISTRATOR'
   );
 }
+
+/**
+ * Robust Date Sanitizer for PostgreSQL DATE columns.
+ * Prevents 400 (Bad Request) errors caused by empty strings, formatted placeholder dates, or invalid date values.
+ * Returns ISO YYYY-MM-DD or null.
+ */
+export function sanitizeDate(val: any): string | null {
+  if (val === null || val === undefined) return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val.toISOString().split('T')[0];
+  }
+  const str = String(val).trim();
+  if (!str || str === '' || str === '-' || str.toLowerCase() === 'null' || str.toLowerCase() === 'undefined' || str.toLowerCase() === 'dd-mm-yyyy' || str.toLowerCase() === 'nan-nan-nan') {
+    return null;
+  }
+  // Check DD-MM-YYYY or DD/MM/YYYY
+  const ddmmyyyy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (ddmmyyyy) {
+    const d = ddmmyyyy[1].padStart(2, '0');
+    const m = ddmmyyyy[2].padStart(2, '0');
+    const y = ddmmyyyy[3];
+    return `${y}-${m}-${d}`;
+  }
+  // Check YYYY-MM-DD or YYYY/MM/DD
+  const yyyymmdd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (yyyymmdd) {
+    const y = yyyymmdd[1];
+    const m = yyyymmdd[2].padStart(2, '0');
+    const d = yyyymmdd[3].padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+}
+

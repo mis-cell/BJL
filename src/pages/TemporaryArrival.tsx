@@ -13,7 +13,7 @@ import {
   Unlock,
   AlertTriangle
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, sanitizeDate } from '../lib/utils';
 import { Amad, ArrivalDetailRow } from '../types';
 import { dbModule } from '../services/dbModule';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -1096,7 +1096,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         amad_no: formData.arrival_no,
         temporary_arrival_no: formData.arrival_no,
         po_no: formData.po_no,
-        date: formData.date,
+        date: sanitizeDate(formData.date),
         jci: formData.jci,
         challan_supplier: formData.challan_supplier,
         supplier: formData.supplier,
@@ -1106,13 +1106,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         challan_railway_receipt_no: (formData as any).challan_railway_receipt_no || formData.challan_rr_no || '',
         lorry_number: lorryCombined,
         pan_no: formData.pan_no,
-        lorry_date: formData.lorry_date || null,
+        lorry_date: sanitizeDate(formData.lorry_date),
         consignment_note: (formData as any).consignment_note || formData.consignment_note_no || '',
         consignment_note_no: (formData as any).consignment_note || formData.consignment_note_no || '',
         di_no: formData.di_no,
-        di_date: formData.di_date || null,
+        di_date: sanitizeDate(formData.di_date),
         invoice_no: formData.invoice_no,
-        invoice_date: formData.invoice_date || null,
+        invoice_date: sanitizeDate(formData.invoice_date),
         ptf: formData.ptf,
         lorry_returned: formData.lorry_returned,
         lorry_returned_other_mill: formData.lorry_returned_other_mill,
@@ -1121,7 +1121,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         unit_code: formData.unit_code,
         unit_name: formData.unit_name,
         way_bill_no: formData.way_bill_no,
-        way_bill_date: formData.way_bill_date || null,
+        way_bill_date: sanitizeDate(formData.way_bill_date),
         apmc_fees: formData.apmc_fees || 0,
         remarks: formData.remarks,
         total_packets: totalPacketsSum,

@@ -1735,10 +1735,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           for (const key of searchKeys) {
             const cleanKey = String(key).trim();
             const upperKey = cleanKey.toUpperCase();
-            const [pdmRes, scpRes, midRes, faDb, pmDb, tmrDb] = await Promise.all([
+            const [pdmRes, scpRes, matInspRes, faDb, pmDb, tmrDb] = await Promise.all([
               supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
               supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
-              supabase.from('mill_inspection_detail').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`),
+              supabase.from('material_inspection_details').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`),
               supabase.from('final_arrival').select('unit_name, unit_code, grid_details').or(`final_arrival_no.eq.${cleanKey},arrival_no.eq.${cleanKey},mr_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1),
               supabase.from('purchase_master').select('unit_name, unit_code').or(`po_no.eq.${cleanKey}`).limit(1),
               supabase.from('temporary_material_received').select('unit_name, unit_code').or(`mr_no.eq.${cleanKey},arrival_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1)
@@ -1755,7 +1755,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               ? pdmRes.data
               : ((scpRes.data && scpRes.data.length > 0)
                   ? scpRes.data
-                  : (midRes.data || []));
+                  : (matInspRes.data || []));
 
             if (found.length > 0) {
               rawGrid = found;
@@ -2063,18 +2063,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     if (loadedDetails.length === 0 && supabase) {
       try {
-        const [midRes, inspRes, millDetRes] = await Promise.all([
-          supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true }),
-          supabase.from("inspection_details").select("*").eq("mr_no", rec.mr_no),
-          supabase.from("mill_inspection_detail").select("*").eq("mr_no", rec.mr_no)
-        ]);
-
+        const midRes = await supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true });
         if (midRes.data && midRes.data.length > 0) {
           loadedDetails = midRes.data;
-        } else if (inspRes.data && inspRes.data.length > 0) {
-          loadedDetails = inspRes.data;
-        } else if (millDetRes.data && millDetRes.data.length > 0) {
-          loadedDetails = millDetRes.data;
         }
       } catch (err) {
         console.warn("Could not fetch print details from remote DB:", err);
@@ -2969,19 +2960,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     if (!confirm(`Are you sure you want to delete inspection record ${mr_no}? This will remove it from all inspection tables.`)) return;
     try {
       if (supabase) {
+        // Cascade delete: first remove child details & deductions, then remove master
         await Promise.all([
-          supabase.from("inspection_checklist_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("mill_inspection_detail").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
           supabase.from("material_inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("inspection_checklist").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("mill_inspection_master").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("material_inspection").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("mill_inspection_deduction").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
           supabase.from("material_inspection_deductions").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
-          supabase.from("mill_inspection_print_logs").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
+          supabase.from("mill_inspection_deduction").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
         ]);
+        await supabase.from("material_inspection").delete().eq("mr_no", mr_no);
       }
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       try {
@@ -2990,14 +2975,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         if (cached) {
           const list = JSON.parse(cached).filter((r: any) => r.mr_no !== mr_no);
           localStorage.setItem("material_inspection_records", JSON.stringify(list));
-          localStorage.setItem("inspection_master_records", JSON.stringify(list));
         }
         localStorage.removeItem("AUTOSAVE_MATERIAL_INSPECTION");
       } catch (e) {}
 
-      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_master', mr_no } }));
-      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'mill_inspection_master', mr_no } }));
-      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'inspection_checklist', mr_no } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'material_inspection', mr_no } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'material_inspection_details', mr_no } }));
 
       showToast(`Record ${mr_no} completely deleted from all respective tables.`);
     } catch (err: any) {
