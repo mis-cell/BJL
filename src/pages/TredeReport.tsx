@@ -646,9 +646,7 @@ interface SearchablePoSelectProps {
   selectedPoNo: string;
   onSelectPo: (poNo: string) => void;
   displayPos: any[];
-  matchedFinalPo: any;
-  isPoNotInFinal: boolean;
-  showAllPos: boolean;
+  matchedFinalPo?: any;
   isPoEligibleForPayment: (po: any) => boolean;
   verifiedArrivals?: any[];
   paymentList?: any[];
@@ -660,8 +658,6 @@ function SearchablePoSelect({
   onSelectPo,
   displayPos,
   matchedFinalPo,
-  isPoNotInFinal,
-  showAllPos,
   isPoEligibleForPayment,
   verifiedArrivals = [],
   paymentList = [],
@@ -688,9 +684,7 @@ function SearchablePoSelect({
     };
   }, []);
 
-  const baseList = displayPos
-    .filter(po => !isPoNotInFinal || showAllPos)
-    .filter(po => !matchedFinalPo || showAllPos || po.po_no === matchedFinalPo.po_no);
+  const baseList = displayPos.filter(po => isPoEligibleForPayment(po));
 
   const normalizedSearch = searchTerm.toLowerCase().trim();
 
@@ -797,8 +791,8 @@ function SearchablePoSelect({
               <span>-- Clear Selection --</span>
             </div>
 
-            {/* Matched PO highlight */}
-            {matchedFinalPo && (!normalizedSearch || matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch) || (matchedFinalPo.supplier||'').toLowerCase().includes(normalizedSearch)) && (
+            {/* Matched PO highlight (only if eligible) */}
+            {matchedFinalPo && isPoEligibleForPayment(matchedFinalPo) && (!normalizedSearch || matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch) || (matchedFinalPo.supplier||'').toLowerCase().includes(normalizedSearch)) && (
               <div
                 onClick={() => {
                   onSelectPo(matchedFinalPo.po_no);
@@ -830,9 +824,8 @@ function SearchablePoSelect({
             {/* Filtered List */}
             {filteredList.map((po, i) => {
               const poNo = po.po_no || po.ptf_no || po.sauda_no;
-              if (matchedFinalPo && poNo === matchedFinalPo.po_no) return null;
+              if (matchedFinalPo && isPoEligibleForPayment(matchedFinalPo) && poNo === matchedFinalPo.po_no) return null;
 
-              const isEligible = isPoEligibleForPayment(po);
               const isSelected = selectedPoNo === poNo;
               const linkedMrs = getLinkedMrsForPo(po, verifiedArrivals);
               const unpaidMrs = linkedMrs.filter(mr => !isMrAlreadyProcessed(mr, paymentList, currentVoucherNo, poNo).isPaid);
@@ -853,15 +846,9 @@ function SearchablePoSelect({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-extrabold text-slate-900">{poNo}</span>
-                      {isEligible ? (
-                        <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-emerald-200">
-                          {linkedMrs.length > 0 ? `${unpaidMrs.length} Unpaid M.R (${linkedMrs.length} Total)` : 'Completed & PASS'}
-                        </span>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-slate-200">
-                          All M.R Paid
-                        </span>
-                      )}
+                      <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-emerald-200">
+                        {linkedMrs.length > 0 ? `${unpaidMrs.length} Unpaid M.R${unpaidMrs.length > 1 ? 's' : ''} (${linkedMrs.length} Total)` : 'Pending Payment'}
+                      </span>
                     </div>
                     <div className="text-[11px] text-slate-600 truncate mt-0.5">
                       Supplier: <strong className="text-slate-800">{po.supplier || po.party_name || 'N/A'}</strong> | Broker: {po.broker || 'N/A'} ({po.total_contract_mt || po.total_amt || 0} MT)
@@ -874,9 +861,9 @@ function SearchablePoSelect({
               );
             })}
 
-            {filteredList.length === 0 && (!matchedFinalPo || (normalizedSearch && !matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch))) && (
+            {filteredList.length === 0 && (!matchedFinalPo || !isPoEligibleForPayment(matchedFinalPo) || (normalizedSearch && !matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch))) && (
               <div className="p-4 text-center text-slate-500 text-xs italic">
-                {searchTerm ? `No P.O matching "${searchTerm}"` : "No eligible P.O records pending payment. (All linked M.Rs are paid)"}
+                {searchTerm ? `No eligible P.O matching "${searchTerm}"` : "No eligible P.O records pending payment."}
               </div>
             )}
           </div>
@@ -924,7 +911,7 @@ function SearchableMrSelect({
   }, []);
 
   const baseList = selectedPoNo
-    ? verifiedArrivals.filter(a => (a.po_no === selectedPoNo || a.mill_po_no === selectedPoNo))
+    ? getLinkedMrsForPo(selectedPoNo, verifiedArrivals)
     : verifiedArrivals;
 
   const normalizedSearch = searchTerm.toLowerCase().trim();
@@ -3117,8 +3104,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               {/* PO and Inspection Selector Logic */}
               {(() => {
-                const displayPos = showAllPos ? purchaseOrders : eligiblePos;
-
                 const selectedArrival = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
                 const inspectionPoNo = selectedArrival?.po_no || selectedArrival?.mill_po_no || '';
                 const matchedFinalPo = inspectionPoNo ? findMatchingPo(inspectionPoNo, purchaseOrders) : null;
@@ -3135,21 +3120,15 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                             <span>P.O</span>
                             {selectedPoNo && <span className="text-purple-700 font-mono font-bold">({selectedPoNo})</span>}
                           </label>
-                          <button
-                            type="button"
-                            onClick={() => setShowAllPos(prev => !prev)}
-                            className="text-[10px] font-semibold text-purple-600 hover:text-purple-800 underline lowercase"
-                          >
-                            {showAllPos ? `filter eligible (${eligiblePos.length})` : `show all (${purchaseOrders.length})`}
-                          </button>
+                          <span className="text-[10px] font-semibold text-purple-700">
+                            {eligiblePos.length} Pending Payment
+                          </span>
                         </div>
                         <SearchablePoSelect
                           selectedPoNo={selectedPoNo}
                           onSelectPo={handlePoSelection}
-                          displayPos={displayPos}
+                          displayPos={eligiblePos}
                           matchedFinalPo={matchedFinalPo}
-                          isPoNotInFinal={isPoNotInFinal}
-                          showAllPos={showAllPos}
                           isPoEligibleForPayment={isPoEligibleForPaymentLocal}
                           verifiedArrivals={verifiedArrivals}
                           paymentList={paymentList}
