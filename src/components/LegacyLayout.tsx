@@ -702,17 +702,6 @@ export default function LegacyLayout({
                       <span>📊 System Reports</span>
                     </button>
                   )}
-                  {hasModulePermission('treds', effectiveAllowedModules, effectiveIsAdmin) && (
-                    <button
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        handleNavNavigation('treds');
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
-                    >
-                      <span>💰 TReDS</span>
-                    </button>
-                  )}
                   <button
                     onClick={() => {
                       setIsProfileMenuOpen(false);
