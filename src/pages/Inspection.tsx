@@ -24,7 +24,8 @@ import {
   RotateCcw,
   Sparkles,
   Lock,
-  Edit3
+  Edit3,
+  Loader2
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
@@ -911,6 +912,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Sorting state for arrival date, arrival no, status
   const [sortField, setSortField] = useState<"arrival_date" | "arrival_no" | "status">("arrival_date");
@@ -2693,14 +2695,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       return;
     }
 
+    if (isSaving) return;
+    setIsSaving(true);
+
     try {
+      const cleanMrNo = headerForm.mr_no.trim();
       const activeDeductions = deductionRows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || Number(r.deduction_amount) > 0);
       const totalDeductionAmt = deductionRows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
       const primaryDeduction = activeDeductions[0] || deductionRows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
 
       // Prepare detail rows
       const validDetails = detailRows.map((row, idx) => ({
-        mr_no: headerForm.mr_no.trim(),
+        mr_no: cleanMrNo,
         srl_no: row.srl_no || idx + 1,
         arrival_grade: row.arrival_grade || row.stock_grade_name || "",
         stock_grade_code: row.stock_grade_code || "",
@@ -2795,10 +2801,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
 
       const masterPayload: any = {
-        mr_no: headerForm.mr_no.trim(),
+        mr_no: cleanMrNo,
         mr_date: resolvedMrDate,
         date: resolvedMrDate,
-        arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+        arrival_no: headerForm.arrival_no || cleanMrNo,
         arrival_date: resolvedArrivalDate,
         po_no: headerForm.po_no || null,
         po_date: resolvedPoDate,
@@ -2833,22 +2839,133 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         status: headerForm.status || "Completed",
         grid_details: validDetails,
         details: validDetails,
+        company_id: (headerForm as any).company_id || null,
+        unit_id: (headerForm as any).unit_id || null,
+        machine_id: (headerForm as any).machine_id || null,
+        shift: (headerForm as any).shift || null,
+        department: (headerForm as any).department || null,
+        production_id: (headerForm as any).production_id || (headerForm as any).production_ref || null,
+        production_ref: (headerForm as any).production_ref || null,
         created_at: headerForm.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
-      if (supabase) {
-        // 1. Upsert master record to material_inspection
-        try {
-          const { error: masterErr } = await supabase.from("material_inspection").upsert(masterPayload);
-          if (masterErr) {
-            console.error("Error upserting to material_inspection:", masterErr);
+      console.log("[INSPECTION REGISTER - FRONTEND BEFORE SAVE & PRODUCTION VALIDATION]", {
+        timestamp: new Date().toISOString(),
+        cleanMrNo,
+        arrival_no: headerForm.arrival_no,
+        po_no: headerForm.po_no,
+        production_id: masterPayload.production_id,
+        production_ref: masterPayload.production_ref,
+        mandatoryFieldsCheck: {
+          mr_no: cleanMrNo,
+          mr_date: resolvedMrDate,
+          arrival_no: headerForm.arrival_no || cleanMrNo,
+          arrival_date: resolvedArrivalDate,
+          supplier_name: headerForm.supplier_name || "",
+          broker_name: headerForm.broker_name || "",
+          unit: masterPayload.unit,
+          status: masterPayload.status
+        },
+        detailRowsCount: validDetails.length,
+        deductionsCount: deductionRows.length
+      });
+
+      let savedDbRecord: any = null;
+      let apiSuccess = false;
+      let affectedRows = 0;
+
+      // Primary Save Flow: Strictly await Backend API Route response
+      try {
+        const response = await fetch("/api/inspection-register/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(masterPayload)
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          const isSuccess = Boolean(resJson && resJson.success === true);
+          const rowCount = Number(resJson?.affectedRows ?? resJson?.rowCount ?? (resJson?.data ? 1 : 0));
+
+          if (isSuccess && rowCount > 0 && resJson.data) {
+            savedDbRecord = resJson.data;
+            affectedRows = rowCount;
+            apiSuccess = true;
+          } else {
+            // Backend returned validation error or affected 0 rows
+            const errMsg = resJson?.error || "Unable to save Inspection Module Register. Database returned 0 affected rows. Data was not saved.";
+            alert(errMsg);
+            return; // ABORT without clearing form and WITHOUT firing success alert
           }
-        } catch (mErr) {
-          console.error("Exception upserting material_inspection:", mErr);
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData?.error || `Server responded with status ${response.status}. Unable to save Inspection Module Register. Data was not saved.`;
+          alert(errMsg);
+          return; // ABORT without clearing form and WITHOUT firing success alert
+        }
+      } catch (netErr) {
+        console.warn("Backend API route unreachable, executing direct verified Supabase transaction:", netErr);
+      }
+
+      // Fallback Direct Supabase Transaction (strictly verified if API route was unreachable)
+      if (!apiSuccess && supabase) {
+        // Step 1: Check existing record
+        const { data: existingCheck, error: checkErr } = await supabase
+          .from("material_inspection")
+          .select("mr_no")
+          .eq("mr_no", cleanMrNo)
+          .maybeSingle();
+
+        if (checkErr) {
+          throw new Error(`Unable to save Inspection Module Register: Database lookup error - ${checkErr.message}. Data was not saved.`);
         }
 
-        // 2. Persist deductions in mill_inspection_deduction & material_inspection_deductions
+        if (existingCheck && existingCheck.mr_no) {
+          // UPDATE
+          const { data: updateRes, error: updateErr } = await supabase
+            .from("material_inspection")
+            .update(masterPayload)
+            .eq("mr_no", cleanMrNo)
+            .select();
+
+          if (updateErr) {
+            throw new Error(`Unable to save Inspection Module Register: ${updateErr.message}. Data was not saved.`);
+          }
+          if (!updateRes || updateRes.length === 0) {
+            throw new Error("Unable to save Inspection Module Register. Database update affected zero rows. Data was not saved.");
+          }
+          savedDbRecord = updateRes[0];
+          affectedRows = updateRes.length;
+        } else {
+          // INSERT
+          masterPayload.created_at = new Date().toISOString();
+          const { data: insertRes, error: insertErr } = await supabase
+            .from("material_inspection")
+            .insert(masterPayload)
+            .select();
+
+          if (insertErr) {
+            throw new Error(`Unable to save Inspection Module Register: ${insertErr.message}. Data was not saved.`);
+          }
+          if (!insertRes || insertRes.length === 0) {
+            throw new Error("Unable to save Inspection Module Register. Database insert affected zero rows. Data was not saved.");
+          }
+          savedDbRecord = insertRes[0];
+          affectedRows = insertRes.length;
+        }
+
+        // Child Details & Deductions
+        try {
+          await supabase.from("material_inspection_details").delete().eq("mr_no", cleanMrNo);
+          if (validDetails.length > 0) {
+            const { error: dErr } = await supabase.from("material_inspection_details").insert(validDetails);
+            if (dErr) console.warn("material_inspection_details insert error:", dErr);
+          }
+        } catch (cErr) {
+          console.warn("Child details error:", cErr);
+        }
+
         try {
           const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0) || Number((headerForm as any).total_quantity || 0);
           const totalGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || (headerForm as any).challan_gross_wt || 0);
@@ -2857,11 +2974,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const millDeductionRows = deductionRows
             .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
             .map(r => ({
-              mr_no: headerForm.mr_no.trim(),
+              mr_no: cleanMrNo,
               mr_date: resolvedMrDate,
               po_no: headerForm.po_no || null,
               po_date: resolvedPoDate,
-              arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+              arrival_no: headerForm.arrival_no || cleanMrNo,
               arrival_date: resolvedArrivalDate,
               supplier: headerForm.supplier_name || '',
               supplier_name: headerForm.supplier_name || '',
@@ -2881,19 +2998,18 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               updated_at: new Date().toISOString()
             }));
 
-          // Clean & re-insert deductions
-          await supabase.from("mill_inspection_deduction").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
+          await supabase.from("mill_inspection_deduction").delete().eq("mr_no", cleanMrNo);
           if (millDeductionRows.length > 0) {
-            await supabase.from("mill_inspection_deduction").insert(millDeductionRows).then(() => {}, () => {});
+            await supabase.from("mill_inspection_deduction").insert(millDeductionRows);
           }
 
-          await supabase.from("material_inspection_deductions").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
+          await supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo);
           const midRows = deductionRows
             .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0)
             .map(r => ({
-              mr_no: headerForm.mr_no.trim(),
+              mr_no: cleanMrNo,
               po_no: headerForm.po_no || null,
-              arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+              arrival_no: headerForm.arrival_no || cleanMrNo,
               deduction_type: r.deduction_type || '',
               deduction_rate: Number(r.deduction_rate) || 0,
               deduction_qty: Number(r.deduction_qty) || 0,
@@ -2901,58 +3017,80 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               remarks: (r as any).remarks || ''
             }));
           if (midRows.length > 0) {
-            await supabase.from("material_inspection_deductions").insert(midRows).then(() => {}, () => {});
+            await supabase.from("material_inspection_deductions").insert(midRows);
           }
         } catch (allDedErr) {
           console.warn("Error persisting deductions:", allDedErr);
         }
 
-        // 3. Clean and save detail rows to material_inspection_details
         try {
-          await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
-          if (validDetails.length > 0) {
-            await supabase.from("material_inspection_details").insert(validDetails).then(() => {}, () => {});
-          }
-        } catch (dErr) {
-          console.warn("Error inserting details:", dErr);
-        }
-
-        // 4. Update final_arrival status if matching
-        try {
-          const mrNoKey = headerForm.mr_no.trim();
+          const mrNoKey = cleanMrNo;
           const arrNoKey = headerForm.arrival_no ? headerForm.arrival_no.trim() : "";
           if (mrNoKey) {
             await supabase.from("final_arrival").update({
               status: 'Completed',
               grid_details: validDetails,
               details: validDetails
-            }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ''}`).then(() => {}, () => {});
+            }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ''}`);
           }
         } catch (faErr) {}
+
+        // Verification Query
+        const { data: verifiedRow, error: verifyErr } = await supabase
+          .from("material_inspection")
+          .select("*")
+          .eq("mr_no", cleanMrNo)
+          .maybeSingle();
+
+        if (verifyErr || !verifiedRow) {
+          throw new Error("Unable to save Inspection Module Register. Data was not saved in database.");
+        }
+        savedDbRecord = verifiedRow;
       }
 
-      // Immediately update in-memory state so dashboard displays it without delay
-      setRecords(prev => {
-        const filtered = prev.filter(r => r.mr_no !== masterPayload.mr_no && (r.arrival_no ? r.arrival_no !== masterPayload.arrival_no : true));
-        return [masterPayload, ...filtered];
+      // Check strictly: Only proceed if record exists and affected rows > 0
+      if (!savedDbRecord || affectedRows <= 0) {
+        throw new Error("Unable to save Inspection Module Register. Database returned 0 affected rows. Data was not saved.");
+      }
+
+      // Step 9: Commit verified - Update in-memory state, caches and show success
+      const finalCommittedRecord = savedDbRecord || masterPayload;
+
+      console.log("[INSPECTION REGISTER - FRONTEND AFTER SAVE SUCCESS & VERIFIED]", {
+        timestamp: new Date().toISOString(),
+        status: "COMMITTED",
+        affectedRows,
+        mr_no: cleanMrNo,
+        savedRecord: finalCommittedRecord
       });
 
-      // Update local storage cache
+      setRecords(prev => {
+        const filtered = prev.filter(r => r.mr_no !== finalCommittedRecord.mr_no && (r.arrival_no ? r.arrival_no !== finalCommittedRecord.arrival_no : true));
+        return [finalCommittedRecord, ...filtered];
+      });
+
       try {
-        localStorage.setItem(`inspection_deductions_${masterPayload.mr_no}`, JSON.stringify(deductionRows));
+        localStorage.setItem(`inspection_deductions_${finalCommittedRecord.mr_no}`, JSON.stringify(deductionRows));
         const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
         let list: InspectionMasterRecord[] = cached ? JSON.parse(cached) : [];
-        list = [masterPayload, ...list.filter((r: any) => r.mr_no !== masterPayload.mr_no)];
+        list = [finalCommittedRecord, ...list.filter((r: any) => r.mr_no !== finalCommittedRecord.mr_no)];
         localStorage.setItem("material_inspection_records", JSON.stringify(list));
         localStorage.setItem("inspection_master_records", JSON.stringify(list));
       } catch (e) {}
 
       window.dispatchEvent(new Event("app-data-updated"));
-      showToast(`Inspection ${masterPayload.mr_no} saved successfully.`);
+      // Strictly fire the alert only after successful database response with affected rows > 0
+      alert("Data Saved Successfully.");
+      showToast("Data Saved Successfully.");
       setViewMode("dashboard");
       fetchInspectionRecords();
+
     } catch (err: any) {
-      alert("Failed to save inspection: " + err.message);
+      console.error("Save failure:", err);
+      // On failure, keep the entered information in headerForm and detailRows so user can correct and retry
+      alert(err.message || "Unable to save Inspection Module Register. Data was not saved.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -4861,10 +4999,24 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                   </button>
                   <button
                     onClick={handleSaveForm}
-                    className="px-5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-lg flex items-center gap-1.5 shadow-md"
+                    disabled={isSaving}
+                    className={`px-5 py-2 font-black text-xs rounded-lg flex items-center gap-1.5 shadow-md transition-all ${
+                      isSaving
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                        : "bg-amber-400 hover:bg-amber-300 text-slate-950 active:scale-95 cursor-pointer"
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
-                    <span>Save Inspection</span>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-600" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Inspection</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

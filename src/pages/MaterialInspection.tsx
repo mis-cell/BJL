@@ -2710,10 +2710,26 @@ export default function MaterialInspection({
         }
       }
 
+      console.log("[MATERIAL INSPECTION - FRONTEND BEFORE SAVE & PRODUCTION VALIDATION]", {
+        timestamp: new Date().toISOString(),
+        mr_no: masterPayload.mr_no,
+        arrival_no: masterPayload.arrival_no,
+        po_no: masterPayload.po_no,
+        supplier: masterPayload.supplier,
+        broker: masterPayload.broker,
+        detailsCount: detailsList.length
+      });
+
       // 1. Save or Update Master into active material_inspection table
       const { error: masterErr } = await supabase.from("material_inspection").upsert(masterPayload);
       if (masterErr) {
         console.warn("Primary upsert to material_inspection error:", masterErr);
+      } else {
+        console.log("[MATERIAL INSPECTION - FRONTEND AFTER SAVE SUCCESS]", {
+          timestamp: new Date().toISOString(),
+          status: "COMMITTED",
+          mr_no: masterPayload.mr_no
+        });
       }
 
       // 2. Clean out old Detail Rows (to safely rewrite or insert)

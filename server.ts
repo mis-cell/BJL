@@ -715,6 +715,594 @@ async function startServer() {
     }
   });
 
+  // Ensure material_inspection schema & triggers exist on startup via exec_sql
+  try {
+    await supabase.rpc('exec_sql', {
+      query: `
+        -- Ensure production_records table exists
+        CREATE TABLE IF NOT EXISTS production_records (
+          id TEXT PRIMARY KEY,
+          batch_no TEXT,
+          lot_no TEXT,
+          production_no TEXT,
+          date DATE,
+          status TEXT DEFAULT 'Active',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE IF EXISTS production_records DISABLE ROW LEVEL SECURITY;
+
+        -- Ensure columns in material_inspection
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS company_id TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS unit_id TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS machine_id TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS shift TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS department TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS production_id TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS production_ref TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS batch_id TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS delivery_claim NUMERIC DEFAULT 0;
+
+        -- Trigger function for material_inspection with explicit RAISE NOTICE logging
+        CREATE OR REPLACE FUNCTION trg_material_inspection_validate_sync()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          RAISE NOTICE '[DB Trigger material_inspection BEFORE] Validating MR: %, Arrival: %, PO: %, Production ID: %', 
+            NEW.mr_no, NEW.arrival_no, NEW.po_no, NEW.production_id;
+
+          -- Enforce mandatory primary key
+          IF NEW.mr_no IS NULL OR TRIM(NEW.mr_no) = '' THEN
+            RAISE EXCEPTION 'M.R. No is mandatory for Material Inspection Register.';
+          END IF;
+
+          -- Fallback arrival_no to mr_no
+          IF NEW.arrival_no IS NULL OR TRIM(NEW.arrival_no) = '' THEN
+            NEW.arrival_no := NEW.mr_no;
+          END IF;
+
+          -- Sanitize dates
+          IF NEW.mr_date IS NULL THEN
+            NEW.mr_date := CURRENT_DATE;
+          END IF;
+          IF NEW.date IS NULL THEN
+            NEW.date := NEW.mr_date;
+          END IF;
+          IF NEW.arrival_date IS NULL THEN
+            NEW.arrival_date := NEW.mr_date;
+          END IF;
+
+          NEW.updated_at := NOW();
+
+          RAISE NOTICE '[DB Trigger material_inspection AFTER] Successfully validated and prepared MR: %', NEW.mr_no;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        DROP TRIGGER IF EXISTS trg_material_inspection_validate_sync ON material_inspection;
+        CREATE TRIGGER trg_material_inspection_validate_sync
+        BEFORE INSERT OR UPDATE ON material_inspection
+        FOR EACH ROW
+        EXECUTE FUNCTION trg_material_inspection_validate_sync();
+      `
+    });
+    console.log("Supabase trigger 'trg_material_inspection_validate_sync' verified/created successfully via exec_sql.");
+  } catch (trgErr) {
+    console.warn("Failed to create/verify inspection trigger in Supabase via RPC:", trgErr);
+  }
+
+  // Helper date sanitizer for server
+  const serverSanitizeDate = (val: any): string | null => {
+    if (!val) return null;
+    if (typeof val !== 'string') {
+      if (val instanceof Date && !isNaN(val.getTime())) {
+        return val.toISOString().split('T')[0];
+      }
+      return null;
+    }
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === '' || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined' || trimmed === 'nan-nan-nan') return null;
+    const ddmmyyyy = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (ddmmyyyy) {
+      const d = ddmmyyyy[1].padStart(2, '0');
+      const m = ddmmyyyy[2].padStart(2, '0');
+      const y = ddmmyyyy[3];
+      return `${y}-${m}-${d}`;
+    }
+    const yyyymmdd = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (yyyymmdd) {
+      const y = yyyymmdd[1];
+      const m = yyyymmdd[2].padStart(2, '0');
+      const d = yyyymmdd[3].padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    const parsed = new Date(trimmed);
+    return isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+  };
+
+  // INSPECTION MODULE REGISTER SAVE ENDPOINT
+  app.post([
+    "/api/inspection-register/save", 
+    "/Jute-Purchase-Automation/api/inspection-register/save",
+    "/api/material-inspection/save",
+    "/Jute-Purchase-Automation/api/material-inspection/save"
+  ], async (req, res) => {
+    try {
+      const body = req.body || {};
+      const mrNoRaw = body.mr_no || body.headerForm?.mr_no;
+      
+      // Step 1: Validate Frontend Data - Mandatory MR No
+      if (!mrNoRaw || String(mrNoRaw).trim() === '') {
+        console.error("[INSPECTION SAVE - VALIDATION ERROR]", { error: "Arrival No. / M.R. No. is required.", body });
+        return res.status(400).json({ 
+          success: false, 
+          error: "Arrival No. / M.R. No. is required." 
+        });
+      }
+
+      const cleanMrNo = String(mrNoRaw).trim();
+      const rawDetails = Array.isArray(body.grid_details) 
+        ? body.grid_details 
+        : (Array.isArray(body.details) ? body.details : (Array.isArray(body.detailRows) ? body.detailRows : []));
+
+      const rawDeductions = Array.isArray(body.deductions)
+        ? body.deductions
+        : (Array.isArray(body.deduction_rows) ? body.deduction_rows : (Array.isArray(body.deductionRows) ? body.deductionRows : []));
+
+      const productionId = String(body.production_id || body.production_ref || body.batch_id || '').trim();
+      const arrivalNo = String(body.arrival_no || body.headerForm?.arrival_no || cleanMrNo).trim();
+      const poNo = String(body.po_no || body.headerForm?.po_no || '').trim();
+      const requireProductionValidation = Boolean(body.require_production_validation);
+
+      // Step 2: EXPLICIT LOGGING BEFORE PRODUCTION ROW VALIDATION
+      console.log("[INSPECTION SAVE - BEFORE PRODUCTION ROW VALIDATION]", {
+        timestamp: new Date().toISOString(),
+        cleanMrNo,
+        arrivalNo,
+        poNo,
+        productionId,
+        requireProductionValidation,
+        candidateSearchKeys: [productionId, arrivalNo, cleanMrNo, poNo].filter(Boolean),
+        detailRowsCount: rawDetails.length,
+        deductionsCount: rawDeductions.length
+      });
+
+      // Execute Multi-Tier Production Row Validation & Resolution
+      let matchedProductionRow: any = null;
+      let matchedSource = "none";
+
+      const candidateKeys = [productionId, arrivalNo, cleanMrNo, poNo].filter(k => k && k.length > 0);
+
+      for (const key of candidateKeys) {
+        if (matchedProductionRow) break;
+
+        // Tier 1: Check production_records
+        try {
+          const { data: prodRow, error: pErr } = await supabase
+            .from('production_records')
+            .select('*')
+            .or(`id.ilike.%${key}%,batch_no.ilike.%${key}%,lot_no.ilike.%${key}%,production_no.ilike.%${key}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (prodRow && !pErr) {
+            matchedProductionRow = prodRow;
+            matchedSource = "production_records";
+            console.log(`[INSPECTION SAVE - PRODUCTION VALIDATION] Matched in production_records for key '${key}':`, prodRow);
+            break;
+          }
+        } catch (e) {
+          console.warn("[INSPECTION SAVE] Error checking production_records:", e);
+        }
+
+        // Tier 2: Check final_arrival
+        try {
+          const { data: faRow, error: faErr } = await supabase
+            .from('final_arrival')
+            .select('*')
+            .or(`final_arrival_no.ilike.%${key}%,arrival_no.ilike.%${key}%,mr_no.ilike.%${key}%,po_no.ilike.%${key}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (faRow && !faErr) {
+            matchedProductionRow = faRow;
+            matchedSource = "final_arrival";
+            console.log(`[INSPECTION SAVE - PRODUCTION VALIDATION] Matched in final_arrival for key '${key}':`, faRow);
+            break;
+          }
+        } catch (e) {
+          console.warn("[INSPECTION SAVE] Error checking final_arrival:", e);
+        }
+
+        // Tier 3: Check temporary_material_received
+        try {
+          const { data: tmRow, error: tmErr } = await supabase
+            .from('temporary_material_received')
+            .select('*')
+            .or(`mr_no.ilike.%${key}%,arrival_no.ilike.%${key}%,temporary_arrival_no.ilike.%${key}%,po_no.ilike.%${key}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (tmRow && !tmErr) {
+            matchedProductionRow = tmRow;
+            matchedSource = "temporary_material_received";
+            console.log(`[INSPECTION SAVE - PRODUCTION VALIDATION] Matched in temporary_material_received for key '${key}':`, tmRow);
+            break;
+          }
+        } catch (e) {
+          console.warn("[INSPECTION SAVE] Error checking temporary_material_received:", e);
+        }
+
+        // Tier 4: Check purchase_master
+        try {
+          const { data: pmRow, error: pmErr } = await supabase
+            .from('purchase_master')
+            .select('*')
+            .or(`po_no.ilike.%${key}%,mill_po_no.ilike.%${key}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (pmRow && !pmErr) {
+            matchedProductionRow = pmRow;
+            matchedSource = "purchase_master";
+            console.log(`[INSPECTION SAVE - PRODUCTION VALIDATION] Matched in purchase_master for key '${key}':`, pmRow);
+            break;
+          }
+        } catch (e) {
+          console.warn("[INSPECTION SAVE] Error checking purchase_master:", e);
+        }
+      }
+
+      // Step 3: EXPLICIT LOGGING AFTER PRODUCTION ROW VALIDATION
+      if (matchedProductionRow) {
+        console.log("[INSPECTION SAVE - AFTER PRODUCTION ROW VALIDATION: SUCCESS]", {
+          timestamp: new Date().toISOString(),
+          status: "FOUND",
+          resolvedSource: matchedSource,
+          cleanMrNo,
+          matchedRecordSummary: {
+            id: matchedProductionRow.id || matchedProductionRow.final_arrival_no || matchedProductionRow.mr_no || matchedProductionRow.po_no,
+            source: matchedSource
+          }
+        });
+      } else {
+        console.warn("[INSPECTION SAVE - AFTER PRODUCTION ROW VALIDATION: NOT FOUND IN PRODUCTION/ARRIVAL TABLES]", {
+          timestamp: new Date().toISOString(),
+          status: "NOT_FOUND",
+          cleanMrNo,
+          searchedKeys: candidateKeys,
+          requireProductionValidation
+        });
+
+        // Only reject if caller strictly requested strict production validation and productionId was explicitly supplied
+        if (requireProductionValidation && productionId) {
+          console.error("[INSPECTION SAVE - ABORTING SAVE DUE TO MISSING PRODUCTION ROW]", { productionId, cleanMrNo });
+          return res.status(422).json({
+            success: false,
+            error: `Unable to save Inspection Module Register: Required Production Row '${productionId}' not found in database.`
+          });
+        }
+      }
+
+      // Format Dates & Numbers
+      const resolvedMrDate = serverSanitizeDate(body.mr_date || body.date || body.headerForm?.mr_date) || new Date().toISOString().split('T')[0];
+      const resolvedArrivalDate = serverSanitizeDate(body.arrival_date || body.headerForm?.arrival_date) || resolvedMrDate;
+      const resolvedPoDate = serverSanitizeDate(body.po_date || body.headerForm?.po_date);
+      const resolvedUnloadingDate = serverSanitizeDate(body.unloading_date || body.headerForm?.unloading_date);
+      const resolvedMillPoDate = serverSanitizeDate(body.mill_po_date || body.headerForm?.mill_po_date) || resolvedPoDate;
+
+      // Prepare Sanitize Detail Rows with strictly typed database column mappings
+      const validDetails = rawDetails.map((row: any, idx: number) => ({
+        mr_no: cleanMrNo,
+        srl_no: Number(row.srl_no) || (idx + 1),
+        arrival_grade: String(row.arrival_grade || row.stock_grade_name || row.grade || '').trim(),
+        stock_grade_code: String(row.stock_grade_code || row.grade_code || '').trim(),
+        stock_grade_name: String(row.stock_grade_name || row.arrival_grade || row.grade || '').trim(),
+        area: String(row.area || '').trim(),
+        agency: String(row.agency || '').trim(),
+        agency_code: String(row.agency_code || '').trim(),
+        marks: String(row.marks || row.marka || '').trim(),
+        marka: String(row.marka || row.marks || '').trim(),
+        crop_year: String(row.crop_year || '2026-27').trim(),
+        lot: String(row.lot || '').trim(),
+        quantity: Number(row.quantity) || 0,
+        unit: String(row.unit || body.unit_name || body.unit || 'BALES').trim().toUpperCase(),
+        rate: Number(row.rate || row.rate_qntl || 0) || 0,
+        rate_qntl: Number(row.rate_qntl || row.rate || 0) || 0,
+        challan_gross_wt: Number(row.challan_gross_wt) || 0,
+        receipt_gross_wt: Number(row.receipt_gross_wt) || 0,
+        gross_weight_batch: Number(row.gross_weight_batch) || 0,
+        add_weight: Number(row.add_weight) || 0,
+        less_weight: Number(row.less_weight) || 0,
+        reduced_weight: Number(row.reduced_weight) || 0,
+        lorry_moisture_min: Number(row.lorry_moisture_min) || 0,
+        lorry_moisture_max: Number(row.lorry_moisture_max) || 0,
+        lorry_read_min: Number(row.lorry_read_min) || 0,
+        lorry_read_max: Number(row.lorry_read_max) || 0,
+        lorry_read_avg: Number(row.lorry_read_avg) || 0,
+        insp_read_min: Number(row.insp_read_min) || 0,
+        insp_read_max: Number(row.insp_read_max) || 0,
+        insp_read_avg: Number(row.insp_read_avg) || 0,
+        moisture_act: Number(row.moisture_act || row.actual_moisture || 0) || 0,
+        moisture_claim: Number(row.moisture_claim || row.claim_moisture || 0) || 0,
+        dust_act: Number(row.dust_act || row.actual_dust || 0) || 0,
+        dust_claim: Number(row.dust_claim || row.claim_dust || 0) || 0,
+        ncv_act: Number(row.ncv_act || row.actual_ncv || 0) || 0,
+        ncv_claim: Number(row.ncv_claim || row.claim_ncv || 0) || 0,
+        grade_down_act: Number(row.grade_down_act || row.actual_grade_down || 0) || 0,
+        grade_down_claim: Number(row.grade_down_claim || row.claim_grade_down || 0) || 0,
+        actual_moisture: Number(row.moisture_act || row.actual_moisture || 0) || 0,
+        claim_moisture: Number(row.moisture_claim || row.claim_moisture || 0) || 0,
+        actual_dust: Number(row.dust_act || row.actual_dust || 0) || 0,
+        claim_dust: Number(row.dust_claim || row.claim_dust || 0) || 0,
+        actual_ncv: Number(row.ncv_act || row.actual_ncv || 0) || 0,
+        claim_ncv: Number(row.ncv_claim || row.claim_ncv || 0) || 0,
+        actual_grade_down: Number(row.grade_down_act || row.actual_grade_down || 0) || 0,
+        claim_grade_down: Number(row.grade_down_claim || row.claim_grade_down || 0) || 0,
+        final_receipt_wt: Number(row.final_receipt_wt) || 0,
+        settlement_moisture: Number(row.settlement_moisture) || 0,
+        settlement_grade_down: Number(row.settlement_grade_down) || 0,
+        settlement_dust: Number(row.settlement_dust) || 0,
+        settlement_ncv: Number(row.settlement_ncv) || 0,
+        ropes_weight: Number(row.ropes_weight) || 0,
+        ropes_tot_wt_grd: Number(row.ropes_tot_wt_grd) || 0,
+        ropes_grade: String(row.ropes_grade || '').trim(),
+        chotta_weight: Number(row.chotta_weight) || 0,
+        chotta_tot_wt_grd: Number(row.chotta_tot_wt_grd) || 0,
+        chotta_grade: String(row.chotta_grade || '').trim(),
+        tolerable: String(row.tolerable || 'Yes').trim(),
+        premium: String(row.premium || (row.is_premium ? 'Yes' : 'No')).trim(),
+        is_premium: Boolean(row.is_premium || row.premium === 'Yes'),
+        amount: Number(row.amount) || 0,
+        row_remarks: String(row.row_remarks || '').trim(),
+        jqi_remarks: String(row.jqi_remarks || '').trim(),
+        jci_remarks: String(row.jci_remarks || row.jqi_remarks || '').trim()
+      }));
+
+      const activeDeductions = rawDeductions.filter((r: any) => (r.deduction_type && String(r.deduction_type).trim() !== '') || Number(r.deduction_amount) > 0);
+      const totalDeductionAmt = rawDeductions.reduce((acc: number, r: any) => acc + (Number(r.deduction_amount) || 0), 0);
+      const primaryDeduction = activeDeductions[0] || rawDeductions[0] || { deduction_type: '', deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
+
+      // Step 4: Strictly Enforce Payload Mapping to Database Schema
+      const masterPayload: any = {
+        mr_no: cleanMrNo,
+        mr_date: resolvedMrDate,
+        date: resolvedMrDate,
+        arrival_no: String(arrivalNo || cleanMrNo).trim(),
+        arrival_date: resolvedArrivalDate,
+        po_no: poNo ? String(poNo).trim() : null,
+        po_date: resolvedPoDate,
+        broker_name: String(body.broker_name || body.broker || '').trim(),
+        supplier_name: String(body.supplier_name || body.supplier || '').trim(),
+        broker: String(body.broker_name || body.broker || '').trim(),
+        supplier: String(body.supplier_name || body.supplier || '').trim(),
+        actual_moisture: Number(body.actual_moisture) || 0,
+        claim_moisture: Number(body.claim_moisture) || 0,
+        actual_dust: Number(body.actual_dust) || 0,
+        claim_dust: Number(body.claim_dust) || 0,
+        actual_ncv: Number(body.actual_ncv) || 0,
+        claim_ncv: Number(body.claim_ncv) || 0,
+        detention_days: Number(body.detention_days) || 0,
+        unloading_date: resolvedUnloadingDate,
+        mill_po_no: body.mill_po_no ? String(body.mill_po_no).trim() : (poNo ? String(poNo).trim() : null),
+        mill_po_date: resolvedMillPoDate,
+        mr_spcl_print: body.mr_spcl_print ? String(body.mr_spcl_print).trim() : null,
+        remarks: body.remarks ? String(body.remarks).trim() : null,
+        lorry_number: body.lorry_number ? String(body.lorry_number).trim() : null,
+        delivery_claim: Number(body.delivery_claim) || 0,
+        deduction_type: activeDeductions.map((r: any) => r.deduction_type).filter(Boolean).join(', ') || primaryDeduction.deduction_type || '',
+        deduction_rate: Number(primaryDeduction.deduction_rate) || 0,
+        deduction_qty: Number(primaryDeduction.deduction_qty) || 0,
+        deduction_amount: Number(totalDeductionAmt) || 0,
+        deductions: rawDeductions,
+        deduction_rows: rawDeductions,
+        deductions_json: JSON.stringify(rawDeductions),
+        deduction_types: rawDeductions,
+        unit_name: String(body.unit_name || body.unit || validDetails[0]?.unit || 'BALES').trim().toUpperCase(),
+        unit: String(body.unit_name || body.unit || validDetails[0]?.unit || 'BALES').trim().toUpperCase(),
+        status: String(body.status || 'Completed').trim(),
+        grid_details: validDetails,
+        details: validDetails,
+        company_id: body.company_id ? String(body.company_id).trim() : null,
+        unit_id: body.unit_id ? String(body.unit_id).trim() : null,
+        machine_id: body.machine_id ? String(body.machine_id).trim() : null,
+        shift: body.shift ? String(body.shift).trim() : null,
+        department: body.department ? String(body.department).trim() : null,
+        production_id: productionId || (matchedProductionRow?.id ? String(matchedProductionRow.id) : null),
+        production_ref: body.production_ref || (matchedProductionRow ? String(matchedProductionRow.batch_no || matchedProductionRow.final_arrival_no || '') : null),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log("[INSPECTION SAVE - COMMITTING MASTER PAYLOAD TO DB]", {
+        mr_no: masterPayload.mr_no,
+        arrival_no: masterPayload.arrival_no,
+        po_no: masterPayload.po_no,
+        production_id: masterPayload.production_id,
+        validDetailsCount: validDetails.length
+      });
+
+      // Step 5: Check if record exists for INSERT vs UPDATE
+      const { data: existingCheck, error: checkErr } = await supabase
+        .from('material_inspection')
+        .select('mr_no')
+        .eq('mr_no', cleanMrNo)
+        .maybeSingle();
+
+      if (checkErr) {
+        console.warn("[Inspection Save API] Check existing error:", checkErr);
+      }
+
+      let saveResultData: any = null;
+
+      if (existingCheck && existingCheck.mr_no) {
+        // UPDATE existing record
+        const { data: updateRes, error: updateErr } = await supabase
+          .from('material_inspection')
+          .update(masterPayload)
+          .eq('mr_no', cleanMrNo)
+          .select();
+
+        if (updateErr) {
+          console.error("[Inspection Save API] Update error:", updateErr);
+          return res.status(500).json({
+            success: false,
+            error: `Unable to save Inspection Module Register: ${updateErr.message || 'Database update error'}. Data was not saved.`
+          });
+        }
+
+        if (!updateRes || updateRes.length === 0) {
+          return res.status(500).json({
+            success: false,
+            error: "Unable to save Inspection Module Register. Database update affected zero rows. Data was not saved."
+          });
+        }
+
+        saveResultData = updateRes[0];
+      } else {
+        // INSERT new record
+        masterPayload.created_at = new Date().toISOString();
+        const { data: insertRes, error: insertErr } = await supabase
+          .from('material_inspection')
+          .insert(masterPayload)
+          .select();
+
+        if (insertErr) {
+          console.error("[Inspection Save API] Insert error:", insertErr);
+          return res.status(500).json({
+            success: false,
+            error: `Unable to save Inspection Module Register: ${insertErr.message || 'Database insert error'}. Data was not saved.`
+          });
+        }
+
+        if (!insertRes || insertRes.length === 0) {
+          return res.status(500).json({
+            success: false,
+            error: "Unable to save Inspection Module Register. Database insert affected zero rows. Data was not saved."
+          });
+        }
+
+        saveResultData = insertRes[0];
+      }
+
+      // Step 6: Save child details & deductions
+      try {
+        await supabase.from('material_inspection_details').delete().eq('mr_no', cleanMrNo);
+        if (validDetails.length > 0) {
+          const { error: dErr } = await supabase.from('material_inspection_details').insert(validDetails);
+          if (dErr) {
+            console.warn("[Inspection Save API] material_inspection_details insert error:", dErr);
+          }
+        }
+      } catch (childErr) {
+        console.warn("[Inspection Save API] Child detail error:", childErr);
+      }
+
+      try {
+        const totalBalesCount = validDetails.reduce((sum: number, r: any) => sum + (Number(r.quantity) || 0), 0) || Number(body.total_quantity || 0);
+        const totalGrossMt = validDetails.reduce((sum: number, r: any) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number(body.receipt_gross_wt || body.challan_gross_wt || 0);
+        const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalGrossMt * 1000) / totalBalesCount : 0;
+
+        const millDeductionRows = rawDeductions
+          .filter((r: any) => (r.deduction_type && String(r.deduction_type).trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
+          .map((r: any) => ({
+            mr_no: cleanMrNo,
+            mr_date: resolvedMrDate,
+            po_no: poNo ? String(poNo).trim() : null,
+            po_date: resolvedPoDate,
+            arrival_no: String(arrivalNo || cleanMrNo).trim(),
+            arrival_date: resolvedArrivalDate,
+            supplier: String(body.supplier_name || body.supplier || '').trim(),
+            supplier_name: String(body.supplier_name || body.supplier || '').trim(),
+            broker: String(body.broker_name || body.broker || '').trim(),
+            broker_name: String(body.broker_name || body.broker || '').trim(),
+            lorry_number: body.lorry_number ? String(body.lorry_number).trim() : '',
+            deduction_type: String(r.deduction_type || '').trim(),
+            deduction_rate: Number(r.deduction_rate) || 0,
+            deduction_qty: Number(r.deduction_qty) || 0,
+            deduction_amount: Number(r.deduction_amount) || 0,
+            unit: String(body.unit_name || body.unit || validDetails[0]?.unit || 'BALES').trim().toUpperCase(),
+            gross_weight_mt: totalGrossMt,
+            total_bales: totalBalesCount,
+            avg_bale_weight: calculatedAvgBaleWeight,
+            remarks: String(r.remarks || body.remarks || '').trim(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }));
+
+        await supabase.from('mill_inspection_deduction').delete().eq('mr_no', cleanMrNo);
+        if (millDeductionRows.length > 0) {
+          await supabase.from('mill_inspection_deduction').insert(millDeductionRows);
+        }
+
+        await supabase.from('material_inspection_deductions').delete().eq('mr_no', cleanMrNo);
+        const midRows = rawDeductions
+          .filter((r: any) => (r.deduction_type && String(r.deduction_type).trim() !== '') || Number(r.deduction_amount) > 0)
+          .map((r: any) => ({
+            mr_no: cleanMrNo,
+            po_no: poNo ? String(poNo).trim() : null,
+            arrival_no: String(arrivalNo || cleanMrNo).trim(),
+            deduction_type: String(r.deduction_type || '').trim(),
+            deduction_rate: Number(r.deduction_rate) || 0,
+            deduction_qty: Number(r.deduction_qty) || 0,
+            deduction_amount: Number(r.deduction_amount) || 0,
+            remarks: String(r.remarks || '').trim()
+          }));
+        if (midRows.length > 0) {
+          await supabase.from('material_inspection_deductions').insert(midRows);
+        }
+      } catch (dedErr) {
+        console.warn("[Inspection Save API] Deduction save error:", dedErr);
+      }
+
+      // Step 7: Sync to final_arrival
+      try {
+        await supabase.from('final_arrival').update({
+          status: 'Completed',
+          grid_details: validDetails,
+          details: validDetails
+        }).or(`mr_no.eq.${cleanMrNo},final_arrival_no.eq.${cleanMrNo}${arrivalNo ? `,final_arrival_no.eq.${arrivalNo}` : ''}`);
+      } catch (faErr) {}
+
+      // Step 8: Post-Commit Verification - Verify saved record genuinely exists in DB
+      const { data: verifiedRecord, error: verifyErr } = await supabase
+        .from('material_inspection')
+        .select('*')
+        .eq('mr_no', cleanMrNo)
+        .maybeSingle();
+
+      if (verifyErr || !verifiedRecord) {
+        console.error("[Inspection Save API] Verification query failed:", verifyErr);
+        return res.status(500).json({
+          success: false,
+          error: "Unable to save Inspection Module Register. Data was not saved."
+        });
+      }
+
+      console.log("[INSPECTION SAVE - COMPLETED & VERIFIED]", {
+        mr_no: verifiedRecord.mr_no,
+        arrival_no: verifiedRecord.arrival_no,
+        status: verifiedRecord.status,
+        timestamp: new Date().toISOString()
+      });
+
+      // Step 9: Return confirmed success response
+      const affectedRowsCount = (saveResultData && verifiedRecord) ? 1 : 0;
+      return res.status(200).json({
+        success: true,
+        affectedRows: affectedRowsCount,
+        rowCount: affectedRowsCount,
+        recordId: verifiedRecord.mr_no,
+        data: verifiedRecord,
+        message: "Data Saved Successfully."
+      });
+
+    } catch (serverErr: any) {
+      console.error("[Inspection Save API] Fatal exception:", serverErr);
+      return res.status(500).json({
+        success: false,
+        error: `Unable to save Inspection Module Register: ${serverErr.message || 'Internal Server Error'}. Data was not saved.`
+      });
+    }
+  });
+
   // Health Check
   app.get(["/api/health", "/Jute-Purchase-Automation/api/health"], (req, res) => {
     res.json({ status: "ok" });
