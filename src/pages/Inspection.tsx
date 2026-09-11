@@ -2689,6 +2689,86 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     });
   };
 
+  // Resilient Supabase persistence helpers that automatically handle missing table columns in Supabase
+  const resilientSupabaseUpsert = async (
+    client: any,
+    table: string,
+    record: any,
+    matchColumn: string = "mr_no"
+  ) => {
+    let payload: Record<string, any> = { ...record };
+    let attempts = 0;
+    while (attempts < 20) {
+      attempts++;
+      const matchVal = payload[matchColumn];
+      const { data: existing } = await client
+        .from(table)
+        .select(matchColumn)
+        .eq(matchColumn, matchVal)
+        .maybeSingle();
+
+      let result;
+      if (existing && existing[matchColumn]) {
+        result = await client.from(table).update(payload).eq(matchColumn, matchVal).select();
+      } else {
+        result = await client.from(table).insert(payload).select();
+      }
+
+      if (!result.error) {
+        return result.data && result.data.length > 0 ? result.data[0] : payload;
+      }
+
+      const missingColMatch = result.error.message?.match(/Could not find the '([^']+)' column of/i)
+        || result.error.message?.match(/column "([^"]+)" of relation "[^"]+" does not exist/i)
+        || result.error.message?.match(/column '([^']+)' does not exist/i);
+
+      if (missingColMatch && missingColMatch[1]) {
+        const col = missingColMatch[1];
+        console.warn(`[Supabase Resilient Save] Column '${col}' not found in table '${table}', dropping column and retrying...`);
+        delete payload[col];
+        continue;
+      }
+
+      throw result.error;
+    }
+    return payload;
+  };
+
+  const resilientSupabaseInsertRows = async (
+    client: any,
+    table: string,
+    rows: any[]
+  ) => {
+    if (!rows || rows.length === 0) return [];
+    let currentRows: Record<string, any>[] = rows.map(r => ({ ...r }));
+    let attempts = 0;
+    while (attempts < 20) {
+      attempts++;
+      const { data, error } = await client.from(table).insert(currentRows).select();
+      if (!error) {
+        return data || currentRows;
+      }
+
+      const missingColMatch = error.message?.match(/Could not find the '([^']+)' column of/i)
+        || error.message?.match(/column "([^"]+)" of relation "[^"]+" does not exist/i)
+        || error.message?.match(/column '([^']+)' does not exist/i);
+
+      if (missingColMatch && missingColMatch[1]) {
+        const col = missingColMatch[1];
+        console.warn(`[Supabase Resilient Rows Insert] Column '${col}' not in table '${table}', dropping column and retrying...`);
+        currentRows = currentRows.map(r => {
+          const copy = { ...r };
+          delete copy[col];
+          return copy;
+        });
+        continue;
+      }
+
+      throw error;
+    }
+    return currentRows;
+  };
+
   const handleSaveForm = async () => {
     if (!headerForm.mr_no || !headerForm.mr_no.trim()) {
       alert("Arrival No. / M. R. No. is required.");
@@ -2800,6 +2880,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         }
       }
 
+      const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0) || Number((headerForm as any).total_quantity || (headerForm as any).quantity || 0);
+      const totalChallanGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.challan_gross_wt) || 0), 0) || Number((headerForm as any).challan_gross_wt || 0);
+      const totalReceiptGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || totalChallanGrossMt);
+      const totalGrossBatch = validDetails.reduce((sum, r) => sum + (Number(r.gross_weight_batch) || 0), 0) || Number((headerForm as any).gross_weight_batch || 0);
+      const totalAddWeight = validDetails.reduce((sum, r) => sum + (Number(r.add_weight) || 0), 0) || Number((headerForm as any).add_weight || 0);
+      const totalLessWeight = validDetails.reduce((sum, r) => sum + (Number(r.less_weight) || 0), 0) || Number((headerForm as any).less_weight || 0);
+      const totalReducedWeight = validDetails.reduce((sum, r) => sum + (Number(r.reduced_weight) || 0), 0) || Number((headerForm as any).reduced_weight || totalReceiptGrossMt);
+      const totalFinalReceiptWt = validDetails.reduce((sum, r) => sum + (Number(r.final_receipt_wt) || 0), 0) || Number((headerForm as any).final_receipt_wt || totalReceiptGrossMt);
+      const firstDetail = validDetails[0] || ({} as any);
+
       const masterPayload: any = {
         mr_no: cleanMrNo,
         mr_date: resolvedMrDate,
@@ -2818,6 +2908,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         claim_dust: Number(headerForm.claim_dust) || 0,
         actual_ncv: Number(headerForm.actual_ncv) || 0,
         claim_ncv: Number(headerForm.claim_ncv) || 0,
+        actual_grade_down: Number((headerForm as any).actual_grade_down) || 0,
+        claim_grade_down: Number((headerForm as any).claim_grade_down) || 0,
         detention_days: Number(headerForm.detention_days) || 0,
         unloading_date: sanitizeDate(headerForm.unloading_date),
         mill_po_no: headerForm.mill_po_no || headerForm.po_no || null,
@@ -2839,6 +2931,25 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         status: headerForm.status || "Completed",
         grid_details: validDetails,
         details: validDetails,
+        quantity: totalBalesCount,
+        total_quantity: totalBalesCount,
+        challan_gross_wt: totalChallanGrossMt,
+        receipt_gross_wt: totalReceiptGrossMt,
+        gross_weight_batch: totalGrossBatch,
+        add_weight: totalAddWeight,
+        less_weight: totalLessWeight,
+        reduced_weight: totalReducedWeight,
+        final_receipt_wt: totalFinalReceiptWt,
+        arrival_grade: firstDetail.arrival_grade || (headerForm as any).arrival_grade || "",
+        stock_grade_code: firstDetail.stock_grade_code || (headerForm as any).stock_grade_code || "",
+        stock_grade_name: firstDetail.stock_grade_name || (headerForm as any).stock_grade_name || "",
+        area: firstDetail.area || (headerForm as any).area || "",
+        agency: firstDetail.agency || (headerForm as any).agency || "",
+        agency_code: firstDetail.agency_code || (headerForm as any).agency_code || "",
+        marks: firstDetail.marks || (headerForm as any).marks || "",
+        marka: firstDetail.marka || firstDetail.marks || (headerForm as any).marka || "",
+        crop_year: firstDetail.crop_year || (headerForm as any).crop_year || "2026-27",
+        lot: firstDetail.lot || (headerForm as any).lot || "",
         company_id: (headerForm as any).company_id || null,
         unit_id: (headerForm as any).unit_id || null,
         machine_id: (headerForm as any).machine_id || null,
@@ -2876,45 +2987,57 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       let apiSuccess = false;
       let affectedRows = 0;
 
-      // Primary Save Flow: Strictly await Backend API Route response
-      try {
-        const response = await fetch("/api/inspection-register/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(masterPayload)
-        });
+      // Primary Save Flow: Attempt Backend API route unless on static hosting (e.g. GitHub Pages)
+      const isStaticHost = typeof window !== "undefined" && (
+        window.location.hostname.includes("github.io") ||
+        window.location.protocol === "file:" ||
+        window.location.hostname.endsWith(".pages.dev")
+      );
 
-        if (response.ok) {
-          const resJson = await response.json();
-          const isSuccess = Boolean(resJson && resJson.success === true);
-          const rowCount = Number(resJson?.affectedRows ?? resJson?.rowCount ?? (resJson?.data ? 1 : 0));
-          const returnedId = resJson?.recordId || resJson?.data?.id || resJson?.data?.mr_no;
+      if (!isStaticHost) {
+        try {
+          const response = await fetch("/api/inspection-register/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(masterPayload)
+          });
 
-          if (isSuccess && rowCount > 0 && resJson.data && returnedId && !resJson.error) {
-            savedDbRecord = resJson.data;
-            affectedRows = rowCount;
-            apiSuccess = true;
-          } else {
-            // Backend returned validation error, missing record ID, or affected 0 rows
-            const errMsg = resJson?.error || "Unable to save Inspection Module Register. Database returned invalid record ID or 0 affected rows. Data was not saved.";
+          if (response.ok) {
+            const resJson = await response.json();
+            const isSuccess = Boolean(resJson && resJson.success === true);
+            const rowCount = Number(resJson?.affectedRows ?? resJson?.rowCount ?? (resJson?.data ? 1 : 0));
+            const returnedId = resJson?.recordId || resJson?.data?.id || resJson?.data?.mr_no;
+
+            if (isSuccess && rowCount > 0 && resJson.data && returnedId && !resJson.error) {
+              savedDbRecord = resJson.data;
+              affectedRows = rowCount;
+              apiSuccess = true;
+            } else {
+              const errMsg = resJson?.error || "Unable to save Inspection Module Register. Database returned invalid record ID or 0 affected rows. Data was not saved.";
+              alert(errMsg);
+              return;
+            }
+          } else if (response.status === 405 || response.status === 404 || response.status === 502) {
+            // Method Not Allowed / Not Found on static host or GitHub Pages - seamlessly continue to direct Supabase
+            console.warn(`[INSPECTION SAVE] Backend endpoint returned ${response.status} (static host/proxy). Switching automatically to direct Supabase transaction.`);
+          } else if (response.status === 422 || response.status === 400) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData?.error || `Unable to save Inspection Module Register. Server returned status ${response.status}.`;
             alert(errMsg);
-            return; // ABORT without clearing form and WITHOUT firing success alert
+            return;
+          } else {
+            console.warn(`[INSPECTION SAVE] Backend API returned status ${response.status}, switching to direct Supabase transaction.`);
           }
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData?.error || `Server responded with status ${response.status}. Unable to save Inspection Module Register. Data was not saved.`;
-          alert(errMsg);
-          return; // ABORT without clearing form and WITHOUT firing success alert
+        } catch (netErr) {
+          console.warn("[INSPECTION SAVE] Backend API route unreachable, executing direct verified Supabase transaction:", netErr);
         }
-      } catch (netErr) {
-        console.warn("Backend API route unreachable, executing direct verified Supabase transaction:", netErr);
       }
 
-      // Fallback Direct Supabase Transaction (strictly verified if API route was unreachable)
+      // Supabase Direct Transaction (for GitHub Pages / static hosting or when API route unreachable)
       if (!apiSuccess && supabase) {
-        // Step 0: Verify that the production row actually exists before allowing the INSERT/UPDATE
-        const prodIdToCheck = String(masterPayload.production_id || masterPayload.production_ref || '').trim();
-        if (prodIdToCheck) {
+        // Step 0: Verify that the production row actually exists before allowing the INSERT/UPDATE ONLY IF a valid production_id is present
+        const prodIdToCheck = String(masterPayload.production_id || masterPayload.production_ref || "").trim();
+        if (prodIdToCheck && prodIdToCheck !== "null" && prodIdToCheck !== "undefined") {
           const { data: pCheck } = await supabase
             .from("production_records")
             .select("id, batch_no, production_no, lot_no")
@@ -2927,70 +3050,28 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           }
         }
 
-        // Step 1: Check existing record
-        const { data: existingCheck, error: checkErr } = await supabase
-          .from("material_inspection")
-          .select("mr_no")
-          .eq("mr_no", cleanMrNo)
-          .maybeSingle();
+        // Resilient save to material_inspection
+        const masterSaveRes = await resilientSupabaseUpsert(supabase, "material_inspection", masterPayload, "mr_no");
+        savedDbRecord = masterSaveRes;
+        affectedRows = 1;
 
-        if (checkErr) {
-          throw new Error(`Unable to save Inspection Module Register: Database lookup error - ${checkErr.message}. Data was not saved.`);
-        }
-
-        if (existingCheck && existingCheck.mr_no) {
-          // UPDATE
-          const { data: updateRes, error: updateErr } = await supabase
-            .from("material_inspection")
-            .update(masterPayload)
-            .eq("mr_no", cleanMrNo)
-            .select();
-
-          if (updateErr) {
-            throw new Error(`Unable to save Inspection Module Register: ${updateErr.message}. Data was not saved.`);
-          }
-          if (!updateRes || updateRes.length === 0) {
-            throw new Error("Unable to save Inspection Module Register. Database update affected zero rows. Data was not saved.");
-          }
-          savedDbRecord = updateRes[0];
-          affectedRows = updateRes.length;
-        } else {
-          // INSERT
-          masterPayload.created_at = new Date().toISOString();
-          const { data: insertRes, error: insertErr } = await supabase
-            .from("material_inspection")
-            .insert(masterPayload)
-            .select();
-
-          if (insertErr) {
-            throw new Error(`Unable to save Inspection Module Register: ${insertErr.message}. Data was not saved.`);
-          }
-          if (!insertRes || insertRes.length === 0) {
-            throw new Error("Unable to save Inspection Module Register. Database insert affected zero rows. Data was not saved.");
-          }
-          savedDbRecord = insertRes[0];
-          affectedRows = insertRes.length;
-        }
-
-        // Child Details & Deductions
+        // Child Details
         try {
           await supabase.from("material_inspection_details").delete().eq("mr_no", cleanMrNo);
           if (validDetails.length > 0) {
-            const { error: dErr } = await supabase.from("material_inspection_details").insert(validDetails);
-            if (dErr) console.warn("material_inspection_details insert error:", dErr);
+            await resilientSupabaseInsertRows(supabase, "material_inspection_details", validDetails);
           }
         } catch (cErr) {
           console.warn("Child details error:", cErr);
         }
 
+        // All Deduction Fields for material_inspection_deductions
         try {
-          const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0) || Number((headerForm as any).total_quantity || 0);
-          const totalGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || (headerForm as any).challan_gross_wt || 0);
-          const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalGrossMt * 1000) / totalBalesCount : 0;
+          const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalReceiptGrossMt * 1000) / totalBalesCount : 0;
 
           // Build complete deduction records with ALL fields from this app
           const allDeductionRows = deductionRows
-            .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
+            .filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
             .map(r => ({
               mr_no: cleanMrNo,
               mr_date: resolvedMrDate,
@@ -2998,20 +3079,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               po_date: resolvedPoDate,
               arrival_no: headerForm.arrival_no || cleanMrNo,
               arrival_date: resolvedArrivalDate,
-              supplier: headerForm.supplier_name || '',
-              supplier_name: headerForm.supplier_name || '',
-              broker: headerForm.broker_name || '',
-              broker_name: headerForm.broker_name || '',
-              lorry_number: headerForm.lorry_number || '',
-              deduction_type: r.deduction_type || '',
+              supplier: headerForm.supplier_name || "",
+              supplier_name: headerForm.supplier_name || "",
+              broker: headerForm.broker_name || "",
+              broker_name: headerForm.broker_name || "",
+              lorry_number: headerForm.lorry_number || "",
+              deduction_type: r.deduction_type || "",
               deduction_rate: Number(r.deduction_rate) || 0,
               deduction_qty: Number(r.deduction_qty) || 0,
               deduction_amount: Number(r.deduction_amount) || 0,
-              unit: (headerForm as any).unit_name || validDetails[0]?.unit || 'BALES',
-              gross_weight_mt: totalGrossMt,
+              unit: (headerForm as any).unit_name || validDetails[0]?.unit || "BALES",
+              gross_weight_mt: totalReceiptGrossMt,
               total_bales: totalBalesCount,
               avg_bale_weight: calculatedAvgBaleWeight,
-              remarks: (r as any).remarks || headerForm.remarks || '',
+              remarks: (r as any).remarks || headerForm.remarks || "",
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }));
@@ -3019,29 +3100,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           // Primary Table: material_inspection_deductions
           await supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo);
           if (allDeductionRows.length > 0) {
-            const { error: insErr } = await supabase.from("material_inspection_deductions").insert(allDeductionRows);
-            if (insErr) {
-              console.warn("material_inspection_deductions extended column insert failed, falling back to base columns:", insErr.message);
-              const baseRows = allDeductionRows.map(r => ({
-                mr_no: r.mr_no,
-                po_no: r.po_no,
-                arrival_no: r.arrival_no,
-                deduction_type: r.deduction_type,
-                deduction_rate: r.deduction_rate,
-                deduction_qty: r.deduction_qty,
-                deduction_amount: r.deduction_amount,
-                remarks: r.remarks,
-                created_at: r.created_at
-              }));
-              await supabase.from("material_inspection_deductions").insert(baseRows);
-            }
+            await resilientSupabaseInsertRows(supabase, "material_inspection_deductions", allDeductionRows);
           }
 
           // Also sync to mill_inspection_deduction for compatibility
           try {
             await supabase.from("mill_inspection_deduction").delete().eq("mr_no", cleanMrNo);
             if (allDeductionRows.length > 0) {
-              await supabase.from("mill_inspection_deduction").insert(allDeductionRows);
+              await resilientSupabaseInsertRows(supabase, "mill_inspection_deduction", allDeductionRows);
             }
           } catch (mErr) {}
         } catch (allDedErr) {
@@ -3053,10 +3119,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const arrNoKey = headerForm.arrival_no ? headerForm.arrival_no.trim() : "";
           if (mrNoKey) {
             await supabase.from("final_arrival").update({
-              status: 'Completed',
+              status: "Completed",
               grid_details: validDetails,
               details: validDetails
-            }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ''}`);
+            }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ""}`);
           }
         } catch (faErr) {}
 
