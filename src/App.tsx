@@ -1199,6 +1199,7 @@ const JCI_WORKFLOW_STEPS: {
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string>("L1");
   const [userLevel, setUserLevel] = useState<string>("L1");
@@ -1269,8 +1270,10 @@ export default function App() {
           }
         }
       }
+      setSessionStatus('ready');
     } catch (e) {
       console.warn("Session restore error:", e);
+      setSessionStatus('error');
     }
   }, []);
 
@@ -1743,6 +1746,7 @@ export default function App() {
         "LOGIN_HISTORY",
         `Administrator login verified under session year: ${year}`,
       );
+      setSessionStatus('ready');
       return;
     }
 
@@ -1818,6 +1822,7 @@ export default function App() {
           "LOGIN_HISTORY",
           `Operator account: ${data.username} [Role: ${data.role || "USER"}] successfully logged in under session year: ${year}`,
         );
+        setSessionStatus('ready');
       } else {
         alert("Access denied: Authentication failure.");
       }
@@ -1826,6 +1831,36 @@ export default function App() {
       alert("Internal security fault. Verify DB connection.");
     }
   };
+
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#FAF7F0] font-sans">
+        <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200 max-w-sm w-full">
+          <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-base font-bold text-[#1E331B] uppercase tracking-wide">Loading your workspace...</h2>
+          <p className="text-xs text-slate-500 mt-1">Verifying access permissions and active session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionStatus === 'error') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#FAF7F0] font-sans">
+        <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-red-200 max-w-sm w-full">
+          <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 font-bold">!</div>
+          <h2 className="text-base font-bold text-red-900 uppercase tracking-wide">Session Verification Error</h2>
+          <p className="text-xs text-slate-600 mt-1">Unable to load workspace security context. Please check your connection and reload.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#1E331B] text-white rounded text-xs font-bold uppercase cursor-pointer"
+          >
+            Reload Application
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
