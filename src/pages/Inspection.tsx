@@ -2850,6 +2850,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         updated_at: new Date().toISOString()
       };
 
+      console.log("[INSPECTION REGISTER - FULL PAYLOAD BEFORE DATABASE SAVE]", masterPayload);
       console.log("[INSPECTION REGISTER - FRONTEND BEFORE SAVE & PRODUCTION VALIDATION]", {
         timestamp: new Date().toISOString(),
         cleanMrNo,
@@ -2887,14 +2888,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const resJson = await response.json();
           const isSuccess = Boolean(resJson && resJson.success === true);
           const rowCount = Number(resJson?.affectedRows ?? resJson?.rowCount ?? (resJson?.data ? 1 : 0));
+          const returnedId = resJson?.recordId || resJson?.data?.id || resJson?.data?.mr_no;
 
-          if (isSuccess && rowCount > 0 && resJson.data) {
+          if (isSuccess && rowCount > 0 && resJson.data && returnedId && !resJson.error) {
             savedDbRecord = resJson.data;
             affectedRows = rowCount;
             apiSuccess = true;
           } else {
-            // Backend returned validation error or affected 0 rows
-            const errMsg = resJson?.error || "Unable to save Inspection Module Register. Database returned 0 affected rows. Data was not saved.";
+            // Backend returned validation error, missing record ID, or affected 0 rows
+            const errMsg = resJson?.error || "Unable to save Inspection Module Register. Database returned invalid record ID or 0 affected rows. Data was not saved.";
             alert(errMsg);
             return; // ABORT without clearing form and WITHOUT firing success alert
           }
@@ -3048,9 +3050,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         savedDbRecord = verifiedRow;
       }
 
-      // Check strictly: Only proceed if record exists and affected rows > 0
-      if (!savedDbRecord || affectedRows <= 0) {
-        throw new Error("Unable to save Inspection Module Register. Database returned 0 affected rows. Data was not saved.");
+      // Check strictly: Only proceed if record exists, has a valid ID, and affected rows > 0
+      const validRecordId = savedDbRecord?.mr_no || savedDbRecord?.id;
+      if (!savedDbRecord || !validRecordId || affectedRows <= 0) {
+        throw new Error("Unable to save Inspection Module Register. Database returned invalid record ID or 0 affected rows. Data was not saved.");
       }
 
       // Step 9: Commit verified - Update in-memory state, caches and show success
@@ -3059,6 +3062,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       console.log("[INSPECTION REGISTER - FRONTEND AFTER SAVE SUCCESS & VERIFIED]", {
         timestamp: new Date().toISOString(),
         status: "COMMITTED",
+        recordId: validRecordId,
         affectedRows,
         mr_no: cleanMrNo,
         savedRecord: finalCommittedRecord
@@ -3079,7 +3083,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       } catch (e) {}
 
       window.dispatchEvent(new Event("app-data-updated"));
-      // Strictly fire the alert only after successful database response with affected rows > 0
+      // Strictly fire the alert only after successful database response with valid record ID and affected rows > 0
       alert("Data Saved Successfully.");
       showToast("Data Saved Successfully.");
       setViewMode("dashboard");

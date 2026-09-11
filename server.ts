@@ -1111,6 +1111,7 @@ async function startServer() {
         updated_at: new Date().toISOString()
       };
 
+      console.log("[INSPECTION SAVE - FULL PAYLOAD BEFORE SUPABASE DB CALL]", masterPayload);
       console.log("[INSPECTION SAVE - COMMITTING MASTER PAYLOAD TO DB]", {
         mr_no: masterPayload.mr_no,
         arrival_no: masterPayload.arrival_no,
