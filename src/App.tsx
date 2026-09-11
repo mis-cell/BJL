@@ -1072,7 +1072,7 @@ const allSidebarItems = [
   { id: "admindesk", label: "Admin Desk", icon: Lock },
   { id: "satta", label: "Satta", icon: Sparkles },
   { id: "requisition_desk", label: "Requisition Desk", icon: ClipboardList },
-  { id: "vyapari", label: "Traders Directory", icon: Users },
+  { id: "vyapari", label: "Trade (Traders Directory)", icon: Users },
   { id: "ai_assistant", label: "Jarves AI 2.0", icon: Bot },
   { id: "treds", label: "treds", icon: TrendingUp },
 ];
@@ -1097,8 +1097,8 @@ function getPageMeta(pageId: string) {
   if (pageId === "satta_entry") {
     return { label: "Satta Entry", icon: PlusCircle };
   }
-  if (pageId === "vyapari") {
-    return { label: "Traders Directory", icon: Users };
+  if (pageId === "vyapari" || pageId === "trade") {
+    return { label: "Trade (Traders Directory)", icon: Users };
   }
   if (pageId === "admindesk") {
     return { label: "Admin Desk", icon: Settings };
@@ -2101,10 +2101,10 @@ export default function App() {
                 />
               </div>
               <div
-                className={currentPage === "vyapari" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+                className={(currentPage === "vyapari" || (currentPage as string) === "trade") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
                 <DirectoryView
-                  title="Traders"
+                  title="Trade (Traders Directory)"
                   type="vyapari"
                   onClose={() => closePage("vyapari", "dashboard")}
                 />
