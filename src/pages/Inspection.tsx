@@ -507,6 +507,37 @@ export const extractMonthFromDate = (dateStr?: string | null): number => {
   return 8; // fallback to dry season default if unparseable
 };
 
+// Robust Date Sanitizer for PostgreSQL DATE columns (avoids 400 Bad Request on empty strings or invalid dates)
+export const sanitizeDate = (val: any): string | null => {
+  if (!val) return null;
+  if (typeof val !== 'string') {
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      return val.toISOString().split('T')[0];
+    }
+    return null;
+  }
+  const trimmed = val.trim();
+  if (!trimmed || trimmed === '' || trimmed.toLowerCase() === 'null' || trimmed.toLowerCase() === 'undefined' || trimmed === 'nan-nan-nan') return null;
+  // If DD-MM-YYYY or DD/MM/YYYY format, convert to YYYY-MM-DD for PostgreSQL
+  const ddmmyyyy = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (ddmmyyyy) {
+    const d = ddmmyyyy[1].padStart(2, '0');
+    const m = ddmmyyyy[2].padStart(2, '0');
+    const y = ddmmyyyy[3];
+    return `${y}-${m}-${d}`;
+  }
+  // If YYYY-MM-DD or YYYY/MM/DD
+  const yyyymmdd = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (yyyymmdd) {
+    const y = yyyymmdd[1];
+    const m = yyyymmdd[2].padStart(2, '0');
+    const d = yyyymmdd[3].padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const parsed = new Date(trimmed);
+  return isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+};
+
 // Calculate Claim Moisture % based on moisture_logic rules from database
 // Formula: Claim Moisture % = CEIL(MAX(0, Actual Moisture % - Applicable Moisture %))
 export const calculateClaimMoisture = (
@@ -2184,18 +2215,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     let loadedDetails: InspectionDetailRow[] = [];
 
     if (supabase) {
-      const [midRes, inspRes, millDetRes] = await Promise.all([
-        supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true }),
-        supabase.from("inspection_details").select("*").eq("mr_no", rec.mr_no),
-        supabase.from("mill_inspection_detail").select("*").eq("mr_no", rec.mr_no)
-      ]);
-
-      if (midRes.data && midRes.data.length > 0) {
-        loadedDetails = midRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
-      } else if (inspRes.data && inspRes.data.length > 0) {
-        loadedDetails = inspRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
-      } else if (millDetRes.data && millDetRes.data.length > 0) {
-        loadedDetails = millDetRes.data.map(d => ({ ...d, is_auto: true, expanded: false }));
+      try {
+        const { data: midData } = await supabase.from("material_inspection_details").select("*").eq("mr_no", rec.mr_no).order("srl_no", { ascending: true });
+        if (midData && midData.length > 0) {
+          loadedDetails = midData.map(d => ({ ...d, is_auto: true, expanded: false }));
+        }
+      } catch (err) {
+        console.warn("Could not query material_inspection_details:", err);
       }
     }
 
@@ -2671,19 +2697,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   const handleSaveForm = async () => {
-    if (!headerForm.mr_no.trim()) {
-      alert("M. R. No. is required.");
+    if (!headerForm.mr_no || !headerForm.mr_no.trim()) {
+      alert("Arrival No. / M. R. No. is required.");
       return;
     }
 
     try {
-      const activeDeductions = deductionRows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || r.deduction_amount > 0);
+      const activeDeductions = deductionRows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || Number(r.deduction_amount) > 0);
       const totalDeductionAmt = deductionRows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
       const primaryDeduction = activeDeductions[0] || deductionRows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
 
       // Prepare detail rows
       const validDetails = detailRows.map((row, idx) => ({
-        mr_no: headerForm.mr_no,
+        mr_no: headerForm.mr_no.trim(),
         srl_no: row.srl_no || idx + 1,
         arrival_grade: row.arrival_grade || row.stock_grade_name || "",
         stock_grade_code: row.stock_grade_code || "",
@@ -2749,86 +2775,107 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         jci_remarks: row.jci_remarks || row.jqi_remarks || ""
       }));
 
-      const payload: any = {
-        ...headerForm,
-        unit_name: (headerForm as any).unit_name || validDetails[0]?.unit || "BALES",
+      const resolvedMrDate = sanitizeDate(headerForm.mr_date) || sanitizeDate((headerForm as any).date) || new Date().toISOString().split("T")[0];
+      const resolvedArrivalDate = sanitizeDate(headerForm.arrival_date) || resolvedMrDate;
+      let resolvedPoDate = sanitizeDate(headerForm.po_date);
+
+      if (supabase && headerForm.po_no) {
+        try {
+          const { data: scpData } = await supabase
+            .from('purchase_master')
+            .select('po_date')
+            .eq('po_no', headerForm.po_no.trim())
+            .maybeSingle();
+          if (scpData && scpData.po_date) {
+            resolvedPoDate = sanitizeDate(scpData.po_date) || resolvedPoDate;
+          } else {
+            const { data: scpViewData } = await supabase
+              .from('sauda_check_point')
+              .select('po_date, s_date')
+              .eq('po_no', headerForm.po_no.trim())
+              .maybeSingle();
+            if (scpViewData) {
+              resolvedPoDate = sanitizeDate(scpViewData.po_date || scpViewData.s_date) || resolvedPoDate;
+            }
+          }
+        } catch (poErr) {
+          console.warn("Error resolving PO Date source of truth:", poErr);
+        }
+      }
+
+      const masterPayload: any = {
+        mr_no: headerForm.mr_no.trim(),
+        mr_date: resolvedMrDate,
+        date: resolvedMrDate,
+        arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+        arrival_date: resolvedArrivalDate,
+        po_no: headerForm.po_no || null,
+        po_date: resolvedPoDate,
+        broker_name: headerForm.broker_name || "",
+        supplier_name: headerForm.supplier_name || "",
+        broker: headerForm.broker_name || "",
+        supplier: headerForm.supplier_name || "",
+        actual_moisture: Number(headerForm.actual_moisture) || 0,
+        claim_moisture: Number(headerForm.claim_moisture) || 0,
+        actual_dust: Number(headerForm.actual_dust) || 0,
+        claim_dust: Number(headerForm.claim_dust) || 0,
+        actual_ncv: Number(headerForm.actual_ncv) || 0,
+        claim_ncv: Number(headerForm.claim_ncv) || 0,
+        detention_days: Number(headerForm.detention_days) || 0,
+        unloading_date: sanitizeDate(headerForm.unloading_date),
+        mill_po_no: headerForm.mill_po_no || headerForm.po_no || null,
+        mill_po_date: sanitizeDate(headerForm.mill_po_date) || resolvedPoDate,
+        mr_spcl_print: headerForm.mr_spcl_print || null,
+        remarks: headerForm.remarks || null,
+        lorry_number: headerForm.lorry_number || null,
+        delivery_claim: Number(headerForm.delivery_claim) || 0,
         deduction_type: activeDeductions.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryDeduction.deduction_type || "",
-        deduction_rate: primaryDeduction.deduction_rate || 0,
-        deduction_qty: primaryDeduction.deduction_qty || 0,
-        deduction_amount: totalDeductionAmt,
+        deduction_rate: Number(primaryDeduction.deduction_rate) || 0,
+        deduction_qty: Number(primaryDeduction.deduction_qty) || 0,
+        deduction_amount: Number(totalDeductionAmt) || 0,
         deductions: deductionRows,
         deduction_rows: deductionRows,
         deductions_json: JSON.stringify(deductionRows),
         deduction_types: deductionRows,
-        date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
-        broker: headerForm.broker_name || (headerForm as any).broker || "",
-        supplier: headerForm.supplier_name || (headerForm as any).supplier || "",
+        unit_name: (headerForm as any).unit_name || validDetails[0]?.unit || "BALES",
+        unit: (headerForm as any).unit_name || validDetails[0]?.unit || "BALES",
         status: headerForm.status || "Completed",
         grid_details: validDetails,
         details: validDetails,
-        created_at: headerForm.created_at || new Date().toISOString()
+        created_at: headerForm.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       if (supabase) {
-        // Enforce Sauda Check Point PO Date as single source of truth dynamically
-        if (payload.po_no) {
-          try {
-            const { data: scpData } = await supabase
-              .from('purchase_master')
-              .select('po_date')
-              .eq('po_no', payload.po_no.trim())
-              .maybeSingle();
-            if (scpData && scpData.po_date) {
-              payload.po_date = scpData.po_date;
-            } else {
-              const { data: scpViewData } = await supabase
-                .from('sauda_check_point')
-                .select('po_date, s_date')
-                .eq('po_no', payload.po_no.trim())
-                .maybeSingle();
-              if (scpViewData) {
-                payload.po_date = scpViewData.po_date || scpViewData.s_date || payload.po_date;
-              }
-            }
-          } catch (poErr) {
-            console.warn("Error resolving PO Date source of truth:", poErr);
-          }
-        }
-
+        // 1. Upsert master record to material_inspection
         try {
-          const { error: masterErr } = await supabase.from("material_inspection").upsert([payload]);
+          const { error: masterErr } = await supabase.from("material_inspection").upsert(masterPayload);
           if (masterErr) {
-            console.warn("Error upserting to material_inspection:", masterErr);
+            console.error("Error upserting to material_inspection:", masterErr);
           }
         } catch (mErr) {
-          console.warn("Exception upserting material_inspection:", mErr);
+          console.error("Exception upserting material_inspection:", mErr);
         }
 
-        // Also update fallback inspection master tables for legacy queries
+        // 2. Persist deductions in mill_inspection_deduction & material_inspection_deductions
         try {
-          await supabase.from("mill_inspection_master").upsert([payload]);
-          await supabase.from("inspection_master").upsert([payload]);
-        } catch (e) {}
-
-        // Persist dedicated deduction detail items in mill_inspection_deduction and material_inspection_deductions
-        try {
-          const totalBalesCount = detailRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0) || Number((headerForm as any).total_quantity || 0);
-          const totalGrossMt = detailRows.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || (headerForm as any).challan_gross_wt || 0);
+          const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0) || Number((headerForm as any).total_quantity || 0);
+          const totalGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || (headerForm as any).challan_gross_wt || 0);
           const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalGrossMt * 1000) / totalBalesCount : 0;
 
           const millDeductionRows = deductionRows
             .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
             .map(r => ({
-              mr_no: headerForm.mr_no,
-              mr_date: headerForm.mr_date || (headerForm as any).date || new Date().toISOString().split("T")[0],
+              mr_no: headerForm.mr_no.trim(),
+              mr_date: resolvedMrDate,
               po_no: headerForm.po_no || null,
-              po_date: payload.po_date || headerForm.po_date || null,
-              arrival_no: headerForm.arrival_no || null,
-              arrival_date: headerForm.arrival_date || null,
-              supplier: headerForm.supplier_name || (headerForm as any).supplier || '',
-              supplier_name: headerForm.supplier_name || (headerForm as any).supplier || '',
-              broker: headerForm.broker_name || (headerForm as any).broker || '',
-              broker_name: headerForm.broker_name || (headerForm as any).broker || '',
+              po_date: resolvedPoDate,
+              arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+              arrival_date: resolvedArrivalDate,
+              supplier: headerForm.supplier_name || '',
+              supplier_name: headerForm.supplier_name || '',
+              broker: headerForm.broker_name || '',
+              broker_name: headerForm.broker_name || '',
               lorry_number: headerForm.lorry_number || '',
               deduction_type: r.deduction_type || '',
               deduction_rate: Number(r.deduction_rate) || 0,
@@ -2843,94 +2890,76 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               updated_at: new Date().toISOString()
             }));
 
-          // 1. Save to mill_inspection_deduction (target table requested by user)
-          try {
-            await supabase.from("mill_inspection_deduction").delete().eq("mr_no", headerForm.mr_no);
-            if (millDeductionRows.length > 0) {
-              const { error: midErr } = await supabase.from("mill_inspection_deduction").insert(millDeductionRows);
-              if (midErr) {
-                console.warn("Error inserting to mill_inspection_deduction table:", midErr);
-              }
-            }
-          } catch (millErr) {
-            console.warn("Exception saving to mill_inspection_deduction table:", millErr);
+          // Clean & re-insert deductions
+          await supabase.from("mill_inspection_deduction").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
+          if (millDeductionRows.length > 0) {
+            await supabase.from("mill_inspection_deduction").insert(millDeductionRows).then(() => {}, () => {});
           }
 
-          // 2. Save to material_inspection_deductions (backwards compatibility)
-          try {
-            await supabase.from("material_inspection_deductions").delete().eq("mr_no", headerForm.mr_no);
-            const midRows = deductionRows
-              .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0)
-              .map(r => ({
-                mr_no: headerForm.mr_no,
-                po_no: headerForm.po_no || null,
-                arrival_no: headerForm.arrival_no || null,
-                deduction_type: r.deduction_type || '',
-                deduction_rate: Number(r.deduction_rate) || 0,
-                deduction_qty: Number(r.deduction_qty) || 0,
-                deduction_amount: Number(r.deduction_amount) || 0,
-                remarks: (r as any).remarks || ''
-              }));
-            if (midRows.length > 0) {
-              await supabase.from("material_inspection_deductions").insert(midRows);
-            }
-          } catch (midErr) {
-            console.warn("Error saving to material_inspection_deductions:", midErr);
+          await supabase.from("material_inspection_deductions").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
+          const midRows = deductionRows
+            .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0)
+            .map(r => ({
+              mr_no: headerForm.mr_no.trim(),
+              po_no: headerForm.po_no || null,
+              arrival_no: headerForm.arrival_no || headerForm.mr_no.trim(),
+              deduction_type: r.deduction_type || '',
+              deduction_rate: Number(r.deduction_rate) || 0,
+              deduction_qty: Number(r.deduction_qty) || 0,
+              deduction_amount: Number(r.deduction_amount) || 0,
+              remarks: (r as any).remarks || ''
+            }));
+          if (midRows.length > 0) {
+            await supabase.from("material_inspection_deductions").insert(midRows).then(() => {}, () => {});
           }
         } catch (allDedErr) {
-          console.warn("Error processing deductions persistence:", allDedErr);
+          console.warn("Error persisting deductions:", allDedErr);
         }
-        
-        // Clean out old detail rows
-        try {
-          await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no);
-        } catch (e) {}
 
-        if (validDetails.length > 0) {
-          try {
-            const { error: insErr } = await supabase.from("material_inspection_details").insert(validDetails);
-            if (insErr) {
-              console.warn("material_inspection_details insert returned error:", insErr);
-            }
-          } catch (dErr) {
-            console.warn("Exception inserting material_inspection_details:", dErr);
+        // 3. Clean and save detail rows to material_inspection_details
+        try {
+          await supabase.from("material_inspection_details").delete().eq("mr_no", headerForm.mr_no.trim()).then(() => {}, () => {});
+          if (validDetails.length > 0) {
+            await supabase.from("material_inspection_details").insert(validDetails).then(() => {}, () => {});
           }
+        } catch (dErr) {
+          console.warn("Error inserting details:", dErr);
         }
 
-        // Sync with final_arrival table
+        // 4. Update final_arrival status if matching
         try {
-          await supabase.from("final_arrival").upsert({
-            mr_no: headerForm.mr_no,
-            mr_date: headerForm.mr_date || null,
-            temporary_arrival_no: headerForm.arrival_no,
-            arrival_date: headerForm.arrival_date || null,
-            date: headerForm.arrival_date || headerForm.mr_date || null,
-            po_no: headerForm.po_no,
-            po_date: payload.po_date || null,
-            broker: headerForm.broker_name,
-            supplier: headerForm.supplier_name,
-            lorry_number: headerForm.lorry_number,
-            grid_details: validDetails,
-            details: validDetails,
-            status: 'Completed'
-          });
+          const mrNoKey = headerForm.mr_no.trim();
+          const arrNoKey = headerForm.arrival_no ? headerForm.arrival_no.trim() : "";
+          if (mrNoKey) {
+            await supabase.from("final_arrival").update({
+              status: 'Completed',
+              grid_details: validDetails,
+              details: validDetails
+            }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ''}`).then(() => {}, () => {});
+          }
         } catch (faErr) {}
       }
 
+      // Immediately update in-memory state so dashboard displays it without delay
+      setRecords(prev => {
+        const filtered = prev.filter(r => r.mr_no !== masterPayload.mr_no && (r.arrival_no ? r.arrival_no !== masterPayload.arrival_no : true));
+        return [masterPayload, ...filtered];
+      });
+
       // Update local storage cache
       try {
-        localStorage.setItem(`inspection_deductions_${headerForm.mr_no}`, JSON.stringify(deductionRows));
+        localStorage.setItem(`inspection_deductions_${masterPayload.mr_no}`, JSON.stringify(deductionRows));
         const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
         let list: InspectionMasterRecord[] = cached ? JSON.parse(cached) : [];
-        list = [payload, ...list.filter((r: any) => r.mr_no !== payload.mr_no)];
+        list = [masterPayload, ...list.filter((r: any) => r.mr_no !== masterPayload.mr_no)];
         localStorage.setItem("material_inspection_records", JSON.stringify(list));
         localStorage.setItem("inspection_master_records", JSON.stringify(list));
       } catch (e) {}
 
       window.dispatchEvent(new Event("app-data-updated"));
-      showToast(`Inspection ${headerForm.mr_no} saved successfully.`);
-      fetchInspectionRecords();
+      showToast(`Inspection ${masterPayload.mr_no} saved successfully.`);
       setViewMode("dashboard");
+      fetchInspectionRecords();
     } catch (err: any) {
       alert("Failed to save inspection: " + err.message);
     }
