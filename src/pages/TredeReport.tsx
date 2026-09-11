@@ -479,6 +479,168 @@ const initialMaster = (): PaymentMaster => ({
   repayment_date:''
 });
 
+/* Helper to retrieve all verified arrivals / M.Rs linked to a specific P.O */
+export function getLinkedMrsForPo(poOrPoNo: any, arrivalsList: any[] = []): any[] {
+  if (!poOrPoNo || !arrivalsList || arrivalsList.length === 0) return [];
+
+  const targetPoNo = typeof poOrPoNo === 'string'
+    ? poOrPoNo
+    : (poOrPoNo.po_no || poOrPoNo.ptf_no || poOrPoNo.sauda_no || poOrPoNo.contract_po_no || '');
+
+  const cleanTarget = String(targetPoNo).trim().toUpperCase();
+  if (!cleanTarget || cleanTarget === 'N/A') return [];
+
+  const targetSuffix = cleanTarget.split('/').pop() || '';
+
+  return arrivalsList.filter(arr => {
+    const arrPo1 = String(arr.po_no || '').trim().toUpperCase();
+    const arrPo2 = String(arr.mill_po_no || '').trim().toUpperCase();
+    const arrPo3 = String(arr.contract_po_no || arr.sauda_no || arr.po_contract || '').trim().toUpperCase();
+    
+    const candidates = [arrPo1, arrPo2, arrPo3].filter(Boolean);
+    for (const cand of candidates) {
+      if (cand === cleanTarget) return true;
+      if (cand.includes(cleanTarget) || cleanTarget.includes(cand)) return true;
+      const candSuffix = cand.split('/').pop() || '';
+      if (targetSuffix.length >= 3 && (candSuffix === targetSuffix || cand.includes(targetSuffix))) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/* Helper to verify if an M.R has already been processed in payment_master */
+export function isMrAlreadyProcessed(
+  mrNoOrArrival: string | any,
+  paymentList: any[],
+  currentVoucherNo?: string,
+  poNo?: string
+): { isPaid: boolean; paidPayment?: any } {
+  if (!mrNoOrArrival || !paymentList || paymentList.length === 0) {
+    return { isPaid: false };
+  }
+
+  const mrStr = typeof mrNoOrArrival === 'string'
+    ? mrNoOrArrival
+    : (mrNoOrArrival.mr_no || mrNoOrArrival.final_arrival_no || mrNoOrArrival.arrival_no || '');
+  
+  const cleanMr = String(mrStr).trim().toUpperCase();
+  if (!cleanMr || cleanMr === 'N/A') {
+    return { isPaid: false };
+  }
+
+  const cleanPo = poNo
+    ? String(poNo).trim().toUpperCase()
+    : (typeof mrNoOrArrival === 'object' ? String(mrNoOrArrival.po_no || mrNoOrArrival.mill_po_no || '').trim().toUpperCase() : '');
+
+  const matchedPayment = paymentList.find(p => {
+    // If editing, ignore current voucher
+    if (currentVoucherNo && String(p.voucher_no || '').trim().toUpperCase() === String(currentVoucherNo).trim().toUpperCase()) {
+      return false;
+    }
+
+    // Exclude cancelled or rejected payments
+    const pStatus = String(p.status || '').toLowerCase().trim();
+    if (pStatus === 'cancelled' || pStatus === 'rejected') {
+      return false;
+    }
+
+    const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+    if (!pMr) return false;
+
+    // Direct MR match
+    const isMrMatch = pMr === cleanMr;
+
+    if (isMrMatch) {
+      if (cleanPo) {
+        const pPo = String(p.po_no || '').trim().toUpperCase();
+        if (pPo) {
+          const pPoSuffix = pPo.split('/').pop() || '';
+          const cleanPoSuffix = cleanPo.split('/').pop() || '';
+          if (pPo === cleanPo || pPo.includes(cleanPo) || cleanPo.includes(pPo) || (cleanPoSuffix.length >= 3 && pPoSuffix === cleanPoSuffix)) {
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    return false;
+  });
+
+  return {
+    isPaid: Boolean(matchedPayment),
+    paidPayment: matchedPayment
+  };
+}
+
+/* Helper to evaluate if a P.O is eligible for payment based on both P.O status AND remaining unpaid M.R records */
+export function isPoEligibleForPayment(
+  po: any,
+  arrivalsList: any[] = [],
+  paymentsList: any[] = [],
+  currentVoucherNo?: string
+): boolean {
+  if (!po) return false;
+
+  const statusStr = String(po.status || '').toLowerCase().trim();
+  const passMismatchStr = String(po.pass_mismatch || po.pass_status || po.mismatch_status || po.quality_status || '').toUpperCase().trim();
+  
+  const isCompleted = (statusStr === 'completed' || statusStr === 'closed' || statusStr === 'final' || statusStr === 'moved_to_final' || statusStr === 'settled' || (po.ptf_no && String(po.ptf_no).trim() && String(po.ptf_no).trim() !== 'N/A'));
+  
+  let isPass = false;
+  if (passMismatchStr === 'PASS') isPass = true;
+  else if (po.mismatch_cleared === true || String(po.mismatch_cleared) === 'true') isPass = true;
+  else if (po.satta_dispute_approved === true || String(po.satta_dispute_approved) === 'true') isPass = true;
+  else if (statusStr === 'final' || statusStr === 'moved_to_final' || statusStr === 'completed' || statusStr === 'settled') isPass = true;
+  else if (po.ptf_no && String(po.ptf_no).trim() && String(po.ptf_no).trim() !== 'N/A') isPass = true;
+  else if (statusStr !== 'mismatch' && statusStr !== 'dispute' && po.mismatch_cleared !== false) isPass = true;
+
+  if (!isCompleted || !isPass) {
+    return false;
+  }
+
+  const poNo = String(po.po_no || po.ptf_no || po.sauda_no || po.contract_po_no || '').trim().toUpperCase();
+
+  // Step 1: Find all verified M.R records linked with this P.O
+  const linkedMrs = getLinkedMrsForPo(po, arrivalsList);
+
+  if (linkedMrs.length > 0) {
+    // Step 2 & 3: Check each M.R against payment_master and exclude paid ones
+    const unpaidMrs = linkedMrs.filter(mr => {
+      const check = isMrAlreadyProcessed(mr, paymentsList, currentVoucherNo, poNo);
+      return !check.isPaid;
+    });
+
+    // Step 4: If remaining eligible M.R. count > 0 -> Show P.O (Eligible: true)
+    // If remaining eligible M.R. count = 0 -> Hide P.O (Eligible: false)
+    return unpaidMrs.length > 0;
+  }
+
+  if (paymentsList && paymentsList.length > 0 && poNo) {
+    const directPayment = paymentsList.find(p => {
+      if (currentVoucherNo && String(p.voucher_no || '').trim().toUpperCase() === String(currentVoucherNo).trim().toUpperCase()) {
+        return false;
+      }
+      const pStatus = String(p.status || '').toLowerCase().trim();
+      if (pStatus === 'cancelled' || pStatus === 'rejected') return false;
+
+      const pPo = String(p.po_no || '').trim().toUpperCase();
+      if (pPo === poNo) return true;
+      const pPoSuffix = pPo.split('/').pop() || '';
+      const poSuffix = poNo.split('/').pop() || '';
+      return (poSuffix.length >= 3 && pPoSuffix === poSuffix);
+    });
+
+    if (directPayment) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /* Searchable P.O Dropdown Component */
 interface SearchablePoSelectProps {
   selectedPoNo: string;
@@ -488,6 +650,9 @@ interface SearchablePoSelectProps {
   isPoNotInFinal: boolean;
   showAllPos: boolean;
   isPoEligibleForPayment: (po: any) => boolean;
+  verifiedArrivals?: any[];
+  paymentList?: any[];
+  currentVoucherNo?: string;
 }
 
 function SearchablePoSelect({
@@ -497,7 +662,10 @@ function SearchablePoSelect({
   matchedFinalPo,
   isPoNotInFinal,
   showAllPos,
-  isPoEligibleForPayment
+  isPoEligibleForPayment,
+  verifiedArrivals = [],
+  paymentList = [],
+  currentVoucherNo
 }: SearchablePoSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -666,6 +834,8 @@ function SearchablePoSelect({
 
               const isEligible = isPoEligibleForPayment(po);
               const isSelected = selectedPoNo === poNo;
+              const linkedMrs = getLinkedMrsForPo(po, verifiedArrivals);
+              const unpaidMrs = linkedMrs.filter(mr => !isMrAlreadyProcessed(mr, paymentList, currentVoucherNo, poNo).isPaid);
 
               return (
                 <div
@@ -683,9 +853,13 @@ function SearchablePoSelect({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-extrabold text-slate-900">{poNo}</span>
-                      {isEligible && (
+                      {isEligible ? (
                         <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-emerald-200">
-                          Completed / PASS
+                          {linkedMrs.length > 0 ? `${unpaidMrs.length} Unpaid M.R (${linkedMrs.length} Total)` : 'Completed & PASS'}
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-500 text-[9px] px-1.5 py-0.2 rounded font-semibold border border-slate-200">
+                          All M.R Paid
                         </span>
                       )}
                     </div>
@@ -702,7 +876,7 @@ function SearchablePoSelect({
 
             {filteredList.length === 0 && (!matchedFinalPo || (normalizedSearch && !matchedFinalPo.po_no.toLowerCase().includes(normalizedSearch))) && (
               <div className="p-4 text-center text-slate-500 text-xs italic">
-                No P.O matching &quot;{searchTerm}&quot;
+                {searchTerm ? `No P.O matching "${searchTerm}"` : "No eligible P.O records pending payment. (All linked M.Rs are paid)"}
               </div>
             )}
           </div>
@@ -710,71 +884,6 @@ function SearchablePoSelect({
       )}
     </div>
   );
-}
-
-/* Helper to verify if an M.R has already been processed in payment_master */
-export function isMrAlreadyProcessed(
-  mrNoOrArrival: string | any,
-  paymentList: any[],
-  currentVoucherNo?: string,
-  poNo?: string
-): { isPaid: boolean; paidPayment?: any } {
-  if (!mrNoOrArrival || !paymentList || paymentList.length === 0) {
-    return { isPaid: false };
-  }
-
-  const mrStr = typeof mrNoOrArrival === 'string'
-    ? mrNoOrArrival
-    : (mrNoOrArrival.mr_no || mrNoOrArrival.final_arrival_no || mrNoOrArrival.arrival_no || '');
-  
-  const cleanMr = String(mrStr).trim().toUpperCase();
-  if (!cleanMr || cleanMr === 'N/A') {
-    return { isPaid: false };
-  }
-
-  const cleanPo = poNo
-    ? String(poNo).trim().toUpperCase()
-    : (typeof mrNoOrArrival === 'object' ? String(mrNoOrArrival.po_no || mrNoOrArrival.mill_po_no || '').trim().toUpperCase() : '');
-
-  const matchedPayment = paymentList.find(p => {
-    // If editing, ignore current voucher
-    if (currentVoucherNo && String(p.voucher_no || '').trim().toUpperCase() === String(currentVoucherNo).trim().toUpperCase()) {
-      return false;
-    }
-
-    // Exclude cancelled or rejected payments
-    const pStatus = String(p.status || '').toLowerCase().trim();
-    if (pStatus === 'cancelled' || pStatus === 'rejected') {
-      return false;
-    }
-
-    const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
-    if (!pMr) return false;
-
-    // Direct MR match
-    const isMrMatch = pMr === cleanMr;
-
-    if (isMrMatch) {
-      if (cleanPo) {
-        const pPo = String(p.po_no || '').trim().toUpperCase();
-        if (pPo) {
-          const pPoSuffix = pPo.split('/').pop() || '';
-          const cleanPoSuffix = cleanPo.split('/').pop() || '';
-          if (pPo === cleanPo || pPo.includes(cleanPo) || cleanPo.includes(pPo) || (cleanPoSuffix.length >= 3 && pPoSuffix === cleanPoSuffix)) {
-            return true;
-          }
-        }
-      }
-      return true;
-    }
-
-    return false;
-  });
-
-  return {
-    isPaid: Boolean(matchedPayment),
-    paidPayment: matchedPayment
-  };
 }
 
 /* Searchable Inspection / M.R Dropdown Component */
@@ -1030,9 +1139,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     return false;
   };
 
-  const isPoEligibleForPayment = (po: any): boolean => {
-    if (!po) return false;
-    return isPoCompletedStatus(po) && isPoPassStatus(po);
+  const isPoEligibleForPaymentLocal = (po: any): boolean => {
+    return isPoEligibleForPayment(
+      po,
+      verifiedArrivals,
+      paymentList,
+      isEdit ? masterData.voucher_no : undefined
+    );
   };
 
   const findMatchingPo = (targetPoNo: string, poArray: any[]) => {
@@ -1069,6 +1182,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       return !isPaid;
     });
   }, [verifiedArrivals, paymentList, isEdit, masterData.voucher_no, selectedPoNo]);
+
+  // Filter purchase orders where at least one eligible unpaid M.R remains
+  const eligiblePos = useMemo(() => {
+    return purchaseOrders.filter(po => isPoEligibleForPaymentLocal(po));
+  }, [purchaseOrders, verifiedArrivals, paymentList, isEdit, masterData.voucher_no]);
 
   const ensurePaymentTablesExist = async () => {
     if (!supabase) return;
@@ -2989,7 +3107,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold">
                   <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded border border-purple-200">
-                    {purchaseOrders.filter(po => isPoEligibleForPayment(po)).length} Eligible P.O Records (Status: Completed & PASS)
+                    {eligiblePos.length} Eligible P.O Records (Pending Payment)
                   </span>
                   <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
                     {availableArrivals.length} Unpaid M.R Records ({verifiedArrivals.length} Total Verified)
@@ -2999,8 +3117,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               {/* PO and Inspection Selector Logic */}
               {(() => {
-                const eligiblePos = purchaseOrders.filter(po => isPoEligibleForPayment(po));
-                const displayPos = showAllPos ? purchaseOrders : (eligiblePos.length > 0 ? eligiblePos : purchaseOrders);
+                const displayPos = showAllPos ? purchaseOrders : eligiblePos;
 
                 const selectedArrival = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
                 const inspectionPoNo = selectedArrival?.po_no || selectedArrival?.mill_po_no || '';
@@ -3033,7 +3150,10 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           matchedFinalPo={matchedFinalPo}
                           isPoNotInFinal={isPoNotInFinal}
                           showAllPos={showAllPos}
-                          isPoEligibleForPayment={isPoEligibleForPayment}
+                          isPoEligibleForPayment={isPoEligibleForPaymentLocal}
+                          verifiedArrivals={verifiedArrivals}
+                          paymentList={paymentList}
+                          currentVoucherNo={isEdit ? masterData.voucher_no : undefined}
                         />
                       </div>
 
