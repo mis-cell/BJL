@@ -81,6 +81,7 @@ import ClubPOMR from "./pages/ClubPOMR";
 import FinalArrival from "./pages/FinalArrival";
 import RequisitionDesk from "./pages/RequisitionDesk";
 import PaymentModule from "./pages/PaymentModule";
+import TredeReport from "./pages/TredeReport";
 import LorryDispatchSystem from "./pages/LorryDispatchSystem";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
@@ -1044,7 +1045,8 @@ type Page =
   | "satta_chart"
   | "sms_sauda"
   | "weight_bridge"
-  | "main_gate";
+  | "main_gate"
+  | "trades";
 
 const allSidebarItems = [
   { id: "dashboard", label: "Operational Hub", icon: LayoutDashboard },
@@ -1072,6 +1074,7 @@ const allSidebarItems = [
   { id: "requisition_desk", label: "Requisition Desk", icon: ClipboardList },
   { id: "vyapari", label: "Traders Directory", icon: Users },
   { id: "ai_assistant", label: "Jarves AI 2.0", icon: Bot },
+  { id: "treds", label: "treds", icon: TrendingUp },
 ];
 
 function getPageMeta(pageId: string) {
@@ -2110,6 +2113,11 @@ export default function App() {
                 className={currentPage === "reports" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
                 <Reports onClose={() => closePage("reports", "dashboard")} />
+              </div>
+              <div
+                className={currentPage === "treds" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+              >
+                <TredeReport onClose={() => closePage("treds", "dashboard")} />
               </div>
               <div
                 className={currentPage === "payment" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}

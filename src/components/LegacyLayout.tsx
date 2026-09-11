@@ -381,7 +381,7 @@ export default function LegacyLayout({
       icon: BarChart3,
       subItems: [
         { id: 'reports', label: 'System Reports', icon: BarChart3, pageId: 'reports' },
-        { id: 'vyapari', label: 'Traders Directory', icon: Users, pageId: 'vyapari' },
+        { id: 'treds', label: 'TReDS', icon: Wallet, pageId: 'treds' },
         { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
         { id: 'settings', label: 'Config Center', icon: Settings, pageId: 'settings' },
         { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' },
@@ -700,6 +700,17 @@ export default function LegacyLayout({
                       className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
                     >
                       <span>📊 System Reports</span>
+                    </button>
+                  )}
+                  {hasModulePermission('treds', effectiveAllowedModules, effectiveIsAdmin) && (
+                    <button
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleNavNavigation('treds');
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                    >
+                      <span>💰 TReDS</span>
                     </button>
                   )}
                   <button

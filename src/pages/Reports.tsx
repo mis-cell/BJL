@@ -45,7 +45,7 @@ import {
 import { cn } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
-import PaymentReport from '../components/PaymentReport';
+//import PaymentReport from '../components/PaymentReport';
 //import TradeReport from '../components/TradeReport';
 import { dbModule } from '../services/dbModule';
 import { jsPDF } from 'jspdf';
@@ -1759,7 +1759,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
           </button>
 
           {/* Trades Report */}
-          <button
+         {/*  <button
             id="tab-data-Paymentreport"
             onClick={() => setReportType('payment_report')}
             className={cn(
@@ -1771,7 +1771,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
             )}
           >
             Treds
-          </button>
+          </button> */}
 
           {/* <button
             id="tab-trade-report"
@@ -3596,9 +3596,9 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
 
           </div>
         )}
-         {reportType === 'payment_report' && (
+         {/* {reportType === 'payment_report' && (
            <PaymentReport></PaymentReport>
-         )}
+         )} */}
          {/* {reportType === 'trade' && (
            <TradeReport
              saudaData={saudaData}
