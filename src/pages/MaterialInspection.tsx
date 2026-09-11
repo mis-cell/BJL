@@ -38,7 +38,7 @@ import { dbModule } from "../services/dbModule";
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from "../lib/permissions";
 import { PaginationControls } from "../components/PaginationControls";
 import { comparePoInspection } from "../lib/poMatch";
-import { sanitizeCsvData } from "../lib/utils";
+import { sanitizeCsvData, formatIndianCurrency, formatIndianNumber, calculateFloor1000, calculate93PctPaidAmount } from "../lib/utils";
 import PrintModal from "../components/PrintModal";
 import InspectionPrintSlip from "../components/InspectionPrintSlip";
 
@@ -1545,7 +1545,7 @@ export default function MaterialInspection({
         totalBill = Number(poRecord.contract_value);
       }
 
-      const default93 = totalBill > 0 ? Math.round(totalBill * 0.93 * 100) / 100 : 0;
+      const default93 = totalBill > 0 ? calculate93PctPaidAmount(totalBill) : 0;
 
       setPaymentOpsInfo({
         paidAmount: default93,
@@ -4921,20 +4921,20 @@ export default function MaterialInspection({
                   <div className="pl-36 text-[10px] -mt-2 mb-1">
                     {paymentOpsInfo.source === 'payment_master' ? (
                       <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
-                        ✓ From Payment Ops ({paymentOpsInfo.voucherNo || 'Voucher'}): <strong>₹{paymentOpsInfo.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                        ✓ From Payment Ops ({paymentOpsInfo.voucherNo || 'Voucher'}): <strong>{formatIndianCurrency(paymentOpsInfo.paidAmount)}</strong>
                         {paymentOpsInfo.totalBill > 0 && (
                           <span className="text-emerald-900 font-normal">
-                            ({((paymentOpsInfo.paidAmount / paymentOpsInfo.totalBill) * 100).toFixed(1)}% of bill ₹{paymentOpsInfo.totalBill.toLocaleString('en-IN', { minimumFractionDigits: 2 })})
+                            ({((paymentOpsInfo.paidAmount / paymentOpsInfo.totalBill) * 100).toFixed(1)}% of bill {formatIndianCurrency(paymentOpsInfo.totalBill)})
                           </span>
                         )}
                       </span>
                     ) : paymentOpsInfo.totalBill > 0 ? (
                       <span className="inline-flex items-center gap-1 font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                        Payment Ops standard: <strong className="text-emerald-800">93.0% of total bill (₹{paymentOpsInfo.totalBill.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) = ₹{paymentOpsInfo.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                        Payment Ops standard: <strong className="text-emerald-800">93% of bill ({formatIndianCurrency(paymentOpsInfo.totalBill)}) [Floor rounded to ₹1,000] = {formatIndianCurrency(paymentOpsInfo.paidAmount)}</strong>
                       </span>
                     ) : (
                       <span className="text-slate-400 italic">
-                        Payment Operations &rarr; Paid Amount (93.0% of total bill)
+                        Payment Operations &rarr; Paid Amount (93% of total bill rounded down to nearest ₹1,000)
                       </span>
                     )}
                   </div>

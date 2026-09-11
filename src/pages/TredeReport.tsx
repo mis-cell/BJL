@@ -31,7 +31,7 @@ import {
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
-import { cn, sanitizeCsvData } from '../lib/utils';
+import { cn, sanitizeCsvData, formatIndianCurrency, formatIndianNumber, calculateFloor1000, calculate93PctPaidAmount } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
 import jsPDF from 'jspdf';
@@ -1642,7 +1642,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
-      const defaultPaid = grossVal > 0 ? Math.round(grossVal * 0.93 * 100) / 100 : 0;
+      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -1793,7 +1793,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || totalColAmt || 0);
-      const defaultPaid = grossVal > 0 ? Math.round(grossVal * 0.93 * 100) / 100 : 0;
+      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
 
       setMasterData(prev => ({
@@ -2298,9 +2298,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         p.mr_no,
         p.party_name || p.supplier || '',
         isAdvanceYesp ? 'YES' : 'NO',
-        payablep.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        paidp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        pendingp.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+        formatIndianCurrency(payablep),
+        formatIndianCurrency(paidp),
+        formatIndianCurrency(pendingp),
 
         advance_payment_fromp === '' || advance_payment_fromp === '1'
           ? 'FROM BANK'
@@ -2410,7 +2410,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     doc.text(partyTitle, 14, 15);
     doc.setFontSize(10);
     doc.text(`Statement Date: ${new Date().toLocaleDateString('en-IN')}`, 14, 22);
-    doc.text(`Total Payable Value: ₹ ${partyTotalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}  |  Total Paid: ₹ ${partyTotalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}  |  Net Pending Balance: ₹ ${partyTotalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 14, 28);
+    doc.text(`Total Payable Value: ${formatIndianCurrency(partyTotalPayable)}  |  Total Paid: ${formatIndianCurrency(partyTotalPaid)}  |  Net Pending Balance: ${formatIndianCurrency(partyTotalPending)}`, 14, 28);
 
     const tableData = partyLedgerRecords.map(p => {
       const payable = Number(p.payable_amt || p.total_amount || 0);
@@ -2421,9 +2421,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN') : '',
         p.party_name || p.supplier || '',
         p.po_no || p.mr_no || '',
-        `₹ ${payable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        `₹ ${paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-        `₹ ${pending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        formatIndianCurrency(payable),
+        formatIndianCurrency(paid),
+        formatIndianCurrency(pending),
         p.payment_mode || 'Bank Transfer'
       ];
     });
@@ -2571,9 +2571,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </p>
 
                 <h3 className="text-lg font-black mt-0.5 truncate">
-                  ₹ {totalPaidSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
+                  {formatIndianCurrency(totalPaidSum)}
                 </h3>
 
                 <p className="text-[9px] text-emerald-200 mt-0.5 truncate">
@@ -2595,9 +2593,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </p>
 
                 <h3 className="text-lg font-black mt-0.5 truncate">
-                  ₹ {totalPayableSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
+                  {formatIndianCurrency(totalPayableSum)}
                 </h3>
 
                 <p className="text-[9px] text-violet-200 mt-0.5 truncate">
@@ -2620,9 +2616,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </p>
 
                 <h3 className="text-lg font-black mt-0.5 text-white truncate">
-                  ₹ {totalPendingSum.toLocaleString('en-IN', {
-                    minimumFractionDigits: 2
-                  })}
+                  {formatIndianCurrency(totalPendingSum)}
                 </h3>
 
                 <p className="text-[9px] text-orange-100 mt-0.5 font-semibold truncate">
@@ -2756,19 +2750,19 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                             </span>
                           </td>
                           <td className="p-2.5 text-right font-bold text-slate-700">
-                            ₹ {payable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {formatIndianCurrency(payable)}
                           </td>
                           <td className="p-2.5 text-right font-extrabold text-emerald-700">
-                            ₹ {paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {formatIndianCurrency(paid)}
                           </td>
                           <td className="p-2.5 text-right">
                             {pending > 0 ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                ₹ {pending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                {formatIndianCurrency(pending)}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
-                                ₹ 0.00 (Cleared)
+                                ₹0 (Cleared)
                               </span>
                             )}
                           </td>
@@ -2906,7 +2900,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
               <p className="text-[10px] font-bold uppercase text-slate-500">Total Invoice / Payable Value</p>
               <h4 className="text-base font-black text-slate-800 mt-0.5">
-                ₹ {partyTotalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatIndianCurrency(partyTotalPayable)}
               </h4>
               <p className="text-[9px] text-slate-400 mt-1">Gross Contract Bill Value</p>
             </div>
@@ -2914,7 +2908,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
               <p className="text-[10px] font-bold uppercase text-slate-500">Total Amount Paid</p>
               <h4 className="text-base font-black text-emerald-700 mt-0.5">
-                ₹ {partyTotalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatIndianCurrency(partyTotalPaid)}
               </h4>
               <p className="text-[9px] text-emerald-600 font-semibold mt-1">Total Cleared Disbursed</p>
             </div>
@@ -2925,7 +2919,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 Net Pending / Retention Balance
               </p>
               <h4 className="text-base font-black text-amber-900 mt-0.5">
-                ₹ {partyTotalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                {formatIndianCurrency(partyTotalPending)}
               </h4>
               <p className="text-[9px] text-amber-700 font-bold mt-1">Outstanding Retention Payable</p>
             </div>
@@ -2989,13 +2983,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                             </span>
                           </td>
                           <td className="p-2.5 text-right font-bold text-slate-700">
-                            ₹ {payable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {formatIndianCurrency(payable)}
                           </td>
                           <td className="p-2.5 text-right font-extrabold text-emerald-700">
-                            ₹ {paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {formatIndianCurrency(paid)}
                           </td>
                           <td className="p-2.5 text-right font-black text-amber-800">
-                            ₹ {pending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {formatIndianCurrency(pending)}
                           </td>
                           <td className="p-2.5 text-center">
                             {(() => {
@@ -3041,13 +3035,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         Consolidated Ledger Total:
                       </td>
                       <td className="p-2.5 text-right font-black text-slate-900">
-                        ₹ {partyTotalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatIndianCurrency(partyTotalPayable)}
                       </td>
                       <td className="p-2.5 text-right font-black text-emerald-800">
-                        ₹ {partyTotalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatIndianCurrency(partyTotalPaid)}
                       </td>
                       <td className="p-2.5 text-right font-black text-amber-900">
-                        ₹ {partyTotalPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatIndianCurrency(partyTotalPending)}
                       </td>
                       <td className="p-2.5"></td>
                     </tr>
@@ -3406,7 +3400,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   value={masterData.payable_amt}
                   onChange={e => {
                     const val = parseFloat(e.target.value) || 0;
-                    const defaultPaid = Math.round(val * 0.93 * 100) / 100;
+                    const defaultPaid = calculate93PctPaidAmount(val);
                     setMasterData({
                       ...masterData,
                       payable_amt: val,
@@ -3416,7 +3410,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   }}
                   className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
                 />
-                <span className="text-[10px] text-slate-500 font-medium">Full Invoice Value</span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  Full Invoice Value: {formatIndianCurrency(masterData.payable_amt)}
+                </span>
               </div>
 
               {/* Paid Amount (93% Default) */}
@@ -3429,13 +3425,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     <button
                       type="button"
                       onClick={() => {
-                        const p = Math.round((masterData.payable_amt || 0) * 0.93 * 100) / 100;
+                        const p = calculate93PctPaidAmount(masterData.payable_amt || 0);
                         setMasterData({ ...masterData, paid_amount: p });
                       }}
                       className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors"
-                      title="Apply 93% standard payment"
+                      title="Apply 93% standard payment (floor rounded to nearest ₹1,000)"
                     >
-                      93%
+                      93% (Floor ₹1K)
                     </button>
                   </div>
                 </div>
@@ -3448,8 +3444,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 />
                 <span className="text-[10px] text-emerald-700 font-bold">
                   {masterData.payable_amt > 0
-                    ? `${((masterData.paid_amount / masterData.payable_amt) * 100).toFixed(1)}% of total bill`
-                    : '93% Default Payment'}
+                    ? `${formatIndianCurrency(masterData.paid_amount)} (${((masterData.paid_amount / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
+                    : '93% Default Payment (Floor ₹1,000)'}
                 </span>
               </div>
 
@@ -3467,7 +3463,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                   </span>
                 </div>
                 <div className="text-base font-black text-amber-950 font-mono my-0.5">
-                  ₹ {Math.max(0, masterData.payable_amt - masterData.paid_amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatIndianCurrency(Math.max(0, masterData.payable_amt - masterData.paid_amount))}
                 </div>
                 <span className="text-[9.5px] text-amber-800 font-semibold leading-tight">
                   Retention for Final Settlement
@@ -3613,7 +3609,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           />
                         </td>
                         <td className="p-2 text-right font-bold text-slate-800">
-                          ₹ {getColAmount(col).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {formatIndianCurrency(getColAmount(col))}
                         </td>
                       </tr>
                     ))}

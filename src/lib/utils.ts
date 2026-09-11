@@ -103,6 +103,84 @@ export function sanitizeCsvData(data: any[]): any[] {
 
 import { getCurrentUserContext } from './permissions';
 
+/**
+ * Formats a number to Indian Accounting Number Format (Lakh / Crore system: 1,00,000 / 1,00,00,000).
+ * Indian digit grouping: last 3 digits, then groups of 2 digits (e.g. ₹7,76,000, ₹12,50,000, ₹1,25,00,000).
+ */
+export function formatIndianNumber(
+  val: number | string | null | undefined,
+  decimals?: number
+): string {
+  if (val === null || val === undefined || val === '') return '0';
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
+  if (isNaN(num)) return '0';
+
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
+
+  const decCount = decimals !== undefined ? decimals : (Number.isInteger(absNum) ? 0 : 2);
+  const fixedStr = absNum.toFixed(decCount);
+  const [intPart, decPart] = fixedStr.split('.');
+
+  // Indian format: last 3 digits, then groups of 2 digits
+  let result = '';
+  if (intPart.length > 3) {
+    const lastThree = intPart.substring(intPart.length - 3);
+    const otherNumbers = intPart.substring(0, intPart.length - 3);
+    const groupedOthers = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    result = `${groupedOthers},${lastThree}`;
+  } else {
+    result = intPart;
+  }
+
+  if (decPart && decPart.length > 0 && decCount > 0) {
+    result = `${result}.${decPart}`;
+  }
+
+  return isNeg ? `-${result}` : result;
+}
+
+/**
+ * Formats a currency amount with the Indian Rupee symbol (₹) and Indian number grouping.
+ * E.g., 776000 -> ₹7,76,000, 834489 -> ₹8,34,489, 1250000 -> ₹12,50,000, 12500000 -> ₹1,25,00,000
+ */
+export function formatIndianCurrency(
+  val: number | string | null | undefined,
+  includeSymbol: boolean = true,
+  decimals?: number
+): string {
+  const formatted = formatIndianNumber(val, decimals);
+  return includeSymbol ? `₹${formatted}` : formatted;
+}
+
+/**
+ * Calculates Paid Amount using FLOOR(amount / 1000) * 1000 to always round DOWN to the nearest ₹1,000.
+ * Examples:
+ * ₹7,76,074.77 -> ₹7,76,000
+ * ₹7,76,499.99 -> ₹7,76,000
+ * ₹7,76,999.99 -> ₹7,76,000
+ * ₹7,76,001.00 -> ₹7,76,000
+ * ₹7,76,000.00 -> ₹7,76,000
+ */
+export function calculateFloor1000(val: number | string | null | undefined): number {
+  if (val === null || val === undefined || val === '') return 0;
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
+  if (isNaN(num) || num <= 0) return 0;
+  return Math.floor(num / 1000) * 1000;
+}
+
+/**
+ * Calculates default 93% Paid Amount rounded DOWN to the nearest ₹1,000.
+ * Formula: FLOOR((Payable Net Amount * 0.93) / 1000) * 1000
+ */
+export function calculate93PctPaidAmount(payableAmt: number | string | null | undefined): number {
+  if (payableAmt === null || payableAmt === undefined || payableAmt === '') return 0;
+  const num = typeof payableAmt === 'number' ? payableAmt : parseFloat(String(payableAmt).replace(/,/g, ''));
+  if (isNaN(num) || num <= 0) return 0;
+  const raw93 = num * 0.93;
+  return calculateFloor1000(raw93);
+}
+
 export function canDeleteData(): boolean {
   const ctx = getCurrentUserContext();
   return (ctx.userRole || '').toUpperCase() === 'ADMIN';
