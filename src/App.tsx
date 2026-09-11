@@ -1247,9 +1247,7 @@ export default function App() {
             ? normalizeAllowedModules(rawMods)
             : ["*"];
           const finalMods = mods.length === 0 ? ["*"] : mods;
-          setAllowedModules(finalMods);
-          setIsLoggedIn(true);
-          if (sess.year) setSelectedYear(sess.year);
+          
           setCurrentUserContext({
             userId: sess.userId || 'op_1',
             username: sess.username,
@@ -1258,6 +1256,10 @@ export default function App() {
             userLevel: sess.level?.toUpperCase() || "L1",
             allowedModules: finalMods,
           });
+
+          setAllowedModules(finalMods);
+          setIsLoggedIn(true);
+          if (sess.year) setSelectedYear(sess.year);
 
           // Check if URL specifies a target page
           const urlParams = new URLSearchParams(window.location.search);
@@ -1787,12 +1789,6 @@ export default function App() {
           ? normalizeAllowedModules(rawMods)
           : ["*"];
         const finalMods = modules.length === 0 ? ["*"] : modules;
-        setAllowedModules(finalMods);
-        setIsLoggedIn(true);
-        setSelectedYear(year);
-
-        const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
-        setCurrentPage(firstLanding);
 
         setCurrentUserContext({
           userId: data.user_id,
@@ -1802,6 +1798,13 @@ export default function App() {
           userLevel: data.level?.toUpperCase() || "L1",
           allowedModules: finalMods,
         });
+
+        setAllowedModules(finalMods);
+        setIsLoggedIn(true);
+        setSelectedYear(year);
+
+        const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
+        setCurrentPage(firstLanding);
 
         // Persist session
         try {
