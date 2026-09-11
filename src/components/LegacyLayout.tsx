@@ -381,7 +381,7 @@ export default function LegacyLayout({
       icon: BarChart3,
       subItems: [
         { id: 'reports', label: 'System Reports', icon: BarChart3, pageId: 'reports' },
-        { id: 'treds', label: 'TReDS', icon: Wallet, pageId: 'treds' },
+        { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
         { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
         { id: 'settings', label: 'Config Center', icon: Settings, pageId: 'settings' },
         { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' },
