@@ -719,7 +719,7 @@ async function startServer() {
   try {
     await supabase.rpc('exec_sql', {
       query: `
-        -- Ensure production_records table exists
+        -- Ensure production_records table exists (100% NON-DESTRUCTIVE)
         CREATE TABLE IF NOT EXISTS production_records (
           id TEXT PRIMARY KEY,
           batch_no TEXT,
@@ -731,7 +731,120 @@ async function startServer() {
         );
         ALTER TABLE IF EXISTS production_records DISABLE ROW LEVEL SECURITY;
 
-        -- Ensure columns in material_inspection
+        -- Ensure material_inspection table exists
+        CREATE TABLE IF NOT EXISTS material_inspection (
+          mr_no TEXT PRIMARY KEY,
+          mr_date DATE,
+          date DATE,
+          arrival_no TEXT,
+          arrival_date DATE,
+          po_no TEXT,
+          po_date DATE,
+          broker_name TEXT,
+          supplier_name TEXT,
+          broker TEXT,
+          supplier TEXT,
+          actual_moisture NUMERIC DEFAULT 0,
+          claim_moisture NUMERIC DEFAULT 0,
+          actual_dust NUMERIC DEFAULT 0,
+          claim_dust NUMERIC DEFAULT 0,
+          actual_ncv NUMERIC DEFAULT 0,
+          claim_ncv NUMERIC DEFAULT 0,
+          actual_grade_down NUMERIC DEFAULT 0,
+          claim_grade_down NUMERIC DEFAULT 0,
+          detention_days NUMERIC DEFAULT 0,
+          unloading_date DATE,
+          mill_po_no TEXT,
+          mill_po_date DATE,
+          mr_spcl_print TEXT,
+          remarks TEXT,
+          lorry_number TEXT,
+          delivery_claim NUMERIC DEFAULT 0,
+          deduction_type TEXT,
+          deduction_rate NUMERIC DEFAULT 0,
+          deduction_qty NUMERIC DEFAULT 0,
+          deduction_amount NUMERIC DEFAULT 0,
+          deductions JSONB,
+          deduction_rows JSONB,
+          deductions_json TEXT,
+          deduction_types JSONB,
+          unit_name TEXT DEFAULT 'BALES',
+          unit TEXT DEFAULT 'BALES',
+          status TEXT DEFAULT 'Completed',
+          grid_details JSONB,
+          details JSONB,
+          company_id TEXT,
+          unit_id TEXT,
+          machine_id TEXT,
+          shift TEXT,
+          department TEXT,
+          production_id TEXT,
+          production_ref TEXT,
+          batch_id TEXT,
+          quantity NUMERIC DEFAULT 0,
+          total_quantity NUMERIC DEFAULT 0,
+          challan_gross_wt NUMERIC DEFAULT 0,
+          receipt_gross_wt NUMERIC DEFAULT 0,
+          gross_weight_batch NUMERIC DEFAULT 0,
+          add_weight NUMERIC DEFAULT 0,
+          less_weight NUMERIC DEFAULT 0,
+          reduced_weight NUMERIC DEFAULT 0,
+          final_receipt_wt NUMERIC DEFAULT 0,
+          arrival_grade TEXT,
+          stock_grade_code TEXT,
+          stock_grade_name TEXT,
+          area TEXT,
+          agency TEXT,
+          agency_code TEXT,
+          marks TEXT,
+          marka TEXT,
+          crop_year TEXT DEFAULT '2026-27',
+          lot TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE IF EXISTS material_inspection DISABLE ROW LEVEL SECURITY;
+
+        -- Ensure columns in material_inspection (Preserves existing data)
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS mr_date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_no TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS po_no TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS po_date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS broker_name TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS broker TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS supplier TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS actual_moisture NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS claim_moisture NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS actual_dust NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS claim_dust NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS actual_ncv NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS claim_ncv NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS actual_grade_down NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS claim_grade_down NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS detention_days NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS unloading_date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS mill_po_no TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS mill_po_date DATE;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS mr_spcl_print TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS remarks TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS lorry_number TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS delivery_claim NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_type TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_rate NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_qty NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_amount NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deductions JSONB;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_rows JSONB;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deductions_json TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS deduction_types JSONB;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS unit_name TEXT DEFAULT 'BALES';
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'BALES';
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Completed';
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS grid_details JSONB;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS details JSONB;
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS company_id TEXT;
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS unit_id TEXT;
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS machine_id TEXT;
@@ -740,16 +853,190 @@ async function startServer() {
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS production_id TEXT;
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS production_ref TEXT;
         ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS batch_id TEXT;
-        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS delivery_claim NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS quantity NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS total_quantity NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS challan_gross_wt NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS receipt_gross_wt NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS gross_weight_batch NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS add_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS less_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS reduced_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS final_receipt_wt NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_grade TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS stock_grade_code TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS stock_grade_name TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS area TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS agency TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS agency_code TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS marks TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS marka TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS crop_year TEXT DEFAULT '2026-27';
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS lot TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS lorry_read_min NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS lorry_read_max NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS lorry_read_avg NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS insp_read_min NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS insp_read_max NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS insp_read_avg NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS ropes_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS ropes_tot_wt_grd NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS ropes_grade TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS chotta_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS chotta_tot_wt_grd NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS chotta_grade TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS habijabi_weight NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS habijabi_tot_wt_grd NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS habijabi_grade TEXT;
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
-        -- Trigger function for material_inspection with explicit RAISE NOTICE logging
+        -- Ensure material_inspection_details table
+        CREATE TABLE IF NOT EXISTS material_inspection_details (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          mr_no TEXT,
+          srl_no INTEGER,
+          arrival_grade TEXT,
+          stock_grade_code TEXT,
+          stock_grade_name TEXT,
+          area TEXT,
+          agency TEXT,
+          agency_code TEXT,
+          marka TEXT,
+          marks TEXT,
+          crop_year TEXT DEFAULT '2026-27',
+          lot TEXT,
+          quantity NUMERIC DEFAULT 0,
+          unit TEXT DEFAULT 'BALES',
+          rate NUMERIC DEFAULT 0,
+          rate_qntl NUMERIC DEFAULT 0,
+          challan_gross_wt NUMERIC DEFAULT 0,
+          receipt_gross_wt NUMERIC DEFAULT 0,
+          gross_weight_batch NUMERIC DEFAULT 0,
+          add_weight NUMERIC DEFAULT 0,
+          less_weight NUMERIC DEFAULT 0,
+          reduced_weight NUMERIC DEFAULT 0,
+          lorry_moisture_min NUMERIC DEFAULT 0,
+          lorry_moisture_max NUMERIC DEFAULT 0,
+          lorry_read_min NUMERIC DEFAULT 0,
+          lorry_read_max NUMERIC DEFAULT 0,
+          lorry_read_avg NUMERIC DEFAULT 0,
+          insp_read_min NUMERIC DEFAULT 0,
+          insp_read_max NUMERIC DEFAULT 0,
+          insp_read_avg NUMERIC DEFAULT 0,
+          moisture_act NUMERIC DEFAULT 0,
+          moisture_claim NUMERIC DEFAULT 0,
+          dust_act NUMERIC DEFAULT 0,
+          dust_claim NUMERIC DEFAULT 0,
+          ncv_act NUMERIC DEFAULT 0,
+          ncv_claim NUMERIC DEFAULT 0,
+          grade_down_act NUMERIC DEFAULT 0,
+          grade_down_claim NUMERIC DEFAULT 0,
+          final_receipt_wt NUMERIC DEFAULT 0,
+          settlement_moisture NUMERIC DEFAULT 0,
+          settlement_grade_down NUMERIC DEFAULT 0,
+          settlement_dust NUMERIC DEFAULT 0,
+          settlement_ncv NUMERIC DEFAULT 0,
+          ropes_weight NUMERIC DEFAULT 0,
+          ropes_tot_wt_grd NUMERIC DEFAULT 0,
+          ropes_grade TEXT,
+          chotta_weight NUMERIC DEFAULT 0,
+          chotta_tot_wt_grd NUMERIC DEFAULT 0,
+          chotta_grade TEXT,
+          habijabi_weight NUMERIC DEFAULT 0,
+          habijabi_tot_wt_grd NUMERIC DEFAULT 0,
+          habijabi_grade TEXT,
+          tolerable TEXT DEFAULT 'Yes',
+          premium TEXT,
+          is_premium BOOLEAN DEFAULT FALSE,
+          row_remarks TEXT,
+          remarks TEXT,
+          jqi_remarks TEXT,
+          jci_remarks TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE IF EXISTS material_inspection_details DISABLE ROW LEVEL SECURITY;
+
+        -- Ensure material_inspection_deductions table with all fields from the app
+        CREATE TABLE IF NOT EXISTS material_inspection_deductions (
+          id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+          mr_no TEXT,
+          po_no TEXT,
+          arrival_no TEXT,
+          mr_date DATE,
+          po_date DATE,
+          arrival_date DATE,
+          supplier TEXT,
+          supplier_name TEXT,
+          broker TEXT,
+          broker_name TEXT,
+          lorry_number TEXT,
+          deduction_type TEXT,
+          deduction_rate NUMERIC DEFAULT 0,
+          deduction_qty NUMERIC DEFAULT 0,
+          deduction_amount NUMERIC DEFAULT 0,
+          unit TEXT DEFAULT 'BALES',
+          gross_weight_mt NUMERIC(15,3) DEFAULT 0,
+          total_bales NUMERIC(15,2) DEFAULT 0,
+          avg_bale_weight NUMERIC(15,2) DEFAULT 0,
+          remarks TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE IF EXISTS material_inspection_deductions DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS mr_date DATE;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS po_date DATE;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS arrival_date DATE;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS supplier TEXT;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS broker TEXT;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS broker_name TEXT;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS lorry_number TEXT;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'BALES';
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS gross_weight_mt NUMERIC(15,3) DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS total_bales NUMERIC(15,2) DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS avg_bale_weight NUMERIC(15,2) DEFAULT 0;
+        ALTER TABLE IF EXISTS material_inspection_deductions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+        -- Ensure mill_inspection_deduction table
+        CREATE TABLE IF NOT EXISTS mill_inspection_deduction (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          mr_no TEXT,
+          mr_date DATE,
+          po_no TEXT,
+          po_date DATE,
+          arrival_no TEXT,
+          arrival_date DATE,
+          supplier TEXT,
+          supplier_name TEXT,
+          broker TEXT,
+          broker_name TEXT,
+          lorry_number TEXT,
+          deduction_type TEXT,
+          deduction_rate NUMERIC(15,2) DEFAULT 0,
+          deduction_qty NUMERIC(15,3) DEFAULT 0,
+          deduction_amount NUMERIC(15,2) DEFAULT 0,
+          unit TEXT DEFAULT 'BALES',
+          gross_weight_mt NUMERIC(15,3),
+          total_bales NUMERIC(15,2),
+          avg_bale_weight NUMERIC(15,2),
+          remarks TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE IF EXISTS mill_inspection_deduction DISABLE ROW LEVEL SECURITY;
+
+        -- Safe Indexes
+        CREATE INDEX IF NOT EXISTS idx_inspection_mr ON material_inspection(mr_no);
+        CREATE INDEX IF NOT EXISTS idx_inspection_arr ON material_inspection(arrival_no);
+        CREATE INDEX IF NOT EXISTS idx_inspection_details_mr ON material_inspection_details(mr_no);
+        CREATE INDEX IF NOT EXISTS idx_inspection_deductions_mr ON material_inspection_deductions(mr_no);
+        CREATE INDEX IF NOT EXISTS idx_mill_insp_ded_mr ON mill_inspection_deduction(mr_no);
+
+        -- Safe Trigger function for material_inspection (does NOT block or fail valid rows)
         CREATE OR REPLACE FUNCTION trg_material_inspection_validate_sync()
         RETURNS TRIGGER AS $$
         BEGIN
-          RAISE NOTICE '[DB Trigger material_inspection BEFORE] Validating MR: %, Arrival: %, PO: %, Production ID: %', 
-            NEW.mr_no, NEW.arrival_no, NEW.po_no, NEW.production_id;
-
-          -- Enforce mandatory primary key
+          -- Enforce mandatory mr_no
           IF NEW.mr_no IS NULL OR TRIM(NEW.mr_no) = '' THEN
             RAISE EXCEPTION 'M.R. No is mandatory for Material Inspection Register.';
           END IF;
@@ -771,8 +1058,6 @@ async function startServer() {
           END IF;
 
           NEW.updated_at := NOW();
-
-          RAISE NOTICE '[DB Trigger material_inspection AFTER] Successfully validated and prepared MR: %', NEW.mr_no;
           RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
@@ -782,9 +1067,243 @@ async function startServer() {
         BEFORE INSERT OR UPDATE ON material_inspection
         FOR EACH ROW
         EXECUTE FUNCTION trg_material_inspection_validate_sync();
+
+        -- Transactional RPC function for complete atomic save & production verification
+        CREATE OR REPLACE FUNCTION fn_save_material_inspection(payload JSONB)
+        RETURNS JSONB AS $$
+        DECLARE
+          v_mr_no TEXT;
+          v_prod_id TEXT;
+          v_prod_exists BOOLEAN := true;
+          v_res RECORD;
+          v_item JSONB;
+        BEGIN
+          v_mr_no := TRIM(payload->>'mr_no');
+          IF v_mr_no IS NULL OR v_mr_no = '' THEN
+            RAISE EXCEPTION 'M.R. No is mandatory for Material Inspection Register.';
+          END IF;
+
+          v_prod_id := TRIM(COALESCE(payload->>'production_id', ''));
+          IF v_prod_id <> '' THEN
+            SELECT EXISTS(
+              SELECT 1 FROM production_records 
+              WHERE id = v_prod_id OR batch_no = v_prod_id OR production_no = v_prod_id OR lot_no = v_prod_id
+            ) INTO v_prod_exists;
+
+            IF NOT v_prod_exists THEN
+              RAISE EXCEPTION 'Required Production row % not found in database.', v_prod_id;
+            END IF;
+          END IF;
+
+          INSERT INTO material_inspection (
+            mr_no, mr_date, date, arrival_no, arrival_date, po_no, po_date,
+            broker_name, supplier_name, broker, supplier,
+            actual_moisture, claim_moisture, actual_dust, claim_dust,
+            actual_ncv, claim_ncv, actual_grade_down, claim_grade_down,
+            detention_days, unloading_date, mill_po_no, mill_po_date,
+            mr_spcl_print, remarks, lorry_number, delivery_claim,
+            deduction_type, deduction_rate, deduction_qty, deduction_amount,
+            deductions, deduction_rows, deductions_json, deduction_types,
+            unit_name, unit, status, grid_details, details,
+            company_id, unit_id, machine_id, shift, department,
+            production_id, production_ref, batch_id, quantity, total_quantity,
+            challan_gross_wt, receipt_gross_wt, gross_weight_batch,
+            add_weight, less_weight, reduced_weight, final_receipt_wt,
+            arrival_grade, stock_grade_code, stock_grade_name, area, agency,
+            agency_code, marks, marka, crop_year, lot,
+            created_at, updated_at
+          ) VALUES (
+            v_mr_no,
+            COALESCE((payload->>'mr_date')::DATE, CURRENT_DATE),
+            COALESCE((payload->>'date')::DATE, CURRENT_DATE),
+            COALESCE(payload->>'arrival_no', v_mr_no),
+            COALESCE((payload->>'arrival_date')::DATE, CURRENT_DATE),
+            payload->>'po_no',
+            (payload->>'po_date')::DATE,
+            payload->>'broker_name',
+            payload->>'supplier_name',
+            payload->>'broker',
+            payload->>'supplier',
+            COALESCE((payload->>'actual_moisture')::NUMERIC, 0),
+            COALESCE((payload->>'claim_moisture')::NUMERIC, 0),
+            COALESCE((payload->>'actual_dust')::NUMERIC, 0),
+            COALESCE((payload->>'claim_dust')::NUMERIC, 0),
+            COALESCE((payload->>'actual_ncv')::NUMERIC, 0),
+            COALESCE((payload->>'claim_ncv')::NUMERIC, 0),
+            COALESCE((payload->>'actual_grade_down')::NUMERIC, 0),
+            COALESCE((payload->>'claim_grade_down')::NUMERIC, 0),
+            COALESCE((payload->>'detention_days')::NUMERIC, 0),
+            (payload->>'unloading_date')::DATE,
+            payload->>'mill_po_no',
+            (payload->>'mill_po_date')::DATE,
+            payload->>'mr_spcl_print',
+            payload->>'remarks',
+            payload->>'lorry_number',
+            COALESCE((payload->>'delivery_claim')::NUMERIC, 0),
+            payload->>'deduction_type',
+            COALESCE((payload->>'deduction_rate')::NUMERIC, 0),
+            COALESCE((payload->>'deduction_qty')::NUMERIC, 0),
+            COALESCE((payload->>'deduction_amount')::NUMERIC, 0),
+            payload->'deductions',
+            payload->'deduction_rows',
+            payload->>'deductions_json',
+            payload->'deduction_types',
+            COALESCE(payload->>'unit_name', 'BALES'),
+            COALESCE(payload->>'unit', 'BALES'),
+            COALESCE(payload->>'status', 'Completed'),
+            payload->'grid_details',
+            payload->'details',
+            payload->>'company_id',
+            payload->>'unit_id',
+            payload->>'machine_id',
+            payload->>'shift',
+            payload->>'department',
+            payload->>'production_id',
+            payload->>'production_ref',
+            payload->>'batch_id',
+            COALESCE((payload->>'quantity')::NUMERIC, 0),
+            COALESCE((payload->>'total_quantity')::NUMERIC, 0),
+            COALESCE((payload->>'challan_gross_wt')::NUMERIC, 0),
+            COALESCE((payload->>'receipt_gross_wt')::NUMERIC, 0),
+            COALESCE((payload->>'gross_weight_batch')::NUMERIC, 0),
+            COALESCE((payload->>'add_weight')::NUMERIC, 0),
+            COALESCE((payload->>'less_weight')::NUMERIC, 0),
+            COALESCE((payload->>'reduced_weight')::NUMERIC, 0),
+            COALESCE((payload->>'final_receipt_wt')::NUMERIC, 0),
+            payload->>'arrival_grade',
+            payload->>'stock_grade_code',
+            payload->>'stock_grade_name',
+            payload->>'area',
+            payload->>'agency',
+            payload->>'agency_code',
+            payload->>'marks',
+            payload->>'marka',
+            COALESCE(payload->>'crop_year', '2026-27'),
+            payload->>'lot',
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (mr_no) DO UPDATE SET
+            mr_date = EXCLUDED.mr_date,
+            date = EXCLUDED.date,
+            arrival_no = EXCLUDED.arrival_no,
+            arrival_date = EXCLUDED.arrival_date,
+            po_no = EXCLUDED.po_no,
+            po_date = EXCLUDED.po_date,
+            broker_name = EXCLUDED.broker_name,
+            supplier_name = EXCLUDED.supplier_name,
+            broker = EXCLUDED.broker,
+            supplier = EXCLUDED.supplier,
+            actual_moisture = EXCLUDED.actual_moisture,
+            claim_moisture = EXCLUDED.claim_moisture,
+            actual_dust = EXCLUDED.actual_dust,
+            claim_dust = EXCLUDED.claim_dust,
+            actual_ncv = EXCLUDED.actual_ncv,
+            claim_ncv = EXCLUDED.claim_ncv,
+            actual_grade_down = EXCLUDED.actual_grade_down,
+            claim_grade_down = EXCLUDED.claim_grade_down,
+            detention_days = EXCLUDED.detention_days,
+            unloading_date = EXCLUDED.unloading_date,
+            mill_po_no = EXCLUDED.mill_po_no,
+            mill_po_date = EXCLUDED.mill_po_date,
+            mr_spcl_print = EXCLUDED.mr_spcl_print,
+            remarks = EXCLUDED.remarks,
+            lorry_number = EXCLUDED.lorry_number,
+            delivery_claim = EXCLUDED.delivery_claim,
+            deduction_type = EXCLUDED.deduction_type,
+            deduction_rate = EXCLUDED.deduction_rate,
+            deduction_qty = EXCLUDED.deduction_qty,
+            deduction_amount = EXCLUDED.deduction_amount,
+            deductions = EXCLUDED.deductions,
+            deduction_rows = EXCLUDED.deduction_rows,
+            deductions_json = EXCLUDED.deductions_json,
+            deduction_types = EXCLUDED.deduction_types,
+            unit_name = EXCLUDED.unit_name,
+            unit = EXCLUDED.unit,
+            status = EXCLUDED.status,
+            grid_details = EXCLUDED.grid_details,
+            details = EXCLUDED.details,
+            company_id = EXCLUDED.company_id,
+            unit_id = EXCLUDED.unit_id,
+            machine_id = EXCLUDED.machine_id,
+            shift = EXCLUDED.shift,
+            department = EXCLUDED.department,
+            production_id = EXCLUDED.production_id,
+            production_ref = EXCLUDED.production_ref,
+            batch_id = EXCLUDED.batch_id,
+            quantity = EXCLUDED.quantity,
+            total_quantity = EXCLUDED.total_quantity,
+            challan_gross_wt = EXCLUDED.challan_gross_wt,
+            receipt_gross_wt = EXCLUDED.receipt_gross_wt,
+            gross_weight_batch = EXCLUDED.gross_weight_batch,
+            add_weight = EXCLUDED.add_weight,
+            less_weight = EXCLUDED.less_weight,
+            reduced_weight = EXCLUDED.reduced_weight,
+            final_receipt_wt = EXCLUDED.final_receipt_wt,
+            arrival_grade = EXCLUDED.arrival_grade,
+            stock_grade_code = EXCLUDED.stock_grade_code,
+            stock_grade_name = EXCLUDED.stock_grade_name,
+            area = EXCLUDED.area,
+            agency = EXCLUDED.agency,
+            agency_code = EXCLUDED.agency_code,
+            marks = EXCLUDED.marks,
+            marka = EXCLUDED.marka,
+            crop_year = EXCLUDED.crop_year,
+            lot = EXCLUDED.lot,
+            updated_at = NOW()
+          RETURNING * INTO v_res;
+
+          -- Clean and insert into material_inspection_deductions
+          DELETE FROM material_inspection_deductions WHERE mr_no = v_mr_no;
+          IF payload->'deduction_rows' IS NOT NULL AND jsonb_array_length(payload->'deduction_rows') > 0 THEN
+            FOR v_item IN SELECT * FROM jsonb_array_elements(payload->'deduction_rows')
+            LOOP
+              INSERT INTO material_inspection_deductions (
+                mr_no, po_no, arrival_no, mr_date, po_date, arrival_date,
+                supplier, supplier_name, broker, broker_name, lorry_number,
+                deduction_type, deduction_rate, deduction_qty, deduction_amount,
+                unit, gross_weight_mt, total_bales, avg_bale_weight, remarks,
+                created_at, updated_at
+              ) VALUES (
+                v_mr_no,
+                payload->>'po_no',
+                COALESCE(payload->>'arrival_no', v_mr_no),
+                COALESCE((payload->>'mr_date')::DATE, CURRENT_DATE),
+                (payload->>'po_date')::DATE,
+                COALESCE((payload->>'arrival_date')::DATE, CURRENT_DATE),
+                payload->>'supplier',
+                payload->>'supplier_name',
+                payload->>'broker',
+                payload->>'broker_name',
+                payload->>'lorry_number',
+                v_item->>'deduction_type',
+                COALESCE((v_item->>'deduction_rate')::NUMERIC, 0),
+                COALESCE((v_item->>'deduction_qty')::NUMERIC, 0),
+                COALESCE((v_item->>'deduction_amount')::NUMERIC, 0),
+                COALESCE(payload->>'unit', 'BALES'),
+                COALESCE((payload->>'receipt_gross_wt')::NUMERIC, 0),
+                COALESCE((payload->>'total_quantity')::NUMERIC, 0),
+                0,
+                v_item->>'remarks',
+                NOW(),
+                NOW()
+              );
+            END LOOP;
+          END IF;
+
+          RETURN jsonb_build_object(
+            'success', true,
+            'recordId', v_res.mr_no,
+            'affectedRows', 1,
+            'data', to_jsonb(v_res)
+          );
+        END;
+        $$ LANGUAGE plpgsql;
+
+        NOTIFY pgrst, 'reload schema';
       `
     });
-    console.log("Supabase trigger 'trg_material_inspection_validate_sync' verified/created successfully via exec_sql.");
+    console.log("Supabase schema and trigger verified/updated successfully via exec_sql.");
   } catch (trgErr) {
     console.warn("Failed to create/verify inspection trigger in Supabase via RPC:", trgErr);
   }
@@ -951,7 +1470,54 @@ async function startServer() {
         }
       }
 
-      // Step 3: EXPLICIT LOGGING AFTER PRODUCTION ROW VALIDATION
+      // Step 3: EXPLICIT LOGGING & STRICT VERIFICATION FOR PRODUCTION ROW
+      if (productionId) {
+        let prodExists = false;
+        try {
+          const { data: pCheck, error: pErr } = await supabase
+            .from('production_records')
+            .select('id, batch_no, production_no, lot_no')
+            .or(`id.eq.${productionId},batch_no.eq.${productionId},production_no.eq.${productionId},lot_no.eq.${productionId}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (pCheck && !pErr) {
+            prodExists = true;
+            matchedProductionRow = pCheck;
+            matchedSource = "production_records";
+          }
+        } catch (pe) {
+          console.warn("[INSPECTION SAVE] Error checking production_records directly:", pe);
+        }
+
+        if (!prodExists && candidateKeys.length > 0) {
+          for (const key of candidateKeys) {
+            try {
+              const { data: pRow } = await supabase
+                .from('production_records')
+                .select('*')
+                .or(`id.eq.${key},batch_no.eq.${key},production_no.eq.${key},lot_no.eq.${key}`)
+                .limit(1)
+                .maybeSingle();
+              if (pRow) {
+                prodExists = true;
+                matchedProductionRow = pRow;
+                matchedSource = "production_records";
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (!prodExists) {
+          console.error("[INSPECTION SAVE - ABORTING SAVE DUE TO MISSING PRODUCTION ROW]", { productionId, cleanMrNo });
+          return res.status(422).json({
+            success: false,
+            error: `Unable to save Inspection Module Register: Required Production row '${productionId}' not found in database.`
+          });
+        }
+      }
+
       if (matchedProductionRow) {
         console.log("[INSPECTION SAVE - AFTER PRODUCTION ROW VALIDATION: SUCCESS]", {
           timestamp: new Date().toISOString(),
@@ -963,23 +1529,12 @@ async function startServer() {
             source: matchedSource
           }
         });
-      } else {
-        console.warn("[INSPECTION SAVE - AFTER PRODUCTION ROW VALIDATION: NOT FOUND IN PRODUCTION/ARRIVAL TABLES]", {
-          timestamp: new Date().toISOString(),
-          status: "NOT_FOUND",
-          cleanMrNo,
-          searchedKeys: candidateKeys,
-          requireProductionValidation
+      } else if (requireProductionValidation) {
+        console.error("[INSPECTION SAVE - ABORTING SAVE DUE TO MISSING PRODUCTION ROW]", { cleanMrNo });
+        return res.status(422).json({
+          success: false,
+          error: `Unable to save Inspection Module Register: Required Production row for '${cleanMrNo}' not found in database.`
         });
-
-        // Only reject if caller strictly requested strict production validation and productionId was explicitly supplied
-        if (requireProductionValidation && productionId) {
-          console.error("[INSPECTION SAVE - ABORTING SAVE DUE TO MISSING PRODUCTION ROW]", { productionId, cleanMrNo });
-          return res.status(422).json({
-            success: false,
-            error: `Unable to save Inspection Module Register: Required Production Row '${productionId}' not found in database.`
-          });
-        }
       }
 
       // Format Dates & Numbers
@@ -1120,70 +1675,93 @@ async function startServer() {
         validDetailsCount: validDetails.length
       });
 
-      // Step 5: Check if record exists for INSERT vs UPDATE
-      const { data: existingCheck, error: checkErr } = await supabase
-        .from('material_inspection')
-        .select('mr_no')
-        .eq('mr_no', cleanMrNo)
-        .maybeSingle();
-
-      if (checkErr) {
-        console.warn("[Inspection Save API] Check existing error:", checkErr);
-      }
-
+      // Step 4.5: Attempt Transactional RPC save in Supabase if function exists
       let saveResultData: any = null;
-
-      if (existingCheck && existingCheck.mr_no) {
-        // UPDATE existing record
-        const { data: updateRes, error: updateErr } = await supabase
-          .from('material_inspection')
-          .update(masterPayload)
-          .eq('mr_no', cleanMrNo)
-          .select();
-
-        if (updateErr) {
-          console.error("[Inspection Save API] Update error:", updateErr);
-          return res.status(500).json({
-            success: false,
-            error: `Unable to save Inspection Module Register: ${updateErr.message || 'Database update error'}. Data was not saved.`
-          });
+      let rpcHandled = false;
+      try {
+        const { data: rpcRes, error: rpcErr } = await supabase.rpc('fn_save_material_inspection', { payload: masterPayload });
+        if (!rpcErr && rpcRes && rpcRes.success) {
+          console.log("[INSPECTION SAVE - TRANSACTIONAL RPC SUCCESS]", rpcRes);
+          rpcHandled = true;
+          saveResultData = rpcRes.data || masterPayload;
+        } else if (rpcErr) {
+          console.warn("[Inspection Save API] Transactional RPC fn_save_material_inspection notice (falling back to chained transaction):", rpcErr.message);
+          // If RPC threw a production missing error, honor it immediately!
+          if (rpcErr.message && rpcErr.message.toLowerCase().includes('production row')) {
+            return res.status(422).json({
+              success: false,
+              error: `Unable to save Inspection Module Register: ${rpcErr.message}`
+            });
+          }
         }
-
-        if (!updateRes || updateRes.length === 0) {
-          return res.status(500).json({
-            success: false,
-            error: "Unable to save Inspection Module Register. Database update affected zero rows. Data was not saved."
-          });
-        }
-
-        saveResultData = updateRes[0];
-      } else {
-        // INSERT new record
-        masterPayload.created_at = new Date().toISOString();
-        const { data: insertRes, error: insertErr } = await supabase
-          .from('material_inspection')
-          .insert(masterPayload)
-          .select();
-
-        if (insertErr) {
-          console.error("[Inspection Save API] Insert error:", insertErr);
-          return res.status(500).json({
-            success: false,
-            error: `Unable to save Inspection Module Register: ${insertErr.message || 'Database insert error'}. Data was not saved.`
-          });
-        }
-
-        if (!insertRes || insertRes.length === 0) {
-          return res.status(500).json({
-            success: false,
-            error: "Unable to save Inspection Module Register. Database insert affected zero rows. Data was not saved."
-          });
-        }
-
-        saveResultData = insertRes[0];
+      } catch (rpcCallErr: any) {
+        console.warn("[Inspection Save API] RPC call exception, continuing with chained transaction:", rpcCallErr?.message);
       }
 
-      // Step 6: Save child details & deductions
+      if (!rpcHandled) {
+        // Step 5: Check if record exists for INSERT vs UPDATE
+        const { data: existingCheck, error: checkErr } = await supabase
+          .from('material_inspection')
+          .select('mr_no')
+          .eq('mr_no', cleanMrNo)
+          .maybeSingle();
+
+        if (checkErr) {
+          console.warn("[Inspection Save API] Check existing error:", checkErr);
+        }
+
+        if (existingCheck && existingCheck.mr_no) {
+          // UPDATE existing record
+          const { data: updateRes, error: updateErr } = await supabase
+            .from('material_inspection')
+            .update(masterPayload)
+            .eq('mr_no', cleanMrNo)
+            .select();
+
+          if (updateErr) {
+            console.error("[Inspection Save API] Update error:", updateErr);
+            return res.status(500).json({
+              success: false,
+              error: `Unable to save Inspection Module Register: ${updateErr.message || 'Database update error'}. Data was not saved.`
+            });
+          }
+
+          if (!updateRes || updateRes.length === 0) {
+            return res.status(500).json({
+              success: false,
+              error: "Unable to save Inspection Module Register. Database update affected zero rows. Data was not saved."
+            });
+          }
+
+          saveResultData = updateRes[0];
+        } else {
+          // INSERT new record
+          masterPayload.created_at = new Date().toISOString();
+          const { data: insertRes, error: insertErr } = await supabase
+            .from('material_inspection')
+            .insert(masterPayload)
+            .select();
+
+          if (insertErr) {
+            console.error("[Inspection Save API] Insert error:", insertErr);
+            return res.status(500).json({
+              success: false,
+              error: `Unable to save Inspection Module Register: ${insertErr.message || 'Database insert error'}. Data was not saved.`
+            });
+          }
+
+          if (!insertRes || insertRes.length === 0) {
+            return res.status(500).json({
+              success: false,
+              error: "Unable to save Inspection Module Register. Database insert affected zero rows. Data was not saved."
+            });
+          }
+
+          saveResultData = insertRes[0];
+        }
+      }
+
+      // Step 6: Save child details & material_inspection_deductions with ALL fields from this app
       try {
         await supabase.from('material_inspection_details').delete().eq('mr_no', cleanMrNo);
         if (validDetails.length > 0) {
@@ -1201,7 +1779,11 @@ async function startServer() {
         const totalGrossMt = validDetails.reduce((sum: number, r: any) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number(body.receipt_gross_wt || body.challan_gross_wt || 0);
         const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalGrossMt * 1000) / totalBalesCount : 0;
 
-        const millDeductionRows = rawDeductions
+        // Clean existing deduction rows for this MR No
+        await supabase.from('material_inspection_deductions').delete().eq('mr_no', cleanMrNo);
+
+        // Build complete deduction records with ALL fields from the app
+        const allDeductionRows = rawDeductions
           .filter((r: any) => (r.deduction_type && String(r.deduction_type).trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
           .map((r: any) => ({
             mr_no: cleanMrNo,
@@ -1228,27 +1810,36 @@ async function startServer() {
             updated_at: new Date().toISOString()
           }));
 
-        await supabase.from('mill_inspection_deduction').delete().eq('mr_no', cleanMrNo);
-        if (millDeductionRows.length > 0) {
-          await supabase.from('mill_inspection_deduction').insert(millDeductionRows);
+        if (allDeductionRows.length > 0) {
+          // Attempt insert with all extended columns
+          const { error: insErr } = await supabase.from('material_inspection_deductions').insert(allDeductionRows);
+          if (insErr) {
+            console.warn("[Inspection Save API] Extended column insert on material_inspection_deductions failed, falling back to base columns:", insErr.message);
+            const baseDeductionRows = allDeductionRows.map((r: any) => ({
+              mr_no: r.mr_no,
+              po_no: r.po_no,
+              arrival_no: r.arrival_no,
+              deduction_type: r.deduction_type,
+              deduction_rate: r.deduction_rate,
+              deduction_qty: r.deduction_qty,
+              deduction_amount: r.deduction_amount,
+              remarks: r.remarks,
+              created_at: r.created_at
+            }));
+            const { error: fallbackErr } = await supabase.from('material_inspection_deductions').insert(baseDeductionRows);
+            if (fallbackErr) {
+              console.error("[Inspection Save API] Fallback deduction insert error:", fallbackErr);
+            }
+          }
         }
 
-        await supabase.from('material_inspection_deductions').delete().eq('mr_no', cleanMrNo);
-        const midRows = rawDeductions
-          .filter((r: any) => (r.deduction_type && String(r.deduction_type).trim() !== '') || Number(r.deduction_amount) > 0)
-          .map((r: any) => ({
-            mr_no: cleanMrNo,
-            po_no: poNo ? String(poNo).trim() : null,
-            arrival_no: String(arrivalNo || cleanMrNo).trim(),
-            deduction_type: String(r.deduction_type || '').trim(),
-            deduction_rate: Number(r.deduction_rate) || 0,
-            deduction_qty: Number(r.deduction_qty) || 0,
-            deduction_amount: Number(r.deduction_amount) || 0,
-            remarks: String(r.remarks || '').trim()
-          }));
-        if (midRows.length > 0) {
-          await supabase.from('material_inspection_deductions').insert(midRows);
-        }
+        // Also sync mill_inspection_deduction for backward compatibility
+        try {
+          await supabase.from('mill_inspection_deduction').delete().eq('mr_no', cleanMrNo);
+          if (allDeductionRows.length > 0) {
+            await supabase.from('mill_inspection_deduction').insert(allDeductionRows);
+          }
+        } catch (mErr) {}
       } catch (dedErr) {
         console.warn("[Inspection Save API] Deduction save error:", dedErr);
       }

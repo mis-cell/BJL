@@ -1264,11 +1264,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       const dbDeductionsMap = new Map<string, DeductionRow[]>();
       if (supabase) {
         try {
-          // 1. Fetch from mill_inspection_deduction table as primary
-          let { data: dedData } = await supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true });
+          // 1. Fetch from material_inspection_deductions table as primary
+          let { data: dedData } = await supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true });
           if (!dedData || dedData.length === 0) {
-            // Fallback to material_inspection_deductions
-            const { data: fallbackData } = await supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true });
+            // Fallback to mill_inspection_deduction
+            const { data: fallbackData } = await supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true });
             dedData = fallbackData;
           }
           if (dedData && Array.isArray(dedData)) {
@@ -2912,6 +2912,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       // Fallback Direct Supabase Transaction (strictly verified if API route was unreachable)
       if (!apiSuccess && supabase) {
+        // Step 0: Verify that the production row actually exists before allowing the INSERT/UPDATE
+        const prodIdToCheck = String(masterPayload.production_id || masterPayload.production_ref || '').trim();
+        if (prodIdToCheck) {
+          const { data: pCheck } = await supabase
+            .from("production_records")
+            .select("id, batch_no, production_no, lot_no")
+            .or(`id.eq.${prodIdToCheck},batch_no.eq.${prodIdToCheck},production_no.eq.${prodIdToCheck},lot_no.eq.${prodIdToCheck}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (!pCheck) {
+            throw new Error(`Unable to save Inspection Module Register: Required Production row '${prodIdToCheck}' not found in database.`);
+          }
+        }
+
         // Step 1: Check existing record
         const { data: existingCheck, error: checkErr } = await supabase
           .from("material_inspection")
@@ -2973,7 +2988,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           const totalGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || 0), 0) || Number((headerForm as any).receipt_gross_wt || (headerForm as any).challan_gross_wt || 0);
           const calculatedAvgBaleWeight = totalBalesCount > 0 ? (totalGrossMt * 1000) / totalBalesCount : 0;
 
-          const millDeductionRows = deductionRows
+          // Build complete deduction records with ALL fields from this app
+          const allDeductionRows = deductionRows
             .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0 || Number(r.deduction_rate) > 0)
             .map(r => ({
               mr_no: cleanMrNo,
@@ -3000,27 +3016,34 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               updated_at: new Date().toISOString()
             }));
 
-          await supabase.from("mill_inspection_deduction").delete().eq("mr_no", cleanMrNo);
-          if (millDeductionRows.length > 0) {
-            await supabase.from("mill_inspection_deduction").insert(millDeductionRows);
+          // Primary Table: material_inspection_deductions
+          await supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo);
+          if (allDeductionRows.length > 0) {
+            const { error: insErr } = await supabase.from("material_inspection_deductions").insert(allDeductionRows);
+            if (insErr) {
+              console.warn("material_inspection_deductions extended column insert failed, falling back to base columns:", insErr.message);
+              const baseRows = allDeductionRows.map(r => ({
+                mr_no: r.mr_no,
+                po_no: r.po_no,
+                arrival_no: r.arrival_no,
+                deduction_type: r.deduction_type,
+                deduction_rate: r.deduction_rate,
+                deduction_qty: r.deduction_qty,
+                deduction_amount: r.deduction_amount,
+                remarks: r.remarks,
+                created_at: r.created_at
+              }));
+              await supabase.from("material_inspection_deductions").insert(baseRows);
+            }
           }
 
-          await supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo);
-          const midRows = deductionRows
-            .filter(r => (r.deduction_type && r.deduction_type.trim() !== '') || Number(r.deduction_amount) > 0)
-            .map(r => ({
-              mr_no: cleanMrNo,
-              po_no: headerForm.po_no || null,
-              arrival_no: headerForm.arrival_no || cleanMrNo,
-              deduction_type: r.deduction_type || '',
-              deduction_rate: Number(r.deduction_rate) || 0,
-              deduction_qty: Number(r.deduction_qty) || 0,
-              deduction_amount: Number(r.deduction_amount) || 0,
-              remarks: (r as any).remarks || ''
-            }));
-          if (midRows.length > 0) {
-            await supabase.from("material_inspection_deductions").insert(midRows);
-          }
+          // Also sync to mill_inspection_deduction for compatibility
+          try {
+            await supabase.from("mill_inspection_deduction").delete().eq("mr_no", cleanMrNo);
+            if (allDeductionRows.length > 0) {
+              await supabase.from("mill_inspection_deduction").insert(allDeductionRows);
+            }
+          } catch (mErr) {}
         } catch (allDedErr) {
           console.warn("Error persisting deductions:", allDedErr);
         }
