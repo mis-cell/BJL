@@ -196,9 +196,9 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     id: 'vyapari',
     label: 'Trade (Traders Directory)',
     category: 'Reports & Administration',
-    pageId: 'vyapari',
+    pageId: 'treds',
     aliases: [
-      'trade', 'trades', 'vyapari', 'trader', 'traders',
+      'trade', 'trades', 'treds', 'trede', 'tred', 'treds_report', 'trade_report', 'vyapari', 'trader', 'traders',
       'traders_directory', 'traders directory', 'trader_directory', 'trader directory',
       'trade_directory', 'trade directory', 'trade (traders directory)', 'trade / traders directory',
       'traders_master', 'trader_master', 'trade_master'
@@ -414,8 +414,17 @@ const EXACT_CANONICAL_MAP: Record<string, string> = {
   'weight_bridge': 'weight_bridge',
   'weighbridge': 'weight_bridge',
   'reports': 'reports',
+  'treds': 'vyapari',
+  'tred': 'vyapari',
+  'trede': 'vyapari',
+  'treds_report': 'vyapari',
+  'treds report': 'vyapari',
+  'trede_report': 'vyapari',
+  'trede report': 'vyapari',
   'trade': 'vyapari',
   'trades': 'vyapari',
+  'trade_report': 'vyapari',
+  'trade report': 'vyapari',
   'vyapari': 'vyapari',
   'trader': 'vyapari',
   'traders': 'vyapari',
@@ -501,7 +510,19 @@ export function getCanonicalModuleId(idOrAlias: string): string {
   if (alphaClean.includes('bardana') || alphaClean.includes('godown')) return 'bardana';
   if (alphaClean.includes('weightbridge') || alphaClean.includes('weighbridge')) return 'weight_bridge';
   if (alphaClean.includes('report')) return 'reports';
-  if (alphaClean.includes('vyapari') || alphaClean.includes('trader') || alphaClean === 'trade' || alphaClean === 'trades' || alphaClean.includes('tradedir')) return 'vyapari';
+  if (
+    alphaClean.includes('vyapari') ||
+    alphaClean.includes('trader') ||
+    alphaClean.includes('treds') ||
+    alphaClean.includes('trede') ||
+    alphaClean === 'trade' ||
+    alphaClean === 'trades' ||
+    alphaClean === 'treds' ||
+    alphaClean === 'trede' ||
+    alphaClean.includes('tradedir') ||
+    alphaClean.includes('tradereport') ||
+    alphaClean.includes('tredsreport')
+  ) return 'vyapari';
   if (alphaClean.includes('admindesk') || alphaClean === 'admin') return 'admindesk';
   if (alphaClean.includes('setting') || alphaClean.includes('config')) return 'settings';
   if (alphaClean.includes('jarves') || alphaClean.includes('aiassistant')) return 'ai_assistant';

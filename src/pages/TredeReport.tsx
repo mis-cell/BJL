@@ -2163,8 +2163,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
   return (
     <LegacyLayout
-      title="Payment Module (payment_master)"
-      subtitle="Complete Cash, Bank & Final Bill Payment Operations with Real-Time Database Sync"
+      title="Trade (TReDS Report)"
+      subtitle="Complete Trade Receivables Discounting (TReDS) & Payment Settlement Register"
       onClose={onClose}
     >
       {/* Top Header Actions Bar */}

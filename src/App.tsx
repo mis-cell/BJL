@@ -1046,7 +1046,9 @@ type Page =
   | "sms_sauda"
   | "weight_bridge"
   | "main_gate"
-  | "trades";
+  | "trades"
+  | "treds"
+  | "trade";
 
 const allSidebarItems = [
   { id: "dashboard", label: "Operational Hub", icon: LayoutDashboard },
@@ -1074,7 +1076,7 @@ const allSidebarItems = [
   { id: "requisition_desk", label: "Requisition Desk", icon: ClipboardList },
   { id: "vyapari", label: "Trade (Traders Directory)", icon: Users },
   { id: "ai_assistant", label: "Jarves AI 2.0", icon: Bot },
-  { id: "treds", label: "treds", icon: TrendingUp },
+  { id: "treds", label: "Trade", icon: Wallet },
 ];
 
 function getPageMeta(pageId: string) {
@@ -1097,8 +1099,8 @@ function getPageMeta(pageId: string) {
   if (pageId === "satta_entry") {
     return { label: "Satta Entry", icon: PlusCircle };
   }
-  if (pageId === "vyapari" || pageId === "trade") {
-    return { label: "Trade (Traders Directory)", icon: Users };
+  if (pageId === "vyapari" || pageId === "trade" || pageId === "treds" || pageId === "trades" || pageId === "trede") {
+    return { label: "Trade", icon: Wallet };
   }
   if (pageId === "admindesk") {
     return { label: "Admin Desk", icon: Settings };
@@ -2115,9 +2117,9 @@ export default function App() {
                 <Reports onClose={() => closePage("reports", "dashboard")} />
               </div>
               <div
-                className={currentPage === "treds" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+                className={(currentPage === "treds" || (currentPage as string) === "trade" || (currentPage as string) === "trades" || (currentPage as string) === "trede") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
-                <TredeReport onClose={() => closePage("treds", "dashboard")} />
+                <TredeReport onClose={() => closePage(currentPage, "dashboard")} />
               </div>
               <div
                 className={currentPage === "payment" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
