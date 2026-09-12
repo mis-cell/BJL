@@ -4597,9 +4597,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       } else if (statusFilter === 'completed') {
         if (computedStatus !== 'completed') return false;
       } else if (statusFilter === 'short') {
-        if (!tol.isUnderDelivery || isCompleted) return false;
+        if (!tol.isUnderDelivery || tol.isAcceptable) return false;
       } else if (statusFilter === 'excess') {
-        if (!tol.isOverDelivery || isCompleted) return false;
+        if (!tol.isOverDelivery || tol.isAcceptable) return false;
       } else if (statusFilter === 'cancelled') {
         if (!isCancelled) return false;
       } else if (computedStatus !== statusFilter) {
@@ -4812,25 +4812,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   }).length;
 
   const totalShortPos = scopedPos.filter(p => {
-    const pendingStr = String(p.pending ?? '').trim().toLowerCase();
-    const statusStr = String(p.status ?? '').trim().toLowerCase();
     const receivedWt = parseFloat(p.received_weight_mt) || 0;
     const contractWt = parseFloat(p.total_contract_mt) || 0;
     const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
-    return !isCompleted && tol.isUnderDelivery;
+    return tol.isUnderDelivery && !tol.isAcceptable;
   }).length;
 
   const totalExcessPos = scopedPos.filter(p => {
-    const pendingStr = String(p.pending ?? '').trim().toLowerCase();
-    const statusStr = String(p.status ?? '').trim().toLowerCase();
     const receivedWt = parseFloat(p.received_weight_mt) || 0;
     const contractWt = parseFloat(p.total_contract_mt) || 0;
     const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
-    return !isCompleted && tol.isOverDelivery;
+    return tol.isOverDelivery && !tol.isAcceptable;
   }).length;
 
   const totalPendingPos = scopedPos.length - totalCompletedPos;
@@ -5574,10 +5568,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   );
 
                                   const diffMt = rcvd - contract;
-                                  const diffLabel = diffMt > 0 ? "+" + diffMt.toFixed(3) + " MT" : diffMt.toFixed(3) + " MT";
+                                  const diffQtl = diffMt * 10;
+                                  const diffLabel = (diffMt > 0 ? "+" : "") + diffMt.toFixed(3) + " MT";
 
-                                  const isExcess = tol.isOverDelivery && !tol.isAcceptable && !tol.isCompleted;
-                                  const isShort = tol.isUnderDelivery && !tol.isAcceptable && !tol.isCompleted;
+                                  const isExcess = tol.isOverDelivery && !tol.isAcceptable;
+                                  const isShort = tol.isUnderDelivery && !tol.isAcceptable;
 
                                   if (isExcess) {
                                     return (
@@ -5590,7 +5585,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                             ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200" 
                                             : "bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200"
                                         )} 
-                                        title={"Received Quantity: EXCESS (" + diffLabel + "). Click to view or adjust Excess Settlement."}
+                                        title={"Received Quantity: EXCESS (" + diffLabel + " / " + (diffQtl > 0 ? "+" : "") + diffQtl.toFixed(2) + " Qtl) | Allowed Tol: ±" + tol.toleranceQtl.toFixed(2) + " Qtl | Deductible: " + tol.deductibleQtyQtl.toFixed(2) + " Qtl. Click to view or adjust Excess Settlement."}
                                       >
                                         <Scale className="w-3 h-3 text-purple-700 shrink-0" />
                                         <span>EXCESS ({diffLabel}){isSettledDeduction ? " ✓" : ""}</span>
@@ -5609,7 +5604,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                             ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200" 
                                             : "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
                                         )} 
-                                        title={"Received Quantity: SHORT (" + diffLabel + "). Click to view or adjust Shortage Settlement."}
+                                        title={"Received Quantity: SHORT (" + diffLabel + " / " + diffQtl.toFixed(2) + " Qtl) | Allowed Tol: ±" + tol.toleranceQtl.toFixed(2) + " Qtl | Deductible: " + tol.deductibleQtyQtl.toFixed(2) + " Qtl. Click to view or adjust Shortage Settlement."}
                                       >
                                         <Scale className="w-3 h-3 text-amber-700 shrink-0" />
                                         <span>SHORT ({diffLabel}){isSettledDeduction ? " ✓" : ""}</span>
@@ -5619,13 +5614,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
                                   if (rcvd > 0) {
                                     return (
-                                      <span 
-                                        className="text-[9px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs inline-flex items-center gap-1"
-                                        title={"Weight within acceptable contract tolerance range: diff " + diffLabel}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                        className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs inline-flex items-center gap-1 hover:bg-emerald-100 cursor-pointer"
+                                        title={"Within Tolerance – No Deduction | Diff: " + diffLabel + " | Allowed Tol: ±" + tol.toleranceQtl.toFixed(2) + " Qtl (±" + tol.toleranceMt.toFixed(3) + " MT). Click to view details."}
                                       >
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                                        <span>NORMAL ({diffLabel})</span>
-                                      </span>
+                                        <span>WITHIN TOLERANCE ({diffLabel})</span>
+                                      </button>
                                     );
                                   }
 
