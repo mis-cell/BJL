@@ -1877,9 +1877,13 @@ if (supabase) {
           b_rate NUMERIC(15,2),
           s_date DATE,
           status TEXT DEFAULT 'pending',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          open_remarks JSONB
        );`,
       `ALTER TABLE IF EXISTS sauda_check_point DISABLE ROW LEVEL SECURITY;`,
+      `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
       `CREATE TABLE IF NOT EXISTS sauda_check_point_details (
           item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           po_no TEXT REFERENCES sauda_check_point(po_no) ON DELETE CASCADE,

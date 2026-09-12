@@ -125,7 +125,8 @@ CREATE TABLE sauda_master (
     superior_normal_marks TEXT,
     signature_url TEXT,
     status TEXT DEFAULT 'pending',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    open_remarks JSONB
 );
 
 CREATE TABLE IF NOT EXISTS sauda_quality_details (
@@ -576,6 +577,57 @@ CREATE TABLE IF NOT EXISTS mill_inspection_detail (
     challan_gross_wt NUMERIC DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- ============================================================================
+-- SAUDA CHECK POINT TABLE (WITH open_remarks JSONB AS LAST FIELD)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS sauda_check_point (
+    po_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    financial_year TEXT NOT NULL,
+    purchase_order TEXT,
+    po_type TEXT,
+    ptf_no TEXT,
+    pending BOOLEAN DEFAULT TRUE,
+    po_no TEXT NOT NULL UNIQUE,
+    po_date DATE NOT NULL,
+    broker TEXT,
+    supplier TEXT,
+    challan_supplier TEXT,
+    area TEXT,
+    trans_paid_by TEXT,
+    weight_unit_kgs NUMERIC(15,2),
+    against_cancellation TEXT,
+    purchase_unit_code TEXT,
+    purchase_unit_name TEXT,
+    total_lorries NUMERIC(15,2),
+    units_per_lorry NUMERIC(15,2),
+    total_units NUMERIC(15,2),
+    weight_per_lorry NUMERIC(15,3),
+    total_contract_mt NUMERIC(15,3),
+    marka_type TEXT,
+    marka_penalty NUMERIC(15,2),
+    qty_penalty NUMERIC(15,2),
+    delivery_from DATE,
+    delivery_to DATE,
+    grace_days INTEGER,
+    delivery_penalty NUMERIC(15,2),
+    contract_po_no TEXT,
+    contract_date DATE,
+    rate_detail TEXT,
+    delivery_schedule TEXT,
+    terms_condition TEXT,
+    remarks TEXT,
+    po_identification TEXT,
+    b_rate NUMERIC(15,2),
+    s_date DATE,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    open_remarks JSONB
+);
+
+ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS open_remarks JSONB;
+ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;
+ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;
 
 -- ============================================================================
 -- HIGH PERFORMANCE COMPOSITE INDEXES FOR REDUCING DISK I/O & EGRESS

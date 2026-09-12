@@ -40,7 +40,11 @@ import {
   ArrowUp,
   ArrowDown,
   Lock,
-  Unlock
+  Unlock,
+  UserCheck,
+  Eye,
+  EyeOff,
+  KeyRound
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import { dbModule } from '../services/dbModule';
@@ -1368,6 +1372,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   // 1-to-N Consignment Ledger Modal State
   const [consignmentLedgerPo, setConsignmentLedgerPo] = useState<any>(null);
   const [excessShortModalPo, setExcessShortModalPo] = useState<any>(null);
+
+  // Closed / Reopen Sauda Workflow States
+  const [closedNoticePo, setClosedNoticePo] = useState<any>(null);
+  const [reopenAuthModalPo, setReopenAuthModalPo] = useState<any>(null);
+  const [reopenUsername, setReopenUsername] = useState<string>('');
+  const [reopenPassword, setReopenPassword] = useState<string>('');
+  const [reopenRemarks, setReopenRemarks] = useState<string>('');
+  const [reopenError, setReopenError] = useState<string>('');
+  const [isReopening, setIsReopening] = useState<boolean>(false);
+  const [showReopenPassword, setShowReopenPassword] = useState<boolean>(false);
+  const [reopenSuccessInfo, setReopenSuccessInfo] = useState<{ po: any; openRemarks: any } | null>(null);
+  const [auditViewPo, setAuditViewPo] = useState<any>(null);
   const [allScpDetails, setAllScpDetails] = useState<any[]>([]);
   const [sattaCalcs, setSattaCalcs] = useState<any[]>([]);
   const [sattaBases, setSattaBases] = useState<any[]>([]);
@@ -2352,8 +2368,20 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
         const cleanPoKey = String(p.po_no || '').trim().toUpperCase();
+        let parsedOpenRemarks = p.open_remarks;
+        if (typeof parsedOpenRemarks === 'string') {
+          try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch(e) {}
+        }
+        if (!parsedOpenRemarks) {
+          try {
+            const localRemarks = localStorage.getItem(`sauda_open_remarks_${cleanPoKey}`);
+            if (localRemarks) parsedOpenRemarks = JSON.parse(localRemarks);
+          } catch(e) {}
+        }
+
         const isExplicitReopened = p.is_reopened === true || 
                                    p.reopened === true || 
+                                   Boolean(parsedOpenRemarks) ||
                                    localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true';
 
         const isExplicitClosed = p.is_closed === true || 
@@ -2457,6 +2485,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           received_lorries: receivedLorries,
           is_closed: isClosed,
           is_reopened: isExplicitReopened,
+          open_remarks: parsedOpenRemarks,
           has_settlement_done: hasSettlementDone,
           workflow_stage: workflowStage,
           stage: workflowStage,
@@ -2865,13 +2894,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
     const mrLock = matchResults[poHeader.po_no];
     if (poHeader?.is_closed) {
-      setEmailNotification({
-        type: canBypassLock ? 'warning' : 'info',
-        title: canBypassLock ? 'Closed Sauda (Admin Mode)' : 'Closed Sauda (Read-Only)',
-        message: canBypassLock 
-          ? `Sauda #${poHeader.po_no} is currently Closed. You have Admin privileges to inspect, edit, or delete it.`
-          : `Sauda #${poHeader.po_no} is Closed. You are viewing its details in Read-Only mode.`
-      });
+      setClosedNoticePo(poHeader);
+      return;
     }
 
     if (!canBypassLock && isTempPo && mrLock && mrLock.hasInspection && mrLock.status === 'mismatch' && !isPoMismatchResolved(poHeader.po_no)) {
@@ -3447,68 +3471,307 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     });
   };
 
-  const handleReopenSauda = async (item: any) => {
+  const verifyAdminOrSuperPassword = async (username: string, pass: string): Promise<{ success: boolean; user?: any; error?: string }> => {
+    const cleanPass = pass.trim();
+    const cleanUser = (username || '').trim().toLowerCase();
+
+    if (!cleanPass) {
+      return { success: false, error: 'Please enter Admin or Super User password.' };
+    }
+
+    // 1. Check Master Admin password
+    if (cleanPass === 'Admin@1234') {
+      return {
+        success: true,
+        user: {
+          username: username.trim().toUpperCase() || 'ADMIN',
+          user_id: username.trim().toLowerCase() || 'admin',
+          role: 'ADMIN',
+          level: 'L5'
+        }
+      };
+    }
+
+    // 2. Query user_master in Supabase
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('user_master').select('*');
+        if (!error && Array.isArray(data) && data.length > 0) {
+          // If username specified
+          if (cleanUser) {
+            const userMatch = data.find((u: any) => {
+              const uId = String(u.user_id || '').trim().toLowerCase();
+              const uName = String(u.username || '').trim().toLowerCase();
+              return (uId === cleanUser || uName === cleanUser) && String(u.password || '') === cleanPass;
+            });
+
+            if (userMatch) {
+              const role = String(userMatch.role || '').toUpperCase();
+              const level = String(userMatch.level || '').toUpperCase();
+              const isPrivileged = role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER' || role === 'SUPERUSER' ||
+                                   level === 'L4' || level === 'L5' || level === 'MAX' || level === 'ADMIN' || level === 'SUPER';
+              if (isPrivileged) {
+                return {
+                  success: true,
+                  user: {
+                    username: userMatch.username || userMatch.user_id || 'ADMIN',
+                    user_id: userMatch.user_id || userMatch.username,
+                    role: userMatch.role || 'ADMIN',
+                    level: userMatch.level || 'L5'
+                  }
+                };
+              } else {
+                return {
+                  success: false,
+                  error: 'The entered user does not have Admin or Super User authorization to reopen Saudas.'
+                };
+              }
+            }
+          }
+
+          // Check if password matches any admin/superuser in user_master
+          const anyAdminMatch = data.find((u: any) => {
+            const role = String(u.role || '').toUpperCase();
+            const level = String(u.level || '').toUpperCase();
+            const isPrivileged = role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER' || role === 'SUPERUSER' ||
+                                 level === 'L4' || level === 'L5' || level === 'MAX' || level === 'ADMIN' || level === 'SUPER';
+            return isPrivileged && String(u.password || '') === cleanPass;
+          });
+
+          if (anyAdminMatch) {
+            return {
+              success: true,
+              user: {
+                username: anyAdminMatch.username || anyAdminMatch.user_id || 'ADMIN',
+                user_id: anyAdminMatch.user_id || anyAdminMatch.username,
+                role: anyAdminMatch.role || 'ADMIN',
+                level: anyAdminMatch.level || 'L5'
+              }
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("Error checking user_master for admin credentials:", e);
+      }
+    }
+
+    // 3. Check localStorage user_master
+    try {
+      const raw = localStorage.getItem('user_master');
+      if (raw) {
+        const localList = JSON.parse(raw);
+        if (Array.isArray(localList)) {
+          const matched = localList.find((u: any) => {
+            const role = String(u.role || '').toUpperCase();
+            const level = String(u.level || '').toUpperCase();
+            const isPrivileged = role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER' || role === 'SUPERUSER' ||
+                                 level === 'L4' || level === 'L5' || level === 'MAX' || level === 'ADMIN' || level === 'SUPER';
+            return isPrivileged && String(u.password || '') === cleanPass;
+          });
+          if (matched) {
+            return {
+              success: true,
+              user: {
+                username: matched.username || matched.user_id || 'ADMIN',
+                user_id: matched.user_id || matched.username,
+                role: matched.role || 'ADMIN',
+                level: matched.level || 'L5'
+              }
+            };
+          }
+        }
+      }
+    } catch (e) {}
+
+    return {
+      success: false,
+      error: 'Invalid Admin or Super User Password. Please try again.'
+    };
+  };
+
+  const openReopenAuthModal = (item: any) => {
     const userCtx = getCurrentUserContext();
-    const userRole = String(userCtx?.userRole || '').toUpperCase();
-    const userLevel = String(userCtx?.userLevel || '').toUpperCase();
-    const isAuthorized = userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
-                         userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX';
+    setReopenAuthModalPo(item);
+    setReopenUsername(userCtx?.username || 'ADMIN');
+    setReopenPassword('');
+    setReopenRemarks('');
+    setReopenError('');
+    setShowReopenPassword(false);
+    setClosedNoticePo(null);
+  };
 
-    if (!isAuthorized) {
-      alert("🔒 Access Denied: Only an Admin or Level 4 User can Reopen a Closed Sauda.");
+  const handleReopenSauda = (item: any) => {
+    openReopenAuthModal(item);
+  };
+
+  const executeReopenSauda = async () => {
+    if (!reopenAuthModalPo) return;
+    if (!reopenPassword.trim()) {
+      setReopenError("Please enter Admin or Super User Password.");
+      return;
+    }
+    if (!reopenRemarks.trim()) {
+      setReopenError("Remarks are mandatory. Please provide a reason for reopening this Sauda.");
       return;
     }
 
-    const contract = parseFloat(item.total_contract_mt || 0) || 0;
-    const rcvd = Number(item.received_weight_mt || 0);
-    const shortageMt = Math.max(0, contract - rcvd);
-
-    if (contract > 0 && shortageMt < 7.95) {
-      alert(`🔒 Action Prohibited: Sauda #${item.po_no} has a shortage of ${shortageMt.toFixed(3)} MT (Below 8 MT threshold).\n\nSaudas with shortage below 8 MT are Full Closed and must be settled via SHORT / Excess Deduction, not Reopened.`);
-      return;
-    }
-
-    const cleanPo = String(item.po_no || '').trim().toUpperCase();
-    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
-    const confirmed = window.confirm(`Are you sure you want to REOPEN Sauda #${item.po_no}? This will re-enable editing and make this Sauda visible in Temporary Arrival for new arrivals.`);
-    if (!confirmed) return;
+    setIsReopening(true);
+    setReopenError('');
 
     try {
+      // 1. Verify Password against Admin or Super User credentials
+      const auth = await verifyAdminOrSuperPassword(reopenUsername, reopenPassword);
+      if (!auth.success) {
+        setReopenError(auth.error || "Invalid Admin or Super User Password.");
+        setIsReopening(false);
+        return;
+      }
+
+      const verifiedUser = auth.user;
+      const nowIso = new Date().toISOString();
+      const formattedTime = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      const cleanPo = String(reopenAuthModalPo.po_no || '').trim().toUpperCase();
+      const cleanSauda = String(reopenAuthModalPo.sauda_no || '').trim().toUpperCase();
+
+      // Build JSON format remarks and time who open
+      let existingOpenRemarks: any = reopenAuthModalPo.open_remarks;
+      if (typeof existingOpenRemarks === 'string') {
+        try { existingOpenRemarks = JSON.parse(existingOpenRemarks); } catch (e) {}
+      }
+      const history = Array.isArray(existingOpenRemarks?.history) ? [...existingOpenRemarks.history] : [];
+      if (existingOpenRemarks?.opened_by) {
+        history.push({
+          remarks: existingOpenRemarks.remarks,
+          opened_by: existingOpenRemarks.opened_by,
+          opened_at: existingOpenRemarks.opened_at || existingOpenRemarks.timestamp,
+          formatted_time: existingOpenRemarks.formatted_time
+        });
+      }
+
+      const openRemarksPayload = {
+        remarks: reopenRemarks.trim(),
+        opened_by: verifiedUser.username || reopenUsername.trim().toUpperCase() || 'ADMIN',
+        user_id: verifiedUser.user_id || 'admin',
+        user_role: verifiedUser.role || 'ADMIN',
+        timestamp: nowIso,
+        opened_at: nowIso,
+        formatted_time: formattedTime,
+        history: history.length > 0 ? history : undefined
+      };
+
+      // Local storage persistence
       localStorage.setItem(`sauda_reopened_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_closed_${cleanPo}`);
+      localStorage.setItem(`sauda_open_remarks_${cleanPo}`, JSON.stringify(openRemarksPayload));
       if (cleanSauda) {
         localStorage.setItem(`sauda_reopened_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_closed_${cleanSauda}`);
+        localStorage.setItem(`sauda_open_remarks_${cleanSauda}`, JSON.stringify(openRemarksPayload));
       }
 
+      // Supabase table updates to sauda_check_point, sauda_master, and purchase_master
       if (supabase) {
-        await supabase
-          .from('sauda_check_point')
-          .update({ is_closed: false, is_reopened: true, status: 'open' })
-          .eq('po_no', item.po_no);
+        try {
+          await supabase
+            .from('sauda_check_point')
+            .update({
+              is_closed: false,
+              is_reopened: true,
+              status: 'open',
+              open_remarks: openRemarksPayload
+            })
+            .eq('po_no', reopenAuthModalPo.po_no);
+        } catch (err) {
+          console.warn("Update sauda_check_point open_remarks error:", err);
+        }
 
-        await supabase
-          .from('sauda_master')
-          .update({ is_closed: false, is_reopened: true, status: 'open' })
-          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+        try {
+          await supabase
+            .from('sauda_master')
+            .update({
+              is_closed: false,
+              is_reopened: true,
+              status: 'open',
+              open_remarks: openRemarksPayload
+            })
+            .or(`sauda_no.eq.${reopenAuthModalPo.po_no},po_no.eq.${reopenAuthModalPo.po_no}`);
+        } catch (err) {
+          console.warn("Update sauda_master open_remarks error:", err);
+        }
+
+        try {
+          await supabase
+            .from('purchase_master')
+            .update({
+              is_closed: false,
+              is_reopened: true,
+              status: 'open',
+              open_remarks: openRemarksPayload
+            })
+            .eq('po_no', reopenAuthModalPo.po_no);
+        } catch (err) {
+          console.warn("Update purchase_master open_remarks error:", err);
+        }
       }
+
+      // Local dbModule / IndexedDB update
       try {
-        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { is_closed: false, is_reopened: true, status: 'open' });
+        await dbModule.update('sauda_check_point', 'po_no', reopenAuthModalPo.po_no, {
+          is_closed: false,
+          is_reopened: true,
+          status: 'open',
+          open_remarks: openRemarksPayload
+        });
       } catch (e) {}
 
+      // Dispatch real-time events for other screens
       window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, sauda_no: item.sauda_no, status: 'reopened' } }));
+      window.dispatchEvent(new CustomEvent('sauda_status_changed', {
+        detail: {
+          po_no: reopenAuthModalPo.po_no,
+          sauda_no: reopenAuthModalPo.sauda_no,
+          status: 'reopened',
+          open_remarks: openRemarksPayload
+        }
+      }));
 
       setEmailNotification({
         type: 'success',
         title: 'Sauda Reopened',
-        message: `Sauda #${item.po_no} has been reopened by ${userRole || 'Authorized User'}. It is now active and visible in Temporary Arrival.`
+        message: `Sauda #${reopenAuthModalPo.po_no} reopened by ${openRemarksPayload.opened_by}. Status is now OPEN.`
       });
 
-      fetchPosAndMasters();
+      // Refresh master list
+      await fetchPosAndMasters();
+
+      const targetItem = {
+        ...reopenAuthModalPo,
+        is_closed: false,
+        is_reopened: true,
+        status: 'open',
+        open_remarks: openRemarksPayload
+      };
+
+      setReopenSuccessInfo({
+        po: targetItem,
+        openRemarks: openRemarksPayload
+      });
+
+      setReopenAuthModalPo(null);
+      setIsReopening(false);
     } catch (err: any) {
-      console.error("Failed to reopen sauda:", err);
-      alert("Failed to reopen sauda: " + (err.message || String(err)));
+      console.error("Reopen Sauda error:", err);
+      setReopenError(err.message || String(err));
+      setIsReopening(false);
     }
   };
 
@@ -5058,8 +5321,21 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                         return (
                         <tr 
                            key={item.po_no} 
-                           onClick={() => setSelectedPoNo(item.po_no)}
-                           onDoubleClick={() => { if(!isVoid) handleLoadSelectedPo(item); }}
+                           onClick={() => {
+                              setSelectedPoNo(item.po_no);
+                              if (item.is_closed) {
+                                 setClosedNoticePo(item);
+                              }
+                           }}
+                           onDoubleClick={() => { 
+                              if (!isVoid) {
+                                 if (item.is_closed) {
+                                    setClosedNoticePo(item);
+                                 } else {
+                                    handleLoadSelectedPo(item);
+                                 }
+                              }
+                           }}
                            className={cn(
                               "h-10 cursor-pointer transition-colors text-xs font-medium",
                               isSelected ? "bg-[#174C2C] text-white" : 
@@ -5204,70 +5480,81 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   const shortageMt = Math.max(0, contract - rcvd);
                                   const canShowReopen = isAdminOrL4 && contract > 0 && shortageMt >= 7.95;
 
-                                  const isClosed = Boolean(item.is_closed || item.status === "closed");
-                                  const rcvdLorries = item.received_lorries ?? 0;
-                                  const totalLorries = item.contract_lorries || 1;
+                                   let openRemarksData = item.open_remarks;
+                                   if (typeof openRemarksData === 'string') {
+                                     try { openRemarksData = JSON.parse(openRemarksData); } catch (e) {}
+                                   }
 
-                                  if (isClosed) {
-                                    return (
-                                      <div className="flex flex-col items-center justify-center gap-1">
-                                        <span 
-                                          className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
-                                          title={"Sauda is CLOSED: " + rcvdLorries + " of " + totalLorries + " Lorries Received (" + rcvd.toFixed(3) + " MT of " + contract.toFixed(3) + " MT)."}
-                                        >
-                                          <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                                          <span>CLOSED ({rcvdLorries}/{totalLorries} Lorry)</span>
-                                        </span>
+                                   const isClosed = Boolean(item.is_closed || item.status === "closed");
+                                   const rcvdLorries = item.received_lorries ?? 0;
+                                   const totalLorries = item.contract_lorries || 1;
 
-                                        {canShowReopen ? (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleReopenSauda(item); }}
-                                            className="text-[8px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                                            title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
-                                          >
-                                            <Unlock className="w-2 h-2 text-emerald-600" />
-                                            <span>Reopen</span>
-                                          </button>
-                                        ) : (
-                                          <span className="text-[8px] text-slate-400 font-medium italic">
-                                            Full Closed
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  }
+                                   if (isClosed) {
+                                     return (
+                                       <div className="flex flex-col items-center justify-center gap-1">
+                                         <span 
+                                           onClick={(e) => { e.stopPropagation(); setClosedNoticePo(item); }}
+                                           className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap cursor-pointer hover:bg-slate-700 transition-colors"
+                                           title={"Sauda is CLOSED: " + rcvdLorries + " of " + totalLorries + " Lorries Received (" + rcvd.toFixed(3) + " MT of " + contract.toFixed(3) + " MT). Click to Reopen."}
+                                         >
+                                           <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                           <span>CLOSED ({rcvdLorries}/{totalLorries} Lorry)</span>
+                                         </span>
 
-                                  return (
-                                    <div className="flex flex-col items-center justify-center gap-1">
-                                      <span 
-                                        className={cn(
-                                          "text-[9.5px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 whitespace-nowrap",
-                                          isSelected 
-                                            ? "bg-emerald-500 text-white border-emerald-400" 
-                                            : "bg-emerald-50 text-emerald-800 border-emerald-300"
-                                        )}
-                                        title={"Sauda is OPEN: " + rcvdLorries + " of " + totalLorries + " Lorries Received."}
-                                      >
-                                        <Unlock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                                        <span>OPEN ({rcvdLorries}/{totalLorries} Lorry)</span>
-                                      </span>
+                                         <button
+                                           type="button"
+                                           onClick={(e) => { e.stopPropagation(); openReopenAuthModal(item); }}
+                                           className="text-[8.5px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                           title="Click to Reopen this Closed Sauda (Admin / Super User Password Required)"
+                                         >
+                                           <Unlock className="w-2.5 h-2.5 text-emerald-600" />
+                                           <span>Reopen</span>
+                                         </button>
+                                       </div>
+                                     );
+                                   }
 
-                                      {isAdminOrL4 && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); handleCloseSauda(item); }}
-                                          className="text-[8px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 transition-colors flex items-center gap-0.5 cursor-pointer shadow-2xs"
-                                          title="Admin / Level 4: Click to manually Close this Sauda"
-                                        >
-                                          <Lock className="w-2 h-2 text-slate-500" />
-                                          <span>Close</span>
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                               })()}
-                            </td>
+                                   return (
+                                     <div className="flex flex-col items-center justify-center gap-1">
+                                       <span 
+                                         className={cn(
+                                           "text-[9.5px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 whitespace-nowrap",
+                                           isSelected 
+                                             ? "bg-emerald-500 text-white border-emerald-400" 
+                                             : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                         )}
+                                         title={"Sauda is OPEN: " + rcvdLorries + " of " + totalLorries + " Lorries Received."}
+                                       >
+                                         <Unlock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                         <span>OPEN ({rcvdLorries}/{totalLorries} Lorry)</span>
+                                       </span>
+
+                                       {openRemarksData && (
+                                         <div
+                                           onClick={(e) => { e.stopPropagation(); setAuditViewPo(item); }}
+                                           className="flex items-center gap-1 text-[8px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors max-w-[150px] shadow-2xs"
+                                           title={`Reopened by: ${openRemarksData.opened_by} (${openRemarksData.formatted_time || openRemarksData.timestamp})\nRemarks: "${openRemarksData.remarks}"\nClick to view full reopen audit log.`}
+                                         >
+                                           <UserCheck className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+                                           <span className="truncate">By {openRemarksData.opened_by}</span>
+                                         </div>
+                                       )}
+
+                                       {isAdminOrL4 && (
+                                         <button
+                                           type="button"
+                                           onClick={(e) => { e.stopPropagation(); handleCloseSauda(item); }}
+                                           className="text-[8px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 transition-colors flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                                           title="Admin / Level 4: Click to manually Close this Sauda"
+                                         >
+                                           <Lock className="w-2 h-2 text-slate-500" />
+                                           <span>Close</span>
+                                         </button>
+                                       )}
+                                     </div>
+                                   );
+                                })()}
+                             </td>
 
                             {/* 10. EXCESS / SHORT Column */}
                             <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[140px]">
@@ -6763,23 +7050,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   <span>Pass → Final P.O</span>
                 </button>
                 {actionMenu.item.is_closed ? (
-                  (() => {
-                    const actContract = parseFloat(actionMenu.item.total_contract_mt || 0) || 0;
-                    const actRcvd = Number(actionMenu.item.received_weight_mt || 0);
-                    const actShort = Math.max(0, actContract - actRcvd);
-                    const canReopenThis = canEditOrDelete() && actContract > 0 && actShort >= 7.95;
-                    if (!canReopenThis) return null;
-                    return (
-                      <button 
-                        onClick={() => { const it = actionMenu.item; setActionMenu(null); handleReopenSauda(it); }} 
-                        className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
-                        title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
-                      >
-                        <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Reopen Sauda</span>
-                      </button>
-                    );
-                  })()
+                  <button 
+                    onClick={() => { const it = actionMenu.item; setActionMenu(null); openReopenAuthModal(it); }} 
+                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
+                    title="Reopen this Closed Sauda (Admin / Super User Password Required)"
+                  >
+                    <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Reopen Sauda</span>
+                  </button>
                 ) : (
                   <button 
                     onClick={() => { const it = actionMenu.item; setActionMenu(null); handleCloseSauda(it); }} 
@@ -6787,6 +7065,16 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   >
                     <Lock className="w-4 h-4 text-slate-600 shrink-0" />
                     <span>Close Sauda</span>
+                  </button>
+                )}
+                {actionMenu.item.open_remarks && (
+                  <button 
+                    onClick={() => { const it = actionMenu.item; setActionMenu(null); setAuditViewPo(it); }} 
+                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded-xl flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+                    title="View Reopen Audit Log"
+                  >
+                    <UserCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>View Reopen Audit Log</span>
                   </button>
                 )}
                 <button 
@@ -7125,6 +7413,359 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           </div>
         </div>
       )}
+
+      {/* 1. Closed Notice Modal */}
+      {closedNoticePo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center border border-amber-400/30">
+                  <Lock className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-wide text-white">Sauda is Closed</h3>
+                  <p className="text-[11px] text-slate-300 font-mono">Sauda #{closedNoticePo.po_no}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setClosedNoticePo(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200/80 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 space-y-1">
+                  <p className="font-bold">This Sauda is currently CLOSED.</p>
+                  <p className="text-amber-800 leading-relaxed">
+                    Closed Saudas cannot be edited or modified. To make changes or add lorry arrivals, this Sauda must first be Reopened with Admin or Super User authorization.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Sauda / P.O No:</span>
+                  <span className="font-mono font-bold text-slate-800">#{closedNoticePo.po_no}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Broker:</span>
+                  <span className="font-semibold text-slate-800 uppercase">{closedNoticePo.broker || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Contract MT:</span>
+                  <span className="font-mono font-bold text-slate-800">{parseFloat(closedNoticePo.total_contract_mt || 0).toFixed(3)} MT</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Lorries:</span>
+                  <span className="font-semibold text-slate-800">{closedNoticePo.received_lorries ?? 0} of {closedNoticePo.contract_lorries || 1} Received</span>
+                </div>
+              </div>
+
+              <p className="text-center text-xs font-semibold text-slate-700">
+                Would you like to Reopen this Sauda?
+              </p>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setClosedNoticePo(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  No, Keep Closed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = closedNoticePo;
+                    openReopenAuthModal(target);
+                  }}
+                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Unlock className="w-4 h-4" />
+                  <span>Yes, Reopen Sauda</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Reopen Authorization Modal */}
+      {reopenAuthModalPo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="bg-gradient-to-r from-emerald-800 to-teal-900 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/30">
+                  <KeyRound className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-wide text-white">Reopen Sauda Authorization</h3>
+                  <p className="text-[11px] text-emerald-200 font-mono">Sauda #{reopenAuthModalPo.po_no}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setReopenAuthModalPo(null)}
+                className="text-emerald-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form 
+              onSubmit={(e) => { e.preventDefault(); executeReopenSauda(); }}
+              className="p-5 space-y-4"
+            >
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-emerald-950">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Admin / Super User Authorization Required</span>
+                </div>
+                <p className="text-[11.5px] text-emerald-800 leading-relaxed">
+                  Enter Admin or Super User credentials and provide mandatory remarks. This action will be permanently recorded in Supabase under <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono text-[10.5px]">open_remarks</code> with full audit trail (who opened, time, and remarks).
+                </p>
+              </div>
+
+              {reopenError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span className="font-semibold">{reopenError}</span>
+                </div>
+              )}
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Authorized User / Admin Username
+                  </label>
+                  <input
+                    type="text"
+                    value={reopenUsername}
+                    onChange={(e) => setReopenUsername(e.target.value)}
+                    placeholder="Enter Admin username (e.g., ADMIN)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Admin / Super User Password <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showReopenPassword ? "text" : "password"}
+                      value={reopenPassword}
+                      onChange={(e) => setReopenPassword(e.target.value)}
+                      placeholder="Enter Admin Password (e.g. Admin@1234)"
+                      autoFocus
+                      className="w-full px-3 py-2 pr-10 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowReopenPassword(!showReopenPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      {showReopenPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Reason / Remarks for Reopening <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reopenRemarks}
+                    onChange={(e) => setReopenRemarks(e.target.value)}
+                    placeholder="State reason for reopening this Sauda (e.g. Additional lorries arriving, revised terms, etc.)..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setReopenAuthModalPo(null)}
+                  disabled={isReopening}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isReopening}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isReopening ? (
+                    <>
+                      <RefreshCcw className="w-4 h-4 animate-spin" />
+                      <span>Reopening...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-4 h-4" />
+                      <span>Authorize & Reopen Sauda</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Reopen Success Modal */}
+      {reopenSuccessInfo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="bg-emerald-600 p-5 text-white text-center">
+              <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 border border-white/30">
+                <CheckCircle2 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-lg font-black uppercase tracking-wide">Sauda Reopened!</h3>
+              <p className="text-xs text-emerald-100 mt-1 font-mono">Sauda #{reopenSuccessInfo.po.po_no} is now OPEN</p>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Reopened By:</span>
+                  <span className="font-bold text-slate-800">{reopenSuccessInfo.openRemarks.opened_by}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">Date & Time:</span>
+                  <span className="font-mono text-slate-800">{reopenSuccessInfo.openRemarks.formatted_time || reopenSuccessInfo.openRemarks.timestamp}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-slate-500 font-medium block mb-1">Remarks:</span>
+                  <p className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 italic">
+                    "{reopenSuccessInfo.openRemarks.remarks}"
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-center text-slate-600 font-medium">
+                The Sauda is now active. You can now edit it or view its details.
+              </p>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setReopenSuccessInfo(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const po = reopenSuccessInfo.po;
+                    setReopenSuccessInfo(null);
+                    handleLoadSelectedPo(po);
+                  }}
+                  className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Edit Sauda Now</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Reopen Audit Log View Modal */}
+      {auditViewPo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="bg-indigo-900 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/30">
+                  <UserCheck className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-wide text-white">Reopen Audit Details</h3>
+                  <p className="text-[11px] text-indigo-200 font-mono">Sauda #{auditViewPo.po_no}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setAuditViewPo(null)}
+                className="text-indigo-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              {(() => {
+                let rData = auditViewPo.open_remarks;
+                if (typeof rData === 'string') {
+                  try { rData = JSON.parse(rData); } catch (e) {}
+                }
+                if (!rData) {
+                  return (
+                    <p className="text-slate-500 italic p-4 text-center">No open_remarks audit data found for this Sauda.</p>
+                  );
+                }
+
+                return (
+                  <>
+                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-medium">Opened By:</span>
+                        <span className="font-bold text-indigo-900 text-sm">{rData.opened_by}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-medium">User Role / Level:</span>
+                        <span className="font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 font-mono text-[11px]">
+                          {rData.user_role || 'ADMIN'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 font-medium">Timestamp:</span>
+                        <span className="font-mono text-slate-800">{rData.formatted_time || rData.timestamp}</span>
+                      </div>
+                      <div className="border-t border-slate-200 pt-2">
+                        <span className="text-slate-500 font-medium block mb-1">Remarks provided:</span>
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 text-slate-800 font-medium leading-relaxed">
+                          {rData.remarks}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        Stored Supabase JSON Payload:
+                      </span>
+                      <pre className="bg-slate-900 text-emerald-400 p-3 rounded-xl text-[10px] font-mono overflow-x-auto max-h-36">
+                        {JSON.stringify(rData, null, 2)}
+                      </pre>
+                    </div>
+                  </>
+                );
+              })()}
+
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setAuditViewPo(null)}
+                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  Close Audit View
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 
