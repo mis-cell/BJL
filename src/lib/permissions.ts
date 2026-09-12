@@ -670,27 +670,54 @@ export function getCurrentUserContext(): UserContext {
 export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
   let role = '';
   let level = '';
+  let username = '';
   let allowed: string[] = [];
+  let isAdmFlag = false;
 
   if (typeof roleOrContext === 'string') {
     role = roleOrContext.toUpperCase();
   } else if (roleOrContext && typeof roleOrContext === 'object') {
-    role = (roleOrContext.userRole || '').toUpperCase();
-    level = (roleOrContext.userLevel || '').toUpperCase();
+    role = (roleOrContext.userRole || (roleOrContext as any).role || '').toUpperCase();
+    level = (roleOrContext.userLevel || (roleOrContext as any).level || '').toUpperCase();
+    username = (roleOrContext.username || roleOrContext.userName || (roleOrContext as any).userId || (roleOrContext as any).user_id || '').toUpperCase();
     allowed = normalizeAllowedModules(roleOrContext.allowedModules || (roleOrContext as any).allowed_modules || []);
+    isAdmFlag = Boolean((roleOrContext as any).isAdmin || (roleOrContext as any).is_admin);
   } else {
     const ctx = getCurrentUserContext();
-    role = (ctx?.userRole || '').toUpperCase();
-    level = (ctx?.userLevel || '').toUpperCase();
+    role = (ctx?.userRole || (ctx as any)?.role || '').toUpperCase();
+    level = (ctx?.userLevel || (ctx as any)?.level || '').toUpperCase();
+    username = (ctx?.username || ctx?.userName || (ctx as any)?.userId || '').toUpperCase();
     allowed = normalizeAllowedModules(ctx?.allowedModules || []);
+    isAdmFlag = Boolean((ctx as any)?.isAdmin || (ctx as any)?.is_admin);
   }
 
-  // If specific modules are assigned and '*' is NOT included, the user is NOT an admin with global bypass
-  if (allowed.length > 0 && !allowed.includes('*')) {
-    return false;
+  // Check stored auth session from localStorage if memory context was reset or unhydrated
+  if (!isAdmFlag && role !== 'ADMIN' && role !== 'ADMINISTRATOR' && level !== 'ADMIN' && username !== 'ADMIN') {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const sessionRaw = window.localStorage.getItem('bally_auth_session');
+        if (sessionRaw) {
+          const parsed = JSON.parse(sessionRaw);
+          const sRole = String(parsed.role || '').toUpperCase();
+          const sLevel = String(parsed.level || '').toUpperCase();
+          const sUser = String(parsed.username || parsed.userId || '').toUpperCase();
+          if (sRole === 'ADMIN' || sRole === 'ADMINISTRATOR' || sLevel === 'ADMIN' || sUser === 'ADMIN' || parsed.allowed_modules === '*') {
+            return true;
+          }
+        }
+      }
+    } catch {}
   }
 
-  const isRoleAdmin = role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'ADMINISTRATOR' || level === 'MAX';
+  const isRoleAdmin = 
+    role === 'ADMIN' || 
+    role === 'ADMINISTRATOR' || 
+    level === 'ADMIN' || 
+    level === 'ADMINISTRATOR' || 
+    level === 'MAX' || 
+    username === 'ADMIN' || 
+    isAdmFlag;
+
   return isRoleAdmin || allowed.includes('*');
 }
 

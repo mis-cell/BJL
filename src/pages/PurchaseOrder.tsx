@@ -52,7 +52,7 @@ import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTo
 import PoPrintSlip from '../components/PoPrintSlip';
 import ExcessShortSettlementModal from '../components/ExcessShortSettlementModal';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext } from '../lib/permissions';
+import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../lib/permissions';
 import { 
   PieChart, 
   Pie, 
@@ -2855,32 +2855,31 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleLoadSelectedPo = async (poHeader: any) => {
-    if (!enforceEditOrDeletePermission("Edit")) return;
-    // Lock: L1, L2, L3 users cannot edit a Temporary P.O with a Material Mismatch until resolved.
-    // Admin, L4, and L5 users are allowed to open/edit it.
+    // Check user context
     const userCtx = getCurrentUserContext();
-    const currentUserRole = userCtx.userRole || "USER";
-    const currentUserLevel = userCtx.userLevel || "L1";
-    const isAdminUser = currentUserRole === "ADMIN";
-    const isL4L5User = currentUserLevel === "L4" || currentUserLevel === "L5";
+    const currentUserRole = (userCtx.userRole || (userCtx as any).role || "USER").toUpperCase();
+    const currentUserLevel = (userCtx.userLevel || (userCtx as any).level || "L1").toUpperCase();
+    const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any).isAdmin) || currentUserLevel === "ADMIN";
+    const isL4L5User = isL5OrAdmin() || currentUserLevel === "L4" || currentUserLevel === "L5" || currentUserLevel === "MAX";
     const canBypassLock = isAdminUser || isL4L5User;
 
     const mrLock = matchResults[poHeader.po_no];
-    if (poHeader?.is_closed && !canBypassLock) {
-      alert(`🔒 Action Prohibited: Sauda #${poHeader.po_no} is Closed (${poHeader.received_lorries}/${poHeader.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited by standard users. Only an Admin or Level 4 User can Reopen this Sauda.`);
-      return;
-    }
     if (poHeader?.is_closed) {
       setEmailNotification({
-        type: 'warning',
-        title: 'Closed Sauda (Admin/L4 Mode)',
-        message: `Sauda #${poHeader.po_no} is currently Closed. You have Admin / Level 4 privileges to inspect or reopen it.`
+        type: canBypassLock ? 'warning' : 'info',
+        title: canBypassLock ? 'Closed Sauda (Admin Mode)' : 'Closed Sauda (Read-Only)',
+        message: canBypassLock 
+          ? `Sauda #${poHeader.po_no} is currently Closed. You have Admin privileges to inspect, edit, or delete it.`
+          : `Sauda #${poHeader.po_no} is Closed. You are viewing its details in Read-Only mode.`
       });
     }
 
     if (!canBypassLock && isTempPo && mrLock && mrLock.hasInspection && mrLock.status === 'mismatch' && !isPoMismatchResolved(poHeader.po_no)) {
-      alert(`P.O ${poHeader.po_no} is LOCKED — it has a Material Mismatch in: ${mrLock.mismatches.map((m: any) => m.field).join(', ')}.\n\nResolve it in the Material Mismatch section before editing.`);
-      return;
+      setEmailNotification({
+        type: 'warning',
+        title: 'Material Mismatch Review',
+        message: `P.O ${poHeader.po_no} has a Material Mismatch. Details loaded for review.`
+      });
     }
     const getGradeNameForCompare = (gCode: string) => {
       const match = gradeList.find((g: any) => g.grade_code === gCode);
@@ -3020,16 +3019,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
   const handleDeletePo = async (poNo: string) => {
     const targetItem = (poList || []).find(p => String(p.po_no).trim().toUpperCase() === String(poNo).trim().toUpperCase());
-    if (targetItem?.is_closed) {
-      alert(`🔒 Action Prohibited: Sauda #${poNo} is Closed (${targetItem.received_lorries}/${targetItem.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited or deleted by any user unless reopened by an Admin or Level 4 User.`);
+    const userCtx = getCurrentUserContext();
+    const isAdminUser = isUserAdmin(userCtx) || (userCtx?.userRole || '').toUpperCase() === 'ADMIN' || (userCtx?.userRole || '').toUpperCase() === 'ADMINISTRATOR' || Boolean((userCtx as any)?.isAdmin) || (userCtx?.userLevel || '').toUpperCase() === 'ADMIN';
+    const isL4L5User = isL5OrAdmin() || (userCtx?.userLevel || '').toUpperCase() === 'L4' || (userCtx?.userLevel || '').toUpperCase() === 'L5' || (userCtx?.userLevel || '').toUpperCase() === 'MAX';
+    const canDeleteThis = isAdminUser || isL4L5User;
+
+    if (!canDeleteThis && !canEditOrDelete()) {
+      alert(`Access Denied: Only authorized Admin users can delete records.`);
       return;
     }
 
-    if (!enforceEditOrDeletePermission("Delete")) {
+    if (targetItem?.is_closed && !canDeleteThis) {
+      alert(`🔒 Action Prohibited: Sauda #${poNo} is Closed (${targetItem.received_lorries}/${targetItem.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be deleted by non-admin users. Only an Admin user can delete this closed record.`);
       return;
     }
 
-    const conf = window.confirm(`Are you sure you want to completely delete Purchase Order: ${poNo}?`);
+    const conf = window.confirm(`Are you sure you want to permanently delete Purchase Order / Sauda: ${poNo}?\n\nThis will remove the record from all database tables and list pages.`);
     if (!conf) return;
 
     setLoading(true);
@@ -3038,12 +3043,36 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         await supabase.from('purchase_detail_master').delete().eq('po_no', poNo);
         await supabase.from('sauda_check_point_details').delete().eq('po_no', poNo);
         await supabase.from('sauda_check_point').delete().eq('po_no', poNo);
+        await supabase.from('purchase_master').delete().eq('po_no', poNo);
+        await supabase.from('material_mismatch').delete().ilike('po_no', `%${poNo}%`);
+        await supabase.from('satta_mismatch').delete().ilike('po_no', `%${poNo}%`);
       }
       await dbModule.delete(MASTER_TABLE, 'po_no', poNo);
-      // Extra cleanup just in case it's in purchase_master when temp or vice versa
       await dbModule.delete('purchase_master', 'po_no', poNo).catch(() => {});
+      await dbModule.delete('sauda_check_point', 'po_no', poNo).catch(() => {});
       await dbModule.delete('p.o_archive', 'po_no', poNo).catch(() => {});
 
+      // Clear local resolution caches
+      const tokens = [poNo, poNo.split('/').pop() || ''].filter(Boolean);
+      tokens.forEach(t => {
+        const tu = t.toUpperCase();
+        localStorage.removeItem(`material_resolved_${tu}`);
+        localStorage.removeItem(`mismatch_resolved_${tu}`);
+        localStorage.removeItem(`mismatch_cleared_${tu}`);
+        localStorage.removeItem(`satta_resolved_${tu}`);
+      });
+
+      // Update state immediately so record disappears from list
+      setPoList(prev => prev.filter(p => String(p.po_no).trim().toUpperCase() !== String(poNo).trim().toUpperCase()));
+
+      // If active form is showing this record, reset it so it disappears from detail page
+      const curNo = String(formData.no || formData.ptf_no || '').trim().toUpperCase();
+      if (curNo === String(poNo).trim().toUpperCase()) {
+        handleGlobalAdd();
+        setSelectedPoNo(null);
+      }
+
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
       alert(`Purchase Order ${poNo} deleted permanently.`);
       await fetchPosAndMasters();
     } catch (err: any) {
@@ -5099,9 +5128,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  const showShortOrExcess = (tol.isOverDelivery || tol.isUnderDelivery) && !tol.isCompleted && !tol.isAcceptable;
 
                                  if (item.is_closed) {
+                                   const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
+                                   const isMismatch = !isResolved && (
+                                     stage === "mismatch" || 
+                                     (item.mismatch_fields && item.mismatch_fields.length > 0) || 
+                                     (mr && mr.hasInspection && mr.status === "mismatch") || 
+                                     Boolean(item.has_mismatch) ||
+                                     Boolean(item.mismatch_status && item.mismatch_status !== "resolved")
+                                   );
+
                                    return (
                                      <div className="flex flex-col items-center gap-1">
-                                       <div className="flex items-center gap-1">
+                                       <div className="flex items-center gap-1 flex-wrap justify-center">
                                          <span 
                                            className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
                                             title={`Sauda is CLOSED: ${item.received_lorries ?? 0} of ${item.contract_lorries || 1} Lorries Received (${Number(item.received_weight_mt || 0).toFixed(3)} MT of ${contract.toFixed(3)} MT).`}
@@ -5109,7 +5147,21 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                            <Lock className="w-2.5 h-2.5 text-amber-400" />
                                             <span>CLOSED ({item.received_lorries ?? 0}/{item.contract_lorries || 1} Lorry)</span>
                                          </span>
+                                         {isMismatch && (
+                                           <span 
+                                             className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs flex items-center gap-1 whitespace-nowrap animate-pulse"
+                                             title="Sauda is Closed but has an unresolved Material Mismatch"
+                                           >
+                                             <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                                             <span>MISMATCH</span>
+                                           </span>
+                                         )}
                                        </div>
+                                       {isMismatch && (
+                                         <span className="text-[8.5px] font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 shadow-2xs whitespace-nowrap">
+                                           Closed – Mismatch
+                                         </span>
+                                       )}
 
                                        {showShortOrExcess && (
                                          <button 
@@ -6662,14 +6714,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                 <div className="border-t border-slate-100 my-0.5" />
                 <button 
                   onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} 
-                  disabled={actionMenu.item.is_closed}
+                  disabled={actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin()}
                   className={cn(
                     "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
-                    actionMenu.item.is_closed 
+                    actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin()
                       ? "text-slate-400 opacity-50 cursor-not-allowed"
                       : "hover:bg-rose-50/70 text-rose-600"
                   )}
-                  title={actionMenu.item.is_closed ? "Closed Saudas cannot be deleted" : "Delete Sauda"}
+                  title={actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin() ? "Closed Saudas can only be deleted by Admin" : "Delete Sauda"}
                 >
                   <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
                   <span>Delete</span>

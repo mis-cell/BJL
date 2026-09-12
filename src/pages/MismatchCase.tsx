@@ -10,7 +10,8 @@ import {
   Check, 
   FileSpreadsheet, 
   RefreshCw,
-  Info
+  Info,
+  Lock
 } from 'lucide-react';
 import { cn, canApproveMismatch } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
@@ -169,6 +170,7 @@ export interface MaterialMismatchItem {
   issueDescription: string;
   severity: 'low' | 'medium' | 'high';
   status: 'pending' | 'resolved';
+  isClosed?: boolean;
   resolutionNotes?: string;
   resolvedAt?: string;
   resolvedBy?: string;
@@ -420,6 +422,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             issueDescription: `Mismatched fields detected: ${mismatchedLabels.join(', ')}.`,
             severity: matchRes.mismatches.some(m => m.field.includes('Weight') || m.field.includes('Rate')) ? 'high' : 'medium',
             status: isCleared ? 'resolved' : 'pending',
+            isClosed: Boolean(po.is_closed),
             resolutionNotes: (dbMm && dbMm.remarks) || po.mismatch_remarks || undefined,
             resolvedBy: (dbMm && dbMm.approved_by) || po.approved_by || (isCleared ? 'L3/L5 User' : undefined),
             resolvedAt: (dbMm && dbMm.approved_at) ? String(dbMm.approved_at).split('T')[0] : (po.approved_at ? String(po.approved_at).split('T')[0] : (isCleared ? new Date().toISOString().split('T')[0] : undefined)),
@@ -454,6 +457,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             issueDescription: r.issue_description || `Mismatched fields: ${labels.join(', ')}.`,
             severity: (r.severity as any) || 'medium',
             status: r.status === 'resolved' ? 'resolved' : 'pending',
+            isClosed: Boolean(poMap.get(poNo)?.is_closed || r.is_closed),
             resolutionNotes: r.remarks,
             resolvedBy: r.approved_by,
             resolvedAt: r.approved_at ? String(r.approved_at).split('T')[0] : undefined,
@@ -792,29 +796,40 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   }, []);
 
   const handleResolve = async (itemId: string, itemPoNo: string) => {
-    const remarks = remarksMap[itemId] || '';
-    if (!remarks.trim()) {
-      alert("Mandatory approval remarks required for L3/L5 clearance.");
-      return;
-    }
+    const rawRemarks = remarksMap[itemId] || '';
+    const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';
 
     const ctx = getCurrentUserContext();
-    const username = ctx.username || 'L3/L5 User';
-    const approvalLevel = (ctx.userLevel || ctx.userRole || 'L3/L5').toUpperCase();
+    const username = ctx.username || ctx.userName || 'Administrator';
+    const approvalLevel = (ctx.userLevel || ctx.userRole || 'ADMIN').toUpperCase();
     const nowIso = new Date().toISOString();
 
     const targetItem = mismatchList.find(i => i.id === itemId || i.poNo === itemPoNo);
 
     // Save resolution in localStorage immediately for resilient offline/local caching
-    const poTokens = [itemPoNo, itemPoNo.split('/').pop() || '', itemPoNo.replace(/^BJCL\//i, ''), itemId].filter(Boolean);
+    const poTokens = [
+      itemPoNo,
+      itemPoNo.split('/').pop() || '',
+      itemPoNo.replace(/^BJCL\//i, ''),
+      itemPoNo.replace(/^BJC\//i, ''),
+      itemId,
+      itemId.replace(/^MIS-/i, '')
+    ].filter(Boolean);
+
     poTokens.forEach(token => {
       try {
-        localStorage.setItem(`material_resolved_${token.toUpperCase()}`, JSON.stringify({
+        const tu = token.toUpperCase();
+        const payload = JSON.stringify({
           resolvedBy: username,
           resolvedAt: nowIso,
           approvalLevel,
           remarks: remarks.trim(),
-        }));
+          status: 'resolved'
+        });
+        localStorage.setItem(`material_resolved_${tu}`, payload);
+        localStorage.setItem(`mismatch_resolved_${tu}`, payload);
+        localStorage.setItem(`mismatch_cleared_${tu}`, 'true');
+        localStorage.setItem(`pass_status_${tu}`, 'pass');
       } catch (e) {}
     });
 
@@ -854,10 +869,11 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     if (supabase) {
       try {
         // First check existing rows using select('*') which never fails
+        const searchSuffix = itemPoNo.split('/').pop() || itemPoNo;
         const { data: existingRows } = await supabase
           .from('material_mismatch')
           .select('*')
-          .ilike('po_no', `%${itemPoNo.split('/').pop() || itemPoNo}%`);
+          .or(`po_no.ilike.%${searchSuffix}%,mismatch_id.ilike.%${searchSuffix}%`);
 
         if (existingRows && existingRows.length > 0) {
           const rowId = existingRows[0].id;
@@ -880,6 +896,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         try {
           await supabase.from('sauda_check_point').update({
             mismatch_cleared: true,
+            pass_status: 'pass',
             mismatch_remarks: remarks.trim(),
             approved_by: username,
             approved_at: nowIso,
@@ -890,6 +907,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         try {
           await supabase.from('purchase_master').update({
             mismatch_cleared: true,
+            pass_status: 'pass',
             mismatch_remarks: remarks.trim(),
             approved_by: username,
             approved_at: nowIso,
@@ -939,15 +957,12 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   };
 
   const handleResolveSatta = async (itemId: string, itemPoNo: string) => {
-    const remarks = remarksMap[itemId] || '';
-    if (!remarks.trim()) {
-      alert("Mandatory approval remarks required for L3/L5 price dispute clearance.");
-      return;
-    }
+    const rawRemarks = remarksMap[itemId] || '';
+    const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';
 
     const ctx = getCurrentUserContext();
-    const username = ctx.username || 'L3/L5 User';
-    const approvalLevel = (ctx.userLevel || ctx.userRole || 'L3/L5').toUpperCase();
+    const username = ctx.username || ctx.userName || 'Administrator';
+    const approvalLevel = (ctx.userLevel || ctx.userRole || 'ADMIN').toUpperCase();
     const nowIso = new Date().toISOString();
 
     const targetItem = sattaMismatchList.find(i => i.id === itemId || i.poNo === itemPoNo || i.saudaNo === itemPoNo);
@@ -958,17 +973,23 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
       targetItem?.saudaNo, 
       itemPoNo.split('/').pop() || '', 
       (targetItem?.saudaNo || '').split('/').pop() || '',
+      itemPoNo.replace(/^BJCL\//i, ''),
+      (targetItem?.saudaNo || '').replace(/^BJCL\//i, ''),
       itemId
     ].filter(Boolean);
 
     saudaTokens.forEach(token => {
       try {
-        localStorage.setItem(`satta_resolved_${String(token).toUpperCase()}`, JSON.stringify({
+        const payload = JSON.stringify({
           resolvedBy: username,
           resolvedAt: nowIso,
           approvalLevel,
           remarks: remarks.trim(),
-        }));
+          status: 'resolved'
+        });
+        localStorage.setItem(`satta_resolved_${String(token).toUpperCase()}`, payload);
+        localStorage.setItem(`mismatch_resolved_${String(token).toUpperCase()}`, payload);
+        localStorage.setItem(`mismatch_cleared_${String(token).toUpperCase()}`, 'true');
       } catch (e) {}
     });
 
@@ -1368,7 +1389,15 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                         <tr key={item.id} className="hover:bg-slate-50/80 transition align-top">
                           {/* PO Number & Date */}
                           <td className="p-3 border-r border-slate-200 font-mono">
-                            <div className="font-extrabold text-slate-900 text-sm">{item.poNo}</div>
+                            <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                              <span>{item.poNo}</span>
+                              {item.isClosed && (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5 text-amber-400" />
+                                  CLOSED
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
                               Detected: {item.detectedAt}
                             </div>
@@ -1453,10 +1482,17 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                                 Cleared / Approved
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                                <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
-                                Pending Approval
-                              </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 border border-rose-300 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                                  <AlertTriangle className="h-3.5 w-3.5 text-rose-700" />
+                                  {item.isClosed ? 'Closed – Mismatch' : 'Pending Approval'}
+                                </span>
+                                {item.isClosed && (
+                                  <span className="text-[8.5px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                                    P.O Closed
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </td>
 

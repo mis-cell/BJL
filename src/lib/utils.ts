@@ -101,7 +101,7 @@ export function sanitizeCsvData(data: any[]): any[] {
   });
 }
 
-import { getCurrentUserContext } from './permissions';
+import { getCurrentUserContext, isUserAdmin } from './permissions';
 
 /**
  * Formats a number to Indian Accounting Number Format (Lakh / Crore system: 1,00,000 / 1,00,00,000).
@@ -183,21 +183,29 @@ export function calculate93PctPaidAmount(payableAmt: number | string | null | un
 
 export function canDeleteData(): boolean {
   const ctx = getCurrentUserContext();
-  return (ctx.userRole || '').toUpperCase() === 'ADMIN';
+  if (isUserAdmin(ctx)) return true;
+  const role = (ctx?.userRole || (ctx as any)?.role || '').toUpperCase();
+  const level = (ctx?.userLevel || (ctx as any)?.level || '').toUpperCase();
+  return role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'MAX' || Boolean((ctx as any)?.isAdmin);
 }
 
 export function canApproveMismatch(): boolean {
   const ctx = getCurrentUserContext();
-  const role = (ctx.userRole || '').toUpperCase();
-  const level = (ctx.userLevel || '').toUpperCase();
+  if (isUserAdmin(ctx)) return true;
+  const role = (ctx?.userRole || (ctx as any)?.role || '').toUpperCase();
+  const level = (ctx?.userLevel || (ctx as any)?.level || '').toUpperCase();
+  const username = (ctx?.username || ctx?.userName || '').toUpperCase();
   return (
     role === 'ADMIN' ||
     role === 'ADMINISTRATOR' ||
+    username === 'ADMIN' ||
     level === 'L3' ||
+    level === 'L4' ||
     level === 'L5' ||
     level === 'MAX' ||
     level === 'ADMIN' ||
-    level === 'ADMINISTRATOR'
+    level === 'ADMINISTRATOR' ||
+    Boolean((ctx as any)?.isAdmin)
   );
 }
 
