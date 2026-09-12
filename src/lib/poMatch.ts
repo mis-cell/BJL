@@ -67,6 +67,10 @@ const AGENCY_CODE_NAME_MAP: Record<string, string> = {
   '6': 'GAUHATI', 'GAUHATI': '6',
   '7': 'KISHANGANJ', 'KISHANGANJ': '7',
   '8': 'SILIGURI', 'SILIGURI': '8',
+  '22': 'PURNIA', 'PURNIA': '22', 'PURNEA': '22',
+  '30': 'DAISEE', 'DAISEE': '30',
+  '64': 'KARIMPUR', 'KARIMPUR': '64',
+  '78': 'NABADWIP', 'NABADWIP': '78',
 };
 
 /**
@@ -125,7 +129,7 @@ export function splitTokens(input: any): string[] {
 /**
  * Expand and normalize grade tokens into standardized key representations
  */
-export function expandGradeTokens(input: any): Set<string> {
+export function expandGradeTokens(input: any, customMap?: Record<string, string>): Set<string> {
   const tokens = new Set<string>();
   if (!input) return tokens;
 
@@ -138,9 +142,15 @@ export function expandGradeTokens(input: any): Set<string> {
       if (GRADE_CODE_NAME_MAP[c]) {
         tokens.add(cleanStr(GRADE_CODE_NAME_MAP[c]));
       }
+      if (customMap && customMap[c]) {
+        tokens.add(cleanStr(customMap[c]));
+      }
       const u = str.toUpperCase().replace(/\s+/g, '');
       if (GRADE_CODE_NAME_MAP[u]) {
         tokens.add(cleanStr(GRADE_CODE_NAME_MAP[u]));
+      }
+      if (customMap && customMap[u]) {
+        tokens.add(cleanStr(customMap[u]));
       }
     }
   }
@@ -150,7 +160,7 @@ export function expandGradeTokens(input: any): Set<string> {
 /**
  * Expand and normalize agency tokens
  */
-export function expandAgencyTokens(input: any): Set<string> {
+export function expandAgencyTokens(input: any, customMap?: Record<string, string>): Set<string> {
   const tokens = new Set<string>();
   if (!input) return tokens;
 
@@ -163,9 +173,15 @@ export function expandAgencyTokens(input: any): Set<string> {
       if (AGENCY_CODE_NAME_MAP[c]) {
         tokens.add(cleanStr(AGENCY_CODE_NAME_MAP[c]));
       }
+      if (customMap && customMap[c]) {
+        tokens.add(cleanStr(customMap[c]));
+      }
       const u = str.toUpperCase().replace(/\s+/g, '');
       if (AGENCY_CODE_NAME_MAP[u]) {
         tokens.add(cleanStr(AGENCY_CODE_NAME_MAP[u]));
+      }
+      if (customMap && customMap[u]) {
+        tokens.add(cleanStr(customMap[u]));
       }
     }
   }
@@ -332,13 +348,29 @@ export function compareSaudaTempArrival(
   // ==========================================
   // 5. GRADE (Multiple-Value Match: Sauda is approved set)
   // ==========================================
+  const dynamicGradeMap: Record<string, string> = {};
+  const registerGradePair = (codeVal: any, nameVal: any) => {
+    if (!codeVal || !nameVal) return;
+    const cStr = String(codeVal).trim().toUpperCase();
+    const nStr = String(nameVal).trim().toUpperCase();
+    if (cStr && nStr && cStr !== nStr) {
+      dynamicGradeMap[cleanStr(cStr)] = cleanStr(nStr);
+      dynamicGradeMap[cleanStr(nStr)] = cleanStr(cStr);
+    }
+  };
+
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => registerGradePair(d?.grade_code, d?.grade_name || d?.grade));
+  }
+  arrivalGridRows.forEach(g => registerGradePair(g?.receipt_grade_code || g?.challan_grade_code, g?.receipt_grade_name || g?.challan_grade_name || g?.grade));
+
   const rawSaudaGrades: any[] = [sauda.grade, sauda.quality, sauda.grade_name, sauda.grade_code];
   if (Array.isArray(saudaDetails)) {
     saudaDetails.forEach(d => {
       rawSaudaGrades.push(d?.grade_name, d?.quality, d?.grade, d?.grade_code, d?.stock_grade_name);
     });
   }
-  const saudaGradeTokens = expandGradeTokens(rawSaudaGrades);
+  const saudaGradeTokens = expandGradeTokens(rawSaudaGrades, dynamicGradeMap);
 
   const rawArrivalGrades: any[] = [
     arrival.challan_grade,
@@ -356,26 +388,49 @@ export function compareSaudaTempArrival(
 
   if (saudaGradeTokens.size > 0 && arrivalGradeList.length > 0) {
     const unapprovedGrades: string[] = [];
-    arrivalGradeList.forEach(arrGrade => {
-      const gTokens = expandGradeTokens(arrGrade);
+    
+    // Group by row entry
+    const arrivalGradeEntries: any[] = [];
+    arrivalGridRows.forEach(g => {
+      arrivalGradeEntries.push([g?.challan_grade_name, g?.receipt_grade_name, g?.grade, g?.quality, g?.grade_name, g?.receipt_grade_code].filter(Boolean));
+    });
+    if (arrivalGradeEntries.length === 0) {
+      arrivalGradeEntries.push(rawArrivalGrades.filter(Boolean));
+    }
+
+    arrivalGradeEntries.forEach(entry => {
+      if (!entry || entry.length === 0) return;
+      const entryTokens = expandGradeTokens(entry, dynamicGradeMap);
       let isMatch = false;
-      gTokens.forEach(t => {
+      entryTokens.forEach(t => {
         if (saudaGradeTokens.has(t)) isMatch = true;
       });
-      if (!isMatch && arrGrade.trim()) {
-        unapprovedGrades.push(arrGrade.trim());
+      if (!isMatch) {
+        const displayLabel = entry.join(', ');
+        if (displayLabel && !unapprovedGrades.includes(displayLabel)) {
+          unapprovedGrades.push(displayLabel);
+        }
       }
     });
 
-    if (unapprovedGrades.length > 0) {
+    const trueUnapprovedGrades = unapprovedGrades.filter(unApprovedStr => {
+      const tokens = expandGradeTokens(unApprovedStr, dynamicGradeMap);
+      let matched = false;
+      tokens.forEach(t => {
+        if (saudaGradeTokens.has(t)) matched = true;
+      });
+      return !matched;
+    });
+
+    if (trueUnapprovedGrades.length > 0) {
       const approvedDisplay = splitTokens(rawSaudaGrades).join(', ') || Array.from(saudaGradeTokens).join(', ');
       const arrivalDisplay = arrivalGradeList.join(', ');
       mismatches.push({
         field: 'Grade',
-        mismatchLabel: `Grade Mismatch: ${unapprovedGrades.join(', ')} not approved (Approved: ${approvedDisplay})`,
+        mismatchLabel: `Grade Mismatch: ${trueUnapprovedGrades.join(', ')} not approved (Approved: ${approvedDisplay})`,
         poValue: approvedDisplay,
         inspValue: arrivalDisplay,
-        unapprovedValues: unapprovedGrades,
+        unapprovedValues: trueUnapprovedGrades,
       });
     }
   }
@@ -383,11 +438,36 @@ export function compareSaudaTempArrival(
   // ==========================================
   // 6. AGENCY (Multiple-Value Match: Sauda is approved set)
   // ==========================================
+  const dynamicAgencyMap: Record<string, string> = {};
+  
+  const registerAgencyPair = (codeVal: any, nameVal: any) => {
+    if (!codeVal || !nameVal) return;
+    const cStr = String(codeVal).trim().toUpperCase();
+    const nStr = String(nameVal).trim().toUpperCase();
+    if (cStr && nStr && cStr !== nStr) {
+      dynamicAgencyMap[cleanStr(cStr)] = cleanStr(nStr);
+      dynamicAgencyMap[cleanStr(nStr)] = cleanStr(cStr);
+    }
+  };
+
+  // Register pairs from sauda and details
+  registerAgencyPair(sauda.agency_code || sauda.agency, sauda.agency_name);
+  if (Array.isArray(saudaDetails)) {
+    saudaDetails.forEach(d => {
+      registerAgencyPair(d?.agency_code || d?.agency, d?.agency_name);
+    });
+  }
+  // Register pairs from arrival and grid
+  registerAgencyPair(arrival.agency_code || arrival.agency, arrival.agency_name);
+  arrivalGridRows.forEach(g => {
+    registerAgencyPair(g?.agency_code || g?.agency, g?.agency_name);
+  });
+
   const rawSaudaAgencies: any[] = [sauda.agency, sauda.agency_name, sauda.agency_code];
   if (Array.isArray(saudaDetails)) {
     saudaDetails.forEach(d => rawSaudaAgencies.push(d?.agency_name, d?.agency_code, d?.agency));
   }
-  const saudaAgencyTokens = expandAgencyTokens(rawSaudaAgencies);
+  const saudaAgencyTokens = expandAgencyTokens(rawSaudaAgencies, dynamicAgencyMap);
 
   const rawArrivalAgencies: any[] = [arrival.agency, arrival.agency_name, arrival.agency_code];
   arrivalGridRows.forEach(g => rawArrivalAgencies.push(g?.agency_name, g?.agency_code, g?.agency));
@@ -395,26 +475,50 @@ export function compareSaudaTempArrival(
 
   if (saudaAgencyTokens.size > 0 && arrivalAgencyList.length > 0) {
     const unapprovedAgencies: string[] = [];
-    arrivalAgencyList.forEach(arrAgency => {
-      const aTokens = expandAgencyTokens(arrAgency);
+    
+    // Group arrival agencies by row entry
+    const arrivalAgencyEntries: any[] = [];
+    arrivalGridRows.forEach(g => {
+      arrivalAgencyEntries.push([g?.agency, g?.agency_name, g?.agency_code].filter(Boolean));
+    });
+    if (arrivalAgencyEntries.length === 0) {
+      arrivalAgencyEntries.push([arrival.agency, arrival.agency_name, arrival.agency_code].filter(Boolean));
+    }
+
+    arrivalAgencyEntries.forEach(entry => {
+      if (!entry || entry.length === 0) return;
+      const entryTokens = expandAgencyTokens(entry, dynamicAgencyMap);
       let isMatch = false;
-      aTokens.forEach(t => {
+      entryTokens.forEach(t => {
         if (saudaAgencyTokens.has(t)) isMatch = true;
       });
-      if (!isMatch && arrAgency.trim()) {
-        unapprovedAgencies.push(arrAgency.trim());
+      if (!isMatch) {
+        const displayLabel = entry.join(', ');
+        if (displayLabel && !unapprovedAgencies.includes(displayLabel)) {
+          unapprovedAgencies.push(displayLabel);
+        }
       }
     });
 
-    if (unapprovedAgencies.length > 0) {
+    // Double check that any reported unapproved agency doesn't intersect with saudaAgencyTokens
+    const trueUnapprovedAgencies = unapprovedAgencies.filter(unApprovedStr => {
+      const tokens = expandAgencyTokens(unApprovedStr, dynamicAgencyMap);
+      let matched = false;
+      tokens.forEach(t => {
+        if (saudaAgencyTokens.has(t)) matched = true;
+      });
+      return !matched;
+    });
+
+    if (trueUnapprovedAgencies.length > 0) {
       const approvedDisplay = splitTokens(rawSaudaAgencies).join(', ') || Array.from(saudaAgencyTokens).join(', ');
       const arrivalDisplay = arrivalAgencyList.join(', ');
       mismatches.push({
         field: 'Agency',
-        mismatchLabel: `Agency Mismatch: ${unapprovedAgencies.join(', ')} not matching (Approved: ${approvedDisplay})`,
+        mismatchLabel: `Agency Mismatch: ${trueUnapprovedAgencies.join(', ')} not matching (Approved: ${approvedDisplay})`,
         poValue: approvedDisplay,
         inspValue: arrivalDisplay,
-        unapprovedValues: unapprovedAgencies,
+        unapprovedValues: trueUnapprovedAgencies,
       });
     }
   }
