@@ -866,130 +866,13 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           </div>
 
-          {/* SECTION 2: EFFECTIVE SATTA RATE SCHEDULE & APPLICABLE RATE SELECTION */}
-          <div className="bg-slate-900 text-white p-3 rounded-lg border border-slate-800 space-y-2.5 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
-              <div className="flex items-center gap-2">
-                <Calculator className="w-4 h-4 text-amber-400 shrink-0" />
-                <div>
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-100 block">
-                    2. Effective Base Rate Schedule &amp; Applicable Deduction Rate
-                  </span>
-                  <span className="text-[9.5px] text-slate-400 font-mono">
-                    Sauda Date ({formatDisplayDate(saudaDate)}) vs Last Temp Arrival Date ({formatDisplayDate(lastArrivalDate)})
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 font-mono shrink-0">
-                <div className="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded text-right">
-                  <span className="text-[8.5px] text-slate-400 block uppercase">Sauda Base Rate</span>
-                  <span className="text-xs font-black text-amber-300">₹{saudaBaseRate.toLocaleString()} / Qtl</span>
-                </div>
-
-                <span className="text-slate-500 font-bold">vs</span>
-
-                <div className="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded text-right">
-                  <span className="text-[8.5px] text-slate-400 block uppercase">Last Temp Arrival Rate</span>
-                  <span className="text-xs font-black text-emerald-400">₹{arrivalBaseRate.toLocaleString()} / Qtl</span>
-                </div>
-
-                <div className="bg-amber-950 border border-amber-500/60 px-2.5 py-1 rounded text-right">
-                  <span className="text-[8.5px] text-amber-300 block uppercase">Rate Diff |Arrival - Sauda|</span>
-                  <span className="text-xs font-black text-amber-200">₹{rateDifference.toLocaleString()} / Qtl</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Applicable Satta Rate Used For Deduction */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wide">
-                  Applicable Rate Used for Deduction:
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={isSettled}
-                    onClick={() => setSelectedRateMode('rate_difference')}
-                    className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer disabled:cursor-not-allowed",
-                      selectedRateMode === 'rate_difference' 
-                        ? "bg-amber-400 text-slate-950 font-black shadow-xs" 
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    )}
-                  >
-                    Rate Diff (₹{rateDifference}/Qtl)
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isSettled}
-                    onClick={() => setSelectedRateMode('last_arrival_satta')}
-                    className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer disabled:cursor-not-allowed",
-                      selectedRateMode === 'last_arrival_satta' 
-                        ? "bg-emerald-400 text-slate-950 font-black shadow-xs" 
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    )}
-                  >
-                    Last Temp Arrival Rate (₹{arrivalBaseRate}/Qtl)
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isSettled}
-                    onClick={() => setSelectedRateMode('sauda_satta')}
-                    className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer disabled:cursor-not-allowed",
-                      selectedRateMode === 'sauda_satta' 
-                        ? "bg-indigo-400 text-slate-950 font-black shadow-xs" 
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    )}
-                  >
-                    Sauda Rate (₹{saudaBaseRate}/Qtl)
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isSettled}
-                    onClick={() => setSelectedRateMode('custom')}
-                    className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer disabled:cursor-not-allowed",
-                      selectedRateMode === 'custom' 
-                        ? "bg-white text-slate-950 font-black shadow-xs" 
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    )}
-                  >
-                    Custom ₹/Qtl
-                  </button>
-
-                  {selectedRateMode === 'custom' && (
-                    <input
-                      type="number"
-                      disabled={isSettled}
-                      value={customRateInput || ''}
-                      onChange={(e) => setCustomRateInput(Math.max(0, Number(e.target.value)))}
-                      placeholder="₹/Qtl"
-                      className="w-20 px-2 py-0.5 text-[11px] font-mono font-bold bg-slate-800 border border-slate-600 rounded text-white"
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="text-right font-mono text-[11px] text-amber-300">
-                <span>Active Rate: <strong>₹{applicableRate.toLocaleString()} / Quintal</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: TEMPORARY M.R DETAILS & GRADE BREAKDOWN TABLE */}
+          {/* SECTION 2: TEMPORARY M.R DETAILS & GRADE BREAKDOWN TABLE */}
           <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
               <div className="flex items-center gap-1.5">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                 <span className="font-black uppercase tracking-wider text-[10.5px] text-slate-800">
-                  3. Temporary M.R Details &amp; Grade Breakdown
+                  2. Temporary M.R Details &amp; Grade Breakdown
                 </span>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-slate-600">
@@ -1043,91 +926,42 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           </div>
 
-          {/* SECTION 4: STEP-BY-STEP CALCULATION FORMULA & DEDUCTION STRIP */}
-          <div className="bg-white p-3 rounded-lg border border-amber-300 shadow-2xs space-y-2.5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-              <span className="font-black uppercase text-[10.5px] text-slate-800 flex items-center gap-1.5">
-                <Calculator className="w-3.5 h-3.5 text-amber-600" />
-                4. Mandatory Deduction Calculation Formula &amp; Audit Breakdown
-              </span>
-              <span className="text-[9.5px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                Deductible Quantity × Applicable Rate = Total Deduction
-              </span>
-            </div>
-
-            {/* Step-by-Step Mathematical Trace */}
-            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono text-[10px] space-y-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <p>1. <strong>Sauda Quantity:</strong> {saudaQtyQtl.toFixed(2)} Quintal ({contractMt.toFixed(3)} MT)</p>
-                  <p>2. <strong>Total Received Quantity:</strong> {totalReceivedQtl.toFixed(2)} Quintal ({totalReceivedMt.toFixed(3)} MT)</p>
-                  <p>3. <strong>Receipt Difference:</strong> {totalReceivedQtl.toFixed(2)} Qtl − {saudaQtyQtl.toFixed(2)} Qtl = <strong className={isExcess ? 'text-purple-700' : 'text-amber-700'}>{diffQtl > 0 ? `+${diffQtl.toFixed(2)}` : diffQtl.toFixed(2)} Quintal ({isExcess ? 'Excess' : (isShort ? 'Short' : 'Equal')})</strong></p>
-                </div>
-                <div>
-                  <p>4. <strong>Allowed Tolerance:</strong> Lower of (3% = {(saudaQtyQtl * 0.03).toFixed(2)} Qtl or 15 Qtl) = <strong className="text-indigo-700">{tolerance.toleranceQtl.toFixed(2)} Quintal ({tolerance.toleranceMt.toFixed(3)} MT)</strong></p>
-                  <p>5. <strong>Deductible Quantity:</strong> {isWithinTolerance ? 'Within tolerance bounds = 0.00 Quintal' : `Excess/Short Diff (${absDiffQtl.toFixed(2)} Qtl) − Allowed Tolerance (${tolerance.toleranceQtl.toFixed(2)} Qtl) = ${deductibleQtyQtl.toFixed(2)} Quintal`}</p>
-                  <p>6. <strong>Applicable Rate:</strong> ₹{applicableRate.toLocaleString()} / Quintal ({applicableRateLabel})</p>
-                </div>
-              </div>
-            </div>
-
-            {/* High-Contrast Bottom Strip (Deductible Quantity × Applicable Rate = Total Deduction) */}
-            <div className="bg-slate-950 text-white p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div>
-                <span className="text-[9px] font-bold uppercase text-amber-400 block tracking-wider">
-                  {isWithinTolerance 
-                    ? 'Within Tolerance – No Deduction (₹0.00)' 
-                    : (isExcess ? 'Total Excess Weight Deduction Amount' : 'Total Short Weight Deduction Amount')}
-                </span>
-                
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xl sm:text-2xl font-black font-mono text-white">
-                    ₹ {totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className={cn(
-                    "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight",
-                    isWithinTolerance ? "bg-emerald-600 text-white" : (isExcess ? "bg-purple-600 text-white" : "bg-amber-600 text-white")
-                  )}>
-                    {policyStatusText}
-                  </span>
-                </div>
-
-                <div className="text-[10px] text-amber-200 font-mono mt-0.5">
-                  Calculation: <strong>{deductibleQtyQtl.toFixed(2)} Quintal</strong> × <strong>₹{applicableRate.toLocaleString()} / Quintal</strong> = <strong>₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-                </div>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-lg text-right font-mono min-w-[210px]">
-                <span className="text-[8.5px] font-bold uppercase text-slate-400 block">
-                  Total Final Payable
-                </span>
-                <span className="text-lg font-black text-emerald-400 block">
-                  ₹ {totalFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span className="text-[9px] text-slate-400">
-                  Sauda Material Value: ₹{existingSaudaAmount.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Remarks */}
+          {/* DEDUCTION SUMMARY STRIP */}
+          <div className="bg-slate-950 text-white p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
             <div>
-              <label className="text-[9.5px] font-bold uppercase text-slate-500 block mb-0.5">
-                Settlement Remarks / Audit Notes:
-              </label>
-              {isSettled ? (
-                <p className="text-xs bg-slate-50 p-2 rounded border border-slate-200 font-mono text-slate-800">
-                  {remarks || `${policyStatusText}: Deductible ${deductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl = ₹${totalCalculatedAmount}.`}
-                </p>
-              ) : (
-                <input
-                  type="text"
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder={`Settling ${deductibleQtyQtl.toFixed(2)} Quintal at ₹${applicableRate}/Qtl (${policyStatusText}).`}
-                  className="w-full px-2.5 py-1.5 text-xs border rounded border-slate-300 font-medium focus:ring-1 focus:ring-indigo-500"
-                />
-              )}
+              <span className="text-[9px] font-bold uppercase text-amber-400 block tracking-wider">
+                {isWithinTolerance 
+                  ? 'Within Tolerance – No Deduction (₹0.00)' 
+                  : (isExcess ? 'Total Excess Weight Deduction Amount' : 'Total Short Weight Deduction Amount')}
+              </span>
+              
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xl sm:text-2xl font-black font-mono text-white">
+                  ₹ {totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tight",
+                  isWithinTolerance ? "bg-emerald-600 text-white" : (isExcess ? "bg-purple-600 text-white" : "bg-amber-600 text-white")
+                )}>
+                  {policyStatusText}
+                </span>
+              </div>
+
+              <div className="text-[10px] text-amber-200 font-mono mt-0.5">
+                Calculation: <strong>{deductibleQtyQtl.toFixed(2)} Quintal</strong> × <strong>₹{applicableRate.toLocaleString()} / Quintal</strong> = <strong>₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 px-3.5 py-2 rounded-lg text-right font-mono min-w-[210px]">
+              <span className="text-[8.5px] font-bold uppercase text-slate-400 block">
+                Total Final Payable
+              </span>
+              <span className="text-lg font-black text-emerald-400 block">
+                ₹ {totalFinalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] text-slate-400">
+                Sauda Material Value: ₹{existingSaudaAmount.toLocaleString()}
+              </span>
             </div>
           </div>
 
