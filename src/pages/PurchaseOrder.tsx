@@ -5659,7 +5659,20 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                       item.pass_status === 'mismatch'
                                     );
 
-                                    const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved || (!isMismatch && !isFinalized);
+                                    const hasTempArrivalData = Boolean(
+                                      (mr && mr.hasInspection) ||
+                                      (item.received_weight_mt && Number(item.received_weight_mt) > 0) ||
+                                      (item.received_lorries && Number(item.received_lorries) > 0) ||
+                                      item.has_arrival ||
+                                      item.has_temp_arrival
+                                    );
+
+                                    const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved || (!isMismatch && !isFinalized && hasTempArrivalData);
+
+                                    // If Temporary Arrival has NO data (Material not received yet), show blank
+                                    if (!hasTempArrivalData && !isFinalized && item.pass_status !== 'pass' && stage !== 'final_po' && !isResolved) {
+                                      return <span className="text-slate-300 font-semibold text-xs">-</span>;
+                                    }
 
                                     if (isFinalized) {
                                       return (

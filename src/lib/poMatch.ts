@@ -73,6 +73,20 @@ const AGENCY_CODE_NAME_MAP: Record<string, string> = {
   '78': 'NABADWIP', 'NABADWIP': '78',
 };
 
+// Area Code <-> Area Name mapping dictionary
+const AREA_CODE_NAME_MAP: Record<string, string> = {
+  '10': 'BIHAR', 'BIHAR': '10',
+  '15': 'ASSAM', 'ASSAM': '15',
+  '12': 'WEST BENGAL', 'WEST BENGAL': '12',
+  '22': 'PURNIA', 'PURNIA': '22', 'PURNEA': '22',
+  '30': 'DAISEE', 'DAISEE': '30',
+  '64': 'KARIMPUR', 'KARIMPUR': '64',
+  '78': 'NABADWIP', 'NABADWIP': '78',
+  '6': 'GAUHATI', 'GAUHATI': '6',
+  '7': 'KISHANGANJ', 'KISHANGANJ': '7',
+  '8': 'SILIGURI', 'SILIGURI': '8',
+};
+
 /**
  * Normalize string for exact matching (trim leading/trailing spaces, collapse multiple spaces, case-insensitive)
  */
@@ -82,6 +96,20 @@ export function normalizeExact(v: unknown): string {
     .trim()
     .replace(/\s+/g, ' ')
     .toUpperCase();
+}
+
+/**
+ * Normalize Company / Party Name (e.g. HARIHAR TRADES PVT.LTD. -> HARIHAR TRADES PVT LTD)
+ */
+export function normalizeCompanyName(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  let str = String(v).toUpperCase().trim();
+  str = str.replace(/PRIVATE\s+LIMITED/g, 'PVT LTD');
+  str = str.replace(/PVT\.?\s*LTD\.?/g, 'PVT LTD');
+  str = str.replace(/LIMITED/g, 'LTD');
+  str = str.replace(/LTD\.?/g, 'LTD');
+  str = str.replace(/[^A-Z0-9\s]/g, '');
+  return str.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -127,8 +155,34 @@ export function splitTokens(input: any): string[] {
 }
 
 /**
- * Expand and normalize grade tokens into standardized key representations
+ * Resolve Grade Code to Grade Name (e.g. 832 -> TD6, 833 -> TD7, 834 -> TD8)
  */
+export function resolveGradeName(val: any, customMap?: Record<string, string>): string {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  if (!str) return '';
+  const clean = cleanStr(str);
+  if (GRADE_CODE_NAME_MAP[clean]) return GRADE_CODE_NAME_MAP[clean];
+  if (GRADE_CODE_NAME_MAP[str]) return GRADE_CODE_NAME_MAP[str];
+  if (customMap && customMap[clean]) return customMap[clean];
+  if (customMap && customMap[str]) return customMap[str];
+  return str;
+}
+
+/**
+ * Resolve Agency Code to Agency Name (e.g. 64 -> KARIMPUR, 22 -> PURNIA, 78 -> NABADWIP)
+ */
+export function resolveAgencyName(val: any, customMap?: Record<string, string>): string {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  if (!str) return '';
+  const clean = cleanStr(str);
+  if (AGENCY_CODE_NAME_MAP[clean]) return AGENCY_CODE_NAME_MAP[clean];
+  if (AGENCY_CODE_NAME_MAP[str]) return AGENCY_CODE_NAME_MAP[str];
+  if (customMap && customMap[clean]) return customMap[clean];
+  if (customMap && customMap[str]) return customMap[str];
+  return str;
+}
 export function expandGradeTokens(input: any, customMap?: Record<string, string>): Set<string> {
   const tokens = new Set<string>();
   if (!input) return tokens;
@@ -265,13 +319,13 @@ export function compareSaudaTempArrival(
   }
 
   // ==========================================
-  // 1. BROKER (Exact Match)
+  // 1. BROKER (Match By Name)
   // ==========================================
   const saudaBroker = sauda.broker ?? sauda.broker_name;
   const arrivalBroker = arrival.broker ?? arrival.broker_name;
   if (saudaBroker && arrivalBroker) {
-    const normSauda = normalizeExact(saudaBroker);
-    const normArrival = normalizeExact(arrivalBroker);
+    const normSauda = normalizeCompanyName(saudaBroker);
+    const normArrival = normalizeCompanyName(arrivalBroker);
     if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Broker',
@@ -283,13 +337,13 @@ export function compareSaudaTempArrival(
   }
 
   // ==========================================
-  // 2. SUPPLIER (Exact Match)
+  // 2. SUPPLIER (Match By Name)
   // ==========================================
   const saudaSupplier = sauda.supplier ?? sauda.supplier_name ?? sauda.party_name;
   const arrivalSupplier = arrival.supplier ?? arrival.supplier_name ?? arrival.party_name;
   if (saudaSupplier && arrivalSupplier) {
-    const normSauda = normalizeExact(saudaSupplier);
-    const normArrival = normalizeExact(arrivalSupplier);
+    const normSauda = normalizeCompanyName(saudaSupplier);
+    const normArrival = normalizeCompanyName(arrivalSupplier);
     if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Supplier',
@@ -301,13 +355,13 @@ export function compareSaudaTempArrival(
   }
 
   // ==========================================
-  // 3. CHALLAN SUPPLIER (Exact Match)
+  // 3. CHALLAN SUPPLIER (Match By Name)
   // ==========================================
   const saudaChallan = sauda.challan_supplier ?? sauda.challan_party ?? sauda.supplier;
   const arrivalChallan = arrival.challan_supplier ?? arrival.challan_party ?? arrival.supplier;
   if (saudaChallan && arrivalChallan) {
-    const normSauda = normalizeExact(saudaChallan);
-    const normArrival = normalizeExact(arrivalChallan);
+    const normSauda = normalizeCompanyName(saudaChallan);
+    const normArrival = normalizeCompanyName(arrivalChallan);
     if (normSauda && normArrival && normSauda !== normArrival) {
       mismatches.push({
         field: 'Challan Supplier',
@@ -319,23 +373,42 @@ export function compareSaudaTempArrival(
   }
 
   // ==========================================
-  // 4. AREA (Exact Match: Sauda Area vs Temporary Arrival Arrival Area)
+  // 4. AREA (Match By Name: Code converted to Name)
   // ==========================================
-  const saudaAreas = [sauda.area, sauda.arrival_area_name, sauda.area_name, sauda.sourcing_area];
+  const saudaRawAreas = [sauda.area, sauda.arrival_area_name, sauda.area_name, sauda.sourcing_area];
   if (Array.isArray(saudaDetails)) {
-    saudaDetails.forEach(d => saudaAreas.push(d?.area, d?.area_name, d?.arrival_area_name));
+    saudaDetails.forEach(d => saudaRawAreas.push(d?.area, d?.area_name, d?.arrival_area_name));
   }
-  const normSaudaAreas = saudaAreas.map(normalizeExact).filter(Boolean);
+  const normSaudaAreas: string[] = [];
+  saudaRawAreas.forEach(a => {
+    if (!a) return;
+    const str = String(a).trim();
+    if (AREA_CODE_NAME_MAP[str]) normSaudaAreas.push(normalizeExact(AREA_CODE_NAME_MAP[str]));
+    const cleanA = cleanStr(str);
+    if (AREA_CODE_NAME_MAP[cleanA]) normSaudaAreas.push(normalizeExact(AREA_CODE_NAME_MAP[cleanA]));
+    normSaudaAreas.push(normalizeExact(str));
+  });
 
-  const arrivalAreas = [arrival.arrival_area_name, arrival.area, arrival.arrival_area_code, arrival.sourcing_area];
-  arrivalGridRows.forEach(g => arrivalAreas.push(g?.arrival_area_name, g?.area, g?.area_name));
-  const normArrivalAreas = arrivalAreas.map(normalizeExact).filter(Boolean);
+  const arrivalRawAreas = [arrival.arrival_area_name, arrival.area, arrival.arrival_area_code, arrival.sourcing_area];
+  arrivalGridRows.forEach(g => arrivalRawAreas.push(g?.arrival_area_name, g?.area, g?.area_name));
+  const normArrivalAreas: string[] = [];
+  arrivalRawAreas.forEach(a => {
+    if (!a) return;
+    const str = String(a).trim();
+    if (AREA_CODE_NAME_MAP[str]) normArrivalAreas.push(normalizeExact(AREA_CODE_NAME_MAP[str]));
+    const cleanA = cleanStr(str);
+    if (AREA_CODE_NAME_MAP[cleanA]) normArrivalAreas.push(normalizeExact(AREA_CODE_NAME_MAP[cleanA]));
+    normArrivalAreas.push(normalizeExact(str));
+  });
 
-  if (normSaudaAreas.length > 0 && normArrivalAreas.length > 0) {
-    const areaMatch = normArrivalAreas.some(aa => normSaudaAreas.some(sa => sa === aa || sa.includes(aa) || aa.includes(sa)));
+  const validSaudaAreas = normSaudaAreas.filter(Boolean);
+  const validArrivalAreas = normArrivalAreas.filter(Boolean);
+
+  if (validSaudaAreas.length > 0 && validArrivalAreas.length > 0) {
+    const areaMatch = validArrivalAreas.some(aa => validSaudaAreas.some(sa => sa === aa || sa.includes(aa) || aa.includes(sa)));
     if (!areaMatch) {
-      const saudaDisplay = Array.from(new Set(normSaudaAreas)).join(', ');
-      const arrivalDisplay = Array.from(new Set(normArrivalAreas)).join(', ');
+      const saudaDisplay = Array.from(new Set(validSaudaAreas)).join(', ');
+      const arrivalDisplay = Array.from(new Set(validArrivalAreas)).join(', ');
       mismatches.push({
         field: 'Area',
         mismatchLabel: `Area Mismatch: ${arrivalDisplay} (Approved: ${saudaDisplay})`,
@@ -423,14 +496,21 @@ export function compareSaudaTempArrival(
     });
 
     if (trueUnapprovedGrades.length > 0) {
-      const approvedDisplay = splitTokens(rawSaudaGrades).join(', ') || Array.from(saudaGradeTokens).join(', ');
-      const arrivalDisplay = arrivalGradeList.join(', ');
+      const approvedNames = splitTokens(rawSaudaGrades).map(g => resolveGradeName(g, dynamicGradeMap)).filter(Boolean);
+      const approvedDisplay = Array.from(new Set(approvedNames)).join(', ') || Array.from(saudaGradeTokens).join(', ');
+
+      const arrivalNames = arrivalGradeList.map(g => resolveGradeName(g, dynamicGradeMap)).filter(Boolean);
+      const arrivalDisplay = Array.from(new Set(arrivalNames)).join(', ');
+
+      const unapprovedDisplayNames = trueUnapprovedGrades.map(g => resolveGradeName(g, dynamicGradeMap)).filter(Boolean);
+      const cleanUnapprovedList = Array.from(new Set(unapprovedDisplayNames));
+
       mismatches.push({
         field: 'Grade',
-        mismatchLabel: `Grade Mismatch: ${trueUnapprovedGrades.join(', ')} not approved (Approved: ${approvedDisplay})`,
+        mismatchLabel: `Grade Mismatch: ${cleanUnapprovedList.join(', ')} not approved (Approved: ${approvedDisplay})`,
         poValue: approvedDisplay,
         inspValue: arrivalDisplay,
-        unapprovedValues: trueUnapprovedGrades,
+        unapprovedValues: cleanUnapprovedList,
       });
     }
   }
@@ -511,14 +591,21 @@ export function compareSaudaTempArrival(
     });
 
     if (trueUnapprovedAgencies.length > 0) {
-      const approvedDisplay = splitTokens(rawSaudaAgencies).join(', ') || Array.from(saudaAgencyTokens).join(', ');
-      const arrivalDisplay = arrivalAgencyList.join(', ');
+      const approvedNames = splitTokens(rawSaudaAgencies).map(a => resolveAgencyName(a, dynamicAgencyMap)).filter(Boolean);
+      const approvedDisplay = Array.from(new Set(approvedNames)).join(', ') || Array.from(saudaAgencyTokens).join(', ');
+
+      const arrivalNames = arrivalAgencyList.map(a => resolveAgencyName(a, dynamicAgencyMap)).filter(Boolean);
+      const arrivalDisplay = Array.from(new Set(arrivalNames)).join(', ');
+
+      const unapprovedDisplayNames = trueUnapprovedAgencies.map(a => resolveAgencyName(a, dynamicAgencyMap)).filter(Boolean);
+      const cleanUnapprovedList = Array.from(new Set(unapprovedDisplayNames));
+
       mismatches.push({
         field: 'Agency',
-        mismatchLabel: `Agency Mismatch: ${trueUnapprovedAgencies.join(', ')} not matching (Approved: ${approvedDisplay})`,
+        mismatchLabel: `Agency Mismatch: ${cleanUnapprovedList.join(', ')} not matching (Approved: ${approvedDisplay})`,
         poValue: approvedDisplay,
         inspValue: arrivalDisplay,
-        unapprovedValues: trueUnapprovedAgencies,
+        unapprovedValues: cleanUnapprovedList,
       });
     }
   }
