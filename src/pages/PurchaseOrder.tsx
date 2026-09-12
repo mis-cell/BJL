@@ -2403,9 +2403,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         // User Requirement:
         // 1. Temporary Arrival Lorry / Arrival Count and Sauda Check Point Lorry Count is same -> Closed
         const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
-        // 2. Weight buffer: If contract weight minus received weight <= 8 MT (e.g. 42.106 MT received of 44.250 MT, or 36 MT received of 44.250 MT) -> Closed
-        const isWeightClosed = contractWeight > 0 && totalReceivedMt >= 5.0 && (remainingWeight <= 8.25 || totalReceivedMt >= contractWeight - 8.25);
-        const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed || isWeightClosed);
+        // Open/Closed status is strictly Lorry-wise (or explicit manual close)
+        const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
 
         // Check Payment Status in payment_master
         const matchingPayments = (payments || []).filter((pay: any) => {
@@ -2903,10 +2902,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const canBypassLock = isAdminUser || isL4L5User;
 
     const mrLock = matchResults[poHeader.po_no];
-    if (poHeader?.is_closed) {
-      setClosedNoticePo(poHeader);
-      return;
-    }
 
     if (!canBypassLock && isTempPo && mrLock && mrLock.hasInspection && mrLock.status === 'mismatch' && !isPoMismatchResolved(poHeader.po_no)) {
       setEmailNotification({
@@ -3208,10 +3203,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
   };
 
   const handleSave = async () => {
-    const targetPoNo = String(formData.no || (formData as any).po_no || formData.ptf_no || '').trim().toUpperCase();
-    const existingPo = (poList || []).find(p => String(p.po_no).trim().toUpperCase() === targetPoNo);
-    if (existingPo?.is_closed) {
-      alert(`🔒 Action Prohibited: Sauda #${targetPoNo} is Closed (${existingPo.received_lorries}/${existingPo.contract_lorries} Lorries Received).\n\nClosed Saudas cannot be edited or modified by any user unless reopened by an Admin or Level 4 User.`);
+    const userCtx = getCurrentUserContext();
+    const currentUserRole = (userCtx.userRole || (userCtx as any).role || "USER").toUpperCase();
+    const currentUserLevel = (userCtx.userLevel || (userCtx as any).level || "L1").toUpperCase();
+    const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any).isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();
+
+    if (!isAdminUser) {
+      alert(`🔒 Access Denied: Only Admin users are authorized to edit or save Sauda records.`);
       return;
     }
 
@@ -5262,41 +5260,53 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                             {renderSortIndicator('weight')}
                           </div>
                         </th>
-                        <th 
+                         <th 
                           onClick={() => handleSort('status')}
-                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[100px]"
-                          title="Sort by Status"
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[110px]"
+                          title="Sort by Lorry Status"
                         >
                           <div className="flex items-center justify-center gap-1">
-                            <span>Status</span>
+                            <span>Lorry Status</span>
                             {renderSortIndicator('status')}
                           </div>
                         </th>
                         <th 
-                          onClick={() => handleSort('closed_open')}
-                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[130px]"
-                          title="Sort by Closed / Open"
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[110px]"
+                          title="Pending Quantity in MT (When Open)"
                         >
                           <div className="flex items-center justify-center gap-1">
-                            <span>Closed / Open</span>
-                            {renderSortIndicator('closed_open')}
+                            <span>Pending (MT)</span>
                           </div>
                         </th>
                         <th 
-                          onClick={() => handleSort('excess_short')}
-                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[140px]"
-                          title="Sort by Excess / Short"
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[110px]"
+                          title="Excess Quantity in MT (When Closed)"
                         >
                           <div className="flex items-center justify-center gap-1">
-                            <span>Excess / Short</span>
-                            {renderSortIndicator('excess_short')}
+                            <span>Excess (MT)</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[110px]"
+                          title="Short Quantity in MT (When Closed)"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Short (MT)</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider min-w-[150px]"
+                          title="Allowed Tolerance & Reopen Eligibility"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Tolerance & Reopen</span>
                           </div>
                         </th>
                         {isTempPo && (
                           <>
                             <th 
                               onClick={() => handleSort('pass_mismatch')}
-                              className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[120px]"
+                              className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[130px]"
                               title="Sort by Pass / Mismatch"
                             >
                               <div className="flex items-center justify-center gap-1">
@@ -5325,19 +5335,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                         return (
                         <tr 
                            key={item.po_no} 
-                           onClick={() => {
-                              setSelectedPoNo(item.po_no);
-                              if (item.is_closed) {
-                                 setClosedNoticePo(item);
-                              }
-                           }}
+                           onClick={() => setSelectedPoNo(item.po_no)}
                            onDoubleClick={() => { 
                               if (!isVoid) {
-                                 if (item.is_closed) {
-                                    setClosedNoticePo(item);
-                                 } else {
-                                    handleLoadSelectedPo(item);
-                                 }
+                                 handleLoadSelectedPo(item);
                               }
                            }}
                            className={cn(
@@ -7039,90 +7040,29 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1 text-xs w-40 animate-in fade-in zoom-in-95 duration-100"
             style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 160) }}
           >
-            {isTempPo ? (
-              <>
-                <button 
-                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} 
-                  className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 text-blue-700 font-bold text-xs transition-colors cursor-pointer"
-                >
-                  <Edit className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>{actionMenu.item.is_closed ? 'View Sauda' : 'Edit / View'}</span>
-                </button>
-                <button 
-                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePassToFinal(it); }} 
-                  className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-800 font-bold text-xs transition-colors cursor-pointer"
-                  title="Move this P.O from Sauda Check Point to Final P.O"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Pass → Final P.O</span>
-                </button>
-                {actionMenu.item.is_closed ? (
-                  <button 
-                    onClick={() => { const it = actionMenu.item; setActionMenu(null); openReopenAuthModal(it); }} 
-                    className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-700 font-bold text-xs transition-colors cursor-pointer"
-                    title="Reopen this Closed Sauda (Admin / Super User Password Required)"
-                  >
-                    <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Reopen Sauda</span>
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => { const it = actionMenu.item; setActionMenu(null); handleCloseSauda(it); }} 
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-xl flex items-center gap-2.5 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    <Lock className="w-4 h-4 text-slate-600 shrink-0" />
-                    <span>Close Sauda</span>
-                  </button>
-                )}
-                {actionMenu.item.open_remarks && (
-                  <button 
-                    onClick={() => { const it = actionMenu.item; setActionMenu(null); setAuditViewPo(it); }} 
-                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded-xl flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
-                    title="View Reopen Audit Log"
-                  >
-                    <UserCheck className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>View Reopen Audit Log</span>
-                  </button>
-                )}
-                <button 
-                  onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} 
-                  className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-xl flex items-center gap-2.5 text-indigo-600 font-bold text-xs transition-colors cursor-pointer"
-                >
-                  <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span>Email</span>
-                </button>
-                <div className="border-t border-slate-100 my-0.5" />
-                <button 
-                  onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} 
-                  disabled={actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin()}
-                  className={cn(
-                    "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
-                    actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin()
-                      ? "text-slate-400 opacity-50 cursor-not-allowed"
-                      : "hover:bg-rose-50/70 text-rose-600"
-                  )}
-                  title={actionMenu.item.is_closed && !isUserAdmin() && !isL5OrAdmin() ? "Closed Saudas can only be deleted by Admin" : "Delete Sauda"}
-                >
-                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Delete</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleLoadSelectedPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-blue-700 font-bold"><Edit className="w-3.5 h-3.5" />Edit / View</button>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setExcessShortModalPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-amber-50 flex items-center gap-2 text-amber-900 font-bold"><Scale className="w-3.5 h-3.5 text-amber-600" />Excess / Short</button>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); setConsignmentLedgerPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-cyan-700 font-bold"><Truck className="w-3.5 h-3.5" />Consignment Ledger (1-to-N)</button>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handlePrintPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-slate-700 font-bold"><Printer className="w-3.5 h-3.5" />Print Slip</button>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleDownloadPoPdf(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-emerald-700 font-bold"><Download className="w-3.5 h-3.5" />Download PDF</button>
-                <button onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} className="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700 font-bold"><Mail className="w-3.5 h-3.5" />Email Slip</button>
-                {canEditOrDelete() && (
-                  <>
-                    <div className="border-t border-slate-200 my-1" />
-                    <button onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} className="w-full text-left px-3 py-1.5 hover:bg-rose-50 flex items-center gap-2 text-rose-700 font-bold"><Trash2 className="w-3.5 h-3.5" />Cancel / Delete</button>
-                  </>
-                )}
-              </>
-            )}
+            {/* Dashboard Actions Menu - ONLY Email and Delete per Requirement 8 */}
+            <button 
+              onClick={() => { const it = actionMenu.item; setActionMenu(null); handleSendMailPo(it); }} 
+              className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-xl flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+            >
+              <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>Email</span>
+            </button>
+            <div className="border-t border-slate-100 my-0.5" />
+            <button 
+              onClick={() => { const po = actionMenu.item.po_no; setActionMenu(null); handleDeletePo(po); }} 
+              disabled={!isUserAdmin() && !isL5OrAdmin()}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
+                (!isUserAdmin() && !isL5OrAdmin())
+                  ? "opacity-40 cursor-not-allowed text-slate-400"
+                  : "hover:bg-rose-50 text-rose-700"
+              )}
+              title={(!isUserAdmin() && !isL5OrAdmin()) ? "Admin permission required to delete Sauda records" : "Delete Sauda record"}
+            >
+              <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Delete</span>
+            </button>
           </div>
         </>,
         document.body
