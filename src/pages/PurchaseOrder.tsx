@@ -1347,11 +1347,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     setCurrentPage(1);
   }, [searchTerm, startDate, endDate, statusFilter]);
   const [sortConfig, setSortConfig] = useState<{
-    key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'pass_mismatch';
+    key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'closed_open' | 'excess_short' | 'pass_mismatch';
     direction: 'asc' | 'desc';
   }>({ key: 'date', direction: 'desc' });
 
-  const handleSort = (key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'pass_mismatch') => {
+  const handleSort = (key: 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'closed_open' | 'excess_short' | 'pass_mismatch') => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
@@ -4399,6 +4399,24 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           }
           break;
         }
+        case 'closed_open': {
+          const isClosedA = a.is_closed || a.status === 'closed' ? 1 : 0;
+          const isClosedB = b.is_closed || b.status === 'closed' ? 1 : 0;
+          comparison = isClosedA - isClosedB;
+          break;
+        }
+        case 'excess_short': {
+          const contractA = parseFloat(a.total_contract_mt || 0) || 0;
+          const rcvdA = Number(a.received_weight_mt || 0);
+          const diffA = rcvdA - contractA;
+
+          const contractB = parseFloat(b.total_contract_mt || 0) || 0;
+          const rcvdB = Number(b.received_weight_mt || 0);
+          const diffB = rcvdB - contractB;
+
+          comparison = diffA - diffB;
+          break;
+        }
         case 'pass_mismatch': {
           const getPassMismatchText = (item: any) => {
             const isFinalized = item.status === 'final' || item.status === 'moved_to_final';
@@ -4938,16 +4956,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           </div>
                         </th>
                         <th 
-                          onClick={() => handleSort('supplier')}
-                          className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
-                          title="Sort by Supplier"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Supplier</span>
-                            {renderSortIndicator('supplier')}
-                          </div>
-                        </th>
-                        <th 
                           onClick={() => handleSort('broker')}
                           className="px-3 text-left border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
                           title="Sort by Broker"
@@ -4989,12 +4997,32 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                         </th>
                         <th 
                           onClick={() => handleSort('status')}
-                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[100px]"
                           title="Sort by Status"
                         >
                           <div className="flex items-center justify-center gap-1">
                             <span>Status</span>
                             {renderSortIndicator('status')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('closed_open')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[130px]"
+                          title="Sort by Closed / Open"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Closed / Open</span>
+                            {renderSortIndicator('closed_open')}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('excess_short')}
+                          className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[140px]"
+                          title="Sort by Excess / Short"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Excess / Short</span>
+                            {renderSortIndicator('excess_short')}
                           </div>
                         </th>
                         {isTempPo && (
@@ -5046,7 +5074,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
                               </span>
                            </td>
-                           <td className={cn("px-3 uppercase truncate font-bold self-center max-w-[200px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.supplier}</td>
                            <td className={cn("px-3 uppercase truncate max-w-[150px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.broker}</td>
                            <td className={cn("px-3 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200/60 text-[10px]", isSelected ? "text-slate-200" : "text-slate-700")}>{item.purchase_unit_name || 'BALES'}</td>
                            <td className={cn("px-3 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.total_units || 0}</td>
@@ -5088,182 +5115,240 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                  );
                               })()}
                            </td>
-                           <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60">
-                              {(() => {
-                                 const contract = parseFloat(item.total_contract_mt || 0) || 0;
-                                 const rcvd = Number(item.received_weight_mt || 0);
-                                 const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
-                                 const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-                                 const mr = matchResults[item.po_no] || matchResults[item.contract_po_no] || (item.ptf_no ? matchResults[item.ptf_no] : null);
-                                 const isResolved = isPoMismatchResolved(item);
-                                 const isPass = isTempPo 
-                                    ? (isResolved || item.pass_status === 'pass' || (mr && mr.hasInspection && mr.status === 'match'))
-                                    : true;
-                                 const isWeightComplete = item.status === 'completed' || item.status === 'settled' || tol.isCompleted;
-                                 const isCompletedPo = isTempPo 
-                                    ? ((item.pending === false || item.is_fully_completed || isWeightComplete) && isPass)
-                                    : (item.pending === false || item.status === 'completed' || item.status === 'settled' || tol.isCompleted);
+                            {/* 8. Pure Operational Status Column */}
+                            <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[100px]">
+                               {(() => {
+                                  const contract = parseFloat(item.total_contract_mt || 0) || 0;
+                                  const rcvd = Number(item.received_weight_mt || 0);
+                                  const unit = item.purchase_unit_name || item.unit_type || item.unit || "BALES";
+                                  const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+                                  const mr = matchResults[item.po_no] || matchResults[item.contract_po_no] || (item.ptf_no ? matchResults[item.ptf_no] : null);
+                                  const isResolved = isPoMismatchResolved(item);
+                                  const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
 
-                                 const userCtx = getCurrentUserContext();
-                                 const canReopen = userCtx?.userRole === 'ADMIN' || userCtx?.userRole === 'ADMINISTRATOR' || userCtx?.userLevel === 'L4' || userCtx?.userLevel === 'L5';
+                                  const isMismatch = !isResolved && (
+                                    stage === "mismatch" || 
+                                    (item.mismatch_fields && item.mismatch_fields.length > 0) || 
+                                    (mr && mr.hasInspection && mr.status === "mismatch") || 
+                                    Boolean(item.has_mismatch) ||
+                                    Boolean(item.mismatch_status && item.mismatch_status !== "resolved")
+                                  );
 
-                                 const poKey = String(item.po_no || '').trim().toUpperCase();
-                                 const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
-                                 const isSettledDeduction = Boolean(
-                                   settledDeductions[poKey] || 
-                                   settledDeductions[saudaKey] || 
-                                   item.excess_short_deduction != null || 
-                                   (item.excess_short_status && item.excess_short_status !== 'pending')
-                                 );
+                                  const isPass = isTempPo 
+                                     ? (isResolved || item.pass_status === "pass" || (mr && mr.hasInspection && mr.status === "match"))
+                                     : true;
+                                  const isWeightComplete = item.status === "completed" || item.status === "settled" || tol.isCompleted;
+                                  const isCompletedPo = isTempPo 
+                                     ? ((item.pending === false || item.is_fully_completed || isWeightComplete) && isPass)
+                                     : (item.pending === false || item.status === "completed" || item.status === "settled" || tol.isCompleted);
 
-                                 const diffMt = rcvd - contract;
-                                 const shortageMt = Math.max(0, contract - rcvd);
-                                 const diffLabel = diffMt > 0 ? `+${diffMt.toFixed(3)} MT` : `${diffMt.toFixed(3)} MT`;
+                                  if (contract > 0 && rcvd > 0 && rcvd < 5.0) {
+                                    return (
+                                      <span 
+                                        className={cn(
+                                          "text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full border shadow-2xs cursor-help inline-flex items-center gap-1", 
+                                          isSelected ? "bg-rose-600 text-white border-rose-500" : "text-rose-800 bg-rose-100 border-rose-300"
+                                        )}
+                                        title="Below 5 MT: Sauda automatically cancelled. Please create a fresh PTF."
+                                      >
+                                        <span>CANCELLED</span>
+                                      </span>
+                                    );
+                                  }
 
-                                 // User Business Rule:
-                                 // 1. Reopen option ONLY available where Short is 8 MT or above (e.g. 42 MT 5 Lorry sauda, received 34 MT with 5 lorries => 8 MT short => Reopen option Available).
-                                 // 2. Below 8 MT (e.g. 42 MT sauda, received 38 MT => 4 MT short => SHORT and Deduction It, Full Closed without Reopen).
-                                 // 3. Other (no shortage / completed / excess) => Full Closed without Reopen.
-                                 const canShowReopen = canReopen && contract > 0 && shortageMt >= 7.95;
-                                 const showShortOrExcess = (tol.isOverDelivery || tol.isUnderDelivery) && !tol.isCompleted && !tol.isAcceptable;
+                                  if (isMismatch) {
+                                    return (
+                                      <span 
+                                        className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs inline-flex items-center gap-1 animate-pulse"
+                                        title="Has an active or pending Material Mismatch awaiting approval"
+                                      >
+                                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                        <span>MISMATCH</span>
+                                      </span>
+                                    );
+                                  }
 
-                                 if (item.is_closed) {
-                                   const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
-                                   const isMismatch = !isResolved && (
-                                     stage === "mismatch" || 
-                                     (item.mismatch_fields && item.mismatch_fields.length > 0) || 
-                                     (mr && mr.hasInspection && mr.status === "mismatch") || 
-                                     Boolean(item.has_mismatch) ||
-                                     Boolean(item.mismatch_status && item.mismatch_status !== "resolved")
-                                   );
+                                  if (isCompletedPo) {
+                                    return (
+                                      <span className={cn(
+                                        "text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1", 
+                                        isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300"
+                                      )}>
+                                        <Check className="w-2.5 h-2.5" />
+                                        <span>COMPLETED</span>
+                                      </span>
+                                    );
+                                  }
 
-                                   return (
-                                     <div className="flex flex-col items-center gap-1">
-                                       <div className="flex items-center gap-1 flex-wrap justify-center">
-                                         <span 
-                                           className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
-                                            title={`Sauda is CLOSED: ${item.received_lorries ?? 0} of ${item.contract_lorries || 1} Lorries Received (${Number(item.received_weight_mt || 0).toFixed(3)} MT of ${contract.toFixed(3)} MT).`}
-                                         >
-                                           <Lock className="w-2.5 h-2.5 text-amber-400" />
-                                            <span>CLOSED ({item.received_lorries ?? 0}/{item.contract_lorries || 1} Lorry)</span>
-                                         </span>
-                                         {isMismatch && (
-                                           <span 
-                                             className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs flex items-center gap-1 whitespace-nowrap animate-pulse"
-                                             title="Sauda is Closed but has an unresolved Material Mismatch"
-                                           >
-                                             <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
-                                             <span>MISMATCH</span>
-                                           </span>
-                                         )}
-                                       </div>
-                                       {isMismatch && (
-                                         <span className="text-[8.5px] font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 shadow-2xs whitespace-nowrap">
-                                           Closed – Mismatch
-                                         </span>
-                                       )}
+                                  return (
+                                    <span className={cn(
+                                      "text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1", 
+                                      isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200"
+                                    )}>
+                                      <span>PENDING</span>
+                                    </span>
+                                  );
+                               })()}
+                            </td>
 
-                                       {showShortOrExcess && (
-                                         <button 
-                                           type="button" 
-                                           onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
-                                           className={cn(
-                                             "text-[8.5px] font-black px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
-                                             tol.isOverDelivery 
-                                               ? (isSettledDeduction ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-purple-100 text-purple-900 border-purple-300")
-                                               : (isSettledDeduction ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-900 border-amber-300")
-                                           )} 
-                                           title={`Received Quantity: ${tol.isOverDelivery ? 'EXCESS' : 'SHORT'} (${diffLabel}). Click to view or adjust Excess / Short Settlement Calculation.`}
-                                         >
-                                           <Scale className="w-2.5 h-2.5" />
-                                           <span>{tol.isOverDelivery ? 'EXCESS' : 'SHORT'} ({diffLabel}){isSettledDeduction ? ' ✓' : ''}</span>
-                                         </button>
-                                       )}
+                            {/* 9. CLOSED / OPEN Column */}
+                            <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[130px]">
+                               {(() => {
+                                  const userCtx = getCurrentUserContext();
+                                  const userRole = String(userCtx?.userRole || "").toUpperCase();
+                                  const userLevel = String(userCtx?.userLevel || "").toUpperCase();
+                                  const isAdminOrL4 = isUserAdmin(userCtx) || userRole === "ADMIN" || userRole === "ADMINISTRATOR" || isL5OrAdmin() || userLevel === "L4" || userLevel === "L5" || userLevel === "MAX";
 
-                                       {canShowReopen && (
-                                         <button
-                                           type="button"
-                                           onClick={(e) => { e.stopPropagation(); handleReopenSauda(item); }}
-                                           className="text-[8px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors flex items-center gap-0.5 cursor-pointer"
-                                           title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
-                                         >
-                                           <Unlock className="w-2 h-2 text-emerald-600" />
-                                           <span>Reopen</span>
-                                         </button>
-                                       )}
-                                     </div>
-                                   );
-                                 }
+                                  const contract = parseFloat(item.total_contract_mt || 0) || 0;
+                                  const rcvd = Number(item.received_weight_mt || 0);
+                                  const shortageMt = Math.max(0, contract - rcvd);
+                                  const canShowReopen = isAdminOrL4 && contract > 0 && shortageMt >= 7.95;
 
-                                 return (
-                                    <div className="flex flex-col items-center gap-0.5">
-                                       {contract > 0 && rcvd > 0 && rcvd < 5.0 ? (
-                                         <span 
-                                           className={cn(
-                                             "text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-help flex items-center gap-1", 
-                                             isSelected ? "bg-rose-600 text-white border-rose-500" : "text-rose-800 bg-rose-100 border-rose-300"
-                                           )}
-                                           title="Below 5 MT: Sauda automatically cancelled. Please create a fresh PTF."
-                                         >
-                                           <span>CANCELLED</span>
-                                         </span>
-                                       ) : isCompletedPo ? (
-                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300")}>COMPLETED</span>
-                                       ) : ((tol.isOverDelivery || tol.isUnderDelivery) && !tol.isAcceptable && !tol.isCompleted) ? (() => {
-                                         const poKey = String(item.po_no || '').trim().toUpperCase();
-                                         const saudaKey = String(item.sauda_no || '').trim().toUpperCase();
-                                         const isSettledDeduction = Boolean(
-                                           settledDeductions[poKey] || 
-                                           settledDeductions[saudaKey] || 
-                                           item.excess_short_deduction != null || 
-                                           (item.excess_short_status && item.excess_short_status !== 'pending')
-                                         );
-                                         const badgeLabel = tol.isOverDelivery 
-                                           ? (isSettledDeduction ? 'EXCESS WT ✓' : 'EXCESS WT') 
-                                           : (isSettledDeduction ? 'SHORT WT ✓' : 'SHORT WT');
+                                  const isClosed = Boolean(item.is_closed || item.status === "closed");
+                                  const rcvdLorries = item.received_lorries ?? 0;
+                                  const totalLorries = item.contract_lorries || 1;
 
-                                         if (isSettledDeduction) {
-                                           return (
-                                             <button 
-                                               type="button" 
-                                               onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
-                                               className={cn(
-                                                 "text-[9.5px] font-black px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
-                                                 isSelected 
-                                                   ? "bg-emerald-600 text-white border-emerald-500" 
-                                                   : "text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border-emerald-300"
-                                               )} 
-                                               title={`${tol.isOverDelivery ? 'Excess Weight' : 'Short Weight'} Settled & Recorded (Click to view Read-Only settlement slip)`}
-                                             >
-                                               <Scale className="w-3 h-3 text-emerald-700" />
-                                               <span>{badgeLabel}</span>
-                                             </button>
-                                           );
-                                         }
+                                  if (isClosed) {
+                                    return (
+                                      <div className="flex flex-col items-center justify-center gap-1">
+                                        <span 
+                                          className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap"
+                                          title={"Sauda is CLOSED: " + rcvdLorries + " of " + totalLorries + " Lorries Received (" + rcvd.toFixed(3) + " MT of " + contract.toFixed(3) + " MT)."}
+                                        >
+                                          <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                          <span>CLOSED ({rcvdLorries}/{totalLorries} Lorry)</span>
+                                        </span>
 
-                                         return (
-                                           <button 
-                                             type="button" 
-                                             onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
-                                             className={cn(
-                                               "text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition flex items-center gap-1", 
-                                               isSelected 
-                                                 ? "bg-amber-500 text-white border-amber-400" 
-                                                 : "text-amber-900 bg-amber-100 hover:bg-amber-200 border-amber-300"
-                                             )} 
-                                             title="Click to open Excess / Short Settlement"
-                                           >
-                                             <Scale className="w-3 h-3 text-amber-700" />
-                                             <span>{badgeLabel}</span>
-                                           </button>
-                                         );
-                                       })() : (
-                                         <span className={cn("text-[9.5px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs", isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200")}>PENDING</span>
-                                       )}
+                                        {canShowReopen ? (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleReopenSauda(item); }}
+                                            className="text-[8px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                            title="Admin / Level 4: Click to Reopen this Closed Sauda (Shortage is ≥ 8 MT)"
+                                          >
+                                            <Unlock className="w-2 h-2 text-emerald-600" />
+                                            <span>Reopen</span>
+                                          </button>
+                                        ) : (
+                                          <span className="text-[8px] text-slate-400 font-medium italic">
+                                            Full Closed
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="flex flex-col items-center justify-center gap-1">
+                                      <span 
+                                        className={cn(
+                                          "text-[9.5px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 whitespace-nowrap",
+                                          isSelected 
+                                            ? "bg-emerald-500 text-white border-emerald-400" 
+                                            : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                        )}
+                                        title={"Sauda is OPEN: " + rcvdLorries + " of " + totalLorries + " Lorries Received."}
+                                      >
+                                        <Unlock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                        <span>OPEN ({rcvdLorries}/{totalLorries} Lorry)</span>
+                                      </span>
+
+                                      {isAdminOrL4 && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleCloseSauda(item); }}
+                                          className="text-[8px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 transition-colors flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                                          title="Admin / Level 4: Click to manually Close this Sauda"
+                                        >
+                                          <Lock className="w-2 h-2 text-slate-500" />
+                                          <span>Close</span>
+                                        </button>
+                                      )}
                                     </div>
-                                 );
-                              })()}
-                           </td>
+                                  );
+                               })()}
+                            </td>
+
+                            {/* 10. EXCESS / SHORT Column */}
+                            <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[140px]">
+                               {(() => {
+                                  const contract = parseFloat(item.total_contract_mt || 0) || 0;
+                                  const rcvd = Number(item.received_weight_mt || 0);
+                                  const unit = item.purchase_unit_name || item.unit_type || item.unit || "BALES";
+                                  const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+
+                                  const poKey = String(item.po_no || "").trim().toUpperCase();
+                                  const saudaKey = String(item.sauda_no || "").trim().toUpperCase();
+                                  const isSettledDeduction = Boolean(
+                                    settledDeductions[poKey] || 
+                                    settledDeductions[saudaKey] || 
+                                    item.excess_short_deduction != null || 
+                                    (item.excess_short_status && item.excess_short_status !== "pending")
+                                  );
+
+                                  const diffMt = rcvd - contract;
+                                  const diffLabel = diffMt > 0 ? "+" + diffMt.toFixed(3) + " MT" : diffMt.toFixed(3) + " MT";
+
+                                  const isExcess = tol.isOverDelivery && !tol.isAcceptable && !tol.isCompleted;
+                                  const isShort = tol.isUnderDelivery && !tol.isAcceptable && !tol.isCompleted;
+
+                                  if (isExcess) {
+                                    return (
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
+                                        className={cn(
+                                          "text-[9px] font-black px-2.5 py-1 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition-all flex items-center gap-1 mx-auto",
+                                          isSettledDeduction 
+                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200" 
+                                            : "bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-200"
+                                        )} 
+                                        title={"Received Quantity: EXCESS (" + diffLabel + "). Click to view or adjust Excess Settlement."}
+                                      >
+                                        <Scale className="w-3 h-3 text-purple-700 shrink-0" />
+                                        <span>EXCESS ({diffLabel}){isSettledDeduction ? " ✓" : ""}</span>
+                                      </button>
+                                    );
+                                  }
+
+                                  if (isShort) {
+                                    return (
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
+                                        className={cn(
+                                          "text-[9px] font-black px-2.5 py-1 rounded-full border shadow-2xs cursor-pointer hover:scale-105 transition-all flex items-center gap-1 mx-auto",
+                                          isSettledDeduction 
+                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200" 
+                                            : "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
+                                        )} 
+                                        title={"Received Quantity: SHORT (" + diffLabel + "). Click to view or adjust Shortage Settlement."}
+                                      >
+                                        <Scale className="w-3 h-3 text-amber-700 shrink-0" />
+                                        <span>SHORT ({diffLabel}){isSettledDeduction ? " ✓" : ""}</span>
+                                      </button>
+                                    );
+                                  }
+
+                                  if (rcvd > 0) {
+                                    return (
+                                      <span 
+                                        className="text-[9px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs inline-flex items-center gap-1"
+                                        title={"Weight within acceptable contract tolerance range: diff " + diffLabel}
+                                      >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                        <span>NORMAL ({diffLabel})</span>
+                                      </span>
+                                    );
+                                  }
+
+                                  return (
+                                    <span className="text-[10px] text-slate-400 font-mono italic">
+                                      —
+                                    </span>
+                                  );
+                               })()}
+                            </td>
                            {isTempPo && (
                               <>
                                 {/* Pass / Mismatch Column */}
@@ -5470,7 +5555,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      )})}
                      {filteredPos.length === 0 && (
                         <tr>
-                           <td colSpan={isTempPo ? 11 : 10} className="py-12 text-center text-slate-400 uppercase font-black italic">
+                           <td colSpan={isTempPo ? 13 : 11} className="py-12 text-center text-slate-400 uppercase font-black italic">
                              No Saved Purchase Orders found matching criteria.
                            </td>
                         </tr>
