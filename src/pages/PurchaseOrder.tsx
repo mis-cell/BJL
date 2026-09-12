@@ -2363,6 +2363,16 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
           if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
         });
+        // Lorry and MR distinct counting (prevent double counting duplicate MRs)
+        const distinctMrKeys = new Set<string>();
+        matchingFinal.forEach((fa: any) => {
+          const k = fa.mr_no || fa.amad_no || fa.arrival_no;
+          if (k) distinctMrKeys.add(String(k).trim().toUpperCase());
+        });
+        matchingTempArrivals.forEach((ar: any) => {
+          const k = ar.amad_no || ar.temporary_arrival_no;
+          if (k) distinctMrKeys.add(String(k).trim().toUpperCase());
+        });
         const receivedLorries = Math.max(matchingTempArrivals.length, distinctArrivalKeys.size);
 
         const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
