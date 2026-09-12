@@ -5648,8 +5648,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                     const stage = item.workflow_stage || (item.pass_status === 'pass' ? 'final_po' : item.pass_status) || 'temp_arrival_pending';
                                     const isResolved = isPoMismatchResolved(item);
                                     
-                                    const isMismatch = !isResolved && (stage === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0) || Boolean(item.has_mismatch));
-                                    const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved;
+                                    const mr = matchResults[item.po_no] || matchResults[item.contract_po_no] || matchResults[item.ptf_no] || matchResults[item.sauda_no];
+                                    const hasMrMismatch = mr && mr.status === 'mismatch' && mr.mismatches && mr.mismatches.length > 0;
+
+                                    const isMismatch = !isResolved && (
+                                      stage === 'mismatch' || 
+                                      (item.mismatch_fields && item.mismatch_fields.length > 0) || 
+                                      Boolean(item.has_mismatch) ||
+                                      hasMrMismatch ||
+                                      item.pass_status === 'mismatch'
+                                    );
+
+                                    const isPass = isFinalized || item.pass_status === 'pass' || stage === 'final_po' || isResolved || (!isMismatch && !isFinalized);
 
                                     if (isFinalized) {
                                       return (
