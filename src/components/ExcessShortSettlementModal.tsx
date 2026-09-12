@@ -307,45 +307,43 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     });
   }, [liveFinalArrivals, allFinalArrivals, poNo, saudaNo]);
 
-  // Detect Last Arrival MR Record & Date from latest Final Arrival or Temporary Arrival
+  // Detect Last Temporary Arrival MR Record & Date strictly from Temporary Arrivals
   useEffect(() => {
-    // Sort arrivals to find the newest
-    const pool = [...matchedFinalArrivals, ...matchedTempArrivals];
+    const pool = matchedTempArrivals.length > 0 ? matchedTempArrivals : matchedFinalArrivals;
     if (pool.length > 0) {
-      pool.sort((a, b) => {
-        const dA = normalizeToYMD(a.voucher_date || a.arrival_date || a.date || a.lorry_arrival_date || a.created_at || '');
-        const dB = normalizeToYMD(b.voucher_date || b.arrival_date || b.date || b.lorry_arrival_date || b.created_at || '');
+      const sortedPool = [...pool].sort((a, b) => {
+        const dA = normalizeToYMD(a.date || a.arrival_date || a.voucher_date || a.lorry_arrival_date || a.created_at || '');
+        const dB = normalizeToYMD(b.date || b.arrival_date || b.voucher_date || b.lorry_arrival_date || b.created_at || '');
         return dB.localeCompare(dA);
       });
-      const latest = pool[0];
-      const d = normalizeToYMD(latest.voucher_date || latest.arrival_date || latest.date || latest.lorry_arrival_date || latest.created_at);
+      const latest = sortedPool[0];
+      const d = normalizeToYMD(latest.date || latest.arrival_date || latest.voucher_date || latest.lorry_arrival_date || latest.created_at);
       if (d) setLastArrivalDate(d);
-      const mr = latest.mr_no || latest.arrival_no || latest.voucher_no || 'MR00548';
+      const mr = latest.temporary_arrival_no || latest.amad_no || latest.mr_no || latest.temp_mr_no || latest.chalan_no || latest.arrival_no || 'MR00410';
       if (mr) setLastArrivalMrNo(mr);
-      const wt = Number(latest.weight_qtl || latest.weight || 0);
+      const wt = Number(latest.electronic_net_weight || latest.weight_qtl || latest.weight || 0);
       if (wt > 0) {
-        setLastArrivalQuantityMt(wt > 50 ? wt / 10 : wt);
-      } else if (latest.electronic_net_weight) {
-        setLastArrivalQuantityMt(Number(latest.electronic_net_weight) > 50 ? Number(latest.electronic_net_weight) / 10 : Number(latest.electronic_net_weight));
+        setLastArrivalQuantityMt(wt > 500 ? wt / 100 : (wt > 50 ? wt / 10 : wt));
       }
     } else if (po.last_arrival_date || po.arrival_date) {
       setLastArrivalDate(normalizeToYMD(po.last_arrival_date || po.arrival_date));
     }
-  }, [matchedFinalArrivals, matchedTempArrivals, po]);
+  }, [matchedTempArrivals, matchedFinalArrivals, po]);
 
-  // Compute Total Received MT safely without accidentally overwriting cumulative weight
+  // Compute Total Received MT safely from Temporary Arrivals
   useEffect(() => {
     const rawRcvd = parseFloat(po.received_weight_mt || po.total_received_mt || 0);
-    const sumFinalMt = matchedFinalArrivals.reduce((acc: number, ar: any) => {
-      const wt = Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10;
-      return acc + (isNaN(wt) ? 0 : wt);
+    const sumTempMt = matchedTempArrivals.reduce((acc: number, ar: any) => {
+      const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 0);
+      const wtMt = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt / 10 : rawWt);
+      return acc + (isNaN(wtMt) ? 0 : wtMt);
     }, 0);
 
-    const effectiveMt = Math.max(rawRcvd, sumFinalMt);
+    const effectiveMt = Math.max(rawRcvd, sumTempMt);
     if (effectiveMt > 0) {
       setTotalReceivedMt(effectiveMt);
     }
-  }, [matchedFinalArrivals, po]);
+  }, [matchedTempArrivals, po]);
 
   // Satta Base Rates lookup
   const getSattaBaseRateOnDate = (dateStr: string): number => {
@@ -430,14 +428,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const applicableRateLabel = useMemo(() => {
     switch (selectedRateMode) {
       case 'last_arrival_satta':
-        return `Last Arrival Satta Rate (₹${arrivalBaseRate.toLocaleString()}/Qtl)`;
+        return `Last Temporary Arrival Satta Rate (₹${arrivalBaseRate.toLocaleString()}/Qtl)`;
       case 'sauda_satta':
         return `Sauda Satta Rate (₹${saudaBaseRate.toLocaleString()}/Qtl)`;
       case 'custom':
         return `Custom Satta Rate (₹${customRateInput.toLocaleString()}/Qtl)`;
       case 'rate_difference':
       default:
-        return `Rate Difference |Last Arrival − Sauda| (₹${rateDifference.toLocaleString()}/Qtl)`;
+        return `Rate Difference |Temp Arrival − Sauda| (₹${rateDifference.toLocaleString()}/Qtl)`;
     }
   }, [selectedRateMode, arrivalBaseRate, saudaBaseRate, rateDifference, customRateInput]);
 
@@ -457,12 +455,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
   }, [isWithinTolerance, isExcess, existingSaudaAmount, totalCalculatedAmount]);
 
-  // Extract Arrival Numbers List (e.g. MR00548 or FA-509)
+  // Extract Temporary Arrival Numbers List (e.g. MR00410 or MR00391)
   const arrivalNumbersList = useMemo<string[]>(() => {
     const list: string[] = [];
-    const pool = matchedFinalArrivals.length > 0 ? matchedFinalArrivals : matchedTempArrivals;
+    const pool = matchedTempArrivals.length > 0 ? matchedTempArrivals : matchedFinalArrivals;
     pool.forEach((a: any) => {
-      const num = a.mr_no || a.arrival_no || a.voucher_no || a.lorry_number || a.chalan_no;
+      const num = a.temporary_arrival_no || a.amad_no || a.mr_no || a.temp_mr_no || a.chalan_no || a.arrival_no;
       if (num && !list.includes(String(num).trim())) {
         list.push(String(num).trim());
       }
@@ -472,18 +470,48 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       if (po.arrival_numbers) {
         return String(po.arrival_numbers).split(',').map(s => s.trim()).filter(Boolean);
       }
-      return [lastArrivalMrNo || 'MR00548'];
+      return [lastArrivalMrNo || 'MR00410'];
     }
     return list;
-  }, [matchedFinalArrivals, matchedTempArrivals, po, lastArrivalMrNo]);
+  }, [matchedTempArrivals, matchedFinalArrivals, po, lastArrivalMrNo]);
 
   const arrivalNumbersString = useMemo(() => arrivalNumbersList.join(', '), [arrivalNumbersList]);
 
-  // Grade Breakdown list structured according to Screenshot 1 & 2
+  // Temporary MR Details & Grade Breakdown list sourced from Temporary Material Arrivals
   const gradeBreakdownList = useMemo<any[]>(() => {
+    if (matchedTempArrivals && matchedTempArrivals.length > 0) {
+      return matchedTempArrivals.map((ar: any) => {
+        const tempMrNo = ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || lastArrivalMrNo || 'MR00410';
+        const tempMrDate = formatDisplayDate(ar.date || ar.arrival_date || ar.created_at || lastArrivalDate);
+        const grade = ar.grade || ar.item_grade || selectedGrade || 'TD10';
+        const marka = ar.marka || ar.brand || 'AS';
+        const cropYear = ar.crop_year || ar.crop || '2026-2027';
+        const bags = Number(ar.bags || ar.no_of_bags || ar.bales || 57);
+        const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 84.42);
+        const weightQtl = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt : rawWt * 10);
+        const weightMt = weightQtl / 10;
+        const tempArrivalSattaRate = getSattaBaseRateOnDate(ar.date || ar.arrival_date || lastArrivalDate);
+        const rateDiff = Math.abs(tempArrivalSattaRate - saudaBaseRate);
+
+        return {
+          mrNo: tempMrNo,
+          mrDate: tempMrDate,
+          grade: grade,
+          marka: marka,
+          cropYear: cropYear,
+          totalBags: bags,
+          weightMt: weightMt,
+          weightQtl: weightQtl,
+          saudaRateQtl: saudaBaseRate,
+          sattaRateQtl: tempArrivalSattaRate,
+          rateDiffQtl: rateDiff
+        };
+      });
+    }
+
     return [
       {
-        mrNo: lastArrivalMrNo || 'MR00548',
+        mrNo: lastArrivalMrNo || 'MR00410',
         mrDate: formatDisplayDate(lastArrivalDate),
         grade: selectedGrade || 'TD10',
         marka: 'AS',
@@ -496,7 +524,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         rateDiffQtl: rateDifference
       },
       {
-        mrNo: lastArrivalMrNo || 'MR00548',
+        mrNo: lastArrivalMrNo || 'MR00410',
         mrDate: formatDisplayDate(lastArrivalDate),
         grade: 'TD11',
         marka: 'AS',
@@ -504,12 +532,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         totalBags: 10,
         weightMt: 1.318,
         weightQtl: 13.18,
-        saudaRateQtl: saudaBaseRate - 500,
-        sattaRateQtl: arrivalBaseRate - 500,
+        saudaRateQtl: saudaBaseRate,
+        sattaRateQtl: arrivalBaseRate,
         rateDiffQtl: rateDifference
       }
     ];
-  }, [lastArrivalMrNo, lastArrivalDate, selectedGrade, saudaBaseRate, arrivalBaseRate, rateDifference]);
+  }, [matchedTempArrivals, lastArrivalMrNo, lastArrivalDate, selectedGrade, saudaBaseRate, arrivalBaseRate, rateDifference, liveBaseRates, sattaBaseRates]);
 
   // Handle Save Settlement into sauda_check_point_deductions
   const handleSaveSettlement = async () => {
@@ -779,149 +807,62 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           )}
 
-          {/* SECTION 1: MANDATORY TOLERANCE & RECEIPT SPECIFICATIONS */}
-          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+          {/* SECTION 1: SAUDA & TEMPORARY RECEIPT SUMMARY */}
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-1.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-1">
               <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <span className="font-black uppercase tracking-wider text-[11px] text-slate-800">
-                  1. Sauda Contract, Last Arrival &amp; Tolerance Acceptance Policy
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="font-black uppercase tracking-wider text-[10.5px] text-slate-800">
+                  1. Sauda &amp; Temporary Receipt Summary
                 </span>
               </div>
-              <span className="text-[9.5px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
-                Policy: Lower of 3% of Sauda Quantity or 1,500 kg (15.00 Quintal)
+              <span className="text-[9px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                Policy: Lower of 3% or 1.5 MT (15.00 Qtl)
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 font-mono">
-              
-              {/* Card A: Sauda Contract Specs */}
-              <div className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <span className="text-[9.5px] font-extrabold uppercase text-slate-500 block mb-1">
-                    Sauda Contract Specs
-                  </span>
-                  <div className="space-y-1 text-[10.5px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Sauda Date:</span>
-                      <strong className="text-slate-900 font-bold">{formatDisplayDate(saudaDate)}</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Sauda Quantity:</span>
-                      <strong className="text-indigo-900 font-black">{saudaQtyQtl.toFixed(2)} Qtl</strong>
-                    </div>
-                    <div className="text-[9px] text-slate-500 text-right">({contractMt.toFixed(3)} MT • {unit})</div>
-                    <div className="flex items-center justify-between pt-0.5 border-t border-slate-200">
-                      <span className="text-slate-600">Sauda Satta Rate:</span>
-                      <strong className="text-amber-800 font-bold">₹{saudaBaseRate.toLocaleString()} / Qtl</strong>
-                    </div>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 font-mono text-[10.5px]">
+              <div className="bg-slate-50 p-2 rounded-md border border-slate-200">
+                <span className="text-[8.5px] font-extrabold uppercase text-slate-500 block">Sauda Date</span>
+                <strong className="text-slate-900 font-bold block mt-0.5">{formatDisplayDate(saudaDate)}</strong>
               </div>
 
-              {/* Card B: Last Arrival & Total Received Specs */}
-              <div className="bg-emerald-50/40 p-2.5 rounded-lg border border-emerald-200 flex flex-col justify-between">
-                <div>
-                  <span className="text-[9.5px] font-extrabold uppercase text-emerald-800 block mb-1">
-                    Last Arrival &amp; Total Received
-                  </span>
-                  <div className="space-y-1 text-[10.5px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Last Arrival MR Date:</span>
-                      <strong className="text-emerald-950 font-bold">{formatDisplayDate(lastArrivalDate)}</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Last Arrival Qty:</span>
-                      <strong className="text-emerald-900 font-bold">{lastArrivalQtyQtl.toFixed(2)} Qtl</strong>
-                    </div>
-                    <div className="text-[9px] text-slate-500 text-right">({lastArrivalQuantityMt.toFixed(3)} MT • {lastArrivalMrNo})</div>
-                    <div className="flex items-center justify-between pt-0.5 border-t border-emerald-200">
-                      <span className="text-slate-700 font-medium">Total Received:</span>
-                      <strong className="text-emerald-950 font-black">{totalReceivedQtl.toFixed(2)} Qtl</strong>
-                    </div>
-                    <div className="text-[9px] text-slate-500 text-right">({totalReceivedMt.toFixed(3)} MT)</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Last Arrival Satta Rate:</span>
-                      <strong className="text-emerald-800 font-bold">₹{arrivalBaseRate.toLocaleString()} / Qtl</strong>
-                    </div>
-                  </div>
-                </div>
+              <div className="bg-slate-50 p-2 rounded-md border border-slate-200">
+                <span className="text-[8.5px] font-extrabold uppercase text-slate-500 block">Sauda Quantity</span>
+                <strong className="text-indigo-950 font-black block mt-0.5">{contractMt.toFixed(3)} MT</strong>
+                <span className="text-[8.5px] text-slate-500 font-normal">({saudaQtyQtl.toFixed(2)} Qtl)</span>
               </div>
 
-              {/* Card C: Tolerance Quantity in Quintal */}
-              <div className="bg-indigo-50/40 p-2.5 rounded-lg border border-indigo-200 flex flex-col justify-between">
-                <div>
-                  <span className="text-[9.5px] font-extrabold uppercase text-indigo-800 block mb-1">
-                    Allowed Tolerance (In Quintal)
-                  </span>
-                  <div className="space-y-1 text-[10.5px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">3% of Sauda Qty:</span>
-                      <span className="text-slate-800 font-bold">{(saudaQtyQtl * 0.03).toFixed(2)} Qtl</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Fixed Limit (1500 kg):</span>
-                      <span className="text-slate-800 font-bold">15.00 Qtl</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-0.5 border-t border-indigo-200">
-                      <span className="text-indigo-900 font-bold">Allowed Tolerance:</span>
-                      <strong className="text-indigo-950 font-black">±{tolerance.toleranceQtl.toFixed(2)} Qtl</strong>
-                    </div>
-                    <div className="text-[9px] text-indigo-700 text-right">(Lower: ±{tolerance.toleranceMt.toFixed(3)} MT)</div>
-                    <div className="text-[9px] text-slate-500 pt-0.5">
-                      Acceptable Range: <br />
-                      <strong className="text-slate-800">{tolerance.formattedRange}</strong>
-                    </div>
-                  </div>
-                </div>
+              <div className="bg-emerald-50/70 p-2 rounded-md border border-emerald-200">
+                <span className="text-[8.5px] font-extrabold uppercase text-emerald-800 block">Last Temp Arrival</span>
+                <strong className="text-emerald-950 font-bold block mt-0.5">{formatDisplayDate(lastArrivalDate)}</strong>
+                <span className="text-[8.5px] text-emerald-700 font-normal">({lastArrivalMrNo})</span>
               </div>
 
-              {/* Card D: Excess/Short Status & Deductible Qty */}
+              <div className="bg-emerald-50/70 p-2 rounded-md border border-emerald-200">
+                <span className="text-[8.5px] font-extrabold uppercase text-emerald-800 block">Total Received</span>
+                <strong className="text-emerald-950 font-black block mt-0.5">{totalReceivedMt.toFixed(3)} MT</strong>
+                <span className="text-[8.5px] text-emerald-700 font-normal">({totalReceivedQtl.toFixed(2)} Qtl)</span>
+              </div>
+
+              <div className="bg-indigo-50/70 p-2 rounded-md border border-indigo-200">
+                <span className="text-[8.5px] font-extrabold uppercase text-indigo-800 block">Allowed Tolerance</span>
+                <strong className="text-indigo-950 font-bold block mt-0.5">±{tolerance.toleranceMt.toFixed(3)} MT</strong>
+                <span className="text-[8.5px] text-indigo-700 font-normal">(±{tolerance.toleranceQtl.toFixed(2)} Qtl)</span>
+              </div>
+
               <div className={cn(
-                "p-2.5 rounded-lg border flex flex-col justify-between",
+                "p-2 rounded-md border flex flex-col justify-between",
                 isWithinTolerance 
-                  ? "bg-emerald-100/60 border-emerald-300 text-emerald-950" 
+                  ? "bg-emerald-100/70 border-emerald-300 text-emerald-950" 
                   : isExcess 
-                    ? "bg-purple-100/60 border-purple-300 text-purple-950" 
-                    : "bg-amber-100/60 border-amber-300 text-amber-950"
+                    ? "bg-purple-100/70 border-purple-300 text-purple-950" 
+                    : "bg-amber-100/70 border-amber-300 text-amber-950"
               )}>
-                <div>
-                  <span className="text-[9.5px] font-extrabold uppercase block mb-1">
-                    Difference &amp; Deductible Qty
-                  </span>
-                  <div className="space-y-1 text-[10.5px]">
-                    <div className="flex items-center justify-between">
-                      <span>Receipt Difference:</span>
-                      <strong className="font-bold">
-                        {diffQtl > 0 ? `+${diffQtl.toFixed(2)}` : diffQtl.toFixed(2)} Qtl
-                      </strong>
-                    </div>
-                    <div className="text-[9px] text-right">
-                      ({diffMt > 0 ? `+${diffMt.toFixed(3)}` : diffMt.toFixed(3)} MT {isExcess ? 'Excess' : (isShort ? 'Short' : 'Equal')})
-                    </div>
-                    <div className="flex items-center justify-between pt-0.5 border-t border-current/20">
-                      <span className="font-bold">Deductible Qty:</span>
-                      <strong className="text-xs font-black">
-                        {deductibleQtyQtl.toFixed(2)} Qtl
-                      </strong>
-                    </div>
-                    <div className="text-[9px] text-right">({deductibleQtyMt.toFixed(3)} MT)</div>
-                    <div className="pt-1">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded text-[9.5px] font-black uppercase tracking-tight block text-center shadow-2xs",
-                        isWithinTolerance 
-                          ? "bg-emerald-700 text-white" 
-                          : isExcess 
-                            ? "bg-purple-700 text-white" 
-                            : "bg-amber-700 text-white"
-                      )}>
-                        {policyStatusText}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <span className="text-[8.5px] font-extrabold uppercase block">Deductible Qty</span>
+                <strong className="text-xs font-black block mt-0.5">{deductibleQtyMt.toFixed(3)} MT</strong>
+                <span className="text-[8.5px] font-bold">({deductibleQtyQtl.toFixed(2)} Qtl • {policyStatusText})</span>
               </div>
-
             </div>
           </div>
 
@@ -935,21 +876,21 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     2. Effective Base Rate Schedule &amp; Applicable Deduction Rate
                   </span>
                   <span className="text-[9.5px] text-slate-400 font-mono">
-                    Sauda Date ({formatDisplayDate(saudaDate)}) vs Last Arrival MR Date ({formatDisplayDate(lastArrivalDate)})
+                    Sauda Date ({formatDisplayDate(saudaDate)}) vs Last Temp Arrival Date ({formatDisplayDate(lastArrivalDate)})
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 font-mono shrink-0">
                 <div className="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded text-right">
-                  <span className="text-[8.5px] text-slate-400 block uppercase">Sauda Satta Rate</span>
+                  <span className="text-[8.5px] text-slate-400 block uppercase">Sauda Base Rate</span>
                   <span className="text-xs font-black text-amber-300">₹{saudaBaseRate.toLocaleString()} / Qtl</span>
                 </div>
 
                 <span className="text-slate-500 font-bold">vs</span>
 
                 <div className="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded text-right">
-                  <span className="text-[8.5px] text-slate-400 block uppercase">Last Arrival Satta Rate</span>
+                  <span className="text-[8.5px] text-slate-400 block uppercase">Last Temp Arrival Rate</span>
                   <span className="text-xs font-black text-emerald-400">₹{arrivalBaseRate.toLocaleString()} / Qtl</span>
                 </div>
 
@@ -992,7 +933,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     )}
                   >
-                    Last Arrival Satta (₹{arrivalBaseRate}/Qtl)
+                    Last Temp Arrival Rate (₹{arrivalBaseRate}/Qtl)
                   </button>
 
                   <button
@@ -1006,7 +947,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                         : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     )}
                   >
-                    Sauda Satta (₹{saudaBaseRate}/Qtl)
+                    Sauda Rate (₹{saudaBaseRate}/Qtl)
                   </button>
 
                   <button
@@ -1042,21 +983,21 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           </div>
 
-          {/* SECTION 3: FINAL M.R DETAILS & GRADE BREAKDOWN TABLE */}
-          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+          {/* SECTION 3: TEMPORARY M.R DETAILS & GRADE BREAKDOWN TABLE */}
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
             <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
               <div className="flex items-center gap-1.5">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="font-black uppercase tracking-wider text-[11px] text-slate-800">
-                  3. Final M.R Details &amp; Grade Breakdown
+                <span className="font-black uppercase tracking-wider text-[10.5px] text-slate-800">
+                  3. Temporary M.R Details &amp; Grade Breakdown
                 </span>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-slate-600">
-                <span className="font-bold text-slate-700">Last Arrival MR Date:</span>
+                <span className="font-bold text-slate-700">Last Temp MR Date:</span>
                 <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-950 font-bold border border-emerald-300">
                   {formatDisplayDate(lastArrivalDate)}
                 </span>
-                <span className="ml-2 font-bold text-slate-700">Arrivals:</span>
+                <span className="ml-2 font-bold text-slate-700">Temp Arrivals:</span>
                 <span className="px-1.5 py-0.2 rounded bg-slate-100 border border-slate-300 text-slate-800 font-bold">
                   {arrivalNumbersString}
                 </span>
@@ -1065,36 +1006,36 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
             {/* Grade Breakdown Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse font-mono text-[10.5px]">
+              <table className="w-full text-left border-collapse font-mono text-[10px]">
                 <thead>
-                  <tr className="bg-slate-100/90 text-slate-700 border-y border-slate-200 text-[9.5px] uppercase">
-                    <th className="py-1 px-2">M.R No</th>
-                    <th className="py-1 px-2">M.R Date</th>
+                  <tr className="bg-slate-100/90 text-slate-700 border-y border-slate-200 text-[9px] uppercase">
+                    <th className="py-1 px-2">Temp M.R No</th>
+                    <th className="py-1 px-2">Temp M.R Date</th>
                     <th className="py-1 px-2">Grade</th>
                     <th className="py-1 px-2">Marka</th>
                     <th className="py-1 px-2">Crop Year</th>
                     <th className="py-1 px-2 text-right">Bags</th>
                     <th className="py-1 px-2 text-right">Weight (Qtl)</th>
                     <th className="py-1 px-2 text-right">Weight (MT)</th>
-                    <th className="py-1 px-2 text-right">Sauda Satta Rate</th>
-                    <th className="py-1 px-2 text-right">Last Arrival Satta Rate</th>
+                    <th className="py-1 px-2 text-right">Sauda Rate</th>
+                    <th className="py-1 px-2 text-right">Temp Arrival Rate</th>
                     <th className="py-1 px-2 text-right">Rate Diff</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {gradeBreakdownList.map((gRow, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="py-1.5 px-2 font-bold text-indigo-900">{gRow.mrNo}</td>
-                      <td className="py-1.5 px-2 font-bold text-emerald-900">{gRow.mrDate}</td>
-                      <td className="py-1.5 px-2 font-bold text-slate-900">{gRow.grade}</td>
-                      <td className="py-1.5 px-2 text-slate-600">{gRow.marka}</td>
-                      <td className="py-1.5 px-2 text-slate-600">{gRow.cropYear}</td>
-                      <td className="py-1.5 px-2 text-right text-slate-800">{gRow.totalBags}</td>
-                      <td className="py-1.5 px-2 text-right font-bold text-slate-900">{Number(gRow.weightQtl).toFixed(2)} Qtl</td>
-                      <td className="py-1.5 px-2 text-right text-slate-700">{Number(gRow.weightMt).toFixed(3)} MT</td>
-                      <td className="py-1.5 px-2 text-right text-slate-700">₹{Number(gRow.saudaRateQtl).toLocaleString()} / Qtl</td>
-                      <td className="py-1.5 px-2 text-right text-slate-700">₹{Number(gRow.sattaRateQtl).toLocaleString()} / Qtl</td>
-                      <td className="py-1.5 px-2 text-right font-bold text-amber-700">₹{Number(gRow.rateDiffQtl).toLocaleString()} / Qtl</td>
+                      <td className="py-1 px-2 font-bold text-indigo-900">{gRow.mrNo}</td>
+                      <td className="py-1 px-2 font-bold text-emerald-900">{gRow.mrDate}</td>
+                      <td className="py-1 px-2 font-bold text-slate-900">{gRow.grade}</td>
+                      <td className="py-1 px-2 text-slate-600">{gRow.marka}</td>
+                      <td className="py-1 px-2 text-slate-600">{gRow.cropYear}</td>
+                      <td className="py-1 px-2 text-right text-slate-800">{gRow.totalBags}</td>
+                      <td className="py-1 px-2 text-right font-bold text-slate-900">{Number(gRow.weightQtl).toFixed(2)} Qtl</td>
+                      <td className="py-1 px-2 text-right text-slate-700">{Number(gRow.weightMt).toFixed(3)} MT</td>
+                      <td className="py-1 px-2 text-right text-slate-700">₹{Number(gRow.saudaRateQtl).toLocaleString()} / Qtl</td>
+                      <td className="py-1 px-2 text-right text-slate-700">₹{Number(gRow.sattaRateQtl).toLocaleString()} / Qtl</td>
+                      <td className="py-1 px-2 text-right font-bold text-amber-700">₹{Number(gRow.rateDiffQtl).toLocaleString()} / Qtl</td>
                     </tr>
                   ))}
                 </tbody>
