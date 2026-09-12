@@ -221,6 +221,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   const [sattaMismatchList, setSattaMismatchList] = useState<SattaMismatchItem[]>([]);
   const [sattaFilterStatus, setSattaFilterStatus] = useState<'all' | 'dispute' | 'ok' | 'resolved'>('dispute');
   const [sattaSourceFilter, setSattaSourceFilter] = useState<'ALL' | 'sauda_master' | 'sauda_check_point' | 'purchase_master'>('ALL');
+  const [savingSattaId, setSavingSattaId] = useState<string | null>(null);
 
   // 100-rows per page pagination (searches full dataset, displays paginated)
   const [currentPage, setCurrentPage] = useState(1);
@@ -315,16 +316,16 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
         dbModule.fetchAll('material_inspection').catch(() => []),
         dbModule.fetchAll('mill_inspection_master').catch(() => []),
         supabase ? supabase.from('material_mismatch').select('*').then(res => res.data || []) : dbModule.fetchAll('material_mismatch').catch(() => []),
-        dbModule.fetchAll('purchase_master').catch(() => []),
+        supabase ? supabase.from('purchase_master').select('*').then(res => res.data || []) : dbModule.fetchAll('purchase_master').catch(() => []),
         supabase ? supabase.from('purchase_detail_master').select('*').then(res => res.data || []) : Promise.resolve([]),
         supabase ? supabase.from('satta_base_rates').select('*').then(res => res.data || []) : Promise.resolve([]),
         supabase ? supabase.from('satta_differentials').select('*').then(res => res.data || []) : Promise.resolve([]),
         dbModule.fetchAll('grade_master').catch(() => []),
         supabase ? supabase.from('satta_mismatch').select('*').then(res => res.data || []) : dbModule.fetchAll('satta_mismatch').catch(() => []),
-        dbModule.fetchAll('sauda_master').catch(() => []),
-        dbModule.fetchAll('sauda_quality_details').catch(() => []),
-        dbModule.fetchAll('satta_master').catch(() => []),
-        dbModule.fetchAll('satta_quality_details').catch(() => []),
+        supabase ? supabase.from('sauda_master').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_master').catch(() => []),
+        supabase ? supabase.from('sauda_quality_details').select('*').then(res => res.data || []) : dbModule.fetchAll('sauda_quality_details').catch(() => []),
+        supabase ? supabase.from('satta_master').select('*').then(res => res.data || []) : dbModule.fetchAll('satta_master').catch(() => []),
+        supabase ? supabase.from('satta_quality_details').select('*').then(res => res.data || []) : dbModule.fetchAll('satta_quality_details').catch(() => []),
         supabase ? supabase.from('sms_sauda').select('*').then(res => res.data || []) : Promise.resolve([]),
       ]);
 
@@ -693,7 +694,43 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           if (refRate > 0 && Math.abs(entryRate - refRate) > 0.01) {
             const formattedNo = getFormattedOrderNo(entry);
             const itemId = `SD-RATEDIFF-${entry.sauda_id || formattedNo}`;
-            if (!sattaItems.some(i => i.id === itemId)) {
+            if (!sattaItems.some(item => item.id === itemId)) {
+              const cleanPoNo = String(formattedNo || '').trim().toUpperCase();
+              const cleanSaudaNo = String(entry.sauda_no || formattedNo || '').trim().toUpperCase();
+              const poSuffix = cleanPoNo.split('/').pop() || '';
+              const saudaSuffix = cleanSaudaNo.split('/').pop() || '';
+              const entryId = String(entry.sauda_id || '').toUpperCase();
+
+              const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => {
+                const smPo = String(sm.po_no || '').trim().toUpperCase();
+                const smSauda = String(sm.sauda_no || '').trim().toUpperCase();
+                const smId = String(sm.mismatch_id || sm.id || '').toUpperCase();
+                return (
+                  (smId && (smId === itemId.toUpperCase() || (entryId && smId.includes(entryId)))) ||
+                  (smPo && (smPo === cleanPoNo || cleanPoNo.includes(smPo) || smPo.includes(cleanPoNo) || (poSuffix && smPo.includes(poSuffix)))) ||
+                  (smSauda && (smSauda === cleanSaudaNo || cleanSaudaNo.includes(smSauda) || smSauda.includes(cleanSaudaNo) || (saudaSuffix && smSauda.includes(saudaSuffix))))
+                );
+              });
+
+              const isResolved = Boolean(
+                entry.satta_dispute_approved === true ||
+                entry.mismatch_cleared === true ||
+                (dbSattaMm && (
+                  dbSattaMm.status === 'resolved' ||
+                  dbSattaMm.status === 'approved' ||
+                  dbSattaMm.status === 'cleared' ||
+                  Boolean(dbSattaMm.approved_by) ||
+                  String(dbSattaMm.remarks || '').toLowerCase().includes('approved') ||
+                  String(dbSattaMm.remarks || '').toLowerCase().includes('resolved')
+                )) ||
+                (cleanPoNo && localStorage.getItem(`satta_resolved_${cleanPoNo}`)) ||
+                (cleanSaudaNo && localStorage.getItem(`satta_resolved_${cleanSaudaNo}`)) ||
+                (poSuffix && localStorage.getItem(`satta_resolved_${poSuffix}`)) ||
+                (saudaSuffix && localStorage.getItem(`satta_resolved_${saudaSuffix}`)) ||
+                (entryId && localStorage.getItem(`satta_resolved_${entryId}`)) ||
+                localStorage.getItem(`satta_resolved_${itemId.toUpperCase()}`)
+              );
+
               sattaItems.push({
                 id: itemId,
                 poNo: formattedNo,
@@ -709,11 +746,15 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                 differentialQtl: entryRate - refRate,
                 sattaFinalRateMt: refRate * 10,
                 sattaFinalRateQtl: refRate,
-                status: 'dispute',
+                status: isResolved ? 'resolved' : 'dispute',
                 issueDescription: `Same-Date B. Rate Mismatch on date ${bDate}: Reference rate for date ${bDate} is ₹${refRate.toLocaleString()}/Qtl, but contract specifies ₹${entryRate.toLocaleString()}/Qtl.`,
                 differenceMt: (entryRate - refRate) * 10,
                 differenceQtl: entryRate - refRate,
                 weightMt: Number(entry.total_wt_in_ton || 0),
+                resolutionNotes: (dbSattaMm && dbSattaMm.remarks) || entry.satta_remarks,
+                resolvedAt: (dbSattaMm && dbSattaMm.approved_at) ? String(dbSattaMm.approved_at).split('T')[0] : (entry.approved_at ? String(entry.approved_at).split('T')[0] : (isResolved ? new Date().toISOString().split('T')[0] : undefined)),
+                resolvedBy: (dbSattaMm && dbSattaMm.approved_by) || entry.approved_by || (isResolved ? 'Administrator' : undefined),
+                approvalLevel: (dbSattaMm && dbSattaMm.approval_level) || entry.approval_level || 'L3/L5',
                 sourceType: 'sauda_master',
                 sourceLabel: 'Sauda Desk Module (Same-Date Rate Mismatch)'
               });
@@ -744,6 +785,40 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
             const poNo = String(entry.po_no || entry.purchase_order || '').trim();
             const itemId = `PTF-RATEDIFF-${poNo || i}`;
             if (!sattaItems.some(item => item.id === itemId)) {
+              const cleanPoNo = String(poNo || '').trim().toUpperCase();
+              const cleanSaudaNo = String(entry.contract_po_no || poNo || '').trim().toUpperCase();
+              const poSuffix = cleanPoNo.split('/').pop() || '';
+              const saudaSuffix = cleanSaudaNo.split('/').pop() || '';
+
+              const dbSattaMm = (dbSattaMismatches || []).find((sm: any) => {
+                const smPo = String(sm.po_no || '').trim().toUpperCase();
+                const smSauda = String(sm.sauda_no || '').trim().toUpperCase();
+                const smId = String(sm.mismatch_id || sm.id || '').toUpperCase();
+                return (
+                  (smId && (smId === itemId.toUpperCase() || itemId.toUpperCase().includes(smId))) ||
+                  (smPo && (smPo === cleanPoNo || cleanPoNo.includes(smPo) || smPo.includes(cleanPoNo) || (poSuffix && smPo.includes(poSuffix)))) ||
+                  (smSauda && (smSauda === cleanSaudaNo || cleanSaudaNo.includes(smSauda) || smSauda.includes(cleanSaudaNo) || (saudaSuffix && smSauda.includes(saudaSuffix))))
+                );
+              });
+
+              const isResolved = Boolean(
+                entry.satta_dispute_approved === true ||
+                entry.mismatch_cleared === true ||
+                (dbSattaMm && (
+                  dbSattaMm.status === 'resolved' ||
+                  dbSattaMm.status === 'approved' ||
+                  dbSattaMm.status === 'cleared' ||
+                  Boolean(dbSattaMm.approved_by) ||
+                  String(dbSattaMm.remarks || '').toLowerCase().includes('approved') ||
+                  String(dbSattaMm.remarks || '').toLowerCase().includes('resolved')
+                )) ||
+                (cleanPoNo && localStorage.getItem(`satta_resolved_${cleanPoNo}`)) ||
+                (cleanSaudaNo && localStorage.getItem(`satta_resolved_${cleanSaudaNo}`)) ||
+                (poSuffix && localStorage.getItem(`satta_resolved_${poSuffix}`)) ||
+                (saudaSuffix && localStorage.getItem(`satta_resolved_${saudaSuffix}`)) ||
+                localStorage.getItem(`satta_resolved_${itemId.toUpperCase()}`)
+              );
+
               sattaItems.push({
                 id: itemId,
                 poNo: poNo || 'N/A',
@@ -759,16 +834,57 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                 differentialQtl: entryRate - refRate,
                 sattaFinalRateMt: refRate * 10,
                 sattaFinalRateQtl: refRate,
-                status: 'dispute',
+                status: isResolved ? 'resolved' : 'dispute',
                 issueDescription: `Same-Date PTF B. Rate Mismatch on S Date ${sDate}: Reference rate for date ${sDate} is ₹${refRate.toLocaleString()}/Qtl, but PTF entry specifies ₹${entryRate.toLocaleString()}/Qtl.`,
                 differenceMt: (entryRate - refRate) * 10,
                 differenceQtl: entryRate - refRate,
                 weightMt: Number(entry.total_contract_mt || entry.total_wt_in_ton || 0),
+                resolutionNotes: (dbSattaMm && dbSattaMm.remarks) || entry.satta_remarks,
+                resolvedAt: (dbSattaMm && dbSattaMm.approved_at) ? String(dbSattaMm.approved_at).split('T')[0] : (entry.approved_at ? String(entry.approved_at).split('T')[0] : (isResolved ? new Date().toISOString().split('T')[0] : undefined)),
+                resolvedBy: (dbSattaMm && dbSattaMm.approved_by) || entry.approved_by || (isResolved ? 'Administrator' : undefined),
+                approvalLevel: (dbSattaMm && dbSattaMm.approval_level) || entry.approval_level || 'L3/L5',
                 sourceType: 'sauda_check_point',
                 sourceLabel: 'Sauda Check Point PTF Module (Same-Date Rate Mismatch)'
               });
             }
           }
+        }
+      });
+
+      // 3. Include any standalone records from satta_mismatch table in DB
+      dbSattaMismatches.forEach((sm: any) => {
+        const poNo = String(sm.po_no || '').trim().toUpperCase();
+        const saudaNo = String(sm.sauda_no || '').trim().toUpperCase();
+        const smId = sm.mismatch_id || sm.id || `SAT-DB-${poNo}`;
+        if (!sattaItems.some(item => item.id === smId || (poNo && item.poNo === poNo))) {
+          const isResolved = sm.status === 'resolved' || sm.status === 'approved' || Boolean(sm.approved_by);
+          sattaItems.push({
+            id: smId,
+            poNo: poNo || 'N/A',
+            saudaNo: saudaNo || poNo || 'N/A',
+            poDate: sm.created_at ? String(sm.created_at).split('T')[0] : new Date().toISOString().split('T')[0],
+            supplierName: sm.supplier || 'N/A',
+            brokerName: sm.broker || 'N/A',
+            area: sm.area || 'DAISEE',
+            grade: sm.grade || 'TD6',
+            poRateMt: Number(sm.actual_rate || 0) * 10,
+            poRateQtl: Number(sm.actual_rate || 0),
+            sattaBaseRateQtl: Number(sm.expected_rate || 0),
+            differentialQtl: 0,
+            sattaFinalRateMt: Number(sm.expected_rate || 0) * 10,
+            sattaFinalRateQtl: Number(sm.expected_rate || 0),
+            status: isResolved ? 'resolved' : 'dispute',
+            issueDescription: sm.remarks || 'Satta Rate Mismatch',
+            differenceMt: (Number(sm.actual_rate || 0) - Number(sm.expected_rate || 0)) * 10,
+            differenceQtl: Number(sm.actual_rate || 0) - Number(sm.expected_rate || 0),
+            weightMt: 0,
+            resolutionNotes: sm.remarks,
+            resolvedAt: sm.approved_at ? String(sm.approved_at).split('T')[0] : (isResolved ? new Date().toISOString().split('T')[0] : undefined),
+            resolvedBy: sm.approved_by || (isResolved ? 'Administrator' : undefined),
+            approvalLevel: sm.approval_level || 'L3/L5',
+            sourceType: 'sauda_master',
+            sourceLabel: 'Satta Mismatch Database'
+          });
         }
       });
 
@@ -957,140 +1073,187 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   };
 
   const handleResolveSatta = async (itemId: string, itemPoNo: string) => {
-    const rawRemarks = remarksMap[itemId] || '';
-    const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';
+    setSavingSattaId(itemId);
+    try {
+      const rawRemarks = remarksMap[itemId] || '';
+      const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';
 
-    const ctx = getCurrentUserContext();
-    const username = ctx.username || ctx.userName || 'Administrator';
-    const approvalLevel = (ctx.userLevel || ctx.userRole || 'ADMIN').toUpperCase();
-    const nowIso = new Date().toISOString();
+      const ctx = getCurrentUserContext();
+      const username = ctx.username || ctx.userName || 'Administrator';
+      const approvalLevel = (ctx.userLevel || ctx.userRole || 'ADMIN').toUpperCase();
+      const nowIso = new Date().toISOString();
 
-    const targetItem = sattaMismatchList.find(i => i.id === itemId || i.poNo === itemPoNo || i.saudaNo === itemPoNo);
+      const targetItem = sattaMismatchList.find(i => i.id === itemId || i.poNo === itemPoNo || i.saudaNo === itemPoNo);
 
-    // Save resolution in localStorage immediately for resilient caching
-    const saudaTokens = [
-      itemPoNo, 
-      targetItem?.saudaNo, 
-      itemPoNo.split('/').pop() || '', 
-      (targetItem?.saudaNo || '').split('/').pop() || '',
-      itemPoNo.replace(/^BJCL\//i, ''),
-      (targetItem?.saudaNo || '').replace(/^BJCL\//i, ''),
-      itemId
-    ].filter(Boolean);
+      // Save resolution in localStorage immediately for resilient caching
+      const saudaTokens = [
+        itemPoNo, 
+        targetItem?.saudaNo, 
+        itemPoNo.split('/').pop() || '', 
+        (targetItem?.saudaNo || '').split('/').pop() || '',
+        itemPoNo.replace(/^BJCL\//i, ''),
+        (targetItem?.saudaNo || '').replace(/^BJCL\//i, ''),
+        itemId
+      ].filter(Boolean);
 
-    saudaTokens.forEach(token => {
-      try {
-        const payload = JSON.stringify({
-          resolvedBy: username,
-          resolvedAt: nowIso,
-          approvalLevel,
-          remarks: remarks.trim(),
-          status: 'resolved'
-        });
-        localStorage.setItem(`satta_resolved_${String(token).toUpperCase()}`, payload);
-        localStorage.setItem(`mismatch_resolved_${String(token).toUpperCase()}`, payload);
-        localStorage.setItem(`mismatch_cleared_${String(token).toUpperCase()}`, 'true');
-      } catch (e) {}
-    });
+      saudaTokens.forEach(token => {
+        try {
+          const payload = JSON.stringify({
+            resolvedBy: username,
+            resolvedAt: nowIso,
+            approvalLevel,
+            remarks: remarks.trim(),
+            status: 'resolved'
+          });
+          localStorage.setItem(`satta_resolved_${String(token).toUpperCase()}`, payload);
+          localStorage.setItem(`mismatch_resolved_${String(token).toUpperCase()}`, payload);
+          localStorage.setItem(`mismatch_cleared_${String(token).toUpperCase()}`, 'true');
+        } catch (e) {}
+      });
 
-    // 1. Base record (compatible with standard PostgreSQL table schema)
-    const baseSattaRecord: Record<string, any> = {
-      sauda_no: String(targetItem?.saudaNo || itemPoNo || '').trim(),
-      po_no: String(itemPoNo || '').trim(),
-      area: String(targetItem?.area || 'DAISEE'),
-      grade: String(targetItem?.grade || 'TD6'),
-      field: 'Price Dispute',
-      expected_value: String(targetItem?.sattaFinalRateQtl || ''),
-      actual_value: String(targetItem?.poRateQtl || ''),
-      expected_rate: Number(targetItem?.sattaFinalRateQtl || 0),
-      actual_rate: Number(targetItem?.poRateQtl || 0),
-      status: 'resolved',
-      remarks: `[APPROVED by ${username} (${approvalLevel}) on ${nowIso.split('T')[0]}]: ${remarks.trim()}`,
-    };
+      // Generate a stable UUID for new records
+      const recordUuid = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'sat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
 
-    // 2. Extended record (if database has extra columns)
-    const extendedSattaRecord: Record<string, any> = {
-      ...baseSattaRecord,
-      mismatch_id: itemId,
-      approved_by: username,
-      approved_at: nowIso,
-      approval_level: approvalLevel,
-    };
+      // 1. Base record (compatible with standard PostgreSQL table schema)
+      const baseSattaRecord: Record<string, any> = {
+        id: recordUuid,
+        sauda_no: String(targetItem?.saudaNo || itemPoNo || '').trim(),
+        po_no: String(itemPoNo || '').trim(),
+        area: String(targetItem?.area || 'DAISEE'),
+        grade: String(targetItem?.grade || 'TD6'),
+        field: 'Price Dispute',
+        expected_value: String(targetItem?.sattaFinalRateQtl || ''),
+        actual_value: String(targetItem?.poRateQtl || ''),
+        expected_rate: Number(targetItem?.sattaFinalRateQtl || 0),
+        actual_rate: Number(targetItem?.poRateQtl || 0),
+        status: 'resolved',
+        remarks: `[APPROVED by ${username} (${approvalLevel}) on ${nowIso.split('T')[0]}]: ${remarks.trim()}`,
+      };
 
-    if (supabase) {
-      try {
-        // Query existing rows using select('*')
-        const searchToken = (targetItem?.saudaNo || itemPoNo).split('/').pop() || itemPoNo;
-        const { data: existingRows } = await supabase
-          .from('satta_mismatch')
-          .select('*')
-          .or(`po_no.ilike.%${searchToken}%,sauda_no.ilike.%${searchToken}%`);
+      // 2. Extended record (if database has extra columns)
+      const extendedSattaRecord: Record<string, any> = {
+        ...baseSattaRecord,
+        mismatch_id: itemId,
+        approved_by: username,
+        approved_at: nowIso,
+        approval_level: approvalLevel,
+      };
 
-        if (existingRows && existingRows.length > 0) {
-          const rowId = existingRows[0].id;
-          const { error: updErr } = await supabase.from('satta_mismatch').update(extendedSattaRecord).eq('id', rowId);
-          if (updErr) {
-            await supabase.from('satta_mismatch').update(baseSattaRecord).eq('id', rowId);
+      if (supabase) {
+        try {
+          // Query existing rows using select('*')
+          const searchToken = (targetItem?.saudaNo || itemPoNo).split('/').pop() || itemPoNo;
+          const { data: existingRows } = await supabase
+            .from('satta_mismatch')
+            .select('*')
+            .or(`mismatch_id.eq.${itemId},po_no.ilike.%${searchToken}%,sauda_no.ilike.%${searchToken}%`);
+
+          if (existingRows && existingRows.length > 0) {
+            const rowId = existingRows[0].id;
+            const updatePayload = { ...extendedSattaRecord };
+            delete updatePayload.id;
+            const { error: updErr } = await supabase.from('satta_mismatch').update(updatePayload).eq('id', rowId);
+            if (updErr) {
+              const basePayload = { ...baseSattaRecord };
+              delete basePayload.id;
+              await supabase.from('satta_mismatch').update(basePayload).eq('id', rowId);
+            }
+          } else {
+            const { error: insErr } = await supabase.from('satta_mismatch').insert(extendedSattaRecord);
+            if (insErr) {
+              await supabase.from('satta_mismatch').insert(baseSattaRecord);
+            }
           }
-        } else {
-          const { error: insErr } = await supabase.from('satta_mismatch').insert(extendedSattaRecord);
-          if (insErr) {
-            await supabase.from('satta_mismatch').insert(baseSattaRecord);
-          }
+        } catch (e) {
+          console.warn("satta_mismatch write warning:", e);
         }
-      } catch (e) {
-        console.warn("satta_mismatch write warning:", e);
+
+        // Update sauda_master, sms_sauda, sauda_check_point, and purchase_master with approval flags
+        for (const token of saudaTokens) {
+          try {
+            await supabase.from('sauda_master').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).ilike('sauda_no', `%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('sms_sauda').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).ilike('sauda_no', `%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('sauda_check_point').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).or(`po_no.ilike.%${token}%,contract_po_no.ilike.%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('purchase_master').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).or(`po_no.ilike.%${token}%,contract_po_no.ilike.%${token}%`);
+          } catch (e) {}
+        }
       }
 
-      // Update sauda_master and sms_sauda with approval flags
-      for (const token of saudaTokens) {
-        try {
-          await supabase.from('sauda_master').update({
-            satta_dispute_approved: true,
-            mismatch_cleared: true,
-            satta_remarks: remarks.trim(),
-            approved_by: username,
-            approved_at: nowIso,
-            approval_level: approvalLevel,
-          }).ilike('sauda_no', `%${token}%`);
-        } catch (e) {}
+      // Direct persistence in dbModule as well
+      await dbModule.insert('satta_mismatch', { ...extendedSattaRecord, id: itemId }).catch(() => {});
 
-        try {
-          await supabase.from('sms_sauda').update({
-            satta_dispute_approved: true,
-            mismatch_cleared: true,
-            satta_remarks: remarks.trim(),
-            approved_by: username,
-            approved_at: nowIso,
-            approval_level: approvalLevel,
-          }).ilike('sauda_no', `%${token}%`);
-        } catch (e) {}
-      }
+      // Optimistically update local state immediately so user sees it resolved on screen
+      setSattaMismatchList(prev => prev.map(s => {
+        if (s.id === itemId || s.poNo === itemPoNo || (s.saudaNo && s.saudaNo === itemPoNo)) {
+          return {
+            ...s,
+            status: 'resolved',
+            resolutionNotes: remarks.trim(),
+            resolvedBy: username,
+            resolvedAt: nowIso.split('T')[0],
+            approvalLevel: approvalLevel,
+          };
+        }
+        return s;
+      }));
+
+      // Clear input remarks for this item
+      setRemarksMap(prev => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+
+      window.dispatchEvent(new CustomEvent('satta_resolved', { detail: { poNo: itemPoNo, itemId } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
+      await loadMismatches();
+
+      setSuccessToast(`Satta Price Dispute for [${itemPoNo}] approved, saved, and cleared by ${approvalLevel} level user.`);
+      setTimeout(() => setSuccessToast(null), 4000);
+    } catch (err) {
+      console.error('Failed to resolve Satta dispute:', err);
+    } finally {
+      setSavingSattaId(null);
     }
-
-    // Direct persistence in dbModule as well
-    await dbModule.insert('satta_mismatch', { ...extendedSattaRecord, id: itemId }).catch(() => {});
-
-    // Optimistically update local state immediately so user sees it resolved on screen
-    setSattaMismatchList(prev => prev.map(s => {
-      if (s.id === itemId || s.poNo === itemPoNo || (s.saudaNo && s.saudaNo === itemPoNo)) {
-        return {
-          ...s,
-          status: 'resolved',
-          resolutionNotes: remarks.trim(),
-          resolvedBy: username,
-          resolvedAt: nowIso.split('T')[0],
-          approvalLevel: approvalLevel,
-        };
-      }
-      return s;
-    }));
-
-    window.dispatchEvent(new CustomEvent('app-data-updated'));
-    await loadMismatches();
-
-    setSuccessToast(`Satta Price Dispute for [${itemPoNo}] approved and cleared by ${approvalLevel} level user.`);
-    setTimeout(() => setSuccessToast(null), 4000);
   };
 
   const supplierOptions = Array.from(
@@ -1727,10 +1890,21 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                                   />
                                   <button
                                     onClick={() => handleResolveSatta(item.id, item.poNo)}
-                                    className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase px-3 py-1.5 rounded text-[10.5px] tracking-wider transition flex items-center justify-center gap-1.5 shadow-xs"
+                                    disabled={savingSattaId === item.id}
+                                    className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-black uppercase px-3 py-1.5 rounded text-[10.5px] tracking-wider transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                                    title="Click to Save & Approve Price Dispute clearance"
                                   >
-                                    <Check className="h-4 w-4" />
-                                    <span>Approve Price Dispute</span>
+                                    {savingSattaId === item.id ? (
+                                      <>
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                        <span>Saving...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="h-4 w-4" />
+                                        <span>Save & Approve Dispute</span>
+                                      </>
+                                    )}
                                   </button>
                                 </div>
                               ) : (
