@@ -1735,7 +1735,7 @@ export default function App() {
   const handleLogin = async (year: string, user: string, pass: string) => {
     // Master Admin Fallback
     if (user.toLowerCase() === "admin") {
-      if (pass !== "Admin@1234") {
+      if (pass !== "Admin@4321") {
         alert("Access denied: Invalid Admin Password.");
         return;
       }
