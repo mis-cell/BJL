@@ -874,18 +874,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const col = emptyDetailColumn(idx);
     if (!item && !pDet && !inspItem) return col;
 
-    // 1. Grade (Primary from Mill Inspection Item)
-    const rawGrade = 
+    // 1. Grade (Primary from Final P.O item if present, otherwise mill inspection / arrival item)
+    const poGrade = pDet?.grade_name || pDet?.quality || (pDet?.grade_code ? resolveGradeName(pDet.grade_code, gList) : '') || pDet?.grade || '';
+    const arrivalGrade = 
       inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
       inspItem?.stock_grade_code || inspItem?.grade_code ||
       item?.stock_grade_name || item?.arrival_grade || item?.grade || item?.grade_name || item?.receipt_grade_name || 
       item?.grade_code || item?.stock_grade_code || item?.receipt_grade_code || item?.challan_grade_name || 
-      item?.quality || item?.stock_grade ||
-      pDet?.grade_name || pDet?.grade_code || pDet?.grade || pDet?.quality || '';
+      item?.quality || item?.stock_grade || '';
     
+    const rawGrade = poGrade || arrivalGrade;
     col.grade = resolveGradeName(rawGrade, gList) || rawGrade || '';
 
-    // 2. Area (Primary from Mill Inspection Item)
+    // 2. Area (Primary from Mill Inspection Item, then arrival, then PO)
     const rawArea = 
       inspItem?.area || inspMaster?.arrival_area_name || 
       item?.area || item?.arrival_area_name || faMaster?.arrival_area_name || 
@@ -893,66 +894,70 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     
     col.area = resolveAreaName(rawArea, arList) || rawArea || '';
 
-    // 3. Agency (Primary from Mill Inspection Item)
+    // 3. Agency (Primary from Mill Inspection Item, then arrival, then PO)
     const rawAgency = 
       inspItem?.agency_name || inspItem?.agency || inspItem?.agency_code || 
       item?.agency_name || item?.agency || item?.agency_code || 
-      pDet?.agency_name || pDet?.agency_code || pDet?.agency || poData?.agency || '';
+      pDet?.agency_name || pDet?.agency_code || pDet?.agency || 
+      faMaster?.agency_name || faMaster?.agency || faMaster?.grid_details?.[0]?.agency_name || 
+      inspMaster?.agency_name || poData?.agency || '';
     
     col.agency = resolveAgencyName(rawAgency, agList) || rawAgency || '';
 
-    // 4. Marka / Crop (Primary from Mill Inspection Item)
+    // 4. Marka / Crop (Primary from Mill Inspection Item, then arrival, then PO)
     const rawMarka = 
       inspItem?.marka_name || inspItem?.marka || inspItem?.marka_code || 
       item?.marka_name || item?.challan_marka_name || item?.marka || item?.marka_code || item?.challan_marka_code || 
-      pDet?.marka_name || pDet?.marka_code || pDet?.marka || '';
+      pDet?.marka_name || pDet?.marka_code || pDet?.marka || 
+      faMaster?.marka || faMaster?.grid_details?.[0]?.challan_marka_name || inspMaster?.marka || poData?.marks || '';
     const resolvedMarka = resolveMarkaName(rawMarka, mList) || rawMarka || '';
 
     const rawCrop = 
-      inspItem?.crop_year || inspItem?.crop || inspMaster?.crop_year || faMaster?.crop_year || item?.crop_year || item?.crop || pDet?.crop_year || poData?.crop_year || '';
+      inspItem?.crop_year || inspItem?.crop || inspMaster?.crop_year || faMaster?.crop_year || 
+      item?.crop_year || item?.crop || pDet?.crop_year || poData?.crop_year || faMaster?.grid_details?.[0]?.crop_year || '2026-27';
 
     col.marka_crop = (resolvedMarka ? resolvedMarka : '') + 
       (rawCrop ? (resolvedMarka ? ` / ${rawCrop}` : rawCrop) : '');
 
-    // 5. Quantity (Bales) (Primary from Mill Inspection Item)
-    const rawQty = 
+    // 5. Quantity (Bales) - only if this material arrived in this lorry
+    const rawQty = (inspItem || item) ? (
       inspItem?.quantity || inspItem?.bales ||
-      item?.quantity || item?.quantity_rcpt || item?.quantity_chln || item?.qty || item?.packets || item?.total_packets || item?.bales || 
-      pDet?.quantity || pDet?.qty || 0;
+      item?.quantity || item?.quantity_rcpt || item?.quantity_chln || item?.qty || item?.packets || item?.total_packets || item?.bales || 0
+    ) : 0;
     
     col.quantity = Number(rawQty) || 0;
 
     // 6. Arrival Quantity / Weight (Arr Qty Wt) -> EXACTLY Final Receipt Wt. (Claim) from Mill Inspection
     let rawWt = 0;
-    if (inspItem?.final_receipt_wt !== undefined && inspItem?.final_receipt_wt !== null && Number(inspItem.final_receipt_wt) > 0) {
-      rawWt = Number(inspItem.final_receipt_wt);
-    } else if (item?.final_receipt_wt !== undefined && item?.final_receipt_wt !== null && Number(item.final_receipt_wt) > 0) {
-      rawWt = Number(item.final_receipt_wt);
-    } else if (inspItem?.receipt_gross_wt && Number(inspItem.receipt_gross_wt) > 0) {
-      rawWt = Number(inspItem.receipt_gross_wt);
-    } else if (inspItem?.challan_gross_wt && Number(inspItem.challan_gross_wt) > 0) {
-      rawWt = Number(inspItem.challan_gross_wt);
-    } else if (item?.receipt_gross_wt && Number(item.receipt_gross_wt) > 0) {
-      rawWt = Number(item.receipt_gross_wt);
-    } else if (item?.weight && Number(item.weight) > 0) {
-      rawWt = Number(item.weight);
-    } else if (item?.arr_qty_wt && Number(item.arr_qty_wt) > 0) {
-      rawWt = Number(item.arr_qty_wt);
-    } else if (inspItem?.weight && Number(inspItem.weight) > 0) {
-      rawWt = Number(inspItem.weight);
-    } else if (pDet?.weight_mt && Number(pDet.weight_mt) > 0) {
-      rawWt = Number(pDet.weight_mt);
+    if (inspItem || item) {
+      if (inspItem?.final_receipt_wt !== undefined && inspItem?.final_receipt_wt !== null && Number(inspItem.final_receipt_wt) > 0) {
+        rawWt = Number(inspItem.final_receipt_wt);
+      } else if (item?.final_receipt_wt !== undefined && item?.final_receipt_wt !== null && Number(item.final_receipt_wt) > 0) {
+        rawWt = Number(item.final_receipt_wt);
+      } else if (inspItem?.receipt_gross_wt && Number(inspItem.receipt_gross_wt) > 0) {
+        rawWt = Number(inspItem.receipt_gross_wt);
+      } else if (inspItem?.challan_gross_wt && Number(inspItem.challan_gross_wt) > 0) {
+        rawWt = Number(inspItem.challan_gross_wt);
+      } else if (item?.receipt_gross_wt && Number(item.receipt_gross_wt) > 0) {
+        rawWt = Number(item.receipt_gross_wt);
+      } else if (item?.weight && Number(item.weight) > 0) {
+        rawWt = Number(item.weight);
+      } else if (item?.arr_qty_wt && Number(item.arr_qty_wt) > 0) {
+        rawWt = Number(item.arr_qty_wt);
+      } else if (inspItem?.weight && Number(inspItem.weight) > 0) {
+        rawWt = Number(inspItem.weight);
+      }
     }
     
     col.arr_qty_wt = col.quantity > 0 || rawWt > 0 ? (Number(rawWt) || 0) : 0;
     // Min.Qty/Wt is "Arr. Qty/Wt" with 3% acceptable (97% of Arr. Qty/Wt)
     col.min_qty_wt = col.arr_qty_wt > 0 ? Number((col.arr_qty_wt * 0.97).toFixed(3)) : 0;
 
-    // 7. Rate
+    // 7. Rate (Primary from Final P.O contract rate, then inspection/arrival)
     const rawRate = 
+      pDet?.rate_qntl || pDet?.rate || poData?.rate_qntl ||
       inspItem?.rate || inspItem?.rate_qntl ||
-      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 
-      pDet?.rate_qntl || pDet?.rate || poData?.rate_qntl || 0;
+      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
     
     col.rate_value = Number(rawRate) || 0;
 
@@ -1046,6 +1051,160 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     col.claim_settlement = Number((gdVal + mVal + dVal + nVal).toFixed(2));
 
     return col;
+  };
+
+  const buildAlignedSettlementColumns = (
+    poDetails: any[],
+    inspDetails: any[],
+    faGridArr: any[],
+    faMaster: any,
+    inspMaster: any,
+    poData: any,
+    gList: any[],
+    agList: any[],
+    mList: any[],
+    arList: any[]
+  ): SettlementDetailColumn[] => {
+    // 1. Prepare normalized arrival rows
+    const arrivalRows: Array<{ inspItem: any; faItem: any; rawGrade: string; gradeName: string; gradeCode: string }> = [];
+    const maxArrivalLen = Math.max(inspDetails?.length || 0, faGridArr?.length || 0);
+    for (let i = 0; i < maxArrivalLen; i++) {
+      const inspItem = inspDetails?.[i] || null;
+      const faItem = faGridArr?.[i] || null;
+      const rawG = 
+        inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
+        inspItem?.stock_grade_code || inspItem?.grade_code ||
+        faItem?.receipt_grade_name || faItem?.challan_grade_name || faItem?.stock_grade_name || faItem?.arrival_grade || 
+        faItem?.grade || faItem?.grade_name || faItem?.quality || '';
+      const codeG = String(
+        inspItem?.stock_grade_code || inspItem?.grade_code || 
+        faItem?.receipt_grade_code || faItem?.grade_code || ''
+      ).trim();
+      const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
+
+      arrivalRows.push({
+        inspItem,
+        faItem,
+        rawGrade: rawG,
+        gradeName: nameG,
+        gradeCode: codeG
+      });
+    }
+
+    const matchedArrivalIndices = new Set<number>();
+
+    // If PO details exist, columns 1..4 align primarily with the PO items
+    if (poDetails && poDetails.length > 0) {
+      return [1, 2, 3, 4].map(idx => {
+        const pDet = poDetails[idx - 1] || null;
+        if (pDet) {
+          const poRawG = pDet.grade_name || pDet.quality || pDet.grade || '';
+          const poCodeG = String(pDet.grade_code || '').trim();
+          const poNameG = (resolveGradeName(poRawG || poCodeG, gList) || poRawG || '').trim().toUpperCase();
+
+          // Find matching arrival row by grade
+          let matchedArrivalIndex = -1;
+          for (let aIdx = 0; aIdx < arrivalRows.length; aIdx++) {
+            if (matchedArrivalIndices.has(aIdx)) continue;
+            const arr = arrivalRows[aIdx];
+            const isNameMatch = Boolean(poNameG && arr.gradeName && poNameG === arr.gradeName);
+            const isCodeMatch = Boolean(poCodeG && arr.gradeCode && poCodeG === arr.gradeCode);
+            const isCrossCodeNameMatch = Boolean(
+              (poCodeG && arr.gradeName && resolveGradeName(poCodeG, gList)?.trim().toUpperCase() === arr.gradeName) ||
+              (arr.gradeCode && poNameG && resolveGradeName(arr.gradeCode, gList)?.trim().toUpperCase() === poNameG)
+            );
+
+            if (isNameMatch || isCodeMatch || isCrossCodeNameMatch) {
+              matchedArrivalIndex = aIdx;
+              break;
+            }
+          }
+
+          if (matchedArrivalIndex !== -1) {
+            matchedArrivalIndices.add(matchedArrivalIndex);
+            const matchedArr = arrivalRows[matchedArrivalIndex];
+            return buildSettlementCol(
+              idx,
+              matchedArr.inspItem || matchedArr.faItem,
+              pDet,
+              faMaster,
+              inspMaster,
+              poData,
+              gList,
+              agList,
+              mList,
+              arList,
+              matchedArr.inspItem
+            );
+          } else {
+            // PO item exists, but no material of this grade arrived in this lorry
+            return buildSettlementCol(
+              idx,
+              null,
+              pDet,
+              faMaster,
+              inspMaster,
+              poData,
+              gList,
+              agList,
+              mList,
+              arList,
+              null
+            );
+          }
+        } else {
+          // No PO item for this column index, check for any unmatched arrival rows
+          let nextUnmatchedIndex = -1;
+          for (let aIdx = 0; aIdx < arrivalRows.length; aIdx++) {
+            if (!matchedArrivalIndices.has(aIdx)) {
+              nextUnmatchedIndex = aIdx;
+              break;
+            }
+          }
+
+          if (nextUnmatchedIndex !== -1) {
+            matchedArrivalIndices.add(nextUnmatchedIndex);
+            const matchedArr = arrivalRows[nextUnmatchedIndex];
+            return buildSettlementCol(
+              idx,
+              matchedArr.inspItem || matchedArr.faItem,
+              null,
+              faMaster,
+              inspMaster,
+              poData,
+              gList,
+              agList,
+              mList,
+              arList,
+              matchedArr.inspItem
+            );
+          } else {
+            return emptyDetailColumn(idx);
+          }
+        }
+      });
+    }
+
+    // Fallback when no poDetails are present: map directly from arrival rows
+    return [1, 2, 3, 4].map(idx => {
+      const arr = arrivalRows[idx - 1];
+      if (arr) {
+        return buildSettlementCol(
+          idx,
+          arr.inspItem || arr.faItem,
+          null,
+          faMaster,
+          inspMaster,
+          poData,
+          gList,
+          agList,
+          mList,
+          arList,
+          arr.inspItem
+        );
+      }
+      return emptyDetailColumn(idx);
+    });
   };
 
   useLiveAutoRefresh(initPage, [], { 
@@ -1634,13 +1793,48 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       let poDetails: any[] = [];
-      if (poNoForDet) {
-        const { data: pDetData } = await supabase
-          .from('purchase_detail_master')
-          .select('*')
-          .eq('po_no', poNoForDet)
-          .order('srl_no', { ascending: true });
-        if (pDetData) poDetails = pDetData;
+      let poData: any = null;
+      const effectivePoNo = poNoForDet || cleanTargetPo;
+      if (effectivePoNo) {
+        const [pDetRes, pMasterRes] = await Promise.all([
+          supabase.from('purchase_detail_master').select('*').eq('po_no', effectivePoNo).order('srl_no', { ascending: true }),
+          supabase.from('purchase_master').select('*').eq('po_no', effectivePoNo).maybeSingle()
+        ]);
+        if (pDetRes?.data && pDetRes.data.length > 0) poDetails = pDetRes.data;
+        if (pMasterRes?.data) poData = pMasterRes.data;
+      }
+
+      let gList = gradeMasterList;
+      if (!gList || gList.length === 0) {
+        const { data: gData } = await supabase.from('grade_master').select('*');
+        if (gData && gData.length > 0) {
+          gList = gData;
+          setGradeMasterList(gData);
+        }
+      }
+      let agList = agencyMasterList;
+      if (!agList || agList.length === 0) {
+        const { data: agData } = await supabase.from('agency_master').select('*');
+        if (agData && agData.length > 0) {
+          agList = agData;
+          setAgencyMasterList(agData);
+        }
+      }
+      let mList = markaMasterList;
+      if (!mList || mList.length === 0) {
+        const { data: mData } = await supabase.from('marka_master').select('*');
+        if (mData && mData.length > 0) {
+          mList = mData;
+          setMarkaMasterList(mData);
+        }
+      }
+      let arList = areaMasterList;
+      if (!arList || arList.length === 0) {
+        const { data: aData } = await supabase.from('area_master').select('*');
+        if (aData && aData.length > 0) {
+          arList = aData;
+          setAreaMasterList(aData);
+        }
       }
 
       // Fetch Temporary Arrival record to retrieve A.P.M.C Fees (Rs.)
@@ -1829,14 +2023,24 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             .eq('mr_no', targetMrNo)
             .order('col_index', { ascending: true });
 
+          const fallbackCols = buildAlignedSettlementColumns(
+            poDetails,
+            inspDetails,
+            faGridArr,
+            faMaster,
+            inspMaster,
+            poData,
+            gList,
+            agList,
+            mList,
+            arList
+          );
+
           if (existingDetails && existingDetails.length > 0) {
             // Fill columns up to 4, backfilling missing fields if necessary
             const newCols = [1, 2, 3, 4].map(idx => {
               const dbMatch = existingDetails.find(d => d.col_index === idx);
-              const inspItem = inspDetails[idx - 1] || null;
-              const srcItem = inspItem || faGridArr[idx - 1] || null;
-              const pDet = poDetails[idx - 1] || null;
-              const fallbackCol = buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
+              const fallbackCol = fallbackCols[idx - 1] || emptyDetailColumn(idx);
 
               if (dbMatch) {
                 const merged = { ...emptyDetailColumn(idx), ...dbMatch };
@@ -1869,13 +2073,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             });
             setDetailCols(newCols);
           } else {
-            const newCols = [1, 2, 3, 4].map(idx => {
-              const inspItem = inspDetails[idx - 1] || null;
-              const srcItem = inspItem || faGridArr[idx - 1] || null;
-              const pDet = poDetails[idx - 1] || null;
-              return buildSettlementCol(idx, srcItem, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
-            });
-            setDetailCols(newCols);
+            setDetailCols(fallbackCols);
           }
           if (existingMaster.po_no) {
           setSelectedPoNo(existingMaster.po_no);
@@ -1922,12 +2120,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           final_on_ac_adv: syncedPaidAmount
         };
 
-        const populatedCols = [1, 2, 3, 4].map(idx => {
-          const inspItem = inspDetails[idx - 1] || null;
-          const item = inspItem || faGridArr[idx - 1] || null;
-          const pDet = poDetails[idx - 1] || null;
-          return buildSettlementCol(idx, item, pDet, faMaster, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
-        });
+        const populatedCols = buildAlignedSettlementColumns(
+          poDetails,
+          inspDetails,
+          faGridArr,
+          faMaster,
+          inspMaster,
+          poData,
+          gList,
+          agList,
+          mList,
+          arList
+        );
 
         const activeColsCount = populatedCols.filter(c => 
           (Number(c.quantity) || 0) > 0 || (Number(c.arr_qty_wt) || 0) > 0 || (Number(c.wt_quantity) || 0) > 0
@@ -2007,12 +2211,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         final_on_ac_adv: syncedPaidAmount
       };
 
-      const populatedCols = [1, 2, 3, 4].map(idx => {
-        const item = inspDetails[idx - 1] || null;
-        const inspItem = inspDetails[idx - 1] || null;
-        const pDet = poDetails[idx - 1] || null;
-        return buildSettlementCol(idx, item, pDet, null, inspMaster, null, gradeMasterList, agencyMasterList, markaMasterList, areaMasterList, inspItem);
-      });
+      const populatedCols = buildAlignedSettlementColumns(
+        poDetails,
+        inspDetails,
+        [],
+        null,
+        inspMaster,
+        poData,
+        gList,
+        agList,
+        mList,
+        arList
+      );
 
       const activeColsCountFallback = populatedCols.filter(c => 
         (Number(c.quantity) || 0) > 0 || (Number(c.arr_qty_wt) || 0) > 0 || (Number(c.wt_quantity) || 0) > 0
