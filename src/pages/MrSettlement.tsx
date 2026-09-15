@@ -371,16 +371,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   const [paymentList, setPaymentList] = useState<any[]>([]);
   const [paymentValidationInfo, setPaymentValidationInfo] = useState<{ mrNo: string; poNo: string; paidAmount: number; voucherNo: string } | null>(null);
 
-  const syncPaymentModuleData = async (mrNo: string, poNo: string) => {
+  const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<number> => {
     try {
       let payRecords: any[] = [];
+      let payDetails: any[] = [];
+
       if (supabase) {
         try {
           const res = await supabase.from('payment_master').select('*');
           if (res.data) payRecords = res.data;
         } catch (e) {}
+        try {
+          const resDet = await supabase.from('payment_details').select('*');
+          if (resDet.data) payDetails = resDet.data;
+        } catch (e) {}
       }
       const payments = payRecords && payRecords.length > 0 ? payRecords : await dbModule.fetchAll('payment_master').catch(() => []);
+      const details = payDetails && payDetails.length > 0 ? payDetails : await dbModule.fetchAll('payment_details').catch(() => []);
       setPaymentList(payments);
 
       const cleanStr = (s: string) => (s || '').replace(/#/g, '').replace(/[\s\-\/]/g, '').trim().toLowerCase();
@@ -388,18 +395,50 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const targetPoClean = cleanStr(poNo);
       const targetPoRaw = (poNo || '').replace(/#/g, '').trim().toLowerCase();
 
-      const matchingPayments = payments.filter((p: any) => {
-        const pMrClean = cleanStr(p.mr_no);
-        const pArrivalClean = cleanStr(p.arrival_no);
-        const pPoClean = cleanStr(p.po_no);
-        const pPoRaw = (p.po_no || '').replace(/#/g, '').trim().toLowerCase();
+      // Collect voucher numbers linked via payment_details table matching target MR
+      const vouchersFromDetails = new Set<string>();
+      if (targetMrClean) {
+        details.forEach((d: any) => {
+          const dMr = cleanStr(d.mr_no);
+          if (dMr && (dMr === targetMrClean || dMr.includes(targetMrClean) || targetMrClean.includes(dMr))) {
+            if (d.voucher_no) vouchersFromDetails.add(d.voucher_no);
+          }
+        });
+      }
 
-        return (
-          (targetMrClean && (pMrClean === targetMrClean || pArrivalClean === targetMrClean)) ||
-          (targetPoRaw && (pPoRaw === targetPoRaw || pPoRaw.includes(targetPoRaw) || targetPoRaw.includes(pPoRaw))) ||
-          (targetPoClean && (pPoClean === targetPoClean || pPoClean.includes(targetPoClean) || targetPoClean.includes(pPoClean)))
-        );
-      });
+      // Priority 1: Match payments specifically linked to this MR
+      let matchingPayments: any[] = [];
+      if (targetMrClean) {
+        matchingPayments = payments.filter((p: any) => {
+          const pMrClean = cleanStr(p.mr_no);
+          const pArrivalClean = cleanStr(p.arrival_no);
+          const pBillClean = cleanStr(p.payable_bill_no);
+          const pRefClean = cleanStr(p.reference_no);
+          const pRemarksClean = cleanStr(p.remarks);
+          const isVoucherMatch = Boolean(p.voucher_no && vouchersFromDetails.has(p.voucher_no));
+
+          return (
+            isVoucherMatch ||
+            (pMrClean && (pMrClean === targetMrClean || pMrClean.includes(targetMrClean) || targetMrClean.includes(pMrClean))) ||
+            (pArrivalClean && (pArrivalClean === targetMrClean || pArrivalClean.includes(targetMrClean) || targetMrClean.includes(pArrivalClean))) ||
+            (pBillClean && (pBillClean === targetMrClean || pBillClean.includes(targetMrClean) || targetMrClean.includes(pBillClean))) ||
+            (pRefClean && pRefClean.includes(targetMrClean)) ||
+            (pRemarksClean && pRemarksClean.includes(targetMrClean))
+          );
+        });
+      }
+
+      // Priority 2: Fallback to PO-matched payments if no MR-specific payments found
+      if (matchingPayments.length === 0 && (targetPoClean || targetPoRaw)) {
+        matchingPayments = payments.filter((p: any) => {
+          const pPoClean = cleanStr(p.po_no);
+          const pPoRaw = (p.po_no || '').replace(/#/g, '').trim().toLowerCase();
+          return (
+            (targetPoRaw && (pPoRaw === targetPoRaw || pPoRaw.includes(targetPoRaw) || targetPoRaw.includes(pPoRaw))) ||
+            (targetPoClean && (pPoClean === targetPoClean || pPoClean.includes(targetPoClean) || targetPoClean.includes(pPoClean)))
+          );
+        });
+      }
 
       if (matchingPayments.length > 0) {
         const totalPaid = matchingPayments.reduce((sum, p) => sum + Number(p.paid_amount || p.total_amount || 0), 0);
@@ -416,11 +455,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             final_on_ac_adv: totalPaid
           }));
         }
+        return totalPaid;
       } else {
         setPaymentValidationInfo(null);
+        return 0;
       }
     } catch (e) {
       console.warn("Payment module sync error:", e);
+      return 0;
     }
   };
 
@@ -1640,7 +1682,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         tempArrivalData?.apmc_fees ?? tempArrivalData?.arival_apmc_fees ?? faMaster?.apmc_fees ?? faMaster?.arival_apmc_fees ?? inspMaster?.apmc_fees ?? 0
       );
 
-      await syncPaymentModuleData(targetMrNo, poNoForDet);
+      const syncedPaidAmount = await syncPaymentModuleData(targetMrNo, poNoForDet);
 
       // Calculate total Premium Quantity (MT), Premium WT (Qtl), and Premium Amount (₹) from Inspection Details
       let totalPremMt = 0;
@@ -1776,7 +1818,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_less_amt: isLastMr
               ? (Number(existingMaster.val_less_amt) > 0 ? existingMaster.val_less_amt : Number(saudaDedRecord?.deduction_amount || 0))
               : Number(existingMaster.val_less_amt || 0),
-            arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees
+            arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
+            final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
           };
           setMasterData(mergedMaster);
 
@@ -1875,7 +1918,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           val_premium_amt: calculatedPremTotalAmt,
           val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
           arival_apmc_fees: resolvedArrivalApmcFees,
-          final_apmc_fees: 0
+          final_apmc_fees: 0,
+          final_on_ac_adv: syncedPaidAmount
         };
 
         const populatedCols = [1, 2, 3, 4].map(idx => {
@@ -1959,7 +2003,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         val_premium_amt: calculatedPremTotalAmt,
         val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
         arival_apmc_fees: resolvedArrivalApmcFees,
-        final_apmc_fees: 0
+        final_apmc_fees: 0,
+        final_on_ac_adv: syncedPaidAmount
       };
 
       const populatedCols = [1, 2, 3, 4].map(idx => {
