@@ -706,6 +706,8 @@ export default function LegacyLayout({
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       window.dispatchEvent(new CustomEvent('app-close'));
+                      localStorage.clear()
+                      window.history.replaceState({}, '', window.location.pathname);
                     }}
                     className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-700 flex items-center gap-2 font-medium cursor-pointer border-t border-[#EAE2D2]"
                   >
