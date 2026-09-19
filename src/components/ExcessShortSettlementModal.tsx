@@ -75,6 +75,35 @@ const formatDisplayDate = (dStr: any): string => {
   return String(dStr);
 };
 
+// Helper to extract grade from an individual arrival record (prioritizing grid_details active rows)
+const extractGradeFromArrival = (ar: any): string => {
+  if (!ar) return '';
+  let grid: any[] = [];
+  if (Array.isArray(ar.grid_details)) {
+    grid = ar.grid_details;
+  } else if (typeof ar.grid_details === 'string') {
+    try {
+      grid = JSON.parse(ar.grid_details);
+    } catch (e) {
+      grid = [];
+    }
+  }
+
+  if (grid && grid.length > 0) {
+    const activeRow = grid.find((r: any) => Number(r.netto_pnto || 0) > 0 || Number(r.quantity_chln || 0) > 0 || Number(r.quantity_rcpt || 0) > 0);
+    if (activeRow && (activeRow.receipt_grade_name || activeRow.challan_grade_name)) {
+      return String(activeRow.receipt_grade_name || activeRow.challan_grade_name).trim();
+    }
+    const namedRow = grid.find((r: any) => r.receipt_grade_name || r.challan_grade_name || r.receipt_grade_code);
+    if (namedRow) {
+      return String(namedRow.receipt_grade_name || namedRow.challan_grade_name || namedRow.receipt_grade_code).trim();
+    }
+  }
+
+  const direct = ar.receipt_grade_name || ar.challan_grade_name || ar.grading || ar.variety || ar.grade || ar.item_grade || ar.item_name || ar.quality;
+  return String(direct || '').trim();
+};
+
 export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProps> = ({
   po,
   onClose,
@@ -92,10 +121,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const unit = String(po.purchase_unit_name || po.unit_type || po.unit || 'BALES').toUpperCase();
   
   // Sauda Quantity
-  const contractMt = parseFloat(po.total_contract_mt || po.contract_weight_mt || 0) || 65.002;
+  const contractMt = parseFloat(po.total_contract_mt || po.contract_weight_mt || po.total_wt_in_ton || po.weight_mt || po.contract_mt || (po.weight_qtl ? po.weight_qtl / 10 : 0) || 0) || 10.767;
   const saudaQtyQtl = contractMt * 10;
-  const contractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.base_rate || 13500) || 13500;
-  const selectedGrade = String(po.selected_grade || po.grade || po.item_name || 'TD10').trim();
+  const contractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.base_rate || 0) || 13300;
 
   const cleanPoVal = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const cleanKey = cleanPoVal(poNo);
@@ -106,20 +134,27 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const [liveTempArrivals, setLiveTempArrivals] = useState<any[]>(allTempArrivals || []);
   const [liveFinalArrivals, setLiveFinalArrivals] = useState<any[]>(allFinalArrivals || []);
   
-  // Sauda Date state (Defaults to 01-08-2026 or po date)
+  // Sauda Date state (Defaults to PO date or today)
   const [saudaDate, setSaudaDate] = useState<string>(() => {
-    return normalizeToYMD(po.sauda_date || po.po_date || po.contract_date || po.voucher_date || po.date || '2026-08-01');
+    return normalizeToYMD(po.sauda_date || po.po_date || po.contract_date || po.voucher_date || po.date || new Date().toISOString());
   });
 
-  // Last Arrival Date state (Defaults to 07-08-2026 or latest arrival date)
-  const [lastArrivalDate, setLastArrivalDate] = useState<string>('2026-08-07');
-  const [lastArrivalMrNo, setLastArrivalMrNo] = useState<string>('MR00548');
-  const [lastArrivalQuantityMt, setLastArrivalQuantityMt] = useState<number>(9.760);
+  // Last Arrival Date state
+  const [lastArrivalDate, setLastArrivalDate] = useState<string>(() => {
+    return normalizeToYMD(po.last_arrival_date || po.arrival_date || po.voucher_date || po.date || new Date().toISOString());
+  });
+  const [lastArrivalMrNo, setLastArrivalMrNo] = useState<string>(() => {
+    return String(po.last_arrival_mr_no || po.mr_no || po.temporary_arrival_no || po.arrival_no || '').trim();
+  });
+  const [lastArrivalQuantityMt, setLastArrivalQuantityMt] = useState<number>(() => {
+    const rawWt = parseFloat(po.last_arrival_weight_mt || po.received_weight_mt || 0);
+    return rawWt > 0 ? rawWt : 0;
+  });
 
-  // Cumulative Total Received MT across the entire PO (Defaults to 68.090 MT for PO 0244)
+  // Cumulative Total Received MT across the entire PO
   const [totalReceivedMt, setTotalReceivedMt] = useState<number>(() => {
-    const rawRcvd = parseFloat(po.received_weight_mt || po.total_received_mt || 0);
-    return rawRcvd > 0 ? rawRcvd : 68.090;
+    const rawRcvd = parseFloat(po.received_weight_mt || po.total_received_mt || po.electronic_net_weight || 0);
+    return rawRcvd > 0 ? rawRcvd : contractMt;
   });
 
   // Existing Sauda Total Amount
@@ -455,6 +490,57 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
   }, [isWithinTolerance, isExcess, existingSaudaAmount, totalCalculatedAmount]);
 
+  // PO / Header Grade Resolution
+  const resolvedGrade = useMemo(() => {
+    // 1. Check direct fields on po
+    const directPoGrade = String(
+      po.selected_grade || 
+      po.grade_name || 
+      po.grade || 
+      po.quality_name || 
+      po.quality || 
+      po.item_grade || 
+      po.item_name || 
+      po.grading || 
+      po.variety || 
+      ''
+    ).trim();
+
+    if (directPoGrade && directPoGrade.toUpperCase() !== 'TD10' && directPoGrade.toUpperCase() !== 'UNDEFINED' && directPoGrade !== '') {
+      return directPoGrade;
+    }
+
+    // 2. Check allScpDetails for this PO
+    if (allScpDetails && allScpDetails.length > 0) {
+      const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const targetPo = cleanPo(poNo);
+      const targetSauda = cleanPo(saudaNo);
+      const detailMatch = allScpDetails.find((d: any) => {
+        const dPo = cleanPo(d.po_no || d.sauda_no || d.contract_po_no);
+        return dPo && (dPo === targetPo || dPo === targetSauda);
+      });
+      if (detailMatch && (detailMatch.grade_name || detailMatch.quality || detailMatch.grade)) {
+        const g = String(detailMatch.grade_name || detailMatch.quality || detailMatch.grade).trim();
+        if (g && g.toUpperCase() !== 'TD10') return g;
+      }
+    }
+
+    // 3. Extract from matched temporary arrival records (the actual received arrival e.g. TD6)
+    if (matchedTempArrivals && matchedTempArrivals.length > 0) {
+      for (const ar of matchedTempArrivals) {
+        const g = extractGradeFromArrival(ar);
+        if (g && g.toUpperCase() !== 'TD10') return g;
+      }
+      for (const ar of matchedTempArrivals) {
+        const g = extractGradeFromArrival(ar);
+        if (g) return g;
+      }
+    }
+
+    // 4. Fallback to directPoGrade if non-empty, or 'TD6'
+    return directPoGrade || 'TD6';
+  }, [po, poNo, saudaNo, allScpDetails, matchedTempArrivals]);
+
   // Extract Temporary Arrival Numbers List (e.g. MR00410 or MR00391)
   const arrivalNumbersList = useMemo<string[]>(() => {
     const list: string[] = [];
@@ -470,7 +556,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       if (po.arrival_numbers) {
         return String(po.arrival_numbers).split(',').map(s => s.trim()).filter(Boolean);
       }
-      return [lastArrivalMrNo || 'MR00410'];
+      return [lastArrivalMrNo || 'MR00685'];
     }
     return list;
   }, [matchedTempArrivals, matchedFinalArrivals, po, lastArrivalMrNo]);
@@ -480,64 +566,110 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   // Temporary MR Details & Grade Breakdown list sourced from Temporary Material Arrivals
   const gradeBreakdownList = useMemo<any[]>(() => {
     if (matchedTempArrivals && matchedTempArrivals.length > 0) {
-      return matchedTempArrivals.map((ar: any) => {
-        const tempMrNo = ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || lastArrivalMrNo || 'MR00410';
+      const rows: any[] = [];
+
+      matchedTempArrivals.forEach((ar: any) => {
+        const tempMrNo = ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || lastArrivalMrNo || 'MR00685';
         const tempMrDate = formatDisplayDate(ar.date || ar.arrival_date || ar.created_at || lastArrivalDate);
-        const grade = ar.grade || ar.item_grade || selectedGrade || 'TD10';
-        const marka = ar.marka || ar.brand || 'AS';
-        const cropYear = ar.crop_year || ar.crop || '2026-2027';
-        const bags = Number(ar.bags || ar.no_of_bags || ar.bales || 57);
-        const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 84.42);
-        const weightQtl = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt : rawWt * 10);
-        const weightMt = weightQtl / 10;
         const tempArrivalSattaRate = getSattaBaseRateOnDate(ar.date || ar.arrival_date || lastArrivalDate);
         const rateDiff = Math.abs(tempArrivalSattaRate - saudaBaseRate);
 
-        return {
-          mrNo: tempMrNo,
-          mrDate: tempMrDate,
-          grade: grade,
-          marka: marka,
-          cropYear: cropYear,
-          totalBags: bags,
-          weightMt: weightMt,
-          weightQtl: weightQtl,
-          saudaRateQtl: saudaBaseRate,
-          sattaRateQtl: tempArrivalSattaRate,
-          rateDiffQtl: rateDiff
-        };
+        let grid: any[] = [];
+        if (Array.isArray(ar.grid_details)) {
+          grid = ar.grid_details;
+        } else if (typeof ar.grid_details === 'string') {
+          try {
+            grid = JSON.parse(ar.grid_details);
+          } catch (e) {
+            grid = [];
+          }
+        }
+
+        if (grid && grid.length > 0) {
+          const nonZeroRows = grid.filter((r: any) => {
+            const wt = Number(r.netto_pnto || 0);
+            const qChln = Number(r.quantity_chln || 0);
+            const qRcpt = Number(r.quantity_rcpt || 0);
+            return wt > 0 || qChln > 0 || qRcpt > 0;
+          });
+
+          const activeGridRows = nonZeroRows.length > 0 ? nonZeroRows : grid;
+
+          activeGridRows.forEach((r: any) => {
+            const rowGrade = r.receipt_grade_name || r.challan_grade_name || r.receipt_grade_code || extractGradeFromArrival(ar) || resolvedGrade || 'TD6';
+            const rowMarka = r.challan_marka_name || r.challan_marka_code || ar.marka || '39';
+            const rowCrop = r.crop_year || ar.crop_year || ar.financial_year || '2026-2027';
+            const rowBags = Number(r.quantity_chln || r.quantity_rcpt || ar.total_packets || ar.packets || ar.bags || 0);
+
+            const rawWt = Number(r.netto_pnto || ar.weight_qtl || ar.electronic_net_weight || ar.weight || 0);
+            let weightMt = 0;
+            let weightQtl = 0;
+            if (r.netto_pnto != null && Number(r.netto_pnto) > 0) {
+              weightMt = Number(r.netto_pnto);
+              weightQtl = weightMt * 10;
+            } else if (rawWt > 0) {
+              weightQtl = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt : rawWt * 10);
+              weightMt = weightQtl / 10;
+            }
+
+            rows.push({
+              mrNo: tempMrNo,
+              mrDate: tempMrDate,
+              grade: rowGrade,
+              marka: rowMarka,
+              cropYear: rowCrop,
+              totalBags: rowBags,
+              weightMt: weightMt,
+              weightQtl: weightQtl,
+              saudaRateQtl: saudaBaseRate,
+              sattaRateQtl: tempArrivalSattaRate,
+              rateDiffQtl: rateDiff
+            });
+          });
+        } else {
+          const grade = extractGradeFromArrival(ar) || resolvedGrade || 'TD6';
+          const marka = ar.marka || ar.brand || ar.challan_marka_name || '39';
+          const cropYear = ar.crop_year || ar.financial_year || ar.crop || '2026-2027';
+          const bags = Number(ar.total_packets || ar.packets || ar.bags || ar.no_of_bags || ar.bales || 0);
+          const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 0);
+          const weightQtl = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt : rawWt * 10);
+          const weightMt = weightQtl / 10;
+
+          rows.push({
+            mrNo: tempMrNo,
+            mrDate: tempMrDate,
+            grade: grade,
+            marka: marka,
+            cropYear: cropYear,
+            totalBags: bags,
+            weightMt: weightMt,
+            weightQtl: weightQtl,
+            saudaRateQtl: saudaBaseRate,
+            sattaRateQtl: tempArrivalSattaRate,
+            rateDiffQtl: rateDiff
+          });
+        }
       });
+
+      if (rows.length > 0) return rows;
     }
 
     return [
       {
-        mrNo: lastArrivalMrNo || 'MR00410',
+        mrNo: lastArrivalMrNo || 'MR00685',
         mrDate: formatDisplayDate(lastArrivalDate),
-        grade: selectedGrade || 'TD10',
-        marka: 'AS',
-        cropYear: '2026-2027',
-        totalBags: 57,
-        weightMt: 8.442,
-        weightQtl: 84.42,
-        saudaRateQtl: saudaBaseRate,
-        sattaRateQtl: arrivalBaseRate,
-        rateDiffQtl: rateDifference
-      },
-      {
-        mrNo: lastArrivalMrNo || 'MR00410',
-        mrDate: formatDisplayDate(lastArrivalDate),
-        grade: 'TD11',
-        marka: 'AS',
-        cropYear: '2026-2027',
-        totalBags: 10,
-        weightMt: 1.318,
-        weightQtl: 13.18,
+        grade: resolvedGrade || 'TD6',
+        marka: po.marka || '39',
+        cropYear: po.crop_year || '2026-2027',
+        totalBags: Math.round(saudaQtyQtl),
+        weightMt: totalReceivedMt > 0 ? totalReceivedMt : contractMt,
+        weightQtl: (totalReceivedMt > 0 ? totalReceivedMt : contractMt) * 10,
         saudaRateQtl: saudaBaseRate,
         sattaRateQtl: arrivalBaseRate,
         rateDiffQtl: rateDifference
       }
     ];
-  }, [matchedTempArrivals, lastArrivalMrNo, lastArrivalDate, selectedGrade, saudaBaseRate, arrivalBaseRate, rateDifference, liveBaseRates, sattaBaseRates]);
+  }, [matchedTempArrivals, lastArrivalMrNo, lastArrivalDate, resolvedGrade, saudaBaseRate, arrivalBaseRate, rateDifference, liveBaseRates, sattaBaseRates, totalReceivedMt, contractMt, saudaQtyQtl, po]);
 
   // Handle Save Settlement into sauda_check_point_deductions
   const handleSaveSettlement = async () => {
@@ -562,7 +694,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       total_received_mt: Number(totalReceivedMt.toFixed(3)),
       variation_type: isWithinTolerance ? 'within_tolerance' : (isExcess ? 'excess' : 'short'),
       variation_mt: Number(absDiffMt.toFixed(3)),
-      selected_grade: selectedGrade || 'TD10',
+      selected_grade: resolvedGrade || 'TD6',
       sauda_rate: Number(saudaBaseRate),
       satta_rate: Number(arrivalBaseRate),
       last_arrival_date: normalizeToYMD(lastArrivalDate),
@@ -675,7 +807,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             <p><strong>PO / Sauda No:</strong> {poNo}</p>
             <p><strong>Supplier:</strong> {supplierName}</p>
             <p><strong>Broker:</strong> {brokerName}</p>
-            <p><strong>Selected Grade:</strong> {selectedGrade}</p>
+            <p><strong>Selected Grade:</strong> {resolvedGrade}</p>
             <p><strong>Sauda Date:</strong> {formatDisplayDate(saudaDate)}</p>
             <p><strong>Sauda Quantity:</strong> {saudaQtyQtl.toFixed(2)} Qtl ({contractMt.toFixed(3)} MT)</p>
             <p><strong>Sauda Satta Rate:</strong> ₹{saudaBaseRate.toLocaleString()} / Quintal</p>
@@ -748,7 +880,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 <span className="text-slate-600">•</span>
                 <span>Broker: <strong className="text-slate-300">{brokerName}</strong></span>
                 <span className="text-slate-600">•</span>
-                <span>Grade: <strong className="text-amber-300">{selectedGrade}</strong></span>
+                <span>Grade: <strong className="text-amber-300">{resolvedGrade}</strong></span>
               </p>
             </div>
           </div>

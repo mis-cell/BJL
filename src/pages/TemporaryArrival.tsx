@@ -1091,6 +1091,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       const totalWeightSum = activeRows.reduce((acc, curr) => acc + (Number(curr.netto_pnto) || 0), 0);
       const lorryCombined = `${formData.lorry_prefix}-${formData.lorry_suffix}`.trim();
 
+      const primaryRow = activeRows.find(r => (Number(r.netto_pnto) > 0 || Number(r.quantity_chln) > 0 || Number(r.quantity_rcpt) > 0)) || activeRows[0];
+
       const payload = {
         financial_year: formData.financial_year,
         amad_no: formData.arrival_no,
@@ -1156,13 +1158,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         electronic_tare_weight: formData.electronic_tare_weight || 0,
         weight_reduced: formData.weight_reduced || 0,
 
-        // Backward compatibility properties
+        // Backward compatibility properties & grade indexing
         packets: totalPacketsSum,
         weight: totalWeightSum * 10,
         commodity: 'RAW JUTE',
-        variety: activeRows[0]?.receipt_grade_name || 'TOSSA',
-        grading: activeRows[0]?.receipt_grade_name || 'TD-5',
-        marka: activeRows[0]?.challan_marka_name || 'DIRECT',
+        variety: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TOSSA',
+        grading: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TD6',
+        grade: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TD6',
+        marka: primaryRow?.challan_marka_name || 'DIRECT',
         status: 'Active'
       };
 
