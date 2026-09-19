@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
+import { findMatchedPoItem } from './PaymentModule';
 import { 
   FileCheck, 
   Plus, 
@@ -1523,45 +1524,120 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const getPoItemDetails = async (po: any): Promise<any[]> => {
     if (!po) return [];
     let parsed = parseGridOrItems(po.items || po.grid_details);
+    let itemsToEnrich: any[] = [];
+
     if (parsed.length > 0) {
       const hasAnyContent = parsed.some(it => it.grade || it.grade_name || it.grade_code || it.agency || it.agency_name || it.agency_code);
-      if (hasAnyContent) return parsed;
+      if (hasAnyContent) {
+        itemsToEnrich = parsed;
+      }
     }
 
-    if (po.po_no) {
+    if (itemsToEnrich.length === 0 && po.po_no) {
+      const cleanPo = String(po.po_no || '').trim().replace(/^#/, '');
+      const withHash = `#${cleanPo}`;
       try {
         if (supabase) {
           const { data: pdm } = await supabase
             .from('purchase_detail_master')
             .select('*')
-            .eq('po_no', po.po_no);
-          if (pdm && pdm.length > 0) return pdm;
+            .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
+          if (pdm && pdm.length > 0) {
+            itemsToEnrich = pdm;
+          } else {
+            const { data: pdmIlike } = await supabase
+              .from('purchase_detail_master')
+              .select('*')
+              .ilike('po_no', cleanPo);
+            if (pdmIlike && pdmIlike.length > 0) {
+              itemsToEnrich = pdmIlike;
+            }
+          }
 
-          const { data: pdmIlike } = await supabase
-            .from('purchase_detail_master')
-            .select('*')
-            .ilike('po_no', po.po_no.trim());
-          if (pdmIlike && pdmIlike.length > 0) return pdmIlike;
-
-          const { data: scp } = await supabase
-            .from('sauda_check_point_details')
-            .select('*')
-            .eq('po_no', po.po_no);
-          if (scp && scp.length > 0) return scp;
+          if (itemsToEnrich.length === 0) {
+            const { data: scp } = await supabase
+              .from('sauda_check_point_details')
+              .select('*')
+              .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
+            if (scp && scp.length > 0) {
+              itemsToEnrich = scp;
+            } else {
+              const { data: scpIlike } = await supabase
+                .from('sauda_check_point_details')
+                .select('*')
+                .ilike('po_no', cleanPo);
+              if (scpIlike && scpIlike.length > 0) {
+                itemsToEnrich = scpIlike;
+              }
+            }
+          }
         }
         
-        const allPdm = await dbModule.fetchAll('purchase_detail_master').catch(() => []);
-        const filteredPdm = allPdm.filter((d: any) => String(d.po_no).trim().toUpperCase() === String(po.po_no).trim().toUpperCase());
-        if (filteredPdm.length > 0) return filteredPdm;
+        if (itemsToEnrich.length === 0) {
+          const allPdm = await dbModule.fetchAll('purchase_detail_master').catch(() => []);
+          const filteredPdm = allPdm.filter((d: any) => {
+            const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
+            return pNo === cleanPo.toUpperCase();
+          });
+          if (filteredPdm.length > 0) itemsToEnrich = filteredPdm;
+        }
 
-        const allScp = await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
-        const filteredScp = allScp.filter((d: any) => String(d.po_no).trim().toUpperCase() === String(po.po_no).trim().toUpperCase());
-        if (filteredScp.length > 0) return filteredScp;
+        if (itemsToEnrich.length === 0) {
+          const allScp = await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
+          const filteredScp = allScp.filter((d: any) => {
+            const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
+            return pNo === cleanPo.toUpperCase();
+          });
+          if (filteredScp.length > 0) itemsToEnrich = filteredScp;
+        }
       } catch (e) {
         console.warn("Failed to fetch PO details:", e);
       }
     }
-    return parsed;
+
+    if (itemsToEnrich.length === 0) {
+      itemsToEnrich = parsed;
+    }
+
+    let gList = gradeMasterList;
+    let agList = agencyMasterList;
+    if ((gList.length === 0 || agList.length === 0) && supabase) {
+      try {
+        const [gData, agData] = await Promise.all([
+          supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
+          supabase.from('agency_master').select('*').then(r => r.data || [], () => [])
+        ]);
+        if (gData.length > 0) { gList = gData; setGradeMasterList(gData); }
+        if (agData.length > 0) { agList = agData; setAgencyMasterList(agData); }
+      } catch (err) {
+        console.warn("Failed to load masters in getPoItemDetails:", err);
+      }
+    }
+
+    return itemsToEnrich.map(item => {
+      let gradeName = item.grade_name || item.grade || '';
+      if (!gradeName && item.grade_code && gList.length > 0) {
+        const match = gList.find(g => String(g.grade_code || g.code || g.id || '').trim().toUpperCase() === String(item.grade_code).trim().toUpperCase());
+        if (match) gradeName = match.grade_name || match.name || '';
+      }
+
+      let agencyName = item.agency_name || item.agency || '';
+      if (!agencyName && item.agency_code && agList.length > 0) {
+        const match = agList.find(a => String(a.agency_code || a.code || a.id || '').trim().toUpperCase() === String(item.agency_code).trim().toUpperCase());
+        if (match) agencyName = match.agency_name || match.name || '';
+      }
+
+      const rateVal = Number(item.rate_qntl || item.rate_per_mt || item.rate_mt || item.rate || item.b_rate || 0);
+
+      return {
+        ...item,
+        grade_name: gradeName || item.grade_code,
+        agency_name: agencyName || item.agency_code,
+        rate_qntl: rateVal,
+        rate_per_mt: rateVal,
+        rate: rateVal
+      };
+    });
   };
 
   // Selection Handler for Contract Final P.O
@@ -1730,22 +1806,26 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         markaMasters: mList
       });
 
-      // Merge PO item line rates into the inspection detail columns
+      // Merge PO item line rates into the inspection detail columns with strict grade matching
       if (poItems.length > 0) {
-        cols = cols.map((col, idx) => {
+        cols = cols.map((col) => {
           if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
-          const matchedPoItem = poItems.find(p => {
-            const pGrade = String(p.grade_name || p.grade || p.grade_code || '').trim().toUpperCase();
-            const cGrade = String(col.grade || '').trim().toUpperCase();
-            return pGrade && cGrade && (pGrade === cGrade || pGrade.includes(cGrade) || cGrade.includes(pGrade));
-          }) || poItems[idx];
+          
+          const matchedPoItem = findMatchedPoItem(col, poItems, { gradeMasters: gList, agencyMasters: agList });
 
           if (matchedPoItem) {
             const lineRate = Number(
-              matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || matchedPoItem.b_rate || 0
+              matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || 0
             );
             if (lineRate > 0) {
               return { ...col, rate_value: lineRate };
+            }
+          }
+          // If no specific grade match, but column has no rate, fallback to header base rate
+          if (!col.rate_value || col.rate_value === 0) {
+            const fallbackRate = Number(po?.b_rate || po?.rate_qntl || 0);
+            if (fallbackRate > 0) {
+              return { ...col, rate_value: fallbackRate };
             }
           }
           return col;
@@ -1753,7 +1833,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       }
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
-      const grossVal = Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || totalColAmt || 0);
+      const grossVal = totalColAmt > 0
+        ? totalColAmt
+        : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0);
       const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
 

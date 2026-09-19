@@ -236,6 +236,141 @@ export const parseGridOrItems = (raw: any): any[] => {
   return [];
 };
 
+// Finds the PO item that strictly corresponds to the given column by Grade code, Grade name, and Agency
+export const findMatchedPoItem = (
+  col: { grade?: string; agency?: string; area?: string; stock_grade_code?: string },
+  poItems: any[],
+  masters?: { gradeMasters?: any[]; agencyMasters?: any[] }
+): any | null => {
+  if (!poItems || poItems.length === 0) return null;
+
+  const colGradeRaw = String(col.grade || '').trim();
+  if (!colGradeRaw && !col.stock_grade_code) return null;
+
+  const colAgencyRaw = String(col.agency || '').trim().toUpperCase();
+  const colGradeUpper = colGradeRaw.toUpperCase();
+  const colGradeNorm = colGradeUpper.replace(/[\s\-_]/g, '');
+
+  const gradeMasters = masters?.gradeMasters || [];
+
+  // Find all candidate names and codes for the column's grade from grade masters
+  const colMatchedMasters = gradeMasters.filter(g => {
+    const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
+    const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
+    const gNameNorm = gName.replace(/[\s\-_]/g, '');
+    return (
+      (gCode && (gCode === colGradeUpper || gCode === colGradeNorm)) ||
+      (gName && (gName === colGradeUpper || gNameNorm === colGradeNorm)) ||
+      (colGradeRaw && String(g.id || '') === colGradeRaw)
+    );
+  });
+
+  const colNames = new Set<string>();
+  const colCodes = new Set<string>();
+
+  if (colGradeUpper) colNames.add(colGradeUpper);
+  if (colGradeNorm) colNames.add(colGradeNorm);
+  if (col.stock_grade_code) colCodes.add(String(col.stock_grade_code).trim().toUpperCase());
+
+  colMatchedMasters.forEach(g => {
+    const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
+    const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
+    const gNameNorm = gName.replace(/[\s\-_]/g, '');
+    if (gCode) colCodes.add(gCode);
+    if (gName) colNames.add(gName);
+    if (gNameNorm) colNames.add(gNameNorm);
+  });
+
+  let bestMatch: any = null;
+  let bestScore = 0;
+
+  for (const p of poItems) {
+    const pCode = String(p.grade_code || p.stock_grade_code || p.receipt_grade_code || p.code || '').trim().toUpperCase();
+    const pName = String(p.grade_name || p.grade || p.arrival_grade || p.stock_grade_name || '').trim().toUpperCase();
+    const pNameNorm = pName.replace(/[\s\-_]/g, '');
+
+    // Check against masters for PO item
+    const pMatchedMasters = gradeMasters.filter(g => {
+      const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
+      const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
+      const gNameNorm = gName.replace(/[\s\-_]/g, '');
+      return (
+        (pCode && (gCode === pCode || String(g.id || '') === pCode)) ||
+        (pName && (gName === pName || gNameNorm === pNameNorm))
+      );
+    });
+
+    const pNames = new Set<string>();
+    const pCodes = new Set<string>();
+
+    if (pName) pNames.add(pName);
+    if (pNameNorm) pNames.add(pNameNorm);
+    if (pCode) pCodes.add(pCode);
+
+    pMatchedMasters.forEach(g => {
+      const gCode = String(g.grade_code || g.code || g.id || '').trim().toUpperCase();
+      const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
+      const gNameNorm = gName.replace(/[\s\-_]/g, '');
+      if (gCode) pCodes.add(gCode);
+      if (gName) pNames.add(gName);
+      if (gNameNorm) pNames.add(gNameNorm);
+    });
+
+    // Check for direct Grade match
+    let isGradeMatch = false;
+
+    // 1. Code match
+    for (const c of colCodes) {
+      if (c && pCodes.has(c)) {
+        isGradeMatch = true;
+        break;
+      }
+    }
+
+    // 2. Name match
+    if (!isGradeMatch) {
+      for (const n of colNames) {
+        if (n && pNames.has(n)) {
+          isGradeMatch = true;
+          break;
+        }
+      }
+    }
+
+    // 3. Fallback direct text comparison
+    if (!isGradeMatch && colGradeNorm && pNameNorm && colGradeNorm === pNameNorm) {
+      isGradeMatch = true;
+    }
+    if (!isGradeMatch && colGradeUpper && pCode && colGradeUpper === pCode) {
+      isGradeMatch = true;
+    }
+
+    if (isGradeMatch) {
+      let score = 10; // Base score for correct grade match
+
+      // Agency matching bonus
+      const pAgency = String(p.agency_name || p.agency || p.agency_code || '').trim().toUpperCase();
+      if (colAgencyRaw && pAgency) {
+        if (colAgencyRaw === pAgency || pAgency.includes(colAgencyRaw) || colAgencyRaw.includes(pAgency)) {
+          score += 5;
+        }
+      }
+
+      // Quantity/weight presence bonus if multiple identical grades exist
+      if (Number(p.quantity || p.weight_mt || p.arr_qty_wt || 0) > 0) {
+        score += 1;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = p;
+      }
+    }
+  }
+
+  return bestMatch;
+};
+
 // Maps raw items or grid details into 4-column breakdown matrix with master lookup resolution
 export const mapItemsToDetailCols = (
   rawItems: any,
@@ -1525,45 +1660,122 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const getPoItemDetails = async (po: any): Promise<any[]> => {
     if (!po) return [];
     let parsed = parseGridOrItems(po.items || po.grid_details);
+    let itemsToEnrich: any[] = [];
+
     if (parsed.length > 0) {
       const hasAnyContent = parsed.some(it => it.grade || it.grade_name || it.grade_code || it.agency || it.agency_name || it.agency_code);
-      if (hasAnyContent) return parsed;
+      if (hasAnyContent) {
+        itemsToEnrich = parsed;
+      }
     }
 
-    if (po.po_no) {
+    if (itemsToEnrich.length === 0 && po.po_no) {
+      const cleanPo = String(po.po_no || '').trim().replace(/^#/, '');
+      const withHash = `#${cleanPo}`;
       try {
         if (supabase) {
           const { data: pdm } = await supabase
             .from('purchase_detail_master')
             .select('*')
-            .eq('po_no', po.po_no);
-          if (pdm && pdm.length > 0) return pdm;
+            .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
+          if (pdm && pdm.length > 0) {
+            itemsToEnrich = pdm;
+          } else {
+            const { data: pdmIlike } = await supabase
+              .from('purchase_detail_master')
+              .select('*')
+              .ilike('po_no', cleanPo);
+            if (pdmIlike && pdmIlike.length > 0) {
+              itemsToEnrich = pdmIlike;
+            }
+          }
 
-          const { data: pdmIlike } = await supabase
-            .from('purchase_detail_master')
-            .select('*')
-            .ilike('po_no', po.po_no.trim());
-          if (pdmIlike && pdmIlike.length > 0) return pdmIlike;
-
-          const { data: scp } = await supabase
-            .from('sauda_check_point_details')
-            .select('*')
-            .eq('po_no', po.po_no);
-          if (scp && scp.length > 0) return scp;
+          if (itemsToEnrich.length === 0) {
+            const { data: scp } = await supabase
+              .from('sauda_check_point_details')
+              .select('*')
+              .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
+            if (scp && scp.length > 0) {
+              itemsToEnrich = scp;
+            } else {
+              const { data: scpIlike } = await supabase
+                .from('sauda_check_point_details')
+                .select('*')
+                .ilike('po_no', cleanPo);
+              if (scpIlike && scpIlike.length > 0) {
+                itemsToEnrich = scpIlike;
+              }
+            }
+          }
         }
         
-        const allPdm = await dbModule.fetchAll('purchase_detail_master').catch(() => []);
-        const filteredPdm = allPdm.filter((d: any) => String(d.po_no).trim().toUpperCase() === String(po.po_no).trim().toUpperCase());
-        if (filteredPdm.length > 0) return filteredPdm;
+        if (itemsToEnrich.length === 0) {
+          const allPdm = await dbModule.fetchAll('purchase_detail_master').catch(() => []);
+          const filteredPdm = allPdm.filter((d: any) => {
+            const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
+            return pNo === cleanPo.toUpperCase();
+          });
+          if (filteredPdm.length > 0) itemsToEnrich = filteredPdm;
+        }
 
-        const allScp = await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
-        const filteredScp = allScp.filter((d: any) => String(d.po_no).trim().toUpperCase() === String(po.po_no).trim().toUpperCase());
-        if (filteredScp.length > 0) return filteredScp;
+        if (itemsToEnrich.length === 0) {
+          const allScp = await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
+          const filteredScp = allScp.filter((d: any) => {
+            const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
+            return pNo === cleanPo.toUpperCase();
+          });
+          if (filteredScp.length > 0) itemsToEnrich = filteredScp;
+        }
       } catch (e) {
         console.warn("Failed to fetch PO details:", e);
       }
     }
-    return parsed;
+
+    if (itemsToEnrich.length === 0) {
+      itemsToEnrich = parsed;
+    }
+
+    // Ensure masters are available to enrich PO items
+    let gList = gradeMasterList;
+    let agList = agencyMasterList;
+    if ((gList.length === 0 || agList.length === 0) && supabase) {
+      try {
+        const [gData, agData] = await Promise.all([
+          supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
+          supabase.from('agency_master').select('*').then(r => r.data || [], () => [])
+        ]);
+        if (gData.length > 0) { gList = gData; setGradeMasterList(gData); }
+        if (agData.length > 0) { agList = agData; setAgencyMasterList(agData); }
+      } catch (err) {
+        console.warn("Failed to load masters in getPoItemDetails:", err);
+      }
+    }
+
+    // Enrich each PO item with resolved grade_name, agency_name, and normalized rates
+    return itemsToEnrich.map(item => {
+      let gradeName = item.grade_name || item.grade || '';
+      if (!gradeName && item.grade_code && gList.length > 0) {
+        const match = gList.find(g => String(g.grade_code || g.code || g.id || '').trim().toUpperCase() === String(item.grade_code).trim().toUpperCase());
+        if (match) gradeName = match.grade_name || match.name || '';
+      }
+
+      let agencyName = item.agency_name || item.agency || '';
+      if (!agencyName && item.agency_code && agList.length > 0) {
+        const match = agList.find(a => String(a.agency_code || a.code || a.id || '').trim().toUpperCase() === String(item.agency_code).trim().toUpperCase());
+        if (match) agencyName = match.agency_name || match.name || '';
+      }
+
+      const rateVal = Number(item.rate_qntl || item.rate_per_mt || item.rate_mt || item.rate || item.b_rate || 0);
+
+      return {
+        ...item,
+        grade_name: gradeName || item.grade_code,
+        agency_name: agencyName || item.agency_code,
+        rate_qntl: rateVal,
+        rate_per_mt: rateVal,
+        rate: rateVal
+      };
+    });
   };
 
   // Selection Handler for Contract Final P.O
@@ -1732,22 +1944,26 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         markaMasters: mList
       });
 
-      // Merge PO item line rates into the inspection detail columns
+      // Merge PO item line rates into the inspection detail columns with strict grade matching
       if (poItems.length > 0) {
-        cols = cols.map((col, idx) => {
+        cols = cols.map((col) => {
           if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
-          const matchedPoItem = poItems.find(p => {
-            const pGrade = String(p.grade_name || p.grade || p.grade_code || '').trim().toUpperCase();
-            const cGrade = String(col.grade || '').trim().toUpperCase();
-            return pGrade && cGrade && (pGrade === cGrade || pGrade.includes(cGrade) || cGrade.includes(pGrade));
-          }) || poItems[idx];
+          
+          const matchedPoItem = findMatchedPoItem(col, poItems, { gradeMasters: gList, agencyMasters: agList });
 
           if (matchedPoItem) {
             const lineRate = Number(
-              matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || matchedPoItem.b_rate || 0
+              matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || 0
             );
             if (lineRate > 0) {
               return { ...col, rate_value: lineRate };
+            }
+          }
+          // If no specific grade match, but column has no rate, fallback to header base rate
+          if (!col.rate_value || col.rate_value === 0) {
+            const fallbackRate = Number(po?.b_rate || po?.rate_qntl || 0);
+            if (fallbackRate > 0) {
+              return { ...col, rate_value: fallbackRate };
             }
           }
           return col;
@@ -1755,7 +1971,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       }
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
-      const grossVal = Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || totalColAmt || 0);
+      const grossVal = totalColAmt > 0
+        ? totalColAmt
+        : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0);
       const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
 
@@ -3355,7 +3573,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
- id="col_quantity_2406" name="col_quantity" aria-label="col quantity"                            type="number"
+                            id="col_quantity_2406" name="col_quantity" aria-label="col quantity"
+                            type="number"
                             value={col.quantity || ''}
                             onChange={e => {
                               const updated = [...detailCols];
@@ -3367,26 +3586,50 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         </td>
                         <td className="p-2">
                           <input
- id="col_arr_qty_wt_2418" name="col_arr_qty_wt" aria-label="col arr qty wt"                            type="number"
+                            id="col_arr_qty_wt_2418" name="col_arr_qty_wt" aria-label="col arr qty wt"
+                            type="number"
                             step="0.001"
                             value={col.arr_qty_wt || ''}
                             onChange={e => {
                               const updated = [...detailCols];
                               updated[idx].arr_qty_wt = parseFloat(e.target.value) || 0;
                               setDetailCols(updated);
+                              const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                              if (newTotal > 0) {
+                                const newPaid = calculate93PctPaidAmount(newTotal);
+                                setMasterData(prev => ({
+                                  ...prev,
+                                  total_amount: newTotal,
+                                  payable_amt: newTotal,
+                                  net_amt: newTotal,
+                                  paid_amount: newPaid
+                                }));
+                              }
                             }}
                             className="w-24 p-1 border rounded text-xs"
                           />
                         </td>
                         <td className="p-2">
                           <input
- id="col_rate_value_2431" name="col_rate_value" aria-label="col rate value"                            type="number"
+                            id="col_rate_value_2431" name="col_rate_value" aria-label="col rate value"
+                            type="number"
                             step="0.01"
                             value={col.rate_value || ''}
                             onChange={e => {
                               const updated = [...detailCols];
                               updated[idx].rate_value = parseFloat(e.target.value) || 0;
                               setDetailCols(updated);
+                              const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                              if (newTotal > 0) {
+                                const newPaid = calculate93PctPaidAmount(newTotal);
+                                setMasterData(prev => ({
+                                  ...prev,
+                                  total_amount: newTotal,
+                                  payable_amt: newTotal,
+                                  net_amt: newTotal,
+                                  paid_amount: newPaid
+                                }));
+                              }
                             }}
                             className="w-24 p-1 border rounded text-xs"
                           />
