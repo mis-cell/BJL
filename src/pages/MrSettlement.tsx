@@ -35,6 +35,7 @@ import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
+import { findMatchedPoItem, parseGridOrItems } from './PaymentModule';
 
 export interface SettlementDeductionItem {
   id?: string;
@@ -199,10 +200,10 @@ export const getColWtMt = (col?: SettlementDetailColumn): number => {
   return 0;
 };
 
-export const getColAmount = (col?: SettlementDetailColumn): number => {
+export const getColAmount = (col?: SettlementDetailColumn, fallbackRate: number = 0): number => {
   if (!col) return 0;
   const wtMt = getColWtMt(col);
-  const reconRate = Number(col.rate_value) || 0;
+  const reconRate = Number(col.rate_value) > 0 ? Number(col.rate_value) : (Number(fallbackRate) || 0);
   if (wtMt <= 0 || reconRate <= 0) return 0;
   // WT(MT) to KG = wtMt * 1000
   // Recon Rate (₹/Qtl) to ₹/KG = reconRate / 100
@@ -914,7 +915,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const col = emptyDetailColumn(idx);
     if (!item && !pDet && !inspItem) return col;
 
-    // 1. Grade (Primary from Final P.O item if present, otherwise mill inspection / arrival item)
+    // 1. Grade (Primary from Mill Inspection / arrival item if present, otherwise PO item)
     const poGrade = pDet?.grade_name || pDet?.quality || (pDet?.grade_code ? resolveGradeName(pDet.grade_code, gList) : '') || pDet?.grade || '';
     const arrivalGrade = 
       inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
@@ -923,7 +924,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       item?.grade_code || item?.stock_grade_code || item?.receipt_grade_code || item?.challan_grade_name || 
       item?.quality || item?.stock_grade || '';
     
-    const rawGrade = poGrade || arrivalGrade;
+    const rawGrade = arrivalGrade || poGrade;
     col.grade = resolveGradeName(rawGrade, gList) || rawGrade || '';
 
     // 2. Area (Primary from Mill Inspection Item, then arrival, then PO)
@@ -995,11 +996,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     // 7. Rate (Primary from Final P.O contract rate, then inspection/arrival)
     const rawRate = 
-      pDet?.rate_qntl || pDet?.rate || poData?.rate_qntl ||
+      pDet?.rate_qntl || pDet?.rate_per_mt || pDet?.rate || pDet?.rate_mt ||
+      poData?.rate_qntl || poData?.rate_mt || poData?.b_rate ||
       inspItem?.rate || inspItem?.rate_qntl ||
       item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
     
     col.rate_value = Number(rawRate) || 0;
+    if (!col.rate_value || col.rate_value === 0) {
+      const fallbackRate = Number(poData?.b_rate || poData?.rate_qntl || poData?.rate_mt || 0);
+      if (fallbackRate > 0) {
+        col.rate_value = fallbackRate;
+      }
+    }
 
     // 8. Wt/Quantity calculation: Round "Arr. Qty/Wt" convert in kg / Quantity (B)
     const rawWtKg = col.arr_qty_wt > 0 ? (col.arr_qty_wt <= 50 ? col.arr_qty_wt * 1000 : col.arr_qty_wt) : 0;
@@ -1149,24 +1157,39 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           let matchedPoItem: any = null;
           let matchedPoIdx = -1;
           if (poDetails && poDetails.length > 0) {
-            for (let pIdx = 0; pIdx < poDetails.length; pIdx++) {
-              if (matchedPoIndices.has(pIdx)) continue;
-              const pDet = poDetails[pIdx];
-              const poRawG = pDet.grade_name || pDet.quality || pDet.grade || '';
-              const poCodeG = String(pDet.grade_code || '').trim();
-              const poNameG = (resolveGradeName(poRawG || poCodeG, gList) || poRawG || '').trim().toUpperCase();
+            // 1. Try findMatchedPoItem first with unallocated PO items
+            const availablePoItems = poDetails.filter((_, pIdx) => !matchedPoIndices.has(pIdx));
+            const colSpec = {
+              grade: arr.gradeName || arr.rawGrade,
+              stock_grade_code: arr.gradeCode,
+              agency: arr.inspItem?.agency_name || arr.inspItem?.agency || arr.faItem?.agency_name || arr.faItem?.agency || '',
+              area: arr.inspItem?.area || arr.faItem?.area || ''
+            };
+            const matched = findMatchedPoItem(colSpec, availablePoItems, { gradeMasters: gList, agencyMasters: agList });
+            if (matched) {
+              matchedPoItem = matched;
+              matchedPoIdx = poDetails.indexOf(matched);
+            } else {
+              // 2. Fallback to manual matching
+              for (let pIdx = 0; pIdx < poDetails.length; pIdx++) {
+                if (matchedPoIndices.has(pIdx)) continue;
+                const pDet = poDetails[pIdx];
+                const poRawG = pDet.grade_name || pDet.quality || pDet.grade || '';
+                const poCodeG = String(pDet.grade_code || '').trim();
+                const poNameG = (resolveGradeName(poRawG || poCodeG, gList) || poRawG || '').trim().toUpperCase();
 
-              const isNameMatch = Boolean(poNameG && arr.gradeName && poNameG === arr.gradeName);
-              const isCodeMatch = Boolean(poCodeG && arr.gradeCode && poCodeG === arr.gradeCode);
-              const isCrossCodeNameMatch = Boolean(
-                (poCodeG && arr.gradeName && resolveGradeName(poCodeG, gList)?.trim().toUpperCase() === arr.gradeName) ||
-                (arr.gradeCode && poNameG && resolveGradeName(arr.gradeCode, gList)?.trim().toUpperCase() === poNameG)
-              );
+                const isNameMatch = Boolean(poNameG && arr.gradeName && poNameG === arr.gradeName);
+                const isCodeMatch = Boolean(poCodeG && arr.gradeCode && poCodeG === arr.gradeCode);
+                const isCrossCodeNameMatch = Boolean(
+                  (poCodeG && arr.gradeName && resolveGradeName(poCodeG, gList)?.trim().toUpperCase() === arr.gradeName) ||
+                  (arr.gradeCode && poNameG && resolveGradeName(arr.gradeCode, gList)?.trim().toUpperCase() === poNameG)
+                );
 
-              if (isNameMatch || isCodeMatch || isCrossCodeNameMatch) {
-                matchedPoItem = pDet;
-                matchedPoIdx = pIdx;
-                break;
+                if (isNameMatch || isCodeMatch || isCrossCodeNameMatch) {
+                  matchedPoItem = pDet;
+                  matchedPoIdx = pIdx;
+                  break;
+                }
               }
             }
           }
@@ -1216,6 +1239,168 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
 
     return [1, 2, 3, 4].map(idx => emptyDetailColumn(idx));
+  };
+
+  const fetchPoAndItemDetails = async (poNo: string): Promise<{ poData: any; poDetails: any[] }> => {
+    if (!poNo) return { poData: null, poDetails: [] };
+    const cleanPo = String(poNo).trim().replace(/^#/, '');
+    const withHash = `#${cleanPo}`;
+
+    let poData: any = null;
+    let poDetails: any[] = [];
+
+    try {
+      if (supabase) {
+        // 1. Fetch PO Master from purchase_master, sauda_check_point, or po_archive
+        const [pmRes, scpRes] = await Promise.all([
+          supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle(),
+          supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle()
+        ]);
+
+        if (pmRes?.data) {
+          poData = pmRes.data;
+        } else if (scpRes?.data) {
+          const scp = scpRes.data;
+          poData = {
+            ...scp,
+            po_date: scp.po_date || scp.s_date,
+            supplier: scp.supplier_name || scp.supplier,
+            broker: scp.broker_name || scp.broker,
+            total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
+            pending: scp.pending ?? true,
+            status: scp.status || 'temp'
+          };
+        } else {
+          // Check po_archive
+          const { data: archPo } = await supabase.from('po_archive').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle();
+          if (archPo) poData = archPo;
+        }
+
+        // ILIKE fallback if still not found
+        if (!poData) {
+          const [pmIlike, scpIlike] = await Promise.all([
+            supabase.from('purchase_master').select('*').ilike('po_no', cleanPo).limit(1),
+            supabase.from('sauda_check_point').select('*').ilike('po_no', cleanPo).limit(1)
+          ]);
+          if (pmIlike?.data && pmIlike.data.length > 0) poData = pmIlike.data[0];
+          else if (scpIlike?.data && scpIlike.data.length > 0) {
+            const scp = scpIlike.data[0];
+            poData = {
+              ...scp,
+              po_date: scp.po_date || scp.s_date,
+              supplier: scp.supplier_name || scp.supplier,
+              broker: scp.broker_name || scp.broker,
+              total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
+              pending: scp.pending ?? true,
+              status: scp.status || 'temp'
+            };
+          }
+        }
+
+        // 2. Fetch PO line items
+        if (poData?.items || poData?.grid_details) {
+          const parsed = parseGridOrItems(poData.items || poData.grid_details);
+          if (parsed.length > 0 && parsed.some((it: any) => it.grade || it.grade_name || it.grade_code || it.rate_qntl || it.rate)) {
+            poDetails = parsed;
+          }
+        }
+
+        if (poDetails.length === 0) {
+          const [pdmRes, scpdRes] = await Promise.all([
+            supabase.from('purchase_detail_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true }),
+            supabase.from('sauda_check_point_details').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true })
+          ]);
+
+          if (pdmRes?.data && pdmRes.data.length > 0) {
+            poDetails = pdmRes.data;
+          } else if (scpdRes?.data && scpdRes.data.length > 0) {
+            poDetails = scpdRes.data;
+          } else {
+            // ILIKE fallback
+            const [pdmIlike, scpdIlike] = await Promise.all([
+              supabase.from('purchase_detail_master').select('*').ilike('po_no', cleanPo),
+              supabase.from('sauda_check_point_details').select('*').ilike('po_no', cleanPo)
+            ]);
+            if (pdmIlike?.data && pdmIlike.data.length > 0) poDetails = pdmIlike.data;
+            else if (scpdIlike?.data && scpdIlike.data.length > 0) poDetails = scpdIlike.data;
+          }
+        }
+      }
+
+      // Local indexedDB fallback
+      if (!poData) {
+        const [localPm, localScp] = await Promise.all([
+          dbModule.fetchAll('purchase_master').catch(() => []),
+          dbModule.fetchAll('sauda_check_point').catch(() => [])
+        ]);
+        const matchPm = (localPm || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+        if (matchPm) poData = matchPm;
+        else {
+          const matchScp = (localScp || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+          if (matchScp) poData = matchScp;
+        }
+      }
+
+      if (poDetails.length === 0) {
+        const [localPdm, localScpd] = await Promise.all([
+          dbModule.fetchAll('purchase_detail_master').catch(() => []),
+          dbModule.fetchAll('sauda_check_point_details').catch(() => [])
+        ]);
+        const matchPdm = (localPdm || []).filter((d: any) => String(d.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+        if (matchPdm.length > 0) poDetails = matchPdm;
+        else {
+          const matchScpd = (localScpd || []).filter((d: any) => String(d.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+          if (matchScpd.length > 0) poDetails = matchScpd;
+        }
+      }
+    } catch (err) {
+      console.warn("Error in fetchPoAndItemDetails:", err);
+    }
+
+    // Resolve master lists to enrich items
+    let gList = gradeMasterList;
+    let agList = agencyMasterList;
+    if ((!gList || gList.length === 0 || !agList || agList.length === 0) && supabase) {
+      try {
+        const [gData, agData] = await Promise.all([
+          supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
+          supabase.from('agency_master').select('*').then(r => r.data || [], () => [])
+        ]);
+        if (gData?.length > 0) { gList = gData; setGradeMasterList(gData); }
+        if (agData?.length > 0) { agList = agData; setAgencyMasterList(agData); }
+      } catch (e) {}
+    }
+
+    const enrichedItems = poDetails.map((item: any) => {
+      let gradeName = item.grade_name || item.grade || item.quality || '';
+      if (!gradeName && item.grade_code && gList && gList.length > 0) {
+        const match = gList.find((g: any) => String(g.grade_code || g.code || g.id || '').trim().toUpperCase() === String(item.grade_code).trim().toUpperCase());
+        if (match) gradeName = match.grade_name || match.name || '';
+      }
+
+      let agencyName = item.agency_name || item.agency || '';
+      if (!agencyName && item.agency_code && agList && agList.length > 0) {
+        const match = agList.find((a: any) => String(a.agency_code || a.code || a.id || '').trim().toUpperCase() === String(item.agency_code).trim().toUpperCase());
+        if (match) agencyName = match.agency_name || match.name || '';
+      }
+
+      const rateVal = Number(item.rate_qntl || item.rate_per_mt || item.rate_mt || item.rate || poData?.b_rate || poData?.rate_qntl || 0);
+
+      return {
+        ...item,
+        grade_name: gradeName || item.grade_code || '',
+        agency_name: agencyName || item.agency_code || '',
+        rate_qntl: rateVal,
+        rate_per_mt: rateVal,
+        rate: rateVal
+      };
+    });
+
+    if (poData && !poData.rate_qntl) {
+      poData.rate_qntl = Number(poData.rate_mt || poData.b_rate || 0);
+    }
+
+    return { poData, poDetails: enrichedItems };
   };
 
   useLiveAutoRefresh(initPage, [], { 
@@ -1316,7 +1501,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         setInspections(combinedInspections);
 
-        // 3. Fetch purchase orders list for selection from Final P.O
+        // 3. Fetch purchase orders list for selection from Final P.O and Sauda Check Point
         const { data: poList } = await supabase
           .from('purchase_master')
           .select('po_no, po_date, broker, supplier, total_contract_mt, status, pending, pending_received')
@@ -1328,7 +1513,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           .order('po_no', { ascending: false })
           .then(res => res, () => ({ data: [] }));
 
-        const rawCombined = [...(poList || []), ...(poArchList || [])];
+        const { data: scpPoList } = await supabase
+          .from('sauda_check_point')
+          .select('po_no, po_date, s_date, broker, broker_name, supplier, supplier_name, quantity, total_contract_mt, status, pending')
+          .then(res => res, () => ({ data: [] }));
+
+        const rawCombined = [
+          ...(poList || []),
+          ...(poArchList || []),
+          ...((scpPoList || []).map((s: any) => ({
+            ...s,
+            po_date: s.po_date || s.s_date,
+            broker: s.broker_name || s.broker,
+            supplier: s.supplier_name || s.supplier,
+            total_contract_mt: s.total_contract_mt || s.quantity || 0,
+          })))
+        ];
 
         if (rawCombined.length > 0) {
           const poReceivedMap = new Map<string, number>();
@@ -1470,71 +1670,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         setSaudaDeductionRecord(null);
       }
 
-      // 1. Fetch matching PO master (check purchase_master and po_archive fallback)
-      let { data: poData } = await supabase
-        .from('purchase_master')
-        .select('*')
-        .eq('po_no', cleanPoNo)
-        .maybeSingle();
-
-      if (!poData) {
-        const { data: archPo } = await supabase
-          .from('po_archive')
-          .select('*')
-          .eq('po_no', cleanPoNo)
-          .maybeSingle();
-        if (archPo) poData = archPo;
-      }
-
-      if (!poData) {
-        const { data: poMatches } = await supabase
-          .from('purchase_master')
-          .select('*')
-          .ilike('po_no', cleanPoNo)
-          .limit(1);
-        if (poMatches && poMatches.length > 0) {
-          poData = poMatches[0];
-        }
-      }
-
-      if (!poData) {
-        const { data: scpPo } = await supabase
-          .from('sauda_check_point')
-          .select('*')
-          .eq('po_no', cleanPoNo)
-          .maybeSingle();
-        if (scpPo) {
-          poData = {
-            ...scpPo,
-            po_date: scpPo.po_date || scpPo.s_date,
-            supplier: scpPo.supplier_name || scpPo.supplier,
-            broker: scpPo.broker_name || scpPo.broker,
-            total_contract_mt: scpPo.total_contract_mt || scpPo.quantity || 0,
-            pending: scpPo.pending ?? true,
-            status: scpPo.status || 'temp'
-          };
-        }
-      }
-
-      if (!poData) {
-        const { data: scpPoMatches } = await supabase
-          .from('sauda_check_point')
-          .select('*')
-          .ilike('po_no', cleanPoNo)
-          .limit(1);
-        if (scpPoMatches && scpPoMatches.length > 0) {
-          const scp = scpPoMatches[0];
-          poData = {
-            ...scp,
-            po_date: scp.po_date || scp.s_date,
-            supplier: scp.supplier_name || scp.supplier,
-            broker: scp.broker_name || scp.broker,
-            total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
-            pending: scp.pending ?? true,
-            status: scp.status || 'temp'
-          };
-        }
-      }
+      // 1. Fetch matching PO master and item details (checking purchase_master, sauda_check_point, po_archive, and indexedDB)
+      const { poData, poDetails: fetchedDetails } = await fetchPoAndItemDetails(cleanPoNo);
 
       if (!poData) {
         setSelectedPoData(null);
@@ -1696,15 +1833,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // If preserveMrNo is false, clear MR and prepare base PO columns so user can select from the filtered FA dropdown
       if (!preserveMrNo) {
-        const { data: poDetails } = await supabase
-          .from('purchase_detail_master')
-          .select('*')
-          .eq('po_no', poData.po_no || cleanPoNo)
-          .order('srl_no', { ascending: true });
+        const poDetails = (fetchedDetails && fetchedDetails.length > 0) ? fetchedDetails : [];
 
         const newCols = [1, 2, 3, 4].map(idx => {
           const pDet = poDetails && poDetails[idx - 1] ? poDetails[idx - 1] : null;
-          return buildSettlementCol(idx, null, pDet, null, null, poData);
+          return buildSettlementCol(
+            idx,
+            null,
+            pDet,
+            null,
+            null,
+            poData,
+            gradeMasterList,
+            agencyMasterList,
+            markaMasterList,
+            areaMasterList
+          );
         });
 
         setMasterData(prev => ({
@@ -1715,6 +1859,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           supplier: poData.supplier || '',
           chn_supplier: poData.supplier || '',
           po_type: poData.po_type || 'MILL_PO',
+          rate_qntl: Number(poData.rate_qntl || poData.rate_mt || poData.b_rate || 0),
           sett_date: prev.sett_date || new Date().toISOString().split('T')[0],
           mr_no: '',
           lorry_number: '',
@@ -1809,12 +1954,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       let poData: any = null;
       const effectivePoNo = poNoForDet || cleanTargetPo;
       if (effectivePoNo) {
-        const [pDetRes, pMasterRes] = await Promise.all([
-          supabase.from('purchase_detail_master').select('*').eq('po_no', effectivePoNo).order('srl_no', { ascending: true }),
-          supabase.from('purchase_master').select('*').eq('po_no', effectivePoNo).maybeSingle()
-        ]);
-        if (pDetRes?.data && pDetRes.data.length > 0) poDetails = pDetRes.data;
-        if (pMasterRes?.data) poData = pMasterRes.data;
+        const { poData: fetchedPo, poDetails: fetchedDetails } = await fetchPoAndItemDetails(effectivePoNo);
+        poData = fetchedPo;
+        poDetails = fetchedDetails;
+        if (poData) setSelectedPoData(poData);
       }
 
       let gList = gradeMasterList;
@@ -2025,6 +2168,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_less_amt: isLastMr
               ? (Number(existingMaster.val_less_amt) > 0 ? existingMaster.val_less_amt : Number(saudaDedRecord?.deduction_amount || 0))
               : Number(existingMaster.val_less_amt || 0),
+            summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
             final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
           };
@@ -2111,6 +2255,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           chn_supplier: faMaster?.challan_supplier || faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || '',
           po_no: faMaster?.po_no || inspMaster?.po_no || '',
           po_date: faMaster?.po_date || inspMaster?.po_date || '',
+          rate_qntl: Number(poData?.rate_qntl || poData?.rate_mt || poData?.b_rate || 0),
           lorry_number: faMaster?.lorry_number || faMaster?.final_arrival_no || inspMaster?.lorry_number || inspMaster?.arrival_no || '',
           arrival_no: faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || '',
           arrival_date: formatToInputDate(faMaster?.date || faMaster?.arrival_date || inspMaster?.arrival_date) || '',
@@ -2204,6 +2349,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         chn_supplier: inspMaster.supplier_name || '',
         po_no: inspMaster.po_no || '',
         po_date: inspMaster.po_date || '',
+        rate_qntl: Number(poData?.rate_qntl || poData?.rate_mt || poData?.b_rate || 0),
         lorry_number: inspMaster.lorry_number || inspMaster.arrival_no || '',
         detention_days: inspMaster.detention_days || 0,
         arrival_no: inspMaster.arrival_no || '',
@@ -2359,24 +2505,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     const calculatedRateWtClaim = avgFinalMoisturePct;
 
-    // Calculate Delivery Claim based on Delivery To (from Final P.O) vs Receipt Date (Arrival Date from TEMPORARY M.R)
-    const receiptDateObj = parseDateOnly(masterData.arrival_date || masterData.sett_date);
-    const deliveryToObj = parseDateOnly(selectedPoData?.delivery_to);
-    const electronicScaleNetMT = Number(masterData.electronic_scale_net) || 0;
-
-    let calculatedDeliveryClaim = 0;
-    if (deliveryToObj && receiptDateObj) {
-      if (receiptDateObj.getTime() > deliveryToObj.getTime()) {
-        const diffMs = receiptDateObj.getTime() - deliveryToObj.getTime();
-        const lateDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        const penaltyPerDay = Number(selectedPoData?.delivery_penalty) || Number(selectedPoData?.shipment_penalty) || Number(selectedPoData?.qty_penalty) || 0;
-        const totalWtMt = getColWtMt(detailCols[0]) + getColWtMt(detailCols[1]) + getColWtMt(detailCols[2]) + getColWtMt(detailCols[3]);
-        const scaleQuintals = electronicScaleNetMT > 0 ? (electronicScaleNetMT * 10) : (totalWtMt * 10);
-        calculatedDeliveryClaim = Number((lateDays * penaltyPerDay * scaleQuintals).toFixed(2));
-      }
-    }
-
-    const deliveryClaimAmt = Number(masterData.summary_delivery_claim) > 0 ? Number(masterData.summary_delivery_claim) : calculatedDeliveryClaim;
+    // Delivery Claim in Grade-wise summary panel must default to 0 (user-editable, not auto-penalized)
+    const deliveryClaimAmt = (Number(masterData.summary_delivery_claim) === 5550)
+      ? 0
+      : (Number(masterData.summary_delivery_claim) || 0);
 
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
@@ -2425,7 +2557,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const nextActualApmcFees = prev.actual_apmc_fees || calculatedApmcFees;
       const targetRateAffCdCl = prev.summary_rate_aff_cd_cl > 0 ? prev.summary_rate_aff_cd_cl : nextRatePerMt;
 
-      const targetDeliveryClaim = (prev.summary_delivery_claim !== undefined && Number(prev.summary_delivery_claim) > 0) ? prev.summary_delivery_claim : calculatedDeliveryClaim;
+      const targetDeliveryClaim = (prev.summary_delivery_claim === 5550 || prev.summary_delivery_claim === undefined) ? 0 : (Number(prev.summary_delivery_claim) || 0);
 
       if (
         prev.summary_material_value !== calculatedMaterialValue ||
@@ -4001,30 +4133,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
                         {selectedPoData?.delivery_to && (
                           <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
-                            <p className="text-yellow-300 font-bold">Delivery Claim Calculation</p>
+                            <p className="text-yellow-300 font-bold">Delivery Claim Information</p>
                             <p>Delivery To (Deadline): <code className="text-cyan-300">{selectedPoData.delivery_to}</code></p>
                             <p>Receipt / Arrival Date: <code className="text-cyan-300">{masterData.arrival_date || masterData.sett_date || 'N/A'}</code></p>
-                            {(() => {
-                              const rD = parseDateOnly(masterData.arrival_date || masterData.sett_date);
-                              const dT = parseDateOnly(selectedPoData.delivery_to);
-                              if (rD && dT && rD.getTime() > dT.getTime()) {
-                                const lDays = Math.round((rD.getTime() - dT.getTime()) / (1000 * 60 * 60 * 24));
-                                const penalty = Number(selectedPoData.delivery_penalty) || Number(selectedPoData.shipment_penalty) || Number(selectedPoData.qty_penalty) || 0;
-                                const netScaleMt = Number(masterData.electronic_scale_net) || 0;
-                                const totalWtMt = getColWtMt(detailCols[0]) + getColWtMt(detailCols[1]) + getColWtMt(detailCols[2]) + getColWtMt(detailCols[3]);
-                                const scaleQtl = netScaleMt > 0 ? (netScaleMt * 10) : (totalWtMt * 10);
-                                const totalClaim = lDays * penalty * scaleQtl;
-                                return (
-                                  <>
-                                    <p>Late Days: <code className="text-amber-300 font-bold">{lDays} days</code></p>
-                                    <p>Penalty Rate: <code className="text-emerald-300 font-bold">₹{penalty} / Qtl / Day</code></p>
-                                    <p>Weight (Quintal): <code className="text-cyan-300 font-bold">{scaleQtl.toFixed(2)} Qtl</code> <span className="text-[7px] text-gray-400">({netScaleMt > 0 ? `${netScaleMt} MT × 10` : 'from details'})</span></p>
-                                    <p className="mt-1 pt-1 border-t border-slate-700 text-white font-bold">Claim: ₹{totalClaim.toFixed(2)}</p>
-                                  </>
-                                );
-                              }
-                              return <p className="text-emerald-400 font-bold mt-1">Status: On Time (No Penalty)</p>;
-                            })()}
+                            <p className="mt-1 pt-1 border-t border-slate-700 text-emerald-300 font-bold">Standard Delivery Claim: ₹0.00</p>
                           </div>
                         )}
                       </div>
@@ -4032,7 +4144,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         type="number" 
                         step="0.01"
                         className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-rose-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
-                        value={masterData.summary_delivery_claim || ''} 
+                        value={masterData.summary_delivery_claim !== undefined && masterData.summary_delivery_claim !== null ? masterData.summary_delivery_claim : 0} 
                         onChange={(e) => handleMasterChange('summary_delivery_claim', parseFloat(e.target.value) || 0)}
                       />
                     </div>
@@ -5000,7 +5112,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         </td>
                         {visibleSpecCols.map(idx => (
                           <td key={idx} className="p-0.5 border-r border-gray-200">
-                            <input  id="rate_3303" name="rate" aria-label="₹ Rate"
+                            <input  id={`recon_rate_${idx}`} name={`recon_rate_${idx}`} aria-label={`₹ Rate Col ${idx}`}
                               type="number" 
                               className="w-full bg-white text-center p-0.5 font-mono text-indigo-950 font-bold border border-indigo-200 text-[10px]"
                               placeholder="₹ Rate"
@@ -5018,7 +5130,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           <span className="text-[8.5px] text-emerald-800 font-mono">(₹)</span>
                         </td>
                         {visibleSpecCols.map(idx => {
-                          const colAmt = getColAmount(detailCols[idx-1]);
+                          const colAmt = getColAmount(detailCols[idx-1], Number(masterData.rate_qntl) || Number(selectedPoData?.b_rate) || 0);
                           return (
                             <td key={idx} className="p-1 border-r border-gray-300 text-center font-mono font-bold text-emerald-950 text-[11px] bg-[#eef7f2]">
                               ₹{colAmt.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 0 })}
