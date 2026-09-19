@@ -86,7 +86,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   sattaBaseRates = []
 }) => {
   const poNo = String(po.po_no || po.contract_po_no || '').trim();
-  const contractPoNo = String(po.contract_po_no || '').trim();
   const saudaNo = String(po.sauda_no || po.sauda_ref || po.po_no || '').trim();
   const supplierName = String(po.supplier || po.supplier_name || po.supp_name || 'SOHANLALL CHANDANMULL AND CO.').trim();
   const brokerName = String(po.broker || po.broker_name || 'SOHANLALL CHANDANMULL & CO.').trim();
@@ -331,21 +330,20 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     }
   }, [matchedTempArrivals, matchedFinalArrivals, po]);
 
-  // Compute Total Received MT safely from Temporary and Final Arrivals
+  // Compute Total Received MT safely from Temporary Arrivals
   useEffect(() => {
     const rawRcvd = parseFloat(po.received_weight_mt || po.total_received_mt || 0);
-    const allArrivals = [...(matchedTempArrivals || []), ...(matchedFinalArrivals || [])];
-    const sumArrivalsMt = allArrivals.reduce((acc: number, ar: any) => {
-      const rawWt = Number(ar.electronic_net_weight || ar.challan_material_weight || ar.weight_reduced || ar.weight_qtl || ar.weight || 0);
-      const wtMt = rawWt > 500 ? rawWt / 1000 : (rawWt > 50 ? rawWt / 10 : rawWt);
+    const sumTempMt = matchedTempArrivals.reduce((acc: number, ar: any) => {
+      const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 0);
+      const wtMt = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt / 10 : rawWt);
       return acc + (isNaN(wtMt) ? 0 : wtMt);
     }, 0);
 
-    const effectiveMt = Math.max(rawRcvd, sumArrivalsMt);
+    const effectiveMt = Math.max(rawRcvd, sumTempMt);
     if (effectiveMt > 0) {
       setTotalReceivedMt(effectiveMt);
     }
-  }, [matchedTempArrivals, matchedFinalArrivals, po]);
+  }, [matchedTempArrivals, po]);
 
   // Satta Base Rates lookup
   const getSattaBaseRateOnDate = (dateStr: string): number => {
@@ -598,49 +596,48 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           if (data?.id) setExistingRecordId(data.id);
         }
 
-        // Update purchase_master, sauda_check_point, and sauda_master safely
-        const updateFields = {
-          excess_short_deduction: totalCalculatedAmount,
-          excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
-          final_payable_amount: totalFinalPayable,
-          is_settled: true
-        };
+        // Update purchase_master, sauda_check_point, and sauda_master
+        await supabase
+          .from('purchase_master')
+          .update({
+            excess_short_deduction: totalCalculatedAmount,
+            excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+            final_payable_amount: totalFinalPayable,
+            is_settled: true
+          })
+          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
 
-        await supabase.from('purchase_master').update(updateFields).eq('po_no', poNo);
-        await supabase.from('purchase_master').update(updateFields).eq('po_no', `#${poNo}`);
-        if (contractPoNo && contractPoNo !== poNo) {
-          await supabase.from('purchase_master').update(updateFields).eq('contract_po_no', contractPoNo);
-        }
-
-        await supabase.from('sauda_check_point').update(updateFields).eq('po_no', poNo);
-        await supabase.from('sauda_check_point').update(updateFields).eq('po_no', `#${poNo}`);
-        if (contractPoNo && contractPoNo !== poNo) {
-          await supabase.from('sauda_check_point').update(updateFields).eq('contract_po_no', contractPoNo);
-        }
+        await supabase
+          .from('sauda_check_point')
+          .update({
+            excess_short_deduction: totalCalculatedAmount,
+            excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+            final_payable_amount: totalFinalPayable,
+            is_settled: true
+          })
+          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
 
         if (saudaNo) {
-          await supabase.from('sauda_master').update(updateFields).eq('sauda_no', saudaNo);
+          await supabase
+            .from('sauda_master')
+            .update({
+              excess_short_deduction: totalCalculatedAmount,
+              excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+              final_payable_amount: totalFinalPayable,
+              is_settled: true
+            })
+            .eq('sauda_no', saudaNo);
         }
       } else {
         await dbModule.insert('sauda_check_point_deductions', payload);
       }
 
-      // Save locally across multiple keys for maximum compatibility
+      // Save locally
       localStorage.setItem(`sauda_settled_${cleanKey}`, 'true');
       localStorage.setItem(`sauda_settlement_${cleanKey}`, JSON.stringify(payload));
-      localStorage.setItem(`sauda_settled_${poNo}`, 'true');
-      localStorage.setItem(`sauda_settlement_${poNo}`, JSON.stringify(payload));
-      localStorage.setItem(`sauda_settlement_#${poNo}`, JSON.stringify(payload));
       if (cleanSaudaKey) {
         localStorage.setItem(`sauda_settled_${cleanSaudaKey}`, 'true');
         localStorage.setItem(`sauda_settlement_${cleanSaudaKey}`, JSON.stringify(payload));
-      }
-
-      // Dispatch global event for instant sync in Settlement & Final PO modules
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('sauda_settlement_saved', {
-          detail: { poNo, deductionAmount: totalCalculatedAmount, payload }
-        }));
       }
 
       setIsSettled(true);

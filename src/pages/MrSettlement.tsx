@@ -191,9 +191,7 @@ const emptyDetailColumn = (index: number): SettlementDetailColumn => ({
 export const getColWtMt = (col?: SettlementDetailColumn): number => {
   if (!col) return 0;
   const arrWt = Number(col.arr_qty_wt) || 0;
-  if (arrWt > 0) {
-    return arrWt > 500 ? Number((arrWt / 1000).toFixed(3)) : (arrWt > 50 ? Number((arrWt / 10).toFixed(3)) : Number(arrWt.toFixed(3)));
-  }
+  if (arrWt > 0) return arrWt;
   const qty = Number(col.quantity) || 0;
   const wtPerQty = Number(col.wt_quantity) || Number(col.wt_phota) || 0;
   if (qty > 0 && wtPerQty > 0) {
@@ -518,136 +516,32 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     });
   }, [detailCols, showAllDeductionCols]);
 
-  // Helper to fetch Sauda Checkpoint deduction for a PO from sauda_check_point_deductions table, purchase_master, or localStorage
-  const fetchSaudaCheckpointDeduction = async (cleanPoNo: string, poDataObj?: any) => {
+  // Helper to fetch Sauda Checkpoint deduction for a PO from sauda_check_point_deductions table
+  const fetchSaudaCheckpointDeduction = async (cleanPoNo: string) => {
     if (!cleanPoNo) return null;
     try {
       const rawPoNo = cleanPoNo.trim().replace(/^#/, '');
       const poWithHash = '#' + rawPoNo;
-      const cleanKey = rawPoNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-      // 1. Direct poDataObj or selectedPoData check
-      const effectivePo = poDataObj || selectedPoData;
-      if (effectivePo && Number(effectivePo.excess_short_deduction) > 0) {
-        return {
-          deduction_amount: Number(effectivePo.excess_short_deduction),
-          po_no: rawPoNo,
-          source: 'po_master'
-        };
-      }
-
-      // 2. Check localStorage (where ExcessShortSettlementModal saves directly)
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const localSettlement = localStorage.getItem(`sauda_settlement_${cleanKey}`) ||
-          localStorage.getItem(`sauda_settlement_${rawPoNo}`) ||
-          localStorage.getItem(`sauda_settlement_${poWithHash}`);
-        if (localSettlement) {
-          try {
-            const parsed = JSON.parse(localSettlement);
-            const dedAmt = Number(parsed.deduction_amount ?? parsed.excess_short_deduction ?? 0);
-            if (dedAmt > 0) {
-              return {
-                ...parsed,
-                deduction_amount: dedAmt,
-                source: 'localStorage'
-              };
-            }
-          } catch (e) {
-            console.warn("Could not parse local settlement JSON:", e);
-          }
-        }
-      }
-
-      // 3. Supabase query with safe quoted filters or separate queries
       if (supabase) {
-        // Query sauda_check_point_deductions with quoted values to prevent PostgREST syntax errors on (PTF)
-        const { data: dedRows } = await supabase
+        const { data } = await supabase
           .from('sauda_check_point_deductions')
           .select('*')
-          .or(`po_no.eq."${rawPoNo}",po_no.eq."${poWithHash}"`)
-          .order('updated_at', { ascending: false })
-          .limit(1);
-
-        if (dedRows && dedRows.length > 0 && Number(dedRows[0].deduction_amount) > 0) {
-          return dedRows[0];
-        }
-
-        // Try single .eq if .or failed
-        const { data: singleDed } = await supabase
-          .from('sauda_check_point_deductions')
-          .select('*')
-          .eq('po_no', rawPoNo)
+          .or(`po_no.eq.${rawPoNo},po_no.eq.${poWithHash}`)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (singleDed && Number(singleDed.deduction_amount) > 0) {
-          return singleDed;
-        }
-
-        // Check purchase_master and sauda_check_point for excess_short_deduction
-        const [pmRes, scpRes] = await Promise.all([
-          supabase.from('purchase_master').select('excess_short_deduction, total_contract_mt, b_rate, rate_qntl, status, ptf_no').eq('po_no', rawPoNo).maybeSingle(),
-          supabase.from('sauda_check_point').select('excess_short_deduction, total_contract_mt, b_rate, rate_qntl, quantity, status, ptf_no').eq('po_no', rawPoNo).maybeSingle()
-        ]);
-        const pmDed = Number(pmRes?.data?.excess_short_deduction) || 0;
-        const scpDed = Number(scpRes?.data?.excess_short_deduction) || 0;
-        const resolvedDed = pmDed > 0 ? pmDed : scpDed;
-        if (resolvedDed > 0) {
-          return {
-            deduction_amount: resolvedDed,
-            po_no: rawPoNo,
-            source: 'purchase_or_scp_master'
-          };
-        }
+        if (data) return data;
       }
 
-      // 4. Fallback: IndexedDB
       const localRecords = await dbModule.fetchAll('sauda_check_point_deductions').catch(() => []);
       if (Array.isArray(localRecords) && localRecords.length > 0) {
         const found = localRecords.find((r: any) => {
-          const rClean = String(r.po_no || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-          return rClean === cleanKey && Number(r.deduction_amount) > 0;
+          const rPo = String(r.po_no || '').trim().replace(/^#/, '').toUpperCase();
+          return rPo === rawPoNo.toUpperCase();
         });
         if (found) return found;
-      }
-
-      // 5. Automatic computation fallback for Final P.O (PTF or standard) if in Final PO section with excess weight
-      const poObj = effectivePo || null;
-      if (poObj && (poObj.status === 'final' || poObj.purchase_order === 'FINAL PO' || poObj.is_ptf || String(poObj.po_no || '').includes('(PTF)'))) {
-        const contractMt = Number(poObj.total_contract_mt || poObj.contract_weight_mt || 0);
-        const rateQtl = Number(poObj.b_rate || poObj.rate_qntl || poObj.rate_mt || 0);
-        // Estimate arrived weight from PO received weight, final arrival, or scale net
-        let arrivedMt = Number(poObj.received_weight_mt || poObj.total_received_mt || masterData?.electronic_scale_net || masterData?.challan_weight || 0);
-        if (arrivedMt <= 0 && supabase) {
-          const { data: faRows } = await supabase.from('final_arrival').select('weight_qtl, electronic_net_weight, challan_material_weight').eq('po_no', rawPoNo);
-          if (faRows && faRows.length > 0) {
-            arrivedMt = faRows.reduce((sum: number, r: any) => {
-              const raw = Number(r.electronic_net_weight || r.challan_material_weight || r.weight_qtl || 0);
-              const mt = raw > 500 ? raw / 1000 : (raw > 50 ? raw / 10 : raw);
-              return sum + mt;
-            }, 0);
-          }
-        }
-        if (arrivedMt <= 0 && String(rawPoNo).includes('0361')) {
-          arrivedMt = 11.100;
-        }
-
-        if (contractMt > 0 && arrivedMt > contractMt && rateQtl > 0) {
-          const diffQtl = (arrivedMt - contractMt) * 10;
-          const toleranceQtl = Math.min(contractMt * 10 * 0.03, 15);
-          if (diffQtl > toleranceQtl) {
-            const deductibleQtl = diffQtl - toleranceQtl;
-            const computedAmt = Math.round(deductibleQtl * rateQtl * 100) / 100;
-            if (computedAmt > 0) {
-              return {
-                deduction_amount: computedAmt,
-                po_no: rawPoNo,
-                source: 'auto_final_po_calculation'
-              };
-            }
-          }
-        }
       }
     } catch (err) {
       console.warn("Could not fetch sauda checkpoint deduction:", err);
@@ -1074,15 +968,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     
     col.quantity = Number(rawQty) || 0;
 
-    // 6. Arrival Quantity / Weight (Arr Qty Wt) -> EXACTLY Final Receipt Wt. (Claim) from Mill Inspection / Final Arrival
+    // 6. Arrival Quantity / Weight (Arr Qty Wt) -> EXACTLY Final Receipt Wt. (Claim) from Mill Inspection
     let rawWt = 0;
     if (inspItem || item) {
       if (inspItem?.final_receipt_wt !== undefined && inspItem?.final_receipt_wt !== null && Number(inspItem.final_receipt_wt) > 0) {
         rawWt = Number(inspItem.final_receipt_wt);
       } else if (item?.final_receipt_wt !== undefined && item?.final_receipt_wt !== null && Number(item.final_receipt_wt) > 0) {
         rawWt = Number(item.final_receipt_wt);
-      } else if (item?.netto_pnto && Number(item.netto_pnto) > 0) {
-        rawWt = Number(item.netto_pnto);
       } else if (inspItem?.receipt_gross_wt && Number(inspItem.receipt_gross_wt) > 0) {
         rawWt = Number(inspItem.receipt_gross_wt);
       } else if (inspItem?.challan_gross_wt && Number(inspItem.challan_gross_wt) > 0) {
@@ -1095,14 +987,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         rawWt = Number(item.arr_qty_wt);
       } else if (inspItem?.weight && Number(inspItem.weight) > 0) {
         rawWt = Number(inspItem.weight);
-      } else if (item?.weight_qtl && Number(item.weight_qtl) > 0) {
-        rawWt = Number(item.weight_qtl);
       }
     }
-
-    // If rawWt is in Quintals (> 50), convert to MT (e.g. 111 Qtl = 11.100 MT)
-    if (rawWt > 500) rawWt = rawWt / 1000;
-    else if (rawWt > 50) rawWt = rawWt / 10;
     
     col.arr_qty_wt = col.quantity > 0 || rawWt > 0 ? (Number(rawWt) || 0) : 0;
     // Min.Qty/Wt is "Arr. Qty/Wt" with 3% acceptable (97% of Arr. Qty/Wt)
@@ -1768,6 +1654,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       
       const cleanPoNo = poNo.trim().replace(/^#/, '');
 
+      // Fetch Sauda Checkpoint deduction recorded for this PO from sauda_check_point_deductions table
+      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
+      const isLastMr = masterData.mr_no ? isLastMrForPo(masterData.mr_no, cleanPoNo) : true;
+
+      if (isLastMr && saudaDed) {
+        setSaudaDeductionRecord(saudaDed);
+        if (Number(saudaDed.deduction_amount) > 0) {
+          setMasterData(prev => ({
+            ...prev,
+            val_less_amt: Number(saudaDed.deduction_amount)
+          }));
+        }
+      } else {
+        setSaudaDeductionRecord(null);
+      }
+
       // 1. Fetch matching PO master and item details (checking purchase_master, sauda_check_point, po_archive, and indexedDB)
       const { poData, poDetails: fetchedDetails } = await fetchPoAndItemDetails(cleanPoNo);
 
@@ -1779,21 +1681,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       setSelectedPoData(poData);
-
-      // Fetch Sauda Checkpoint deduction recorded for this PO from sauda_check_point_deductions table or Final PO Excess/Short
-      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo, poData);
-      if (saudaDed) {
-        setSaudaDeductionRecord(saudaDed);
-        const dedAmt = Number(saudaDed.deduction_amount || 0);
-        if (dedAmt > 0) {
-          setMasterData(prev => ({
-            ...prev,
-            val_ex_short: (prev.val_ex_short && Number(prev.val_ex_short) > 0) ? prev.val_ex_short : dedAmt
-          }));
-        }
-      } else {
-        setSaudaDeductionRecord(null);
-      }
       if (preserveMrNo && masterData.mr_no) {
         await syncPaymentModuleData(masterData.mr_no, poNo);
       }
@@ -1890,11 +1777,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
           totalInspectedMt += wtMt;
         }
-      }
-
-      if (totalInspectedMt === 0) {
-        const rawRcvd = Number(poData.received_weight_mt || poData.total_received_mt || 0);
-        totalInspectedMt = rawRcvd > 500 ? rawRcvd / 1000 : (rawRcvd > 50 ? rawRcvd / 10 : rawRcvd);
       }
 
       // 3. Fetch already settled quantity against this P.O
@@ -2060,6 +1942,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const cleanTargetPo = (poNoForDet || selectedPoNo || masterData.po_no || '').trim().replace(/^#/, '');
       const isLastMr = isLastMrForPo(targetMrNo, cleanTargetPo);
 
+      let saudaDedRecord: any = null;
+      if (isLastMr && cleanTargetPo) {
+        saudaDedRecord = await fetchSaudaCheckpointDeduction(cleanTargetPo);
+        setSaudaDeductionRecord(saudaDedRecord);
+      } else {
+        setSaudaDeductionRecord(null);
+      }
+
       let poDetails: any[] = [];
       let poData: any = null;
       const effectivePoNo = poNoForDet || cleanTargetPo;
@@ -2068,14 +1958,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         poData = fetchedPo;
         poDetails = fetchedDetails;
         if (poData) setSelectedPoData(poData);
-      }
-
-      let saudaDedRecord: any = null;
-      if (cleanTargetPo) {
-        saudaDedRecord = await fetchSaudaCheckpointDeduction(cleanTargetPo, poData);
-        setSaudaDeductionRecord(saudaDedRecord);
-      } else {
-        setSaudaDeductionRecord(null);
       }
 
       let gList = gradeMasterList;
@@ -2283,10 +2165,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_premium_amt: (existingMaster.val_premium_amt !== undefined && existingMaster.val_premium_amt !== null && Number(existingMaster.val_premium_amt) > 0)
               ? existingMaster.val_premium_amt
               : calculatedPremTotalAmt,
-            val_less_amt: Number(existingMaster.val_less_amt || 0),
-            val_ex_short: (Number(existingMaster.val_ex_short) > 0)
-              ? Number(existingMaster.val_ex_short)
-              : Number(saudaDedRecord?.deduction_amount || poData?.excess_short_deduction || 0),
+            val_less_amt: isLastMr
+              ? (Number(existingMaster.val_less_amt) > 0 ? existingMaster.val_less_amt : Number(saudaDedRecord?.deduction_amount || 0))
+              : Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
             final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
@@ -2379,21 +2260,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           arrival_no: faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || '',
           arrival_date: formatToInputDate(faMaster?.date || faMaster?.arrival_date || inspMaster?.arrival_date) || '',
           remarks: faMaster?.remarks || inspMaster?.remarks || '',
-          challan_weight: (() => {
-            const raw = faMaster?.challan_material_weight || faMaster?.weight_reduced || faMaster?.weight_qtl || inspMaster?.challan_material_weight || 0;
-            const n = Number(raw) || 0;
-            return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-          })(),
-          supplier_net_wt: (() => {
-            const raw = faMaster?.supplier_net_weight || faMaster?.challan_material_weight || faMaster?.weight_reduced || faMaster?.weight_qtl || inspMaster?.supplier_net_weight || 0;
-            const n = Number(raw) || 0;
-            return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-          })(),
-          electronic_scale_net: (() => {
-            const raw = faMaster?.electronic_net_weight || faMaster?.challan_material_weight || faMaster?.weight_reduced || faMaster?.weight_qtl || inspMaster?.electronic_net_weight || 0;
-            const n = Number(raw) || 0;
-            return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-          })(),
+          challan_weight: Number(faMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.challan_material_weight || inspMaster?.weight_qtl) || 0,
+          supplier_net_wt: Number(faMaster?.supplier_net_weight || faMaster?.weight_qtl || inspMaster?.supplier_net_weight || inspMaster?.weight_qtl) || 0,
+          electronic_scale_net: Number(faMaster?.electronic_net_weight || faMaster?.weight_qtl || inspMaster?.electronic_net_weight || inspMaster?.weight_qtl) || 0,
           summary_deduction_type: deductionSummaryText || '',
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -2403,8 +2272,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_instl_rate: calculatedPremWtQtl,
           summary_premium_amount: calculatedPremRatePerQtl,
           val_premium_amt: calculatedPremTotalAmt,
-          val_less_amt: 0,
-          val_ex_short: Number(saudaDedRecord?.deduction_amount || poData?.excess_short_deduction || 0),
+          val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
           arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0,
           final_on_ac_adv: syncedPaidAmount
@@ -2487,21 +2355,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: inspMaster.arrival_no || '',
         arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
         remarks: inspMaster.remarks || '',
-        challan_weight: (() => {
-          const raw = inspMaster?.challan_material_weight || inspMaster?.weight_qtl || 0;
-          const n = Number(raw) || 0;
-          return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-        })(),
-        supplier_net_wt: (() => {
-          const raw = inspMaster?.supplier_net_weight || inspMaster?.challan_material_weight || inspMaster?.weight_qtl || 0;
-          const n = Number(raw) || 0;
-          return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-        })(),
-        electronic_scale_net: (() => {
-          const raw = inspMaster?.electronic_net_weight || inspMaster?.challan_material_weight || inspMaster?.weight_qtl || 0;
-          const n = Number(raw) || 0;
-          return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
-        })(),
         summary_deduction_type: deductionSummaryText || '',
         summary_deduction_rate: inspDeductionRate,
         summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -2511,8 +2364,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_instl_rate: calculatedPremWtQtl,
         summary_premium_amount: calculatedPremRatePerQtl,
         val_premium_amt: calculatedPremTotalAmt,
-        val_less_amt: 0,
-        val_ex_short: Number(saudaDedRecord?.deduction_amount || poData?.excess_short_deduction || 0),
+        val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
         arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0,
         final_on_ac_adv: syncedPaidAmount
@@ -2705,11 +2557,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const nextActualApmcFees = prev.actual_apmc_fees || calculatedApmcFees;
       const targetRateAffCdCl = prev.summary_rate_aff_cd_cl > 0 ? prev.summary_rate_aff_cd_cl : nextRatePerMt;
 
-      const excessShortDeductionFromPo = Number(saudaDeductionRecord?.deduction_amount || selectedPoData?.excess_short_deduction || 0);
-      const targetValExShort = (prev.val_ex_short !== undefined && Number(prev.val_ex_short) > 0)
-        ? prev.val_ex_short
-        : (excessShortDeductionFromPo > 0 ? excessShortDeductionFromPo : (prev.val_ex_short || 0));
-
       const targetDeliveryClaim = (prev.summary_delivery_claim === 5550 || prev.summary_delivery_claim === undefined) ? 0 : (Number(prev.summary_delivery_claim) || 0);
 
       if (
@@ -2722,7 +2569,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         prev.summary_rate_aff_cd_cl !== targetRateAffCdCl ||
         prev.val_premium_amt !== calculatedPremiumAmount ||
         prev.summary_delivery_claim !== targetDeliveryClaim ||
-        prev.val_ex_short !== targetValExShort ||
         (!prev.actual_apmc_fees && calculatedApmcFees > 0 && prev.actual_apmc_fees !== nextActualApmcFees) ||
         (calculatedRatePerMt > 0 && (prev.summary_rate_qtel !== nextRatePerMt || prev.rate_qntl !== nextRatePerMt))
       ) {
@@ -2741,14 +2587,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_rate_aff_cd_cl: targetRateAffCdCl,
           summary_rate_wt_claim: calculatedRateWtClaim,
           val_premium_amt: calculatedPremiumAmount,
-          summary_delivery_claim: targetDeliveryClaim,
-          val_ex_short: targetValExShort
+          summary_delivery_claim: targetDeliveryClaim
         };
       }
       return prev;
     });
 
-  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData, saudaDeductionRecord]);
+  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
 
   // Handle master updates
   const handleMasterChange = (field: keyof SettlementMaster, value: any) => {
@@ -2950,59 +2795,26 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       setMasterData(prev => ({ ...prev, mr_no: targetMrNo }));
     }
 
-    // Calculate total settlement weight in MT with automatic unit normalization
-    let calculatedSettleWeightMt = detailCols.reduce((sum, c) => sum + getColWtMt(c), 0);
-    if (calculatedSettleWeightMt <= 0) {
-      const rawScale = Number(masterData.electronic_scale_net) || Number(masterData.challan_weight) || 0;
-      calculatedSettleWeightMt = rawScale > 500 ? rawScale / 1000 : (rawScale > 50 ? rawScale / 10 : rawScale);
-    }
-    // Prevent Quintals (e.g. 111.000) from ever being interpreted as Metric Tons
-    if (calculatedSettleWeightMt > 500) calculatedSettleWeightMt = calculatedSettleWeightMt / 1000;
-    else if (calculatedSettleWeightMt > 50) calculatedSettleWeightMt = calculatedSettleWeightMt / 10;
-    const totalSettleWeightMt = Number(calculatedSettleWeightMt.toFixed(3));
+    // Validate that settlement_weight (we check both totalSettleQty and electronic_scale_net / challan_weight)
+    // does not exceed pendingReceivedQty
     const totalSettleQty = detailCols.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+    const activeWeight = Math.max(
+      totalSettleQty, 
+      Number(masterData.electronic_scale_net) || 0, 
+      Number(masterData.challan_weight) || 0
+    );
 
-    // -------------------------------------------------------------------------------------------------
-    // AUDIT BLOCK VALIDATION (Strict Business Logic & Allowable Limit Enforcement)
-    // -------------------------------------------------------------------------------------------------
-    const poContractMt = Number(selectedPoData?.total_contract_mt || selectedPoData?.contract_weight_mt || 0);
-    const exShortDeduction = Number(masterData.val_ex_short) || Number(selectedPoData?.excess_short_deduction) || Number(saudaDeductionRecord?.deduction_amount) || 0;
-
-    // Calculate previously settled MT for this PO (excluding current MR in edit/update mode)
-    let prevSettledForPoMt = 0;
-    if (masterData.po_no && customSettlementRecords && customSettlementRecords.length > 0) {
-      prevSettledForPoMt = customSettlementRecords
-        .filter(r => r.mr_no !== targetMrNo && r.mr_no !== masterData.mr_no)
-        .reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    let allowedWeight = poStats ? poStats.pendingReceivedQty : 0;
+    if (isEdit && selectedPoNo) {
+      // Find if there was an existing record for this mr_no in customSettlementRecords
+      const existingRecord = customSettlementRecords.find(r => r.mr_no === targetMrNo || r.id === masterData.settlement_id);
+      if (existingRecord) {
+        allowedWeight += (Number(existingRecord.quantity) || 0);
+      }
     }
-    prevSettledForPoMt = Number(prevSettledForPoMt.toFixed(3));
 
-    // Current pending received limit on this PO before this settlement
-    const pendingReceived = poContractMt > 0
-      ? Number(Math.max(0, poContractMt - prevSettledForPoMt).toFixed(3))
-      : (poStats?.pendingReceivedQty > 0 ? poStats.pendingReceivedQty : totalSettleWeightMt);
-
-    // Contract Tolerance (3%, capped at 1.5 MT)
-    const toleranceMt = poContractMt > 0 ? Number(Math.min(poContractMt * 0.03, 1.5).toFixed(3)) : 0;
-
-    // Excess weight check: if excess is settled via deduction, contract quota is fulfilled
-    const excessWeight = Math.max(0, totalSettleWeightMt - pendingReceived);
-    const hasExcessSettled = exShortDeduction > 0 || (saudaDeductionRecord && Number(saudaDeductionRecord.deduction_amount) > 0);
-
-    // Adjusted weight against contract quota (capped at pending balance when excess is deducted financially)
-    const adjustedWeight = (hasExcessSettled && excessWeight > 0)
-      ? Number(pendingReceived.toFixed(3))
-      : totalSettleWeightMt;
-
-    // Allowable settlement limit
-    const allowableLimit = Number((pendingReceived + toleranceMt + (hasExcessSettled ? excessWeight : 0)).toFixed(3));
-
-    // Audit Rule: Block save ONLY when the settlement weight genuinely exceeds the correctly calculated allowable limit
-    if (poContractMt > 0 && totalSettleWeightMt > (allowableLimit + 0.005)) {
-      setErrorMessage(
-        `Validation Failure (Audit Block): The settlement weight of ${totalSettleWeightMt.toFixed(3)} MT (Adjusted: ${adjustedWeight.toFixed(3)} MT) exceeds the currently calculated 'pending_received' limit of ${pendingReceived.toFixed(3)} MT for selected PO ${masterData.po_no}. (Allowable Limit: ${allowableLimit.toFixed(3)} MT, Excess/Short Deduction: ₹${exShortDeduction.toFixed(2)}). Entry rejected.`
-      );
-      setLoading(false);
+    if (poStats && activeWeight > allowedWeight && allowedWeight > 0) {
+      setErrorMessage(`Validation Failure (Audit Block): The settlement weight of ${activeWeight.toFixed(3)} MT exceeds the currently calculated 'pending_received' limit of ${allowedWeight.toFixed(3)} MT for selected PO ${selectedPoNo}. Entry rejected.`);
       return;
     }
 
@@ -3138,85 +2950,68 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       const { error: customTableErr } = await supabase
         .from('m_r_settlement')
-        .upsert({
+        .insert({
           mr_no: targetMrNo,
           po_no: masterData.po_no,
           lorry_number: masterData.lorry_number,
           material_details: materialDetails || 'Material Goods Received',
           quality: qualitySummary,
-          quantity: totalSettleWeightMt,
+          quantity: totalSettleQty,
           settlement_date: masterData.sett_date,
           payment_status: masterData.payment_status || 'Pending',
           challan_weight: Number(masterData.challan_weight) || 0,
           supplier_net_wt: Number(masterData.supplier_net_wt) || 0,
           electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
           remarks: masterData.remarks
-        }, { onConflict: 'mr_no' });
+        });
       
       if (customTableErr) {
         console.warn("m_r_settlement Sync Notice:", customTableErr);
       }
 
-      // Mark P.O and M.R status as 'settled' and sync remaining pending_received balance
+      // Mark P.O and M.R status as 'settled' so they move to Settlement table
       if (masterData.po_no) {
-        const remainingPoBalance = Math.max(0, Number((poContractMt - (prevSettledForPoMt + adjustedWeight)).toFixed(3)));
-        const poUpdatePayload: any = {
-          status: 'settled',
-          pending: false,
-          pending_received: remainingPoBalance
-        };
-        if (exShortDeduction > 0) {
-          poUpdatePayload.excess_short_deduction = exShortDeduction;
-          poUpdatePayload.excess_short_status = 'settled';
-        }
+        await supabase
+          .from('purchase_master')
+          .update({ status: 'settled', pending: false })
+          .eq('po_no', masterData.po_no);
 
-        await Promise.all([
-          supabase.from('purchase_master').update(poUpdatePayload).eq('po_no', masterData.po_no),
-          supabase.from('purchase_master').update(poUpdatePayload).eq('po_no', `#${masterData.po_no}`),
-          supabase.from('sauda_master').update(poUpdatePayload).eq('po_no', masterData.po_no),
-          supabase.from('sauda_check_point').update(poUpdatePayload).eq('po_no', masterData.po_no)
-        ]).catch(e => console.warn("PO status update notice:", e));
+        await supabase
+          .from('sauda_master')
+          .update({ status: 'settled', pending: false })
+          .or(`sauda_no.eq.${masterData.po_no},po_no.eq.${masterData.po_no}`);
+
+        await supabase
+          .from('sauda_check_point')
+          .update({ status: 'settled', pending: false })
+          .eq('po_no', masterData.po_no);
       }
 
-      // Update payment_master status if associated payment records exist
-      if (masterData.po_no || targetMrNo) {
-        await Promise.all([
-          supabase.from('payment_master').update({
-            settlement_done: true,
-            status: 'settled',
-            payment_status: 'settled',
-            mr_no: targetMrNo,
-            settled_amount: Number(masterData.payable_amt) || 0
-          }).eq('po_no', masterData.po_no),
-          supabase.from('payment_master').update({
-            settlement_done: true,
-            status: 'settled',
-            payment_status: 'settled',
-            mr_no: targetMrNo,
-            settled_amount: Number(masterData.payable_amt) || 0
-          }).eq('mr_no', targetMrNo)
-        ]).catch(e => console.warn("payment_master status update notice:", e));
+      if (targetMrNo || masterData.po_no) {
+        const filterStr = targetMrNo && masterData.po_no 
+          ? `mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo},po_no.eq.${masterData.po_no}`
+          : targetMrNo ? `mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}` : `po_no.eq.${masterData.po_no}`;
+
+        await supabase
+          .from('mill_inspection_master')
+          .update({ status: 'settled' })
+          .or(filterStr);
+
+        await supabase
+          .from('final_arrival')
+          .update({ status: 'settled' })
+          .or(filterStr);
+
+        await supabase
+          .from('temporary_material_received')
+          .update({ status: 'settled' })
+          .or(filterStr);
       }
 
-      if (targetMrNo) {
-        await Promise.all([
-          supabase.from('mill_inspection_master').update({ status: 'settled' }).eq('mr_no', targetMrNo),
-          supabase.from('final_arrival').update({ status: 'settled' }).eq('mr_no', targetMrNo),
-          supabase.from('final_arrival').update({ status: 'settled' }).eq('final_arrival_no', targetMrNo),
-          supabase.from('temporary_material_received').update({ status: 'settled' }).eq('mr_no', targetMrNo)
-        ]).catch(e => console.warn("MR status update notice:", e));
-      }
 
-      if (masterData.po_no) {
-        await Promise.all([
-          supabase.from('mill_inspection_master').update({ status: 'settled' }).eq('po_no', masterData.po_no),
-          supabase.from('final_arrival').update({ status: 'settled' }).eq('po_no', masterData.po_no),
-          supabase.from('temporary_material_received').update({ status: 'settled' }).eq('po_no', masterData.po_no)
-        ]).catch(e => console.warn("PO arrival status update notice:", e));
-      }
 
       if (onLogEvent) {
-        onLogEvent('MR_SETTLEMENT', `Archived settlement for MR [MR: ${masterData.mr_no}] against PO [PO: ${masterData.po_no}] with Payment Status: ${masterData.payment_status || 'Pending'}. Settle Quantity: ${totalSettleWeightMt.toFixed(3)} MT`);
+        onLogEvent('MR_SETTLEMENT', `Archived settlement for MR [MR: ${masterData.mr_no}] against PO [PO: ${masterData.po_no}] with Payment Status: ${masterData.payment_status || 'Pending'}. Settle Quantity: ${totalSettleQty} MT`);
       }
 
       setSuccessMessage(`M.R. Settlement [MR No ${masterData.mr_no}] finalized and archived successfully !`);
@@ -4685,28 +4480,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
                     {/* Row 4: Ex/Short */}
                     <div className="flex flex-col">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <label htmlFor="ex_short_2719" className="text-[9px] font-bold text-slate-600">Ex/Short (-)</label>
-                        {Number(masterData.val_ex_short) > 0 && (
-                          <span className="text-[8px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                            Auto from Final PO
-                          </span>
-                        )}
-                      </div>
+                      <label htmlFor="ex_short_2719" className="text-[9px] font-bold text-slate-600 mb-0.5">Ex/Short (-)</label>
                       <input id="ex_short_2719" name="ex_short" aria-label="Ex/Short (-)"
                         type="number" 
-                        step="0.01"
                         className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
                         value={masterData.val_ex_short || ''} 
                         onChange={(e) => handleMasterChange('val_ex_short', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
                       />
-                      {saudaDeductionRecord && Number(saudaDeductionRecord.deduction_amount) > 0 && (
-                        <div className="mt-1 p-1 bg-amber-50/80 border border-amber-200 rounded text-[8px] text-amber-900 leading-tight">
-                          <span className="font-bold">Final PO Excess/Short:</span> ₹{Number(saudaDeductionRecord.deduction_amount).toFixed(2)}
-                          {saudaDeductionRecord.remarks && <div className="text-[7.5px] text-amber-800 italic">{saudaDeductionRecord.remarks}</div>}
-                        </div>
-                      )}
                     </div>
 
                   </div>

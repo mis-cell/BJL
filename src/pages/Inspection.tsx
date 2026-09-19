@@ -2536,9 +2536,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
 
       if (
-        Number(currentRow.receipt_gross_wt) > 0 && 
-        (field === "dust_claim" ||
-          field === "moisture_claim" ||
+        Number(currentRow.receipt_gross_wt) > 0 &&
+        (field === "moisture_claim" ||
           field === "lorry_read_min" ||
           field === "lorry_read_max" ||
           field === "lorry_read_avg" ||
@@ -2549,11 +2548,9 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           field === "less_weight")
       ) {
         const claimMoist = Number(currentRow.moisture_claim) || 0;
-        const claimDust = Number(currentRow.dust_claim) || 0;
         const baseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
         const moisturediduct = ((baseWt / 100) * claimMoist);
-        const dustdiduct = ((baseWt / 100) * claimDust);
-        const finalrecieptwt = baseWt - Number(moisturediduct.toFixed(3)) - Number(dustdiduct.toFixed(3));
+        const finalrecieptwt = baseWt - Number(moisturediduct.toFixed(3));
         currentRow.final_receipt_wt = Number(finalrecieptwt.toFixed(3));
       }
         

@@ -2226,23 +2226,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           dedMap[cleanKeyFormat(d.sauda_no)] = d;
         }
       });
-
-      // Also merge from localStorage settlements
-      if (typeof window !== 'undefined' && window.localStorage) {
-        Object.keys(localStorage).forEach(k => {
-          if (k.startsWith('sauda_settlement_')) {
-            try {
-              const parsed = JSON.parse(localStorage.getItem(k) || '{}');
-              if (parsed && (Number(parsed.deduction_amount) > 0 || Number(parsed.excess_short_deduction) > 0)) {
-                if (parsed.po_no) {
-                  dedMap[String(parsed.po_no).trim().toUpperCase()] = parsed;
-                  dedMap[cleanKeyFormat(parsed.po_no)] = parsed;
-                }
-              }
-            } catch (_e) {}
-          }
-        });
-      }
       setSettledDeductions(dedMap);
 
       const allMergedInspections = [...(matInspections || []), ...(inspections || [])];
@@ -5606,25 +5589,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   const isClosed = Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
 
                                   const diffMt = rcvd - contract;
-                                  const cleanKey = String(item.po_no || "").trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-                                  const rawPoKey = String(item.po_no || "").trim().toUpperCase();
-                                  const dedRecord = settledDeductions[rawPoKey] ||
-                                    settledDeductions[cleanKey] ||
-                                    (item.sauda_no ? settledDeductions[String(item.sauda_no).trim().toUpperCase()] : null);
-                                  
-                                  let deductionAmount = Number(item.excess_short_deduction || dedRecord?.deduction_amount || 0);
-
-                                  // If PTF PO or Final PO and excess weight exists, calculate auto-deduction if not yet stored
-                                  if (deductionAmount === 0 && diffMt > 0) {
-                                    const diffQtl = diffMt * 10;
-                                    const tolMt = Math.min(contract * 0.03, 1.5);
-                                    const tolQtl = tolMt * 10;
-                                    if (diffQtl > (tolQtl + 0.001)) {
-                                      const deductibleQtyQtl = diffQtl - tolQtl;
-                                      const rate = Number(item.rate_qntl || item.rate_mt || item.b_rate || 13300);
-                                      deductionAmount = Number((deductibleQtyQtl * rate).toFixed(2));
-                                    }
-                                  }
 
                                   if (!isClosed) {
                                     const pendingMt = Math.max(0, contract - rcvd);
@@ -5633,7 +5597,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                         className="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs inline-flex items-center gap-1"
                                         title={`Sauda is Open. Remaining Quantity Pending: ${pendingMt.toFixed(3)} MT`}
                                       >
-                                        <span>PENDING (${pendingMt.toFixed(3)} MT)</span>
+                                        <span>PENDING ({pendingMt.toFixed(3)} MT)</span>
                                       </span>
                                     );
                                   }
@@ -5644,18 +5608,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                       <button 
                                         type="button" 
                                         onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
-                                        className="text-[9px] font-black px-2.5 py-1 rounded-md bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-center gap-0.5 mx-auto"
-                                        title={`Closed Sauda Shortage: -${shortMt.toFixed(3)} MT. Total Short Weight Deduction: ₹${deductionAmount.toFixed(2)}. Click to view or adjust Shortage Settlement.`}
+                                        className="text-[9px] font-black px-2.5 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs cursor-pointer hover:scale-105 transition-all flex items-center gap-1 mx-auto"
+                                        title={`Closed Sauda Shortage: -${shortMt.toFixed(3)} MT. Click to view or adjust Shortage Settlement.`}
                                       >
-                                        <div className="flex items-center gap-1">
-                                          <Scale className="w-3 h-3 text-rose-700 shrink-0" />
-                                          <span>SHORT (-${shortMt.toFixed(3)} MT)</span>
-                                        </div>
-                                        {deductionAmount > 0 && (
-                                          <span className="text-[8px] font-extrabold text-rose-800 font-mono tracking-tight bg-rose-200/60 px-1 rounded">
-                                            Ex/Short (-): ₹${deductionAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </span>
-                                        )}
+                                        <Scale className="w-3 h-3 text-rose-700 shrink-0" />
+                                        <span>SHORT (-{shortMt.toFixed(3)} MT)</span>
                                       </button>
                                     );
                                   }
@@ -5665,18 +5622,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                       <button 
                                         type="button" 
                                         onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }} 
-                                        className="text-[9px] font-black px-2.5 py-1 rounded-md bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-center gap-0.5 mx-auto"
-                                        title={`Closed Sauda Excess: +${diffMt.toFixed(3)} MT. Total Excess Weight Deduction Amount: ₹${deductionAmount.toFixed(2)}. Click to view or adjust Excess Settlement.`}
+                                        className="text-[9px] font-black px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs cursor-pointer hover:scale-105 transition-all flex items-center gap-1 mx-auto"
+                                        title={`Closed Sauda Excess: +${diffMt.toFixed(3)} MT. Click to view or adjust Excess Settlement.`}
                                       >
-                                        <div className="flex items-center gap-1">
-                                          <Scale className="w-3 h-3 text-purple-700 shrink-0" />
-                                          <span>EXCESS (+${diffMt.toFixed(3)} MT)</span>
-                                        </div>
-                                        {deductionAmount > 0 && (
-                                          <span className="text-[8px] font-extrabold text-purple-800 font-mono tracking-tight bg-purple-200/60 px-1 rounded">
-                                            Ex/Short (-): ₹${deductionAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </span>
-                                        )}
+                                        <Scale className="w-3 h-3 text-purple-700 shrink-0" />
+                                        <span>EXCESS (+{diffMt.toFixed(3)} MT)</span>
                                       </button>
                                     );
                                   }
