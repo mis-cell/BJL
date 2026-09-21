@@ -230,49 +230,101 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       return matchesSearch && matchesParty && matchesMode;
     });
   }, [paymentList, searchFilter, partyFilter, modeFilter]); */
-  const filteredPayments = useMemo(() => {
-  return paymentList.filter(p => {
-    const matchesSearch =
-      !searchFilter.trim() ||
-      (p.party_name || p.supplier || '')
-        .toLowerCase()
-        .includes(searchFilter.toLowerCase()) ||
-      (p.mr_no || '')
-        .toLowerCase()
-        .includes(searchFilter.toLowerCase());
+  /* const filteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
+      const matchesSearch =
+        !searchFilter.trim() ||
+        (p.party_name || p.supplier || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase()) ||
+        (p.mr_no || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase());
 
-    const matchesParty =
-      partyFilter === 'All' ||
-      (p.party_name || p.supplier) === partyFilter;
+      const matchesParty =
+        partyFilter === 'All' ||
+        (p.party_name || p.supplier) === partyFilter;
 
-    const matchesMode =
-      modeFilter === 'All' ||
-      p.advance_payment_from === modeFilter;
+      const matchesMode =
+        modeFilter === 'All' ||
+        p.advance_payment_from === modeFilter;
 
-    // Month filter
-    const matchesMonth =
-      selectedMonth === null ||
-      (
-        p.repayment_date &&
-        new Date(p.repayment_date).getMonth() === selectedMonth &&
-        new Date(p.repayment_date).getFullYear() === selectedYear
+      // Month filter
+      const matchesMonth =
+        selectedMonth === null ||
+        (
+          p.repayment_date &&
+          new Date(p.repayment_date).getMonth() === selectedMonth &&
+          new Date(p.repayment_date).getFullYear() === selectedYear
+        );
+
+      return (
+        matchesSearch &&
+        matchesParty &&
+        matchesMode &&
+        matchesMonth
       );
+    });
+    }, [
+    paymentList,
+    searchFilter,
+    partyFilter,
+    modeFilter,
+    selectedMonth,
+    selectedYear
+  ]); */
+  //const matchesYear = p.repayment_date && new Date(p.repayment_date).getFullYear() === selectedYear;
+  const filteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
 
-    return (
-      matchesSearch &&
-      matchesParty &&
-      matchesMode &&
-      matchesMonth
-    );
-  });
-}, [
-  paymentList,
-  searchFilter,
-  partyFilter,
-  modeFilter,
-  selectedMonth,
-  selectedYear
-]);
+      const matchesSearch =
+        !searchFilter.trim() ||
+        (p.party_name || p.supplier || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase()) ||
+        (p.mr_no || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase());
+
+      const matchesParty =
+        partyFilter === 'All' ||
+        (p.party_name || p.supplier) === partyFilter;
+
+      const matchesMode =
+        modeFilter === 'All' ||
+        p.advance_payment_from === modeFilter;
+
+      // YEAR FILTER
+      const matchesYear =
+        p.repayment_date &&
+        new Date(p.repayment_date).getFullYear() === selectedYear;
+
+      // MONTH FILTER
+      const matchesMonth =
+        selectedMonth === null ||
+        (
+          p.repayment_date &&
+          new Date(p.repayment_date).getMonth() === selectedMonth
+        );
+
+      return (
+        matchesSearch &&
+        matchesParty &&
+        matchesMode &&
+        matchesYear &&
+        matchesMonth
+      );
+    });
+  }, [
+    paymentList,
+    searchFilter,
+    partyFilter,
+    modeFilter,
+    selectedMonth,
+    selectedYear
+  ]);
+
+
 
   // Derived high fidelity KPI values from the modern MIS spec
   const metrics = useMemo(() => {
@@ -481,104 +533,153 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       onClose={onClose}
     >
       {/* FILTER TOPBAR BAR */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4 mb-4">
+      
+      <div className="bg-gradient-to-r from-[#103A20] via-[#174C2C] to-[#205F38] p-4 rounded-xl border border-[#0d321c] shadow-[0_6px_18px_rgba(16,58,32,0.20)] flex flex-wrap items-center justify-between gap-4 mb-4">
+
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
-          
+
           <div className="flex items-end gap-2">
+
             {/* Year Dropdown */}
             <div className="flex flex-col min-w-[110px]">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+
+              <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
                 Year
               </label>
+
               <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500"
-              >
+  value={selectedYear}
+  onChange={(e) => {
+    setSelectedYear(Number(e.target.value));
+    setSelectedMonth(null);
+  }}
+  className="border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
+>
                 {Array.from({ length: 10 }, (_, index) => 2026 + index).map((year) => (
                   <option key={year} value={year}>
                     {year}
                   </option>
                 ))}
               </select>
+
             </div>
+
+
             {/* Date Range */}
             <div className="flex flex-col min-w-[160px]">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+
+              <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
                 Date Range
               </label>
-              <div className="flex items-center gap-1 border border-slate-200 rounded-lg px-2 py-1.5 bg-slate-50 text-xs font-semibold text-slate-700">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+
+              <div className="flex items-center gap-1 border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c]">
+
+                <Calendar className="w-3.5 h-3.5 text-[#4b7658]" />
+
                 <span>
                   01 Jan {selectedYear} — 31 Dec {selectedYear}
                 </span>
+
               </div>
+
             </div>
+
           </div>
 
+
+          {/* Party Group */}
           <div className="flex flex-col min-w-[180px]">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Party Group</label>
+
+            <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+              Party Group
+            </label>
+
             <select
               value={partyFilter}
               onChange={e => setPartyFilter(e.target.value)}
-              className="border border-slate-200 bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 outline-hidden focus:ring-2 focus:ring-emerald-500"
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
             >
               <option value="All">All Parties</option>
+
               {uniquePartyOptions.map(pt => (
-                <option key={pt} value={pt}>{pt}</option>
+                <option key={pt} value={pt}>
+                  {pt}
+                </option>
               ))}
+
             </select>
+
           </div>
 
+
+          {/* Payment Mode */}
           <div className="flex flex-col min-w-[180px]">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Payment Mode</label>
+
+            <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+              Payment Mode
+            </label>
+
             <select
               value={modeFilter}
               onChange={e => setModeFilter(e.target.value)}
-              className="border border-slate-200 bg-white rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 outline-hidden focus:ring-2 focus:ring-emerald-500"
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
             >
               <option value="All">All (Trade / Invoice Mart / RXIL)</option>
-              <option value="1">From Bank </option>
+              <option value="1">From Bank</option>
               <option value="2">RXIL</option>
-              <option value="3">TReDS </option>
+              <option value="3">TReDS</option>
               <option value="4">Invoice Mart</option>
             </select>
+
           </div>
+
         </div>
 
+
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 pt-4">
+
           <div className="flex items-center gap-2">
-              {/* <button
-                onClick={() => setViewMode('ledger')}
-                className="px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center gap-1.5 transition-colors"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                Party Ledger View
-              </button> */}
-              <button
-                onClick={handleExportCsv}
-                className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
-              </button>
-              <button
-                onClick={handleExportPdf}
-                className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export PDF
-              </button>
-              <button
-                onClick={initPage}
-                disabled={loading}
-                className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors disabled:opacity-50"
-                title="Refresh Table"
-              >
-                <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin text-purple-600")} />
-              </button>
-            </div>
+
+            {/* Export CSV */}
+            <button
+              onClick={handleExportCsv}
+              className="px-3 py-1.5 text-xs font-bold text-[#174C2C] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+
+
+            {/* Export PDF */}
+            <button
+              onClick={handleExportPdf}
+              className="px-3 py-1.5 text-xs font-bold text-[#174C2C] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export PDF
+            </button>
+
+
+            {/* Refresh */}
+            <button
+              onClick={initPage}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs font-bold text-[#174C2C] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              title="Refresh Table"
+            >
+              <RefreshCcw
+                className={cn(
+                  "w-4 h-4",
+                  loading && "animate-spin text-[#174c2c]"
+                )}
+              />
+            </button>
+
+          </div>
+
         </div>
+
       </div>
 
       {/* METRIC KPI TILES SECTION */}
@@ -586,225 +687,223 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         <div className="space-y-4">
           
           <div className="space-y-3">
-
             {/* Main Summary Cards */}
-            
-          <div className="bg-[#f3f7f4] rounded-2xl p-3">
+            <div className="bg-gradient-to-br from-[#e8eee2] via-[#dfe8d9] to-[#d4e1ce] rounded-2xl p-3 border border-[#cbdac4] shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
 
-  {/* ================= SUMMARY CARDS ================= */}
-  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* ================= SUMMARY CARDS ================= */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
-    {/* Total Advance Paid */}
-    <div className="group relative overflow-hidden bg-white px-3 py-3 rounded-xl border border-[#dce8df] shadow-[0_3px_10px_rgba(23,76,44,0.07)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_6px_16px_rgba(23,76,44,0.12)] transition-all">
+                {/* Total Advance Paid */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f3f6e9] to-[#e4eddc] px-3 py-3 rounded-xl border border-[#c5d7bd] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
 
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#174c2c]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#174c2c] to-[#3f8054]" />
 
-      <div className="min-w-0 pl-1">
-        <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#718579] block truncate">
-          Total Advance Paid
-        </span>
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#647c61] block truncate">
+                      Total Advance Paid
+                    </span>
 
-        <h3 className="text-base font-black text-[#17351f] mt-0.5 truncate">
-          ₹ {metrics.totalAdvancePaid.toLocaleString('en-IN')}
-        </h3>
-      </div>
+                    <h3 className="text-base font-black text-[#17351f] mt-0.5 truncate">
+                      ₹ {metrics.totalAdvancePaid.toLocaleString('en-IN')}
+                    </h3>
+                  </div>
 
-      <div className="p-2 bg-[#edf5ef] rounded-lg text-[#174c2c] shrink-0 group-hover:bg-[#174c2c] group-hover:text-white transition-colors">
-        <FileText className="w-4 h-4" />
-      </div>
+                  <div className="p-2 bg-[#d5e5ca] rounded-lg text-[#174c2c] shrink-0 group-hover:bg-[#174c2c] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <FileText className="w-4 h-4" />
+                  </div>
 
-    </div>
-
-
-    {/* Total Transactions */}
-    <div className="group relative overflow-hidden bg-white px-3 py-3 rounded-xl border border-[#dce8df] shadow-[0_3px_10px_rgba(23,76,44,0.07)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_6px_16px_rgba(23,76,44,0.12)] transition-all">
-
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#28613c]" />
-
-      <div className="min-w-0 pl-1">
-        <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#718579] block truncate">
-          Total Transactions
-        </span>
-
-        <h3 className="text-base font-black text-[#17351f] mt-0.5">
-          {metrics.totalTransactions}
-        </h3>
-      </div>
-
-      <div className="p-2 bg-[#edf5ef] rounded-lg text-[#28613c] shrink-0 group-hover:bg-[#28613c] group-hover:text-white transition-colors">
-        <FileText className="w-4 h-4" />
-      </div>
-
-    </div>
+                </div>
 
 
-    {/* Total Parties */}
-    <div className="group relative overflow-hidden bg-white px-3 py-3 rounded-xl border border-[#dce8df] shadow-[0_3px_10px_rgba(23,76,44,0.07)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_6px_16px_rgba(23,76,44,0.12)] transition-all">
+                {/* Total Transactions */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e5eff0] to-[#d4e5e7] px-3 py-3 rounded-xl border border-[#bdd5d8] shadow-[0_3px_12px_rgba(30,80,100,0.05)] flex items-center justify-between min-w-0 hover:border-[#28718a]/40 hover:shadow-[0_8px_20px_rgba(40,113,138,0.12)] transition-all duration-300">
 
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4b7658]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#28613c] to-[#3c8990]" />
 
-      <div className="min-w-0 pl-1">
-        <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#718579] block truncate">
-          Total Parties
-        </span>
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#607c81] block truncate">
+                      Total Transactions
+                    </span>
 
-        <h3 className="text-base font-black text-[#17351f] mt-0.5">
-          {metrics.uniqueParties}
-        </h3>
-      </div>
+                    <h3 className="text-base font-black text-[#173b42] mt-0.5">
+                      {metrics.totalTransactions}
+                    </h3>
+                  </div>
 
-      <div className="p-2 bg-[#edf5ef] rounded-lg text-[#4b7658] shrink-0 group-hover:bg-[#4b7658] group-hover:text-white transition-colors">
-        <Users className="w-4 h-4" />
-      </div>
+                  <div className="p-2 bg-[#c7e0e2] rounded-lg text-[#286b78] shrink-0 group-hover:bg-[#286b78] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <FileText className="w-4 h-4" />
+                  </div>
 
-    </div>
-
-
-    {/* Pending Advance */}
-    <div className="group relative overflow-hidden bg-white px-3 py-3 rounded-xl border border-[#eadfb9] shadow-[0_3px_10px_rgba(176,138,34,0.07)] flex items-center justify-between min-w-0 hover:border-[#d4af37]/60 hover:shadow-[0_6px_16px_rgba(176,138,34,0.12)] transition-all">
-
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#d4af37]" />
-
-      <div className="min-w-0 pl-1">
-        <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#8a805f] block truncate">
-          Pending Advance
-        </span>
-
-        <h3 className="text-base font-black text-[#17351f] mt-0.5 truncate">
-          ₹ {metrics.pendingAdvance.toLocaleString('en-IN')}
-        </h3>
-      </div>
-
-      <div className="p-2 bg-[#faf6e7] rounded-lg text-[#a17d18] shrink-0 group-hover:bg-[#d4af37] group-hover:text-white transition-colors">
-        <Clock className="w-4 h-4" />
-      </div>
-
-    </div>
-
-  </div>
+                </div>
 
 
-  {/* ================= MONTHLY TRANSACTIONS ================= */}
-  <div className="mt-3">
+                {/* Total Parties */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#ebe7f2] to-[#ddd8e9] px-3 py-3 rounded-xl border border-[#d0c8df] shadow-[0_3px_12px_rgba(80,70,130,0.05)] flex items-center justify-between min-w-0 hover:border-[#7565a5]/40 hover:shadow-[0_8px_20px_rgba(80,70,130,0.12)] transition-all duration-300">
 
-    <div className="flex items-center justify-between mb-2 px-1">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#4b7658] to-[#7b69aa]" />
 
-      <div>
-        <h3 className="text-xs font-black text-[#17351f] uppercase tracking-wide">
-          Monthly Transactions
-        </h3>
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#756b8b] block truncate">
+                      Total Parties
+                    </span>
 
-        <p className="text-[9px] text-[#7b9182] mt-0.5">
-          Select a month to filter payment records
-        </p>
-      </div>
+                    <h3 className="text-base font-black text-[#302d4b] mt-0.5">
+                      {metrics.uniqueParties}
+                    </h3>
+                  </div>
 
-      <div className="px-2.5 py-1 rounded-lg bg-white border border-[#dce8df] text-[9px] font-bold text-[#174c2c] shadow-sm">
-        {selectedMonth === null
-          ? "All Months"
-          : [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ][selectedMonth]
-        }
-      </div>
+                  <div className="p-2 bg-[#d4cde6] rounded-lg text-[#7565a5] shrink-0 group-hover:bg-[#7565a5] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Users className="w-4 h-4" />
+                  </div>
 
-    </div>
+                </div>
 
 
-    {/* Month Cards */}
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+                {/* Pending Advance */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f5edd5] to-[#ecdfb9] px-3 py-3 rounded-xl border border-[#e3d2a4] shadow-[0_3px_12px_rgba(176,138,34,0.06)] flex items-center justify-between min-w-0 hover:border-[#d4af37]/60 hover:shadow-[0_8px_20px_rgba(176,138,34,0.14)] transition-all duration-300">
 
-      {[
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ].map((month, index) => (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#d4af37] to-[#b78b24]" />
 
-        <div
-          key={month}
-          onClick={() =>
-            setSelectedMonth(
-              selectedMonth === index ? null : index
-            )
-          }
-          className={`group relative overflow-hidden px-2 py-2.5 rounded-xl border text-center min-w-0 cursor-pointer transition-all duration-200 ${
-            selectedMonth === index
-              ? "border-[#174c2c] bg-[#174c2c] shadow-[0_5px_14px_rgba(23,76,44,0.20)] scale-[1.02]"
-              : "border-[#dce8df] bg-[#f8fbf9] hover:bg-white hover:border-[#174c2c]/40 hover:shadow-[0_4px_12px_rgba(23,76,44,0.10)]"
-          }`}
-        >
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#8d7947] block truncate">
+                      Pending Advance
+                    </span>
 
-          {/* Top Accent */}
-          <div
-            className={`absolute top-0 left-0 right-0 h-0.5 ${
-              selectedMonth === index
-                ? "bg-[#d4af37]"
-                : "bg-[#dce8df] group-hover:bg-[#174c2c]"
-            }`}
-          />
+                    <h3 className="text-base font-black text-[#493c1e] mt-0.5 truncate">
+                      ₹ {metrics.pendingAdvance.toLocaleString('en-IN')}
+                    </h3>
+                  </div>
 
-          {/* Month */}
-          <span
-            className={`text-[9px] uppercase tracking-wide font-extrabold block ${
-              selectedMonth === index
-                ? "text-[#d4af37]"
-                : "text-[#66806f]"
-            }`}
-          >
-            {month}
-          </span>
+                  <div className="p-2 bg-[#e8d8a8] rounded-lg text-[#a47d19] shrink-0 group-hover:bg-[#d4af37] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Clock className="w-4 h-4" />
+                  </div>
 
-          {/* Count */}
-          <h3
-            className={`text-lg font-black mt-0.5 ${
-              selectedMonth === index
-                ? "text-white"
-                : "text-[#17351f]"
-            }`}
-          >
-            {monthlyTransactions[index]}
-          </h3>
+                </div>
 
-          {/* Label */}
-          <span
-            className={`text-[8px] font-medium ${
-              selectedMonth === index
-                ? "text-[#dce8df]"
-                : "text-[#7b9182]"
-            }`}
-          >
-            Transactions
-          </span>
+              </div>
 
-        </div>
 
-      ))}
+              {/* ================= MONTHLY TRANSACTIONS ================= */}
+              <div className="mt-4">
 
-    </div>
+                <div className="flex items-center justify-between mb-2 px-1">
 
-  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-[#17351f] uppercase tracking-wide">
+                      Monthly Transactions
+                    </h3>
 
-</div>
+                    <p className="text-[9px] text-[#6c8367] mt-0.5">
+                      Select a month to filter payment records
+                    </p>
+                  </div>
+
+                  <div className="px-2.5 py-1 rounded-lg bg-[#d1dfc9] border border-[#b9ceb1] text-[9px] font-bold text-[#174c2c] shadow-[0_2px_6px_rgba(23,76,44,0.06)]">
+                    {selectedMonth === null
+                      ? "All Months"
+                      : [
+                          "January",
+                          "February",
+                          "March",
+                          "April",
+                          "May",
+                          "June",
+                          "July",
+                          "August",
+                          "September",
+                          "October",
+                          "November",
+                          "December",
+                        ][selectedMonth]
+                    }
+                  </div>
+
+                </div>
+
+
+                {/* Month Cards */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+
+                  {[
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec",
+                  ].map((month, index) => (
+
+                    <div
+                      key={month}
+                      onClick={() =>
+                        setSelectedMonth(
+                          selectedMonth === index ? null : index
+                        )
+                      }
+                      className={`group relative overflow-hidden px-2 py-3 rounded-xl border text-center min-w-0 cursor-pointer transition-all duration-300 ${
+                        selectedMonth === index
+                          ? "border-[#174c2c] bg-gradient-to-br from-[#174c2c] via-[#205b35] to-[#347346] shadow-[0_6px_16px_rgba(23,76,44,0.25)] scale-[1.02]"
+                          : "border-[#b8cdb0] bg-gradient-to-br from-[#dce8d5] to-[#cbdcc4] hover:from-[#d1e3cb] hover:to-[#bdd2b5] hover:border-[#8eaf8b] hover:shadow-[0_5px_14px_rgba(23,76,44,0.14)]"
+                      }`}
+                    >
+
+                      {/* Top Accent */}
+                      <div
+                        className={`absolute top-0 left-0 right-0 h-0.5 ${
+                          selectedMonth === index
+                            ? "bg-[#e4c65c]"
+                            : "bg-[#aec5a6] group-hover:bg-[#174c2c]"
+                        }`}
+                      />
+
+                      {/* Month */}
+                      <span
+                        className={`text-[10px] uppercase tracking-wide font-extrabold block ${
+                          selectedMonth === index
+                            ? "text-[#f4d76a]"
+                            : "text-[#466b4b]"
+                        }`}
+                      >
+                        {month}
+                      </span>
+
+                      {/* Count */}
+                      <h3
+                        className={`text-xl font-black mt-1 leading-tight ${
+                          selectedMonth === index
+                            ? "text-white"
+                            : "text-[#17351f]"
+                        }`}
+                      >
+                        {monthlyTransactions[index]}
+                      </h3>
+
+                      {/* Label */}
+                      <span
+                        className={`text-[9px] font-semibold ${
+                          selectedMonth === index
+                            ? "text-[#e1eadf]"
+                            : "text-[#6b8870]"
+                        }`}
+                      >
+                        Transactions
+                      </span>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              </div>
+
+            </div>
 
           </div>
 

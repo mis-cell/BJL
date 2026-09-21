@@ -1707,7 +1707,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
                 : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
-            Report1
+            Report
           </button>
 
           {/* MAP WISE (formerly Map Wise P.O) */}
