@@ -2454,6 +2454,14 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         currentRow.final_receipt_wt = Number(reducewtt.toFixed(3));
       }
 
+      if ( Number(currentRow.receipt_gross_wt) > 0 && field === "dust_claim"){
+          const claimDusttotal = Number(currentRow.dust_claim) || 0;
+          const totalbaseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
+          const ductdiductwt = ((totalbaseWt / 100) * claimDusttotal);
+          const finalrecieptwt1 = totalbaseWt - Number(ductdiductwt.toFixed(3));
+          currentRow.final_receipt_wt = Number(finalrecieptwt1.toFixed(3));
+      }
+
       if (
         Number(currentRow.receipt_gross_wt) > 0 &&
         (field === "moisture_claim" ||
