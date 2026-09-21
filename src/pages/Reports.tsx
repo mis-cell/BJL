@@ -45,6 +45,7 @@ import {
 import { cn } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
+import { PercentageWiseAnalyticsSection } from '../components/reports/PercentageWiseAnalyticsSection';
 //import PaymentReport from '../components/PaymentReport';
 //import TradeReport from '../components/TradeReport';
 import { dbModule } from '../services/dbModule';
@@ -208,7 +209,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
   const [saudaDetails, setSaudaDetails] = useState<any[]>([]);
 
   // Advanced Sauda Report Engine State
-  const [saudaViewMode, setSaudaViewMode] = useState<'dashboard' | 'advanced_reports'>('dashboard');
+  const [saudaViewMode, setSaudaViewMode] = useState<'percentage_analytics' | 'dashboard' | 'advanced_reports'>('percentage_analytics');
   const [activeSaudaReportKey, setActiveSaudaReportKey] = useState<string>('r1');
   const [saudaReportMonth, setSaudaReportMonth] = useState<string>('ALL');
   const [saudaReportYear, setSaudaReportYear] = useState<string>('ALL');
@@ -1937,6 +1938,20 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
             <div className="flex flex-wrap gap-2">
 
               <button
+                onClick={() => setSaudaViewMode('percentage_analytics')}
+                className={cn(
+                  "px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
+                  "rounded-xl border transition-all duration-200",
+                  "shadow-sm hover:shadow-md hover:-translate-y-[1px]",
+                  saudaViewMode === 'percentage_analytics'
+                    ? "bg-emerald-700 text-white border-emerald-800 shadow-emerald-200"
+                    : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                )}
+              >
+                ⚡ Percentage-Wise Analytics
+              </button>
+
+              <button
                 onClick={() => setSaudaViewMode('dashboard')}
                 className={cn(
                   "px-4 py-2 text-[10px] sm:text-[11px] font-black uppercase tracking-wide",
@@ -1947,7 +1962,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
                     : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
                 )}
               >
-                📊 Sauda Dashboard
+                📊 Sauda Overview
               </button>
 
               <button
@@ -1961,16 +1976,25 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
                     : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
                 )}
               >
-                📋 Advanced Reports
+                📋 Legacy 10-Reports Deck
               </button>
 
             </div>
 
             <span className="text-[9px] font-black text-emerald-800 uppercase tracking-[0.18em] font-mono">
-              JUTE MIS • ADVANCED SAUDA ENGINE
+              JUTE MIS • PERCENTAGE-WISE ANALYTICS ENGINE
             </span>
           </div>
 
+          {/* ==================== PERCENTAGE-WISE ANALYTICS SECTION ==================== */}
+          {saudaViewMode === 'percentage_analytics' && (
+            <PercentageWiseAnalyticsSection
+              saudaData={saudaData}
+              poData={poData}
+              mrData={amadData}
+              tempMRData={amadData}
+            />
+          )}
 
           {/* ==================== DASHBOARD ==================== */}
           {saudaViewMode === 'dashboard' && (

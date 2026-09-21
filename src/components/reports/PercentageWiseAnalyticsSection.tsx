@@ -1,0 +1,230 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  compileReportData, 
+  CompiledReportData 
+} from '../../services/reportCalculations';
+import { ReportFilterBar, ReportFilters } from './ReportFilterBar';
+import { PercentageKPISection } from './PercentageKPISection';
+import { BrokerPercentageReport } from './BrokerPercentageReport';
+import { AreaPercentageReport } from './AreaPercentageReport';
+import { SupplierPercentageReport } from './SupplierPercentageReport';
+import { MonthWisePerformanceReport } from './MonthWisePerformanceReport';
+import { GradeItemPercentageReport } from './GradeItemPercentageReport';
+import { ActivePendingLedger } from './ActivePendingLedger';
+import { POSummaryPercentageEngine } from './POSummaryPercentageEngine';
+import { DeliveryComplianceMatrix } from './DeliveryComplianceMatrix';
+import { FinancialCostAnalytics } from './FinancialCostAnalytics';
+import { FullPipelineAuditReport } from './FullPipelineAuditReport';
+import { ReportChartsDeck } from './ReportChartsDeck';
+import { 
+  BarChart3, 
+  PieChart, 
+  Users, 
+  MapPin, 
+  UserCheck, 
+  Calendar, 
+  Package, 
+  Clock, 
+  FileCheck, 
+  ShieldCheck, 
+  DollarSign, 
+  GitCommit,
+  Layers,
+  Sparkles
+} from 'lucide-react';
+
+interface PercentageWiseAnalyticsSectionProps {
+  saudaData: any[];
+  poData: any[];
+  poDetails?: any[];
+  mrData?: any[];
+  tempMRData?: any[];
+  paymentData?: any[];
+}
+
+export type AnalyticsSubTab = 
+  | 'overview'
+  | 'broker'
+  | 'area'
+  | 'supplier'
+  | 'monthly'
+  | 'grade'
+  | 'pending_ledger'
+  | 'po_lifecycle'
+  | 'compliance'
+  | 'financial'
+  | 'audit';
+
+export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSectionProps> = ({
+  saudaData,
+  poData,
+  poDetails = [],
+  mrData = [],
+  tempMRData = [],
+  paymentData = []
+}) => {
+  const [activeSubTab, setActiveSubTab] = useState<AnalyticsSubTab>('overview');
+
+  const [filters, setFilters] = useState<ReportFilters>({
+    financialYear: 'ALL',
+    month: 'ALL',
+    startDate: '',
+    endDate: '',
+    supplier: 'ALL',
+    broker: 'ALL',
+    area: 'ALL',
+    grade: 'ALL',
+    status: 'ALL',
+    searchTerm: ''
+  });
+
+  // Extract distinct filter options
+  const filterOptions = useMemo(() => {
+    const suppliers = new Set<string>();
+    const brokers = new Set<string>();
+    const areas = new Set<string>();
+    const financialYears = new Set<string>();
+
+    saudaData.forEach(s => {
+      if (s.supplier) suppliers.add(s.supplier.trim());
+      if (s.broker) brokers.add(s.broker.trim());
+      if (s.area) areas.add(s.area.trim());
+      if (s.financial_year) financialYears.add(s.financial_year.trim());
+    });
+
+    poData.forEach(p => {
+      if (p.supplier) suppliers.add(p.supplier.trim());
+      if (p.broker) brokers.add(p.broker.trim());
+      if (p.area) areas.add(p.area.trim());
+      if (p.financial_year) financialYears.add(p.financial_year.trim());
+    });
+
+    return {
+      suppliers: Array.from(suppliers).sort(),
+      brokers: Array.from(brokers).sort(),
+      areas: Array.from(areas).sort(),
+      financialYears: Array.from(financialYears).sort()
+    };
+  }, [saudaData, poData]);
+
+  // Compile full analytical dataset
+  const compiledData: CompiledReportData = useMemo(() => {
+    return compileReportData(saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters);
+  }, [saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters]);
+
+  const SUB_TABS: { key: AnalyticsSubTab; label: string; icon: any; count?: number | string }[] = [
+    { key: 'overview', label: '1. Executive KPI & Charts', icon: BarChart3 },
+    { key: 'broker', label: '2. Broker Performance', icon: UserCheck, count: `${compiledData.brokerSummary.length}` },
+    { key: 'area', label: '3. Area Logistics', icon: MapPin, count: `${compiledData.areaSummary.length}` },
+    { key: 'supplier', label: '4. Supplier Scorecard', icon: Users, count: `${compiledData.supplierSummary.length}` },
+    { key: 'monthly', label: '5. Month-Wise Matrix', icon: Calendar, count: `${compiledData.monthWisePerformance.length}` },
+    { key: 'grade', label: '6. Grade & Quality', icon: Package, count: `${compiledData.gradeItemSummary.length}` },
+    { key: 'pending_ledger', label: '7. Active Pending Ledger', icon: Clock, count: `${compiledData.activePendingLedger.length}` },
+    { key: 'po_lifecycle', label: '8. PO vs MR Engine', icon: FileCheck, count: `${compiledData.poSummaryEngine.rows.length}` },
+    { key: 'compliance', label: '9. Delivery Compliance', icon: ShieldCheck, count: `${compiledData.deliveryCompliance.length}` },
+    { key: 'financial', label: '10. Financial & Cost', icon: DollarSign, count: `${compiledData.financialAnalytics.paymentCompletionPct}%` },
+    { key: 'audit', label: '11. Pipeline Audit', icon: GitCommit, count: `${compiledData.fullPipelineAudit.length}` },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Universal Filter Bar */}
+      <ReportFilterBar 
+        filters={filters}
+        onFilterChange={setFilters}
+        suppliers={filterOptions.suppliers}
+        brokers={filterOptions.brokers}
+        areas={filterOptions.areas}
+        financialYears={filterOptions.financialYears}
+      />
+
+      {/* Standard KPI Cards Section */}
+      <PercentageKPISection kpis={compiledData.kpis} />
+
+      {/* Sub-Tab Navigation Bar */}
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-1.5 shadow-sm overflow-x-auto flex items-center gap-1">
+        {SUB_TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveSubTab(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? 'bg-emerald-600 text-white shadow-sm font-black'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono ${
+                  isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active Tab Viewport */}
+      <div className="transition-all duration-200">
+        {activeSubTab === 'overview' && (
+          <div className="space-y-4">
+            <ReportChartsDeck reportData={compiledData} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <BrokerPercentageReport brokerSummary={compiledData.brokerSummary.slice(0, 10)} />
+              <AreaPercentageReport areaSummary={compiledData.areaSummary.slice(0, 10)} />
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === 'broker' && (
+          <BrokerPercentageReport brokerSummary={compiledData.brokerSummary} />
+        )}
+
+        {activeSubTab === 'area' && (
+          <AreaPercentageReport areaSummary={compiledData.areaSummary} />
+        )}
+
+        {activeSubTab === 'supplier' && (
+          <SupplierPercentageReport supplierSummary={compiledData.supplierSummary} />
+        )}
+
+        {activeSubTab === 'monthly' && (
+          <MonthWisePerformanceReport monthWisePerformance={compiledData.monthWisePerformance} />
+        )}
+
+        {activeSubTab === 'grade' && (
+          <GradeItemPercentageReport gradeItemSummary={compiledData.gradeItemSummary} />
+        )}
+
+        {activeSubTab === 'pending_ledger' && (
+          <ActivePendingLedger 
+            activePendingLedger={compiledData.activePendingLedger}
+            ageingDistribution={compiledData.ageingDistribution}
+          />
+        )}
+
+        {activeSubTab === 'po_lifecycle' && (
+          <POSummaryPercentageEngine poSummaryEngine={compiledData.poSummaryEngine} />
+        )}
+
+        {activeSubTab === 'compliance' && (
+          <DeliveryComplianceMatrix deliveryCompliance={compiledData.deliveryCompliance} />
+        )}
+
+        {activeSubTab === 'financial' && (
+          <FinancialCostAnalytics financialAnalytics={compiledData.financialAnalytics} />
+        )}
+
+        {activeSubTab === 'audit' && (
+          <FullPipelineAuditReport fullPipelineAudit={compiledData.fullPipelineAudit} />
+        )}
+      </div>
+    </div>
+  );
+};
