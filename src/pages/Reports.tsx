@@ -211,6 +211,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
   const [inspectionData, setInspectionData] = useState<any[]>([]);
   const [deductionData, setDeductionData] = useState<any[]>([]);
   const [paymentData, setPaymentData] = useState<any[]>([]);
+  const [scpData, setScpData] = useState<any[]>([]);
 
   // Advanced Sauda Report Engine State
   const [saudaViewMode, setSaudaViewMode] = useState<'percentage_analytics' | 'dashboard' | 'advanced_reports'>('percentage_analytics');
@@ -895,7 +896,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [amad, saudas, pos, details, agencies, grades, sDetails, finalArrivals, inspections, deductions, payments] = await Promise.all([
+      const [amad, saudas, pos, details, agencies, grades, sDetails, finalArrivals, inspections, deductions, payments, scp, payMaster] = await Promise.all([
         dbModule.fetchAll('temporary_material_received').catch(() => []),
         dbModule.fetchAll('sauda_master').catch(() => []),
         dbModule.fetchAll('purchase_master').catch(() => []),
@@ -906,7 +907,9 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
         dbModule.fetchAll('final_arrival').catch(() => []),
         dbModule.fetchAll('material_inspection').catch(() => []),
         dbModule.fetchAll('material_inspection_deductions').catch(() => []),
-        dbModule.fetchAll('payment_records').catch(() => [])
+        dbModule.fetchAll('payment_records').catch(() => []),
+        dbModule.fetchAll('sauda_check_point').catch(() => []),
+        dbModule.fetchAll('payment_master').catch(() => [])
       ]);
       
       const parseDateMs = (val: any) => {
@@ -939,7 +942,8 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
       setFinalArrivalData(finalArrivals || []);
       setInspectionData(inspections || []);
       setDeductionData(deductions || []);
-      setPaymentData(payments || []);
+      setPaymentData([...(payments || []), ...(payMaster || [])]);
+      setScpData(scp || []);
 
       // Fetch global stats
       try {
@@ -1933,6 +1937,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               mrData={finalArrivalData.length > 0 ? finalArrivalData : amadData}
               tempMRData={amadData}
               paymentData={paymentData}
+              scpData={scpData}
             />
           )}
 

@@ -170,6 +170,29 @@ export const calcHelpers = {
   }
 };
 
+export interface BrokerSaudaItem {
+  saudaId: string;
+  saudaNo: string;
+  session: string;
+  date: string;
+  supplier: string;
+  grade: string;
+  contractedMT: number;
+  deliveredMT: number;
+  pendingMT: number;
+  rate: number;
+  totalValue: number;
+  deliveredValue: number;
+  pendingValue: number;
+  saudaDeskStatus: 'COMPLETED' | 'PENDING' | 'PARTIAL';
+  settlementStatus: 'FULLY_SETTLED' | 'PAYMENT_PENDING' | 'DELIVERY_IN_PROGRESS' | 'PENDING_EXECUTION';
+  brokeragePayable: number;
+  brokeragePaid: number;
+  brokeragePending: number;
+  materialPaid: number;
+  materialPending: number;
+}
+
 // Unified Data Processing Engine
 export interface CompiledReportData {
   // Global KPIs
@@ -208,6 +231,10 @@ export interface CompiledReportData {
     broker: string;
     totalSuppliers: number;
     totalContracts: number;
+    completedContractsCount: number;
+    pendingContractsCount: number;
+    contractCompletionPct: number;
+    contractPendingPct: number;
     totalLots: number;
     contractedWeightMT: number;
     deliveredWeightMT: number;
@@ -222,12 +249,21 @@ export interface CompiledReportData {
     avgContractRate: number;
     avgDispatchRate: number;
     totalContractValue: number;
+    deliveredMaterialValue: number;
+    pendingMaterialValue: number;
+    materialPaidAmount: number;
+    materialPendingAmount: number;
+    materialPaymentPct: number;
     brokerageRate: number;
     totalBrokeragePayable: number;
     brokeragePaid: number;
     brokeragePending: number;
     brokeragePaymentPct: number;
+    settledContractsCount: number;
+    settlementRatePct: number;
+    settlementStatus: 'FULLY_SETTLED' | 'PAYMENT_PENDING' | 'DELIVERY_IN_PROGRESS' | 'PENDING_EXECUTION';
     performanceStatus: string;
+    saudaItems: BrokerSaudaItem[];
   }>;
 
   supplierSummary: Array<{
@@ -450,6 +486,102 @@ export interface CompiledReportData {
 
 export type GradeItemSummary = CompiledReportData['gradeItemSummary'][number];
 
+// Helper functions strictly mirroring Sauda Desk (src/pages/SaudaRegister.tsx)
+export const formatPoNumber = (sauda: any): string => {
+  if (!sauda) return '';
+  if (sauda.session && sauda.session.trim()) {
+    const s = sauda.session.trim();
+    const parts = s.split('/').filter(Boolean);
+    if (parts.length >= 3) {
+      return s;
+    }
+    const base = s.endsWith('/') ? s : s + '/';
+    return `${base}${sauda.sauda_no || ''}`;
+  }
+  const numPart = parseInt(sauda.sauda_no, 10);
+  const val = isNaN(numPart) ? sauda.sauda_no : numPart;
+  
+  let yearPart = '26';
+  if (sauda.financial_year) {
+    const startYear = sauda.financial_year.split('-')[0].trim();
+    if (startYear.length >= 4) {
+      yearPart = startYear.slice(-2);
+    } else if (startYear.length === 2) {
+      yearPart = startYear;
+    }
+  } else if (sauda.session && sauda.session.includes('/')) {
+    const parts = sauda.session.split('/');
+    if (parts.length > 1) {
+      yearPart = parts[parts.length - 1].slice(-2);
+    }
+  }
+  return `BJCL/${val}/${yearPart}`;
+};
+
+export const getCleanDigits = (str: string): string => {
+  if (!str) return '';
+  const clean = String(str).trim().toUpperCase();
+  const withoutPrefix = clean
+    .replace(/^BJCL\//i, '')
+    .replace(/^BJC\//i, '')
+    .replace(/^BJC/i, '')
+    .replace(/^PO[-/]/i, '')
+    .replace(/^PTF[-/]/i, '');
+  const withoutYear = withoutPrefix
+    .replace(/20\d{2}-20\d{2}/g, '')
+    .replace(/20\d{2}\/20\d{2}/g, '')
+    .replace(/20\d{2}20\d{2}/g, '')
+    .replace(/\/\d{2}-\d{2}$/g, '')
+    .replace(/^\d{2}-\d{2}\//g, '')
+    .replace(/[^0-9]/g, '');
+  return withoutYear.replace(/^0+/, '');
+};
+
+// Check if a Sauda contract is entered into Sauda Check Point or Purchase Order (Sauda Desk logic)
+export const isSaudaInCheckPointOrPo = (s: any, scpList: any[] = [], poList: any[] = []): boolean => {
+  if (!s) return false;
+  const statusVal = String(s.status || '').toLowerCase();
+  if (statusVal === 'completed' || statusVal === 'in_check_point' || statusVal === 'in_po' || statusVal === 'final') {
+    return true;
+  }
+
+  const sId = String(s.sauda_id || s.id || '').trim().toUpperCase();
+  const sNo = String(s.sauda_no || '').trim().toUpperCase();
+  const sSession = String(s.session || '').trim().toUpperCase();
+  const sDisplay = (formatPoNumber(s) || '').trim().toUpperCase();
+
+  const sNoDigits = getCleanDigits(sNo);
+  const sDisplayDigits = getCleanDigits(sDisplay);
+  const sSessionDigits = getCleanDigits(sSession);
+
+  const allPoSources = [...(scpList || []), ...(poList || [])];
+
+  return allPoSources.some(p => {
+    if (!p) return false;
+    const pSaudaId = String(p.sauda_id || p.sauda_id_ref || '').trim().toUpperCase();
+    if (sId && pSaudaId && sId === pSaudaId) return true;
+
+    const pPo = String(p.po_no || '').trim().toUpperCase();
+    const pContract = String(p.contract_po_no || '').trim().toUpperCase();
+    const pSaudaNo = String(p.sauda_no || p.po_contract || p.contract_no || '').trim().toUpperCase();
+    const pPtf = String(p.ptf_no || '').trim().toUpperCase();
+
+    const pTokens = [pPo, pContract, pSaudaNo, pPtf].filter(Boolean);
+    if (pTokens.some(tok => tok === sNo || tok === sDisplay || tok === sSession)) {
+      return true;
+    }
+
+    for (const tok of pTokens) {
+      const tokDigits = getCleanDigits(tok);
+      if (sNoDigits && tokDigits && sNoDigits === tokDigits) return true;
+      if (sDisplayDigits && tokDigits && sDisplayDigits === tokDigits) return true;
+      if (sSessionDigits && tokDigits && sSessionDigits === tokDigits) return true;
+    }
+
+    return false;
+  });
+};
+
 // Compile all raw transactional tables into structured, accurate percentage data
 export function compileReportData(
   saudaList: any[] = [],
@@ -470,7 +602,8 @@ export function compileReportData(
     status?: string;
     ageingBucket?: string;
     searchTerm?: string;
-  } = {}
+  } = {},
+  scpList: any[] = []
 ): CompiledReportData {
   // 1. Filter active datasets based on standard user criteria
   let filteredSaudas = [...saudaList];
@@ -547,6 +680,39 @@ export function compileReportData(
     }
   });
 
+  // Pre-index Material Payments by PO Number, Sauda Number & Broker Name
+  const paymentsByPO: Record<string, number> = {};
+  const paymentsBySauda: Record<string, number> = {};
+  const paymentsByBroker: Record<string, { materialPaid: number; brokeragePaid: number; totalPaid: number }> = {};
+  let totalLivePaymentsPaid = 0;
+
+  paymentList.forEach(p => {
+    const paid = Number(p.paid_amount || p.amount_paid || p.net_paid || p.total_amount || 0);
+    if (paid <= 0) return;
+    totalLivePaymentsPaid += paid;
+
+    const poKey = (p.po_no || p.po_id || '').trim().toUpperCase();
+    if (poKey) paymentsByPO[poKey] = (paymentsByPO[poKey] || 0) + paid;
+
+    const saudaKey = (p.sauda_no || p.sauda_id || '').trim().toUpperCase();
+    if (saudaKey) paymentsBySauda[saudaKey] = (paymentsBySauda[saudaKey] || 0) + paid;
+
+    const brokerKey = (p.broker_name || p.broker || '').trim().toUpperCase();
+    if (brokerKey) {
+      if (!paymentsByBroker[brokerKey]) {
+        paymentsByBroker[brokerKey] = { materialPaid: 0, brokeragePaid: 0, totalPaid: 0 };
+      }
+      const isBrokerage = String(p.type || p.payment_type || p.category || '').toLowerCase().includes('broker') ||
+                          String(p.remarks || '').toLowerCase().includes('brokerage');
+      if (isBrokerage) {
+        paymentsByBroker[brokerKey].brokeragePaid += paid;
+      } else {
+        paymentsByBroker[brokerKey].materialPaid += paid;
+      }
+      paymentsByBroker[brokerKey].totalPaid += paid;
+    }
+  });
+
   // Calculate Primary Sauda & PO Metrics
   let totalSaudaContracts = 0;
   let totalContractedMT = 0;
@@ -607,21 +773,35 @@ export function compileReportData(
       sumContractValue += contractedWt * 10 * rate;
     }
 
-    // Determine Delivered Weight from linked receipts or fallback status
+    // ---------------- SAUDA DESK COMPLETE VS PENDING CHECK ----------------
+    // Exact Sauda Desk Logic: A Sauda is COMPLETE if it has moved to Sauda Check Point or Final P.O.,
+    // or has status 'completed', 'in_check_point', 'in_po', 'final'.
+    // Otherwise, it is strictly PENDING (Awaiting Check Point / delivery).
+    const isCompletedInSaudaDesk = isSaudaInCheckPointOrPo(s, scpList, filteredPOs);
+
     const matchingReceipt = mrByPO[sId] || mrByPO[sNo.toUpperCase()] || { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '' };
-    let deliveredWt = matchingReceipt.finalMT > 0 ? matchingReceipt.finalMT : matchingReceipt.tempMT;
-    
-    // If no direct receipt records found, infer from Sauda status
-    if (deliveredWt === 0 && s.status === 'completed') {
-      deliveredWt = contractedWt;
-    } else if (deliveredWt === 0 && s.status === 'pending') {
-      // check partial delivery heuristics
-      if (s.delivery_days && s.delivery_days > 15) {
-        deliveredWt = calcHelpers.safeRound(contractedWt * 0.7, 3);
+    const physicalDeliveredMT = matchingReceipt.finalMT > 0 ? matchingReceipt.finalMT : matchingReceipt.tempMT;
+
+    let deliveredWt = 0;
+    let saudaDeskStatus: 'COMPLETED' | 'PENDING' | 'PARTIAL' = 'PENDING';
+
+    if (isCompletedInSaudaDesk) {
+      // Completed in Sauda Desk: Delivery is fulfilled or entered into active PO fulfillment
+      deliveredWt = physicalDeliveredMT > 0 ? physicalDeliveredMT : contractedWt;
+      saudaDeskStatus = 'COMPLETED';
+    } else {
+      // Pending in Sauda Desk: Means Pending! Contract is awaiting check point / fulfillment
+      deliveredWt = physicalDeliveredMT;
+      if (deliveredWt >= (contractedWt - 0.01) && contractedWt > 0) {
+        saudaDeskStatus = 'COMPLETED';
+      } else if (deliveredWt > 0) {
+        saudaDeskStatus = 'PARTIAL';
+      } else {
+        saudaDeskStatus = 'PENDING';
       }
     }
 
-    // Ensure valid non-negative pending weight
+    // Ensure valid non-negative pending weight (Pending means Pending)
     let pendingWt = Math.max(0, contractedWt - deliveredWt);
     let excessWt = deliveredWt > contractedWt ? deliveredWt - contractedWt : 0;
 
@@ -756,6 +936,8 @@ export function compileReportData(
         broker: brokerName,
         suppliers: new Set<string>(),
         contracts: 0,
+        completedContractsCount: 0,
+        pendingContractsCount: 0,
         lots: 0,
         contractedMT: 0,
         deliveredMT: 0,
@@ -770,12 +952,22 @@ export function compileReportData(
         sumDispatchRate: 0,
         countDispatchRate: 0,
         contractValue: 0,
-        brokerageRate: 25 // standard Rs 25/MT
+        deliveredMaterialValue: 0,
+        pendingMaterialValue: 0,
+        materialPaid: 0,
+        brokerageRate: 25, // standard Rs 25/MT
+        settledContractsCount: 0,
+        saudaItems: []
       };
     }
     const bGrp = brokerAgg[brokerName];
     if (s.supplier) bGrp.suppliers.add(s.supplier.toUpperCase());
     bGrp.contracts++;
+    if (saudaDeskStatus === 'COMPLETED') {
+      bGrp.completedContractsCount++;
+    } else {
+      bGrp.pendingContractsCount++;
+    }
     bGrp.lots += Number(s.total_lorry) || 1;
     bGrp.contractedMT += contractedWt;
     bGrp.deliveredMT += deliveredWt;
@@ -785,11 +977,60 @@ export function compileReportData(
     else bGrp.notStarted++;
     if (isDelayed) bGrp.delayedDeliveredMT += deliveredWt;
     else bGrp.onTimeDeliveredMT += deliveredWt;
+    
+    const saudaContractVal = rate > 0 ? contractedWt * 10 * rate : 0;
+    const saudaDeliveredVal = rate > 0 ? deliveredWt * 10 * rate : 0;
+    const saudaPendingVal = rate > 0 ? pendingWt * 10 * rate : 0;
+    const saudaPaidAmt = paymentsBySauda[sNo.toUpperCase()] || paymentsBySauda[sId] || 0;
+    const saudaBrokeragePayable = calcHelpers.safeRound(deliveredWt * 25, 2);
+
+    let saudaSettlementStatus: 'FULLY_SETTLED' | 'PAYMENT_PENDING' | 'DELIVERY_IN_PROGRESS' | 'PENDING_EXECUTION' = 'PENDING_EXECUTION';
+    if (delivPct >= 99.5 && (saudaPaidAmt >= saudaDeliveredVal * 0.95 || saudaDeliveredVal === 0)) {
+      saudaSettlementStatus = 'FULLY_SETTLED';
+    } else if (delivPct >= 99.5) {
+      saudaSettlementStatus = 'PAYMENT_PENDING';
+    } else if (delivPct > 0) {
+      saudaSettlementStatus = 'DELIVERY_IN_PROGRESS';
+    } else {
+      saudaSettlementStatus = 'PENDING_EXECUTION';
+    }
+
+    if (saudaSettlementStatus === 'FULLY_SETTLED') {
+      bGrp.settledContractsCount++;
+    }
+
     if (rate > 0) {
       bGrp.sumContractRate += rate;
       bGrp.countContractRate++;
-      bGrp.contractValue += contractedWt * 10 * rate;
+      bGrp.contractValue += saudaContractVal;
     }
+    bGrp.deliveredMaterialValue += saudaDeliveredVal;
+    bGrp.pendingMaterialValue += saudaPendingVal;
+    bGrp.materialPaid += saudaPaidAmt;
+
+    const saudaItem: BrokerSaudaItem = {
+      saudaId: sId,
+      saudaNo: sNo,
+      session: s.session || formatPoNumber(s),
+      date: s.date || '',
+      supplier: s.supplier || 'DIRECT',
+      grade: s.marks || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5',
+      contractedMT: calcHelpers.safeRound(contractedWt, 3),
+      deliveredMT: calcHelpers.safeRound(deliveredWt, 3),
+      pendingMT: calcHelpers.safeRound(pendingWt, 3),
+      rate,
+      totalValue: calcHelpers.safeRound(saudaContractVal, 2),
+      deliveredValue: calcHelpers.safeRound(saudaDeliveredVal, 2),
+      pendingValue: calcHelpers.safeRound(saudaPendingVal, 2),
+      saudaDeskStatus,
+      settlementStatus: saudaSettlementStatus,
+      brokeragePayable: saudaBrokeragePayable,
+      brokeragePaid: saudaSettlementStatus === 'FULLY_SETTLED' ? saudaBrokeragePayable : 0,
+      brokeragePending: saudaSettlementStatus === 'FULLY_SETTLED' ? 0 : saudaBrokeragePayable,
+      materialPaid: calcHelpers.safeRound(saudaPaidAmt, 2),
+      materialPending: calcHelpers.safeRound(Math.max(0, saudaDeliveredVal - saudaPaidAmt), 2)
+    };
+    bGrp.saudaItems.push(saudaItem);
 
     // 2. Supplier Grouping
     const supplierName = (s.supplier || 'DIRECT').trim().toUpperCase();
@@ -969,15 +1210,45 @@ export function compileReportData(
     const onTimePct = calcHelpers.calcOnTimePct(b.onTimeDeliveredMT, b.deliveredMT);
     const delayedPct = calcHelpers.calcDelayedPct(b.delayedDeliveredMT, b.deliveredMT);
     const avgContractRate = b.countContractRate > 0 ? calcHelpers.safeRound(b.sumContractRate / b.countContractRate) : 0;
+    
+    // Brokerage
     const totalBrokeragePayable = calcHelpers.safeRound(b.deliveredMT * b.brokerageRate, 2);
-    const brokeragePaid = delivPct >= 80 ? calcHelpers.safeRound(totalBrokeragePayable * 0.9, 2) : 0;
-    const brokeragePending = calcHelpers.safeRound(totalBrokeragePayable - brokeragePaid, 2);
+    const brokerPaymentRecord = paymentsByBroker[b.broker] || { materialPaid: 0, brokeragePaid: 0, totalPaid: 0 };
+    const brokeragePaid = brokerPaymentRecord.brokeragePaid > 0 
+      ? brokerPaymentRecord.brokeragePaid 
+      : (delivPct >= 95 ? totalBrokeragePayable : calcHelpers.safeRound(totalBrokeragePayable * (delivPct / 100), 2));
+    const brokeragePending = calcHelpers.safeRound(Math.max(0, totalBrokeragePayable - brokeragePaid), 2);
     const brokeragePaymentPct = calcHelpers.calcPaymentPct(brokeragePaid, totalBrokeragePayable);
+
+    // Material Payments & Settlement
+    const materialPaidAmount = brokerPaymentRecord.materialPaid > 0 ? brokerPaymentRecord.materialPaid : b.materialPaid;
+    const materialPendingAmount = calcHelpers.safeRound(Math.max(0, b.deliveredMaterialValue - materialPaidAmount), 2);
+    const materialPaymentPct = calcHelpers.calcPaymentPct(materialPaidAmount, b.deliveredMaterialValue);
+
+    // Sauda Desk Contract Metrics
+    const contractCompletionPct = b.contracts > 0 ? calcHelpers.safeRound((b.completedContractsCount / b.contracts) * 100) : 0;
+    const contractPendingPct = b.contracts > 0 ? calcHelpers.safeRound((b.pendingContractsCount / b.contracts) * 100) : 0;
+    const settlementRatePct = b.contracts > 0 ? calcHelpers.safeRound((b.settledContractsCount / b.contracts) * 100) : 0;
+
+    let settlementStatus: 'FULLY_SETTLED' | 'PAYMENT_PENDING' | 'DELIVERY_IN_PROGRESS' | 'PENDING_EXECUTION' = 'PENDING_EXECUTION';
+    if (delivPct >= 99 && (materialPaymentPct >= 95 || b.deliveredMaterialValue === 0)) {
+      settlementStatus = 'FULLY_SETTLED';
+    } else if (delivPct >= 90) {
+      settlementStatus = 'PAYMENT_PENDING';
+    } else if (delivPct > 0) {
+      settlementStatus = 'DELIVERY_IN_PROGRESS';
+    } else {
+      settlementStatus = 'PENDING_EXECUTION';
+    }
 
     return {
       broker: b.broker,
       totalSuppliers: b.suppliers.size,
       totalContracts: b.contracts,
+      completedContractsCount: b.completedContractsCount,
+      pendingContractsCount: b.pendingContractsCount,
+      contractCompletionPct,
+      contractPendingPct,
       totalLots: b.lots,
       contractedWeightMT: calcHelpers.safeRound(b.contractedMT, 3),
       deliveredWeightMT: calcHelpers.safeRound(b.deliveredMT, 3),
@@ -992,12 +1263,21 @@ export function compileReportData(
       avgContractRate,
       avgDispatchRate: avgContractRate,
       totalContractValue: calcHelpers.safeRound(b.contractValue, 2),
+      deliveredMaterialValue: calcHelpers.safeRound(b.deliveredMaterialValue, 2),
+      pendingMaterialValue: calcHelpers.safeRound(b.pendingMaterialValue, 2),
+      materialPaidAmount: calcHelpers.safeRound(materialPaidAmount, 2),
+      materialPendingAmount,
+      materialPaymentPct,
       brokerageRate: b.brokerageRate,
       totalBrokeragePayable,
       brokeragePaid,
       brokeragePending,
       brokeragePaymentPct,
-      performanceStatus: delivPct >= 90 ? 'High Performance' : delivPct >= 70 ? 'Moderate' : 'Critical Pending'
+      settledContractsCount: b.settledContractsCount,
+      settlementRatePct,
+      settlementStatus,
+      performanceStatus: delivPct >= 90 ? 'High Performance' : delivPct >= 50 ? 'Moderate' : 'Critical Pending',
+      saudaItems: b.saudaItems
     };
   }).sort((a, b) => b.contractedWeightMT - a.contractedWeightMT);
 
@@ -1230,9 +1510,11 @@ export function compileReportData(
 
   // Financial summary
   const brokeragePayableTotal = calcHelpers.safeRound(totalDeliveredMT * 25, 2);
-  const settlementAmountTotal = calcHelpers.safeRound(sumDispatchedValue * 0.95, 2);
-  const finalPaymentTotal = calcHelpers.safeRound(settlementAmountTotal * 0.90, 2);
-  const outstandingAmountTotal = calcHelpers.safeRound(settlementAmountTotal - finalPaymentTotal, 2);
+  const settlementAmountTotal = calcHelpers.safeRound(sumDispatchedValue, 2);
+  const finalPaymentTotal = totalLivePaymentsPaid > 0 
+    ? calcHelpers.safeRound(totalLivePaymentsPaid, 2) 
+    : calcHelpers.safeRound(settlementAmountTotal * (overallDeliveredPct >= 90 ? 0.90 : 0.60), 2);
+  const outstandingAmountTotal = calcHelpers.safeRound(Math.max(0, settlementAmountTotal - finalPaymentTotal), 2);
   const paymentCompletionPct = calcHelpers.calcPaymentPct(finalPaymentTotal, settlementAmountTotal);
 
   return {

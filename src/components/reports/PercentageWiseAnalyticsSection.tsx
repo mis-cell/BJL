@@ -40,6 +40,7 @@ interface PercentageWiseAnalyticsSectionProps {
   mrData?: any[];
   tempMRData?: any[];
   paymentData?: any[];
+  scpData?: any[];
 }
 
 export type AnalyticsSubTab = 
@@ -61,7 +62,8 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
   poDetails = [],
   mrData = [],
   tempMRData = [],
-  paymentData = []
+  paymentData = [],
+  scpData = []
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<AnalyticsSubTab>('overview');
 
@@ -107,10 +109,10 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
     };
   }, [saudaData, poData]);
 
-  // Compile full analytical dataset
+  // Compile full analytical dataset with Sauda Desk checkpoint alignment
   const compiledData: CompiledReportData = useMemo(() => {
-    return compileReportData(saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters);
-  }, [saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters]);
+    return compileReportData(saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters, scpData);
+  }, [saudaData, poData, poDetails, mrData, tempMRData, paymentData, filters, scpData]);
 
   const SUB_TABS: { key: AnalyticsSubTab; label: string; icon: any; count?: number | string }[] = [
     { key: 'overview', label: '1. Executive KPI & Charts', icon: BarChart3 },
