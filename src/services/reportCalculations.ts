@@ -327,6 +327,8 @@ export interface CompiledReportData {
     rateVariance: number;
     rateVariancePct: number;
     totalPurchaseValue: number;
+    moisturePct?: number;
+    dustPct?: number;
   }>;
 
   activePendingLedger: Array<{
@@ -445,6 +447,8 @@ export interface CompiledReportData {
     lastUpdatedDate: string;
   }>;
 }
+
+export type GradeItemSummary = CompiledReportData['gradeItemSummary'][number];
 
 // Compile all raw transactional tables into structured, accurate percentage data
 export function compileReportData(

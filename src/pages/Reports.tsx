@@ -207,6 +207,10 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
   const [agencyList, setAgencyList] = useState<any[]>([]);
   const [gradeList, setGradeList] = useState<any[]>([]);
   const [saudaDetails, setSaudaDetails] = useState<any[]>([]);
+  const [finalArrivalData, setFinalArrivalData] = useState<any[]>([]);
+  const [inspectionData, setInspectionData] = useState<any[]>([]);
+  const [deductionData, setDeductionData] = useState<any[]>([]);
+  const [paymentData, setPaymentData] = useState<any[]>([]);
 
   // Advanced Sauda Report Engine State
   const [saudaViewMode, setSaudaViewMode] = useState<'percentage_analytics' | 'dashboard' | 'advanced_reports'>('percentage_analytics');
@@ -891,14 +895,18 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [amad, saudas, pos, details, agencies, grades, sDetails] = await Promise.all([
+      const [amad, saudas, pos, details, agencies, grades, sDetails, finalArrivals, inspections, deductions, payments] = await Promise.all([
         dbModule.fetchAll('temporary_material_received').catch(() => []),
         dbModule.fetchAll('sauda_master').catch(() => []),
         dbModule.fetchAll('purchase_master').catch(() => []),
         dbModule.fetchAll('purchase_detail_master').catch(() => []),
         dbModule.fetchAll('agency_master').catch(() => []),
         dbModule.fetchAll('grade_master').catch(() => []),
-        dbModule.fetchAll('sauda_quality_details').catch(() => [])
+        dbModule.fetchAll('sauda_quality_details').catch(() => []),
+        dbModule.fetchAll('final_arrival').catch(() => []),
+        dbModule.fetchAll('material_inspection').catch(() => []),
+        dbModule.fetchAll('material_inspection_deductions').catch(() => []),
+        dbModule.fetchAll('payment_records').catch(() => [])
       ]);
       
       const parseDateMs = (val: any) => {
@@ -928,6 +936,10 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
       setAgencyList(agencies || []);
       setGradeList(grades || []);
       setSaudaDetails(sDetails || []);
+      setFinalArrivalData(finalArrivals || []);
+      setInspectionData(inspections || []);
+      setDeductionData(deductions || []);
+      setPaymentData(payments || []);
 
       // Fetch global stats
       try {
@@ -1917,8 +1929,10 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
             <PercentageWiseAnalyticsSection
               saudaData={saudaData}
               poData={poData}
-              mrData={amadData}
+              poDetails={poDetails}
+              mrData={finalArrivalData.length > 0 ? finalArrivalData : amadData}
               tempMRData={amadData}
+              paymentData={paymentData}
             />
           )}
 

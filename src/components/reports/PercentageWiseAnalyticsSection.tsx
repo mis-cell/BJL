@@ -219,7 +219,11 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
         )}
 
         {activeSubTab === 'financial' && (
-          <FinancialCostAnalytics financialAnalytics={compiledData.financialAnalytics} />
+          <FinancialCostAnalytics 
+            financialAnalytics={compiledData.financialAnalytics} 
+            fullPipelineAudit={compiledData.fullPipelineAudit}
+            monthWisePerformance={compiledData.monthWisePerformance}
+          />
         )}
 
         {activeSubTab === 'audit' && (
