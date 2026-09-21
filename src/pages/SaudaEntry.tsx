@@ -4,7 +4,7 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
-import { enforceEditOrDeletePermission } from '../lib/permissions';
+import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 
 import LegacyLayout from '../components/LegacyLayout';
@@ -87,6 +87,31 @@ export default function SaudaEntry({
   const [markas, setMarkas] = useState<any[]>([]);
   const [baseRatesList, setBaseRatesList] = useState<any[]>([]);
   const [dbDiffsList, setDbDiffsList] = useState<any[]>([]);
+
+  // User 010 Detection logic
+  const userCtx = getCurrentUserContext();
+  const uid = String(userCtx?.userId || (userCtx as any)?.user_id || '').trim().toLowerCase();
+  const uname = String(userCtx?.username || userCtx?.userName || '').trim().toLowerCase();
+  
+  let sessionUid = '';
+  let sessionUname = '';
+  try {
+    const rawSess = typeof window !== 'undefined' ? localStorage.getItem('bally_auth_session') : null;
+    if (rawSess) {
+      const parsed = JSON.parse(rawSess);
+      sessionUid = String(parsed?.userId || parsed?.user_id || '').trim().toLowerCase();
+      sessionUname = String(parsed?.username || '').trim().toLowerCase();
+    }
+  } catch {}
+
+  const detectedIs010 = 
+    uid === '010' || uid === '10' || uid === 'user010' || uid === 'user 010' ||
+    uname === '010' || uname === '10' || uname === 'user010' || uname === 'user 010' ||
+    sessionUid === '010' || sessionUid === '10' || sessionUid === 'user010' ||
+    sessionUname === '010' || sessionUname === '10' || sessionUname === 'user010';
+
+  const [forceUser010, setForceUser010] = useState<boolean | null>(null);
+  const isUser010 = forceUser010 !== null ? forceUser010 : detectedIs010;
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -426,51 +451,80 @@ export default function SaudaEntry({
       return;
     }
 
-    if (!formData.sauda_no) {
-      alert("Please fill in the Order No.");
-      return;
-    }
+    if (!isUser010) {
+      if (!formData.sauda_no) {
+        alert("Please fill in the Order No.");
+        return;
+      }
 
-    if (!formData.broker) {
-      alert("Please fill in or select a Broker.");
-      return;
-    }
+      if (!formData.broker) {
+        alert("Please fill in or select a Broker.");
+        return;
+      }
 
-    if (!formData.supplier) {
-      alert("Please fill in or select a Supplier.");
-      return;
-    }
+      if (!formData.supplier) {
+        alert("Please fill in or select a Supplier.");
+        return;
+      }
 
-    if (!formData.area) {
-      alert("Please fill in or select an Area.");
-      return;
-    }
+      if (!formData.area) {
+        alert("Please fill in or select an Area.");
+        return;
+      }
 
-    // Validate Quality Details rows
-    const qdRows = formData.quality_details || [];
-    for (let i = 0; i < qdRows.length; i++) {
-      const row = qdRows[i];
-      if (row.quality || row.qty || row.rs || row.agency || row.marka) {
-        if (!row.quality) {
-          alert(`Please select or fill in Quality in Row ${i + 1}.`);
-          return;
+      // Validate Quality Details rows
+      const qdRows = formData.quality_details || [];
+      for (let i = 0; i < qdRows.length; i++) {
+        const row = qdRows[i];
+        if (row.quality || row.qty || row.rs || row.agency || row.marka) {
+          if (!row.quality) {
+            alert(`Please select or fill in Quality in Row ${i + 1}.`);
+            return;
+          }
         }
       }
-    }
 
-    if (!formData.b_rate || Number(formData.b_rate) <= 0) {
-      alert("B. Rate (Rs.) is required.");
-      return;
-    }
+      if (!formData.b_rate || Number(formData.b_rate) <= 0) {
+        alert("B. Rate (Rs.) is required.");
+        return;
+      }
 
-    if (!formData.b_date) {
-      alert("B. Date is required.");
-      return;
+      if (!formData.b_date) {
+        alert("B. Date is required.");
+        return;
+      }
     }
 
     setLoading(true);
     try {
       const saudaData = { ...formData };
+
+      // For User 010: apply safe fallbacks for hidden/non-mandatory fields
+      if (isUser010) {
+        if (!saudaData.sauda_no) {
+          saudaData.sauda_no = '0153';
+        }
+        if (!saudaData.date) {
+          saudaData.date = today;
+        }
+        if (!saudaData.broker) {
+          saudaData.broker = 'DIRECT';
+        }
+        if (!saudaData.supplier) {
+          saudaData.supplier = saudaData.broker || 'DIRECT';
+        }
+        if (!saudaData.area) {
+          saudaData.area = 'LOCAL';
+        }
+        if (!saudaData.b_rate || Number(saudaData.b_rate) <= 0) {
+          const firstRs = Number(saudaData.quality_details?.[0]?.rs) || 0;
+          saudaData.b_rate = firstRs;
+        }
+        if (!saudaData.b_date) {
+          saudaData.b_date = saudaData.date || today;
+        }
+      }
+
       const qd = saudaData.quality_details;
 
       // Extract first row agency/marka into main master record for backward compatibility
@@ -605,7 +659,21 @@ export default function SaudaEntry({
           </div>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setForceUser010(prev => prev === null ? !detectedIs010 : !prev)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 ${
+                isUser010
+                  ? "bg-amber-400 hover:bg-amber-300 text-[#0b2415] border-amber-300 font-black shadow-xs"
+                  : "bg-[#0b2415]/70 hover:bg-[#0b2415] text-emerald-200 border-emerald-700/60"
+              }`}
+              title="Toggle between standard form and User 010 non-mandatory streamlined layout"
+            >
+              <span className={`w-2 h-2 rounded-full ${isUser010 ? "bg-emerald-900 animate-pulse" : "bg-emerald-400"}`} />
+              <span>User 010 Mode: {isUser010 ? "ON" : "OFF"}</span>
+            </button>
+
             <button
               type="button"
               onClick={onCancel}
@@ -631,6 +699,7 @@ export default function SaudaEntry({
             brokers={brokers}
             suppliers={suppliers}
             areas={areas}
+            isUser010={isUser010}
           />
 
           {/* Section 2: Transportation Details */}
@@ -639,6 +708,7 @@ export default function SaudaEntry({
             onChange={handleChange}
             onSelectChange={handleSelectChange}
             unitOptions={UNIT_OPTIONS}
+            isUser010={isUser010}
           />
 
           {/* Section 3: Quality Details Table */}
@@ -651,6 +721,7 @@ export default function SaudaEntry({
             grades={grades}
             agencies={agencies}
             markas={markas}
+            isUser010={isUser010}
           />
 
           {/* Section 4: Shipment & Claims */}

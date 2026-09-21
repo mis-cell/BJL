@@ -12,6 +12,7 @@ interface QualityDetailsTableProps {
   grades: any[];
   agencies: any[];
   markas: any[];
+  isUser010?: boolean;
 }
 
 export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
@@ -22,7 +23,8 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   onRemoveRowAt,
   grades,
   agencies,
-  markas
+  markas,
+  isUser010 = false
 }) => {
   // Format options lists
   const gradeOptions = React.useMemo(() => {
@@ -90,15 +92,29 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         <table className="w-full text-left border-collapse">
           <thead className="sticky top-0 z-20 shadow-2xs">
             <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-              <th className="px-3.5 py-2.5 w-1/3 bg-[#EDF4EF] rounded-tl-xl">
-                Quality <span className="text-rose-600 font-black">*</span>
-              </th>
-              <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Agency</th>
-              <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Marka</th>
-              <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
-                Rs. <span className="text-rose-600 font-black">*</span>
-              </th>
-              <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+              {isUser010 ? (
+                <>
+                  <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
+                    Quality
+                  </th>
+                  <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
+                    Rs.
+                  </th>
+                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+                </>
+              ) : (
+                <>
+                  <th className="px-3.5 py-2.5 w-1/3 bg-[#EDF4EF] rounded-tl-xl">
+                    Quality <span className="text-rose-600 font-black">*</span>
+                  </th>
+                  <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Agency</th>
+                  <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Marka</th>
+                  <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
+                    Rs. <span className="text-rose-600 font-black">*</span>
+                  </th>
+                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EAE6DD] text-xs">
@@ -112,39 +128,43 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     value={qd.quality || ''}
                     onChange={(val) => onQualityChange(i, 'quality', val)}
                     options={gradeOptions}
-                    placeholder="--Select Quality *--"
-                    isRequired={true}
+                    placeholder={isUser010 ? "Select Quality..." : "--Select Quality *--"}
+                    isRequired={!isUser010}
                     compact={true}
                   />
                 </td>
 
-                {/* Agency - SEARCHABLE SELECT */}
-                <td className="p-2">
-                  <SearchableSelect
-                    id={`agency_${i}`}
-                    name="agency"
-                    value={qd.agency || ''}
-                    onChange={(val) => onQualityChange(i, 'agency', val)}
-                    options={agencyOptions}
-                    placeholder="Search / Select Agency"
-                    compact={true}
-                    isAutoPopulated={Boolean(qd.agency)}
-                  />
-                </td>
+                {!isUser010 && (
+                  <>
+                    {/* Agency - SEARCHABLE SELECT */}
+                    <td className="p-2">
+                      <SearchableSelect
+                        id={`agency_${i}`}
+                        name="agency"
+                        value={qd.agency || ''}
+                        onChange={(val) => onQualityChange(i, 'agency', val)}
+                        options={agencyOptions}
+                        placeholder="Search / Select Agency"
+                        compact={true}
+                        isAutoPopulated={Boolean(qd.agency)}
+                      />
+                    </td>
 
-                {/* Marka - SEARCHABLE SELECT */}
-                <td className="p-2">
-                  <SearchableSelect
-                    id={`marka_${i}`}
-                    name="marka"
-                    value={qd.marka || ''}
-                    onChange={(val) => onQualityChange(i, 'marka', val)}
-                    options={markaOptions}
-                    placeholder="Search / Select Marka"
-                    compact={true}
-                    isAutoPopulated={Boolean(qd.marka)}
-                  />
-                </td>
+                    {/* Marka - SEARCHABLE SELECT */}
+                    <td className="p-2">
+                      <SearchableSelect
+                        id={`marka_${i}`}
+                        name="marka"
+                        value={qd.marka || ''}
+                        onChange={(val) => onQualityChange(i, 'marka', val)}
+                        options={markaOptions}
+                        placeholder="Search / Select Marka"
+                        compact={true}
+                        isAutoPopulated={Boolean(qd.marka)}
+                      />
+                    </td>
+                  </>
+                )}
 
                 {/* Rs. */}
                 <td className="p-2">
@@ -154,11 +174,15 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     aria-label="Rs."
                     type="number"
                     step="0.01"
-                    required
+                    required={!isUser010}
                     value={qd.rs ?? ''}
                     onChange={(e) => onQualityChange(i, 'rs', e.target.value)}
-                    placeholder="Rs. *"
-                    className="w-full bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-900 text-right outline-none transition-all font-mono"
+                    placeholder={isUser010 ? "Rs." : "Rs. *"}
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-right outline-none transition-all font-mono ${
+                      isUser010
+                        ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                        : "bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
+                    }`}
                   />
                 </td>
 
