@@ -980,7 +980,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   const syncHeaderDeductions = (rows: DeductionRow[]) => {
-    const activeRows = rows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || r.deduction_amount > 0);
+    const activeRows = rows.filter(r => (r.deduction_type && r.deduction_type.trim() !== "") || r.deduction_amount > 0 || r.deduction_rate > 0);
     const totalAmt = rows.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
     const primaryRow = activeRows[0] || rows[0] || { deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 };
 
@@ -988,8 +988,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       ...prev,
       deduction_type: activeRows.map(r => r.deduction_type).filter(Boolean).join(", ") || primaryRow.deduction_type || "",
       deduction_rate: primaryRow.deduction_rate || 0,
-      //deduction_qty: primaryRow.deduction_qty || 0,
-      deduction_qty: 0,
+      deduction_qty: primaryRow.deduction_qty || 0,
       deduction_amount: totalAmt,
       deductions: rows
     }));
@@ -1000,9 +999,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     const n = String(name || "").trim().toUpperCase();
     return (
       ((n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT") || n.includes("<"))) ||
-      n.includes("HABIJABI") || n.includes("CHATTA") || n.includes("ROPE") ||
-      n.includes("DELIVERY CLAIM") || n.includes("PER DAY") ||
-      n.includes("RAIN WET") || n.includes("GODOWN DAMAGE") || n.includes("PITCH DAMAGE") || n.includes("RTCH DAMAGE")
+      n.includes("DELIVERY CLAIM") || n.includes("PER DAY")
     );
   };
 
@@ -1012,7 +1009,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     return (n.includes("BALE") || n.includes("BALES")) && (n.includes("LESS THAN") || n.includes("WEIGHT") || n.includes("<"));
   };
 
-  // Comprehensive auto-sync of all deduction policies from deduction_master
+  // Comprehensive auto-sync of all deduction policies from deduction_master without erasing saved/user-entered rows
   const applyAllAutoDeductions = (
     details: InspectionDetailRow[],
     hForm: Partial<InspectionMasterRecord>,
@@ -1040,8 +1037,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             ...cur,
             deduction_type: matched.ruleName,
             deduction_rate: matched.rate,
-            //deduction_qty: matched.qty,
-            deduction_qty: 0,
+            deduction_qty: matched.qty,
             deduction_amount: matched.amount
           };
         } else {
@@ -1058,8 +1054,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                 id: nextRows[0].id || "1",
                 deduction_type: matched.ruleName,
                 deduction_rate: matched.rate,
-                //deduction_qty: matched.qty,
-                deduction_qty: 0,
+                deduction_qty: matched.qty,
                 deduction_amount: matched.amount
               }
             ];
@@ -1069,19 +1064,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               id: String(Date.now() + Math.random()),
               deduction_type: matched.ruleName,
               deduction_rate: matched.rate,
-              //deduction_qty: matched.qty,
-              deduction_qty: 0,
+              deduction_qty: matched.qty,
               deduction_amount: matched.amount
             });
           }
         }
-      });
-
-      // Remove any previously auto-added rules that are no longer matched
-      nextRows = nextRows.filter(r => {
-        const isAuto = isAutoDeductionRule(r.deduction_type || "");
-        if (!isAuto) return true; // Keep manual rows
-        return matchedApplied.has(r.deduction_type || "");
       });
 
       if (nextRows.length === 0) {
@@ -1095,8 +1082,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           (r, i) =>
             r.deduction_type === nextRows[i].deduction_type &&
             Number(r.deduction_rate) === Number(nextRows[i].deduction_rate) &&
-            //Number(r.deduction_qty) === Number(nextRows[i].deduction_qty) &&
-            Number(r.deduction_qty) === 0 &&
+            Number(r.deduction_qty) === Number(nextRows[i].deduction_qty) &&
             Number(r.deduction_amount) === Number(nextRows[i].deduction_amount)
         );
 
@@ -1136,8 +1122,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         : (Number(r.gross_weight_batch) > 0 ? Number(r.gross_weight_batch) : Number(r.challan_gross_wt) || 0);
       return sum + wt;
     }, 0);
-    //const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-    const totalItemQty = 0;
+    const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
     let defaultQty = 0;
     if (isBaleRule && autoCalc.totalBales > 0) {
@@ -1151,14 +1136,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     } else if (totalItemQty > 0) {
       defaultQty = totalItemQty;
     }
-    defaultQty = 0
+    
     setDeductionRows(prev => {
       const updated = [...prev];
       const current = { ...(updated[idx] || { id: String(Date.now()), deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }) };
       current.deduction_type = selectedName;
       current.deduction_rate = rate;
-      //current.deduction_qty = defaultQty;
-      current.deduction_qty = 0;
+      current.deduction_qty = defaultQty;
       current.deduction_amount = Number((rate * defaultQty).toFixed(2));
       updated[idx] = current;
       syncHeaderDeductions(updated);
@@ -1212,65 +1196,38 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   async function fetchInspectionRecords(isManual: boolean = false) {
     setLoading(true);
     try {
-      // 1. Fetch saved material_inspection records (and merge fallback tables)
       let inspectionList: InspectionMasterRecord[] = [];
-      if (supabase) {
-        const miRes = await supabase.from("material_inspection").select("*").order("created_at", { ascending: false });
-        if (miRes.data && Array.isArray(miRes.data)) {
-          inspectionList = miRes.data;
-        }
-      }
-
-      if (inspectionList.length === 0) {
-        try {
-          const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
-          if (cached) inspectionList = JSON.parse(cached);
-        } catch (e) {}
-      }
-
-      // 2. Fetch Final Arrival records (Actual physical arrivals received at the mill)
       let faList: any[] = [];
-      if (supabase) {
-        try {
-          const faRes = await supabase
-            .from("final_arrival")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-          if (faRes.data && faRes.data.length > 0) {
-            faList.push(...faRes.data);
-          }
-        } catch (e) {
-          console.error("Error fetching arrivals from final_arrival:", e);
-        }
-      }
-
-      // Local storage fallbacks for Final Arrival Vouchers
-      try {
-        const cachedFa = localStorage.getItem("final_arrival_vouchers");
-        if (cachedFa) {
-          const parsed = JSON.parse(cachedFa);
-          parsed.forEach((item: any) => {
-            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id) || (f.mr_no && f.mr_no === item.mr_no))) {
-              faList.push(item);
-            }
-          });
-        }
-      } catch (e) {}
-
-      setFinalArrivalList(faList);
-
-      // Fetch dedicated deduction detail items from Supabase if table exists
       const dbDeductionsMap = new Map<string, DeductionRow[]>();
+
       if (supabase) {
         try {
-          // 1. Fetch from material_inspection_deductions table as primary
-          let { data: dedData } = await supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true });
-          if (!dedData || dedData.length === 0) {
-            // Fallback to mill_inspection_deduction
-            const { data: fallbackData } = await supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true });
-            dedData = fallbackData;
+          const [miRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
+            Promise.resolve(supabase.from("material_inspection").select("*").order("created_at", { ascending: false })),
+            Promise.resolve(supabase.from("final_arrival").select("*").order("created_at", { ascending: false })),
+            Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true })).catch(() => ({ data: null })),
+            Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true })).catch(() => ({ data: null })),
+            Promise.resolve(supabase.from("deduction_master").select("*")).catch(() => ({ data: null })),
+            Promise.resolve(supabase.from("moisture_logic").select("*")).catch(() => ({ data: null }))
+          ]);
+
+          if (miRes.data && Array.isArray(miRes.data)) {
+            inspectionList = miRes.data;
           }
+          if (faRes.data && Array.isArray(faRes.data)) {
+            faList = faRes.data;
+          }
+          if (dMasterRes && dMasterRes.data && Array.isArray(dMasterRes.data) && dMasterRes.data.length > 0) {
+            setDeductionMasterList(dMasterRes.data);
+          }
+          if (moistRes && moistRes.data && Array.isArray(moistRes.data) && moistRes.data.length > 0) {
+            setMoistureLogicRules(moistRes.data);
+          }
+
+          const dedData = (dedPrimaryRes && dedPrimaryRes.data && dedPrimaryRes.data.length > 0)
+            ? dedPrimaryRes.data
+            : (dedFallbackRes?.data || []);
+
           if (dedData && Array.isArray(dedData)) {
             dedData.forEach((d: any) => {
               const k1 = (d.mr_no || "").trim().toUpperCase();
@@ -1296,11 +1253,33 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             });
           }
         } catch (e) {
-          console.warn("Error loading inspection deductions:", e);
+          console.warn("Parallel fetch error in inspection records:", e);
         }
       }
 
-      // 3. Enrich existing saved inspection records if missing details, but do NOT auto-create unsaved rows
+      if (inspectionList.length === 0) {
+        try {
+          const cached = localStorage.getItem("material_inspection_records") || localStorage.getItem("inspection_master_records");
+          if (cached) inspectionList = JSON.parse(cached);
+        } catch (e) {}
+      }
+
+      // Local storage fallbacks for Final Arrival Vouchers
+      try {
+        const cachedFa = localStorage.getItem("final_arrival_vouchers");
+        if (cachedFa) {
+          const parsed = JSON.parse(cachedFa);
+          parsed.forEach((item: any) => {
+            if (!faList.some(f => (f.final_arrival_no && f.final_arrival_no === item.final_arrival_no) || (f.final_arrival_id && f.final_arrival_id === item.final_arrival_id) || (f.mr_no && f.mr_no === item.mr_no))) {
+              faList.push(item);
+            }
+          });
+        }
+      } catch (e) {}
+
+      setFinalArrivalList(faList);
+
+      // Enrich existing saved inspection records
       const map = new Map<string, InspectionMasterRecord>();
 
       inspectionList.forEach(rec => {
@@ -1419,7 +1398,6 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (isManual) {
         showToast("Inspection register data refreshed successfully.");
       }
-      syncInspectionUnitsWithDatabase(displayList, faList);
     } catch (err) {
       console.error("Error fetching material_inspection records:", err);
       if (isManual) {
@@ -1430,68 +1408,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
   };
 
-  const syncInspectionUnitsWithDatabase = async (currentRecords?: InspectionMasterRecord[], faItems?: any[]) => {
-    if (!supabase) return;
-    try {
-      const arrivals = faItems || finalArrivalList || [];
-      const recordsToSync = currentRecords || records || [];
-      if (!arrivals.length || !recordsToSync.length) return;
-
-      const recordMap = new Map<string, InspectionMasterRecord>();
-      recordsToSync.forEach(r => {
-        if (r.mr_no) recordMap.set(r.mr_no.toUpperCase(), r);
-        if (r.arrival_no) recordMap.set(r.arrival_no.toUpperCase(), r);
-      });
-
-      for (const fa of arrivals) {
-        let uName = (fa.unit_name || fa.unit || "").toString().trim().toUpperCase();
-        let rawGrid = fa.grid_details || fa.details || fa.items;
-        if (typeof rawGrid === "string") {
-          try { rawGrid = JSON.parse(rawGrid); } catch (e) {}
-        }
-        if ((!uName || uName === "BALES") && Array.isArray(rawGrid)) {
-          for (const row of rawGrid) {
-            const u = (row?.unit || row?.unit_name || "").toString().trim().toUpperCase();
-            if (u && u !== "BALES") {
-              uName = u;
-              break;
-            }
-          }
-        }
-
-        if (uName && uName !== "BALES") {
-          const keys = [fa.mr_no, fa.final_arrival_no, fa.temporary_arrival_no, fa.arrival_no].filter(Boolean);
-          for (const k of keys) {
-            const upperK = k.toString().toUpperCase();
-            const existing = recordMap.get(upperK);
-            if (existing && existing.unit_name !== uName) {
-              await Promise.all([
-                supabase.from("material_inspection_details").update({ unit: uName }).eq("mr_no", k),
-                supabase.from("material_inspection").update({ unit_name: uName }).eq("mr_no", k)
-              ]).catch(() => {});
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("syncInspectionUnitsWithDatabase non-blocking exception:", e);
-    }
-  };
-
   useEffect(() => {
     fetchInspectionRecords();
-    if (supabase) {
-      supabase.from("deduction_master").select("*").then(r => {
-        if (r.data && r.data.length > 0) {
-          setDeductionMasterList(r.data);
-        }
-      }, () => {});
-      supabase.from("moisture_logic").select("*").then(r => {
-        if (r.data && r.data.length > 0) {
-          setMoistureLogicRules(r.data);
-        }
-      }, () => {});
-    }
   }, []);
 
   useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'temporary_material_received', 'moisture_logic', 'deduction_master'] });
@@ -2177,30 +2095,31 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setDeductionRows([
         { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
       ]);
-    }
-
-    if (supabase && (rec.mr_no || rec.arrival_no)) {
-      const keys = [rec.mr_no, rec.arrival_no].filter(Boolean);
-      const orFilter = keys.map(k => `mr_no.eq.${k},arrival_no.eq.${k}`).join(',');
-      (async () => {
-        try {
-          let { data } = await supabase.from("mill_inspection_deduction").select("*").or(orFilter).order("created_at", { ascending: true });
-          if (!data || data.length === 0) {
-            const { data: fallbackData } = await supabase.from("material_inspection_deductions").select("*").or(orFilter).order("created_at", { ascending: true });
-            data = fallbackData;
-          }
-          if (data && data.length > 0) {
-            setDeductionRows(data.map((d: any, idx: number) => ({
-              id: d.id ? String(d.id) : String(idx + 1),
-              deduction_type: d.deduction_type || "",
-              deduction_rate: Number(d.deduction_rate) || 0,
-              deduction_qty: Number(d.deduction_qty) || 0,
-              deduction_amount: Number(d.deduction_amount) || 0,
-              remarks: d.remarks || ""
-            })));
-          }
-        } catch (e) {}
-      })();
+      
+      // Fallback query ONLY if no deductions were found in memory or cache
+      if (supabase && (rec.mr_no || rec.arrival_no)) {
+        const keys = [rec.mr_no, rec.arrival_no].filter(Boolean);
+        const orFilter = keys.map(k => `mr_no.eq.${k},arrival_no.eq.${k}`).join(',');
+        (async () => {
+          try {
+            let { data } = await supabase.from("material_inspection_deductions").select("*").or(orFilter).order("created_at", { ascending: true });
+            if (!data || data.length === 0) {
+              const { data: fallbackData } = await supabase.from("mill_inspection_deduction").select("*").or(orFilter).order("created_at", { ascending: true });
+              data = fallbackData;
+            }
+            if (data && data.length > 0) {
+              setDeductionRows(data.map((d: any, idx: number) => ({
+                id: d.id ? String(d.id) : String(idx + 1),
+                deduction_type: d.deduction_type || "",
+                deduction_rate: Number(d.deduction_rate) || 0,
+                deduction_qty: Number(d.deduction_qty) || 0,
+                deduction_amount: Number(d.deduction_amount) || 0,
+                remarks: d.remarks || ""
+              })));
+            }
+          } catch (e) {}
+        })();
+      }
     }
 
     setViewMode("form");
