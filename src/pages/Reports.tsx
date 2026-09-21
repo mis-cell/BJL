@@ -158,11 +158,11 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
     if (initialReportType) {
       const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
       if (clean === 'trade_report' || clean === 'trade') return 'trade';
-      if (clean === 'sauda_analyze' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
-        return clean as any;
+      if (clean === 'sauda_analyze' || clean === 'report1' || clean === 'po_summary' || clean === 'map_wise_po' || clean === 'map_wise' || clean === 'data_aggregation' || clean === 'global_analytics' || clean === 'payment_report' || clean === 'amad') {
+        return (clean === 'report1' ? 'sauda_analyze' : clean === 'map_wise' ? 'map_wise_po' : clean) as any;
       }
     }
-    return 'po_summary';
+    return 'sauda_analyze';
   });
 
   useEffect(() => {
@@ -1679,37 +1679,22 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
         {/* Module Selector win95 Tab styling */}
         <div className="flex flex-wrap items-center gap-1.5 px-2 py-2 bg-green-900 border-2 border-green-950 rounded-xl">
 
-          {/* Sauda Analyze */}
+          {/* Report1 (formerly Sauda Analyze) */}
           <button
-            id="tab-sauda-analyze"
+            id="tab-report1"
             onClick={() => setReportType('sauda_analyze')}
             className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
+              "px-5 h-9 text-[11px] sm:text-xs font-black uppercase tracking-wide",
+              "rounded-lg border transition-all duration-150 shadow-sm",
               reportType === 'sauda_analyze'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30 font-black scale-[1.02]"
                 : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
-            Sauda Analyze (OUT)
+            Report1
           </button>
 
-          {/* PO Summary */}
-          <button
-            id="tab-po-summary"
-            onClick={() => setReportType('po_summary')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'po_summary'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            P.O. Summary
-          </button>
-
-          {/* Map Wise PO */}
+          {/* MAP WISE (formerly Map Wise P.O) */}
           <button
             id="tab-map-wise"
             onClick={() => {
@@ -1719,74 +1704,15 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               }
             }}
             className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
+              "px-5 h-9 text-[11px] sm:text-xs font-black uppercase tracking-wide",
+              "rounded-lg border transition-all duration-150 shadow-sm",
               reportType === 'map_wise_po'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
+                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30 font-black scale-[1.02]"
                 : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
             )}
           >
-            Map Wise P.O
+            MAP WISE
           </button>
-
-          {/* Global Analytics */}
-          <button
-            id="tab-global-analytics"
-            onClick={() => setReportType('global_analytics')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'global_analytics'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            Global Analytics
-          </button>
-
-          {/* Data Aggregator */}
-          <button
-            id="tab-data-aggregation"
-            onClick={() => setReportType('data_aggregation')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'data_aggregation'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            Data Aggregator (P.O. & Sauda)
-          </button>
-
-          {/* Trades Report */}
-         {/*  <button
-            id="tab-data-Paymentreport"
-            onClick={() => setReportType('payment_report')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'payment_report'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            Treds
-          </button> */}
-
-          {/* <button
-            id="tab-trade-report"
-            onClick={() => setReportType('trade')}
-            className={cn(
-              "px-4 h-9 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150",
-              reportType === 'trade'
-                ? "bg-white text-green-800 border-green-400 shadow-md"
-                : "bg-green-700 text-white border-green-600 hover:bg-green-600 hover:-translate-y-[1px]"
-            )}
-          >
-            Trade
-          </button> */}
 
         </div>
 
