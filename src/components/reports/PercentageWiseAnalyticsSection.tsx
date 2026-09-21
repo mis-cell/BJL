@@ -142,25 +142,26 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
       <PercentageKPISection kpis={compiledData.kpis} />
 
       {/* Sub-Tab Navigation Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-lg p-1.5 shadow-sm overflow-x-auto flex items-center gap-1">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 shadow-sm flex flex-wrap items-center gap-1.5" id="percentage-sub-tabs-container">
         {SUB_TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.key;
           return (
             <button
               key={tab.key}
+              id={`tab-analytics-${tab.key}`}
               onClick={() => setActiveSubTab(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-emerald-600 text-white shadow-sm font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950/40 font-black scale-[1.02]'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="whitespace-nowrap">{tab.label}</span>
               {tab.count !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono ${
-                  isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold leading-none ${
+                  isActive ? 'bg-emerald-800 text-emerald-100 border border-emerald-500/30' : 'bg-slate-800 text-slate-300 border border-slate-700'
                 }`}>
                   {tab.count}
                 </span>
