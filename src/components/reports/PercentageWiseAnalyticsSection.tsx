@@ -222,7 +222,7 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
         )}
 
         {activeSubTab === 'audit' && (
-          <FullPipelineAuditReport fullPipelineAudit={compiledData.fullPipelineAudit} />
+          <FullPipelineAuditReport fullPipelineAudit={compiledData.fullPipelineAudit} kpis={compiledData.kpis} />
         )}
       </div>
     </div>

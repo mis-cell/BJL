@@ -1216,6 +1216,13 @@ export default function MaterialInspection({
   const loadAllMasters = async () => {
     try {
       if (supabase) {
+        const withTimeout = (promise: Promise<any>, ms: number = 3000) => {
+          return Promise.race([
+            promise,
+            new Promise(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), ms))
+          ]);
+        };
+
         const [
           { data: b },
           { data: s },
@@ -1228,36 +1235,16 @@ export default function MaterialInspection({
           { data: mL },
           dData,
         ] = await Promise.all([
-          supabase
-            .from("broker_master")
-            .select("brok_name")
-            .order("brok_name")
-            .limit(150),
-          supabase
-            .from("supply_master")
-            .select("supp_name")
-            .order("supp_name")
-            .limit(150),
-          supabase
-            .from("grade_master")
-            .select("grade_code, grade_name")
-            .order("grade_code")
-            .limit(150),
-          supabase.from("area_master").select("area_name").order("area_name").limit(150),
-          supabase
-            .from("agency_master")
-            .select("agency_name")
-            .order("agency_name")
-            .limit(150),
-          supabase.from("marka_master").select("marka_name").order("marka_name").limit(150),
-          supabase
-            .from("mill_inspection_master")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(250),
-          supabase.from("unit_master").select("unit_name").order("unit_name").limit(150),
-          supabase.from("moisture_logic").select("*"),
-          supabase.from("deduction_master").select("*").then(r => r.data || [], () => []),
+          withTimeout(Promise.resolve(supabase.from("broker_master").select("brok_name").order("brok_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("supply_master").select("supp_name").order("supp_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("grade_master").select("grade_code, grade_name").order("grade_code").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("area_master").select("area_name").order("area_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("agency_master").select("agency_name").order("agency_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("marka_master").select("marka_name").order("marka_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).limit(250))),
+          withTimeout(Promise.resolve(supabase.from("unit_master").select("unit_name").order("unit_name").limit(150))),
+          withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))),
+          withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).then((r: any) => r?.data || [], () => []),
         ]);
 
         if (b) setBrokers(b.map((x: any) => ({ name: x.brok_name })));

@@ -1202,13 +1202,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (supabase) {
         try {
+          const withTimeout = (promise: Promise<any>, ms: number = 3000) => {
+            return Promise.race([
+              promise,
+              new Promise(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), ms))
+            ]);
+          };
+
           const [miRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
-            Promise.resolve(supabase.from("material_inspection").select("*").order("created_at", { ascending: false })),
-            Promise.resolve(supabase.from("final_arrival").select("*").order("created_at", { ascending: false })),
-            Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true })).catch(() => ({ data: null })),
-            Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true })).catch(() => ({ data: null })),
-            Promise.resolve(supabase.from("deduction_master").select("*")).catch(() => ({ data: null })),
-            Promise.resolve(supabase.from("moisture_logic").select("*")).catch(() => ({ data: null }))
+            withTimeout(Promise.resolve(supabase.from("material_inspection").select("*").order("created_at", { ascending: false }))),
+            withTimeout(Promise.resolve(supabase.from("final_arrival").select("*").order("created_at", { ascending: false }))),
+            withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))).catch(() => ({ data: null }))
           ]);
 
           if (miRes.data && Array.isArray(miRes.data)) {
