@@ -1,4 +1,27 @@
-export function exportToCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+export function exportToCSV(
+  arg1: string | any[],
+  arg2?: string[] | string,
+  arg3?: (string | number)[][]
+) {
+  let filename = 'export.csv';
+  let headers: string[] = [];
+  let rows: (string | number)[][] = [];
+
+  if (Array.isArray(arg1)) {
+    // Called as exportToCSV(dataArray, filename)
+    filename = typeof arg2 === 'string' ? arg2 : 'export.csv';
+    const data = arg1;
+    if (data.length > 0) {
+      headers = Object.keys(data[0]);
+      rows = data.map(item => headers.map(h => item[h] ?? ''));
+    }
+  } else if (typeof arg1 === 'string' && Array.isArray(arg2) && Array.isArray(arg3)) {
+    // Called as exportToCSV(filename, headers, rows)
+    filename = arg1;
+    headers = arg2;
+    rows = arg3;
+  }
+
   const processRow = (row: (string | number)[]) => {
     return row.map(val => {
       let str = String(val ?? '');
@@ -24,3 +47,4 @@ export function exportToCSV(filename: string, headers: string[], rows: (string |
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
