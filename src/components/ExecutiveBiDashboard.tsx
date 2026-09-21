@@ -898,12 +898,16 @@ export default function ExecutiveBiDashboard({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full max-w-full min-w-0">
             <button
-              onClick={() => setcurrentTab('reports')}
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate('reports');
+                } else if (setcurrentTab) {
+                  setcurrentTab('reports');
+                }
+              }}
               className={cn(
                 "h-8 sm:h-9 px-2.5 sm:px-4 border-2 flex items-center gap-1.5 sm:gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-[10px] sm:text-xs uppercase tracking-wider font-extrabold max-w-full truncate",
-                currentTab === 'reports'
-                  ? "bg-[#1E331B] border-[#1E331B] text-[#FAF7F0] shadow-sm"
-                  : "bg-[#FAF7F0] border-[#D6CAA8] text-[#5A6E54] hover:bg-[#EAE2D2] hover:text-[#1E331B]"
+                "bg-[#FAF7F0] border-[#D6CAA8] text-[#5A6E54] hover:bg-[#EAE2D2] hover:text-[#1E331B]"
               )}
             >
               <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400 shrink-0" />

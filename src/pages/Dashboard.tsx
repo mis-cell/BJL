@@ -1401,13 +1401,11 @@ export default function Dashboard({
     <LegacyLayout 
       title="P.O Automation" 
       subtitle="Operational Hub"
-      activeNavTab={currentTab === 'reports' ? 'reports' : 'dashboard'}
+      activeNavTab="dashboard"
       allowedModules={allowedModules}
       isAdmin={isAdmin}
       onNavClick={(pageId) => {
-        if (pageId === 'reports') {
-          setCurrentTab('reports');
-        } else if (pageId === 'dashboard') {
+        if (pageId === 'dashboard') {
           setCurrentTab('menu');
         } else {
           onNavigate(pageId);
@@ -2080,12 +2078,6 @@ export default function Dashboard({
         </div>
       </div>
     ) : null}
-
-        {currentTab === 'reports' && (
-          <div className="bg-white border border-slate-250 shadow-sm rounded-xl p-1">
-            <Reports onClose={() => setCurrentTab('menu')} />
-          </div>
-        )}
 
         {/* Godown Capacity Audited Breakdown Modal */}
         {isGodownModalOpen && (
