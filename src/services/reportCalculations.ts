@@ -80,6 +80,39 @@ export interface AgeingBucketSummary {
   percentage: number;
 }
 
+// Helper function to parse date string without timezone offset shifts
+export function parseDateOnly(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s) return null;
+  if (s.includes('T')) {
+    const parts = s.split('T')[0].split('-');
+    if (parts.length === 3) {
+      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  if (s.includes('-')) {
+    const parts = s.split('-');
+    if (parts[0].length === 4) {
+      const y = Number(parts[0]), m = Number(parts[1]) - 1, d = Number(parts[2]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    } else if (parts[2].length === 4) {
+      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts[2].length === 4) {
+      const y = Number(parts[2]), m = Number(parts[1]) - 1, d = Number(parts[0]);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) return new Date(y, m, d);
+    }
+  }
+  const parsed = new Date(s);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Standard Calculations
 export const calcHelpers = {
   safeRound(val: number, decimals: number = 2): number {
@@ -707,8 +740,42 @@ export function compileReportData(
 
   (scpList || []).forEach(scp => {
     const key = String(scp.po_no || scp.ptf_no || scp.contract_po_no || scp.po_id || '').trim().toUpperCase();
-    if (key && !contractsMap.has(key)) {
-      contractsMap.set(key, { ...scp, _sourceSection: 'Sauda Check Point' });
+    if (key) {
+      if (!contractsMap.has(key)) {
+        contractsMap.set(key, { ...scp, _sourceSection: 'Sauda Check Point' });
+      } else {
+        const existing = contractsMap.get(key);
+        // Ensure Delivery schedule from Sauda Check Point is preserved on merged contract
+        if (!existing.delivery_to && scp.delivery_to) existing.delivery_to = scp.delivery_to;
+        if (!existing.delivery_from && scp.delivery_from) existing.delivery_from = scp.delivery_from;
+        if (existing.grace_days === undefined && scp.grace_days !== undefined) existing.grace_days = scp.grace_days;
+      }
+    }
+  });
+
+  // Fast index of Sauda Check Point entries for delivery dates
+  const scpByPO: Record<string, any> = {};
+  (scpList || []).forEach(scp => {
+    const rawNo = String(scp.po_no || scp.ptf_no || scp.contract_po_no || scp.po_id || '').trim().toUpperCase();
+    if (rawNo) scpByPO[rawNo] = scp;
+    const cleanDigits = getCleanDigits(rawNo);
+    if (cleanDigits) scpByPO[cleanDigits] = scp;
+    const contractNum = extractContractNumber(rawNo);
+    if (contractNum) scpByPO[contractNum] = scp;
+  });
+
+  // Fast index for Temporary Arrival dates from temporary_material_received
+  const tempMRDateMap: Record<string, string> = {};
+  const tempDatesByPO: Record<string, string[]> = {};
+  (tempMRList || []).forEach(tmr => {
+    const tDate = tmr.date || tmr.temporary_arrival_date || tmr.receipt_date || '';
+    if (!tDate) return;
+    const tNo = String(tmr.temporary_arrival_no || tmr.mr_no || tmr.amad_id || '').trim().toUpperCase();
+    if (tNo) tempMRDateMap[tNo] = tDate;
+    const po = String(tmr.po_no || '').trim().toUpperCase();
+    if (po) {
+      if (!tempDatesByPO[po]) tempDatesByPO[po] = [];
+      tempDatesByPO[po].push(tDate);
     }
   });
 
@@ -870,6 +937,8 @@ export function compileReportData(
 
   let onTimeDeliveredMT = 0;
   let delayedDeliveredMT = 0;
+  const onTimeArrivalRecords: any[] = [];
+  const delayedArrivalRecords: any[] = [];
 
   let sumContractValue = 0;
   let sumDispatchedValue = 0;
@@ -955,38 +1024,124 @@ export function compileReportData(
     }
 
     // Check delivery scheduling & delay
+    // Business Rule: On-Time Delivery compares Temporary Arrival Date ("Temporary Date *")
+    // against Sauda Check Point "Delivery To" date. If Temporary Date > Delivery To date, it is Late.
     let isDelayed = false;
     let daysPending = 0;
-    const scheduledDateStr = s.shipment_date || s.date || '';
-    const scheduledTime = scheduledDateStr ? new Date(scheduledDateStr).getTime() : NaN;
-    // 7-day trade grace period standard for jute shipments
-    const graceTime = isNaN(scheduledTime) ? NaN : scheduledTime + (7 * 24 * 60 * 60 * 1000);
+    let contractOnTimeMT = 0;
+    let contractDelayedMT = 0;
+    let contractDelayDays = 0;
+
+    const scpRecord = scpByPO[sId] || 
+      scpByPO[sNo.toUpperCase()] || 
+      (sNoClean ? scpByPO[sNoClean] : undefined) || 
+      (sSessionClean ? scpByPO[sSessionClean] : undefined) || 
+      (sPoClean ? scpByPO[sPoClean] : undefined);
+
+    const deliveryToDateStr = s.delivery_to || scpRecord?.delivery_to || s.delivery_schedule_to || s.delivery_date || s.shipment_date || '';
+    const deliveryToObj = parseDateOnly(deliveryToDateStr);
+    const scheduledDateStr = deliveryToDateStr || s.delivery_date_to || s.delivery_to || s.date || '';
 
     if (matchingReceipt.arrivals && matchingReceipt.arrivals.length > 0) {
       matchingReceipt.arrivals.forEach((arr: any) => {
-        const arrDateStr = arr.date || arr.final_arrival_date || arr.temporary_arrival_date || '';
-        const arrTime = arrDateStr ? new Date(arrDateStr).getTime() : NaN;
+        const arrTmrNo = String(arr.temporary_arrival_no || arr.mr_no || arr.final_arrival_no || arr.amad_no || '').trim().toUpperCase();
+        // Temporary Arrival Date ("Temporary Date *")
+        const tempArrivalDateStr = arr.temporary_arrival_date || tempMRDateMap[arrTmrNo] || (tempDatesByPO[sId]?.[0]) || (tempDatesByPO[sNo.toUpperCase()]?.[0]) || arr.date || arr.final_arrival_date || '';
+        const tempArrivalDateObj = parseDateOnly(tempArrivalDateStr);
         const arrWt = Number(arr.calculatedMT) || (deliveredWt / matchingReceipt.arrivals.length);
 
-        if (!isNaN(arrTime) && !isNaN(graceTime) && arrTime <= graceTime) {
-          onTimeDeliveredMT += arrWt;
-        } else if (!isNaN(arrTime) && !isNaN(graceTime) && arrTime > graceTime) {
-          delayedDeliveredMT += arrWt;
-          isDelayed = true;
+        if (tempArrivalDateObj && deliveryToObj) {
+          if (tempArrivalDateObj.getTime() > deliveryToObj.getTime()) {
+            // LATE: Temporary Arrival Date > Sauda Check Point Delivery "To" Date
+            delayedDeliveredMT += arrWt;
+            contractDelayedMT += arrWt;
+            isDelayed = true;
+            const diffMs = tempArrivalDateObj.getTime() - deliveryToObj.getTime();
+            const lateDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            contractDelayDays = Math.max(contractDelayDays, lateDays);
+            daysPending = Math.max(daysPending, lateDays);
+
+            delayedArrivalRecords.push({
+              id: arr.id || arr.mr_no || arr.final_arrival_no || `${sNo}-${delayedArrivalRecords.length + 1}`,
+              recordNo: arr.final_arrival_no || arr.mr_no || arr.temporary_arrival_no || sNo,
+              tempArrivalNo: arr.temporary_arrival_no || arr.final_arrival_no || arr.mr_no || 'N/A',
+              contractNo: sNo,
+              type: 'Delayed Arrival',
+              date: tempArrivalDateStr,
+              deliveryTo: deliveryToDateStr,
+              delayDays: lateDays,
+              party: s.supplier || s.supplier_name || arr.supplier_name || arr.supplier || 'DIRECT',
+              broker: s.broker || s.broker_name || arr.broker_name || arr.broker || 'DIRECT',
+              grade: arr.grading || arr.item_name || s.marks || 'TD-5',
+              quantity: calcHelpers.safeRound(arrWt, 3),
+              unit: 'MT',
+              status: `Late by ${lateDays} day${lateDays === 1 ? '' : 's'} (Temporary Date > Delivery To)`,
+              sourceTable: 'temporary_material_received & final_arrival'
+            });
+          } else {
+            // ON-TIME: Temporary Arrival Date <= Sauda Check Point Delivery "To" Date
+            onTimeDeliveredMT += arrWt;
+            contractOnTimeMT += arrWt;
+
+            onTimeArrivalRecords.push({
+              id: arr.id || arr.mr_no || arr.final_arrival_no || `${sNo}-${onTimeArrivalRecords.length + 1}`,
+              recordNo: arr.final_arrival_no || arr.mr_no || arr.temporary_arrival_no || sNo,
+              tempArrivalNo: arr.temporary_arrival_no || arr.final_arrival_no || arr.mr_no || 'N/A',
+              contractNo: sNo,
+              type: 'On-Time Arrival',
+              date: tempArrivalDateStr,
+              deliveryTo: deliveryToDateStr,
+              delayDays: 0,
+              party: s.supplier || s.supplier_name || arr.supplier_name || arr.supplier || 'DIRECT',
+              broker: s.broker || s.broker_name || arr.broker_name || arr.broker || 'DIRECT',
+              grade: arr.grading || arr.item_name || s.marks || 'TD-5',
+              quantity: calcHelpers.safeRound(arrWt, 3),
+              unit: 'MT',
+              status: 'On-Time Verified (Temporary Date <= Delivery To)',
+              sourceTable: 'temporary_material_received & final_arrival'
+            });
+          }
         } else {
-          // If no shipment date specified, standard dispatch is considered on-time
+          // If no delivery date was specified on contract, treat standard dispatch as on-time
           onTimeDeliveredMT += arrWt;
+          contractOnTimeMT += arrWt;
+
+          onTimeArrivalRecords.push({
+            id: arr.id || arr.mr_no || arr.final_arrival_no || `${sNo}-${onTimeArrivalRecords.length + 1}`,
+            recordNo: arr.final_arrival_no || arr.mr_no || arr.temporary_arrival_no || sNo,
+            tempArrivalNo: arr.temporary_arrival_no || arr.final_arrival_no || arr.mr_no || 'N/A',
+            contractNo: sNo,
+            type: 'On-Time Arrival',
+            date: tempArrivalDateStr || s.date || '',
+            deliveryTo: deliveryToDateStr || 'N/A',
+            delayDays: 0,
+            party: s.supplier || s.supplier_name || arr.supplier_name || arr.supplier || 'DIRECT',
+            broker: s.broker || s.broker_name || arr.broker_name || arr.broker || 'DIRECT',
+            grade: arr.grading || arr.item_name || s.marks || 'TD-5',
+            quantity: calcHelpers.safeRound(arrWt, 3),
+            unit: 'MT',
+            status: 'On-Time Verified (Standard)',
+            sourceTable: 'temporary_material_received & final_arrival'
+          });
         }
       });
     } else if (deliveredWt > 0) {
-      onTimeDeliveredMT += deliveredWt;
+      const lastArrDateObj = parseDateOnly(matchingReceipt.lastDate);
+      if (lastArrDateObj && deliveryToObj && lastArrDateObj.getTime() > deliveryToObj.getTime()) {
+        delayedDeliveredMT += deliveredWt;
+        contractDelayedMT += deliveredWt;
+        isDelayed = true;
+      } else {
+        onTimeDeliveredMT += deliveredWt;
+        contractOnTimeMT += deliveredWt;
+      }
     }
 
-    if (!isNaN(scheduledTime)) {
-      const diffTime = today.getTime() - scheduledTime;
+    if (deliveryToObj) {
+      const diffTime = today.getTime() - deliveryToObj.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       if (diffDays > 0 && pendingWt > 0) {
-        daysPending = diffDays;
+        daysPending = Math.max(daysPending, diffDays);
         isDelayed = true;
       }
     }
@@ -1127,8 +1282,8 @@ export function compileReportData(
     if (delivPct >= 99.5) bGrp.fullyDelivered++;
     else if (delivPct > 0) bGrp.partiallyDelivered++;
     else bGrp.notStarted++;
-    if (isDelayed) bGrp.delayedDeliveredMT += deliveredWt;
-    else bGrp.onTimeDeliveredMT += deliveredWt;
+    bGrp.delayedDeliveredMT += contractDelayedMT;
+    bGrp.onTimeDeliveredMT += contractOnTimeMT;
     
     const saudaContractVal = rate > 0 ? contractedWt * 10 * rate : 0;
     const saudaDeliveredVal = rate > 0 ? deliveredWt * 10 * rate : 0;
@@ -1213,14 +1368,16 @@ export function compileReportData(
     sGrp.contractedMT += contractedWt;
     sGrp.deliveredMT += deliveredWt;
     sGrp.pendingMT += pendingWt;
+    sGrp.onTimeMT = (sGrp.onTimeMT || 0) + contractOnTimeMT;
+    sGrp.delayedMT = (sGrp.delayedMT || 0) + contractDelayedMT;
     if (delivPct >= 99.5) sGrp.fullyCompleted++;
     else if (delivPct > 0) sGrp.partiallyCompleted++;
     else sGrp.undelivered++;
-    if (isDelayed) {
+    if (contractDelayedMT > 0 || isDelayed) {
       sGrp.delayedCount++;
-      sGrp.delayDaysTotal += daysPending;
+      sGrp.delayDaysTotal += contractDelayDays || daysPending;
       sGrp.delayCount++;
-    } else {
+    } else if (contractOnTimeMT > 0) {
       sGrp.onTimeCount++;
     }
     if (rate > 0) {
@@ -1260,8 +1417,8 @@ export function compileReportData(
       aGrp.sumRate += rate;
       aGrp.rateCount++;
     }
-    if (isDelayed) aGrp.delayedDeliveredMT += deliveredWt;
-    else aGrp.onTimeDeliveredMT += deliveredWt;
+    aGrp.delayedDeliveredMT += contractDelayedMT;
+    aGrp.onTimeDeliveredMT += contractOnTimeMT;
 
     // 4. Month Grouping
     const dateObj = s.date ? new Date(s.date) : new Date();
@@ -1295,8 +1452,8 @@ export function compileReportData(
       mGrp.sumRate += rate;
       mGrp.rateCount++;
     }
-    if (isDelayed) mGrp.delayedDeliveredMT += deliveredWt;
-    else mGrp.onTimeDeliveredMT += deliveredWt;
+    mGrp.delayedDeliveredMT += contractDelayedMT;
+    mGrp.onTimeDeliveredMT += contractOnTimeMT;
 
     // 5. Grade & Item Grouping
     const gradeName = (s.marks || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5').trim().toUpperCase();
@@ -1438,8 +1595,12 @@ export function compileReportData(
     const delivPct = calcHelpers.calcDeliveredPct(s.deliveredMT, s.contractedMT);
     const pendPct = calcHelpers.calcPendingPct(s.pendingMT, s.contractedMT);
     const totalDelivCount = s.onTimeCount + s.delayedCount;
-    const onTimePct = totalDelivCount > 0 ? calcHelpers.safeRound((s.onTimeCount / totalDelivCount) * 100) : 0;
-    const delayedPct = totalDelivCount > 0 ? calcHelpers.safeRound((s.delayedCount / totalDelivCount) * 100) : 0;
+    const onTimePct = s.deliveredMT > 0 && s.onTimeMT !== undefined
+      ? calcHelpers.safeRound((s.onTimeMT / s.deliveredMT) * 100)
+      : (totalDelivCount > 0 ? calcHelpers.safeRound((s.onTimeCount / totalDelivCount) * 100) : 0);
+    const delayedPct = s.deliveredMT > 0 && s.delayedMT !== undefined
+      ? calcHelpers.safeRound((s.delayedMT / s.deliveredMT) * 100)
+      : (totalDelivCount > 0 ? calcHelpers.safeRound((s.delayedCount / totalDelivCount) * 100) : 0);
     const avgDelayDays = s.delayCount > 0 ? calcHelpers.safeRound(s.delayDaysTotal / s.delayCount, 1) : 0;
     const avgContractRate = s.countContractRate > 0 ? calcHelpers.safeRound(s.sumContractRate / s.countContractRate) : 0;
     const rating = calcHelpers.getSupplierRating(delivPct, onTimePct, s.pendingMT, avgDelayDays > 14);
@@ -1670,6 +1831,63 @@ export function compileReportData(
     ptfContractedMT += cWt;
     ptfDeliveredMT += rWt;
     ptfPendingMT += pWt;
+
+    if (contractTypeFilter === 'PTF' || contractTypeFilter === 'ALL') {
+      const pDeliveryTo = p.delivery_to || p.delivery_date || '';
+      const pDeliveryToObj = parseDateOnly(pDeliveryTo);
+      if (mrInfo.arrivals && mrInfo.arrivals.length > 0) {
+        mrInfo.arrivals.forEach((arr: any) => {
+          const arrTmrNo = String(arr.temporary_arrival_no || arr.mr_no || arr.final_arrival_no || arr.amad_no || '').trim().toUpperCase();
+          const tempArrivalDateStr = arr.temporary_arrival_date || tempMRDateMap[arrTmrNo] || (tempDatesByPO[pNo]?.[0]) || arr.date || arr.final_arrival_date || '';
+          const tempArrivalDateObj = parseDateOnly(tempArrivalDateStr);
+          const arrWt = Number(arr.calculatedMT) || (rWt / mrInfo.arrivals.length);
+
+          if (tempArrivalDateObj && pDeliveryToObj) {
+            if (tempArrivalDateObj.getTime() > pDeliveryToObj.getTime()) {
+              delayedDeliveredMT += arrWt;
+              const diffMs = tempArrivalDateObj.getTime() - pDeliveryToObj.getTime();
+              const lateDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              delayedArrivalRecords.push({
+                id: arr.id || arr.mr_no || arr.final_arrival_no || `${pNo}-${delayedArrivalRecords.length + 1}`,
+                recordNo: arr.final_arrival_no || arr.mr_no || arr.temporary_arrival_no || pNo,
+                tempArrivalNo: arr.temporary_arrival_no || arr.final_arrival_no || arr.mr_no || 'N/A',
+                contractNo: pNo,
+                type: 'Delayed PTF Arrival',
+                date: tempArrivalDateStr,
+                deliveryTo: pDeliveryTo,
+                delayDays: lateDays,
+                party: p.supplier || 'FACTORY SOURCING',
+                broker: p.broker || 'DIRECT',
+                grade: p.marka_type || 'TD-5',
+                quantity: calcHelpers.safeRound(arrWt, 3),
+                unit: 'MT',
+                status: `Late by ${lateDays} day${lateDays === 1 ? '' : 's'} (Temporary Date > Delivery To)`,
+                sourceTable: 'temporary_material_received & final_arrival'
+              });
+            } else {
+              onTimeDeliveredMT += arrWt;
+              onTimeArrivalRecords.push({
+                id: arr.id || arr.mr_no || arr.final_arrival_no || `${pNo}-${onTimeArrivalRecords.length + 1}`,
+                recordNo: arr.final_arrival_no || arr.mr_no || arr.temporary_arrival_no || pNo,
+                tempArrivalNo: arr.temporary_arrival_no || arr.final_arrival_no || arr.mr_no || 'N/A',
+                contractNo: pNo,
+                type: 'On-Time PTF Arrival',
+                date: tempArrivalDateStr,
+                deliveryTo: pDeliveryTo,
+                delayDays: 0,
+                party: p.supplier || 'FACTORY SOURCING',
+                broker: p.broker || 'DIRECT',
+                grade: p.marka_type || 'TD-5',
+                quantity: calcHelpers.safeRound(arrWt, 3),
+                unit: 'MT',
+                status: 'On-Time Verified (Temporary Date <= Delivery To)',
+                sourceTable: 'temporary_material_received & final_arrival'
+              });
+            }
+          }
+        });
+      }
+    }
   });
 
   // Calculate Checkpoint Dispatched metrics (Workflow milestones)
@@ -1723,8 +1941,11 @@ export function compileReportData(
   const partialDelivPct = calcHelpers.calcPendingContractPct(partiallyDeliveredCount, activeContractsCount);
   const notStartedPct = calcHelpers.calcPendingContractPct(notStartedCount, activeContractsCount);
 
-  const overallOnTimePct = calcHelpers.calcOnTimePct(onTimeDeliveredMT, totalDeliveredMT);
-  const overallDelayedPct = calcHelpers.calcDelayedPct(delayedDeliveredMT, totalDeliveredMT);
+  const totalDelivBase = (onTimeDeliveredMT + delayedDeliveredMT) > 0 
+    ? (onTimeDeliveredMT + delayedDeliveredMT) 
+    : (activeDeliveredMT || totalDeliveredMT);
+  const overallOnTimePct = calcHelpers.calcOnTimePct(onTimeDeliveredMT, totalDelivBase);
+  const overallDelayedPct = calcHelpers.calcDelayedPct(delayedDeliveredMT, totalDelivBase);
 
   const avgContractRate = countContractRates > 0 ? calcHelpers.safeRound(sumContractRates / countContractRates) : 0;
   const avgDispatchRate = countDispatchRates > 0 ? calcHelpers.safeRound(sumDispatchRates / countDispatchRates) : avgContractRate;
@@ -1979,15 +2200,15 @@ export function compileReportData(
     },
     on_time: {
       title: 'On-Time Mill Deliveries',
-      description: 'Lorry loads delivered on or before the contractual shipment schedule date (including 7-day trade grace period).',
-      formula: 'final_arrival WHERE arrival_date <= (contract.shipment_date + 7 days)',
-      sourceTable: 'final_arrival matched with sauda_master',
-      refreshBehavior: 'Real-time date audit calculation',
-      filterNotes: 'Evaluates each arrival against its specific contract delivery deadline.',
-      totalCount: Math.round(mrList.length * (overallOnTimePct / 100)),
+      description: 'Lorry loads whose Temporary Arrival Date is on or before the Sauda Check Point Delivery "To" Date.',
+      formula: 'temporary_arrival_date <= sauda_check_point.delivery_to',
+      sourceTable: 'temporary_material_received, final_arrival & sauda_check_point',
+      refreshBehavior: 'Real-time date audit calculation comparing Temporary Arrival Date with Delivery To Date',
+      filterNotes: 'Evaluates each temporary arrival against its specific contract Delivery To deadline.',
+      totalCount: onTimeArrivalRecords.length || Math.round(mrList.length * (overallOnTimePct / 100)),
       aggregateQuantity: calcHelpers.safeRound(onTimeDeliveredMT, 3).toLocaleString(),
       aggregateUnit: 'MT',
-      records: mrList.slice(0, Math.round(mrList.length * (overallOnTimePct / 100))).map(mr => {
+      records: onTimeArrivalRecords.length > 0 ? onTimeArrivalRecords : mrList.slice(0, Math.round(mrList.length * (overallOnTimePct / 100))).map(mr => {
         let wt = Number(mr.electronic_net_weight) || Number(mr.weight_reduced) || 0;
         if (wt === 0 && mr.weight_qtl) wt = Number(mr.weight_qtl) / 10;
         return {
@@ -2000,22 +2221,22 @@ export function compileReportData(
           grade: mr.item_name || 'TD-5',
           quantity: calcHelpers.safeRound(wt || 10, 3),
           unit: 'MT',
-          status: 'On-Time Verified',
+          status: 'On-Time Verified (Temporary Date <= Delivery To)',
           sourceTable: 'final_arrival'
         };
       })
     },
     delayed: {
       title: 'Delayed Mill Deliveries',
-      description: 'Lorry loads that arrived after contractual shipment date and grace period.',
-      formula: 'final_arrival WHERE arrival_date > (contract.shipment_date + 7 days)',
-      sourceTable: 'final_arrival matched with sauda_master',
-      refreshBehavior: 'Real-time delay tracking',
-      filterNotes: 'Highlights late arrivals for supplier performance scoring.',
-      totalCount: Math.round(mrList.length * (overallDelayedPct / 100)),
+      description: 'Lorry loads whose Temporary Arrival Date is after the Sauda Check Point Delivery "To" Date.',
+      formula: 'temporary_arrival_date > sauda_check_point.delivery_to',
+      sourceTable: 'temporary_material_received, final_arrival & sauda_check_point',
+      refreshBehavior: 'Real-time delay tracking comparing Temporary Arrival Date with Delivery To Date',
+      filterNotes: 'Highlights late arrivals where Temporary Date > Delivery To Date for supplier compliance scoring.',
+      totalCount: delayedArrivalRecords.length || Math.round(mrList.length * (overallDelayedPct / 100)),
       aggregateQuantity: calcHelpers.safeRound(delayedDeliveredMT, 3).toLocaleString(),
       aggregateUnit: 'MT',
-      records: mrList.slice(Math.round(mrList.length * (overallOnTimePct / 100))).map(mr => {
+      records: delayedArrivalRecords.length > 0 ? delayedArrivalRecords : mrList.slice(Math.round(mrList.length * (overallOnTimePct / 100))).map(mr => {
         let wt = Number(mr.electronic_net_weight) || Number(mr.weight_reduced) || 0;
         if (wt === 0 && mr.weight_qtl) wt = Number(mr.weight_qtl) / 10;
         return {
@@ -2028,7 +2249,7 @@ export function compileReportData(
           grade: mr.item_name || 'TD-5',
           quantity: calcHelpers.safeRound(wt || 10, 3),
           unit: 'MT',
-          status: 'Delayed Overdue',
+          status: 'Late Delivery (Temporary Date > Delivery To)',
           sourceTable: 'final_arrival'
         };
       })
@@ -2190,12 +2411,12 @@ export function compileReportData(
     },
     {
       metricName: 'On-Time Delivery %',
-      oldValue: '0% On-Time (100% Delayed)',
+      oldValue: 'Evaluated using arbitrary 7-day grace on shipment date',
       correctedValue: `${overallOnTimePct.toFixed(1)}% On-Time (${onTimeDeliveredMT.toFixed(2)} MT) • ${overallDelayedPct.toFixed(1)}% Delayed (${delayedDeliveredMT.toFixed(2)} MT)`,
-      causeOfDifference: 'Flawed logic compared historical contract shipment dates against current system date (today in 2026), marking 100% of historical deliveries as delayed! Correct calculation compares arrival date (final_arrival.date) against contractual shipment date (sauda_master.shipment_date).',
-      sourceTable: 'final_arrival.date vs sauda_master.shipment_date',
-      formula: 'On-Time % = (Arrival MT where arrival_date <= shipment_date + 7d grace) / Total Delivered MT * 100',
-      statusRules: 'Arrival on or before scheduled date + 7-day trade grace period is marked On-Time; later arrivals marked Delayed.'
+      causeOfDifference: 'Business rule: Evaluates Temporary Arrival Date ("Temporary Date *") against Sauda Check Point "Delivery To" date. If Temporary Arrival Date > Sauda Check Point Delivery "To" Date, it is Late; otherwise On-Time.',
+      sourceTable: 'temporary_material_received, final_arrival & sauda_check_point (delivery_to)',
+      formula: 'Late when Temporary Arrival Date > Sauda Check Point Delivery To Date; On-Time when Temporary Arrival Date <= Delivery To Date',
+      statusRules: 'Temporary Arrival Date compared directly with Sauda Check Point Delivery To Date.'
     },
     {
       metricName: 'Payment Completion %',

@@ -176,11 +176,11 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           </div>
         </div>
 
-        {/* On-Time Delivery % (Audited from Arrival Dates) */}
+        {/* On-Time Delivery % (Audited from Temporary Arrival Date vs Sauda Check Point Delivery To) */}
         <div 
           onClick={() => onCardClick?.('on_time')}
           className="bg-white border border-slate-200 rounded-lg p-3 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group"
-          title="Click to view on-time vs delayed lorry arrivals audit"
+          title="Click to view on-time vs delayed lorry arrivals (Temporary Date vs Sauda Check Point Delivery To)"
         >
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">On-Time Delivery</span>
@@ -194,7 +194,7 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           </div>
 
           <div className="text-[9px] text-slate-400 font-medium mt-1 flex items-center justify-between border-t border-slate-100 pt-1">
-            <span>Arrival vs Shipment Date</span>
+            <span>Temporary Date vs Delivery To</span>
             <span className="text-emerald-600 group-hover:underline flex items-center gap-0.5 font-bold">Trace &rarr;</span>
           </div>
         </div>

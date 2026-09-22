@@ -1935,7 +1935,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
               poData={poData}
               poDetails={poDetails}
               mrData={finalArrivalData}
-              tempMRData={[]}
+              tempMRData={amadData}
               paymentData={paymentData}
               scpData={scpData}
             />

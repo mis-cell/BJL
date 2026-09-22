@@ -1633,29 +1633,38 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       : (fa.final_arrival_no || `FA-${fa.final_arrival_id || Math.floor(1000 + Math.random() * 9000)}`);
 
     const poNo = fa.po_no || fa.mr_no || "";
+    const mrToCheck = (fa.mr_no || fa.final_arrival_no || displayMrNo || "").trim().toUpperCase();
+    const existingRec = records.find(r => 
+      (r.mr_no && (r.mr_no.toUpperCase() === mrToCheck || r.mr_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase())) ||
+      (r.arrival_no && (r.arrival_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase() || r.arrival_no.toUpperCase() === (fa.temporary_arrival_no || "").toUpperCase()))
+    );
 
-    setHeaderForm(prev => ({
-      ...prev,
-      mr_no: displayMrNo,
-      mr_date: fa.date || prev.mr_date || new Date().toISOString().split("T")[0],
-      arrival_no: fa.final_arrival_no || fa.arrival_no || prev.arrival_no,
-      arrival_date: fa.date || prev.arrival_date || new Date().toISOString().split("T")[0],
-      unloading_date: fa.unloading_date || fa.date || prev.unloading_date || new Date().toISOString().split("T")[0],
-      po_no: poNo || prev.po_no,
-      po_date: fa.po_date || fa.date || prev.po_date,
-      mill_po_no: fa.mr_no || fa.po_no || fa.mill_po_no || fa.arrival_no || displayMrNo || prev.mill_po_no || "",
-      mill_po_date: fa.date || fa.po_date || fa.arrival_date || prev.mill_po_date || new Date().toISOString().split("T")[0],
-      broker_name: fa.broker || prev.broker_name,
-      supplier_name: fa.supplier || fa.challan_supplier || prev.supplier_name,
-      lorry_number: fa.lorry_number || prev.lorry_number,
-      actual_moisture: 0,
-      actual_dust: 0,
-      actual_ncv: 0,
-      claim_moisture: 0,
-      claim_dust: 0,
-      claim_ncv: 0,
-      remarks: fa.remarks || prev.remarks
-    }));
+    let initialHeader = {
+      mr_no: existingRec?.mr_no || displayMrNo,
+      mr_date: existingRec?.mr_date || fa.date || fa.arrival_date || new Date().toISOString().split("T")[0],
+      arrival_no: existingRec?.arrival_no || fa.final_arrival_no || fa.arrival_no || displayMrNo,
+      arrival_date: existingRec?.arrival_date || fa.date || fa.arrival_date || new Date().toISOString().split("T")[0],
+      unloading_date: existingRec?.unloading_date || fa.unloading_date || fa.date || fa.arrival_date || new Date().toISOString().split("T")[0],
+      po_no: existingRec?.po_no || poNo,
+      po_date: existingRec?.po_date || fa.po_date || fa.date || "",
+      mill_po_no: existingRec?.mill_po_no || fa.mill_po_no || fa.po_no || fa.mr_no || fa.final_arrival_no || displayMrNo || "",
+      mill_po_date: existingRec?.mill_po_date || fa.mill_po_date || fa.po_date || fa.date || new Date().toISOString().split("T")[0],
+      broker_name: existingRec?.broker_name || fa.broker || fa.broker_name || "",
+      supplier_name: existingRec?.supplier_name || fa.supplier || fa.supplier_name || fa.challan_supplier || "",
+      lorry_number: existingRec?.lorry_number || fa.lorry_number || fa.lorry_no || "",
+      actual_moisture: existingRec?.actual_moisture !== undefined ? Number(existingRec.actual_moisture) : Number(fa.actual_moisture || 0),
+      actual_dust: existingRec?.actual_dust !== undefined ? Number(existingRec.actual_dust) : Number(fa.actual_dust || 0),
+      actual_ncv: existingRec?.actual_ncv !== undefined ? Number(existingRec.actual_ncv) : Number(fa.actual_ncv || 0),
+      claim_moisture: existingRec?.claim_moisture !== undefined ? Number(existingRec.claim_moisture) : Number(fa.claim_moisture || 0),
+      claim_dust: existingRec?.claim_dust !== undefined ? Number(existingRec.claim_dust) : Number(fa.claim_dust || 0),
+      claim_ncv: existingRec?.claim_ncv !== undefined ? Number(existingRec.claim_ncv) : Number(fa.claim_ncv || 0),
+      detention_days: existingRec?.detention_days !== undefined ? Number(existingRec.detention_days) : Number(fa.detention_days || 0),
+      mr_spcl_print: existingRec?.mr_spcl_print || fa.mr_spcl_print || "",
+      remarks: existingRec?.remarks || fa.remarks || fa.arrival_remarks || ""
+    };
+
+    setHeaderForm(initialHeader);
+    setViewMode("form");
 
     let rawGrid = fa.grid_details || fa.details || fa.items;
     const voucherArea = (fa.arrival_area_name || fa.arrival_area || fa.area_name || fa.area || "").toUpperCase();
@@ -1665,7 +1674,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
 
     // Resolve parent unit from Final Arrival or look up from DB/cache if missing
-    let resolvedUnitName = (fa.unit_name || fa.unit || fa.unit_code || "").toString().trim().toUpperCase();
+    let resolvedUnitName = (fa.unit_name || fa.unit || fa.unit_code || existingRec?.unit_name || "").toString().trim().toUpperCase();
 
     // Check if any row in rawGrid has a unit
     if ((!resolvedUnitName || resolvedUnitName === "BALES") && Array.isArray(rawGrid)) {
@@ -1682,15 +1691,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     let gradeMap: Record<string, string> = {};
     let agencyMap: Record<string, string> = {};
     let markaMap: Record<string, string> = {};
+    let poRateMap: Record<string, number> = {};
 
-    // Load master lookup tables if supabase is available
+    // Load master lookup tables and PO rate details
     if (supabase) {
       try {
-        const [gradesRes, agenciesRes, markasRes] = await Promise.all([
+        const [gradesRes, agenciesRes, markasRes, pdmRes, scpRes, pmRes, scpMasterRes] = await Promise.all([
           supabase.from('grade_master').select('*'),
           supabase.from('agency_master').select('*'),
-          supabase.from('marka_master').select('*')
+          supabase.from('marka_master').select('*'),
+          poNo ? supabase.from('purchase_detail_master').select('*').eq('po_no', poNo) : Promise.resolve({ data: null }),
+          poNo ? supabase.from('sauda_check_point_details').select('*').eq('po_no', poNo) : Promise.resolve({ data: null }),
+          poNo ? supabase.from('purchase_master').select('*').eq('po_no', poNo).maybeSingle() : Promise.resolve({ data: null }),
+          poNo ? supabase.from('sauda_check_point').select('*').eq('po_no', poNo).maybeSingle() : Promise.resolve({ data: null })
         ]);
+
         if (gradesRes.data) {
           gradesRes.data.forEach((g: any) => {
             if (g.grade_code && g.grade_name) gradeMap[String(g.grade_code).trim()] = g.grade_name;
@@ -1706,8 +1721,48 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             if (m.marka_code && m.marka_name) markaMap[String(m.marka_code).trim()] = m.marka_name;
           });
         }
+
+        // Map PO rates
+        const poItems = pdmRes.data || scpRes.data || [];
+        poItems.forEach((p: any) => {
+          const r = Number(p.rate_qntl || p.rate || p.b_rate || 0);
+          if (r > 0) {
+            if (p.grade_code) poRateMap[String(p.grade_code).trim().toUpperCase()] = r;
+            if (p.grade_name) poRateMap[String(p.grade_name).trim().toUpperCase()] = r;
+            if (p.item_name) poRateMap[String(p.item_name).trim().toUpperCase()] = r;
+          }
+        });
+
+        const poMaster = pmRes.data || scpMasterRes.data;
+        if (poMaster) {
+          setHeaderForm(prev => ({
+            ...prev,
+            po_date: prev.po_date || poMaster.po_date || poMaster.date || prev.po_date,
+            broker_name: prev.broker_name || poMaster.broker || prev.broker_name,
+            supplier_name: prev.supplier_name || poMaster.supplier || poMaster.challan_supplier || prev.supplier_name
+          }));
+        }
       } catch (mErr) {
-        console.warn("Could not load master lookup maps:", mErr);
+        console.warn("Could not load master lookup maps / PO rates:", mErr);
+      }
+    }
+
+    // Check if prior material inspection details exist in DB for this MR/Arrival
+    if (supabase && (mrToCheck || fa.final_arrival_no || fa.arrival_no)) {
+      try {
+        const searchKeys = [mrToCheck, fa.final_arrival_no, fa.arrival_no, fa.mr_no].filter(Boolean);
+        const orClause = searchKeys.map(k => `mr_no.eq.${k}`).join(',');
+        const { data: savedMid } = await supabase
+          .from('material_inspection_details')
+          .select('*')
+          .or(orClause)
+          .order('srl_no', { ascending: true });
+
+        if (savedMid && savedMid.length > 0) {
+          rawGrid = savedMid;
+        }
+      } catch (e) {
+        console.warn("Could not load saved material inspection details:", e);
       }
     }
 
@@ -1791,10 +1846,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
 
     if (Array.isArray(rawGrid) && rawGrid.length > 0) {
+      let totalMoistAct = 0;
+      let totalMoistClaim = 0;
+      let totalDustAct = 0;
+      let totalNcvAct = 0;
+      let rowCount = 0;
+
       const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => {
         const gradeCode = item.receipt_grade_code || item.grade_code || item.stock_grade_code || item.item_code || "";
         const gradeName = item.receipt_grade_name || item.challan_grade_name || item.arrival_grade || item.grade_name || item.stock_grade_name || item.variety || item.item_name || item.grade || (gradeCode && gradeMap[gradeCode]) || "";
-        const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase();
+        const areaName = (item.arrival_area_name || item.area || item.area_name || item.arrival_area || voucherArea || "").toUpperCase();
         const agencyCode = item.agency_code || "";
         const agencyName = item.agency_name || item.agency || (agencyCode && agencyMap[agencyCode]) || agencyCode || "";
         const markaCode = item.challan_marka_code || item.marka_code || "";
@@ -1815,8 +1876,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
         const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
 
-        const lMin = Number(item.lorry_read_min || 0);
-        const lMax = Number(item.lorry_read_max || 0);
+        const lMin = Number(item.lorry_read_min || item.lorry_moisture_min || 0);
+        const lMax = Number(item.lorry_read_max || item.lorry_moisture_max || 0);
         const lAvg = Number(item.lorry_read_avg || (lMin > 0 && lMax > 0 ? (lMin + lMax) / 2 : (lMin || lMax)) || 0);
 
         const iMin = Number(item.insp_read_min || 0);
@@ -1830,11 +1891,25 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lAvg || iAvg).toFixed(2));
         }
 
-        const moistAct = Number(item.moisture_act || combinedMoistAvg || 0);
-        const moistClaim = Number(item.moisture_claim || combinedMoistAvg || 0);
-        const gdAct = Number(item.grade_down_act || item.grade_down || 0);
-        const dustAct = Number(item.dust_act || 0);
-        const ncvAct = Number(item.ncv_act || 0);
+        const moistAct = Number(item.moisture_act || item.actual_moisture || combinedMoistAvg || 0);
+        const moistClaim = Number(item.moisture_claim || item.claim_moisture || combinedMoistAvg || 0);
+        const gdAct = Number(item.grade_down_act || item.grade_down || item.actual_grade_down || 0);
+        const gdClaim = Number(item.grade_down_claim || item.claim_grade_down || 0);
+        const dustAct = Number(item.dust_act || item.actual_dust || 0);
+        const dustClaim = Number(item.dust_claim || item.claim_dust || 0);
+        const ncvAct = Number(item.ncv_act || item.actual_ncv || 0);
+        const ncvClaim = Number(item.ncv_claim || item.claim_ncv || 0);
+
+        if (moistAct > 0) totalMoistAct += moistAct;
+        if (moistClaim > 0) totalMoistClaim += moistClaim;
+        if (dustAct > 0) totalDustAct += dustAct;
+        if (ncvAct > 0) totalNcvAct += ncvAct;
+        rowCount++;
+
+        // Look up PO rate for this item
+        const gKey = String(gradeName).trim().toUpperCase();
+        const gCodeKey = String(gradeCode).trim().toUpperCase();
+        const resolvedRate = Number(item.rate_qntl || item.rate || poRateMap[gKey] || poRateMap[gCodeKey] || item.po_rate || 0);
 
         return {
           srl_no: item.srl_no || (i + 1),
@@ -1849,8 +1924,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           lot: item.lot || item.lot_no || "",
           quantity: qtyVal,
           unit: unitVal,
-          rate: Number(item.rate_qntl || item.rate || item.po_rate || 0),
-          rate_qntl: Number(item.rate_qntl || item.rate || item.po_rate || 0),
+          rate: resolvedRate,
+          rate_qntl: resolvedRate,
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
           gross_weight_batch: Number(item.gross_weight_batch || item.batch_gross_weight || nettoVal || 0),
@@ -1869,11 +1944,11 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           moisture_act: moistAct,
           moisture_claim: moistClaim,
           grade_down_act: gdAct,
-          grade_down_claim: Number(item.grade_down_claim || 0),
+          grade_down_claim: gdClaim,
           dust_act: dustAct,
-          dust_claim: Number(item.dust_claim || 0),
+          dust_claim: dustClaim,
           ncv_act: ncvAct,
-          ncv_claim: Number(item.ncv_claim || 0),
+          ncv_claim: ncvClaim,
           settlement_moisture: Number(item.settlement_moisture !== undefined && item.settlement_moisture !== null && item.settlement_moisture !== "" ? item.settlement_moisture : moistAct),
           settlement_grade_down: Number(item.settlement_grade_down !== undefined && item.settlement_grade_down !== null && item.settlement_grade_down !== "" ? item.settlement_grade_down : gdAct),
           settlement_dust: Number(item.settlement_dust !== undefined && item.settlement_dust !== null && item.settlement_dust !== "" ? item.settlement_dust : dustAct),
@@ -1887,16 +1962,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         };
       });
       setDetailRows(details);
+
+      // If header moisture / dust were zero, update with item averages
+      if (rowCount > 0) {
+        setHeaderForm(prev => ({
+          ...prev,
+          actual_moisture: prev.actual_moisture || Number((totalMoistAct / rowCount).toFixed(2)),
+          claim_moisture: prev.claim_moisture || Number((totalMoistClaim / rowCount).toFixed(2)),
+          actual_dust: prev.actual_dust || Number((totalDustAct / rowCount).toFixed(2)),
+          actual_ncv: prev.actual_ncv || Number((totalNcvAct / rowCount).toFixed(2))
+        }));
+      }
     } else if (voucherArea) {
       setDetailRows(prev => prev.map(r => ({ ...r, area: r.area || voucherArea })));
     }
-
-    // Resolve existing deductions if already saved
-    const mrToCheck = (fa.mr_no || fa.final_arrival_no || displayMrNo || "").trim().toUpperCase();
-    const existingRec = records.find(r => 
-      (r.mr_no && (r.mr_no.toUpperCase() === mrToCheck || r.mr_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase())) ||
-      (r.arrival_no && (r.arrival_no.toUpperCase() === (fa.final_arrival_no || "").toUpperCase() || r.arrival_no.toUpperCase() === (fa.temporary_arrival_no || "").toUpperCase()))
-    );
 
     let loadedDeductions: DeductionRow[] = [];
     if (existingRec && existingRec.deductions && Array.isArray(existingRec.deductions) && existingRec.deductions.length > 0) {
