@@ -611,6 +611,11 @@ export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionD
     return true;
   }
   if (row.is_auto) {
+    const val = row[field];
+    // If the value in this field is empty, allow manual entry so user is never trapped
+    if (val === undefined || val === null || val === "" || (typeof val === "string" && val.trim() === "")) {
+      return false;
+    }
     const defaultAutoFields: (keyof InspectionDetailRow)[] = [
       "arrival_grade",
       "stock_grade_code",
@@ -1214,7 +1219,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
           const miCols = "mr_no, mr_date, date, arrival_no, arrival_date, po_no, po_date, supplier_name, broker_name, lorry_number, actual_moisture, claim_moisture, actual_dust, claim_dust, actual_ncv, claim_ncv, detention_days, unloading_date, mill_po_no, mill_po_date, remarks, deduction_type, deduction_rate, deduction_qty, deduction_amount, status, created_at, updated_at, deductions, deduction_rows, deduction_types, arrival_area, arrival_area_name, arrival_area_code, unit, unit_name, agency, area, marka, marks, rate, amount, quantity, gross_weight, net_weight, actual_grade_down, claim_grade_down, final_receipt_wt, arrival_grade, stock_grade_code, stock_grade_name";
 
-          const faCols = "final_arrival_no, arrival_no, mr_no, final_arrival_id, temporary_arrival_no, lorry_number, po_no, po_date, date, supplier, challan_supplier, broker, status, created_at, arrival_date, unit_name, unit_code, arrival_area_name, arrival_area_code, total_packets, weight_qtl, actual_gross_weight, actual_tare_weight, electronic_net_weight";
+          const faCols = "final_arrival_no, arrival_no, mr_no, final_arrival_id, temporary_arrival_no, lorry_number, po_no, po_date, date, supplier, challan_supplier, broker, status, created_at, arrival_date, unit_name, unit_code, arrival_area_name, arrival_area_code, total_packets, weight_qtl, actual_gross_weight, actual_tare_weight, electronic_net_weight, grid_details";
 
           const [miRes, mimRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
             withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false }))),
@@ -1673,43 +1678,101 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
     }
 
-    // Query purchase_detail_master / sauda_check_point_details / mill_inspection_detail if missing or empty
+    // Master dictionaries for code -> name lookup
+    let gradeMap: Record<string, string> = {};
+    let agencyMap: Record<string, string> = {};
+    let markaMap: Record<string, string> = {};
+
+    // Load master lookup tables if supabase is available
+    if (supabase) {
+      try {
+        const [gradesRes, agenciesRes, markasRes] = await Promise.all([
+          supabase.from('grade_master').select('*'),
+          supabase.from('agency_master').select('*'),
+          supabase.from('marka_master').select('*')
+        ]);
+        if (gradesRes.data) {
+          gradesRes.data.forEach((g: any) => {
+            if (g.grade_code && g.grade_name) gradeMap[String(g.grade_code).trim()] = g.grade_name;
+          });
+        }
+        if (agenciesRes.data) {
+          agenciesRes.data.forEach((a: any) => {
+            if (a.agency_code && a.agency_name) agencyMap[String(a.agency_code).trim()] = a.agency_name;
+          });
+        }
+        if (markasRes.data) {
+          markasRes.data.forEach((m: any) => {
+            if (m.marka_code && m.marka_name) markaMap[String(m.marka_code).trim()] = m.marka_name;
+          });
+        }
+      } catch (mErr) {
+        console.warn("Could not load master lookup maps:", mErr);
+      }
+    }
+
+    // If arrival grid details missing or empty, fetch fresh from DB
     if (!Array.isArray(rawGrid) || rawGrid.length === 0) {
-      const searchKeys = [fa.po_no, fa.mr_no, fa.final_arrival_no, fa.arrival_no].filter(Boolean);
+      const searchKeys = [fa.final_arrival_no, fa.arrival_no, fa.mr_no, fa.temporary_arrival_no, fa.po_no].filter(Boolean);
       if (searchKeys.length > 0 && supabase) {
         try {
           for (const key of searchKeys) {
             const cleanKey = String(key).trim();
             const upperKey = cleanKey.toUpperCase();
-            const [pdmRes, scpRes, matInspRes, faDb, pmDb, tmrDb] = await Promise.all([
+            const [faDb, tmrDb, matInspRes, pdmRes, scpRes, pmDb] = await Promise.all([
+              supabase.from('final_arrival').select('unit_name, unit_code, grid_details, arrival_area_name, arrival_area_code').or(`final_arrival_no.eq.${cleanKey},arrival_no.eq.${cleanKey},mr_no.eq.${cleanKey}`).limit(1),
+              supabase.from('temporary_material_received').select('unit_name, unit_code, grid_details').or(`mr_no.eq.${cleanKey},arrival_no.eq.${cleanKey}`).limit(1),
+              supabase.from('material_inspection_details').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`),
               supabase.from('purchase_detail_master').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
               supabase.from('sauda_check_point_details').select('*').or(`po_no.eq.${cleanKey},po_no.ilike.${upperKey}`),
-              supabase.from('material_inspection_details').select('*').or(`mr_no.eq.${cleanKey},mr_no.ilike.${upperKey},po_no.eq.${cleanKey}`),
-              supabase.from('final_arrival').select('unit_name, unit_code, grid_details').or(`final_arrival_no.eq.${cleanKey},arrival_no.eq.${cleanKey},mr_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1),
-              supabase.from('purchase_master').select('unit_name, unit_code').or(`po_no.eq.${cleanKey}`).limit(1),
-              supabase.from('temporary_material_received').select('unit_name, unit_code').or(`mr_no.eq.${cleanKey},arrival_no.eq.${cleanKey},po_no.eq.${cleanKey}`).limit(1)
+              supabase.from('purchase_master').select('unit_name, unit_code').or(`po_no.eq.${cleanKey}`).limit(1)
             ]);
 
             if ((!resolvedUnitName || resolvedUnitName === "BALES")) {
-              const foundUnit = faDb.data?.[0]?.unit_name || pmDb.data?.[0]?.unit_name || tmrDb.data?.[0]?.unit_name;
+              const foundUnit = faDb.data?.[0]?.unit_name || tmrDb.data?.[0]?.unit_name || pmDb.data?.[0]?.unit_name;
               if (foundUnit) {
                 resolvedUnitName = foundUnit.toString().trim().toUpperCase();
               }
             }
 
-            const found = (pdmRes.data && pdmRes.data.length > 0)
-              ? pdmRes.data
-              : ((scpRes.data && scpRes.data.length > 0)
-                  ? scpRes.data
-                  : (matInspRes.data || []));
+            // 1. Prioritize actual arrival grid_details from final_arrival
+            let arrivalGrid = faDb.data?.[0]?.grid_details;
+            if (typeof arrivalGrid === 'string') {
+              try { arrivalGrid = JSON.parse(arrivalGrid); } catch (e) {}
+            }
+            if (Array.isArray(arrivalGrid) && arrivalGrid.length > 0) {
+              rawGrid = arrivalGrid;
+              break;
+            }
 
-            if (found.length > 0) {
-              rawGrid = found;
+            // 2. Try temporary_material_received grid_details
+            let tmrGrid = tmrDb.data?.[0]?.grid_details;
+            if (typeof tmrGrid === 'string') {
+              try { tmrGrid = JSON.parse(tmrGrid); } catch (e) {}
+            }
+            if (Array.isArray(tmrGrid) && tmrGrid.length > 0) {
+              rawGrid = tmrGrid;
+              break;
+            }
+
+            // 3. Try prior material inspection details
+            if (matInspRes.data && Array.isArray(matInspRes.data) && matInspRes.data.length > 0) {
+              rawGrid = matInspRes.data;
+              break;
+            }
+
+            // 4. Fallback to purchase detail or sauda check point
+            if (pdmRes.data && Array.isArray(pdmRes.data) && pdmRes.data.length > 0) {
+              rawGrid = pdmRes.data;
+              break;
+            }
+            if (scpRes.data && Array.isArray(scpRes.data) && scpRes.data.length > 0) {
+              rawGrid = scpRes.data;
               break;
             }
           }
         } catch (e) {
-          console.warn("Could not load from purchase_detail_master:", e);
+          console.warn("Could not load arrival details from DB:", e);
         }
       }
 
@@ -1729,12 +1792,13 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
     if (Array.isArray(rawGrid) && rawGrid.length > 0) {
       const details: InspectionDetailRow[] = rawGrid.map((item: any, i: number) => {
-        const gradeName = item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.item_name || item.grade || "";
         const gradeCode = item.receipt_grade_code || item.grade_code || item.stock_grade_code || item.item_code || "";
+        const gradeName = item.receipt_grade_name || item.challan_grade_name || item.arrival_grade || item.grade_name || item.stock_grade_name || item.variety || item.item_name || item.grade || (gradeCode && gradeMap[gradeCode]) || "";
         const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || voucherArea || "").toUpperCase();
-        const agencyName = item.agency_name || item.agency || "";
         const agencyCode = item.agency_code || "";
-        const markaName = item.challan_marka_name || item.marka_name || item.marks_phota || item.marka || item.marks || "";
+        const agencyName = item.agency_name || item.agency || (agencyCode && agencyMap[agencyCode]) || agencyCode || "";
+        const markaCode = item.challan_marka_code || item.marka_code || "";
+        const markaName = item.challan_marka_name || item.marka_name || item.marks_phota || item.marka || item.marks || (markaCode && markaMap[markaCode]) || markaCode || "";
         const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
         
         let qtyVal = 0;
@@ -1782,10 +1846,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           agency_code: agencyCode,
           marks: markaName,
           crop_year: item.crop_year || "2026-27",
+          lot: item.lot || item.lot_no || "",
           quantity: qtyVal,
           unit: unitVal,
+          rate: Number(item.rate_qntl || item.rate || item.po_rate || 0),
+          rate_qntl: Number(item.rate_qntl || item.rate || item.po_rate || 0),
           challan_gross_wt: nettoVal,
           receipt_gross_wt: nettoVal,
+          gross_weight_batch: Number(item.gross_weight_batch || item.batch_gross_weight || nettoVal || 0),
+          add_weight: Number(item.add_weight || 0),
+          less_weight: Number(item.less_weight || 0),
           reduced_weight: nettoVal,
           final_receipt_wt: nettoVal,
           lorry_moisture_min: lMin,
@@ -3108,8 +3178,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           if (mrNoKey) {
             await supabase.from("final_arrival").update({
               status: "Completed",
-              grid_details: validDetails,
-              details: validDetails
+              grid_details: validDetails
             }).or(`mr_no.eq.${mrNoKey},final_arrival_no.eq.${mrNoKey}${arrNoKey ? `,final_arrival_no.eq.${arrNoKey}` : ""}`);
           }
         } catch (faErr) {}
