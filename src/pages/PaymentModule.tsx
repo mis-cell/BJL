@@ -2292,6 +2292,19 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         }
       }
 
+      const payableVal = Number(masterData.payable_amt) || 0;
+      const parsedPaid = (masterData.paid_amount !== undefined && masterData.paid_amount !== null && String(masterData.paid_amount).trim() !== '' && !isNaN(Number(masterData.paid_amount)))
+        ? Number(masterData.paid_amount)
+        : 0;
+
+      const calcStatus = (payableVal > 0 && parsedPaid >= payableVal - 0.01)
+        ? 'completed'
+        : (parsedPaid > 0 ? 'partially_paid' : 'pending');
+
+      const calcPaymentStatus = (payableVal > 0 && parsedPaid >= payableVal - 0.01)
+        ? 'Paid'
+        : (parsedPaid > 0 ? 'Partially Paid' : 'Pending');
+
       const initialPayload: Record<string, any> = {
         voucher_no: masterData.voucher_no,
         payment_date: masterData.payment_date || new Date().toISOString().split('T')[0],
@@ -2309,22 +2322,22 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         arrival_no: masterData.arrival_no || null,
         arrival_date: masterData.arrival_date || null,
         arival_apmc_fees: Number(masterData.arival_apmc_fees) || 0,
-        payable_amt: Number(masterData.payable_amt) || 0,
+        payable_amt: payableVal,
         payable_bill_no: masterData.payable_bill_no || null,
         payable_bill_date: masterData.payable_bill_date || null,
-        total_amount: Number(masterData.total_amount) || Number(masterData.payable_amt) || 0,
-        paid_amount: Number(masterData.paid_amount) || Number(masterData.payable_amt) || 0,
+        total_amount: (masterData.total_amount !== undefined && masterData.total_amount !== null && !isNaN(Number(masterData.total_amount))) ? Number(masterData.total_amount) : payableVal,
+        paid_amount: parsedPaid,
         payment_mode: masterData.payment_mode || 'Bank Transfer (NEFT/RTGS)',
         bank_name: masterData.bank_name || '',
         reference_no: masterData.reference_no || '',
         remarks: masterData.remarks || '',
-        status: 'completed',
-        payment_status: 'Paid',
+        status: calcStatus,
+        payment_status: calcPaymentStatus,
         advance_payment_done: masterData.advance_payment_done || 'No',
         advance_payment_from: masterData.advance_payment_from || '1',
-        payment_settlementdate: masterData.payment_settlementdate ||'',
-        tenor: masterData.tenor ||'',
-        repayment_date: masterData.repayment_date ||''
+        payment_settlementdate: masterData.payment_settlementdate || '',
+        tenor: masterData.tenor || '',
+        repayment_date: masterData.repayment_date || ''
       };
 
       let savedMaster: any = null;
@@ -2456,11 +2469,15 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       }
 
       // Update payment_status on final_arrival & purchase_master
+      const targetArrivalPaymentStatus = (payableVal > 0 && parsedPaid >= payableVal - 0.01)
+        ? 'Paid'
+        : (parsedPaid > 0 ? 'Partially Paid' : 'Pending');
+
       if (masterData.mr_no) {
-        await supabase.from('final_arrival').update({ payment_status: 'Paid' }).eq('mr_no', masterData.mr_no);
+        await supabase.from('final_arrival').update({ payment_status: targetArrivalPaymentStatus }).eq('mr_no', masterData.mr_no);
       }
       if (masterData.po_no) {
-        await supabase.from('purchase_master').update({ payment_status: 'Paid' }).eq('po_no', masterData.po_no);
+        await supabase.from('purchase_master').update({ payment_status: targetArrivalPaymentStatus }).eq('po_no', masterData.po_no);
       }
 
       setShowSuccessAnim(true);
@@ -3639,13 +3656,23 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 </span>
               </div>
 
-              {/* Paid Amount (93% Default) */}
+              {/* Paid Amount (93% Default / Custom / 0) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[10px] font-bold uppercase text-emerald-900">
                     Paid Amount (₹)
                   </label>
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMasterData({ ...masterData, paid_amount: 0 });
+                      }}
+                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300 transition-colors"
+                      title="Set Paid Amount to ₹0 (Full Pending)"
+                    >
+                      ₹0 (Pending)
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -3657,19 +3684,36 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     >
                       93% (Floor ₹1K)
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMasterData({ ...masterData, paid_amount: masterData.payable_amt || 0 });
+                      }}
+                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 transition-colors"
+                      title="Set 100% Full Payment"
+                    >
+                      100% Full
+                    </button>
                   </div>
                 </div>
                 <input
- id="masterdata_paid_amount_2261" name="masterdata_paid_amount" aria-label="masterdata paid amount"                  type="number"
+                  id="masterdata_paid_amount_2261"
+                  name="masterdata_paid_amount"
+                  aria-label="masterdata paid amount"
+                  type="number"
                   step="0.01"
-                  value={masterData.paid_amount}
-                  onChange={e => setMasterData({ ...masterData, paid_amount: parseFloat(e.target.value) || 0 })}
+                  value={masterData.paid_amount ?? 0}
+                  onChange={e => {
+                    const rawVal = e.target.value;
+                    const parsed = parseFloat(rawVal);
+                    setMasterData({ ...masterData, paid_amount: isNaN(parsed) ? 0 : parsed });
+                  }}
                   className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
                 />
                 <span className="text-[10px] text-emerald-700 font-bold">
                   {masterData.payable_amt > 0
-                    ? `${formatIndianCurrency(masterData.paid_amount)} (${((masterData.paid_amount / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
-                    : '93% Default Payment (Floor ₹1,000)'}
+                    ? `${formatIndianCurrency(masterData.paid_amount || 0)} (${masterData.payable_amt > 0 ? (((masterData.paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1) : '0.0'}% of bill)`
+                    : 'Enter Paid Advance Amount'}
                 </span>
               </div>
 
