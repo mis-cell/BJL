@@ -3395,10 +3395,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                 <label htmlFor="payable_net_amount_2222" className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
                   Payable Net Amount (₹)
                 </label>
-                <input
- id="payable_net_amount_2222" name="payable_net_amount" aria-label="Payable Net Amount (₹)"                  type="number"
+                <input id="payable_net_amount_2222" name="payable_net_amount" aria-label="Payable Net Amount (₹)"                  type="number"
                   step="0.01"
-                  value={masterData.payable_amt}
+                  value={masterData.payable_amt.toFixed(2)}
                   onChange={e => {
                     const val = parseFloat(e.target.value) || 0;
                     const defaultPaid = calculate93PctPaidAmount(val);
