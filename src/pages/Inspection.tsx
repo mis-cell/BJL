@@ -908,6 +908,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   const [records, setRecords] = useState<InspectionMasterRecord[]>([]);
   const [finalArrivalList, setFinalArrivalList] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const isFetchingRecordsRef = React.useRef<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
@@ -1194,6 +1195,8 @@ export default function Inspection({ onNavigate }: InspectionProps) {
   };
 
   async function fetchInspectionRecords(isManual: boolean = false) {
+    if (isFetchingRecordsRef.current) return;
+    isFetchingRecordsRef.current = true;
     setLoading(true);
     try {
       let inspectionList: InspectionMasterRecord[] = [];
@@ -1202,16 +1205,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
 
       if (supabase) {
         try {
-          const withTimeout = (promise: Promise<any>, ms: number = 3000) => {
+          const withTimeout = (promise: Promise<any>, ms: number = 12000) => {
             return Promise.race([
               promise,
               new Promise(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), ms))
             ]);
           };
 
-          const [miRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
-            withTimeout(Promise.resolve(supabase.from("material_inspection").select("*").order("created_at", { ascending: false }))),
-            withTimeout(Promise.resolve(supabase.from("final_arrival").select("*").order("created_at", { ascending: false }))),
+          const miCols = "mr_no, mr_date, date, arrival_no, arrival_date, po_no, po_date, supplier_name, broker_name, lorry_number, actual_moisture, claim_moisture, actual_dust, claim_dust, actual_ncv, claim_ncv, detention_days, unloading_date, mill_po_no, mill_po_date, remarks, deduction_type, deduction_rate, deduction_qty, deduction_amount, status, created_at, updated_at, deductions, deduction_rows, deduction_types, arrival_area, arrival_area_name, arrival_area_code, unit, unit_name, agency, area, marka, marks, rate, amount, quantity, gross_weight, net_weight, actual_grade_down, claim_grade_down, final_receipt_wt, arrival_grade, stock_grade_code, stock_grade_name";
+
+          const faCols = "final_arrival_no, arrival_no, mr_no, final_arrival_id, temporary_arrival_no, lorry_number, po_no, po_date, date, supplier, challan_supplier, broker, status, created_at, arrival_date, unit_name, unit_code, arrival_area_name, arrival_area_code, total_packets, weight_qtl, actual_gross_weight, actual_tare_weight, electronic_net_weight";
+
+          const [miRes, mimRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
+            withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false }))),
+            withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("final_arrival").select(faCols).order("created_at", { ascending: false }))),
             withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })),
@@ -1219,7 +1227,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           ]);
 
           if (miRes.data && Array.isArray(miRes.data)) {
-            inspectionList = miRes.data;
+            inspectionList = [...miRes.data];
+          }
+          if (mimRes?.data && Array.isArray(mimRes.data)) {
+            const existingKeys = new Set(inspectionList.map(r => (r.mr_no || r.arrival_no || "").trim().toUpperCase()).filter(Boolean));
+            mimRes.data.forEach((r: any) => {
+              const k = (r.mr_no || r.arrival_no || "").trim().toUpperCase();
+              if (k && !existingKeys.has(k)) {
+                inspectionList.push(r);
+                existingKeys.add(k);
+              }
+            });
           }
           if (faRes.data && Array.isArray(faRes.data)) {
             faList = faRes.data;
@@ -1412,6 +1430,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       }
     } finally {
       setLoading(false);
+      isFetchingRecordsRef.current = false;
     }
   };
 
@@ -2145,6 +2164,22 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     }
 
     if (loadedDetails.length === 0) {
+      if (!rec.grid_details && supabase && (rec.mr_no || rec.arrival_no)) {
+        try {
+          const key = rec.mr_no || rec.arrival_no;
+          const { data: fullMi } = await supabase
+            .from("material_inspection")
+            .select("grid_details, details, quality_matrix")
+            .or(`mr_no.eq.${key},arrival_no.eq.${key}`)
+            .maybeSingle();
+          if (fullMi) {
+            rec.grid_details = fullMi.grid_details || fullMi.details;
+            (rec as any).details = fullMi.details;
+            (rec as any).quality_matrix = fullMi.quality_matrix;
+          }
+        } catch (e) {}
+      }
+
       // Build detail rows from grid_details if available (from Final Arrival)
       let rawGrid = rec.grid_details;
       if (typeof rawGrid === 'string') {
@@ -3201,6 +3236,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     const query = searchQuery.toLowerCase();
     const matchesQuery =
       (r.mr_no || "").toLowerCase().includes(query) ||
+      (r.arrival_no || "").toLowerCase().includes(query) ||
       (r.po_no || "").toLowerCase().includes(query) ||
       (r.supplier_name || "").toLowerCase().includes(query) ||
       (r.broker_name || "").toLowerCase().includes(query) ||
@@ -3480,7 +3516,10 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                           title="Click to view and edit inspection & deduction details"
                         >
                           <td className="py-3 px-4 font-black text-emerald-950 font-mono flex items-center gap-1.5">
-                            <span>{rec.mr_no}</span>
+                            <span>{rec.arrival_no || rec.mr_no}</span>
+                            {rec.arrival_no && rec.mr_no && rec.arrival_no !== rec.mr_no && (
+                              <span className="text-[10px] text-slate-400 font-normal">({rec.mr_no})</span>
+                            )}
                             {rec.deductions && Array.isArray(rec.deductions) && rec.deductions.filter((d: any) => d.deduction_type || Number(d.deduction_amount) > 0).length > 0 && (
                               <span className="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 font-bold px-1.5 py-0.2 rounded" title="Contains deduction details">
                                 Ded: {rec.deductions.filter((d: any) => d.deduction_type || Number(d.deduction_amount) > 0).length}
