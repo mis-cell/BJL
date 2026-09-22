@@ -1164,7 +1164,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         commodity: 'RAW JUTE',
         variety: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TOSSA',
         grading: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TD6',
-        grade: primaryRow?.receipt_grade_name || primaryRow?.challan_grade_name || 'TD6',
         marka: primaryRow?.challan_marka_name || 'DIRECT',
         status: 'Active'
       };
@@ -1191,18 +1190,27 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         });
       }
 
-      // Prepare standard database payload
+      // Prepare standard database payload (strip non-table properties)
       const dbPayload = { ...payload };
+      delete (dbPayload as any).amad_no;
+      delete (dbPayload as any).grade;
 
       const tryDbOperation = async (operation: () => Promise<any>) => {
         try {
           return await operation();
         } catch (e: any) {
-          if (e.message?.includes('amad_no')) {
+          const errMsg = e?.message || String(e || '');
+          const match = errMsg.match(/Could not find the '([^']+)' column/i);
+          if (match && match[1] && (dbPayload as any)[match[1]] !== undefined) {
+            console.warn(`Stripping unknown column '${match[1]}' from payload and retrying`);
+            delete (dbPayload as any)[match[1]];
+            return await operation();
+          }
+          if (errMsg.includes('amad_no')) {
             delete (dbPayload as any).amad_no;
             return await operation();
           }
-          if (e.message?.includes('temporary_arrival_no')) {
+          if (errMsg.includes('temporary_arrival_no')) {
             delete (dbPayload as any).temporary_arrival_no;
             return await operation();
           }
