@@ -161,7 +161,11 @@ const EXCEL_SEED_DATA: AreaDifferential[] = [
   },
   {
     area: "PURNEA(BIHAR)",
-    diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
+    diffs: { TD5: 500, TD6: -600, TD7: -1000, TD8: -1500 }
+  },
+  {
+    area: "BIHAR",
+    diffs: { TD5: 500, TD6: -600, TD7: -1000, TD8: -1500 }
   },
   {
     area: "PURNEA (LOOSE)",

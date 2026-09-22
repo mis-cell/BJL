@@ -693,24 +693,39 @@ export function compileReportData(
   scpList: any[] = [],
   inspectionList: any[] = []
 ): CompiledReportData {
-  // 1. Separate Sauda records vs PTF records strictly
-  const rawSaudaList = (saudaList || []).filter(s => !isPtfRecord(s));
-  const rawSaudaPtfList = (saudaList || []).filter(s => isPtfRecord(s));
-  const rawScpPtfList = (scpList || []).filter(r => isPtfRecord(r));
-  const rawScpCheckpointList = (scpList || []).filter(r => !isPtfRecord(r));
+  // 1. SOURCING REQUIREMENT: Contract Data Must Be Coming From Sauda Check point + Final P.O
+  // Merge purchase_master (Final P.O) + sauda_check_point (Sauda Check Point)
+  // Deduplicate by unique contract/PO number (Final P.O takes precedence if finalized)
+  const contractsMap = new Map<string, any>();
 
-  // Combined PTF list (deduplicated by ptf_no or po_no)
-  const seenPtfKeys = new Set<string>();
-  const rawCombinedPtfList: any[] = [];
-  [...rawScpPtfList, ...rawSaudaPtfList].forEach(p => {
-    const key = String(p.ptf_no || p.po_no || p.id || '').trim().toUpperCase();
-    if (key && !seenPtfKeys.has(key)) {
-      seenPtfKeys.add(key);
-      rawCombinedPtfList.push(p);
-    } else if (!key) {
-      rawCombinedPtfList.push(p);
+  (poList || []).forEach(po => {
+    const key = String(po.po_no || po.ptf_no || po.contract_po_no || po.po_id || '').trim().toUpperCase();
+    if (key) {
+      contractsMap.set(key, { ...po, _sourceSection: 'Final P.O' });
     }
   });
+
+  (scpList || []).forEach(scp => {
+    const key = String(scp.po_no || scp.ptf_no || scp.contract_po_no || scp.po_id || '').trim().toUpperCase();
+    if (key && !contractsMap.has(key)) {
+      contractsMap.set(key, { ...scp, _sourceSection: 'Sauda Check Point' });
+    }
+  });
+
+  // If saudaList has any legacy contract not present in SCP or Final PO (fallback protection)
+  (saudaList || []).forEach(s => {
+    const key = String(s.po_no || s.sauda_no || s.contract_po_no || s.id || '').trim().toUpperCase();
+    if (key && !contractsMap.has(key)) {
+      contractsMap.set(key, { ...s, _sourceSection: 'Sauda Check Point' });
+    }
+  });
+
+  const allProcurementContracts = Array.from(contractsMap.values());
+
+  // Separate contracts into Sauda vs PTF
+  const rawSaudaList = allProcurementContracts.filter(c => !isPtfRecord(c));
+  const rawCombinedPtfList = allProcurementContracts.filter(c => isPtfRecord(c));
+  const rawScpCheckpointList = (scpList || []).filter(r => !isPtfRecord(r));
 
   // Filter datasets based on standard user criteria
   const applyFilters = (list: any[]) => {
@@ -734,9 +749,14 @@ export function compileReportData(
         const area = String(item.area || item.agency || '').toUpperCase();
         if (!area.includes(aTerm)) return false;
       }
+      if (filters.grade && filters.grade !== 'ALL') {
+        const gTerm = filters.grade.toUpperCase().trim();
+        const grade = String(item.marks || item.marka_type || (item.quality_details && item.quality_details[0]?.quality) || item.purchase_unit_name || '').toUpperCase();
+        if (!grade.includes(gTerm)) return false;
+      }
       if (filters.searchTerm) {
         const q = filters.searchTerm.toUpperCase().trim();
-        const searchBlob = `${item.sauda_no || ''} ${item.po_no || ''} ${item.ptf_no || ''} ${item.supplier || ''} ${item.broker || ''} ${item.area || ''}`.toUpperCase();
+        const searchBlob = `${item.sauda_no || ''} ${item.po_no || ''} ${item.ptf_no || ''} ${item.contract_po_no || ''} ${item.supplier || ''} ${item.broker || ''} ${item.area || ''}`.toUpperCase();
         if (!searchBlob.includes(q)) return false;
       }
       return true;
@@ -745,14 +765,14 @@ export function compileReportData(
 
   const filteredSaudas = applyFilters(rawSaudaList);
   const filteredPtfs = applyFilters(rawCombinedPtfList);
-  const filteredPOs = applyFilters(poList || []);
+  const filteredPOs = applyFilters(allProcurementContracts);
   const filteredScpMilestones = applyFilters(rawScpCheckpointList);
 
   // Active contracts based on contractType filter
   const contractTypeFilter = filters.contractType || 'ALL';
 
-  // Pre-index Material Receipts (Final & Temp) with Normalized Numbers
-  // Note: electronic_net_weight and weight_reduced in final_arrival are stored in Metric Tons (e.g. 9.925 MT)
+  // 2. DELIVERED REQUIREMENT: For Delivered Only Use Final Arrival Section data
+  // Pre-index Material Receipts ONLY from Final Arrival Section (final_arrival table)
   interface MRBucket {
     finalMT: number;
     tempMT: number;
@@ -764,20 +784,16 @@ export function compileReportData(
   const mrByPO: Record<string, MRBucket> = {};
   const allMatchedArrivals: any[] = [];
 
-  const addToMrBucket = (key: string, wtMT: number, isFinal: boolean, mrObj: any) => {
+  const addToMrBucket = (key: string, wtMT: number, mrObj: any) => {
     if (!key) return;
     const cleanKey = key.trim().toUpperCase();
     if (!mrByPO[cleanKey]) {
       mrByPO[cleanKey] = { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '', arrivals: [] };
     }
-    if (isFinal) {
-      mrByPO[cleanKey].finalMT += wtMT;
-      if (mrObj.amad_no) mrByPO[cleanKey].finalMRs.push(mrObj.amad_no);
-    } else {
-      mrByPO[cleanKey].tempMT += wtMT;
-      if (mrObj.temporary_arrival_no) mrByPO[cleanKey].tempMRs.push(mrObj.temporary_arrival_no);
-    }
-    const d = mrObj.date || mrObj.final_arrival_date || mrObj.temporary_arrival_date || '';
+    mrByPO[cleanKey].finalMT += wtMT;
+    const mrNum = mrObj.mr_no || mrObj.final_arrival_no || mrObj.amad_no;
+    if (mrNum) mrByPO[cleanKey].finalMRs.push(mrNum);
+    const d = mrObj.date || mrObj.final_arrival_date || '';
     if (d && (!mrByPO[cleanKey].lastDate || d > mrByPO[cleanKey].lastDate)) {
       mrByPO[cleanKey].lastDate = d;
     }
@@ -795,7 +811,7 @@ export function compileReportData(
       const grossOrSupp = Number(mr.supplier_net_weight) || Number(mr.actual_gross_weight) || 0;
       wt = grossOrSupp > 1000 ? grossOrSupp / 1000 : (grossOrSupp > 100 ? grossOrSupp * 0.1 : grossOrSupp);
     }
-    // Cap: Ensure realistic single lorry weight in MT (7 - 25 MT)
+    // Cap: Ensure realistic single lorry weight in MT
     const finalWt = wt > 100 ? wt / 1000 : wt;
 
     allMatchedArrivals.push({ ...mr, calculatedMT: finalWt });
@@ -803,27 +819,15 @@ export function compileReportData(
     // Index under all recognizable contract keys
     const rawPo = String(mr.po_no || '').trim().toUpperCase();
     const rawId = String(mr.po_id || '').trim().toUpperCase();
-    const rawAmad = String(mr.amad_no || '').trim().toUpperCase();
+    const rawAmad = String(mr.amad_no || mr.mr_no || mr.final_arrival_no || '').trim().toUpperCase();
     const cleanDigits = getCleanDigits(rawPo);
     const contractNum = extractContractNumber(rawPo);
 
-    if (rawPo) addToMrBucket(rawPo, finalWt, true, mr);
-    if (rawId) addToMrBucket(rawId, finalWt, true, mr);
-    if (rawAmad) addToMrBucket(rawAmad, finalWt, true, mr);
-    if (cleanDigits) addToMrBucket(cleanDigits, finalWt, true, mr);
-    if (contractNum) addToMrBucket(contractNum, finalWt, true, mr);
-  });
-
-  (tempMRList || []).forEach(tmr => {
-    let wt = Number(tmr.supplier_net_weight) || Number(tmr.actual_gross_weight) || 0;
-    const tempWt = wt > 100 ? wt / 1000 : wt;
-    const rawPo = String(tmr.po_no || '').trim().toUpperCase();
-    const cleanDigits = getCleanDigits(rawPo);
-    const contractNum = extractContractNumber(rawPo);
-
-    if (rawPo) addToMrBucket(rawPo, tempWt, false, tmr);
-    if (cleanDigits) addToMrBucket(cleanDigits, tempWt, false, tmr);
-    if (contractNum) addToMrBucket(contractNum, tempWt, false, tmr);
+    if (rawPo) addToMrBucket(rawPo, finalWt, mr);
+    if (rawId) addToMrBucket(rawId, finalWt, mr);
+    if (rawAmad) addToMrBucket(rawAmad, finalWt, mr);
+    if (cleanDigits) addToMrBucket(cleanDigits, finalWt, mr);
+    if (contractNum) addToMrBucket(contractNum, finalWt, mr);
   });
 
   // Pre-index Material Payments by PO Number, Sauda Number & Broker Name
@@ -895,13 +899,13 @@ export function compileReportData(
 
   const today = new Date();
 
-  // Process Saudas
+  // Process Sauda Contracts (Sourced from Sauda Check Point + Final P.O)
   filteredSaudas.forEach((s) => {
-    const sNo = s.sauda_no || 'N/A';
-    const sId = (s.sauda_id || sNo).toUpperCase();
+    const sNo = s.po_no || s.sauda_no || s.contract_po_no || 'N/A';
+    const sId = (s.po_no || s.sauda_no || s.contract_po_no || s.sauda_id || sNo).toUpperCase();
     const isCancelled = s.status === 'cancelled';
-    const contractedWt = Number(s.total_wt_in_ton) || 0;
-    const rate = Number(s.b_rate) || 0;
+    const contractedWt = Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0;
+    const rate = Number(s.b_rate) || Number(s.rate) || 0;
 
     totalSaudaContracts++;
 
@@ -920,11 +924,9 @@ export function compileReportData(
     }
 
     // ---------------- CONTRACT DISPATCH & ARRIVAL RECONCILIATION ----------------
-    const isCompletedInSaudaDesk = isSaudaInCheckPointOrPo(s, scpList, filteredPOs);
-
     const sNoClean = getCleanDigits(sNo);
     const sSessionClean = extractContractNumber(s.session);
-    const sPoClean = extractContractNumber(s.po_no);
+    const sPoClean = extractContractNumber(s.po_no || sNo);
 
     const matchingReceipt = mrByPO[sId] || 
       mrByPO[sNo.toUpperCase()] || 
@@ -933,18 +935,14 @@ export function compileReportData(
       (sPoClean ? mrByPO[sPoClean] : undefined) || 
       { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '', arrivals: [] };
 
-    const physicalDeliveredMT = matchingReceipt.finalMT > 0 ? matchingReceipt.finalMT : matchingReceipt.tempMT;
-
-    // Physical Delivered MT is the verifiable weighbridge arrival tonnage
-    // When completed in Sauda Desk without weighbridge slips, delivery is pending at mill gate
+    // DELIVERED ONLY FROM FINAL ARRIVAL SECTION DATA
+    const physicalDeliveredMT = matchingReceipt.finalMT || 0;
     let deliveredWt = physicalDeliveredMT;
     let saudaDeskStatus: 'COMPLETED' | 'PENDING' | 'PARTIAL' = 'PENDING';
 
     if (deliveredWt >= (contractedWt - 0.01) && contractedWt > 0) {
       saudaDeskStatus = 'COMPLETED';
     } else if (deliveredWt > 0) {
-      saudaDeskStatus = 'PARTIAL';
-    } else if (isCompletedInSaudaDesk) {
       saudaDeskStatus = 'PARTIAL';
     } else {
       saudaDeskStatus = 'PENDING';
@@ -1595,12 +1593,17 @@ export function compileReportData(
     };
   }).sort((a, b) => b.contractedWeightMT - a.contractedWeightMT);
 
-  // Compile P.O. Summary Percentage Engine Rows
+  // Compile P.O. Summary Percentage Engine Rows (Sauda Check Point + Final P.O against Final Arrival)
   const poEngineRows: CompiledReportData['poSummaryEngine']['rows'] = filteredPOs.map(po => {
-    const pNo = po.po_no || 'N/A';
-    const cWt = Number(po.total_contract_mt) || 0;
-    const mrInfo = mrByPO[pNo.toUpperCase()] || { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '' };
-    const rWt = mrInfo.finalMT > 0 ? mrInfo.finalMT : mrInfo.tempMT;
+    const pNo = po.po_no || po.ptf_no || po.contract_po_no || 'N/A';
+    const cWt = Number(po.total_contract_mt) || Number(po.total_wt_in_ton) || 0;
+    const cleanDigits = getCleanDigits(pNo);
+    const contractNum = extractContractNumber(pNo);
+    const mrInfo = mrByPO[pNo.toUpperCase()] || 
+      (cleanDigits ? mrByPO[cleanDigits] : undefined) || 
+      (contractNum ? mrByPO[contractNum] : undefined) || 
+      { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '', arrivals: [] };
+    const rWt = mrInfo.finalMT || 0;
     const pWt = Math.max(0, cWt - rWt);
     const rPct = calcHelpers.calcDeliveredPct(rWt, cWt);
     const pPct = calcHelpers.calcPendingPct(pWt, cWt);
@@ -1612,18 +1615,18 @@ export function compileReportData(
 
     return {
       poNo: pNo,
-      poDate: po.po_date || '',
-      supplier: po.supplier || 'DIRECT',
-      broker: po.broker || 'DIRECT',
-      area: po.area || 'DIRECT SOURCING',
-      grade: 'TD-5',
+      poDate: po.po_date || po.contract_date || po.date || '',
+      supplier: po.supplier || po.supplier_name || 'DIRECT',
+      broker: po.broker || po.broker_name || 'DIRECT',
+      area: po.area || po.agency || 'DIRECT SOURCING',
+      grade: po.marks || po.marka_type || (po.quality_details && po.quality_details[0]?.quality) || 'TD-5',
       contractedMT: calcHelpers.safeRound(cWt, 3),
       receivedMT: calcHelpers.safeRound(rWt, 3),
       pendingMT: calcHelpers.safeRound(pWt, 3),
       receivedPct: rPct,
       pendingPct: pPct,
       lifecycleStatus,
-      tempMRNumber: mrInfo.tempMRs[0] || '--',
+      tempMRNumber: '--',
       finalMRNumber: mrInfo.finalMRs[0] || '--',
       settlementStatus: rPct >= 95 ? 'Settled' : 'Pending',
       paymentStatus: rPct >= 95 ? 'Approved' : 'Pending'
@@ -1660,8 +1663,8 @@ export function compileReportData(
   let ptfPendingMT = 0;
 
   filteredPtfs.forEach(p => {
-    const cWt = Number(p.total_contract_mt) || 0;
-    const pNo = (p.po_no || p.ptf_no || '').trim().toUpperCase();
+    const cWt = Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0;
+    const pNo = (p.po_no || p.ptf_no || p.contract_po_no || '').trim().toUpperCase();
     const cleanDigits = getCleanDigits(pNo);
     const contractNum = extractContractNumber(pNo);
 
@@ -1669,7 +1672,7 @@ export function compileReportData(
       (cleanDigits ? mrByPO[cleanDigits] : undefined) || 
       (contractNum ? mrByPO[contractNum] : undefined) || 
       { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '', arrivals: [] };
-    const rWt = mrInfo.finalMT > 0 ? mrInfo.finalMT : mrInfo.tempMT;
+    const rWt = mrInfo.finalMT || 0;
     const pWt = Math.max(0, cWt - rWt);
 
     ptfContractedMT += cWt;
@@ -1747,9 +1750,9 @@ export function compileReportData(
   const traceableRecords: CompiledReportData['traceableRecords'] = {
     total_contracts: {
       title: 'Total Contracts Portfolio',
-      description: 'Complete ledger of all contracted procurement orders across Sauda Contracts and Factory PTF Contracts.',
-      formula: 'Count of Distinct Contracts = (Sauda Contracts in sauda_master) + (PTF Contracts in sauda_check_point)',
-      sourceTable: 'sauda_master & sauda_check_point',
+      description: 'Complete ledger of all contracted procurement orders across Sauda Contracts and Factory PTF Contracts sourced from Sauda Check Point + Final P.O.',
+      formula: 'Count of Distinct Contracts = Sauda Check Point (sauda_check_point) + Final P.O (purchase_master)',
+      sourceTable: 'sauda_check_point & purchase_master',
       refreshBehavior: 'Real-time live query from Supabase',
       filterNotes: 'Global filters (Financial Year, Supplier, Broker, Area, Search) apply directly across all contracts.',
       totalCount: filteredSaudas.length + filteredPtfs.length,
@@ -1757,77 +1760,77 @@ export function compileReportData(
       aggregateUnit: 'Contracts',
       records: [
         ...filteredSaudas.map(s => ({
-          id: s.id || s.sauda_no || '',
-          recordNo: s.sauda_no || 'N/A',
-          type: 'Sauda Contract',
-          date: s.date || '',
-          deliveryDate: s.shipment_date || '',
-          party: s.supplier || 'DIRECT',
-          broker: s.broker || 'DIRECT',
-          area: s.area || 'DIRECT SOURCING',
-          grade: s.marks || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5',
-          quantity: Number(s.total_wt_in_ton) || 0,
+          id: s.id || s.po_no || s.sauda_no || '',
+          recordNo: s.po_no || s.sauda_no || 'N/A',
+          type: 'Sauda Contract (' + (s._sourceSection || 'Sauda Check Point') + ')',
+          date: s.po_date || s.contract_date || s.date || '',
+          deliveryDate: s.delivery_to || s.shipment_date || '',
+          party: s.supplier || s.supplier_name || 'DIRECT',
+          broker: s.broker || s.broker_name || 'DIRECT',
+          area: s.area || s.agency || 'DIRECT SOURCING',
+          grade: s.marks || s.marka_type || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5',
+          quantity: Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0,
           unit: 'MT',
-          rate: Number(s.b_rate) || 0,
-          amount: (Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || 0),
+          rate: Number(s.b_rate) || Number(s.rate) || 0,
+          amount: (Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || Number(s.rate) || 0),
           status: s.status || 'Active',
-          sourceTable: 'sauda_master',
-          link: `/sauda-entry?id=${s.id || s.sauda_no}`
+          sourceTable: s._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point',
+          link: s._sourceSection === 'Final P.O' ? `/purchase-order?id=${s.id || s.po_no}` : `/sauda-check-point?id=${s.id || s.po_no}`
         })),
         ...filteredPtfs.map(p => ({
           id: p.id || p.po_no || p.ptf_no || '',
           recordNo: p.po_no || p.ptf_no || 'N/A',
-          type: 'PTF Contract',
-          date: p.date || p.ptf_date || '',
-          deliveryDate: p.delivery_date || '',
+          type: 'PTF Contract (' + (p._sourceSection || 'Sauda Check Point') + ')',
+          date: p.po_date || p.ptf_date || p.date || '',
+          deliveryDate: p.delivery_date || p.delivery_to || '',
           party: p.supplier || 'FACTORY SOURCING',
           broker: p.broker || 'DIRECT',
           area: p.area || 'FACTORY',
-          grade: 'TD-5',
-          quantity: Number(p.total_contract_mt) || 0,
+          grade: p.marka_type || 'TD-5',
+          quantity: Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0,
           unit: 'MT',
-          rate: Number(p.rate) || 0,
-          amount: (Number(p.total_contract_mt) || 0) * 10 * (Number(p.rate) || 0),
+          rate: Number(p.b_rate) || Number(p.rate) || 0,
+          amount: (Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0) * 10 * (Number(p.b_rate) || Number(p.rate) || 0),
           status: p.status || 'Active PTF',
-          sourceTable: 'sauda_check_point',
-          link: `/sauda-check-point?id=${p.id}`
+          sourceTable: p._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point',
+          link: `/sauda-check-point?id=${p.id || p.po_no}`
         }))
       ]
     },
     sauda_contracts: {
       title: 'Total Sauda Contracts',
-      description: 'Formal purchase agreements executed via broker / supplier trade terms in Sauda Master.',
-      formula: 'Count(sauda_master WHERE po_type != "PTF" AND sauda_no NOT LIKE "%PTF%")',
-      sourceTable: 'sauda_master',
+      description: 'Formal purchase agreements executed via Sauda Check Point + Final P.O.',
+      formula: 'Count(sauda_check_point + purchase_master WHERE !is_ptf)',
+      sourceTable: 'sauda_check_point & purchase_master',
       refreshBehavior: 'Real-time live query via Supabase',
       filterNotes: 'Global filters apply to party, broker, agency, and financial year.',
       totalCount: filteredSaudas.length,
       aggregateQuantity: `${filteredSaudas.length}`,
       aggregateUnit: 'Contracts',
       records: filteredSaudas.map(s => ({
-        id: s.id || s.sauda_no || '',
-        recordNo: s.sauda_no || 'N/A',
-        type: 'Sauda Contract',
-        date: s.date || '',
-        deliveryDate: s.shipment_date || '',
-        party: s.supplier || 'DIRECT',
-        broker: s.broker || 'DIRECT',
-        area: s.area || 'DIRECT SOURCING',
-        grade: s.marks || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5',
-        quantity: Number(s.total_wt_in_ton) || 0,
+        id: s.id || s.po_no || s.sauda_no || '',
+        recordNo: s.po_no || s.sauda_no || 'N/A',
+        type: 'Sauda Contract (' + (s._sourceSection || 'Sauda Check Point') + ')',
+        date: s.po_date || s.contract_date || s.date || '',
+        deliveryDate: s.delivery_to || s.shipment_date || '',
+        party: s.supplier || s.supplier_name || 'DIRECT',
+        broker: s.broker || s.broker_name || 'DIRECT',
+        area: s.area || s.agency || 'DIRECT SOURCING',
+        grade: s.marks || s.marka_type || (s.quality_details && s.quality_details[0]?.quality) || 'TD-5',
+        quantity: Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0,
         unit: 'MT',
-        rate: Number(s.b_rate) || 0,
-        amount: (Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || 0),
+        rate: Number(s.b_rate) || Number(s.rate) || 0,
+        amount: (Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || Number(s.rate) || 0),
         status: s.status || 'Active',
-        sourceTable: 'sauda_master',
-        link: `/sauda-entry?id=${s.id || s.sauda_no}`
+        sourceTable: s._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point',
+        link: s._sourceSection === 'Final P.O' ? `/purchase-order?id=${s.id || s.po_no}` : `/sauda-check-point?id=${s.id || s.po_no}`
       }))
     },
     ptf_contracts: {
       title: 'Total PTF (Purchase To Factory) Contracts',
-      description: 'Direct factory delivery purchase orders with rapid gate dispatch.',
-      formula: 'Count(sauda_check_point WHERE is_ptf = true OR ptf_no LIKE "%(PTF)%" OR po_type = "PTF")',
-      sourceTable: 'sauda_check_point (PTF Records)',
+      description: 'Direct factory delivery purchase orders sourced from Sauda Check Point + Final P.O.',
+      formula: 'Count(sauda_check_point + purchase_master WHERE is_ptf = true OR ptf_no LIKE "%(PTF)%" OR po_type = "PTF")',
+      sourceTable: 'sauda_check_point & purchase_master',
       refreshBehavior: 'Real-time live query via Supabase',
       filterNotes: 'Filtered by supplier, broker, area, and financial year.',
       totalCount: filteredPtfs.length,
@@ -1836,55 +1839,74 @@ export function compileReportData(
       records: filteredPtfs.map(p => ({
         id: p.id || p.po_no || p.ptf_no || '',
         recordNo: p.po_no || p.ptf_no || 'N/A',
-        type: 'PTF Contract',
-        date: p.date || p.ptf_date || '',
-        deliveryDate: p.delivery_date || '',
+        type: 'PTF Contract (' + (p._sourceSection || 'Sauda Check Point') + ')',
+        date: p.po_date || p.ptf_date || p.date || '',
+        deliveryDate: p.delivery_date || p.delivery_to || '',
         party: p.supplier || 'FACTORY SOURCING',
         broker: p.broker || 'DIRECT',
         area: p.area || 'FACTORY',
-        grade: 'TD-5',
-        quantity: Number(p.total_contract_mt) || 0,
+        grade: p.marka_type || 'TD-5',
+        quantity: Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0,
         unit: 'MT',
-        rate: Number(p.rate) || 0,
-        amount: (Number(p.total_contract_mt) || 0) * 10 * (Number(p.rate) || 0),
+        rate: Number(p.b_rate) || Number(p.rate) || 0,
+        amount: (Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0) * 10 * (Number(p.b_rate) || Number(p.rate) || 0),
         status: p.status || 'Active PTF',
-        sourceTable: 'sauda_check_point',
-        link: `/sauda-check-point?id=${p.id}`
+        sourceTable: p._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point',
+        link: `/sauda-check-point?id=${p.id || p.po_no}`
       }))
     },
     contracted_wt: {
       title: 'Total Contracted Quantity',
-      description: 'Aggregated tonnage contracted for delivery across active contracts.',
-      formula: 'Σ(total_wt_in_ton from sauda_master) + Σ(total_contract_mt from sauda_check_point PTF)',
-      sourceTable: 'sauda_master & sauda_check_point',
+      description: 'Aggregated tonnage contracted for delivery across active contracts sourced from Sauda Check Point + Final P.O.',
+      formula: 'Σ(total_contract_mt from sauda_check_point & purchase_master)',
+      sourceTable: 'sauda_check_point & purchase_master',
       refreshBehavior: 'Real-time sum calculation',
       filterNotes: 'Includes all non-cancelled contracts matching active filter criteria.',
       totalCount: filteredSaudas.length + filteredPtfs.length,
       aggregateQuantity: calcHelpers.safeRound(activeContractedMT, 3).toLocaleString(),
       aggregateUnit: 'MT',
-      records: filteredSaudas.map(s => ({
-        id: s.id || s.sauda_no || '',
-        recordNo: s.sauda_no || 'N/A',
-        type: 'Contract Quantity',
-        date: s.date || '',
-        deliveryDate: s.shipment_date || '',
-        party: s.supplier || 'DIRECT',
-        broker: s.broker || 'DIRECT',
-        area: s.area || 'DIRECT SOURCING',
-        grade: s.marks || 'TD-5',
-        quantity: Number(s.total_wt_in_ton) || 0,
-        unit: 'MT',
-        rate: Number(s.b_rate) || 0,
-        amount: (Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || 0),
-        status: s.status || 'Active',
-        sourceTable: 'sauda_master'
-      }))
+      records: [
+        ...filteredSaudas.map(s => ({
+          id: s.id || s.po_no || s.sauda_no || '',
+          recordNo: s.po_no || s.sauda_no || 'N/A',
+          type: 'Contract Quantity (' + (s._sourceSection || 'Sauda Check Point') + ')',
+          date: s.po_date || s.contract_date || s.date || '',
+          deliveryDate: s.delivery_to || s.shipment_date || '',
+          party: s.supplier || s.supplier_name || 'DIRECT',
+          broker: s.broker || s.broker_name || 'DIRECT',
+          area: s.area || s.agency || 'DIRECT SOURCING',
+          grade: s.marks || s.marka_type || 'TD-5',
+          quantity: Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0,
+          unit: 'MT',
+          rate: Number(s.b_rate) || Number(s.rate) || 0,
+          amount: (Number(s.total_contract_mt) || Number(s.total_wt_in_ton) || 0) * 10 * (Number(s.b_rate) || Number(s.rate) || 0),
+          status: s.status || 'Active',
+          sourceTable: s._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point'
+        })),
+        ...filteredPtfs.map(p => ({
+          id: p.id || p.po_no || p.ptf_no || '',
+          recordNo: p.po_no || p.ptf_no || 'N/A',
+          type: 'PTF Contract Quantity (' + (p._sourceSection || 'Sauda Check Point') + ')',
+          date: p.po_date || p.ptf_date || p.date || '',
+          deliveryDate: p.delivery_date || p.delivery_to || '',
+          party: p.supplier || 'FACTORY SOURCING',
+          broker: p.broker || 'DIRECT',
+          area: p.area || 'FACTORY',
+          grade: p.marka_type || 'TD-5',
+          quantity: Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0,
+          unit: 'MT',
+          rate: Number(p.b_rate) || Number(p.rate) || 0,
+          amount: (Number(p.total_contract_mt) || Number(p.total_wt_in_ton) || 0) * 10 * (Number(p.b_rate) || Number(p.rate) || 0),
+          status: p.status || 'Active PTF',
+          sourceTable: p._sourceSection === 'Final P.O' ? 'purchase_master' : 'sauda_check_point'
+        }))
+      ]
     },
     delivered_wt: {
-      title: 'Physical Delivered Weight (Mill Arrivals)',
-      description: 'Electronic weighbridge net weight recorded at mill arrival gates in Final Arrival ledger.',
-      formula: 'Σ(electronic_net_weight from final_arrival WHERE matched to contracts)',
-      sourceTable: 'final_arrival',
+      title: 'Physical Delivered Weight (Final Arrival Section)',
+      description: 'Electronic weighbridge net weight recorded at mill arrival gates strictly in Final Arrival ledger.',
+      formula: 'Σ(electronic_net_weight / weight_reduced from final_arrival WHERE matched to contracts)',
+      sourceTable: 'final_arrival (Final Arrival Section)',
       refreshBehavior: 'Real-time weighbridge capture',
       filterNotes: 'Filtered by associated contract supplier, broker, and arrival date range.',
       totalCount: mrList.length,
@@ -1900,7 +1922,7 @@ export function compileReportData(
         return {
           id: mr.id || mr.mr_no || '',
           recordNo: mr.mr_no || mr.po_no || 'N/A',
-          type: 'Mill Lorry Arrival',
+          type: 'Final Arrival Lorry Entry',
           date: mr.date || mr.final_arrival_date || '',
           party: mr.supplier_name || 'DIRECT',
           broker: mr.broker_name || 'DIRECT',
@@ -2149,30 +2171,30 @@ export function compileReportData(
   const reconciliationReport: ReconciliationReportItem[] = [
     {
       metricName: 'Total Contracts',
-      oldValue: '305 Contracts (269 Completed • 88.2%)',
-      correctedValue: `${filteredSaudas.length} Sauda + ${filteredPtfs.length} PTF = ${filteredSaudas.length + filteredPtfs.length} Total Contracts`,
-      causeOfDifference: 'Old report only queried sauda_master and mislabeled 269 entries as "Completed" because they existed in Sauda Check Point (which is a workflow milestone, not delivery completion). PTF contracts are kept strictly separate as distinct direct-to-factory purchase agreements.',
-      sourceTable: `sauda_master (${filteredSaudas.length} Sauda) + sauda_check_point (${filteredPtfs.length} PTF) + sauda_check_point (${filteredScpMilestones.length} Milestones)`,
-      formula: 'Total = Sauda Contracts (po_type != PTF) + PTF Contracts (is_ptf = true)',
-      statusRules: 'Sauda: sauda_master. PTF: sauda_check_point (is_ptf=true or ptf_no contains "(PTF)"). Checkpoint entries of Saudas are milestones, not duplicate contracts.'
+      oldValue: '305 Contracts (From legacy sauda_master)',
+      correctedValue: `${filteredSaudas.length} Sauda + ${filteredPtfs.length} PTF = ${filteredSaudas.length + filteredPtfs.length} Total Contracts (Sauda Check Point + Final P.O)`,
+      causeOfDifference: 'Previous report only queried old sauda_master. As per official procurement operational workflow, contracts are actively managed and finalized through Sauda Check Point + Final P.O.',
+      sourceTable: `sauda_check_point + purchase_master (${filteredSaudas.length} Sauda + ${filteredPtfs.length} PTF)`,
+      formula: 'Total = Sauda Contracts + PTF Contracts from Sauda Check Point and Final P.O',
+      statusRules: 'Unified contracts merged from purchase_master (Final P.O) and sauda_check_point (Sauda Check Point).'
     },
     {
       metricName: 'Delivered Weight MT',
-      oldValue: '7,542.483 MT (Fulfilled 91.56%)',
-      correctedValue: `${saudaDeliveredMT.toFixed(3)} MT (Sauda Physical) + ${ptfDeliveredMT.toFixed(3)} MT (PTF Physical) = ${(saudaDeliveredMT + ptfDeliveredMT).toFixed(3)} MT Received (${checkpointDispatchedMT.toFixed(2)} MT Checkpoint Dispatched)`,
-      causeOfDifference: 'Old calculation had 3 critical bugs: 1) Failed join between final_arrival (e.g. "BJCL/2026-2027/0080") and sauda_master ("0080"). 2) Divided electronic_net_weight by 1000, reducing arrival weight to negligible amounts. 3) Fallback assumed 100% contracted weight was delivered if a Sauda entered Sauda Check Point, mistaking checkpoint dispatch for mill weighbridge arrival.',
-      sourceTable: `final_arrival (${mrList.length} Lorry Arrivals) & sauda_check_point (${filteredScpMilestones.length} Workflow Dispatches)`,
-      formula: 'Physical Received = Σ(electronic_net_weight from final_arrival). Checkpoint Dispatched = Σ(total_contract_mt from sauda_check_point)',
-      statusRules: 'Physical delivery verified by weighbridge slip; Checkpoint dispatch verified by check-in slip.'
+      oldValue: '11,896.597 MT (Inflated by adding temporary arrivals & duplicate matches)',
+      correctedValue: `${saudaDeliveredMT.toFixed(3)} MT (Sauda) + ${ptfDeliveredMT.toFixed(3)} MT (PTF) = ${(saudaDeliveredMT + ptfDeliveredMT).toFixed(3)} MT Delivered (Final Arrival Section)`,
+      causeOfDifference: 'Previous calculation included temporary arrivals and duplicated records between Sauda and PTF datasets. As requested, Delivered data is now derived strictly and exclusively from the Final Arrival Section (final_arrival table).',
+      sourceTable: `final_arrival (${mrList.length} Verified Final Arrivals)`,
+      formula: 'Physical Delivered = Σ(electronic_net_weight / weight_reduced from final_arrival strictly)',
+      statusRules: 'Physical delivery verified exclusively by Final Arrival Section weighbridge slips.'
     },
     {
       metricName: 'Pending Weight MT',
-      oldValue: '694.826 MT (To Deliver 8.44%)',
-      correctedValue: `${saudaPendingMT.toFixed(3)} MT (Sauda Physical Pending) + ${ptfPendingMT.toFixed(3)} MT (PTF Pending) = ${(saudaPendingMT + ptfPendingMT).toFixed(3)} MT Physical Outstanding`,
-      causeOfDifference: 'Old pending weight was calculated by subtracting the artificially inflated 7,542.483 MT from contracted weight, representing only the contracts not yet entered into Sauda Check Point, rather than physical jute awaiting factory delivery.',
-      sourceTable: 'sauda_master (Contracted) minus final_arrival (Delivered)',
-      formula: 'Physical Pending = Math.max(0, Contracted MT - Mill Received MT)',
-      statusRules: 'Outstanding balance awaiting weighbridge gate entry.'
+      oldValue: 'Overstated / Understated by duplicated arrival offsets',
+      correctedValue: `${saudaPendingMT.toFixed(3)} MT (Sauda) + ${ptfPendingMT.toFixed(3)} MT (PTF) = ${(saudaPendingMT + ptfPendingMT).toFixed(3)} MT Pending to Deliver`,
+      causeOfDifference: 'Pending weight is accurately calculated as Math.max(0, Contracted MT - Final Arrival Delivered MT) for each active contract.',
+      sourceTable: 'Sauda Check Point + Final P.O (Contracted) minus final_arrival (Delivered)',
+      formula: 'Physical Pending = Math.max(0, Contracted MT - Final Arrival Delivered MT)',
+      statusRules: 'Outstanding balance awaiting gate arrival in Final Arrival Section.'
     },
     {
       metricName: 'On-Time Delivery %',

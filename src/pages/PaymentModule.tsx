@@ -34,6 +34,13 @@ import { dbModule } from '../services/dbModule';
 import { cn, sanitizeCsvData, formatIndianCurrency, formatIndianNumber, calculateFloor1000, calculate93PctPaidAmount } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from '../lib/permissions';
+import { 
+  calculateSattaDeduction, 
+  setCachedSattaDiffs, 
+  getCachedSattaDiffs,
+  normalizeGrade,
+  getNextLowerGrade
+} from '../services/sattaCalculation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -241,28 +248,37 @@ export const getColSettPct = (col?: PaymentDetailColumn): number => {
   return 0;
 };
 
-// Deduction (₹/Qtl) = Settlement Basis (Original Rate ₹/Qtl) * Sett (%) ÷ 100
-export const getColDeduction = (col?: PaymentDetailColumn): number => {
+// Deduction (₹/Qtl) - Calculated from Satta Chart grade differentials:
+// Formula: Deduction (₹/Qtl) = |SattaDiff(Contracted Grade) - SattaDiff(Next Lower Grade)| * (Sett % / 100)
+// Example: TD6 in Bihar with 30% claim: TD6 (-600) vs TD7 (-1000) = 400 diff * 30% = ₹120.00/Qtl
+export const getColDeduction = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
   if (!col) return 0;
-  const origRate = Number(col.rate_value) || 0;
   const settPct = getColSettPct(col);
-  if (origRate <= 0 || settPct <= 0) return 0;
-  return Number(((origRate * settPct) / 100).toFixed(2));
+  if (settPct <= 0) return 0;
+  const res = calculateSattaDeduction(col, dbDiffs);
+  return res.deduction;
+};
+
+// Formatted explanation for Satta-based deduction tooltips
+export const getColDeductionExplanation = (col?: PaymentDetailColumn, dbDiffs?: any[]): string => {
+  if (!col) return '';
+  const res = calculateSattaDeduction(col, dbDiffs);
+  return res.explanation;
 };
 
 // Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) − Deduction (₹/Qtl)
-export const getColSettRate = (col?: PaymentDetailColumn): number => {
+export const getColSettRate = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
   if (!col) return 0;
   const origRate = Number(col.rate_value) || 0;
-  const deduction = getColDeduction(col);
+  const deduction = getColDeduction(col, dbDiffs);
   return Math.max(0, Number((origRate - deduction).toFixed(2)));
 };
 
 // Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl)
-export const getColAmount = (col?: PaymentDetailColumn): number => {
+export const getColAmount = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
   if (!col) return 0;
   const qtyQtl = getColQtyQtl(col);
-  const settRate = getColSettRate(col);
+  const settRate = getColSettRate(col, dbDiffs);
   if (qtyQtl <= 0 || settRate <= 0) return 0;
   return Number((qtyQtl * settRate).toFixed(2));
 };
@@ -595,10 +611,26 @@ export const mapItemsToDetailCols = (
       }
 
       const origRate = rate;
-      const deductionRate = Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" && Number(item.deduction_rate) > 0 ? item.deduction_rate : ((origRate * settPct) / 100).toFixed(2));
-      const settRate = Number(item.sett_rate !== undefined && item.sett_rate !== null && item.sett_rate !== "" && Number(item.sett_rate) > 0 ? item.sett_rate : Math.max(0, origRate - deductionRate).toFixed(2));
+      const colCandidate: PaymentDetailColumn = {
+        ...emptyDetailColumn(idx + 1),
+        grade,
+        area,
+        agency,
+        marka_crop: marka,
+        rate_value: origRate,
+        sett_pct: settPct,
+        gd_claim: gdClaim,
+        gd_sett: gdSett,
+        arr_qty_wt: wt,
+        quantity: qty
+      };
+      const calculatedDed = getColDeduction(colCandidate);
+      const deductionRate = (settPct > 0 || calculatedDed > 0)
+        ? calculatedDed
+        : Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" ? item.deduction_rate : 0);
+      const settRate = Math.max(0, Number((origRate - deductionRate).toFixed(2)));
       const qtyQtl = Number((wt * 10).toFixed(3));
-      const amount = Number(item.amount !== undefined && item.amount !== null && item.amount !== "" && Number(item.amount) > 0 ? item.amount : (qtyQtl * settRate).toFixed(2));
+      const amount = Number((qtyQtl * settRate).toFixed(2));
 
       newCols[idx] = {
         ...emptyDetailColumn(idx + 1),
@@ -1319,6 +1351,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   const [agencyMasterList, setAgencyMasterList] = useState<any[]>([]);
   const [markaMasterList, setMarkaMasterList] = useState<any[]>([]);
   const [areaMasterList, setAreaMasterList] = useState<any[]>([]);
+  const [sattaDiffsList, setSattaDiffsList] = useState<any[]>([]);
 
   // Advance Recovery Calculation Engine
   const isPoCompletedStatus = (po: any): boolean => {
@@ -1533,16 +1566,21 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
       if (supabase) {
         // Master lookups
-        const [gRes, agRes, mRes, aRes] = await Promise.all([
+        const [gRes, agRes, mRes, aRes, sattaRes] = await Promise.all([
           supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
           supabase.from('agency_master').select('*').then(r => r.data || [], () => []),
           supabase.from('marka_master').select('*').then(r => r.data || [], () => []),
-          supabase.from('area_master').select('*').then(r => r.data || [], () => [])
+          supabase.from('area_master').select('*').then(r => r.data || [], () => []),
+          supabase.from('satta_differentials').select('*').then(r => r.data || [], () => [])
         ]);
         gData = gRes;
         agData = agRes;
         mDataList = mRes;
         aData = aRes;
+        if (sattaRes && sattaRes.length > 0) {
+          setSattaDiffsList(sattaRes);
+          setCachedSattaDiffs(sattaRes);
+        }
 
         // 1. Fetch Payment Master records from Supabase
         try {
@@ -1750,7 +1788,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  useLiveAutoRefresh(initPage, [], { tables: ['payment_master', 'm_r_settlement', 'final_arrival', 'inspection_master', 'mill_inspection_master', 'inspection_checklist'] });
+  useLiveAutoRefresh(initPage, [], { tables: ['payment_master', 'payment_details', 'm_r_settlement', 'final_arrival', 'inspection_master', 'mill_inspection_master', 'inspection_checklist', 'material_inspection_details', 'satta_differentials'] });
 
   useEffect(() => {
     initPage();
@@ -2110,7 +2148,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           }
 
           const settPct = getColSettPct(col);
-          const ded = Number(((lineRate * settPct) / 100).toFixed(2));
+          const colWithRate = { ...col, rate_value: lineRate, sett_pct: settPct };
+          const ded = getColDeduction(colWithRate);
           const sRate = Math.max(0, Number((lineRate - ded).toFixed(2)));
           const qQtl = getColQtyQtl(col);
           const amt = Number((qQtl * sRate).toFixed(2));
@@ -2503,12 +2542,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               ? Number(d.sett_pct)
               : (Number(d.gd_claim) > 0 ? Number(d.gd_claim) : Number(d.gd_sett || d.sett_pct || 0));
             const origRate = Number(d.rate_value) || 0;
-            const dedRate = d.deduction_rate !== undefined && d.deduction_rate !== null && !isNaN(Number(d.deduction_rate))
-              ? Number(d.deduction_rate)
-              : Number(((origRate * settPct) / 100).toFixed(2));
-            const sRate = d.sett_rate !== undefined && d.sett_rate !== null && !isNaN(Number(d.sett_rate))
-              ? Number(d.sett_rate)
-              : Math.max(0, Number((origRate - dedRate).toFixed(2)));
+            const sattaDed = getColDeduction({ ...d, rate_value: origRate, sett_pct: settPct });
+            const dedRate = (settPct > 0 || sattaDed > 0)
+              ? sattaDed
+              : (d.deduction_rate !== undefined && d.deduction_rate !== null && !isNaN(Number(d.deduction_rate))
+                ? Number(d.deduction_rate)
+                : 0);
+            const sRate = Math.max(0, Number((origRate - dedRate).toFixed(2)));
             const qQtl = d.quantity_qtl !== undefined && d.quantity_qtl !== null && !isNaN(Number(d.quantity_qtl))
               ? Number(d.quantity_qtl)
               : Number((Number(d.arr_qty_wt || d.wt_quantity || 0) * 10).toFixed(3));
@@ -3835,7 +3875,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                                 const newRate = parseFloat(e.target.value) || 0;
                                 updated[idx].rate_value = newRate;
                                 const sPct = getColSettPct(updated[idx]);
-                                const ded = Number(((newRate * sPct) / 100).toFixed(2));
+                                const ded = getColDeduction(updated[idx]);
                                 const sRate = Math.max(0, Number((newRate - ded).toFixed(2)));
                                 const qQtl = getColQtyQtl(updated[idx]);
                                 updated[idx].deduction_rate = ded;
@@ -3875,7 +3915,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                                   const newSettPct = parseFloat(e.target.value) || 0;
                                   updated[idx].sett_pct = newSettPct;
                                   const origRate = Number(updated[idx].rate_value) || 0;
-                                  const ded = Number(((origRate * newSettPct) / 100).toFixed(2));
+                                  const ded = getColDeduction(updated[idx]);
                                   const sRate = Math.max(0, Number((origRate - ded).toFixed(2)));
                                   const qQtl = getColQtyQtl(updated[idx]);
                                   updated[idx].deduction_rate = ded;
@@ -3909,8 +3949,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                           {/* Deduction (₹/Qtl) = Settlement Basis (Original Rate) * Sett (%) / 100 */}
                           <td className="p-2 bg-amber-50/30">
                             <div 
-                              className="w-24 p-1 rounded text-xs font-mono font-bold text-amber-900 bg-amber-100/60 text-right border border-amber-200"
-                              title={`Deduction = ₹${(Number(col.rate_value) || 0).toFixed(2)} × ${settPct}% ÷ 100 = ₹${deduction.toFixed(2)}/Qtl`}
+                              className="w-24 p-1 rounded text-xs font-mono font-bold text-amber-900 bg-amber-100/60 text-right border border-amber-200 cursor-help"
+                              title={getColDeductionExplanation(col) || `Deduction = ₹${deduction.toFixed(2)}/Qtl`}
                             >
                               ₹{deduction.toFixed(2)}
                             </div>

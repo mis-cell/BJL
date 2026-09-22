@@ -2460,7 +2460,15 @@ if (supabase) {
              ('PURNEA (LOOSE)', 'TD5', 100),
              ('PURNEA (LOOSE)', 'TD6', -300),
              ('PURNEA (LOOSE)', 'TD7', -700),
-             ('PURNEA (LOOSE)', 'TD8', -1200)
+             ('PURNEA (LOOSE)', 'TD8', -1200),
+             ('PURNEA(BIHAR)', 'TD5', 500),
+             ('PURNEA(BIHAR)', 'TD6', -600),
+             ('PURNEA(BIHAR)', 'TD7', -1000),
+             ('PURNEA(BIHAR)', 'TD8', -1500),
+             ('BIHAR', 'TD5', 500),
+             ('BIHAR', 'TD6', -600),
+             ('BIHAR', 'TD7', -1000),
+             ('BIHAR', 'TD8', -1500)
            ON CONFLICT (area, grade) DO NOTHING;
          END IF;
 

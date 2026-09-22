@@ -94,18 +94,25 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
     const areas = new Set<string>();
     const financialYears = new Set<string>();
 
-    saudaData.forEach(s => {
+    poData.forEach(p => {
+      if (p.supplier) suppliers.add(p.supplier.trim());
+      if (p.broker) brokers.add(p.broker.trim());
+      if (p.area) areas.add(p.area.trim());
+      if (p.financial_year) financialYears.add(p.financial_year.trim());
+    });
+
+    scpData.forEach(s => {
       if (s.supplier) suppliers.add(s.supplier.trim());
       if (s.broker) brokers.add(s.broker.trim());
       if (s.area) areas.add(s.area.trim());
       if (s.financial_year) financialYears.add(s.financial_year.trim());
     });
 
-    poData.forEach(p => {
-      if (p.supplier) suppliers.add(p.supplier.trim());
-      if (p.broker) brokers.add(p.broker.trim());
-      if (p.area) areas.add(p.area.trim());
-      if (p.financial_year) financialYears.add(p.financial_year.trim());
+    saudaData.forEach(s => {
+      if (s.supplier) suppliers.add(s.supplier.trim());
+      if (s.broker) brokers.add(s.broker.trim());
+      if (s.area) areas.add(s.area.trim());
+      if (s.financial_year) financialYears.add(s.financial_year.trim());
     });
 
     return {
@@ -114,7 +121,7 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
       areas: Array.from(areas).sort(),
       financialYears: Array.from(financialYears).sort()
     };
-  }, [saudaData, poData]);
+  }, [saudaData, poData, scpData]);
 
   // Compile full analytical dataset with Sauda Desk checkpoint alignment
   const compiledData: CompiledReportData = useMemo(() => {

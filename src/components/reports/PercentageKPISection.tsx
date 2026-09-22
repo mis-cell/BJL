@@ -119,14 +119,14 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           </div>
         </div>
 
-        {/* Delivered Weight & % (Physical Mill Arrivals + Checkpoint Dispatched) */}
+        {/* Delivered Weight & % (Final Arrival Section Data) */}
         <div 
           onClick={() => onCardClick?.('delivered_wt')}
           className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group"
-          title="Click to view verified weighbridge mill scale arrivals"
+          title="Click to view verified weighbridge arrivals strictly from Final Arrival Section"
         >
           <div className="flex items-center justify-between text-emerald-600 mb-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800">Delivered Wt (Mill)</span>
+            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800">Delivered Wt (Final Arrival)</span>
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
           </div>
           <div className="text-xl font-black text-emerald-950 font-mono tracking-tight">
@@ -134,18 +134,17 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           </div>
 
           <div className="text-[10px] text-emerald-800 font-bold mt-1 flex items-center justify-between">
-            <span>Mill Scale: {kpis.deliveredPct}%</span>
+            <span>Delivered: {kpis.deliveredPct}%</span>
             <span 
-              onClick={(e) => { e.stopPropagation(); onCardClick?.('checkpoint_wt'); }}
-              className="bg-emerald-200/80 px-1 py-0.2 rounded text-[9px] hover:bg-emerald-300 cursor-pointer"
-              title="Click to trace Checkpoint Dispatched entries"
+              className="bg-emerald-200/80 px-1 py-0.2 rounded text-[9px] text-emerald-900 font-medium"
+              title="Verified strictly from Final Arrival Section data"
             >
-              {(kpis.checkpointDispatchedMT ?? 0).toLocaleString()} MT Chkpt
+              Final Arrival Section
             </span>
           </div>
 
           <div className="text-[9px] text-emerald-700 font-medium mt-1 flex items-center justify-between border-t border-emerald-200/60 pt-1">
-            <span>{kpis.totalArrivalsCount ?? kpis.fullyDeliveredContracts} Verified Deliveries</span>
+            <span>{kpis.totalArrivalsCount ?? 0} Verified Final Arrivals</span>
             <span className="text-emerald-800 group-hover:underline flex items-center gap-0.5 font-bold">Trace &rarr;</span>
           </div>
         </div>
