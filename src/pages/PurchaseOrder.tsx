@@ -2516,7 +2516,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const isPass = isCleared || (workflowStage === 'final_po');
 
         // Complete means weight is fulfilled and stage is passed to final/eligible
-        const isWeightFulfilled = isExplicitCompleted || isWeightCompleted;
+        const isWeightFulfilled = isExplicitCompleted || isWeightCompleted || isClosed;
         const isFullyComplete = isTempPo 
           ? (isWeightFulfilled && isPass)
           : isWeightFulfilled;
@@ -4632,7 +4632,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const contractWt = parseFloat(p.total_contract_mt) || 0;
     const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
+    const receivedLorries = p.received_lorries || 0;
+    const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
     const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
 
     // Users like L1, L2, L3, L4 can ONLY see Pending and Partial data (Completed is hidden)
@@ -4690,7 +4693,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
             const pendingStr = String(item.pending ?? '').trim().toLowerCase();
             const statusStr = String(item.status ?? '').trim().toLowerCase();
-            const isCompletedPo = item.pending === false || pendingStr === 'no' || pendingStr === 'false' || item.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+            const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+            const receivedLorries = item.received_lorries || 0;
+            const isClosed = Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+            const isCompletedPo = item.pending === false || pendingStr === 'no' || pendingStr === 'false' || item.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
 
             if (contract > 0 && rcvd > 0 && rcvd < 5.0) return 5; // CANCELLED
             if (isCompletedPo) return 2; // COMPLETED
@@ -4801,8 +4807,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       return true;
     }
 
-    const isSettledOrArchived = p.status === 'settled' || !!p.archived_at;
-    if (isSettledOrArchived) return false;
+    const isArchived = !!p.archived_at;
+    if (isArchived) return false;
 
     const isCancelled = p.status === 'cancelled';
     if (statusFilter === 'cancelled') {
@@ -4821,7 +4827,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const contractWt = parseFloat(p.total_contract_mt) || 0;
     const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
-    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
+    const receivedLorries = p.received_lorries || 0;
+    const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+    const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
     const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
     if (!canSeeCompleted && computedStatus === 'completed') {
       return false;
@@ -4857,7 +4866,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     const contractWt = parseFloat(p.total_contract_mt) || 0;
     const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
     const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
-    return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted;
+    const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
+    const receivedLorries = p.received_lorries || 0;
+    const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+    return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
   }).length;
 
   const totalShortPos = scopedPos.filter(p => {

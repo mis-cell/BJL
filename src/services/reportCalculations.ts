@@ -712,14 +712,6 @@ export function compileReportData(
     }
   });
 
-  // If saudaList has any legacy contract not present in SCP or Final PO (fallback protection)
-  (saudaList || []).forEach(s => {
-    const key = String(s.po_no || s.sauda_no || s.contract_po_no || s.id || '').trim().toUpperCase();
-    if (key && !contractsMap.has(key)) {
-      contractsMap.set(key, { ...s, _sourceSection: 'Sauda Check Point' });
-    }
-  });
-
   const allProcurementContracts = Array.from(contractsMap.values());
 
   // Separate contracts into Sauda vs PTF
