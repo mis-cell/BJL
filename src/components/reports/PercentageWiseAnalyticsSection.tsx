@@ -5,6 +5,8 @@ import {
 } from '../../services/reportCalculations';
 import { ReportFilterBar, ReportFilters } from './ReportFilterBar';
 import { PercentageKPISection } from './PercentageKPISection';
+import { TraceableKpiModal } from './TraceableKpiModal';
+import { ReconciliationReportModal } from './ReconciliationReportModal';
 import { BrokerPercentageReport } from './BrokerPercentageReport';
 import { AreaPercentageReport } from './AreaPercentageReport';
 import { SupplierPercentageReport } from './SupplierPercentageReport';
@@ -30,7 +32,9 @@ import {
   DollarSign, 
   GitCommit,
   Layers,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface PercentageWiseAnalyticsSectionProps {
@@ -54,7 +58,8 @@ export type AnalyticsSubTab =
   | 'po_lifecycle'
   | 'compliance'
   | 'financial'
-  | 'audit';
+  | 'audit'
+  | 'audit_reconciliation';
 
 export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSectionProps> = ({
   saudaData,
@@ -66,6 +71,8 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
   scpData = []
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<AnalyticsSubTab>('overview');
+  const [selectedKpi, setSelectedKpi] = useState<string | null>(null);
+  const [showReconciliationModal, setShowReconciliationModal] = useState<boolean>(false);
 
   const [filters, setFilters] = useState<ReportFilters>({
     financialYear: 'ALL',
@@ -126,6 +133,7 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
     { key: 'compliance', label: '9. Delivery Compliance', icon: ShieldCheck, count: `${compiledData.deliveryCompliance.length}` },
     { key: 'financial', label: '10. Financial & Cost', icon: DollarSign, count: `${compiledData.financialAnalytics.paymentCompletionPct}%` },
     { key: 'audit', label: '11. Pipeline Audit', icon: GitCommit, count: `${compiledData.fullPipelineAudit.length}` },
+    { key: 'audit_reconciliation', label: '12. Reconciliation Audit', icon: ShieldCheck, count: `${compiledData.reconciliationReport?.length || 7} KPIs` },
   ];
 
   return (
@@ -140,8 +148,12 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
         financialYears={filterOptions.financialYears}
       />
 
-      {/* Standard KPI Cards Section */}
-      <PercentageKPISection kpis={compiledData.kpis} />
+      {/* Standard KPI Cards Section with Traceable Clicks */}
+      <PercentageKPISection 
+        kpis={compiledData.kpis} 
+        onCardClick={(kpiKey) => setSelectedKpi(kpiKey)}
+        onOpenReconciliation={() => setShowReconciliationModal(true)}
+      />
 
       {/* Sub-Tab Navigation Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 shadow-sm flex flex-wrap items-center gap-1.5" id="percentage-sub-tabs-container">
@@ -231,7 +243,102 @@ export const PercentageWiseAnalyticsSection: React.FC<PercentageWiseAnalyticsSec
         {activeSubTab === 'audit' && (
           <FullPipelineAuditReport fullPipelineAudit={compiledData.fullPipelineAudit} kpis={compiledData.kpis} />
         )}
+
+        {activeSubTab === 'audit_reconciliation' && (
+          <div className="space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                      Integrity Audit
+                    </span>
+                    <span className="text-slate-400 text-xs">•</span>
+                    <span className="text-slate-500 text-xs">Live Source-Table Reconciliation</span>
+                  </div>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                    System Report Metric Discrepancy Reconciliation
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                    Side-by-side reconciliation between previous buggy dashboard figures and the corrected, live-reconciled metrics. Click any KPI card above to view the exact underlying records.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowReconciliationModal(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors shadow-xs flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Open Full Reconciliation View
+                </button>
+              </div>
+
+              {/* Grid of Reconciled KPIs */}
+              <div className="grid grid-cols-1 gap-3.5">
+                {compiledData.reconciliationReport.map((item, idx) => (
+                  <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center font-mono">
+                          {idx + 1}
+                        </span>
+                        <span className="font-black text-slate-900 text-xs">{item.metricName}</span>
+                      </div>
+                      <span className="font-mono text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        Source: {item.sourceTable}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+                      <div className="bg-rose-50 border border-rose-200 rounded p-2 text-rose-950">
+                        <div className="text-[10px] font-sans text-rose-600 uppercase font-bold">Old Discrepant Value</div>
+                        <div className="font-bold text-xs mt-0.5">{item.oldValue}</div>
+                      </div>
+                      <div className="bg-emerald-50 border border-emerald-300 rounded p-2 text-emerald-950">
+                        <div className="text-[10px] font-sans text-emerald-700 uppercase font-bold">Corrected Reconciled Value</div>
+                        <div className="font-bold text-xs mt-0.5">{item.correctedValue}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-700 font-sans leading-relaxed bg-white border border-slate-200/80 rounded p-2">
+                      <span className="font-bold text-slate-900">Cause of Difference: </span>
+                      {item.causeOfDifference}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1">
+                      <div>
+                        <span className="font-semibold text-slate-600">Formula: </span>
+                        <code className="text-slate-800 bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">{item.formula}</code>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-600">Rules: </span>
+                        <span>{item.statusRules}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Traceable Records Modal Dialog */}
+      {selectedKpi && (
+        <TraceableKpiModal 
+          details={compiledData.traceableRecords[selectedKpi] || null}
+          onClose={() => setSelectedKpi(null)}
+        />
+      )}
+
+      {/* Reconciliation Report Modal Dialog */}
+      {showReconciliationModal && (
+        <ReconciliationReportModal 
+          reportItems={compiledData.reconciliationReport || []}
+          onClose={() => setShowReconciliationModal(false)}
+        />
+      )}
     </div>
   );
 };
