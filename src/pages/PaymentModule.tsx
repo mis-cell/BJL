@@ -2592,7 +2592,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       p.party_name || p.supplier || '',
       p.mr_no || '',
       p.po_no || '',
-      formatIndianCurrency(Number(p.paid_amount || p.total_amount || 0)),
+      formatIndianCurrency(Number(p.paid_amount || 0)),
       p.payment_mode || 'Bank Transfer',
       p.status || 'completed'
     ]);
@@ -2638,7 +2638,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
   });
 
   // Calculate totals for dashboard summary cards
-  const totalPaidSum = paymentList.reduce((sum, p) => sum + (Number(p.paid_amount || p.total_amount || 0)), 0);
+  const totalPaidSum = paymentList.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
   const totalPayableSum = paymentList.reduce((sum, p) => sum + (Number(p.payable_amt || p.total_amount || 0)), 0);
   const totalPendingSum = paymentList.reduce((sum, p) => {
     const payable = Number(p.payable_amt || p.total_amount || 0);

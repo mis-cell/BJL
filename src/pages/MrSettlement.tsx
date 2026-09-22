@@ -381,7 +381,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     targetMrNo: string;
   } | null>(null);
 
-  const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<number> => {
+  const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<{ totalPaid: number; payDetails: any[] }> => {
     try {
       let payRecords: any[] = [];
       let payDetails: any[] = [];
@@ -407,11 +407,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Collect voucher numbers linked via payment_details table matching target MR
       const vouchersFromDetails = new Set<string>();
+      const matchedDetailsList: any[] = [];
       if (targetMrClean) {
         details.forEach((d: any) => {
           const dMr = cleanStr(d.mr_no);
           if (dMr && (dMr === targetMrClean || dMr.includes(targetMrClean) || targetMrClean.includes(dMr))) {
             if (d.voucher_no) vouchersFromDetails.add(d.voucher_no);
+            matchedDetailsList.push(d);
           }
         });
       }
@@ -450,8 +452,41 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         });
       }
 
+      // Also gather payment_details from matched payments if not already collected
+      if (matchingPayments.length > 0 && matchedDetailsList.length === 0) {
+        const matchedVoucherSet = new Set(matchingPayments.map(p => p.voucher_no).filter(Boolean));
+        details.forEach((d: any) => {
+          if (d.voucher_no && matchedVoucherSet.has(d.voucher_no)) {
+            matchedDetailsList.push(d);
+          }
+        });
+      }
+
+      // Also live-update detailCols if payment has sett_rate for grades
+      if (matchedDetailsList.length > 0) {
+        setDetailCols(prevCols => prevCols.map(col => {
+          const hasData = Boolean(col.grade || col.quantity || col.arr_qty_wt);
+          if (!hasData) return col;
+          const match = matchedDetailsList.find(pd => Number(pd.col_index) === col.col_index) ||
+                        matchedDetailsList.find(pd => {
+                          const pdGrade = (resolveGradeName(pd.grade, gradeMasterList) || String(pd.grade || '')).trim().toUpperCase();
+                          const colGrade = (resolveGradeName(col.grade, gradeMasterList) || String(col.grade || '')).trim().toUpperCase();
+                          return Boolean(pdGrade && colGrade && pdGrade === colGrade);
+                        });
+          if (match) {
+            const settRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
+              ? Number(match.sett_rate)
+              : (Number(match.rate_value) > 0 ? Number(match.rate_value) - Number(match.deduction_rate || 0) : 0);
+            if (settRate > 0) {
+              return { ...col, rate_value: settRate };
+            }
+          }
+          return col;
+        }));
+      }
+
       if (matchingPayments.length > 0) {
-        const totalPaid = matchingPayments.reduce((sum, p) => sum + Number(p.paid_amount || p.total_amount || 0), 0);
+        const totalPaid = matchingPayments.reduce((sum, p) => sum + Number(p.paid_amount !== undefined && p.paid_amount !== null ? p.paid_amount : (p.total_amount || 0)), 0);
         const firstMatch = matchingPayments[0];
         setPaymentValidationInfo({
           mrNo: firstMatch.mr_no || mrNo,
@@ -459,20 +494,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           paidAmount: totalPaid,
           voucherNo: matchingPayments.map(p => p.voucher_no || 'N/A').join(', ')
         });
-        if (totalPaid > 0) {
-          setMasterData(prev => ({
-            ...prev,
-            final_on_ac_adv: totalPaid
-          }));
-        }
-        return totalPaid;
+        setMasterData(prev => ({
+          ...prev,
+          final_on_ac_adv: totalPaid
+        }));
+        return { totalPaid, payDetails: matchedDetailsList };
       } else {
         setPaymentValidationInfo(null);
-        return 0;
+        return { totalPaid: 0, payDetails: matchedDetailsList };
       }
     } catch (e) {
       console.warn("Payment module sync error:", e);
-      return 0;
+      return { totalPaid: 0, payDetails: [] };
     }
   };
 
@@ -919,7 +952,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     agList?: any[],
     mList?: any[],
     arList?: any[],
-    inspItem?: any
+    inspItem?: any,
+    payDetailItem?: any
   ): SettlementDetailColumn => {
     const col = emptyDetailColumn(idx);
     if (!item && !pDet && !inspItem) return col;
@@ -1003,18 +1037,32 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     // Min.Qty/Wt is "Arr. Qty/Wt" with 3% acceptable (97% of Arr. Qty/Wt)
     col.min_qty_wt = col.arr_qty_wt > 0 ? Number((col.arr_qty_wt * 0.97).toFixed(3)) : 0;
 
-    // 7. Rate (Primary from Final P.O contract rate, then inspection/arrival)
-    const rawRate = 
-      pDet?.rate_qntl || pDet?.rate_per_mt || pDet?.rate || pDet?.rate_mt ||
-      poData?.rate_qntl || poData?.rate_mt || poData?.b_rate ||
-      inspItem?.rate || inspItem?.rate_qntl ||
-      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
-    
-    col.rate_value = Number(rawRate) || 0;
-    if (!col.rate_value || col.rate_value === 0) {
-      const fallbackRate = Number(poData?.b_rate || poData?.rate_qntl || poData?.rate_mt || 0);
-      if (fallbackRate > 0) {
-        col.rate_value = fallbackRate;
+    // 7. Rate (Primary from Payment Section "Sett Rate (₹/Qtl)", then Final P.O contract rate, then inspection/arrival)
+    let paymentSettRate = 0;
+    if (payDetailItem) {
+      if (payDetailItem.sett_rate !== undefined && payDetailItem.sett_rate !== null && Number(payDetailItem.sett_rate) > 0) {
+        paymentSettRate = Number(payDetailItem.sett_rate);
+      } else if (Number(payDetailItem.rate_value) > 0) {
+        const ded = Number(payDetailItem.deduction_rate) || 0;
+        paymentSettRate = Math.max(0, Number(payDetailItem.rate_value) - ded);
+      }
+    }
+
+    if (paymentSettRate > 0) {
+      col.rate_value = paymentSettRate;
+    } else {
+      const rawRate = 
+        pDet?.rate_qntl || pDet?.rate_per_mt || pDet?.rate || pDet?.rate_mt ||
+        poData?.rate_qntl || poData?.rate_mt || poData?.b_rate ||
+        inspItem?.rate || inspItem?.rate_qntl ||
+        item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
+      
+      col.rate_value = Number(rawRate) || 0;
+      if (!col.rate_value || col.rate_value === 0) {
+        const fallbackRate = Number(poData?.b_rate || poData?.rate_qntl || poData?.rate_mt || 0);
+        if (fallbackRate > 0) {
+          col.rate_value = fallbackRate;
+        }
       }
     }
 
@@ -1120,7 +1168,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     gList: any[],
     agList: any[],
     mList: any[],
-    arList: any[]
+    arList: any[],
+    payDetails: any[] = []
   ): SettlementDetailColumn[] => {
     // 1. Prepare normalized arrival rows
     const arrivalRows: Array<{ inspItem: any; faItem: any; rawGrade: string; gradeName: string; gradeCode: string; hasData: boolean }> = [];
@@ -1205,6 +1254,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           if (matchedPoIdx !== -1) {
             matchedPoIndices.add(matchedPoIdx);
           }
+
+          // Find matching payment detail row from Payment Module
+          const matchedPayDetail = (payDetails || []).find(pd => Number(pd.col_index) === idx) ||
+            (payDetails || []).find(pd => {
+              const pdGrade = (resolveGradeName(pd.grade, gList) || String(pd.grade || '')).trim().toUpperCase();
+              const arrGrade = (resolveGradeName(arr.gradeName || arr.rawGrade, gList) || String(arr.gradeName || arr.rawGrade || '')).trim().toUpperCase();
+              return Boolean(pdGrade && arrGrade && pdGrade === arrGrade);
+            });
+
           return buildSettlementCol(
             idx,
             arr.inspItem || arr.faItem,
@@ -1216,7 +1274,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             agList,
             mList,
             arList,
-            arr.inspItem
+            arr.inspItem,
+            matchedPayDetail
           );
         } else {
           return emptyDetailColumn(idx);
@@ -1229,6 +1288,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       return [1, 2, 3, 4].map(idx => {
         const pDet = poDetails[idx - 1] || null;
         if (pDet) {
+          const matchedPayDetail = (payDetails || []).find(pd => Number(pd.col_index) === idx) ||
+            (payDetails || []).find(pd => {
+              const pdGrade = (resolveGradeName(pd.grade, gList) || String(pd.grade || '')).trim().toUpperCase();
+              const poGrade = (resolveGradeName(pDet.grade_name || pDet.quality || pDet.grade, gList) || '').trim().toUpperCase();
+              return Boolean(pdGrade && poGrade && pdGrade === poGrade);
+            });
+
           return buildSettlementCol(
             idx,
             null,
@@ -1240,7 +1306,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             agList,
             mList,
             arList,
-            null
+            null,
+            matchedPayDetail
           );
         }
         return emptyDetailColumn(idx);
@@ -2041,7 +2108,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         tempArrivalData?.apmc_fees ?? tempArrivalData?.arival_apmc_fees ?? faMaster?.apmc_fees ?? faMaster?.arival_apmc_fees ?? inspMaster?.apmc_fees ?? 0
       );
 
-      const syncedPaidAmount = await syncPaymentModuleData(targetMrNo, poNoForDet);
+      const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails } = await syncPaymentModuleData(targetMrNo, poNoForDet);
 
       // Calculate total Premium Quantity (MT), Premium WT (Qtl), and Premium Amount (₹) from Inspection Details
       let totalPremMt = 0;
@@ -2199,7 +2266,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             gList,
             agList,
             mList,
-            arList
+            arList,
+            matchedPayDetails
           );
 
           if (existingDetails && existingDetails.length > 0) {
@@ -2224,7 +2292,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   merged.wt_quantity = Math.round(arrWtKg / merged.quantity);
                   merged.wt_phota = merged.wt_quantity;
                 }
-                if (!merged.rate_value && fallbackCol.rate_value) merged.rate_value = fallbackCol.rate_value;
+                if ((!merged.rate_value || Number(merged.rate_value) === 0) && fallbackCol.rate_value) {
+                  merged.rate_value = fallbackCol.rate_value;
+                }
                 if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;
                 if (merged.gd_claim == null || merged.gd_claim === 0) merged.gd_claim = fallbackCol.gd_claim;
                 if (merged.moist_sett == null || merged.moist_sett === 0) merged.moist_sett = fallbackCol.moist_sett;
@@ -2297,7 +2367,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           gList,
           agList,
           mList,
-          arList
+          arList,
+          matchedPayDetails
         );
 
         const activeColsCount = populatedCols.filter(c => 
@@ -2389,7 +2460,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         gList,
         agList,
         mList,
-        arList
+        arList,
+        matchedPayDetails
       );
 
       const activeColsCountFallback = populatedCols.filter(c => 
