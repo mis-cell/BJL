@@ -142,7 +142,7 @@ export interface PaymentDetailColumn {
   rate_value: number;
 
   // Grade Down Settlement & Rate Adjustments
-  sett_pct: number; // Sett (%) - Mill Sett -> Gr. Down %
+  sett_pct: number; // Sett (%) - Populated from Inspection Details Grade Down % Claim (or Mill Sett -> Gr. Down %)
   deduction_rate: number; // Deduction (₹/Qtl) = Settlement Basis (Original Rate) * Sett (%) / 100
   sett_rate: number; // Sett Rate (₹/Qtl) = Original Rate - Deduction (₹/Qtl)
   quantity_qtl: number; // Quantity (Qtl) = Weight (MT) * 10
@@ -224,13 +224,22 @@ export const getColQtyQtl = (col?: PaymentDetailColumn): number => {
   return Number((wtMt * 10).toFixed(3));
 };
 
-// Sett (%) - uses saved Mill Sett -> Gr. Down percentage, or user edited sett_pct
+// Sett (%) - Populated from Inspection Details Grade Down % Claim (gd_claim), Mill Sett -> Gr. Down percentage (gd_sett), or user edited sett_pct
 export const getColSettPct = (col?: PaymentDetailColumn): number => {
   if (!col) return 0;
+  if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct)) && Number(col.sett_pct) > 0) {
+    return Number(col.sett_pct);
+  }
+  if (col.gd_claim !== undefined && col.gd_claim !== null && !isNaN(Number(col.gd_claim)) && Number(col.gd_claim) > 0) {
+    return Number(col.gd_claim);
+  }
+  if (col.gd_sett !== undefined && col.gd_sett !== null && !isNaN(Number(col.gd_sett)) && Number(col.gd_sett) > 0) {
+    return Number(col.gd_sett);
+  }
   if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct))) {
     return Number(col.sett_pct);
   }
-  return Number(col.gd_sett ?? 0);
+  return 0;
 };
 
 // Deduction (₹/Qtl) = Settlement Basis (Original Rate ₹/Qtl) * Sett (%) ÷ 100
@@ -437,14 +446,29 @@ export const mapItemsToDetailCols = (
       );
       const rate = Number(item.rate_per_mt || item.rate_mt || item.rate_qntl || item.rate || item.rate_value || poHeader?.b_rate || defaultRate || 0);
 
-      const gdClaim = Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.grade_down_act ?? 0);
-      const gdSett = Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? 0);
-      const settPct = Number(item.sett_pct !== undefined && item.sett_pct !== null && item.sett_pct !== "" ? item.sett_pct : gdSett);
+      const gdClaim = Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.claim_gr_down ?? item.grade_down_act ?? item.actual_grade_down ?? 0);
+      const gdSett = Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? item.mill_sett_gr_down ?? 0);
+      
+      // Sett (%) Priority:
+      // 1. Explicit user edited or non-zero saved sett_pct
+      // 2. Inspection Details "Grade Down %" -> "Claim" (gdClaim)
+      // 3. Inspection Details "Mill Settlement %" -> "Gr. Down" (gdSett)
+      let settPct = 0;
+      if (item.sett_pct !== undefined && item.sett_pct !== null && item.sett_pct !== "" && !isNaN(Number(item.sett_pct)) && Number(item.sett_pct) > 0) {
+        settPct = Number(item.sett_pct);
+      } else if (gdClaim > 0) {
+        settPct = gdClaim;
+      } else if (gdSett > 0) {
+        settPct = gdSett;
+      } else if (item.sett_pct !== undefined && item.sett_pct !== null && item.sett_pct !== "" && !isNaN(Number(item.sett_pct))) {
+        settPct = Number(item.sett_pct);
+      }
+
       const origRate = rate;
-      const deductionRate = Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" ? item.deduction_rate : ((origRate * settPct) / 100).toFixed(2));
-      const settRate = Number(item.sett_rate !== undefined && item.sett_rate !== null && item.sett_rate !== "" ? item.sett_rate : Math.max(0, origRate - deductionRate).toFixed(2));
+      const deductionRate = Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" && Number(item.deduction_rate) > 0 ? item.deduction_rate : ((origRate * settPct) / 100).toFixed(2));
+      const settRate = Number(item.sett_rate !== undefined && item.sett_rate !== null && item.sett_rate !== "" && Number(item.sett_rate) > 0 ? item.sett_rate : Math.max(0, origRate - deductionRate).toFixed(2));
       const qtyQtl = Number((wt * 10).toFixed(3));
-      const amount = Number(item.amount !== undefined && item.amount !== null && item.amount !== "" ? item.amount : (qtyQtl * settRate).toFixed(2));
+      const amount = Number(item.amount !== undefined && item.amount !== null && item.amount !== "" && Number(item.amount) > 0 ? item.amount : (qtyQtl * settRate).toFixed(2));
 
       newCols[idx] = {
         ...emptyDetailColumn(idx + 1),
@@ -1821,10 +1845,51 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
       
       if (supabase) {
         try {
-          const targetMr = arrival.mr_no || arrival.final_arrival_no || mrNo;
-          const midRes = await supabase.from('material_inspection_details').select('*').eq('mr_no', targetMr);
-          if (midRes.data && midRes.data.length > 0) {
-            rawArrItems = midRes.data;
+          const targetMr = arrival.mr_no || arrival.final_arrival_no || arrival.arrival_no || mrNo;
+          const cleanMr = targetMr.replace(/^MR[-_ ]?/i, '');
+          const candidateKeys = Array.from(new Set([
+            targetMr,
+            mrNo,
+            arrival.mr_no,
+            arrival.final_arrival_no,
+            arrival.arrival_no,
+            cleanMr,
+            `MR${cleanMr}`,
+            `MR-${cleanMr}`,
+            `MR0${cleanMr}`,
+            `MR00${cleanMr}`
+          ].filter(Boolean)));
+
+          for (const key of candidateKeys) {
+            const midRes = await supabase
+              .from('material_inspection_details')
+              .select('*')
+              .eq('mr_no', key)
+              .order('srl_no', { ascending: true });
+            if (midRes.data && midRes.data.length > 0) {
+              rawArrItems = midRes.data;
+              break;
+            }
+          }
+
+          // If material_inspection_details has no rows, check material_inspection master table for grid_details / details
+          if (rawArrItems.length === 0) {
+            for (const key of candidateKeys) {
+              const miRes = await supabase
+                .from('material_inspection')
+                .select('*')
+                .or(`mr_no.eq.${key},arrival_no.eq.${key}`)
+                .limit(1)
+                .maybeSingle();
+              if (miRes.data) {
+                const grid = miRes.data.grid_details || miRes.data.details;
+                const parsed = parseGridOrItems(grid);
+                if (parsed && parsed.length > 0) {
+                  rawArrItems = parsed;
+                  break;
+                }
+              }
+            }
           }
         } catch (e) {
           console.warn("Failed to fetch inspection details:", e);
@@ -2193,9 +2258,9 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         const newCols = [emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)];
         details.forEach((d: any, idx: number) => {
           if (idx < 4) {
-            const settPct = d.sett_pct !== undefined && d.sett_pct !== null && !isNaN(Number(d.sett_pct))
+            const settPct = d.sett_pct !== undefined && d.sett_pct !== null && !isNaN(Number(d.sett_pct)) && Number(d.sett_pct) > 0
               ? Number(d.sett_pct)
-              : Number(d.gd_sett || 0);
+              : (Number(d.gd_claim) > 0 ? Number(d.gd_claim) : Number(d.gd_sett || d.sett_pct || 0));
             const origRate = Number(d.rate_value) || 0;
             const dedRate = d.deduction_rate !== undefined && d.deduction_rate !== null && !isNaN(Number(d.deduction_rate))
               ? Number(d.deduction_rate)
@@ -3689,7 +3754,7 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                               className="w-24 p-1 border rounded text-xs font-mono"
                             />
                           </td>
-                          {/* Sett (%) - populated from Mill Sett -> Gr. Down */}
+                          {/* Sett (%) - populated from Inspection Details -> Grade Down % -> Claim */}
                           <td className="p-2 bg-emerald-50/30">
                             <div className="flex flex-col">
                               <input
@@ -3700,7 +3765,7 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                                 step="0.01"
                                 min="0"
                                 max="100"
-                                value={col.sett_pct !== undefined ? col.sett_pct : (col.gd_sett || '')}
+                                value={col.sett_pct !== undefined && col.sett_pct !== null ? col.sett_pct : ((col.gd_claim > 0 ? col.gd_claim : col.gd_sett) || '')}
                                 onChange={e => {
                                   const updated = [...detailCols];
                                   const newSettPct = parseFloat(e.target.value) || 0;
@@ -3727,11 +3792,11 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                                   }
                                 }}
                                 placeholder="0"
-                                title="Mill Settlement % Gr. Down"
+                                title={`Settlement % (Populated from Inspection Details Grade Down % Claim: ${col.gd_claim || 0}%)`}
                                 className="w-16 p-1 border border-emerald-300 rounded text-xs font-bold text-center bg-white text-emerald-950 focus:ring-1 focus:ring-emerald-500"
                               />
-                              {col.gd_claim > 0 && col.gd_claim !== settPct && (
-                                <span className="text-[9px] text-amber-700 font-semibold mt-0.5" title={`Inspection Claim: ${col.gd_claim}%`}>
+                              {col.gd_claim > 0 && (
+                                <span className="text-[9px] text-amber-700 font-semibold mt-0.5" title={`Inspection Details Grade Down % Claim: ${col.gd_claim}%`}>
                                   Claim: {col.gd_claim}%
                                 </span>
                               )}
