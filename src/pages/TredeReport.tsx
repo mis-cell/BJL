@@ -171,7 +171,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       }
       setPaymentList(payData);
     } catch (e) {
-      print("Error loading page payments layout:", e);
+      console.error("Error loading page payments layout:", e);
     } finally {
       setLoading(false);
     }

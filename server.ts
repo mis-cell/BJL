@@ -1025,6 +1025,22 @@ async function startServer() {
         );
         ALTER TABLE IF EXISTS mill_inspection_deduction DISABLE ROW LEVEL SECURITY;
 
+        -- Ensure payment_details has settlement grade down columns and proper backfill
+        ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS sett_pct NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS deduction_rate NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS sett_rate NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS quantity_qtl NUMERIC DEFAULT 0;
+        ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;
+
+        -- Backfill older payment_details records if sett_rate or amount are missing
+        UPDATE payment_details 
+        SET sett_pct = COALESCE(NULLIF(sett_pct, 0), gd_sett, 0),
+            deduction_rate = COALESCE(NULLIF(deduction_rate, 0), CASE WHEN rate_value > 0 AND COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) > 0 THEN ROUND((rate_value * COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) / 100)::numeric, 2) ELSE 0 END),
+            sett_rate = COALESCE(NULLIF(sett_rate, 0), CASE WHEN rate_value > 0 THEN ROUND((rate_value - (CASE WHEN COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) > 0 THEN (rate_value * COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) / 100) ELSE 0 END))::numeric, 2) ELSE 0 END),
+            quantity_qtl = COALESCE(NULLIF(quantity_qtl, 0), ROUND((COALESCE(NULLIF(arr_qty_wt, 0), wt_quantity, 0) * 10)::numeric, 3)),
+            amount = COALESCE(NULLIF(amount, 0), ROUND(((COALESCE(NULLIF(arr_qty_wt, 0), wt_quantity, 0) * 10) * (CASE WHEN rate_value > 0 THEN (rate_value - (CASE WHEN COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) > 0 THEN (rate_value * COALESCE(NULLIF(sett_pct, 0), gd_sett, 0) / 100) ELSE 0 END)) ELSE 0 END))::numeric, 2))
+        WHERE (sett_rate IS NULL OR sett_rate = 0 OR amount IS NULL OR amount = 0) AND (rate_value > 0 OR arr_qty_wt > 0);
+
         -- Safe Indexes
         CREATE INDEX IF NOT EXISTS idx_inspection_mr ON material_inspection(mr_no);
         CREATE INDEX IF NOT EXISTS idx_inspection_arr ON material_inspection(arrival_no);

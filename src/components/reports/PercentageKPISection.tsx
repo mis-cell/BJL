@@ -72,18 +72,18 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           <div className="mt-1 flex items-center gap-1 text-[10px]">
             <span 
               onClick={(e) => { e.stopPropagation(); onCardClick?.('sauda_contracts'); }}
-              className="bg-blue-50 text-blue-800 font-bold px-1.5 py-0.5 rounded hover:bg-blue-100 transition-colors"
-              title="Click to filter Sauda contracts"
+              className="bg-blue-50 text-blue-800 font-bold px-1.5 py-0.5 rounded hover:bg-blue-100 transition-colors cursor-pointer"
+              title="Click to trace Sauda contracts"
             >
-              {kpis.totalSaudaContracts ?? 304} Sauda
+              {kpis.totalSaudaContracts ?? 0} Sauda
             </span>
             <span className="text-slate-300">•</span>
             <span 
               onClick={(e) => { e.stopPropagation(); onCardClick?.('ptf_contracts'); }}
-              className="bg-purple-50 text-purple-800 font-bold px-1.5 py-0.5 rounded hover:bg-purple-100 transition-colors"
-              title="Click to filter PTF contracts"
+              className="bg-purple-50 text-purple-800 font-bold px-1.5 py-0.5 rounded hover:bg-purple-100 transition-colors cursor-pointer"
+              title="Click to trace PTF contracts"
             >
-              {kpis.totalPtfContracts ?? 217} PTF
+              {kpis.totalPtfContracts ?? 0} PTF
             </span>
           </div>
 
@@ -108,9 +108,9 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           </div>
           
           <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-600 font-medium">
-            <span className="text-blue-700 font-semibold">{kpis.saudaContractedMT?.toLocaleString() ?? '8,225.92'} MT Sauda</span>
+            <span className="text-blue-700 font-semibold">{(kpis.saudaContractedMT ?? 0).toLocaleString()} MT Sauda</span>
             <span className="text-slate-300">•</span>
-            <span className="text-purple-700 font-semibold">{kpis.ptfContractedMT?.toLocaleString() ?? '2,144.63'} MT PTF</span>
+            <span className="text-purple-700 font-semibold">{(kpis.ptfContractedMT ?? 0).toLocaleString()} MT PTF</span>
           </div>
 
           <div className="text-[9px] text-slate-400 font-medium mt-1 flex items-center justify-between border-t border-slate-100 pt-1">
@@ -137,15 +137,15 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
             <span>Mill Scale: {kpis.deliveredPct}%</span>
             <span 
               onClick={(e) => { e.stopPropagation(); onCardClick?.('checkpoint_wt'); }}
-              className="bg-emerald-200/80 px-1 py-0.2 rounded text-[9px] hover:bg-emerald-300"
+              className="bg-emerald-200/80 px-1 py-0.2 rounded text-[9px] hover:bg-emerald-300 cursor-pointer"
               title="Click to trace Checkpoint Dispatched entries"
             >
-              {kpis.checkpointDispatchedMT?.toLocaleString() ?? '7,542.48'} MT Chkpt
+              {(kpis.checkpointDispatchedMT ?? 0).toLocaleString()} MT Chkpt
             </span>
           </div>
 
           <div className="text-[9px] text-emerald-700 font-medium mt-1 flex items-center justify-between border-t border-emerald-200/60 pt-1">
-            <span>632 Verified Arrivals</span>
+            <span>{kpis.totalArrivalsCount ?? kpis.fullyDeliveredContracts} Verified Deliveries</span>
             <span className="text-emerald-800 group-hover:underline flex items-center gap-0.5 font-bold">Trace &rarr;</span>
           </div>
         </div>
@@ -167,7 +167,7 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           <div className="text-[10px] text-amber-800 font-bold mt-1 flex items-center justify-between">
             <span>To Deliver: {kpis.pendingPct}%</span>
             <span className="bg-amber-200/70 px-1 py-0.2 rounded text-[9px]">
-              {kpis.saudaPendingMT?.toLocaleString() ?? '2,984.41'} MT Sauda
+              {(kpis.saudaPendingMT ?? 0).toLocaleString()} MT Sauda
             </span>
           </div>
 
@@ -190,7 +190,7 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
           <div className="text-xl font-black text-slate-900 font-mono tracking-tight">{kpis.onTimePct}%</div>
 
           <div className="text-[10px] text-slate-600 font-medium mt-1 flex items-center justify-between">
-            <span className="text-emerald-700 font-semibold">{kpis.onTimeDeliveredMT?.toLocaleString() ?? '0'} MT On-Time</span>
+            <span className="text-emerald-700 font-semibold">{(kpis.onTimeDeliveredMT ?? 0).toLocaleString()} MT On-Time</span>
             <span className="text-amber-700 font-semibold">Delayed: {kpis.delayedPct}%</span>
           </div>
 
@@ -211,12 +211,12 @@ export const PercentageKPISection: React.FC<PercentageKPISectionProps> = ({
             <DollarSign className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors" />
           </div>
           <div className="text-xl font-black text-slate-900 font-mono tracking-tight">
-            {kpis.billPassingRatePct ?? 97.4}%
+            {(kpis.billPassingRatePct ?? 0).toFixed(1)}%
           </div>
 
           <div className="text-[10px] text-slate-600 font-medium mt-1 flex items-center justify-between">
             <span className="text-emerald-700 font-bold">Bill Passed</span>
-            <span className="text-slate-500">₹4.40L Bank Paid</span>
+            <span className="text-slate-500">₹{((kpis.finalPaymentTotal || 0) / 100000).toFixed(2)}L Bank Paid</span>
           </div>
 
           <div className="text-[9px] text-slate-400 font-medium mt-1 flex items-center justify-between border-t border-slate-100 pt-1">

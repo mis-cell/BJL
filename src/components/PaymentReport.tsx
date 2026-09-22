@@ -141,6 +141,13 @@ export interface PaymentDetailColumn {
   wt_quantity: number;
   rate_value: number;
 
+  // Grade Down Settlement & Rate Adjustments
+  sett_pct: number; // Sett (%) - Mill Sett -> Gr. Down %
+  deduction_rate: number; // Deduction (₹/Qtl) = Settlement Basis (Original Rate) * Sett (%) / 100
+  sett_rate: number; // Sett Rate (₹/Qtl) = Original Rate - Deduction (₹/Qtl)
+  quantity_qtl: number; // Quantity (Qtl) = Weight (MT) * 10
+  amount: number; // Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl)
+
   // Claims
   gd_claim: number;
   gd_sett: number;
@@ -184,6 +191,11 @@ const emptyDetailColumn = (index: number): PaymentDetailColumn => ({
   wt_phota: 0,
   wt_quantity: 0,
   rate_value: 0,
+  sett_pct: 0,
+  deduction_rate: 0,
+  sett_rate: 0,
+  quantity_qtl: 0,
+  amount: 0,
   gd_claim: 0, gd_sett: 0, gd_rev: 0, gd_final: 0,
   moist_claim: 0, moist_sett: 0, moist_rev: 0, moist_final: 0,
   dust_claim: 0, dust_sett: 0, dust_rev: 0, dust_final: 0,
@@ -206,17 +218,45 @@ export const getColWtMt = (col?: PaymentDetailColumn): number => {
   return 0;
 };
 
+// Quantity (Qtl) = Weight (MT) * 10
+export const getColQtyQtl = (col?: PaymentDetailColumn): number => {
+  const wtMt = getColWtMt(col);
+  return Number((wtMt * 10).toFixed(3));
+};
+
+// Sett (%) - uses saved Mill Sett -> Gr. Down percentage, or user edited sett_pct
+export const getColSettPct = (col?: PaymentDetailColumn): number => {
+  if (!col) return 0;
+  if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct))) {
+    return Number(col.sett_pct);
+  }
+  return Number(col.gd_sett ?? 0);
+};
+
+// Deduction (₹/Qtl) = Settlement Basis (Original Rate ₹/Qtl) * Sett (%) ÷ 100
+export const getColDeduction = (col?: PaymentDetailColumn): number => {
+  if (!col) return 0;
+  const origRate = Number(col.rate_value) || 0;
+  const settPct = getColSettPct(col);
+  if (origRate <= 0 || settPct <= 0) return 0;
+  return Number(((origRate * settPct) / 100).toFixed(2));
+};
+
+// Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) − Deduction (₹/Qtl)
+export const getColSettRate = (col?: PaymentDetailColumn): number => {
+  if (!col) return 0;
+  const origRate = Number(col.rate_value) || 0;
+  const deduction = getColDeduction(col);
+  return Math.max(0, Number((origRate - deduction).toFixed(2)));
+};
+
+// Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl)
 export const getColAmount = (col?: PaymentDetailColumn): number => {
   if (!col) return 0;
-  const wtMt = getColWtMt(col);
-  const reconRate = Number(col.rate_value) || 0;
-  if (wtMt <= 0 || reconRate <= 0) return 0;
-  // Weight (MT) converted to kg = wtMt * 1000 (or Qtl = wtMt * 10)
-  // Rate (₹/Qtl) converted to ₹/kg = reconRate / 100
-  // Amount = 5460 kg * 141/kg = 54.60 Qtl * 14100
-  const wtKg = wtMt * 1000;
-  const rateKg = reconRate / 100;
-  return wtKg * rateKg;
+  const qtyQtl = getColQtyQtl(col);
+  const settRate = getColSettRate(col);
+  if (qtyQtl <= 0 || settRate <= 0) return 0;
+  return Number((qtyQtl * settRate).toFixed(2));
 };
 
 // Robust helper to parse grid_details / items from string or array or object
@@ -343,6 +383,13 @@ export const mapItemsToDetailCols = (
     const rate = Number(poHeader.b_rate || poHeader.rate_qntl || defaultRate || 0);
 
     if (grade || area || agency || qty > 0 || wt > 0) {
+      const settPct = Number(poHeader.sett_pct ?? 0);
+      const origRate = rate;
+      const deductionRate = Number(((origRate * settPct) / 100).toFixed(2));
+      const settRate = Math.max(0, Number((origRate - deductionRate).toFixed(2)));
+      const qtyQtl = Number((wt * 10).toFixed(3));
+      const amount = Number((qtyQtl * settRate).toFixed(2));
+
       newCols[0] = {
         ...emptyDetailColumn(1),
         grade,
@@ -351,7 +398,12 @@ export const mapItemsToDetailCols = (
         marka_crop: marka,
         quantity: qty,
         arr_qty_wt: wt,
-        rate_value: rate
+        rate_value: rate,
+        sett_pct: settPct,
+        deduction_rate: deductionRate,
+        sett_rate: settRate,
+        quantity_qtl: qtyQtl,
+        amount: amount
       };
       return newCols;
     }
@@ -385,6 +437,15 @@ export const mapItemsToDetailCols = (
       );
       const rate = Number(item.rate_per_mt || item.rate_mt || item.rate_qntl || item.rate || item.rate_value || poHeader?.b_rate || defaultRate || 0);
 
+      const gdClaim = Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.grade_down_act ?? 0);
+      const gdSett = Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? 0);
+      const settPct = Number(item.sett_pct !== undefined && item.sett_pct !== null && item.sett_pct !== "" ? item.sett_pct : gdSett);
+      const origRate = rate;
+      const deductionRate = Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" ? item.deduction_rate : ((origRate * settPct) / 100).toFixed(2));
+      const settRate = Number(item.sett_rate !== undefined && item.sett_rate !== null && item.sett_rate !== "" ? item.sett_rate : Math.max(0, origRate - deductionRate).toFixed(2));
+      const qtyQtl = Number((wt * 10).toFixed(3));
+      const amount = Number(item.amount !== undefined && item.amount !== null && item.amount !== "" ? item.amount : (qtyQtl * settRate).toFixed(2));
+
       newCols[idx] = {
         ...emptyDetailColumn(idx + 1),
         grade,
@@ -394,8 +455,13 @@ export const mapItemsToDetailCols = (
         quantity: qty,
         arr_qty_wt: wt,
         rate_value: rate,
-        gd_claim: Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.grade_down_act ?? 0),
-        gd_sett: Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? 0),
+        sett_pct: settPct,
+        deduction_rate: deductionRate,
+        sett_rate: settRate,
+        quantity_qtl: qtyQtl,
+        amount: amount,
+        gd_claim: gdClaim,
+        gd_sett: gdSett,
         moist_claim: Number(item.moist_claim ?? item.moisture_claim ?? item.claim_moisture ?? item.moisture_act ?? 0),
         moist_sett: Number(item.moist_sett ?? item.settlement_moisture ?? item.moisture_sett ?? 0),
         dust_claim: Number(item.dust_claim ?? item.dust_claim ?? item.claim_dust ?? item.dust_act ?? 0),
@@ -1788,24 +1854,40 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         cols = cols.map((col) => {
           if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
           
+          let lineRate = col.rate_value;
           const matchedPoItem = findMatchedPoItem(col, poItems, { gradeMasters: gList, agencyMasters: agList });
 
           if (matchedPoItem) {
-            const lineRate = Number(
+            const r = Number(
               matchedPoItem.rate_per_mt || matchedPoItem.rate_mt || matchedPoItem.rate_qntl || matchedPoItem.rate || 0
             );
-            if (lineRate > 0) {
-              return { ...col, rate_value: lineRate };
+            if (r > 0) {
+              lineRate = r;
             }
           }
           // If no specific grade match, but column has no rate, fallback to header base rate
-          if (!col.rate_value || col.rate_value === 0) {
+          if (!lineRate || lineRate === 0) {
             const fallbackRate = Number(po?.b_rate || po?.rate_qntl || 0);
             if (fallbackRate > 0) {
-              return { ...col, rate_value: fallbackRate };
+              lineRate = fallbackRate;
             }
           }
-          return col;
+
+          const settPct = getColSettPct(col);
+          const ded = Number(((lineRate * settPct) / 100).toFixed(2));
+          const sRate = Math.max(0, Number((lineRate - ded).toFixed(2)));
+          const qQtl = getColQtyQtl(col);
+          const amt = Number((qQtl * sRate).toFixed(2));
+
+          return {
+            ...col,
+            rate_value: lineRate,
+            sett_pct: settPct,
+            deduction_rate: ded,
+            sett_rate: sRate,
+            quantity_qtl: qQtl,
+            amount: amt
+          };
         });
       }
 
@@ -1993,6 +2075,11 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
             wt_phota: Number(c.wt_phota) || 0,
             wt_quantity: Number(c.wt_quantity) || 0,
             rate_value: Number(c.rate_value) || 0,
+            sett_pct: getColSettPct(c),
+            deduction_rate: getColDeduction(c),
+            sett_rate: getColSettRate(c),
+            quantity_qtl: getColQtyQtl(c),
+            amount: getColAmount(c),
             gd_claim: Number(c.gd_claim) || 0,
             gd_sett: Number(c.gd_sett) || 0,
             gd_rev: Number(c.gd_rev) || 0,
@@ -2106,9 +2193,31 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         const newCols = [emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)];
         details.forEach((d: any, idx: number) => {
           if (idx < 4) {
+            const settPct = d.sett_pct !== undefined && d.sett_pct !== null && !isNaN(Number(d.sett_pct))
+              ? Number(d.sett_pct)
+              : Number(d.gd_sett || 0);
+            const origRate = Number(d.rate_value) || 0;
+            const dedRate = d.deduction_rate !== undefined && d.deduction_rate !== null && !isNaN(Number(d.deduction_rate))
+              ? Number(d.deduction_rate)
+              : Number(((origRate * settPct) / 100).toFixed(2));
+            const sRate = d.sett_rate !== undefined && d.sett_rate !== null && !isNaN(Number(d.sett_rate))
+              ? Number(d.sett_rate)
+              : Math.max(0, Number((origRate - dedRate).toFixed(2)));
+            const qQtl = d.quantity_qtl !== undefined && d.quantity_qtl !== null && !isNaN(Number(d.quantity_qtl))
+              ? Number(d.quantity_qtl)
+              : Number((Number(d.arr_qty_wt || d.wt_quantity || 0) * 10).toFixed(3));
+            const amt = d.amount !== undefined && d.amount !== null && !isNaN(Number(d.amount))
+              ? Number(d.amount)
+              : Number((qQtl * sRate).toFixed(2));
+
             newCols[idx] = {
               ...emptyDetailColumn(idx + 1),
-              ...d
+              ...d,
+              sett_pct: settPct,
+              deduction_rate: dedRate,
+              sett_rate: sRate,
+              quantity_qtl: qQtl,
+              amount: amt
             };
           }
         });
@@ -3429,96 +3538,235 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b text-[10px] uppercase font-bold text-slate-600">
-                      <th className="p-2 w-12">Col</th>
+                      <th className="p-2 w-10">Col</th>
                       <th className="p-2">Grade</th>
                       <th className="p-2">Area</th>
                       <th className="p-2">Agency</th>
-                      <th className="p-2">Packets / Qty</th>
-                      <th className="p-2">Weight (MT)</th>
-                      <th className="p-2">Rate (₹/Qtl)</th>
+                      <th className="p-2 w-20">Packets / Qty</th>
+                      <th className="p-2 w-24">Weight (MT)</th>
+                      <th className="p-2 w-24">Rate (₹/Qtl)</th>
+                      <th className="p-2 w-20 bg-emerald-50/70 text-emerald-800">Sett (%)</th>
+                      <th className="p-2 w-24 bg-amber-50/70 text-amber-900">Deduction (₹/Qtl)</th>
+                      <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate (₹/Qtl)</th>
                       <th className="p-2 text-right">Amount (₹)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {detailCols.map((col, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-2 font-bold text-slate-500">{col.col_index}</td>
-                        <td className="p-2">
-                          <input
-                            id="grade_e_g_td5_2364" name="grade_e_g_td5" aria-label="Grade (e.g. TD5)"
-                            type="text"
-                            list="grade-options-list"
-                            value={col.grade}
-                            readOnly
-                            placeholder="Grade (e.g. TD5)"
-                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            id="area_e_g_daisee_2378" name="area_e_g_daisee" aria-label="Area (e.g. DAISEE)"
-                            type="text"
-                            list="area-options-list"
-                            value={col.area}
-                            readOnly
-                            placeholder="Area (e.g. DAISEE)"
-                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            id="agency_e_g_ambagan_2392" name="agency_e_g_ambagan" aria-label="Agency (e.g. AMBAGAN)"
-                            type="text"
-                            list="agency-options-list"
-                            value={col.agency}
-                            readOnly
-                            placeholder="Agency (e.g. AMBAGAN)"
-                            className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
- id="col_quantity_2406" name="col_quantity" aria-label="col quantity"                            type="number"
-                            value={col.quantity || ''}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].quantity = parseFloat(e.target.value) || 0;
-                              setDetailCols(updated);
-                            }}
-                            className="w-20 p-1 border rounded text-xs"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
- id="col_arr_qty_wt_2418" name="col_arr_qty_wt" aria-label="col arr qty wt"                            type="number"
-                            step="0.001"
-                            value={col.arr_qty_wt || ''}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].arr_qty_wt = parseFloat(e.target.value) || 0;
-                              setDetailCols(updated);
-                            }}
-                            className="w-24 p-1 border rounded text-xs"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
- id="col_rate_value_2431" name="col_rate_value" aria-label="col rate value"                            type="number"
-                            step="0.01"
-                            value={col.rate_value || ''}
-                            onChange={e => {
-                              const updated = [...detailCols];
-                              updated[idx].rate_value = parseFloat(e.target.value) || 0;
-                              setDetailCols(updated);
-                            }}
-                            className="w-24 p-1 border rounded text-xs"
-                          />
-                        </td>
-                        <td className="p-2 text-right font-bold text-slate-800">
-                          {formatIndianCurrency(getColAmount(col))}
-                        </td>
-                      </tr>
-                    ))}
+                    {detailCols.map((col, idx) => {
+                      const settPct = getColSettPct(col);
+                      const deduction = getColDeduction(col);
+                      const settRate = getColSettRate(col);
+                      const qtyQtl = getColQtyQtl(col);
+                      const rowAmount = getColAmount(col);
+
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="p-2 font-bold text-slate-500">{col.col_index}</td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_grade_col_${idx}`}
+                              name={`rep_grade_col_${idx}`}
+                              aria-label="Grade"
+                              type="text"
+                              list="grade-options-list"
+                              value={col.grade}
+                              readOnly
+                              placeholder="Grade (e.g. TD5)"
+                              className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_area_col_${idx}`}
+                              name={`rep_area_col_${idx}`}
+                              aria-label="Area"
+                              type="text"
+                              list="area-options-list"
+                              value={col.area}
+                              readOnly
+                              placeholder="Area (e.g. DAISEE)"
+                              className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_agency_col_${idx}`}
+                              name={`rep_agency_col_${idx}`}
+                              aria-label="Agency"
+                              type="text"
+                              list="agency-options-list"
+                              value={col.agency}
+                              readOnly
+                              placeholder="Agency (e.g. AMBAGAN)"
+                              className="w-full p-1 border border-slate-200 bg-slate-100 text-slate-500 rounded text-xs font-semibold cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_quantity_col_${idx}`}
+                              name={`rep_quantity_col_${idx}`}
+                              aria-label="Col quantity"
+                              type="number"
+                              value={col.quantity || ''}
+                              onChange={e => {
+                                const updated = [...detailCols];
+                                updated[idx].quantity = parseFloat(e.target.value) || 0;
+                                setDetailCols(updated);
+                              }}
+                              className="w-20 p-1 border rounded text-xs"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_arr_qty_wt_col_${idx}`}
+                              name={`rep_arr_qty_wt_col_${idx}`}
+                              aria-label="Col Weight MT"
+                              type="number"
+                              step="0.001"
+                              value={col.arr_qty_wt || ''}
+                              onChange={e => {
+                                const updated = [...detailCols];
+                                const newWt = parseFloat(e.target.value) || 0;
+                                updated[idx].arr_qty_wt = newWt;
+                                const qQtl = Number((newWt * 10).toFixed(3));
+                                const sRate = getColSettRate(updated[idx]);
+                                updated[idx].quantity_qtl = qQtl;
+                                updated[idx].sett_rate = sRate;
+                                updated[idx].deduction_rate = getColDeduction(updated[idx]);
+                                updated[idx].amount = Number((qQtl * sRate).toFixed(2));
+                                setDetailCols(updated);
+                                const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                                if (newTotal > 0) {
+                                  const newPaid = calculate93PctPaidAmount(newTotal);
+                                  setMasterData(prev => ({
+                                    ...prev,
+                                    total_amount: newTotal,
+                                    payable_amt: newTotal,
+                                    net_amt: newTotal,
+                                    paid_amount: newPaid
+                                  }));
+                                }
+                              }}
+                              className="w-24 p-1 border rounded text-xs font-mono"
+                            />
+                            <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                              {qtyQtl > 0 ? `${qtyQtl} Qtl` : ''}
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <input
+                              id={`rep_rate_value_col_${idx}`}
+                              name={`rep_rate_value_col_${idx}`}
+                              aria-label="Col Original Rate"
+                              type="number"
+                              step="0.01"
+                              value={col.rate_value || ''}
+                              onChange={e => {
+                                const updated = [...detailCols];
+                                const newRate = parseFloat(e.target.value) || 0;
+                                updated[idx].rate_value = newRate;
+                                const sPct = getColSettPct(updated[idx]);
+                                const ded = Number(((newRate * sPct) / 100).toFixed(2));
+                                const sRate = Math.max(0, Number((newRate - ded).toFixed(2)));
+                                const qQtl = getColQtyQtl(updated[idx]);
+                                updated[idx].deduction_rate = ded;
+                                updated[idx].sett_rate = sRate;
+                                updated[idx].quantity_qtl = qQtl;
+                                updated[idx].amount = Number((qQtl * sRate).toFixed(2));
+                                setDetailCols(updated);
+                                const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                                if (newTotal > 0) {
+                                  const newPaid = calculate93PctPaidAmount(newTotal);
+                                  setMasterData(prev => ({
+                                    ...prev,
+                                    total_amount: newTotal,
+                                    payable_amt: newTotal,
+                                    net_amt: newTotal,
+                                    paid_amount: newPaid
+                                  }));
+                                }
+                              }}
+                              className="w-24 p-1 border rounded text-xs font-mono"
+                            />
+                          </td>
+                          {/* Sett (%) - populated from Mill Sett -> Gr. Down */}
+                          <td className="p-2 bg-emerald-50/30">
+                            <div className="flex flex-col">
+                              <input
+                                id={`rep_sett_pct_col_${idx}`}
+                                name={`rep_sett_pct_col_${idx}`}
+                                aria-label="Settlement Percentage"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                value={col.sett_pct !== undefined ? col.sett_pct : (col.gd_sett || '')}
+                                onChange={e => {
+                                  const updated = [...detailCols];
+                                  const newSettPct = parseFloat(e.target.value) || 0;
+                                  updated[idx].sett_pct = newSettPct;
+                                  const origRate = Number(updated[idx].rate_value) || 0;
+                                  const ded = Number(((origRate * newSettPct) / 100).toFixed(2));
+                                  const sRate = Math.max(0, Number((origRate - ded).toFixed(2)));
+                                  const qQtl = getColQtyQtl(updated[idx]);
+                                  updated[idx].deduction_rate = ded;
+                                  updated[idx].sett_rate = sRate;
+                                  updated[idx].quantity_qtl = qQtl;
+                                  updated[idx].amount = Number((qQtl * sRate).toFixed(2));
+                                  setDetailCols(updated);
+                                  const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                                  if (newTotal > 0) {
+                                    const newPaid = calculate93PctPaidAmount(newTotal);
+                                    setMasterData(prev => ({
+                                      ...prev,
+                                      total_amount: newTotal,
+                                      payable_amt: newTotal,
+                                      net_amt: newTotal,
+                                      paid_amount: newPaid
+                                    }));
+                                  }
+                                }}
+                                placeholder="0"
+                                title="Mill Settlement % Gr. Down"
+                                className="w-16 p-1 border border-emerald-300 rounded text-xs font-bold text-center bg-white text-emerald-950 focus:ring-1 focus:ring-emerald-500"
+                              />
+                              {col.gd_claim > 0 && col.gd_claim !== settPct && (
+                                <span className="text-[9px] text-amber-700 font-semibold mt-0.5" title={`Inspection Claim: ${col.gd_claim}%`}>
+                                  Claim: {col.gd_claim}%
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          {/* Deduction (₹/Qtl) = Settlement Basis (Original Rate) * Sett (%) / 100 */}
+                          <td className="p-2 bg-amber-50/30">
+                            <div 
+                              className="w-24 p-1 rounded text-xs font-mono font-bold text-amber-900 bg-amber-100/60 text-right border border-amber-200"
+                              title={`Deduction = ₹${(Number(col.rate_value) || 0).toFixed(2)} × ${settPct}% ÷ 100 = ₹${deduction.toFixed(2)}/Qtl`}
+                            >
+                              ₹{deduction.toFixed(2)}
+                            </div>
+                          </td>
+                          {/* Sett Rate (₹/Qtl) = Original Rate - Deduction */}
+                          <td className="p-2 bg-blue-50/30">
+                            <div 
+                              className="w-24 p-1 rounded text-xs font-mono font-bold text-blue-900 bg-blue-100/60 text-right border border-blue-200"
+                              title={`Sett Rate = ₹${(Number(col.rate_value) || 0).toFixed(2)} − ₹${deduction.toFixed(2)} = ₹${settRate.toFixed(2)}/Qtl`}
+                            >
+                              ₹{settRate.toFixed(2)}
+                            </div>
+                          </td>
+                          {/* Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl) */}
+                          <td className="p-2 text-right">
+                            <div 
+                              className="font-bold text-slate-800 text-xs font-mono"
+                              title={`${qtyQtl.toFixed(2)} Qtl × ₹${settRate.toFixed(2)}/Qtl = ₹${rowAmount.toFixed(2)}`}
+                            >
+                              {formatIndianCurrency(rowAmount)}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

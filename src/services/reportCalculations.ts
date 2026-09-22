@@ -279,6 +279,8 @@ export interface CompiledReportData {
     paymentCompletionPct: number;
     acceptanceRatePct: number;
     billPassingRatePct: number;
+    finalPaymentTotal?: number;
+    totalArrivalsCount?: number;
   };
 
   // Traceable record collections for drilldown modal
@@ -2149,24 +2151,24 @@ export function compileReportData(
       metricName: 'Total Contracts',
       oldValue: '305 Contracts (269 Completed • 88.2%)',
       correctedValue: `${filteredSaudas.length} Sauda + ${filteredPtfs.length} PTF = ${filteredSaudas.length + filteredPtfs.length} Total Contracts`,
-      causeOfDifference: 'Old report only queried sauda_master and mislabeled 269 entries as "Completed" because they existed in Sauda Check Point (which is a workflow milestone, not delivery completion). PTF contracts (217 records) were excluded entirely.',
-      sourceTable: 'sauda_master (304 Sauda) + sauda_check_point (217 PTF) + sauda_check_point (270 Milestones)',
+      causeOfDifference: 'Old report only queried sauda_master and mislabeled 269 entries as "Completed" because they existed in Sauda Check Point (which is a workflow milestone, not delivery completion). PTF contracts are kept strictly separate as distinct direct-to-factory purchase agreements.',
+      sourceTable: `sauda_master (${filteredSaudas.length} Sauda) + sauda_check_point (${filteredPtfs.length} PTF) + sauda_check_point (${filteredScpMilestones.length} Milestones)`,
       formula: 'Total = Sauda Contracts (po_type != PTF) + PTF Contracts (is_ptf = true)',
       statusRules: 'Sauda: sauda_master. PTF: sauda_check_point (is_ptf=true or ptf_no contains "(PTF)"). Checkpoint entries of Saudas are milestones, not duplicate contracts.'
     },
     {
       metricName: 'Delivered Weight MT',
       oldValue: '7,542.483 MT (Fulfilled 91.56%)',
-      correctedValue: `${saudaDeliveredMT.toFixed(3)} MT (Sauda Physical) + ${ptfDeliveredMT.toFixed(3)} MT (PTF Physical) = ${(saudaDeliveredMT + ptfDeliveredMT).toFixed(3)} MT Received (7,542.48 MT Checkpoint Dispatched)`,
-      causeOfDifference: 'Old calculation had 3 critical bugs: 1) Failed join between final_arrival (e.g. "BJCL/2026-2027/0080") and sauda_master ("0080"). 2) Divided electronic_net_weight (9.925 MT) by 1000, reducing arrival weight to 0.0099 MT. 3) Fallback assumed 100% contracted weight was delivered if a Sauda entered Sauda Check Point, mistaking checkpoint dispatch for mill weighbridge arrival.',
-      sourceTable: 'final_arrival (632 Lorry Arrivals) & sauda_check_point (270 Workflow Dispatches)',
+      correctedValue: `${saudaDeliveredMT.toFixed(3)} MT (Sauda Physical) + ${ptfDeliveredMT.toFixed(3)} MT (PTF Physical) = ${(saudaDeliveredMT + ptfDeliveredMT).toFixed(3)} MT Received (${checkpointDispatchedMT.toFixed(2)} MT Checkpoint Dispatched)`,
+      causeOfDifference: 'Old calculation had 3 critical bugs: 1) Failed join between final_arrival (e.g. "BJCL/2026-2027/0080") and sauda_master ("0080"). 2) Divided electronic_net_weight by 1000, reducing arrival weight to negligible amounts. 3) Fallback assumed 100% contracted weight was delivered if a Sauda entered Sauda Check Point, mistaking checkpoint dispatch for mill weighbridge arrival.',
+      sourceTable: `final_arrival (${mrList.length} Lorry Arrivals) & sauda_check_point (${filteredScpMilestones.length} Workflow Dispatches)`,
       formula: 'Physical Received = Σ(electronic_net_weight from final_arrival). Checkpoint Dispatched = Σ(total_contract_mt from sauda_check_point)',
       statusRules: 'Physical delivery verified by weighbridge slip; Checkpoint dispatch verified by check-in slip.'
     },
     {
       metricName: 'Pending Weight MT',
       oldValue: '694.826 MT (To Deliver 8.44%)',
-      correctedValue: `${saudaPendingMT.toFixed(3)} MT (Sauda Physical Pending) + ${ptfPendingMT.toFixed(3)} MT (PTF Pending) = ${(saudaPendingMT + ptfPendingMT).toFixed(3)} MT Physical Outstanding (694.826 MT Pending Check Point)`,
+      correctedValue: `${saudaPendingMT.toFixed(3)} MT (Sauda Physical Pending) + ${ptfPendingMT.toFixed(3)} MT (PTF Pending) = ${(saudaPendingMT + ptfPendingMT).toFixed(3)} MT Physical Outstanding`,
       causeOfDifference: 'Old pending weight was calculated by subtracting the artificially inflated 7,542.483 MT from contracted weight, representing only the contracts not yet entered into Sauda Check Point, rather than physical jute awaiting factory delivery.',
       sourceTable: 'sauda_master (Contracted) minus final_arrival (Delivered)',
       formula: 'Physical Pending = Math.max(0, Contracted MT - Mill Received MT)',
@@ -2184,8 +2186,8 @@ export function compileReportData(
     {
       metricName: 'Payment Completion %',
       oldValue: '0.36% (Settled: 95%)',
-      correctedValue: '97.4% Material Invoiced & Bill Passed (₹12,039.98 Lakhs) • ₹4.40 Lakhs Direct Bank Vouchers Recorded',
-      causeOfDifference: 'Old metric divided small demo voucher records (₹4.40 Lakhs in payment_master) by total contract portfolio value (₹12,039.98 Lakhs) while displaying a hardcoded "Settled: 95%".',
+      correctedValue: `${billPassingRatePct.toFixed(1)}% Material Invoiced & Bill Passed (₹${(settlementAmountTotal / 100000).toFixed(2)} Lakhs) • ₹${(finalPaymentTotal / 100000).toFixed(2)} Lakhs Direct Bank Vouchers Recorded`,
+      causeOfDifference: 'Old metric divided small demo voucher records (₹4.40 Lakhs in payment_master) by total contract portfolio value (₹12,039.98 Lakhs) while displaying a hardcoded "Settled: 95%". Correct calculation shows bill passing clearance rate alongside bank payout totals.',
       sourceTable: 'payment_master (Bank Vouchers) & final_arrival (Bill Passing)',
       formula: 'Bill Passing Rate = Verified Cleared Invoices / Total Invoices. Bank Payout = Σ(paid_amount from payment_master)',
       statusRules: 'Trade billing settlement verified via final arrival invoice passing; Direct bank payouts verified via payment vouchers.'
@@ -2202,7 +2204,7 @@ export function compileReportData(
     {
       metricName: 'Bill Passing Rate %',
       oldValue: '97.4% (Static Hardcoded)',
-      correctedValue: `${billPassingRatePct.toFixed(1)}% (615 of 632 Invoices Verified & Cleared)`,
+      correctedValue: `${billPassingRatePct.toFixed(1)}% (${Math.round(mrList.length * (billPassingRatePct / 100))} of ${mrList.length} Invoices Verified & Cleared)`,
       causeOfDifference: 'Previously hardcoded; now traceable to verified invoice approval records from final arrivals.',
       sourceTable: 'final_arrival',
       formula: '(Cleared Invoices with Passing Approval / Total Arrivals) * 100',
@@ -2251,7 +2253,9 @@ export function compileReportData(
       saudaPendingMT: calcHelpers.safeRound(saudaPendingMT, 3),
       ptfPendingMT: calcHelpers.safeRound(ptfPendingMT, 3),
       acceptanceRatePct,
-      billPassingRatePct
+      billPassingRatePct,
+      finalPaymentTotal: calcHelpers.safeRound(finalPaymentTotal, 2),
+      totalArrivalsCount: mrList.length
     },
     brokerSummary,
     supplierSummary,

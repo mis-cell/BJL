@@ -12,6 +12,7 @@ export interface ReportFilters {
   grade: string;
   status: string;
   searchTerm: string;
+  contractType?: 'ALL' | 'SAUDA' | 'PTF';
 }
 
 export type FilterState = ReportFilters;
@@ -50,7 +51,8 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
       area: 'ALL',
       grade: 'ALL',
       status: 'ALL',
-      searchTerm: ''
+      searchTerm: '',
+      contractType: 'ALL'
     });
   };
 
@@ -80,7 +82,7 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
         {/* Search Input */}
         <div className="col-span-2">
           <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider block mb-1">
@@ -120,6 +122,22 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
                 <option value="2024-2025">2024-2025</option>
               </>
             )}
+          </select>
+        </div>
+
+        {/* Contract Type (Sauda vs PTF) */}
+        <div>
+          <label className="text-[9px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+            Contract Type
+          </label>
+          <select
+            value={filters.contractType || 'ALL'}
+            onChange={(e) => updateField('contractType', e.target.value as any)}
+            className="w-full px-2.5 py-1.5 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-md text-slate-800 focus:border-emerald-500 outline-none"
+          >
+            <option value="ALL">All (Sauda + PTF)</option>
+            <option value="SAUDA">Sauda Only</option>
+            <option value="PTF">PTF Only</option>
           </select>
         </div>
 
