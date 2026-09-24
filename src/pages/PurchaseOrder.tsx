@@ -2966,28 +2966,54 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         .filter((d: any) => d.po_no === poHeader.po_no)
         .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
       
-      // Fallback: If no details in current table, query sauda_check_point_details or sauda_quality_details
+      // Fallback: If no details in current table, query sauda_check_point_details, temporary_material_received, or sauda_quality_details
       if ((!filteredDetails || filteredDetails.length === 0) && supabase) {
         const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').eq('po_no', poHeader.po_no);
         if (scpDet && scpDet.length > 0) {
           filteredDetails = scpDet;
         } else {
-          // Extract sauda number if present
-          const saudaToken = (poHeader.contract_po_no || poHeader.po_no || '').split('/').pop() || '';
-          const { data: saudaRec } = await supabase.from('sauda_master').select('*').or(`session.eq.${poHeader.po_no},sauda_no.eq.${saudaToken}`).maybeSingle();
-          if (saudaRec) {
-            const { data: qDet } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', saudaRec.sauda_id);
-            if (qDet && qDet.length > 0) {
-              filteredDetails = qDet.map((qd: any, i: number) => ({
-                po_no: poHeader.po_no,
-                srl_no: i + 1,
-                crop_year: '2026-27',
-                grade_code: qd.quality,
-                agency_code: qd.agency,
-                marka_code: qd.marka,
-                quantity: qd.qty,
-                rate_qntl: qd.rs
-              }));
+          // Check temporary_material_received for PTF receipt grade details
+          const { data: tempArr } = await supabase
+            .from('temporary_material_received')
+            .select('*')
+            .or(`po_no.eq.${poHeader.po_no},ptf_no.eq.${poHeader.po_no},temporary_arrival_no.eq.${poHeader.po_no}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (tempArr && Array.isArray(tempArr.grid_details) && tempArr.grid_details.length > 0) {
+            filteredDetails = tempArr.grid_details.map((gd: any, i: number) => ({
+              po_no: poHeader.po_no,
+              srl_no: i + 1,
+              crop_year: gd.crop_year || '2026-27',
+              grade_code: gd.receipt_grade_code || gd.grade_code || gd.challan_grade || '',
+              grade_name: gd.receipt_grade_name || gd.grade_name || gd.challan_grade || '',
+              agency_code: gd.agency_code || '',
+              agency_name: gd.agency_name || '',
+              marka_code: gd.challan_marka_code || gd.marka_code || '',
+              marka_name: gd.challan_marka_name || gd.marka_name || '',
+              quantity: gd.quantity_chln || gd.quantity || gd.qty || 0,
+              weight_mt: gd.netto_mt || gd.weight || 0,
+              rate_qntl: gd.rate || 0,
+              premium: gd.premium || 0
+            }));
+          } else {
+            // Extract sauda number if present
+            const saudaToken = (poHeader.contract_po_no || poHeader.po_no || '').split('/').pop() || '';
+            const { data: saudaRec } = await supabase.from('sauda_master').select('*').or(`session.eq.${poHeader.po_no},sauda_no.eq.${saudaToken}`).maybeSingle();
+            if (saudaRec) {
+              const { data: qDet } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', saudaRec.sauda_id);
+              if (qDet && qDet.length > 0) {
+                filteredDetails = qDet.map((qd: any, i: number) => ({
+                  po_no: poHeader.po_no,
+                  srl_no: i + 1,
+                  crop_year: '2026-27',
+                  grade_code: qd.quality,
+                  agency_code: qd.agency,
+                  marka_code: qd.marka,
+                  quantity: qd.qty,
+                  rate_qntl: qd.rs
+                }));
+              }
             }
           }
         }
