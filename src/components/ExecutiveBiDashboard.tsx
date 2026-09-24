@@ -101,7 +101,9 @@ interface ExecutiveBiDashboardProps {
   millIssueDetails?: any[];
   finalArrivals: any[];
   paymentRecords: any[];
+  paymentDetails?: any[];
   inspections?: any[];
+  inspectionDetails?: any[];
   loading: boolean;
   onRefresh: () => void;
   onNavigate?: (pageId: string) => void;
@@ -125,7 +127,9 @@ export default function ExecutiveBiDashboard({
   millIssueDetails = [],
   finalArrivals = [],
   paymentRecords = [],
+  paymentDetails = [],
   inspections = [],
+  inspectionDetails = [],
   loading = false,
   onRefresh,
   onNavigate,
@@ -188,13 +192,16 @@ export default function ExecutiveBiDashboard({
   const inspMetrics = useMemo(() => {
     return computeInspectionMetrics({
       inspections: inspections.length > 0 ? inspections : arrivals,
+      inspectionDetails,
       arrivals,
       saudaCheckPoints,
       saudaCheckPointDetails,
+      paymentRecords,
+      paymentDetails,
       pos,
       selectedYear: activeYear
     });
-  }, [inspections, arrivals, saudaCheckPoints, saudaCheckPointDetails, pos, activeYear]);
+  }, [inspections, inspectionDetails, arrivals, saudaCheckPoints, saudaCheckPointDetails, paymentRecords, paymentDetails, pos, activeYear]);
 
   // Handler to open drilldown modal with specific records
   const handleOpenDrilldown = (params: {
@@ -838,8 +845,8 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* Year-level KPI Highlights Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs font-sans">
+        {/* Year-level KPI Highlights Ribbon (5 Essential Cards) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-2.5 text-xs font-sans">
           {/* Total Lots & Weight - Count MR_No number only */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
             <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Lots / Weight</span>
@@ -876,7 +883,7 @@ export default function ExecutiveBiDashboard({
             </span>
           </div>
 
-          {/* Grade Down % & Claim */}
+          {/* Grade Down % */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
             <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Grade Down %</span>
             <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
@@ -887,33 +894,15 @@ export default function ExecutiveBiDashboard({
             </span>
           </div>
 
-          {/* Chotta & Habi Jabi */}
-          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Chotta & Habi Jabi</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
-              {inspMetrics.totalChottaHabijabiKg.toLocaleString('en-IN', { minimumFractionDigits: 0 })} Kg
-            </span>
-            <span className="text-[10px] text-[#5A6E54] font-medium">Bale Ropes / Chotta</span>
-          </div>
-
-          {/* Premium (Sauda Check Point) */}
+          {/* Premium (Payment Operations / Sauda Check Point) */}
           <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/30">
             <span className="text-[9.5px] text-amber-900 font-bold block uppercase tracking-wider">⚡ Premium (SCP)</span>
             <span className="font-mono font-extrabold text-amber-950 text-sm block">
               {inspMetrics.totalPremiumLots} Lots
             </span>
             <span className="text-[10px] text-amber-800 font-medium">
-              {inspMetrics.totalPremiumSum > 0 ? `₹${formatIndianCurrency(inspMetrics.totalPremiumSum)}` : (inspMetrics.totalPremiumLots > 0 ? `Avg ₹${inspMetrics.avgPremiumRate}/Qtl` : 'From Sauda Check Point')}
+              {inspMetrics.totalPremiumSum > 0 ? `₹${formatIndianCurrency(inspMetrics.totalPremiumSum)}` : (inspMetrics.totalPremiumLots > 0 ? `Avg ₹${inspMetrics.avgPremiumRate}/Qtl` : 'From Payment / SCP')}
             </span>
-          </div>
-
-          {/* Total Claims & Deductions */}
-          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Deductions</span>
-            <span className="font-mono font-extrabold text-rose-800 text-sm block">
-              ₹{formatIndianCurrency(inspMetrics.totalClaimAmount)}
-            </span>
-            <span className="text-[10px] text-[#5A6E54] font-medium">All Deductions</span>
           </div>
         </div>
 
@@ -941,9 +930,9 @@ export default function ExecutiveBiDashboard({
                     </h3>
                   </div>
 
-                  {/* Inspected Lots */}
+                  {/* Inspected Lots / Weight */}
                   <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Lots:</span>
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Lots / Wt:</span>
                     <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">
                       {m.totalInspections} <span className="text-[9.5px] font-normal text-slate-500">({m.totalWeightMt.toFixed(1)} MT)</span>
                     </span>
@@ -976,30 +965,11 @@ export default function ExecutiveBiDashboard({
                     </span>
                   </div>
 
-                  {/* Chotta & Habi Jabi */}
-                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
-                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Chotta & HB:</span>
-                    <span className="font-mono font-bold text-[10px] text-[#1E331B]">
-                      {m.totalChottaHabijabiKg > 0 ? `${m.totalChottaHabijabiKg} Kg` : '0 Kg'}
-                    </span>
-                  </div>
-
-                  {/* Premium (Sauda Check Point) */}
+                  {/* Premium (Payment Operations / Sauda Check Point) */}
                   <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0] bg-amber-50/40 -mx-1 px-1 rounded">
                     <span className="text-[10px] text-amber-900 font-bold">⚡ Premium:</span>
                     <span className="font-mono font-bold text-[10px] text-amber-950">
-                      {m.premiumLotsCount > 0 ? `${m.premiumLotsCount} Lots` : '0'}
-                    </span>
-                  </div>
-
-                  {/* Claims Amount */}
-                  <div className="flex items-center justify-between pt-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Total Claims:</span>
-                    <span className={cn(
-                      "font-mono font-extrabold text-[10.5px]",
-                      m.totalClaimAmount > 0 ? "text-rose-800" : "text-slate-400"
-                    )}>
-                      {m.totalClaimAmount > 0 ? `₹${formatIndianCurrency(m.totalClaimAmount)}` : '₹0'}
+                      {m.premiumLotsCount > 0 ? `${m.premiumLotsCount} Lots (${m.premiumTotalSum > 0 ? `₹${formatIndianCurrency(m.premiumTotalSum)}` : `₹${m.avgPremiumRate}/Q`})` : '0'}
                     </span>
                   </div>
                 </div>

@@ -237,6 +237,7 @@ export default function Dashboard({
   const [smsSaudas, setSmsSaudas] = React.useState<any[]>([]);
   const [rawSaudas, setRawSaudas] = React.useState<any[]>([]);
   const [payments, setPayments] = React.useState<any[]>([]);
+  const [paymentDetails, setPaymentDetails] = React.useState<any[]>([]);
   const [recentAmad, setRecentAmad] = React.useState<any[]>([]);
   const [rawArrivals, setRawArrivals] = React.useState<any[]>([]);
   const [rawFinalArrivals, setRawFinalArrivals] = React.useState<any[]>([]);
@@ -289,13 +290,16 @@ export default function Dashboard({
         openingStocksRes, 
         finalArrivals, 
         paymentRecords,
+        paymentDetailsRes,
         gwsRes,
         mimRes,
         midRes,
         scpRes,
         scpDetRes,
         inspRes,
-        inspDetRes
+        inspDetRes,
+        millInspRes,
+        millDetRes
       ] = await Promise.all([
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_master', 'created_at', false).catch(() => []),
@@ -332,6 +336,17 @@ export default function Dashboard({
               if (r.data) return r.data;
             }
             return await dbModule.fetchAll('payment_master').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('payment_details').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('payment_details').catch(() => []);
           } catch (e) {
             return [];
           }
@@ -412,11 +427,42 @@ export default function Dashboard({
           } catch (e) {
             return [];
           }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('mill_inspection_master').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('mill_inspection_master').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('mill_inspection_detail').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('mill_inspection_detail').catch(() => []);
+          } catch (e) {
+            return [];
+          }
         })()
       ]);
 
-      setInspectionMasters(inspRes || []);
-      setInspectionDetails(inspDetRes || []);
+      const allMasters = [...(inspRes || []), ...(millInspRes || [])];
+      const mastersMap = new Map<string, any>();
+      allMasters.forEach((m: any, idx: number) => {
+        const k = String(m.mr_no || m.id || `M-${idx}`).trim().toUpperCase();
+        if (!mastersMap.has(k)) mastersMap.set(k, m);
+      });
+      const finalInspectionMasters = Array.from(mastersMap.values());
+
+      setInspectionMasters(finalInspectionMasters.length > 0 ? finalInspectionMasters : (inspRes || []));
+      setInspectionDetails([...(inspDetRes || []), ...(millDetRes || [])]);
+      setPaymentDetails(paymentDetailsRes || []);
 
       // Synchronize exact opening stock loader with StockSummary.tsx
       const opData = (openingStocksRes || []).map((r: any) => ({
@@ -723,17 +769,7 @@ export default function Dashboard({
         }
 
         try {
-          const [matInspRes, matDetRes, stNodeStocksRes] = await Promise.all([
-            supabase.from('material_inspection').select('mr_no, mr_date, arrival_date, date, status, created_at'),
-            supabase.from('material_inspection_details').select('mr_no, stock_grade_code, quantity, unit'),
-            supabase.from('opening_stock').select('grade, quantity, weight, godown')
-          ]);
-          
-          const finalMasters = matInspRes.data || [];
-          setInspectionMasters(finalMasters);
-          
-          const combinedDetails = matDetRes.data || [];
-          setInspectionDetails(combinedDetails);
+          const { data: stNodeData } = await supabase.from('opening_stock').select('grade, quantity, weight, godown');
           
           const getOpeningStocksFallback = async () => {
             const fb = await dbModule.fetchAll('opening_stock').catch(() => []);
@@ -752,8 +788,8 @@ export default function Dashboard({
             return [];
           };
 
-          if (stNodeStocksRes.data) {
-            setStockNodeStocks(stNodeStocksRes.data);
+          if (stNodeData) {
+            setStockNodeStocks(stNodeData);
           } else {
             const fallbackStocks = await getOpeningStocksFallback();
             setStockNodeStocks(fallbackStocks);
@@ -1518,7 +1554,9 @@ export default function Dashboard({
             millIssueDetails={millIssueDetails}
             finalArrivals={rawFinalArrivals}
             paymentRecords={payments}
+            paymentDetails={paymentDetails}
             inspections={inspectionMasters}
+            inspectionDetails={inspectionDetails}
             loading={loading}
             onRefresh={loadStats}
             onNavigate={onNavigate}

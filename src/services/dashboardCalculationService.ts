@@ -186,15 +186,19 @@ export interface MonthInspectionSummary {
   inspections: InspectionRecord[];
 }
 
-export function computeInspectionMetrics(params: {
+export interface ComputeInspectionMetricsParams {
   inspections?: any[];
   inspectionDetails?: any[];
   arrivals?: any[];
   saudaCheckPoints?: any[];
   saudaCheckPointDetails?: any[];
+  paymentRecords?: any[];
+  paymentDetails?: any[];
   pos?: any[];
   selectedYear?: number;
-}): {
+}
+
+export function computeInspectionMetrics(params: ComputeInspectionMetricsParams): {
   monthInspectionSummaries: MonthInspectionSummary[];
   allInspections: InspectionRecord[];
   totalInspectionsCount: number;
@@ -219,14 +223,17 @@ export function computeInspectionMetrics(params: {
     arrivals = [], 
     saudaCheckPoints = [],
     saudaCheckPointDetails = [],
+    paymentRecords = [],
+    paymentDetails = [],
     pos = [], 
     selectedYear 
   } = params;
 
-  // Build Sauda Check Point Premium lookup map by normalized PO Number & Sauda Number
-  const scpPremiumMap = new Map<string, { premium: string; isPremium: boolean; rate: number; source: string }>();
+  // Build Premium lookup map by normalized MR Number & PO Number & Voucher Number
+  // Priority: 1. Payment Operations ("Material Grade Details Breakdown"), 2. Sauda Check Point, 3. PO
+  const premiumMap = new Map<string, { premium: string; isPremium: boolean; rate: number; amount: number; source: string }>();
 
-  const registerScpPremium = (refNo: string, raw: any) => {
+  const registerPremium = (refNo: string, raw: any, sourceName = "Payment Operations") => {
     if (!refNo) return;
     const clean = normalizePoRef(refNo);
     if (!clean) return;
@@ -234,51 +241,81 @@ export function computeInspectionMetrics(params: {
     let premStr = "";
     let isPrem = false;
     let premRate = 0;
+    let premAmount = 0;
 
-    if (raw.premium !== undefined && raw.premium !== null && String(raw.premium).trim() !== "" && String(raw.premium).trim() !== "0") {
+    const rateCandidate = Number(raw.premium ?? raw.premium_rate ?? 0);
+    const amtCandidate = Number(raw.summary_premium_amount ?? raw.val_premium_amt ?? raw.premium_amount ?? 0);
+    const wtCandidateMt = Number(raw.arr_qty_wt ?? raw.wt_quantity ?? (Number(raw.quantity_qtl || 0) / 10) ?? raw.weight_mt ?? 0);
+    const wtCandidateQtl = Number(raw.quantity_qtl ?? (wtCandidateMt * 10) ?? 0);
+
+    if (rateCandidate > 0) {
+      isPrem = true;
+      premRate = rateCandidate;
+      premStr = `₹${premRate}/Qtl`;
+      premAmount = amtCandidate > 0 ? amtCandidate : (premRate * (wtCandidateQtl > 0 ? wtCandidateQtl : (wtCandidateMt * 10)));
+    } else if (amtCandidate > 0) {
+      isPrem = true;
+      premAmount = amtCandidate;
+      premStr = `₹${premAmount}`;
+      premRate = wtCandidateQtl > 0 ? (premAmount / wtCandidateQtl) : (wtCandidateMt > 0 ? (premAmount / (wtCandidateMt * 10)) : 0);
+    } else if (raw.premium !== undefined && raw.premium !== null && String(raw.premium).trim() !== "" && String(raw.premium).trim() !== "0" && String(raw.premium).trim().toLowerCase() !== "no") {
       premStr = String(raw.premium).trim();
       const num = parseFloat(premStr.replace(/[^0-9.]/g, ''));
-      if (!isNaN(num) && num > 0) premRate = num;
+      if (!isNaN(num) && num > 0) {
+        premRate = num;
+        premAmount = premRate * (wtCandidateQtl > 0 ? wtCandidateQtl : (wtCandidateMt * 10));
+      }
       isPrem = /yes|true|premium/i.test(premStr) || premRate > 0;
     } else if (raw.is_premium === true || raw.is_premium === "Yes" || raw.is_premium === "YES") {
       isPrem = true;
       premStr = "Yes";
-    } else if (Number(raw.premium_rate) > 0) {
-      isPrem = true;
-      premRate = Number(raw.premium_rate);
-      premStr = `₹${premRate}/Qtl`;
-    } else if (Number(raw.premium_amount) > 0) {
-      isPrem = true;
-      premRate = Number(raw.premium_amount);
-      premStr = `₹${raw.premium_amount}`;
     }
 
-    if (isPrem || premStr) {
-      scpPremiumMap.set(clean, {
-        premium: premStr || "Yes",
+    if (isPrem || premRate > 0 || premAmount > 0) {
+      premiumMap.set(clean, {
+        premium: premStr || (premRate > 0 ? `₹${premRate}/Qtl` : "Yes"),
         isPremium: true,
         rate: premRate,
-        source: "Sauda Check Point"
+        amount: Number(premAmount.toFixed(2)),
+        source: sourceName
       });
     }
   };
 
-  // Populate premium map from Sauda Check Point and PO tables
+  // 1. Payment Details (Material Grade Details breakdown with Premium ₹/Qtl * Weight MT)
+  paymentDetails.forEach(det => {
+    registerPremium(det.mr_no, det, "Payment Operations");
+    registerPremium(det.voucher_no, det, "Payment Operations");
+    registerPremium(det.arrival_no, det, "Payment Operations");
+    registerPremium(det.po_no, det, "Payment Operations");
+  });
+
+  // 2. Payment Master records
+  paymentRecords.forEach(pm => {
+    registerPremium(pm.mr_no, pm, "Payment Operations");
+    registerPremium(pm.voucher_no, pm, "Payment Operations");
+    registerPremium(pm.arrival_no, pm, "Payment Operations");
+    registerPremium(pm.po_no, pm, "Payment Operations");
+  });
+
+  // 3. Sauda Check Point and Details
   saudaCheckPoints.forEach(scp => {
-    registerScpPremium(scp.po_no, scp);
-    registerScpPremium(scp.sauda_no, scp);
-    registerScpPremium(scp.contract_no, scp);
-    registerScpPremium(scp.id, scp);
+    registerPremium(scp.mr_no, scp, "Sauda Check Point");
+    registerPremium(scp.po_no, scp, "Sauda Check Point");
+    registerPremium(scp.sauda_no, scp, "Sauda Check Point");
+    registerPremium(scp.contract_no, scp, "Sauda Check Point");
   });
 
   saudaCheckPointDetails.forEach(det => {
-    registerScpPremium(det.po_no, det);
-    registerScpPremium(det.sauda_no, det);
+    registerPremium(det.mr_no, det, "Sauda Check Point");
+    registerPremium(det.po_no, det, "Sauda Check Point");
+    registerPremium(det.sauda_no, det, "Sauda Check Point");
   });
 
+  // 4. Purchase Orders
   pos.forEach(p => {
-    registerScpPremium(p.po_no, p);
-    registerScpPremium(p.contract_po_no, p);
+    registerPremium(p.po_no, p, "Purchase Order");
+    registerPremium(p.contract_po_no, p, "Purchase Order");
   });
 
   // Build detail rows mapping by MR No / Inspection ID
@@ -295,7 +332,7 @@ export function computeInspectionMetrics(params: {
   // Build arrivals lookup map to enrich inspection metadata if needed
   const arrivalsByMr = new Map<string, any>();
   arrivals.forEach((item, idx) => {
-    const mr = normalizePoRef(item.mr_no || item.temporary_arrival_no || item.arrival_no || item.challan_no || `ARR-${idx}`);
+    const mr = normalizePoRef(item.mr_no || item.temporary_arrival_no || item.arrival_no || item.amad_no || item.challan_no || `ARR-${idx}`);
     if (mr) {
       arrivalsByMr.set(mr, item);
     }
@@ -306,7 +343,7 @@ export function computeInspectionMetrics(params: {
 
   // 1. Process explicit material_inspection / mill_inspection_master records
   inspections.forEach((item, idx) => {
-    const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.id || `MR-${idx}`;
+    const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.amad_no || item.id || `MR-${idx}`;
     const mr = normalizePoRef(rawMr);
     if (!mr) return;
     
@@ -315,60 +352,141 @@ export function computeInspectionMetrics(params: {
     mapByMr.set(mr, { ...arr, ...item, source: 'inspection' });
   });
 
-  // 2. Only if no inspections exist at all, fall back to arrivals that have an MR No
-  if (mapByMr.size === 0) {
-    arrivals.forEach((item, idx) => {
-      if (item.mr_no) {
-        const mr = normalizePoRef(item.mr_no || `ARR-${idx}`);
+  // 2. Also register any arrivals that have an MR No if not already in the map
+  arrivals.forEach((item, idx) => {
+    if (item.mr_no || item.amad_no) {
+      const mr = normalizePoRef(item.mr_no || item.amad_no || `ARR-${idx}`);
+      if (mr && !mapByMr.has(mr)) {
         mapByMr.set(mr, { ...item, source: 'arrival' });
       }
-    });
-  }
+    }
+  });
 
   const parsedInspections: InspectionRecord[] = [];
   const yearsSet = new Set<number>();
 
   mapByMr.forEach((raw, cleanMr) => {
-    const dateStr = raw.mr_date || raw.inspection_date || raw.date || raw.arrival_date || raw.created_at || '';
+    const dateStr = raw.mr_date || raw.inspection_date || raw.date || raw.arrival_date || raw.unloading_date || raw.created_at || '';
     const { year, month: monthIndex } = parseRecordDate(dateStr);
     yearsSet.add(year);
 
     const poRaw = raw.po_no || raw.mill_po_no || raw.contract_no || raw.sauda_no || '';
     const cleanPo = normalizePoRef(poRaw);
 
-    const wtQtl = Number(raw.challan_material_weight || raw.weight_qtl || raw.electronic_net_weight || raw.weight || 0) || 0;
-    const wtMt = wtQtl > 50 ? (wtQtl / 10) : (Number(raw.weight_mt) || (wtQtl / 10));
-
     // Detail rows for this MR if any
     const relatedDetails = detailRowsByMr.get(cleanMr) || raw.grid_details || raw.details || [];
 
-    // 1. Moisture % & Claim (read accurately from inspection records)
-    const rawMoist = raw.actual_moisture !== undefined && raw.actual_moisture !== null && raw.actual_moisture !== '' 
-      ? Number(raw.actual_moisture) 
-      : (raw.moisture_percent !== undefined ? Number(raw.moisture_percent) : (raw.moisture !== undefined ? Number(raw.moisture) : 0));
-    const actualM = isNaN(rawMoist) ? 0 : rawMoist;
-    
-    const applicableM = Number(raw.applicable_moisture || raw.standard_moisture || 15.0);
-    let claimM = Number(raw.claim_moisture !== undefined && raw.claim_moisture !== null && raw.claim_moisture !== '' ? raw.claim_moisture : (raw.claim_percent || 0));
-    if (claimM <= 0 && actualM > applicableM) {
-      claimM = Number((actualM - applicableM).toFixed(1));
+    // Robust Weight Calculation in MT & Qtl
+    let wtMt = 0;
+    if (relatedDetails.length > 0) {
+      const sumGross = relatedDetails.reduce((acc, d) => acc + (Number(d.receipt_gross_wt ?? d.challan_gross_wt ?? d.weight ?? d.quantity ?? 0)), 0);
+      if (sumGross > 0) {
+        wtMt = sumGross > 100 ? sumGross / 1000 : (sumGross > 50 ? sumGross / 10 : sumGross);
+      }
     }
-    const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || (raw.moisture_claim && raw.moisture_claim > 0 ? (raw.moisture_claim * 50) : 0));
+    if (wtMt === 0) {
+      const rawGross = Number(raw.challan_gross_wt || raw.receipt_gross_wt || raw.total_actual_weight || raw.weight_mt || 0);
+      if (rawGross > 0) {
+        wtMt = rawGross > 100 ? rawGross / 1000 : (rawGross > 50 ? rawGross / 10 : rawGross);
+      }
+    }
+    if (wtMt === 0) {
+      const rawNet = Number(raw.electronic_net_weight || raw.supplier_net_weight || raw.challan_material_weight || raw.weight_qtl || raw.weight || 0);
+      if (rawNet > 0) {
+        wtMt = rawNet > 50 ? (rawNet / 10) : rawNet;
+      }
+    }
+    const wtQtl = wtMt * 10;
 
-    // 2. Dust % & Claim
-    const rawDust = raw.actual_dust !== undefined && raw.actual_dust !== null && raw.actual_dust !== '' 
-      ? Number(raw.actual_dust) 
-      : (raw.dust_percent !== undefined ? Number(raw.dust_percent) : (raw.dust_act !== undefined ? Number(raw.dust_act) : 0));
-    const actualDust = isNaN(rawDust) ? 0 : rawDust;
-    const claimDust = Number(raw.claim_dust !== undefined && raw.claim_dust !== null && raw.claim_dust !== '' ? raw.claim_dust : (raw.dust_claim || (actualDust > 1.0 ? Number((actualDust - 1.0).toFixed(1)) : 0)));
+    // 1. Moisture % & Claim (read accurately from INSPECTION MODULE REGISTER)
+    let actualM = 0;
+    if (raw.actual_moisture !== undefined && raw.actual_moisture !== null && raw.actual_moisture !== '') {
+      actualM = Number(raw.actual_moisture);
+    } else if (raw.moisture_act !== undefined && raw.moisture_act !== null && raw.moisture_act !== '') {
+      actualM = Number(raw.moisture_act);
+    } else if (raw.moisture_percent !== undefined && raw.moisture_percent !== null) {
+      actualM = Number(raw.moisture_percent);
+    } else if (raw.moisture !== undefined && raw.moisture !== null) {
+      actualM = Number(raw.moisture);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_moisture !== undefined) {
+      actualM = Number(relatedDetails[0].actual_moisture);
+    }
+    if (isNaN(actualM)) actualM = 0;
+
+    let claimM = 0;
+    if (raw.claim_moisture !== undefined && raw.claim_moisture !== null && raw.claim_moisture !== '') {
+      claimM = Number(raw.claim_moisture);
+    } else if (raw.moisture_claim !== undefined && raw.moisture_claim !== null && raw.moisture_claim !== '') {
+      claimM = Number(raw.moisture_claim);
+    } else if (raw.claim_percent !== undefined && raw.claim_percent !== null) {
+      claimM = Number(raw.claim_percent);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_moisture !== undefined) {
+      claimM = Number(relatedDetails[0].claim_moisture);
+    }
+    if (isNaN(claimM)) claimM = 0;
+    if (claimM <= 0 && actualM > 15.0) {
+      claimM = Number((actualM - 15.0).toFixed(1));
+    }
+    const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || (claimM > 0 ? (claimM * 50) : 0));
+
+    // 2. Dust % & Claim (read accurately from INSPECTION MODULE REGISTER)
+    let actualDust = 0;
+    if (raw.actual_dust !== undefined && raw.actual_dust !== null && raw.actual_dust !== '') {
+      actualDust = Number(raw.actual_dust);
+    } else if (raw.dust_act !== undefined && raw.dust_act !== null && raw.dust_act !== '') {
+      actualDust = Number(raw.dust_act);
+    } else if (raw.dust_percent !== undefined && raw.dust_percent !== null) {
+      actualDust = Number(raw.dust_percent);
+    } else if (raw.dust !== undefined && raw.dust !== null) {
+      actualDust = Number(raw.dust);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_dust !== undefined) {
+      actualDust = Number(relatedDetails[0].actual_dust);
+    }
+    if (isNaN(actualDust)) actualDust = 0;
+
+    let claimDust = 0;
+    if (raw.claim_dust !== undefined && raw.claim_dust !== null && raw.claim_dust !== '') {
+      claimDust = Number(raw.claim_dust);
+    } else if (raw.dust_claim !== undefined && raw.dust_claim !== null && raw.dust_claim !== '') {
+      claimDust = Number(raw.dust_claim);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_dust !== undefined) {
+      claimDust = Number(relatedDetails[0].claim_dust);
+    }
+    if (isNaN(claimDust)) claimDust = 0;
+    if (claimDust <= 0 && actualDust > 1.0) {
+      claimDust = Number((actualDust - 1.0).toFixed(1));
+    }
     const dustDedAmt = Number(raw.dust_claim_amt || raw.dust_deduction_amount || (claimDust > 0 ? (claimDust * 40) : 0));
 
-    // 3. Grade Down % & Claim
-    const rawGd = raw.actual_grade_down !== undefined && raw.actual_grade_down !== null && raw.actual_grade_down !== '' 
-      ? Number(raw.actual_grade_down) 
-      : (raw.grade_down_percent !== undefined ? Number(raw.grade_down_percent) : (raw.grade_down !== undefined ? Number(raw.grade_down) : 0));
-    const actualGradeDown = isNaN(rawGd) ? 0 : rawGd;
-    const claimGradeDown = Number(raw.claim_grade_down !== undefined && raw.claim_grade_down !== null && raw.claim_grade_down !== '' ? raw.claim_grade_down : (raw.grade_down_claim || actualGradeDown));
+    // 3. Grade Down % & Claim (read accurately from INSPECTION MODULE REGISTER)
+    let actualGradeDown = 0;
+    if (raw.actual_grade_down !== undefined && raw.actual_grade_down !== null && raw.actual_grade_down !== '') {
+      actualGradeDown = Number(raw.actual_grade_down);
+    } else if (raw.grade_down_act !== undefined && raw.grade_down_act !== null && raw.grade_down_act !== '') {
+      actualGradeDown = Number(raw.grade_down_act);
+    } else if (raw.grade_down_percent !== undefined && raw.grade_down_percent !== null) {
+      actualGradeDown = Number(raw.grade_down_percent);
+    } else if (raw.grade_down !== undefined && raw.grade_down !== null) {
+      actualGradeDown = Number(raw.grade_down);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_grade_down !== undefined) {
+      actualGradeDown = Number(relatedDetails[0].actual_grade_down);
+    }
+    if (isNaN(actualGradeDown)) actualGradeDown = 0;
+
+    let claimGradeDown = 0;
+    if (raw.claim_grade_down !== undefined && raw.claim_grade_down !== null && raw.claim_grade_down !== '') {
+      claimGradeDown = Number(raw.claim_grade_down);
+    } else if (raw.grade_down_claim !== undefined && raw.grade_down_claim !== null && raw.grade_down_claim !== '') {
+      claimGradeDown = Number(raw.grade_down_claim);
+    } else if (raw.quality_matrix?.grade_down?.['1st']?.claim !== undefined) {
+      claimGradeDown = Number(raw.quality_matrix.grade_down['1st'].claim);
+    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_grade_down !== undefined) {
+      claimGradeDown = Number(relatedDetails[0].claim_grade_down);
+    }
+    if (isNaN(claimGradeDown)) claimGradeDown = 0;
+    if (claimGradeDown <= 0 && actualGradeDown > 0) {
+      claimGradeDown = actualGradeDown;
+    }
     const gradeDownDedAmt = Number(raw.grade_down_claim_amt || raw.grade_deduction_amount || raw.quality_deduction_amount || (claimGradeDown > 0 ? (claimGradeDown * 60) : 0));
 
     // 4. Chotta & Habi Jabi
@@ -377,7 +495,6 @@ export function computeInspectionMetrics(params: {
     let chottaGrade = String(raw.chotta_grade || 'CHOTTA').trim();
     let habijabiGrade = String(raw.ropes_grade || raw.habijabi_grade || 'HABIJABI').trim();
     
-    // Check detail rows for Chotta / Habijabi if header is zero
     if (relatedDetails.length > 0) {
       relatedDetails.forEach((d: any) => {
         chottaKg += Number(d.chotta_weight || 0);
@@ -389,22 +506,32 @@ export function computeInspectionMetrics(params: {
     const totChottaHabijabiKg = chottaKg + habijabiKg;
     const chottaHabijabiDedAmt = Number(raw.chotta_deduction_amount || raw.ropes_deduction_amount || (totChottaHabijabiKg > 0 ? Number(((totChottaHabijabiKg / 100) * 1500).toFixed(2)) : 0));
 
-    // 5. Premium (ONLY FROM SAUDA CHECK POINT)
-    let premiumData = scpPremiumMap.get(cleanPo) || { premium: "No", isPremium: false, rate: 0, source: "Sauda Check Point" };
-    if (!premiumData.isPremium && cleanMr) {
-      const byMr = scpPremiumMap.get(cleanMr);
-      if (byMr) premiumData = byMr;
-    }
-    // Check if raw inspection itself has premium recorded
-    if (!premiumData.isPremium && raw.premium && String(raw.premium).trim() !== "" && String(raw.premium).trim() !== "0") {
-      const num = parseFloat(String(raw.premium).replace(/[^0-9.]/g, ''));
-      const premRate = !isNaN(num) && num > 0 ? num : 0;
-      premiumData = {
-        premium: String(raw.premium),
-        isPremium: true,
-        rate: premRate,
-        source: "Inspection / Sauda"
-      };
+    // 5. Premium: Highest priority from Payment Operations (Premium ₹/Qtl * Weight MT) / Sauda Check Point
+    let premiumData = premiumMap.get(cleanMr) || premiumMap.get(cleanPo) || { premium: "No", isPremium: false, rate: 0, amount: 0, source: "Payment Operations / SCP" };
+    
+    // Check if raw inspection itself or related details have premium
+    if (!premiumData.isPremium) {
+      if (raw.premium && String(raw.premium).trim() !== "" && String(raw.premium).trim() !== "0" && String(raw.premium).trim().toLowerCase() !== "no") {
+        const num = parseFloat(String(raw.premium).replace(/[^0-9.]/g, ''));
+        const premRate = !isNaN(num) && num > 0 ? num : 0;
+        premiumData = {
+          premium: String(raw.premium),
+          isPremium: true,
+          rate: premRate,
+          amount: premRate > 0 ? Number((premRate * (wtQtl > 0 ? wtQtl : (wtMt * 10))).toFixed(2)) : 0,
+          source: "Inspection / Payment"
+        };
+      } else if (relatedDetails.some((d: any) => Number(d.premium || 0) > 0 || d.is_premium === true)) {
+        const dPrem = relatedDetails.find((d: any) => Number(d.premium || 0) > 0 || d.is_premium === true);
+        const premRate = Number(dPrem?.premium || 0);
+        premiumData = {
+          premium: premRate > 0 ? `₹${premRate}/Qtl` : "Yes",
+          isPremium: true,
+          rate: premRate,
+          amount: premRate > 0 ? Number((premRate * (wtQtl > 0 ? wtQtl : (wtMt * 10))).toFixed(2)) : 0,
+          source: "Inspection Details"
+        };
+      }
     }
 
     // Deduction amounts
@@ -420,12 +547,12 @@ export function computeInspectionMetrics(params: {
     const supplier = String(raw.supplier_name || raw.supplier || raw.vyapari_name || 'DIRECT SUPPLIER').trim();
     const broker = String(raw.broker_name || raw.broker || 'DIRECT').trim();
     const vehicle = String(raw.lorry_number || raw.vehicle_no || raw.truck_no || 'WB-00-1234').trim();
-    const grade = String(raw.jute_grade || raw.grade || raw.stock_grade_name || 'TD-4').trim().toUpperCase();
+    const grade = String(raw.jute_grade || raw.grade || raw.stock_grade_name || (relatedDetails[0]?.stock_grade_code) || 'TD-4').trim().toUpperCase();
     const remarks = String(raw.remarks || raw.mr_spcl_print || '').trim();
 
     parsedInspections.push({
       id: raw.id || `insp-rec-${cleanMr}`,
-      mrNo: raw.mr_no || raw.challan_no || cleanMr,
+      mrNo: raw.mr_no || raw.amad_no || raw.challan_no || cleanMr,
       cleanMrNo: cleanMr,
       poNo: poRaw || '---',
       cleanPoNo: cleanPo,
@@ -463,9 +590,9 @@ export function computeInspectionMetrics(params: {
       chottaGrade,
       habijabiGrade,
       
-      // 5. Premium from Sauda Check Point
+      // 5. Premium from Payment Operations / Sauda Check Point
       premium: premiumData.premium,
-      isPremium: premiumData.isPremium,
+      isPremium: premiumData.isPremium && (premiumData.rate > 0 || premiumData.amount > 0 || /yes|true/i.test(premiumData.premium)),
       premiumRate: premiumData.rate,
       premiumSource: premiumData.source,
       
@@ -517,10 +644,11 @@ export function computeInspectionMetrics(params: {
       claimGradeDownSum += r.claimGradeDown;
       totChottaHbKg += r.totalChottaHabijabiKg;
       totChottaHbClaim += r.chottaHabijabiDeductionAmount;
-      if (r.isPremium) {
+      if (r.isPremium && (r.premiumRate > 0 || r.premium !== "No")) {
         premLots++;
         premRateTotal += r.premiumRate;
-        premSum += r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+        const lotPremAmt = r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+        premSum += lotPremAmt;
       }
       totClaim += r.totalClaimAmount;
       if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistClaimLots++;
@@ -576,15 +704,16 @@ export function computeInspectionMetrics(params: {
     totalGradeDownSum += r.actualGradeDown;
     totalClaimGradeDownSum += r.claimGradeDown;
     totalChottaHabijabiKg += r.totalChottaHabijabiKg;
-    if (r.isPremium) {
+    if (r.isPremium && (r.premiumRate > 0 || r.premium !== "No")) {
       totalPremiumLots++;
       totalPremiumRateSum += r.premiumRate;
-      totalPremiumSum += r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+      const lotPremAmt = r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+      totalPremiumSum += lotPremAmt;
     }
     totalClaimAmount += r.totalClaimAmount;
   });
 
-  const overallAvgMoisture = totalInspectionsCount > 0 ? Number((totalMoistSum / totalInspectionsCount).toFixed(1)) : 6.1;
+  const overallAvgMoisture = totalInspectionsCount > 0 ? Number((totalMoistSum / totalInspectionsCount).toFixed(1)) : 0;
   const overallAvgClaimMoisture = totalInspectionsCount > 0 ? Number((totalClaimMoistSum / totalInspectionsCount).toFixed(1)) : 0;
   const overallAvgDust = totalInspectionsCount > 0 ? Number((totalDustSum / totalInspectionsCount).toFixed(1)) : 0;
   const overallAvgClaimDust = totalInspectionsCount > 0 ? Number((totalClaimDustSum / totalInspectionsCount).toFixed(1)) : 0;
