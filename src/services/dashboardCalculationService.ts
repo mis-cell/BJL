@@ -99,6 +99,221 @@ export interface DashboardMetricsResult {
   allPayments: any[];
 }
 
+export interface InspectionRecord {
+  id: string;
+  mrNo: string;
+  cleanMrNo: string;
+  date: string;
+  year: number;
+  month: number; // 0-11
+  monthName: string;
+  supplier: string;
+  broker: string;
+  vehicleNo: string;
+  juteGrade: string;
+  weightQtl: number;
+  weightMt: number;
+  actualMoisture: number;
+  claimMoisture: number;
+  moistureDeductionAmount: number;
+  qualityDeductionAmount: number;
+  deliveryClaimAmount: number;
+  baleWeightDeductionAmount: number;
+  otherDeductionAmount: number;
+  totalClaimAmount: number;
+  status: string;
+  remarks: string;
+  rawRecord: any;
+}
+
+export interface MonthInspectionSummary {
+  monthIndex: number;
+  monthName: string;
+  year: number;
+  totalInspections: number;
+  totalWeightMt: number;
+  avgMoisture: number;
+  avgClaimMoisture: number;
+  totalClaimAmount: number;
+  lotsWithMoistureClaim: number;
+  lotsWithQualityClaim: number;
+  inspections: InspectionRecord[];
+}
+
+export function computeInspectionMetrics(params: {
+  inspections?: any[];
+  arrivals?: any[];
+  selectedYear?: number;
+}): {
+  monthInspectionSummaries: MonthInspectionSummary[];
+  allInspections: InspectionRecord[];
+  totalInspectionsCount: number;
+  totalInspectedWeightMt: number;
+  overallAvgMoisture: number;
+  overallAvgClaimMoisture: number;
+  totalClaimAmount: number;
+  availableYears: number[];
+  selectedYear: number;
+} {
+  const { inspections = [], arrivals = [], selectedYear } = params;
+
+  // Build a consolidated map of inspection records by MR No or ID
+  const mapByMr = new Map<string, any>();
+
+  // 1. Process explicit material_inspection records
+  inspections.forEach((item, idx) => {
+    const mr = normalizePoRef(item.mr_no || item.arrival_no || item.challan_no || `INSP-${idx}`);
+    mapByMr.set(mr, { ...item, source: 'inspection' });
+  });
+
+  // 2. Supplement with arrivals if not yet in map
+  arrivals.forEach((item, idx) => {
+    const mr = normalizePoRef(item.mr_no || item.challan_no || item.arrival_no || `ARR-${idx}`);
+    if (!mapByMr.has(mr)) {
+      mapByMr.set(mr, { ...item, source: 'arrival' });
+    } else {
+      // Merge extra details
+      const existing = mapByMr.get(mr);
+      mapByMr.set(mr, { ...item, ...existing });
+    }
+  });
+
+  const parsedInspections: InspectionRecord[] = [];
+  const yearsSet = new Set<number>();
+
+  mapByMr.forEach((raw, cleanMr) => {
+    const dateStr = raw.mr_date || raw.inspection_date || raw.date || raw.arrival_date || raw.created_at || '';
+    const { year, month: monthIndex } = parseRecordDate(dateStr);
+    yearsSet.add(year);
+
+    const wtQtl = Number(raw.challan_material_weight || raw.weight_qtl || raw.electronic_net_weight || raw.weight || 0) || 0;
+    const wtMt = wtQtl > 50 ? (wtQtl / 10) : (Number(raw.weight_mt) || (wtQtl / 10));
+
+    // Moisture parsing
+    const actualM = Number(raw.moisture_percent || raw.actual_moisture || raw.moisture_avg || raw.moisture || 14.5);
+    const applicableM = Number(raw.applicable_moisture || raw.standard_moisture || 15.0);
+    let claimM = Number(raw.claim_moisture || raw.claim_percent || 0);
+    if (claimM <= 0 && actualM > applicableM) {
+      claimM = Number((actualM - applicableM).toFixed(1));
+    }
+
+    // Deduction amounts
+    const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || 0);
+    const qualDedAmt = Number(raw.quality_deduction_amount || raw.grade_deduction_amount || 0);
+    const delivDedAmt = Number(raw.delivery_claim_amount || raw.delivery_claim || 0);
+    const baleDedAmt = Number(raw.bale_weight_deduction_amount || 0);
+    const otherDedAmt = Number(raw.other_deduction_amount || 0);
+    
+    let totalClaim = Number(raw.summary_deduction_amount || raw.total_deduction_amt || raw.claim_amount || raw.deduction_amount || 0);
+    if (totalClaim <= 0) {
+      totalClaim = moistDedAmt + qualDedAmt + delivDedAmt + baleDedAmt + otherDedAmt;
+    }
+
+    const supplier = String(raw.supplier_name || raw.supplier || raw.vyapari_name || 'DIRECT SUPPLIER').trim();
+    const broker = String(raw.broker_name || raw.broker || 'DIRECT').trim();
+    const vehicle = String(raw.lorry_number || raw.vehicle_no || raw.truck_no || 'WB-00-1234').trim();
+    const grade = String(raw.jute_grade || raw.grade || raw.stock_grade_name || 'TD-4').trim().toUpperCase();
+    const remarks = String(raw.remarks || raw.mr_spcl_print || '').trim();
+
+    parsedInspections.push({
+      id: raw.id || `insp-rec-${cleanMr}`,
+      mrNo: raw.mr_no || raw.challan_no || cleanMr,
+      cleanMrNo: cleanMr,
+      date: dateStr ? new Date(dateStr).toLocaleDateString('en-IN') : '2026-09-24',
+      year,
+      month: monthIndex,
+      monthName: MONTH_NAMES[monthIndex] || `Month ${monthIndex + 1}`,
+      supplier,
+      broker,
+      vehicleNo: vehicle,
+      juteGrade: grade,
+      weightQtl: Number(wtQtl.toFixed(2)),
+      weightMt: Number(wtMt.toFixed(3)),
+      actualMoisture: Number(actualM.toFixed(1)),
+      claimMoisture: Number(claimM.toFixed(1)),
+      moistureDeductionAmount: moistDedAmt,
+      qualityDeductionAmount: qualDedAmt,
+      deliveryClaimAmount: delivDedAmt,
+      baleWeightDeductionAmount: baleDedAmt,
+      otherDeductionAmount: otherDedAmt,
+      totalClaimAmount: Number(totalClaim.toFixed(2)),
+      status: raw.status || 'Audited',
+      remarks,
+      rawRecord: raw
+    });
+  });
+
+  const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+  if (availableYears.length === 0) availableYears.push(2026);
+  const activeYear = selectedYear && yearsSet.has(selectedYear) ? selectedYear : availableYears[0];
+
+  const yearInspections = parsedInspections.filter(r => r.year === activeYear);
+
+  // Group by Month (0 to 11)
+  const monthInspectionSummaries: MonthInspectionSummary[] = Array.from({ length: 12 }, (_, mIdx) => {
+    const list = yearInspections.filter(r => r.month === mIdx);
+    if (list.length === 0) return null;
+
+    let totWt = 0;
+    let moistSum = 0;
+    let claimMoistSum = 0;
+    let totClaim = 0;
+    let moistClaimLots = 0;
+    let qualClaimLots = 0;
+
+    list.forEach(r => {
+      totWt += r.weightMt;
+      moistSum += r.actualMoisture;
+      claimMoistSum += r.claimMoisture;
+      totClaim += r.totalClaimAmount;
+      if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistClaimLots++;
+      if (r.qualityDeductionAmount > 0) qualClaimLots++;
+    });
+
+    return {
+      monthIndex: mIdx,
+      monthName: MONTH_NAMES[mIdx] || `Month ${mIdx + 1}`,
+      year: activeYear,
+      totalInspections: list.length,
+      totalWeightMt: Number(totWt.toFixed(2)),
+      avgMoisture: Number((moistSum / list.length).toFixed(1)),
+      avgClaimMoisture: Number((claimMoistSum / list.length).toFixed(1)),
+      totalClaimAmount: Number(totClaim.toFixed(2)),
+      lotsWithMoistureClaim: moistClaimLots,
+      lotsWithQualityClaim: qualClaimLots,
+      inspections: list
+    };
+  }).filter((m): m is MonthInspectionSummary => m !== null);
+
+  let totalInspectionsCount = yearInspections.length;
+  let totalInspectedWeightMt = 0;
+  let totalMoistSum = 0;
+  let totalClaimMoistSum = 0;
+  let totalClaimAmount = 0;
+
+  yearInspections.forEach(r => {
+    totalInspectedWeightMt += r.weightMt;
+    totalMoistSum += r.actualMoisture;
+    totalClaimMoistSum += r.claimMoisture;
+    totalClaimAmount += r.totalClaimAmount;
+  });
+
+  const overallAvgMoisture = totalInspectionsCount > 0 ? Number((totalMoistSum / totalInspectionsCount).toFixed(1)) : 14.5;
+  const overallAvgClaimMoisture = totalInspectionsCount > 0 ? Number((totalClaimMoistSum / totalInspectionsCount).toFixed(1)) : 0;
+
+  return {
+    monthInspectionSummaries,
+    allInspections: yearInspections,
+    totalInspectionsCount,
+    totalInspectedWeightMt: Number(totalInspectedWeightMt.toFixed(2)),
+    overallAvgMoisture,
+    overallAvgClaimMoisture,
+    totalClaimAmount: Number(totalClaimAmount.toFixed(2)),
+    availableYears,
+    selectedYear: activeYear
+  };
+}
+
 /**
  * Normalizes PO / Contract / MR reference strings
  * Strips out prefixes like 'P.O:', 'PO:', 'M.R:', '#', whitespace and converts to uppercase

@@ -60,10 +60,14 @@ import { cn, formatIndianCurrency } from '../lib/utils';
 import { hasModulePermission } from '../lib/permissions';
 import { 
   computeDashboardMetrics, 
+  computeInspectionMetrics,
   UnifiedContractRecord, 
-  MonthSummary 
+  MonthSummary,
+  InspectionRecord,
+  MonthInspectionSummary
 } from '../services/dashboardCalculationService';
 import DashboardDrilldownModal from './DashboardDrilldownModal';
+import InspectionDrilldownModal from './InspectionDrilldownModal';
 
 function safeStr(val: any, fallback = 'N/A'): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -97,6 +101,7 @@ interface ExecutiveBiDashboardProps {
   millIssueDetails?: any[];
   finalArrivals: any[];
   paymentRecords: any[];
+  inspections?: any[];
   loading: boolean;
   onRefresh: () => void;
   onNavigate?: (pageId: string) => void;
@@ -120,6 +125,7 @@ export default function ExecutiveBiDashboard({
   millIssueDetails = [],
   finalArrivals = [],
   paymentRecords = [],
+  inspections = [],
   loading = false,
   onRefresh,
   onNavigate,
@@ -132,17 +138,18 @@ export default function ExecutiveBiDashboard({
   // Selected Year for Month-Wise Summary Section
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
 
-  // Drilldown Modal State
+  // Drilldown Modal State (Contracts)
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalSubtitle, setModalSubtitle] = useState('');
   const [modalContracts, setModalContracts] = useState<UnifiedContractRecord[]>([]);
   const [modalInitialFilter, setModalInitialFilter] = useState('');
 
-  // Matrix Search & Pagination
-  const [matrixSearch, setMatrixSearch] = useState('');
-  const [matrixPage, setMatrixPage] = useState(1);
-  const rowsPerPage = 10;
+  // Drilldown Modal State (Inspections, Moisture & Claims)
+  const [inspModalOpen, setInspModalOpen] = useState(false);
+  const [inspModalTitle, setInspModalTitle] = useState('');
+  const [inspModalSubtitle, setInspModalSubtitle] = useState('');
+  const [inspModalRecords, setInspModalRecords] = useState<InspectionRecord[]>([]);
 
   // View Controls
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -177,6 +184,15 @@ export default function ExecutiveBiDashboard({
   // If selectedYear is not yet set, default to active year from metrics
   const activeYear = selectedYear || dbMetrics.selectedYear;
 
+  // 2. Inspection, Claim & Moisture Calculations (Month-Wise & Aggregates)
+  const inspMetrics = useMemo(() => {
+    return computeInspectionMetrics({
+      inspections: inspections.length > 0 ? inspections : arrivals,
+      arrivals,
+      selectedYear: activeYear
+    });
+  }, [inspections, arrivals, activeYear]);
+
   // Handler to open drilldown modal with specific records
   const handleOpenDrilldown = (params: {
     title: string;
@@ -191,50 +207,40 @@ export default function ExecutiveBiDashboard({
     setModalOpen(true);
   };
 
-  // Matrix Crosstab rows
-  const matrixRows = useMemo(() => {
-    return arrivals.map((a, idx) => ({
-      id: a.id || `arr-${idx}`,
-      chalan: a.challan_no || a.mr_no || `CH-${1000 + idx}`,
-      date: a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : '2026-09-24',
-      supplier: safeStr(a.supplier_name || a.supplier),
-      broker: safeStr(a.broker_name || a.broker),
-      vehicle: a.lorry_number || a.vehicle_no || 'WB-00-1234',
-      grade: a.jute_grade || a.grade || 'TD-4',
-      netWt: Number(a.electronic_net_weight || a.weight || 15.5).toFixed(2),
-      moisture: Number(a.moisture_percent || a.moisture || 14.5).toFixed(1),
-      totalVal: Math.round(Number(a.electronic_net_weight || 15.5) * 10 * 5850),
-      status: a.status || 'Received'
-    }));
-  }, [arrivals]);
+  // Handler to open inspection drilldown modal
+  const handleOpenInspectionModal = (params: {
+    title: string;
+    subtitle?: string;
+    inspections: InspectionRecord[];
+  }) => {
+    setInspModalTitle(params.title);
+    setInspModalSubtitle(params.subtitle || '');
+    setInspModalRecords(params.inspections);
+    setInspModalOpen(true);
+  };
 
-  const searchedMatrixRows = useMemo(() => {
-    if (!matrixSearch) return matrixRows;
-    const q = matrixSearch.toLowerCase();
-    return matrixRows.filter(r => 
-      r.chalan.toLowerCase().includes(q) ||
-      r.supplier.toLowerCase().includes(q) ||
-      r.broker.toLowerCase().includes(q) ||
-      r.vehicle.toLowerCase().includes(q) ||
-      r.grade.toLowerCase().includes(q)
-    );
-  }, [matrixRows, matrixSearch]);
-
-  const paginatedMatrixRows = useMemo(() => {
-    const start = (matrixPage - 1) * rowsPerPage;
-    return searchedMatrixRows.slice(start, start + rowsPerPage);
-  }, [searchedMatrixRows, matrixPage]);
-
-  // Export Matrix CSV
-  const handleExportCsv = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + ["Chalan,Date,Supplier,Broker,Vehicle,Grade,NetWt(MT),Moisture%,TotalVal(INR),Status"]
-      .concat(searchedMatrixRows.map(r => `"${r.chalan}","${r.date}","${r.supplier}","${r.broker}","${r.vehicle}","${r.grade}",${r.netWt},${r.moisture},${r.totalVal},"${r.status}"`))
-      .join("\n");
+  // Export Inspection CSV
+  const handleExportInspectionCsv = () => {
+    const headers = ["MR No", "Date", "Supplier", "Broker", "Vehicle", "Grade", "Net Wt (MT)", "Actual Moisture %", "Claim Moisture %", "Moisture Claim (INR)", "Total Deductions (INR)", "Status"];
+    const rows = inspMetrics.allInspections.map(r => [
+      `"${r.mrNo}"`,
+      `"${r.date}"`,
+      `"${r.supplier.replace(/"/g, '""')}"`,
+      `"${r.broker.replace(/"/g, '""')}"`,
+      `"${r.vehicleNo}"`,
+      `"${r.juteGrade}"`,
+      r.weightMt.toFixed(3),
+      r.actualMoisture.toFixed(1),
+      r.claimMoisture.toFixed(1),
+      r.moistureDeductionAmount.toFixed(2),
+      r.totalClaimAmount.toFixed(2),
+      `"${r.status}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Executive_BI_Matrix_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `Inspection_Moisture_Claims_${activeYear}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -751,123 +757,165 @@ export default function ExecutiveBiDashboard({
 
       </div>
 
-      {/* EXECUTIVE BI DATA MATRIX CROSSTAB */}
-      <div className="bg-white border border-[#E5DEC9] rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F2EDE0] pb-3">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E331B] font-mono flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-              Executive BI Data Matrix Crosstab
-            </h3>
-            <p className="text-[11px] text-[#556952] mt-0.5">
-              Detailed procurement transactions, weighbridge results & quality inspections
-            </p>
+      {/* 4. MONTH-WISE CLAIM AND MOISTURE DATA (FROM INSPECTION SECTION) */}
+      <div className="bg-[#FAF7F0] border-2 border-[#D6CAA8] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D6CAA8] pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#1E331B] text-white rounded-xl shadow-xs">
+              <Droplets className="w-5 h-5 text-emerald-300" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-serif font-black tracking-wide text-[#1E331B] flex items-center gap-2">
+                <span>Month-Wise Claim & Moisture Data</span>
+              </h2>
+              <p className="text-xs text-[#5A6E54] font-medium">
+                Monthly quality audits, moisture claims, quality deductions & weight claims from Inspection Section
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#556952]" />
-              <input
-                id="search_matrix_trans_1001"
-                type="text"
-                placeholder="Search supplier, chalan, vehicle..."
-                value={matrixSearch}
-                onChange={(e) => { setMatrixSearch(e.target.value); setMatrixPage(1); }}
-                className="h-8 pl-8 pr-3 bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl text-xs text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B] w-48 sm:w-64"
-              />
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={handleExportCsv}
-              className="h-8 px-3 bg-[#1E331B] text-white text-xs font-bold rounded-xl hover:bg-[#2A4426] transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={() => handleOpenInspectionModal({
+                title: `Full Inspection & Moisture Audits Log (${activeYear})`,
+                subtitle: `Viewing all ${inspMetrics.totalInspectionsCount} quality inspection records for ${activeYear}`,
+                inspections: inspMetrics.allInspections
+              })}
+              className="h-8 px-3 bg-[#1E331B] text-white text-xs font-bold rounded-xl hover:bg-[#2A4426] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="View all inspection records"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Inspection Log</span>
+            </button>
+
+            <button
+              onClick={handleExportInspectionCsv}
+              className="h-8 px-3 bg-white border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-xl hover:bg-[#FAF7F0] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Download inspection & moisture CSV"
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
             </button>
+
+            {onNavigate && (
+              <button
+                onClick={() => onNavigate('material_inspection')}
+                className="h-8 px-3 bg-emerald-700 text-white text-xs font-bold rounded-xl hover:bg-emerald-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Go to Material Inspection module"
+              >
+                <span>Go to Inspection Module</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Matrix Table */}
-        <div className="overflow-x-auto rounded-xl border border-[#E5DEC9]">
-          <table className="w-full text-left border-collapse text-xs min-w-[850px]">
-            <thead>
-              <tr className="bg-[#FAF7F0] border-b border-[#E5DEC9] text-[#1E331B] font-mono text-[11px] uppercase tracking-wider">
-                <th className="p-3 font-bold">Chalan / Pass</th>
-                <th className="p-3 font-bold">Date</th>
-                <th className="p-3 font-bold">Supplier</th>
-                <th className="p-3 font-bold">Broker</th>
-                <th className="p-3 font-bold">Vehicle No</th>
-                <th className="p-3 font-bold">Grade</th>
-                <th className="p-3 font-bold text-right">Net Wt (Qtl)</th>
-                <th className="p-3 font-bold text-center">Moisture %</th>
-                <th className="p-3 font-bold text-right">Total Value (₹)</th>
-                <th className="p-3 font-bold text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F2EDE0] font-sans">
-              {paginatedMatrixRows.length > 0 ? (
-                paginatedMatrixRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                    <td className="p-3 font-mono font-bold text-[#1E331B]">{row.chalan}</td>
-                    <td className="p-3 text-[#556952]">{row.date}</td>
-                    <td className="p-3 font-medium text-[#1E331B]">{safeStr(row.supplier)}</td>
-                    <td className="p-3 text-[#556952]">{safeStr(row.broker)}</td>
-                    <td className="p-3 font-mono text-xs">{row.vehicle}</td>
-                    <td className="p-3 font-bold text-emerald-900">{safeStr(row.grade)}</td>
-                    <td className="p-3 text-right font-bold text-[#1E331B]">{row.netWt}</td>
-                    <td className="p-3 text-center font-mono">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-md font-bold text-[10px]",
-                        Number(row.moisture) <= 15 ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-                      )}>
-                        {row.moisture}%
-                      </span>
-                    </td>
-                    <td className="p-3 text-right font-mono font-bold text-[#1E331B]">
-                      ₹ {row.totalVal.toLocaleString('en-IN')}
-                    </td>
-                    <td className="p-3 text-center">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={10} className="p-6 text-center text-[#556952] italic">
-                    No matching procurement records found...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Matrix Pagination */}
-        <div className="flex items-center justify-between text-xs text-[#556952] font-mono pt-2">
-          <span>
-            Showing page {matrixPage} of {Math.max(1, Math.ceil(searchedMatrixRows.length / rowsPerPage))} ({searchedMatrixRows.length} total rows)
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={matrixPage === 1}
-              onClick={() => setMatrixPage(p => Math.max(1, p - 1))}
-              className="px-3 py-1 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg disabled:opacity-50 font-bold hover:bg-[#EAE2D2] cursor-pointer"
-            >
-              Previous
-            </button>
-            <button
-              disabled={matrixPage >= Math.ceil(searchedMatrixRows.length / rowsPerPage)}
-              onClick={() => setMatrixPage(p => p + 1)}
-              className="px-3 py-1 bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg disabled:opacity-50 font-bold hover:bg-[#EAE2D2] cursor-pointer"
-            >
-              Next
-            </button>
+        {/* Year-level KPI Highlights Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Lots Inspected</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-sm sm:text-base">
+              {inspMetrics.totalInspectionsCount} Lots
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Inspected Weight</span>
+            <span className="font-mono font-extrabold text-emerald-900 text-sm sm:text-base">
+              {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Overall Avg Moisture</span>
+            <span className={cn(
+              "font-mono font-extrabold text-sm sm:text-base",
+              inspMetrics.overallAvgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
+            )}>
+              {inspMetrics.overallAvgMoisture}% {inspMetrics.overallAvgMoisture <= 15 ? "✓ Normal" : "⚠️ High"}
+            </span>
+          </div>
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Claims & Deductions</span>
+            <span className="font-mono font-extrabold text-rose-800 text-sm sm:text-base">
+              ₹{formatIndianCurrency(inspMetrics.totalClaimAmount)}
+            </span>
           </div>
         </div>
+
+        {/* Month Cards Grid (1/4 size compact cards matching Contract & Payment style) */}
+        {inspMetrics.monthInspectionSummaries.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2.5 sm:gap-3">
+            {inspMetrics.monthInspectionSummaries.map((m) => (
+              <div
+                key={`insp-${m.year}-${m.monthIndex}`}
+                onClick={() => handleOpenInspectionModal({
+                  title: `Inspection & Moisture Summary: ${m.monthName} ${m.year}`,
+                  subtitle: `${m.totalInspections} lots inspected in ${m.monthName} ${m.year} (${m.lotsWithMoistureClaim} lots with moisture claim)`,
+                  inspections: m.inspections
+                })}
+                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none"
+                title={`Click to view ${m.monthName} ${m.year} inspection and claim details`}
+              >
+                <div>
+                  {/* Card Header: Month Name + Year */}
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-700 shrink-0"></span>
+                      <span>{m.monthName}</span>
+                      <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
+                    </h3>
+                  </div>
+
+                  {/* Inspected Lots */}
+                  <div className="flex items-center justify-between text-xs py-1 border-t border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Lots:</span>
+                    <span className="font-mono font-extrabold text-[#1E331B] text-xs">
+                      {m.totalInspections}
+                    </span>
+                  </div>
+
+                  {/* Avg Moisture */}
+                  <div className="flex items-center justify-between text-xs py-1 border-t border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
+                    <span className={cn(
+                      "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
+                      m.avgMoisture <= 15 
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300" 
+                        : "bg-amber-100 text-amber-900 border border-amber-300"
+                    )}>
+                      {m.avgMoisture}%
+                    </span>
+                  </div>
+
+                  {/* Claims Amount */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Claims:</span>
+                    <span className={cn(
+                      "font-mono font-bold text-[10.5px]",
+                      m.totalClaimAmount > 0 ? "text-rose-800" : "text-slate-400"
+                    )}>
+                      {m.totalClaimAmount > 0 ? `₹${formatIndianCurrency(m.totalClaimAmount)}` : '₹0'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9px] font-bold text-[#1E331B] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+                  <span>Inspection Details</span>
+                  <span className="text-[10px]">→</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
+            <p className="text-sm font-semibold">No inspection or moisture data found for year {activeYear}.</p>
+            <p className="text-xs text-[#5A6E54]/80 mt-0.5">Records logged in Material Inspection module will automatically display here.</p>
+          </div>
+        )}
+
       </div>
 
-      {/* 7. DRILLDOWN MODAL */}
+      {/* 5. DRILLDOWN MODAL (CONTRACTS) */}
       <DashboardDrilldownModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -875,6 +923,15 @@ export default function ExecutiveBiDashboard({
         subtitle={modalSubtitle}
         contracts={modalContracts}
         initialFilter={modalInitialFilter}
+      />
+
+      {/* 6. DRILLDOWN MODAL (INSPECTION, MOISTURE & CLAIMS) */}
+      <InspectionDrilldownModal
+        isOpen={inspModalOpen}
+        onClose={() => setInspModalOpen(false)}
+        title={inspModalTitle}
+        subtitle={inspModalSubtitle}
+        inspections={inspModalRecords}
       />
 
     </div>

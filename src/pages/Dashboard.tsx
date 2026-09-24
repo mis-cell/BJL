@@ -293,7 +293,9 @@ export default function Dashboard({
         mimRes,
         midRes,
         scpRes,
-        scpDetRes
+        scpDetRes,
+        inspRes,
+        inspDetRes
       ] = await Promise.all([
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_master', 'created_at', false).catch(() => []),
@@ -388,8 +390,33 @@ export default function Dashboard({
           } catch (e) {
             return [];
           }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('material_inspection').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('material_inspection').catch(() => []);
+          } catch (e) {
+            return [];
+          }
+        })(),
+        (async () => {
+          try {
+            if (supabase) {
+              const r = await supabase.from('material_inspection_details').select('*');
+              if (r.data) return r.data;
+            }
+            return await dbModule.fetchAll('material_inspection_details').catch(() => []);
+          } catch (e) {
+            return [];
+          }
         })()
       ]);
+
+      setInspectionMasters(inspRes || []);
+      setInspectionDetails(inspDetRes || []);
 
       // Synchronize exact opening stock loader with StockSummary.tsx
       const opData = (openingStocksRes || []).map((r: any) => ({
@@ -1491,6 +1518,7 @@ export default function Dashboard({
             millIssueDetails={millIssueDetails}
             finalArrivals={rawFinalArrivals}
             paymentRecords={payments}
+            inspections={inspectionMasters}
             loading={loading}
             onRefresh={loadStats}
             onNavigate={onNavigate}
