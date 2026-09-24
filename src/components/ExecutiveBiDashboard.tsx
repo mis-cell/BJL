@@ -189,9 +189,12 @@ export default function ExecutiveBiDashboard({
     return computeInspectionMetrics({
       inspections: inspections.length > 0 ? inspections : arrivals,
       arrivals,
+      saudaCheckPoints,
+      saudaCheckPointDetails,
+      pos,
       selectedYear: activeYear
     });
-  }, [inspections, arrivals, activeYear]);
+  }, [inspections, arrivals, saudaCheckPoints, saudaCheckPointDetails, pos, activeYear]);
 
   // Handler to open drilldown modal with specific records
   const handleOpenDrilldown = (params: {
@@ -221,10 +224,31 @@ export default function ExecutiveBiDashboard({
 
   // Export Inspection CSV
   const handleExportInspectionCsv = () => {
-    const headers = ["MR No", "Date", "Supplier", "Broker", "Vehicle", "Grade", "Net Wt (MT)", "Actual Moisture %", "Claim Moisture %", "Moisture Claim (INR)", "Total Deductions (INR)", "Status"];
+    const headers = [
+      "MR No",
+      "Date",
+      "PO / Contract Ref",
+      "Supplier",
+      "Broker",
+      "Vehicle",
+      "Grade",
+      "Net Wt (MT)",
+      "Actual Moisture %",
+      "Claim Moisture %",
+      "Actual Dust %",
+      "Claim Dust %",
+      "Actual Grade Down %",
+      "Claim Grade Down %",
+      "Chotta & Habi Jabi (Kg)",
+      "Premium (Sauda Check Point)",
+      "Moisture Claim (INR)",
+      "Total Deductions (INR)",
+      "Status"
+    ];
     const rows = inspMetrics.allInspections.map(r => [
       `"${r.mrNo}"`,
       `"${r.date}"`,
+      `"${r.poNo || ''}"`,
       `"${r.supplier.replace(/"/g, '""')}"`,
       `"${r.broker.replace(/"/g, '""')}"`,
       `"${r.vehicleNo}"`,
@@ -232,6 +256,12 @@ export default function ExecutiveBiDashboard({
       r.weightMt.toFixed(3),
       r.actualMoisture.toFixed(1),
       r.claimMoisture.toFixed(1),
+      r.actualDust.toFixed(1),
+      r.claimDust.toFixed(1),
+      r.actualGradeDown.toFixed(1),
+      r.claimGradeDown.toFixed(1),
+      r.totalChottaHabijabiKg.toFixed(1),
+      `"${r.premium || (r.isPremium ? 'Yes' : 'No')}"`,
       r.moistureDeductionAmount.toFixed(2),
       r.totalClaimAmount.toFixed(2),
       `"${r.status}"`
@@ -240,7 +270,7 @@ export default function ExecutiveBiDashboard({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Inspection_Moisture_Claims_${activeYear}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `Mill_Inspection_Information_Entry_${activeYear}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -757,7 +787,7 @@ export default function ExecutiveBiDashboard({
 
       </div>
 
-      {/* 4. MONTH-WISE CLAIM AND MOISTURE DATA (FROM INSPECTION SECTION) */}
+      {/* 4. MILL INSPECTION INFORMATION ENTRY (CLAIM, QUALITY & SAUDA CHECK POINT PREMIUM) */}
       <div className="bg-[#FAF7F0] border-2 border-[#D6CAA8] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D6CAA8] pb-3">
@@ -767,10 +797,10 @@ export default function ExecutiveBiDashboard({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-black tracking-wide text-[#1E331B] flex items-center gap-2">
-                <span>Month-Wise Claim & Moisture Data</span>
+                <span>Mill Inspection Information Entry</span>
               </h2>
               <p className="text-xs text-[#5A6E54] font-medium">
-                Monthly quality audits, moisture claims, quality deductions & weight claims from Inspection Section
+                Moisture % (Claim), Dust % (Claim), Grade Down % (Claim), Chotta & Habi Jabi, and Premium (sourced from Sauda Check Point)
               </p>
             </div>
           </div>
@@ -778,8 +808,8 @@ export default function ExecutiveBiDashboard({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => handleOpenInspectionModal({
-                title: `Full Inspection & Moisture Audits Log (${activeYear})`,
-                subtitle: `Viewing all ${inspMetrics.totalInspectionsCount} quality inspection records for ${activeYear}`,
+                title: `Mill Inspection Information Entry Log (${activeYear})`,
+                subtitle: `Viewing all ${inspMetrics.totalInspectionsCount} inspection records for ${activeYear}`,
                 inspections: inspMetrics.allInspections
               })}
               className="h-8 px-3 bg-[#1E331B] text-white text-xs font-bold rounded-xl hover:bg-[#2A4426] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -792,7 +822,7 @@ export default function ExecutiveBiDashboard({
             <button
               onClick={handleExportInspectionCsv}
               className="h-8 px-3 bg-white border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-xl hover:bg-[#FAF7F0] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="Download inspection & moisture CSV"
+              title="Download inspection CSV"
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
@@ -812,33 +842,79 @@ export default function ExecutiveBiDashboard({
         </div>
 
         {/* Year-level KPI Highlights Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs font-sans">
+          {/* Total Lots & Weight */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Lots Inspected</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-sm sm:text-base">
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Lots / Weight</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
               {inspMetrics.totalInspectionsCount} Lots
             </span>
-          </div>
-          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Inspected Weight</span>
-            <span className="font-mono font-extrabold text-emerald-900 text-sm sm:text-base">
+            <span className="text-[10.5px] font-mono font-bold text-emerald-900">
               {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
             </span>
           </div>
+
+          {/* Moisture % & Claim */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Overall Avg Moisture</span>
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Moisture % (Claim)</span>
             <span className={cn(
-              "font-mono font-extrabold text-sm sm:text-base",
+              "font-mono font-extrabold text-sm block",
               inspMetrics.overallAvgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
             )}>
-              {inspMetrics.overallAvgMoisture}% {inspMetrics.overallAvgMoisture <= 15 ? "✓ Normal" : "⚠️ High"}
+              {inspMetrics.overallAvgMoisture}%
+            </span>
+            <span className="text-[10px] font-mono font-bold text-rose-700">
+              Avg Clm: {inspMetrics.overallAvgClaimMoisture}%
             </span>
           </div>
+
+          {/* Dust % & Claim */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Claims & Deductions</span>
-            <span className="font-mono font-extrabold text-rose-800 text-sm sm:text-base">
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Dust % (Claim)</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
+              {inspMetrics.overallAvgDust}%
+            </span>
+            <span className="text-[10px] font-mono font-bold text-rose-700">
+              Avg Clm: {inspMetrics.overallAvgClaimDust}%
+            </span>
+          </div>
+
+          {/* Grade Down % & Claim */}
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Grade Down %</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
+              {inspMetrics.overallAvgGradeDown}%
+            </span>
+            <span className="text-[10px] font-mono font-bold text-rose-700">
+              Avg Clm: {inspMetrics.overallAvgClaimGradeDown}%
+            </span>
+          </div>
+
+          {/* Chotta & Habi Jabi */}
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Chotta & Habi Jabi</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
+              {inspMetrics.totalChottaHabijabiKg.toLocaleString('en-IN', { minimumFractionDigits: 0 })} Kg
+            </span>
+            <span className="text-[10px] text-[#5A6E54] font-medium">Bale Ropes / Chotta</span>
+          </div>
+
+          {/* Premium (Sauda Check Point) */}
+          <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/30">
+            <span className="text-[9.5px] text-amber-900 font-bold block uppercase tracking-wider">⚡ Premium (SCP)</span>
+            <span className="font-mono font-extrabold text-amber-950 text-sm block">
+              {inspMetrics.totalPremiumLots} Lots
+            </span>
+            <span className="text-[10px] text-amber-800 font-medium">From Sauda Check Point</span>
+          </div>
+
+          {/* Total Claims & Deductions */}
+          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Total Deductions</span>
+            <span className="font-mono font-extrabold text-rose-800 text-sm block">
               ₹{formatIndianCurrency(inspMetrics.totalClaimAmount)}
             </span>
+            <span className="text-[10px] text-[#5A6E54] font-medium">All Deductions</span>
           </div>
         </div>
 
@@ -849,12 +925,12 @@ export default function ExecutiveBiDashboard({
               <div
                 key={`insp-${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenInspectionModal({
-                  title: `Inspection & Moisture Summary: ${m.monthName} ${m.year}`,
+                  title: `Mill Inspection Information: ${m.monthName} ${m.year}`,
                   subtitle: `${m.totalInspections} lots inspected in ${m.monthName} ${m.year} (${m.lotsWithMoistureClaim} lots with moisture claim)`,
                   inspections: m.inspections
                 })}
-                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none"
-                title={`Click to view ${m.monthName} ${m.year} inspection and claim details`}
+                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
+                title={`Click to view ${m.monthName} ${m.year} mill inspection details`}
               >
                 <div>
                   {/* Card Header: Month Name + Year */}
@@ -867,31 +943,61 @@ export default function ExecutiveBiDashboard({
                   </div>
 
                   {/* Inspected Lots */}
-                  <div className="flex items-center justify-between text-xs py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Lots:</span>
-                    <span className="font-mono font-extrabold text-[#1E331B] text-xs">
-                      {m.totalInspections}
+                  <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Lots:</span>
+                    <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">
+                      {m.totalInspections} <span className="text-[9.5px] font-normal text-slate-500">({m.totalWeightMt.toFixed(1)} MT)</span>
                     </span>
                   </div>
 
-                  {/* Avg Moisture */}
-                  <div className="flex items-center justify-between text-xs py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
+                  {/* Moisture % & Claim */}
+                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Moisture:</span>
                     <span className={cn(
-                      "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
-                      m.avgMoisture <= 15 
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300" 
-                        : "bg-amber-100 text-amber-900 border border-amber-300"
+                      "font-mono font-bold text-[10px]",
+                      m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
                     )}>
-                      {m.avgMoisture}%
+                      {m.avgMoisture}% {m.avgClaimMoisture > 0 && <span className="text-rose-700 font-semibold text-[9.5px]">(Clm {m.avgClaimMoisture}%)</span>}
+                    </span>
+                  </div>
+
+                  {/* Dust % & Claim */}
+                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Dust:</span>
+                    <span className="font-mono font-bold text-[10px] text-[#1E331B]">
+                      {m.avgDust}% {m.avgClaimDust > 0 && <span className="text-rose-700 font-semibold text-[9.5px]">(Clm {m.avgClaimDust}%)</span>}
+                    </span>
+                  </div>
+
+                  {/* Grade Down % & Claim */}
+                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Grade Down:</span>
+                    <span className="font-mono font-bold text-[10px] text-[#1E331B]">
+                      {m.avgGradeDown}% {m.avgClaimGradeDown > 0 && <span className="text-rose-700 font-semibold text-[9.5px]">(Clm {m.avgClaimGradeDown}%)</span>}
+                    </span>
+                  </div>
+
+                  {/* Chotta & Habi Jabi */}
+                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Chotta & HB:</span>
+                    <span className="font-mono font-bold text-[10px] text-[#1E331B]">
+                      {m.totalChottaHabijabiKg > 0 ? `${m.totalChottaHabijabiKg} Kg` : '0 Kg'}
+                    </span>
+                  </div>
+
+                  {/* Premium (Sauda Check Point) */}
+                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0] bg-amber-50/40 -mx-1 px-1 rounded">
+                    <span className="text-[10px] text-amber-900 font-bold">⚡ Premium:</span>
+                    <span className="font-mono font-bold text-[10px] text-amber-950">
+                      {m.premiumLotsCount > 0 ? `${m.premiumLotsCount} Lots` : '0'}
                     </span>
                   </div>
 
                   {/* Claims Amount */}
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Claims:</span>
+                  <div className="flex items-center justify-between pt-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Total Claims:</span>
                     <span className={cn(
-                      "font-mono font-bold text-[10.5px]",
+                      "font-mono font-extrabold text-[10.5px]",
                       m.totalClaimAmount > 0 ? "text-rose-800" : "text-slate-400"
                     )}>
                       {m.totalClaimAmount > 0 ? `₹${formatIndianCurrency(m.totalClaimAmount)}` : '₹0'}

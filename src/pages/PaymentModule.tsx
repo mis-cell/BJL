@@ -146,6 +146,7 @@ export interface PaymentDetailColumn {
 
   wt_quantity: number;
   rate_value: number;
+  premium?: number;
 
   // Grade Down Settlement & Rate Adjustments
   sett_pct: number; // Sett (%) - Populated from Inspection Details Grade Down % Claim (or Mill Sett -> Gr. Down %)
@@ -197,6 +198,7 @@ const emptyDetailColumn = (index: number): PaymentDetailColumn => ({
   wt_phota: 0,
   wt_quantity: 0,
   rate_value: 0,
+  premium: 0,
   sett_pct: 0,
   deduction_rate: 0,
   sett_rate: 0,
@@ -266,12 +268,13 @@ export const getColDeductionExplanation = (col?: PaymentDetailColumn, dbDiffs?: 
   return res.explanation;
 };
 
-// Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) − Deduction (₹/Qtl)
+// Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) + Premium (₹/Qtl) − Deduction (₹/Qtl)
 export const getColSettRate = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
   if (!col) return 0;
   const origRate = Number(col.rate_value) || 0;
+  const premium = Number(col.premium) || 0;
   const deduction = getColDeduction(col, dbDiffs);
-  return Math.max(0, Number((origRate - deduction).toFixed(2)));
+  return Math.max(0, Number((origRate + premium - deduction).toFixed(2)));
 };
 
 // Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl)
@@ -540,8 +543,9 @@ export const mapItemsToDetailCols = (
     if (grade || area || agency || qty > 0 || wt > 0) {
       const settPct = Number(poHeader.sett_pct ?? 0);
       const origRate = rate;
+      const premium = Number(poHeader.premium || 0);
       const deductionRate = Number(((origRate * settPct) / 100).toFixed(2));
-      const settRate = Math.max(0, Number((origRate - deductionRate).toFixed(2)));
+      const settRate = Math.max(0, Number((origRate + premium - deductionRate).toFixed(2)));
       const qtyQtl = Number((wt * 10).toFixed(3));
       const amount = Number((qtyQtl * settRate).toFixed(2));
 
@@ -554,6 +558,7 @@ export const mapItemsToDetailCols = (
         quantity: qty,
         arr_qty_wt: wt,
         rate_value: rate,
+        premium: premium,
         sett_pct: settPct,
         deduction_rate: deductionRate,
         sett_rate: settRate,
@@ -591,6 +596,7 @@ export const mapItemsToDetailCols = (
                       : (item.arr_qty_wt || item.weight_mt || item.weight || item.receipt_gross_wt || item.challan_gross_wt || item.total_wt_in_ton || (item.weight_qtl ? Number(item.weight_qtl) / 10 : 0)))))
       );
       const rate = Number(item.rate_per_mt || item.rate_mt || item.rate_qntl || item.rate || item.rate_value || poHeader?.b_rate || defaultRate || 0);
+      const premium = Number(item.premium ?? item.prem ?? item.premium_amount ?? poHeader?.premium ?? 0);
 
       const gdClaim = Number(item.gd_claim ?? item.grade_down_claim ?? item.claim_grade_down ?? item.claim_gr_down ?? item.grade_down_act ?? item.actual_grade_down ?? 0);
       const gdSett = Number(item.gd_sett ?? item.settlement_grade_down ?? item.grade_down_sett ?? item.mill_sett_gr_down ?? 0);
@@ -618,6 +624,7 @@ export const mapItemsToDetailCols = (
         agency,
         marka_crop: marka,
         rate_value: origRate,
+        premium: premium,
         sett_pct: settPct,
         gd_claim: gdClaim,
         gd_sett: gdSett,
@@ -628,7 +635,7 @@ export const mapItemsToDetailCols = (
       const deductionRate = (settPct > 0 || calculatedDed > 0)
         ? calculatedDed
         : Number(item.deduction_rate !== undefined && item.deduction_rate !== null && item.deduction_rate !== "" ? item.deduction_rate : 0);
-      const settRate = Math.max(0, Number((origRate - deductionRate).toFixed(2)));
+      const settRate = Math.max(0, Number((origRate + premium - deductionRate).toFixed(2)));
       const qtyQtl = Number((wt * 10).toFixed(3));
       const amount = Number((qtyQtl * settRate).toFixed(2));
 
@@ -641,6 +648,7 @@ export const mapItemsToDetailCols = (
         quantity: qty,
         arr_qty_wt: wt,
         rate_value: rate,
+        premium: premium,
         sett_pct: settPct,
         deduction_rate: deductionRate,
         sett_rate: settRate,
@@ -2129,6 +2137,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
           
           let lineRate = col.rate_value;
+          let linePremium = col.premium || 0;
           const matchedPoItem = findMatchedPoItem(col, poItems, { gradeMasters: gList, agencyMasters: agList });
 
           if (matchedPoItem) {
@@ -2138,6 +2147,10 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             if (r > 0) {
               lineRate = r;
             }
+            const p = Number(matchedPoItem.premium || matchedPoItem.premium_amount || matchedPoItem.prem || 0);
+            if (p > 0) {
+              linePremium = p;
+            }
           }
           // If no specific grade match, but column has no rate, fallback to header base rate
           if (!lineRate || lineRate === 0) {
@@ -2146,17 +2159,24 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               lineRate = fallbackRate;
             }
           }
+          if (!linePremium || linePremium === 0) {
+            const fallbackPrem = Number(po?.premium || 0);
+            if (fallbackPrem > 0) {
+              linePremium = fallbackPrem;
+            }
+          }
 
           const settPct = getColSettPct(col);
-          const colWithRate = { ...col, rate_value: lineRate, sett_pct: settPct };
+          const colWithRate = { ...col, rate_value: lineRate, premium: linePremium, sett_pct: settPct };
           const ded = getColDeduction(colWithRate);
-          const sRate = Math.max(0, Number((lineRate - ded).toFixed(2)));
+          const sRate = Math.max(0, Number((lineRate + linePremium - ded).toFixed(2)));
           const qQtl = getColQtyQtl(col);
           const amt = Number((qQtl * sRate).toFixed(2));
 
           return {
             ...col,
             rate_value: lineRate,
+            premium: linePremium,
             sett_pct: settPct,
             deduction_rate: ded,
             sett_rate: sRate,
@@ -2433,6 +2453,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             wt_phota: Number(c.wt_phota) || 0,
             wt_quantity: Number(c.wt_quantity) || 0,
             rate_value: Number(c.rate_value) || 0,
+            premium: Number(c.premium) || 0,
             sett_pct: getColSettPct(c),
             deduction_rate: getColDeduction(c),
             sett_rate: getColSettRate(c),
@@ -2559,13 +2580,14 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               ? Number(d.sett_pct)
               : (Number(d.gd_claim) > 0 ? Number(d.gd_claim) : Number(d.gd_sett || d.sett_pct || 0));
             const origRate = Number(d.rate_value) || 0;
-            const sattaDed = getColDeduction({ ...d, rate_value: origRate, sett_pct: settPct });
+            const premium = Number(d.premium || 0);
+            const sattaDed = getColDeduction({ ...d, rate_value: origRate, premium: premium, sett_pct: settPct });
             const dedRate = (settPct > 0 || sattaDed > 0)
               ? sattaDed
               : (d.deduction_rate !== undefined && d.deduction_rate !== null && !isNaN(Number(d.deduction_rate))
                 ? Number(d.deduction_rate)
                 : 0);
-            const sRate = Math.max(0, Number((origRate - dedRate).toFixed(2)));
+            const sRate = Math.max(0, Number((origRate + premium - dedRate).toFixed(2)));
             const qQtl = d.quantity_qtl !== undefined && d.quantity_qtl !== null && !isNaN(Number(d.quantity_qtl))
               ? Number(d.quantity_qtl)
               : Number((Number(d.arr_qty_wt || d.wt_quantity || 0) * 10).toFixed(3));
@@ -2576,6 +2598,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             newCols[idx] = {
               ...emptyDetailColumn(idx + 1),
               ...d,
+              rate_value: origRate,
+              premium: premium,
               sett_pct: settPct,
               deduction_rate: dedRate,
               sett_rate: sRate,
@@ -3798,6 +3822,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                       <th className="p-2 w-20">Packets / Qty</th>
                       <th className="p-2 w-24">Weight (MT)</th>
                       <th className="p-2 w-24">Rate (₹/Qtl)</th>
+                      <th className="p-2 w-24 bg-emerald-50/70 text-emerald-900">Premium (₹/Qtl)</th>
                       <th className="p-2 w-20 bg-emerald-50/70 text-emerald-800">Sett (%)</th>
                       <th className="p-2 w-24 bg-amber-50/70 text-amber-900">Deduction (₹/Qtl)</th>
                       <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate (₹/Qtl)</th>
@@ -3920,7 +3945,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                                 updated[idx].rate_value = newRate;
                                 const sPct = getColSettPct(updated[idx]);
                                 const ded = getColDeduction(updated[idx]);
-                                const sRate = Math.max(0, Number((newRate - ded).toFixed(2)));
+                                const prem = Number(updated[idx].premium) || 0;
+                                const sRate = Math.max(0, Number((newRate + prem - ded).toFixed(2)));
                                 const qQtl = getColQtyQtl(updated[idx]);
                                 updated[idx].deduction_rate = ded;
                                 updated[idx].sett_rate = sRate;
@@ -3942,6 +3968,45 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                               className="w-24 p-1 border rounded text-xs font-mono"
                             />
                           </td>
+                          {/* Premium (₹/Qtl) - Populated from Sauda Check Point / PO line items */}
+                          <td className="p-2 bg-emerald-50/30">
+                            <input
+                              id={`premium_col_${idx}`}
+                              name={`premium_col_${idx}`}
+                              aria-label="Col Premium Rate"
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={col.premium !== undefined && col.premium !== null && col.premium !== 0 ? col.premium : ''}
+                              onChange={e => {
+                                const updated = [...detailCols];
+                                const newPrem = parseFloat(e.target.value) || 0;
+                                updated[idx].premium = newPrem;
+                                const origRate = Number(updated[idx].rate_value) || 0;
+                                const ded = getColDeduction(updated[idx]);
+                                const sRate = Math.max(0, Number((origRate + newPrem - ded).toFixed(2)));
+                                const qQtl = getColQtyQtl(updated[idx]);
+                                updated[idx].deduction_rate = ded;
+                                updated[idx].sett_rate = sRate;
+                                updated[idx].quantity_qtl = qQtl;
+                                updated[idx].amount = Number((qQtl * sRate).toFixed(2));
+                                setDetailCols(updated);
+                                const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                                if (newTotal > 0) {
+                                  const newPaid = calculate93PctPaidAmount(newTotal);
+                                  setMasterData(prev => ({
+                                    ...prev,
+                                    total_amount: newTotal,
+                                    payable_amt: newTotal,
+                                    net_amt: newTotal,
+                                    paid_amount: newPaid
+                                  }));
+                                }
+                              }}
+                              title={`Premium (₹/Qtl) from Sauda Check Point: ₹${Number(col.premium || 0).toFixed(2)}`}
+                              className="w-24 p-1 border border-emerald-300 rounded text-xs font-mono font-bold text-right bg-white text-emerald-950 focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </td>
                           {/* Sett (%) - populated from Inspection Details -> Grade Down % -> Claim */}
                           <td className="p-2 bg-emerald-50/30">
                             <div className="flex flex-col">
@@ -3959,8 +4024,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                                   const newSettPct = parseFloat(e.target.value) || 0;
                                   updated[idx].sett_pct = newSettPct;
                                   const origRate = Number(updated[idx].rate_value) || 0;
+                                  const prem = Number(updated[idx].premium) || 0;
                                   const ded = getColDeduction(updated[idx]);
-                                  const sRate = Math.max(0, Number((origRate - ded).toFixed(2)));
+                                  const sRate = Math.max(0, Number((origRate + prem - ded).toFixed(2)));
                                   const qQtl = getColQtyQtl(updated[idx]);
                                   updated[idx].deduction_rate = ded;
                                   updated[idx].sett_rate = sRate;
@@ -3999,11 +4065,11 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                               ₹{deduction.toFixed(2)}
                             </div>
                           </td>
-                          {/* Sett Rate (₹/Qtl) = Original Rate - Deduction */}
+                          {/* Sett Rate (₹/Qtl) = Original Rate + Premium - Deduction */}
                           <td className="p-2 bg-blue-50/30">
                             <div 
                               className="w-24 p-1 rounded text-xs font-mono font-bold text-blue-900 bg-blue-100/60 text-right border border-blue-200"
-                              title={`Sett Rate = ₹${(Number(col.rate_value) || 0).toFixed(2)} − ₹${deduction.toFixed(2)} = ₹${settRate.toFixed(2)}/Qtl`}
+                              title={`Sett Rate = (Rate: ₹${(Number(col.rate_value) || 0).toFixed(2)} + Premium: ₹${(Number(col.premium) || 0).toFixed(2)}) − Deduction: ₹${deduction.toFixed(2)} = ₹${settRate.toFixed(2)}/Qtl`}
                             >
                               ₹{settRate.toFixed(2)}
                             </div>

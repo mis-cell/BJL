@@ -103,6 +103,8 @@ export interface InspectionRecord {
   id: string;
   mrNo: string;
   cleanMrNo: string;
+  poNo: string;
+  cleanPoNo: string;
   date: string;
   year: number;
   month: number; // 0-11
@@ -113,14 +115,43 @@ export interface InspectionRecord {
   juteGrade: string;
   weightQtl: number;
   weightMt: number;
+  
+  // 1. Moisture % & Claim
   actualMoisture: number;
   claimMoisture: number;
   moistureDeductionAmount: number;
+  
+  // 2. Dust % & Claim
+  actualDust: number;
+  claimDust: number;
+  dustDeductionAmount: number;
+  
+  // 3. Grade Down % & Claim
+  actualGradeDown: number;
+  claimGradeDown: number;
+  gradeDownDeductionAmount: number;
+  
+  // 4. Chotta & Habi Jabi
+  chottaWeightKg: number;
+  habijabiWeightKg: number;
+  totalChottaHabijabiKg: number;
+  chottaHabijabiDeductionAmount: number;
+  chottaGrade: string;
+  habijabiGrade: string;
+  
+  // 5. Premium (ONLY FROM SAUDA CHECK POINT)
+  premium: string;
+  isPremium: boolean;
+  premiumRate: number;
+  premiumSource: string;
+  
+  // Additional claims
   qualityDeductionAmount: number;
   deliveryClaimAmount: number;
   baleWeightDeductionAmount: number;
   otherDeductionAmount: number;
   totalClaimAmount: number;
+  
   status: string;
   remarks: string;
   rawRecord: any;
@@ -132,8 +163,21 @@ export interface MonthInspectionSummary {
   year: number;
   totalInspections: number;
   totalWeightMt: number;
+  
+  // Averages & Totals
   avgMoisture: number;
   avgClaimMoisture: number;
+  avgDust: number;
+  avgClaimDust: number;
+  avgGradeDown: number;
+  avgClaimGradeDown: number;
+  
+  totalChottaHabijabiKg: number;
+  totalChottaHabijabiClaim: number;
+  
+  // Premium lots from Sauda Check Point
+  premiumLotsCount: number;
+  
   totalClaimAmount: number;
   lotsWithMoistureClaim: number;
   lotsWithQualityClaim: number;
@@ -142,7 +186,11 @@ export interface MonthInspectionSummary {
 
 export function computeInspectionMetrics(params: {
   inspections?: any[];
+  inspectionDetails?: any[];
   arrivals?: any[];
+  saudaCheckPoints?: any[];
+  saudaCheckPointDetails?: any[];
+  pos?: any[];
   selectedYear?: number;
 }): {
   monthInspectionSummaries: MonthInspectionSummary[];
@@ -151,11 +199,93 @@ export function computeInspectionMetrics(params: {
   totalInspectedWeightMt: number;
   overallAvgMoisture: number;
   overallAvgClaimMoisture: number;
+  overallAvgDust: number;
+  overallAvgClaimDust: number;
+  overallAvgGradeDown: number;
+  overallAvgClaimGradeDown: number;
+  totalChottaHabijabiKg: number;
+  totalPremiumLots: number;
   totalClaimAmount: number;
   availableYears: number[];
   selectedYear: number;
 } {
-  const { inspections = [], arrivals = [], selectedYear } = params;
+  const { 
+    inspections = [], 
+    inspectionDetails = [],
+    arrivals = [], 
+    saudaCheckPoints = [],
+    saudaCheckPointDetails = [],
+    pos = [],
+    selectedYear 
+  } = params;
+
+  // Build Sauda Check Point Premium lookup map by normalized PO Number & Sauda Number
+  const scpPremiumMap = new Map<string, { premium: string; isPremium: boolean; rate: number; source: string }>();
+
+  const registerScpPremium = (refNo: string, raw: any) => {
+    if (!refNo) return;
+    const clean = normalizePoRef(refNo);
+    if (!clean) return;
+
+    let premStr = "";
+    let isPrem = false;
+    let premRate = 0;
+
+    if (raw.premium !== undefined && raw.premium !== null && String(raw.premium).trim() !== "") {
+      premStr = String(raw.premium).trim();
+      const num = parseFloat(premStr.replace(/[^0-9.]/g, ''));
+      if (!isNaN(num) && num > 0) premRate = num;
+      isPrem = /yes|true|premium/i.test(premStr) || premRate > 0;
+    } else if (raw.is_premium === true || raw.is_premium === "Yes" || raw.is_premium === "YES") {
+      isPrem = true;
+      premStr = "Yes";
+    } else if (Number(raw.premium_rate) > 0) {
+      isPrem = true;
+      premRate = Number(raw.premium_rate);
+      premStr = `₹${premRate}/Qtl`;
+    } else if (Number(raw.premium_amount) > 0) {
+      isPrem = true;
+      premStr = `₹${raw.premium_amount}`;
+    }
+
+    if (isPrem || premStr) {
+      scpPremiumMap.set(clean, {
+        premium: premStr || "Yes",
+        isPremium: true,
+        rate: premRate,
+        source: "Sauda Check Point"
+      });
+    }
+  };
+
+  // Populate premium map from Sauda Check Point and PO tables
+  saudaCheckPoints.forEach(scp => {
+    registerScpPremium(scp.po_no, scp);
+    registerScpPremium(scp.sauda_no, scp);
+    registerScpPremium(scp.contract_no, scp);
+    registerScpPremium(scp.id, scp);
+  });
+
+  saudaCheckPointDetails.forEach(det => {
+    registerScpPremium(det.po_no, det);
+    registerScpPremium(det.sauda_no, det);
+  });
+
+  pos.forEach(p => {
+    registerScpPremium(p.po_no, p);
+    registerScpPremium(p.contract_po_no, p);
+  });
+
+  // Build detail rows mapping by MR No / Inspection ID
+  const detailRowsByMr = new Map<string, any[]>();
+  inspectionDetails.forEach(det => {
+    const mr = normalizePoRef(det.mr_no || det.inspection_id || det.arrival_no || '');
+    if (mr) {
+      const existing = detailRowsByMr.get(mr) || [];
+      existing.push(det);
+      detailRowsByMr.set(mr, existing);
+    }
+  });
 
   // Build a consolidated map of inspection records by MR No or ID
   const mapByMr = new Map<string, any>();
@@ -172,7 +302,6 @@ export function computeInspectionMetrics(params: {
     if (!mapByMr.has(mr)) {
       mapByMr.set(mr, { ...item, source: 'arrival' });
     } else {
-      // Merge extra details
       const existing = mapByMr.get(mr);
       mapByMr.set(mr, { ...item, ...existing });
     }
@@ -186,27 +315,68 @@ export function computeInspectionMetrics(params: {
     const { year, month: monthIndex } = parseRecordDate(dateStr);
     yearsSet.add(year);
 
+    const poRaw = raw.po_no || raw.mill_po_no || raw.contract_no || raw.sauda_no || '';
+    const cleanPo = normalizePoRef(poRaw);
+
     const wtQtl = Number(raw.challan_material_weight || raw.weight_qtl || raw.electronic_net_weight || raw.weight || 0) || 0;
     const wtMt = wtQtl > 50 ? (wtQtl / 10) : (Number(raw.weight_mt) || (wtQtl / 10));
 
-    // Moisture parsing
-    const actualM = Number(raw.moisture_percent || raw.actual_moisture || raw.moisture_avg || raw.moisture || 14.5);
+    // Detail rows for this MR if any
+    const relatedDetails = detailRowsByMr.get(cleanMr) || raw.grid_details || raw.details || [];
+
+    // 1. Moisture % & Claim
+    const actualM = Number(raw.actual_moisture !== undefined && raw.actual_moisture !== null && raw.actual_moisture !== '' ? raw.actual_moisture : (raw.moisture_percent || raw.moisture_avg || raw.moisture || 14.5));
     const applicableM = Number(raw.applicable_moisture || raw.standard_moisture || 15.0);
-    let claimM = Number(raw.claim_moisture || raw.claim_percent || 0);
+    let claimM = Number(raw.claim_moisture !== undefined && raw.claim_moisture !== null && raw.claim_moisture !== '' ? raw.claim_moisture : (raw.claim_percent || 0));
     if (claimM <= 0 && actualM > applicableM) {
       claimM = Number((actualM - applicableM).toFixed(1));
     }
+    const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || (raw.moisture_claim && raw.moisture_claim > 0 ? (raw.moisture_claim * 50) : 0));
+
+    // 2. Dust % & Claim
+    const actualDust = Number(raw.actual_dust !== undefined && raw.actual_dust !== null && raw.actual_dust !== '' ? raw.actual_dust : (raw.dust_percent || raw.dust_act || 0));
+    const claimDust = Number(raw.claim_dust !== undefined && raw.claim_dust !== null && raw.claim_dust !== '' ? raw.claim_dust : (raw.dust_claim || (actualDust > 1.0 ? Number((actualDust - 1.0).toFixed(1)) : 0)));
+    const dustDedAmt = Number(raw.dust_claim_amt || raw.dust_deduction_amount || (claimDust > 0 ? (claimDust * 40) : 0));
+
+    // 3. Grade Down % & Claim
+    const actualGradeDown = Number(raw.actual_grade_down !== undefined && raw.actual_grade_down !== null && raw.actual_grade_down !== '' ? raw.actual_grade_down : (raw.grade_down_percent || raw.grade_down_act || raw.grade_down || 0));
+    const claimGradeDown = Number(raw.claim_grade_down !== undefined && raw.claim_grade_down !== null && raw.claim_grade_down !== '' ? raw.claim_grade_down : (raw.grade_down_claim || actualGradeDown));
+    const gradeDownDedAmt = Number(raw.grade_down_claim_amt || raw.grade_deduction_amount || raw.quality_deduction_amount || (claimGradeDown > 0 ? (claimGradeDown * 60) : 0));
+
+    // 4. Chotta & Habi Jabi
+    let chottaKg = Number(raw.chotta_weight || raw.chotta_wt || 0);
+    let habijabiKg = Number(raw.ropes_weight || raw.habijabi_weight || raw.hb_weight || 0);
+    let chottaGrade = String(raw.chotta_grade || 'CHOTTA').trim();
+    let habijabiGrade = String(raw.ropes_grade || raw.habijabi_grade || 'HABIJABI').trim();
+    
+    // Check detail rows for Chotta / Habijabi if header is zero
+    if (relatedDetails.length > 0) {
+      relatedDetails.forEach((d: any) => {
+        chottaKg += Number(d.chotta_weight || 0);
+        habijabiKg += Number(d.ropes_weight || d.habijabi_weight || 0);
+        if (d.chotta_grade) chottaGrade = d.chotta_grade;
+        if (d.ropes_grade || d.habijabi_grade) habijabiGrade = d.ropes_grade || d.habijabi_grade;
+      });
+    }
+    const totChottaHabijabiKg = chottaKg + habijabiKg;
+    const chottaHabijabiDedAmt = Number(raw.chotta_deduction_amount || raw.ropes_deduction_amount || (totChottaHabijabiKg > 0 ? Number(((totChottaHabijabiKg / 100) * 1500).toFixed(2)) : 0));
+
+    // 5. Premium (ONLY FROM SAUDA CHECK POINT)
+    let premiumData = scpPremiumMap.get(cleanPo) || { premium: "No", isPremium: false, rate: 0, source: "Sauda Check Point" };
+    if (!premiumData.isPremium && cleanMr) {
+      // Check if MR has Sauda Check Point lookup
+      const byMr = scpPremiumMap.get(cleanMr);
+      if (byMr) premiumData = byMr;
+    }
 
     // Deduction amounts
-    const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || 0);
-    const qualDedAmt = Number(raw.quality_deduction_amount || raw.grade_deduction_amount || 0);
     const delivDedAmt = Number(raw.delivery_claim_amount || raw.delivery_claim || 0);
     const baleDedAmt = Number(raw.bale_weight_deduction_amount || 0);
     const otherDedAmt = Number(raw.other_deduction_amount || 0);
     
     let totalClaim = Number(raw.summary_deduction_amount || raw.total_deduction_amt || raw.claim_amount || raw.deduction_amount || 0);
     if (totalClaim <= 0) {
-      totalClaim = moistDedAmt + qualDedAmt + delivDedAmt + baleDedAmt + otherDedAmt;
+      totalClaim = moistDedAmt + dustDedAmt + gradeDownDedAmt + chottaHabijabiDedAmt + delivDedAmt + baleDedAmt + otherDedAmt;
     }
 
     const supplier = String(raw.supplier_name || raw.supplier || raw.vyapari_name || 'DIRECT SUPPLIER').trim();
@@ -219,6 +389,8 @@ export function computeInspectionMetrics(params: {
       id: raw.id || `insp-rec-${cleanMr}`,
       mrNo: raw.mr_no || raw.challan_no || cleanMr,
       cleanMrNo: cleanMr,
+      poNo: poRaw || '---',
+      cleanPoNo: cleanPo,
       date: dateStr ? new Date(dateStr).toLocaleDateString('en-IN') : '2026-09-24',
       year,
       month: monthIndex,
@@ -229,10 +401,37 @@ export function computeInspectionMetrics(params: {
       juteGrade: grade,
       weightQtl: Number(wtQtl.toFixed(2)),
       weightMt: Number(wtMt.toFixed(3)),
+      
+      // 1. Moisture
       actualMoisture: Number(actualM.toFixed(1)),
       claimMoisture: Number(claimM.toFixed(1)),
       moistureDeductionAmount: moistDedAmt,
-      qualityDeductionAmount: qualDedAmt,
+      
+      // 2. Dust
+      actualDust: Number(actualDust.toFixed(1)),
+      claimDust: Number(claimDust.toFixed(1)),
+      dustDeductionAmount: dustDedAmt,
+      
+      // 3. Grade Down
+      actualGradeDown: Number(actualGradeDown.toFixed(1)),
+      claimGradeDown: Number(claimGradeDown.toFixed(1)),
+      gradeDownDeductionAmount: gradeDownDedAmt,
+      
+      // 4. Chotta & Habi Jabi
+      chottaWeightKg: Number(chottaKg.toFixed(1)),
+      habijabiWeightKg: Number(habijabiKg.toFixed(1)),
+      totalChottaHabijabiKg: Number(totChottaHabijabiKg.toFixed(1)),
+      chottaHabijabiDeductionAmount: chottaHabijabiDedAmt,
+      chottaGrade,
+      habijabiGrade,
+      
+      // 5. Premium from Sauda Check Point
+      premium: premiumData.premium,
+      isPremium: premiumData.isPremium,
+      premiumRate: premiumData.rate,
+      premiumSource: premiumData.source,
+      
+      qualityDeductionAmount: gradeDownDedAmt + dustDedAmt,
       deliveryClaimAmount: delivDedAmt,
       baleWeightDeductionAmount: baleDedAmt,
       otherDeductionAmount: otherDedAmt,
@@ -257,6 +456,13 @@ export function computeInspectionMetrics(params: {
     let totWt = 0;
     let moistSum = 0;
     let claimMoistSum = 0;
+    let dustSum = 0;
+    let claimDustSum = 0;
+    let gradeDownSum = 0;
+    let claimGradeDownSum = 0;
+    let totChottaHbKg = 0;
+    let totChottaHbClaim = 0;
+    let premLots = 0;
     let totClaim = 0;
     let moistClaimLots = 0;
     let qualClaimLots = 0;
@@ -265,9 +471,16 @@ export function computeInspectionMetrics(params: {
       totWt += r.weightMt;
       moistSum += r.actualMoisture;
       claimMoistSum += r.claimMoisture;
+      dustSum += r.actualDust;
+      claimDustSum += r.claimDust;
+      gradeDownSum += r.actualGradeDown;
+      claimGradeDownSum += r.claimGradeDown;
+      totChottaHbKg += r.totalChottaHabijabiKg;
+      totChottaHbClaim += r.chottaHabijabiDeductionAmount;
+      if (r.isPremium) premLots++;
       totClaim += r.totalClaimAmount;
       if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistClaimLots++;
-      if (r.qualityDeductionAmount > 0) qualClaimLots++;
+      if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
     });
 
     return {
@@ -278,6 +491,13 @@ export function computeInspectionMetrics(params: {
       totalWeightMt: Number(totWt.toFixed(2)),
       avgMoisture: Number((moistSum / list.length).toFixed(1)),
       avgClaimMoisture: Number((claimMoistSum / list.length).toFixed(1)),
+      avgDust: Number((dustSum / list.length).toFixed(1)),
+      avgClaimDust: Number((claimDustSum / list.length).toFixed(1)),
+      avgGradeDown: Number((gradeDownSum / list.length).toFixed(1)),
+      avgClaimGradeDown: Number((claimGradeDownSum / list.length).toFixed(1)),
+      totalChottaHabijabiKg: Number(totChottaHbKg.toFixed(1)),
+      totalChottaHabijabiClaim: Number(totChottaHbClaim.toFixed(2)),
+      premiumLotsCount: premLots,
       totalClaimAmount: Number(totClaim.toFixed(2)),
       lotsWithMoistureClaim: moistClaimLots,
       lotsWithQualityClaim: qualClaimLots,
@@ -289,17 +509,33 @@ export function computeInspectionMetrics(params: {
   let totalInspectedWeightMt = 0;
   let totalMoistSum = 0;
   let totalClaimMoistSum = 0;
+  let totalDustSum = 0;
+  let totalClaimDustSum = 0;
+  let totalGradeDownSum = 0;
+  let totalClaimGradeDownSum = 0;
+  let totalChottaHabijabiKg = 0;
+  let totalPremiumLots = 0;
   let totalClaimAmount = 0;
 
   yearInspections.forEach(r => {
     totalInspectedWeightMt += r.weightMt;
     totalMoistSum += r.actualMoisture;
     totalClaimMoistSum += r.claimMoisture;
+    totalDustSum += r.actualDust;
+    totalClaimDustSum += r.claimDust;
+    totalGradeDownSum += r.actualGradeDown;
+    totalClaimGradeDownSum += r.claimGradeDown;
+    totalChottaHabijabiKg += r.totalChottaHabijabiKg;
+    if (r.isPremium) totalPremiumLots++;
     totalClaimAmount += r.totalClaimAmount;
   });
 
   const overallAvgMoisture = totalInspectionsCount > 0 ? Number((totalMoistSum / totalInspectionsCount).toFixed(1)) : 14.5;
   const overallAvgClaimMoisture = totalInspectionsCount > 0 ? Number((totalClaimMoistSum / totalInspectionsCount).toFixed(1)) : 0;
+  const overallAvgDust = totalInspectionsCount > 0 ? Number((totalDustSum / totalInspectionsCount).toFixed(1)) : 0;
+  const overallAvgClaimDust = totalInspectionsCount > 0 ? Number((totalClaimDustSum / totalInspectionsCount).toFixed(1)) : 0;
+  const overallAvgGradeDown = totalInspectionsCount > 0 ? Number((totalGradeDownSum / totalInspectionsCount).toFixed(1)) : 0;
+  const overallAvgClaimGradeDown = totalInspectionsCount > 0 ? Number((totalClaimGradeDownSum / totalInspectionsCount).toFixed(1)) : 0;
 
   return {
     monthInspectionSummaries,
@@ -308,6 +544,12 @@ export function computeInspectionMetrics(params: {
     totalInspectedWeightMt: Number(totalInspectedWeightMt.toFixed(2)),
     overallAvgMoisture,
     overallAvgClaimMoisture,
+    overallAvgDust,
+    overallAvgClaimDust,
+    overallAvgGradeDown,
+    overallAvgClaimGradeDown,
+    totalChottaHabijabiKg: Number(totalChottaHabijabiKg.toFixed(1)),
+    totalPremiumLots,
     totalClaimAmount: Number(totalClaimAmount.toFixed(2)),
     availableYears,
     selectedYear: activeYear

@@ -2729,7 +2729,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
               marka_name: markaObj?.marka_name || rowMarka,
               qty: item.qty || 0,
               weight: itemWt || 0,
-              rate: finalRate
+              rate: finalRate,
+              premium: Number(item.premium || item.premium_amount || item.prem || 0)
             };
           });
         }
@@ -2798,7 +2799,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       marka_name: '',
       qty: 0,
       weight: 0,
-      rate: 0
+      rate: 0,
+      premium: 0
     };
     setFormData(prev => ({
       ...prev,
@@ -2925,7 +2927,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           marka_name: '',
           qty: 200,
           weight: 29.5,
-          rate: 0
+          rate: 0,
+          premium: 0
         }
       ]
     });
@@ -3016,7 +3019,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           marka_name: markaObj?.marka_name || rawMarka || '',
           qty: qtyVal,
           weight: weightVal,
-          rate: d.rate_qntl || d.rate || d.rs || 0
+          rate: d.rate_qntl || d.rate || d.rs || 0,
+          premium: d.premium !== undefined && d.premium !== null ? Number(d.premium) : 0
         };
       });
 
@@ -3412,7 +3416,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      marka_code: item.marka_code || '',
                      quantity: parseFloat(item.qty) || 0,
                      weight_mt: parseFloat(item.weight) || 0,
-                     rate_qntl: parseFloat(item.rate) || 0
+                     rate_qntl: parseFloat(item.rate) || 0,
+                     premium: parseFloat(item.premium) || 0
                  });
              }
          }
@@ -6822,14 +6827,24 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <th className="px-1 py-1.5 w-32" colSpan={2}>Marka</th>
                           <th className="px-1 py-1 w-16 text-right group relative cursor-help">
                               <div className="flex items-center justify-end gap-1">
-                                 <span>Rate/ m.T</span>
+                                 <span>Rate/ Qntl</span>
                                  <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
                               </div>
                               <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
                                  DB Reference: <code className="text-yellow-400 font-mono">purchase_detail_master.rate_qntl</code>
-                                 <p className="mt-1">Format: Numeric decimal representing Jute rate per Metric Ton (1000 kg). Must be a positive numeric value.</p>
+                                 <p className="mt-1">Format: Numeric decimal representing Jute rate per Quintal (100 kg). Must be a positive numeric value.</p>
                               </div>
                            </th>
+                           <th className="px-1 py-1 w-20 text-right group relative cursor-help">
+                               <div className="flex items-center justify-end gap-1">
+                                  <span>Premium</span>
+                                  <span className="text-[7.5px] font-black bg-indigo-950 text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif">i</span>
+                               </div>
+                               <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md font-sans leading-normal font-normal normal-case text-left">
+                                  DB Reference: <code className="text-yellow-400 font-mono">purchase_detail_master.premium</code>
+                                  <p className="mt-1">Format: Premium rate per Quintal. Passed directly to Payment Operations Material Grade Details.</p>
+                               </div>
+                            </th>
                        </tr>
                        <tr className="bg-[#103A20] text-amber-300 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
                           <th colSpan={2} className="py-1 px-1"></th>
@@ -6839,6 +6854,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                           <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
                           <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
                           <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
+                          <th colSpan={1} className="py-1 px-1"></th>
                           <th colSpan={1} className="py-1 px-1"></th>
                        </tr>
                     </thead>
@@ -7005,11 +7021,30 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   }}
                                 />
                              </td>
+                             <td className="px-0 py-0 text-right font-normal bg-emerald-50/20">
+                                <input  id={`row_premium_${row.srl}`} name="row_premium" aria-label="row premium"
+                                  type="number" 
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-full text-right bg-transparent border-none p-1 outline-none font-extrabold tabular-nums focus:bg-emerald-50 text-emerald-900"
+                                  value={row.premium !== undefined && row.premium !== null ? row.premium : ''}
+                                  onChange={(e) => {
+                                     const valStr = e.target.value;
+                                     const nextVal = valStr === '' ? 0 : parseFloat(valStr) || 0;
+                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                        ...item,
+                                        premium: nextVal
+                                     } : item);
+                                     setFormData(prev => ({ ...prev, items: updated }));
+                                  }}
+                                />
+                             </td>
                           </tr>
                        ))}
                        {Array.from({ length: Math.max(1, 3 - formData.items.length) }).map((_, i) => (
                           <tr key={i} className="h-6.5 divide-x divide-slate-300">
                              <td className="px-1 py-1 text-center bg-slate-50"></td>
+                             <td className="px-1 py-1"></td>
                              <td className="px-1 py-1"></td>
                              <td className="px-1 py-1"></td>
                              <td className="px-1 py-1"></td>
