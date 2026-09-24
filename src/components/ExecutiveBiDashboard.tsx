@@ -791,105 +791,63 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* Month Cards Grid (Calendar ordered January - December, showing only non-empty months) */}
+        {/* Month Cards Grid (1/4 size compact cards showing only Contract and Pending) */}
         {dbMetrics.monthSummaries.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2.5 sm:gap-3">
             {dbMetrics.monthSummaries.map((m) => (
               <div
                 key={`${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenDrilldown({
                   title: `Month Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.totalWeightMt.toLocaleString('en-IN')} MT)`,
+                  subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending)`,
                   contracts: m.contracts
                 })}
-                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-3.5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.99] relative overflow-hidden"
+                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none"
+                title={`Click to view ${m.monthName} ${m.year} contract records`}
               >
                 <div>
-                  {/* Card Header: Month Name + Year + Contract Count Badge */}
-                  <div className="flex items-center justify-between gap-1 border-b border-[#F2EDE0] pb-2 mb-2.5">
-                    <div>
-                      <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-700"></span>
-                        <span>{m.monthName}</span>
-                        <span className="text-[11px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
-                      </h3>
-                    </div>
-                    <span className="text-[10px] font-mono font-extrabold bg-[#FAF7F0] border border-[#D6CAA8] text-[#1E331B] px-2 py-0.5 rounded-full shadow-2xs">
-                      {m.totalContracts} {m.totalContracts === 1 ? 'Cont.' : 'Conts.'}
+                  {/* Card Header: Month Name + Year */}
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
+                      <span>{m.monthName}</span>
+                      <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
+                    </h3>
+                  </div>
+
+                  {/* Contract Count */}
+                  <div className="flex items-center justify-between text-xs py-1 border-t border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Contract:</span>
+                    <span className="font-mono font-extrabold text-[#1E331B] text-xs">
+                      {m.totalContracts}
                     </span>
                   </div>
 
-                  {/* Sub breakdown: Sauda & PTF */}
-                  <div className="flex items-center justify-between text-[10.5px] font-sans text-[#5A6E54] mb-2 bg-[#FAF7F0] p-1.5 rounded-lg border border-[#EAE2D2]">
-                    <span>Sauda: <strong className="text-[#1E331B] font-mono">{m.saudaContracts}</strong></span>
-                    <span className="text-slate-300">•</span>
-                    <span>P.T.F / Final: <strong className="text-[#1E331B] font-mono">{m.ptfContracts}</strong></span>
-                  </div>
-
-                  {/* Core Metrics Grid */}
-                  <div className="space-y-1.5 text-xs font-sans">
-                    
-                    {/* Total Weight */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 text-[11px]">Total Weight:</span>
-                      <span className="font-mono font-bold text-[#1E331B]">
-                        {m.totalWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT
-                      </span>
-                    </div>
-
-                    {/* Pending Contracts */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 text-[11px]">Pending Arrival:</span>
-                      <span className={cn(
-                        "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
-                        m.pendingContracts > 0 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                      )}>
-                        {m.pendingContracts > 0 ? `${m.pendingContracts} Pend. (${m.pendingWeightMt.toFixed(1)} MT)` : '✓ All Received'}
-                      </span>
-                    </div>
-
-                    {/* Contract Value */}
-                    <div className="flex items-center justify-between pt-1 border-t border-dashed border-[#EAE2D2]">
-                      <span className="text-slate-600 text-[11px]">Contract Value:</span>
-                      <span className="font-mono font-extrabold text-[#1E331B]">
-                        ₹{formatIndianCurrency(m.totalContractValue)}
-                      </span>
-                    </div>
-
-                    {/* Paid Amount */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 text-[11px]">Paid Amount:</span>
-                      <span className="font-mono font-bold text-emerald-800">
-                        ₹{formatIndianCurrency(m.paidAmount)}
-                      </span>
-                    </div>
-
-                    {/* Remaining Amount */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 text-[11px]">Remaining Amount:</span>
-                      <span className={cn(
-                        "font-mono font-bold",
-                        m.remainingAmount > 0 ? "text-rose-700" : "text-slate-500"
-                      )}>
-                        ₹{formatIndianCurrency(m.remainingAmount)}
-                      </span>
-                    </div>
-
+                  {/* Pending Count */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Pending:</span>
+                    <span className={cn(
+                      "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
+                      m.pendingContracts > 0 
+                        ? "bg-amber-100 text-amber-900 border border-amber-300" 
+                        : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                    )}>
+                      {m.pendingContracts > 0 ? `${m.pendingContracts}` : '0'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Card Action Link */}
-                <div className="mt-3 pt-1.5 border-t border-dashed border-[#EAE2D2] text-[10px] font-bold text-[#1E331B] flex items-center justify-between group-hover:text-emerald-800 transition-colors">
-                  <span>Trace {m.monthName} Records</span>
-                  <span className="text-xs font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+                  <span>View Details</span>
+                  <span className="text-[10px]">→</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white border border-[#D6CAA8] rounded-xl p-8 text-center text-[#5A6E54]">
-            <p className="text-sm font-semibold">No contract or payment data found for year {activeYear}.</p>
-            <p className="text-xs text-[#5A6E54]/80 mt-1">Please select another year from the dropdown above.</p>
+          <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
+            <p className="text-sm font-semibold">No contract data found for year {activeYear}.</p>
+            <p className="text-xs text-[#5A6E54]/80 mt-0.5">Please select another year from the dropdown above.</p>
           </div>
         )}
 
