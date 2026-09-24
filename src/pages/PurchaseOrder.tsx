@@ -2961,44 +2961,72 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
     setLoading(true);
     try {
-      const allDetails = await dbModule.fetchAll(DETAIL_TABLE);
-      let filteredDetails = allDetails
-        .filter((d: any) => d.po_no === poHeader.po_no)
+      const poNoClean = String(poHeader.po_no || '').trim();
+      const poNoUpper = poNoClean.toUpperCase();
+      const allDetails = await dbModule.fetchAll(DETAIL_TABLE).catch(() => []);
+      let filteredDetails = (allDetails || [])
+        .filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNoUpper)
         .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
       
-      // Fallback: If no details in current table, query sauda_check_point_details, temporary_material_received, or sauda_quality_details
-      if ((!filteredDetails || filteredDetails.length === 0) && supabase) {
-        const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').eq('po_no', poHeader.po_no);
-        if (scpDet && scpDet.length > 0) {
-          filteredDetails = scpDet;
-        } else {
-          // Check temporary_material_received for PTF receipt grade details
-          const { data: tempArr } = await supabase
+      // Fallback: If no details in current table, query sauda_check_point_details, purchase_detail_master, temporary_material_received, or sauda_quality_details
+      if (!filteredDetails || filteredDetails.length === 0) {
+        if (supabase) {
+          const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoClean);
+          if (scpDet && scpDet.length > 0) {
+            filteredDetails = scpDet;
+          } else {
+            const { data: pdmDet } = await supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoClean);
+            if (pdmDet && pdmDet.length > 0) {
+              filteredDetails = pdmDet;
+            }
+          }
+        }
+      }
+
+      if (!filteredDetails || filteredDetails.length === 0) {
+        // Check temporary_material_received for PTF receipt grade details
+        let tempArr: any = null;
+        if (supabase) {
+          const { data } = await supabase
             .from('temporary_material_received')
             .select('*')
-            .or(`po_no.eq.${poHeader.po_no},ptf_no.eq.${poHeader.po_no},temporary_arrival_no.eq.${poHeader.po_no}`)
+            .or(`po_no.eq.${poNoClean},ptf_no.eq.${poNoClean},temporary_arrival_no.eq.${poNoClean}`)
             .limit(1)
             .maybeSingle();
+          tempArr = data;
+        }
+        if (!tempArr) {
+          const allAmads = await dbModule.fetchAll('temporary_material_received').catch(() => []);
+          tempArr = (allAmads || []).find((am: any) => 
+            String(am.po_no || '').trim().toUpperCase() === poNoUpper ||
+            String(am.ptf_no || '').trim().toUpperCase() === poNoUpper ||
+            String(am.temporary_arrival_no || '').trim().toUpperCase() === poNoUpper ||
+            String(am.amad_no || '').trim().toUpperCase() === poNoUpper
+          );
+        }
 
-          if (tempArr && Array.isArray(tempArr.grid_details) && tempArr.grid_details.length > 0) {
-            filteredDetails = tempArr.grid_details.map((gd: any, i: number) => ({
-              po_no: poHeader.po_no,
-              srl_no: i + 1,
-              crop_year: gd.crop_year || '2026-27',
-              grade_code: gd.receipt_grade_code || gd.grade_code || gd.challan_grade || '',
-              grade_name: gd.receipt_grade_name || gd.grade_name || gd.challan_grade || '',
-              agency_code: gd.agency_code || '',
-              agency_name: gd.agency_name || '',
-              marka_code: gd.challan_marka_code || gd.marka_code || '',
-              marka_name: gd.challan_marka_name || gd.marka_name || '',
-              quantity: gd.quantity_chln || gd.quantity || gd.qty || 0,
-              weight_mt: gd.netto_mt || gd.weight || 0,
-              rate_qntl: gd.rate || 0,
-              premium: gd.premium || 0
-            }));
-          } else {
-            // Extract sauda number if present
-            const saudaToken = (poHeader.contract_po_no || poHeader.po_no || '').split('/').pop() || '';
+        if (tempArr && Array.isArray(tempArr.grid_details) && tempArr.grid_details.length > 0) {
+          filteredDetails = tempArr.grid_details.map((gd: any, i: number) => ({
+            po_no: poHeader.po_no,
+            srl_no: i + 1,
+            crop_year: gd.crop_year || '2026-27',
+            grade_code: gd.receipt_grade_code || gd.grade_code || gd.challan_grade || '',
+            grade_name: gd.receipt_grade_name || gd.grade_name || gd.challan_grade_name || gd.challan_grade || '',
+            agency_code: gd.agency_code || '',
+            agency_name: gd.agency_name || '',
+            marka_code: gd.challan_marka_code || gd.marka_code || '',
+            marka_name: gd.challan_marka_name || gd.marka_name || '',
+            quantity: Number(gd.quantity_rcpt || gd.quantity_chln || gd.quantity || gd.qty || 0),
+            weight_mt: (gd.netto_pnto !== undefined && gd.netto_pnto !== null && Number(gd.netto_pnto) > 0)
+              ? Number(gd.netto_pnto)
+              : Number(gd.netto_mt || gd.weight || 0),
+            rate_qntl: Number(gd.rate || 0),
+            premium: gd.premium !== undefined && gd.premium !== null ? Number(gd.premium) : 0
+          }));
+        } else {
+          // Extract sauda number if present
+          const saudaToken = (poHeader.contract_po_no || poHeader.po_no || '').split('/').pop() || '';
+          if (supabase) {
             const { data: saudaRec } = await supabase.from('sauda_master').select('*').or(`session.eq.${poHeader.po_no},sauda_no.eq.${saudaToken}`).maybeSingle();
             if (saudaRec) {
               const { data: qDet } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', saudaRec.sauda_id);
@@ -3010,8 +3038,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                   grade_code: qd.quality,
                   agency_code: qd.agency,
                   marka_code: qd.marka,
-                  quantity: qd.qty,
-                  rate_qntl: qd.rs
+                  quantity: Number(qd.qty || 0),
+                  rate_qntl: Number(qd.rs || 0),
+                  weight_mt: Number(qd.weight || 0),
+                  premium: Number(qd.premium || 0)
                 }));
               }
             }
@@ -3021,10 +3051,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filteredDetails.map((d: any, index: number) => {
-        const qtyVal = d.quantity || d.qty || 0;
-        const weightVal = isBales 
-          ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight_mt || d.weight || 0);
+        const qtyVal = Number(d.quantity || d.qty || d.quantity_rcpt || d.quantity_chln || 0);
+        const existingWeight = (d.weight_mt !== undefined && d.weight_mt !== null && Number(d.weight_mt) > 0)
+          ? Number(d.weight_mt)
+          : ((d.weight !== undefined && d.weight !== null && Number(d.weight) > 0)
+            ? Number(d.weight)
+            : ((d.netto_pnto !== undefined && d.netto_pnto !== null && Number(d.netto_pnto) > 0)
+              ? Number(d.netto_pnto)
+              : 0));
+
+        const weightVal = existingWeight > 0 
+          ? existingWeight 
+          : (isBales && qtyVal > 0 ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) : 0);
         
         const rawGrade = d.grade_code || d.quality || d.grade || '';
         const rawAgency = d.agency_code || d.agency || '';
@@ -3034,18 +3072,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const agencyObj = agencyList.find(a => a.agency_code === rawAgency || a.agency_name?.trim().toUpperCase() === rawAgency?.trim().toUpperCase());
         const markaObj = markaList.find(m => m.marka_code === rawMarka || m.marka_name?.trim().toUpperCase() === rawMarka?.trim().toUpperCase());
 
+        const rateVal = d.rate_qntl !== undefined && d.rate_qntl !== null && Number(d.rate_qntl) > 0
+          ? Number(d.rate_qntl)
+          : (d.rate !== undefined && d.rate !== null && Number(d.rate) > 0 ? Number(d.rate) : Number(d.rs || 0));
+
         return {
           srl: index + 1,
           crop: d.crop_year || d.crop || '2025-26',
           grade_code: gradeObj?.grade_code || rawGrade,
-          grade_name: gradeObj?.grade_name || rawGrade || '',
+          grade_name: gradeObj?.grade_name || d.grade_name || rawGrade || '',
           agency_code: agencyObj?.agency_code || rawAgency,
-          agency_name: agencyObj?.agency_name || rawAgency || '',
+          agency_name: agencyObj?.agency_name || d.agency_name || rawAgency || '',
           marka_code: markaObj?.marka_code || rawMarka,
-          marka_name: markaObj?.marka_name || rawMarka || '',
+          marka_name: markaObj?.marka_name || d.marka_name || rawMarka || '',
           qty: qtyVal,
           weight: weightVal,
-          rate: d.rate_qntl || d.rate || d.rs || 0,
+          rate: rateVal,
           premium: d.premium !== undefined && d.premium !== null ? Number(d.premium) : 0
         };
       });
@@ -3430,13 +3472,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       }
       
       await dbModule.insert(MASTER_TABLE, payload);
+
+      if (supabase) {
+        await supabase.from(MASTER_TABLE).upsert(payload, { onConflict: 'po_no' }).catch(e => console.warn(`Supabase upsert into ${MASTER_TABLE} warning:`, e));
+        await supabase.from(DETAIL_TABLE).delete().eq('po_no', finalPoNo).catch(e => console.warn(`Supabase delete from ${DETAIL_TABLE} warning:`, e));
+      }
       
       if (formData.items && formData.items.length > 0) {
          const sortedItems = [...formData.items].sort((a: any, b: any) => compareQualities(a.grade_name || a.grade_code || '', b.grade_name || b.grade_code || ''));
+         const itemsToInsert: any[] = [];
          for (let i = 0; i < sortedItems.length; i++) {
              const item = sortedItems[i];
              if (item.grade_code || item.marka_code || item.grade_name || item.qty) {
-                 await dbModule.insert(DETAIL_TABLE, {
+                 const detailRow = {
                      po_no: finalPoNo,
                      srl_no: i + 1,
                      crop_year: item.crop || '2025-26',
@@ -3447,11 +3495,17 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                      weight_mt: parseFloat(item.weight) || 0,
                      rate_qntl: parseFloat(item.rate) || 0,
                      premium: parseFloat(item.premium) || 0
-                 });
+                 };
+                 await dbModule.insert(DETAIL_TABLE, detailRow);
+                 itemsToInsert.push(detailRow);
              }
+         }
+         if (supabase && itemsToInsert.length > 0) {
+           await supabase.from(DETAIL_TABLE).insert(itemsToInsert).catch(e => console.warn(`Supabase insert into ${DETAIL_TABLE} warning:`, e));
          }
       }
       
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
       alert(`Purchase Order ${finalPoNo} saved successfully!`);
       setViewMode('register');
       fetchPosAndMasters();
