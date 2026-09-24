@@ -93,9 +93,7 @@ CREATE TABLE IF NOT EXISTS authentication_master (
 );
 
 -- 3. Core Module Tables (Optimized Standard Layouts per user's directive)
-DROP TABLE IF EXISTS sauda_quality_details CASCADE;
-DROP TABLE IF EXISTS sauda_master CASCADE;
-CREATE TABLE sauda_master (
+CREATE TABLE IF NOT EXISTS sauda_master (
     sauda_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     financial_year TEXT NOT NULL,
     sauda_no TEXT NOT NULL,
@@ -140,8 +138,7 @@ CREATE TABLE IF NOT EXISTS sauda_quality_details (
     marka TEXT
 );
 
-DROP TABLE IF EXISTS issue_master CASCADE;
-CREATE TABLE issue_master ( -- Used for Amad Arrival Logic
+CREATE TABLE IF NOT EXISTS issue_master ( -- Used for Amad Arrival Logic
     amad_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     financial_year TEXT NOT NULL,
     amad_no TEXT NOT NULL,
@@ -162,9 +159,7 @@ CREATE TABLE issue_master ( -- Used for Amad Arrival Logic
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-DROP TABLE IF EXISTS purchase_detail_master CASCADE;
-DROP TABLE IF EXISTS purchase_master CASCADE;
-CREATE TABLE purchase_master ( -- Purchase Order Header
+CREATE TABLE IF NOT EXISTS purchase_master ( -- Purchase Order Header
     po_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     financial_year TEXT NOT NULL,
     purchase_order TEXT,
@@ -220,10 +215,7 @@ CREATE TABLE IF NOT EXISTS purchase_detail_master ( -- Purchase Order Items
     premium NUMERIC(15,2) DEFAULT 0
 );
 
-DROP TABLE IF EXISTS temporary_po_details CASCADE;
-DROP TABLE IF EXISTS temporary_po CASCADE;
-
-CREATE TABLE temporary_po ( -- Temporary Purchase Order Header
+CREATE TABLE IF NOT EXISTS temporary_po ( -- Temporary Purchase Order Header
     po_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     financial_year TEXT NOT NULL,
     purchase_order TEXT,
@@ -266,7 +258,7 @@ CREATE TABLE temporary_po ( -- Temporary Purchase Order Header
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE temporary_po_details ( -- Temporary Purchase Order Items
+CREATE TABLE IF NOT EXISTS temporary_po_details ( -- Temporary Purchase Order Items
     item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     po_no TEXT REFERENCES temporary_po(po_no) ON DELETE CASCADE,
     srl_no INTEGER,
@@ -627,7 +619,24 @@ CREATE TABLE IF NOT EXISTS sauda_check_point (
     open_remarks JSONB
 );
 
+CREATE TABLE IF NOT EXISTS sauda_check_point_details (
+    item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    po_no TEXT REFERENCES sauda_check_point(po_no) ON DELETE CASCADE,
+    srl_no INTEGER,
+    crop_year TEXT,
+    grade_code TEXT,
+    agency_code TEXT,
+    marka_code TEXT,
+    quantity INTEGER,
+    weight_mt NUMERIC(15,3),
+    rate_qntl NUMERIC(15,2),
+    premium NUMERIC(15,2) DEFAULT 0
+);
+
 ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS open_remarks JSONB;
+ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
+ALTER TABLE IF EXISTS sauda_check_point_details ADD COLUMN IF NOT EXISTS rate_qntl NUMERIC(15,2) DEFAULT 0;
+ALTER TABLE IF EXISTS sauda_check_point_details ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
 ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;
 ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;
 

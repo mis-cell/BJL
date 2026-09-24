@@ -265,6 +265,8 @@ async function verifyAndMigrateSupabaseSchema() {
     ALTER TABLE IF EXISTS purchase_detail_master ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
     ALTER TABLE IF EXISTS temporary_po_details ADD COLUMN IF NOT EXISTS rate_qntl NUMERIC(15,2) DEFAULT 0;
     ALTER TABLE IF EXISTS temporary_po_details ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
+    ALTER TABLE IF EXISTS sauda_check_point_details ADD COLUMN IF NOT EXISTS rate_qntl NUMERIC(15,2) DEFAULT 0;
+    ALTER TABLE IF EXISTS sauda_check_point_details ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
     ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
     ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;
     ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS premium NUMERIC(15,2) DEFAULT 0;

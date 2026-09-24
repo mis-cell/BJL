@@ -787,7 +787,7 @@ export default function ExecutiveBiDashboard({
 
       </div>
 
-      {/* 4. MILL INSPECTION INFORMATION ENTRY (CLAIM, QUALITY & SAUDA CHECK POINT PREMIUM) */}
+      {/* 4. INSPECTION SUMMARY (CLAIM, QUALITY & SAUDA CHECK POINT PREMIUM) */}
       <div className="bg-[#FAF7F0] border-2 border-[#D6CAA8] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D6CAA8] pb-3">
@@ -797,18 +797,15 @@ export default function ExecutiveBiDashboard({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-black tracking-wide text-[#1E331B] flex items-center gap-2">
-                <span>Mill Inspection Information Entry</span>
+                <span>Inspection Summary</span>
               </h2>
-              <p className="text-xs text-[#5A6E54] font-medium">
-                Moisture % (Claim), Dust % (Claim), Grade Down % (Claim), Chotta & Habi Jabi, and Premium (sourced from Sauda Check Point)
-              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => handleOpenInspectionModal({
-                title: `Mill Inspection Information Entry Log (${activeYear})`,
+                title: `Inspection Summary Log (${activeYear})`,
                 subtitle: `Viewing all ${inspMetrics.totalInspectionsCount} inspection records for ${activeYear}`,
                 inspections: inspMetrics.allInspections
               })}
@@ -843,7 +840,7 @@ export default function ExecutiveBiDashboard({
 
         {/* Year-level KPI Highlights Ribbon */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs font-sans">
-          {/* Total Lots & Weight */}
+          {/* Total Lots & Weight - Count MR_No number only */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
             <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Lots / Weight</span>
             <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
@@ -905,7 +902,9 @@ export default function ExecutiveBiDashboard({
             <span className="font-mono font-extrabold text-amber-950 text-sm block">
               {inspMetrics.totalPremiumLots} Lots
             </span>
-            <span className="text-[10px] text-amber-800 font-medium">From Sauda Check Point</span>
+            <span className="text-[10px] text-amber-800 font-medium">
+              {inspMetrics.totalPremiumSum > 0 ? `₹${formatIndianCurrency(inspMetrics.totalPremiumSum)}` : (inspMetrics.totalPremiumLots > 0 ? `Avg ₹${inspMetrics.avgPremiumRate}/Qtl` : 'From Sauda Check Point')}
+            </span>
           </div>
 
           {/* Total Claims & Deductions */}
@@ -925,12 +924,12 @@ export default function ExecutiveBiDashboard({
               <div
                 key={`insp-${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenInspectionModal({
-                  title: `Mill Inspection Information: ${m.monthName} ${m.year}`,
+                  title: `Inspection Summary: ${m.monthName} ${m.year}`,
                   subtitle: `${m.totalInspections} lots inspected in ${m.monthName} ${m.year} (${m.lotsWithMoistureClaim} lots with moisture claim)`,
                   inspections: m.inspections
                 })}
                 className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
-                title={`Click to view ${m.monthName} ${m.year} mill inspection details`}
+                title={`Click to view ${m.monthName} ${m.year} inspection details`}
               >
                 <div>
                   {/* Card Header: Month Name + Year */}

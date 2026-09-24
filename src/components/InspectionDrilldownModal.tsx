@@ -185,7 +185,7 @@ export default function InspectionDrilldownModal({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Mill_Inspection_Data_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `Inspection_Summary_Data_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -209,7 +209,7 @@ export default function InspectionDrilldownModal({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-black tracking-wide flex items-center gap-2">
-                <span>{title || "Mill Inspection Information Entry Details"}</span>
+                <span>{title || "Inspection Summary Details"}</span>
               </h2>
               {subtitle && (
                 <p className="text-xs text-emerald-200/90 font-sans mt-0.5">

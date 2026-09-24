@@ -49,15 +49,27 @@ export const dbModule = {
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
       return data;
     }
-    const { data: result, error } = await supabase
-      .from(table)
-      .insert(data)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
-    return result;
+    let payload = { ...data };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: result, error } = await supabase
+        .from(table)
+        .insert(payload)
+        .select()
+        .maybeSingle();
+      
+      if (error) {
+        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
+                      error.message?.match(/Could not find the '([^']+)' column/i);
+        if (match && match[1] && match[1] in payload) {
+          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying insert...`);
+          delete payload[match[1]];
+          continue;
+        }
+        throw error;
+      }
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      return result || payload;
+    }
   },
 
   async upsert(table: string, data: any, idCol?: string) {
@@ -67,15 +79,27 @@ export const dbModule = {
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
       return data;
     }
-    const { data: result, error } = await supabase
-      .from(table)
-      .upsert(data, idCol ? { onConflict: idCol } : undefined)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
-    return result;
+    let payload = { ...data };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: result, error } = await supabase
+        .from(table)
+        .upsert(payload, idCol ? { onConflict: idCol } : undefined)
+        .select()
+        .maybeSingle();
+      
+      if (error) {
+        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
+                      error.message?.match(/Could not find the '([^']+)' column/i);
+        if (match && match[1] && match[1] in payload) {
+          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying upsert...`);
+          delete payload[match[1]];
+          continue;
+        }
+        throw error;
+      }
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      return result || payload;
+    }
   },
 
   async update(table: string, idCol: string, idVal: any, data: any) {
@@ -85,16 +109,28 @@ export const dbModule = {
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
       return data;
     }
-    const { data: result, error } = await supabase
-      .from(table)
-      .update(data)
-      .eq(idCol, idVal)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
-    return result;
+    let payload = { ...data };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: result, error } = await supabase
+        .from(table)
+        .update(payload)
+        .eq(idCol, idVal)
+        .select()
+        .maybeSingle();
+      
+      if (error) {
+        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
+                      error.message?.match(/Could not find the '([^']+)' column/i);
+        if (match && match[1] && match[1] in payload) {
+          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying update...`);
+          delete payload[match[1]];
+          continue;
+        }
+        throw error;
+      }
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      return result || payload;
+    }
   },
 
   async delete(table: string, idCol: string, idVal: any) {
