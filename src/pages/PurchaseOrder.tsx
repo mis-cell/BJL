@@ -2611,6 +2611,38 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     window.addEventListener('mismatch_resolved', handleDataUpdate);
     window.addEventListener('storage', handleDataUpdate);
 
+    // One-time automatic cleanup to permanently remove duplicate rows in sauda_check_point_details
+    const cleanupDuplicateDetails = async () => {
+      try {
+        if (!supabase) return;
+        const targetPo = 'BJCL/2026-2027/0332(PTF)';
+        const { data: rows } = await supabase
+          .from('sauda_check_point_details')
+          .select('*')
+          .ilike('po_no', targetPo);
+
+        if (rows && rows.length > 0) {
+          const seen = new Set<string>();
+          const duplicateIds: string[] = [];
+          for (const r of rows) {
+            const gradeKey = `${r.grade_code || r.grade_name || ''}_${r.srl_no || ''}`;
+            if (seen.has(gradeKey)) {
+              if (r.item_id) duplicateIds.push(r.item_id);
+            } else {
+              seen.add(gradeKey);
+            }
+          }
+          if (duplicateIds.length > 0) {
+            await supabase.from('sauda_check_point_details').delete().in('item_id', duplicateIds);
+            console.log(`Cleaned up ${duplicateIds.length} duplicate items for ${targetPo}`);
+          }
+        }
+      } catch (err) {
+        console.warn("Cleanup error:", err);
+      }
+    };
+    cleanupDuplicateDetails();
+
     let channel: any = null;
     if (supabase) {
       channel = supabase
@@ -2952,9 +2984,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     if (foundItems && foundItems.length > 0) {
       const sorted = [...foundItems].sort((a, b) => compareQualities(a.grade_name || a.grade_code, b.grade_name || b.grade_code));
       const reindexed = sorted.map((item, idx) => ({ ...item, srl: idx + 1 }));
+      const totalQty = reindexed.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+      const totalWt = reindexed.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
+
       setFormData(prev => ({
         ...prev,
-        items: reindexed
+        items: reindexed,
+        total_units: totalQty > 0 ? String(totalQty) : prev.total_units,
+        total_contract_mt: totalWt > 0 ? totalWt.toFixed(3) : prev.total_contract_mt
       }));
       alert(`✅ Successfully restored ${reindexed.length} grade rows from Arrival/Sauda records!`);
     } else {
@@ -3173,7 +3210,21 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       }
 
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
-      const mappedItems = filteredDetails.map((d: any, index: number) => {
+
+      // Deduplicate items so duplicate DB entries are merged/filtered cleanly
+      const seenItemKeys = new Set<string>();
+      const dedupedDetails = (filteredDetails || []).filter((d: any) => {
+        const rawG = d.grade_code || d.quality || d.grade || '';
+        const rawA = d.agency_code || d.agency || '';
+        const rawM = d.marka_code || d.marka || '';
+        const key = `${rawG}_${rawA}_${rawM}_${d.srl_no || ''}`;
+        if (!rawG && !rawA && !rawM) return true;
+        if (seenItemKeys.has(key)) return false;
+        seenItemKeys.add(key);
+        return true;
+      });
+
+      const mappedItems = dedupedDetails.map((d: any, index: number) => {
         const qtyVal = Number(d.quantity || d.qty || d.quantity_rcpt || d.quantity_chln || 0);
         const existingWeight = (d.weight_mt !== undefined && d.weight_mt !== null && Number(d.weight_mt) > 0)
           ? Number(d.weight_mt)
@@ -3215,8 +3266,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         };
       });
 
-      const sumQty = mappedItems.reduce((s, it) => s + (parseFloat(it.qty) || 0), 0);
-      const sumWt = mappedItems.reduce((s, it) => s + (parseFloat(it.weight) || 0), 0);
+      const sumQty = mappedItems.reduce((s, it) => s + (parseFloat(String(it.qty)) || 0), 0);
+      const sumWt = mappedItems.reduce((s, it) => s + (parseFloat(String(it.weight)) || 0), 0);
       
       const totalUnits = (poHeader.total_units !== undefined && poHeader.total_units !== null && Number(poHeader.total_units) > 0)
         ? String(poHeader.total_units)
@@ -3583,51 +3634,88 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         s_date: formData.s_date || null
       };
 
-      // Check if this record already exists in purchase_master
-      const allMasters = await dbModule.fetchAll(MASTER_TABLE);
-      const alreadyExists = allMasters.some((p: any) => p.po_no === finalPoNo);
-      
-      // Clear old detail rows first to satisfy foreign key integrity checks
-      await dbModule.delete(DETAIL_TABLE, 'po_no', finalPoNo);
-
-      if (alreadyExists) {
-        await dbModule.delete(MASTER_TABLE, 'po_no', finalPoNo);
-      }
-      
-      await dbModule.insert(MASTER_TABLE, payload);
+      // Save Master Record cleanly using upsert/update
+      const allMasters = await dbModule.fetchAll(MASTER_TABLE).catch(() => []);
+      const alreadyExists = (allMasters || []).some((p: any) => p.po_no === finalPoNo);
 
       if (supabase) {
-        await supabase.from(MASTER_TABLE).upsert(payload, { onConflict: 'po_no' }).catch(e => console.warn(`Supabase upsert into ${MASTER_TABLE} warning:`, e));
-        await supabase.from(DETAIL_TABLE).delete().eq('po_no', finalPoNo).catch(e => console.warn(`Supabase delete from ${DETAIL_TABLE} warning:`, e));
+        try {
+          await supabase.from(MASTER_TABLE).upsert(payload, { onConflict: 'po_no' });
+        } catch (e) {
+          console.warn(`Supabase upsert into ${MASTER_TABLE} warning:`, e);
+        }
       }
+
+      if (alreadyExists) {
+        try {
+          await dbModule.update(MASTER_TABLE, 'po_no', finalPoNo, payload);
+        } catch {
+          await dbModule.insert(MASTER_TABLE, payload).catch(() => {});
+        }
+      } else {
+        await dbModule.insert(MASTER_TABLE, payload).catch(() => {});
+      }
+
+      // Clear old detail rows cleanly before inserting new distinct rows
+      if (supabase) {
+        try {
+          await supabase.from(DETAIL_TABLE).delete().eq('po_no', finalPoNo);
+        } catch (e) {
+          console.warn(`Supabase delete from ${DETAIL_TABLE} warning:`, e);
+        }
+      }
+      await dbModule.delete(DETAIL_TABLE, 'po_no', finalPoNo).catch(() => {});
       
       if (formData.items && formData.items.length > 0) {
          const sortedItems = [...formData.items].sort((a: any, b: any) => compareQualities(a.grade_name || a.grade_code || '', b.grade_name || b.grade_code || ''));
          const itemsToInsert: any[] = [];
          for (let i = 0; i < sortedItems.length; i++) {
              const item = sortedItems[i];
-             if (item.grade_code || item.marka_code || item.grade_name || item.qty) {
+             if (item.grade_code || item.marka_code || item.grade_name || item.qty || item.weight) {
                  const detailRow = {
                      po_no: finalPoNo,
                      srl_no: i + 1,
-                     crop_year: item.crop || '2025-26',
-                     grade_code: item.grade_code || '',
-                     grade_name: item.grade_name || '',
-                     agency_code: item.agency_code || '',
-                     agency_name: item.agency_name || '',
-                     marka_code: item.marka_code || '',
-                     marka_name: item.marka_name || '',
-                     quantity: parseFloat(item.qty) || 0,
-                     weight_mt: parseFloat(item.weight) || 0,
-                     rate_qntl: parseFloat(item.rate) || 0,
-                     premium: parseFloat(item.premium) || 0
+                     crop_year: String(item.crop || '2026-27'),
+                     grade_code: String(item.grade_code || item.grade_name || '').trim(),
+                     grade_name: String(item.grade_name || item.grade_code || '').trim(),
+                     agency_code: String(item.agency_code || item.agency_name || '').trim(),
+                     agency_name: String(item.agency_name || item.agency_code || '').trim(),
+                     marka_code: String(item.marka_code || item.marka_name || '').trim(),
+                     marka_name: String(item.marka_name || item.marka_code || '').trim(),
+                     quantity: Math.round(Number(item.qty || 0)) || 0,
+                     weight_mt: Number(Number(item.weight || 0).toFixed(3)) || 0,
+                     rate_qntl: Number(Number(item.rate || 0).toFixed(2)) || 0,
+                     premium: Number(Number(item.premium || 0).toFixed(2)) || 0
                  };
-                 await dbModule.insert(DETAIL_TABLE, detailRow);
                  itemsToInsert.push(detailRow);
              }
          }
-         if (supabase && itemsToInsert.length > 0) {
-           await supabase.from(DETAIL_TABLE).insert(itemsToInsert).catch(e => console.warn(`Supabase insert into ${DETAIL_TABLE} warning:`, e));
+
+         // Insert each distinct row once via dbModule with Supabase direct fallback
+         for (const row of itemsToInsert) {
+           try {
+             await dbModule.insert(DETAIL_TABLE, row);
+           } catch (insertErr) {
+             console.warn(`dbModule.insert failed on ${DETAIL_TABLE}, trying direct fallback:`, insertErr);
+             if (supabase) {
+               const baseRow: any = {
+                 po_no: row.po_no,
+                 srl_no: row.srl_no,
+                 crop_year: row.crop_year,
+                 grade_code: row.grade_code,
+                 agency_code: row.agency_code,
+                 marka_code: row.marka_code,
+                 quantity: row.quantity,
+                 weight_mt: row.weight_mt,
+                 rate_qntl: row.rate_qntl
+               };
+               try {
+                 await supabase.from(DETAIL_TABLE).insert(baseRow);
+               } catch (e) {
+                 console.warn(`Supabase fallback insert warning:`, e);
+               }
+             }
+           }
          }
       }
       
@@ -7060,22 +7148,22 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-300">
-                       {formData.items.map((row) => (
+                       {formData.items.map((row, index) => (
                           <tr 
-                             key={row.srl} 
-                             onClick={() => setSelectedItemSrl(row.srl)}
+                             key={`item_row_${index}_${row.grade_code || ''}_${row.srl || index}`} 
+                             onClick={() => setSelectedItemSrl(row.srl || index + 1)}
                              className={`divide-x divide-slate-300 transition-colors ${
-                                row.srl === selectedItemSrl ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
+                                (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0)) ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
                              }`}
                           >
-                             <td className="px-1 py-1 text-center bg-slate-50  font-bold text-slate-700">{row.srl}</td>
+                             <td className="px-1 py-1 text-center bg-slate-50  font-bold text-slate-700">{row.srl || index + 1}</td>
                              <td className="px-0 py-0 text-center font-bold">
-                                <select  id="row_crop_getcropyear_3754" name="row_crop_getcropyear" aria-label="row crop getcropyear"
+                                <select  id={`row_crop_${index}`} name="row_crop_getcropyear" aria-label="row crop getcropyear"
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-905 text-slate-900 cursor-pointer" 
                                   value={row.crop || getCropYear()} 
                                   onChange={(e) => {
                                      const val = e.target.value;
-                                     const updated = formData.items.map(item => item.srl === row.srl ? { ...item, crop: val } : item);
+                                     const updated = formData.items.map((item, idx) => idx === index ? { ...item, crop: val } : item);
                                      setFormData(prev => ({ ...prev, items: updated }));
                                   }} 
                                 >
@@ -7088,7 +7176,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                 </select>
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input  id="field_3772" name="field" aria-label="-"
+                                <input  id={`field_grade_code_${index}`} name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.grade_code || ''} 
@@ -7097,7 +7185,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                      const match = gradeList.find(g => g.grade_code.toUpperCase() === codeVal);
                                      const gName = match ? match.grade_name : row.grade_name;
                                      const computedRate = getSattaRateForRow(row.agency_name, gName, formData.s_date, formData.b_rate);
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         grade_code: codeVal,
                                         grade_name: gName,
@@ -7119,7 +7207,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                      const match = gradeList.find(g => g.grade_name.toUpperCase() === nameVal.toUpperCase());
                                      const gCode = match ? match.grade_code : row.grade_code;
                                      const computedRate = getSattaRateForRow(row.agency_name, nameVal, formData.s_date, formData.b_rate);
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         grade_name: nameVal,
                                         grade_code: gCode,
@@ -7130,7 +7218,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                 />
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input  id="field_3814" name="field" aria-label="-"
+                                <input  id={`field_agency_code_${index}`} name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.agency_code || ''} 
@@ -7139,7 +7227,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                      const match = agencyList.find(a => a.agency_code.toUpperCase() === codeVal);
                                      const aName = match ? match.agency_name : row.agency_name;
                                      const computedRate = getSattaRateForRow(aName, row.grade_name, formData.s_date, formData.b_rate);
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         agency_code: codeVal,
                                         agency_name: aName,
@@ -7161,7 +7249,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                      const match = agencyList.find(a => a.agency_name.toUpperCase() === nameVal.toUpperCase());
                                      const aCode = match ? match.agency_code : row.agency_code;
                                      const computedRate = getSattaRateForRow(nameVal, row.grade_name, formData.s_date, formData.b_rate);
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         agency_name: nameVal,
                                         agency_code: aCode,
@@ -7172,13 +7260,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                 />
                              </td>
                              <td className={`px-0 py-0 text-center font-normal transition-colors duration-150 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
-                                <input  id="field_3856" name="field" aria-label="-"
+                                <input  id={`field_marka_code_${index}`} name="field" aria-label="-"
                                   type="text" 
                                   className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
                                   value={row.marka_code || ''} 
                                   onChange={(e) => {
                                      const codeVal = e.target.value.toUpperCase();
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         marka_code: codeVal
                                      } : item);
@@ -7196,7 +7284,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   placeholder="Marka Name"
                                   onChange={(nameVal) => {
                                      const match = markaList.find(m => m.marka_name.toUpperCase() === nameVal.toUpperCase());
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         marka_name: nameVal,
                                         marka_code: match ? match.marka_code : item.marka_code
@@ -7207,14 +7295,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                              </td>
 
                              <td className="px-0 py-0 text-right font-normal">
-                                <input  id="row_rate_3891" name="row_rate" aria-label="row rate"
+                                <input  id={`row_rate_${index}`} name="row_rate" aria-label="row rate"
                                   type="number" 
                                   className="w-full text-right bg-transparent border-none p-1 outline-none font-extrabold tabular-nums focus:bg-amber-50 text-blue-900"
                                   value={row.rate || ''}
                                   onChange={(e) => {
                                      const valStr = e.target.value;
                                      const nextVal = valStr === '' ? 0 : parseFloat(valStr) || 0;
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         rate: nextVal
                                      } : item);
@@ -7223,7 +7311,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                 />
                              </td>
                              <td className="px-0 py-0 text-right font-normal bg-emerald-50/20">
-                                <input  id={`row_premium_${row.srl}`} name="row_premium" aria-label="row premium"
+                                <input  id={`row_premium_${index}`} name="row_premium" aria-label="row premium"
                                   type="number" 
                                   step="0.01"
                                   placeholder="0.00"
@@ -7232,7 +7320,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                                   onChange={(e) => {
                                      const valStr = e.target.value;
                                      const nextVal = valStr === '' ? 0 : parseFloat(valStr) || 0;
-                                     const updated = formData.items.map(item => item.srl === row.srl ? {
+                                     const updated = formData.items.map((item, idx) => idx === index ? {
                                         ...item,
                                         premium: nextVal
                                      } : item);

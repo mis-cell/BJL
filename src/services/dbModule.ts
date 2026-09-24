@@ -31,6 +31,16 @@ export type EntityType =
   | 'payment_master'
   | 'payment_details';
 
+function extractMissingColumn(msg?: string): string | null {
+  if (!msg) return null;
+  const match = msg.match(/Could not find the '([^']+)' column/i) ||
+                msg.match(/column "([^"]+)" of relation/i) ||
+                msg.match(/column "([^"]+)" does not exist/i) ||
+                msg.match(/column '([^']+)' does not exist/i) ||
+                msg.match(/column "([^"]+)"/i);
+  return match ? match[1] : null;
+}
+
 export const dbModule = {
   async fetchAll(table: string, orderCol?: string, ascending: boolean = true): Promise<any[]> {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
@@ -50,7 +60,7 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .insert(payload)
@@ -58,11 +68,10 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
-        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
-                      error.message?.match(/Could not find the '([^']+)' column/i);
-        if (match && match[1] && match[1] in payload) {
-          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying insert...`);
-          delete payload[match[1]];
+        const col = extractMissingColumn(error.message);
+        if (col && col in payload) {
+          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying insert...`);
+          delete payload[col];
           continue;
         }
         throw error;
@@ -80,7 +89,7 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .upsert(payload, idCol ? { onConflict: idCol } : undefined)
@@ -88,11 +97,10 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
-        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
-                      error.message?.match(/Could not find the '([^']+)' column/i);
-        if (match && match[1] && match[1] in payload) {
-          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying upsert...`);
-          delete payload[match[1]];
+        const col = extractMissingColumn(error.message);
+        if (col && col in payload) {
+          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying upsert...`);
+          delete payload[col];
           continue;
         }
         throw error;
@@ -110,7 +118,7 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .update(payload)
@@ -119,11 +127,10 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
-        const match = error.message?.match(/Could not find the '([^']+)' column of '([^']+)'/i) ||
-                      error.message?.match(/Could not find the '([^']+)' column/i);
-        if (match && match[1] && match[1] in payload) {
-          console.warn(`[dbModule] Column '${match[1]}' not in ${table} schema cache. Stripping and retrying update...`);
-          delete payload[match[1]];
+        const col = extractMissingColumn(error.message);
+        if (col && col in payload) {
+          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying update...`);
+          delete payload[col];
           continue;
         }
         throw error;
