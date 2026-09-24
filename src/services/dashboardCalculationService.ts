@@ -468,8 +468,27 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       actualGradeDown = Number(raw.grade_down_percent);
     } else if (raw.grade_down !== undefined && raw.grade_down !== null) {
       actualGradeDown = Number(raw.grade_down);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_grade_down !== undefined) {
-      actualGradeDown = Number(relatedDetails[0].actual_grade_down);
+    }
+
+    if (actualGradeDown === 0 && raw.quality_matrix?.grade_down) {
+      const qm = raw.quality_matrix.grade_down;
+      for (const k of ['1st', '2nd', '3rd', '4th', 'col1', 'col2', 'col3', 'col4']) {
+        const val = Number(qm[k]?.dept ?? qm[k]?.actual ?? 0);
+        if (val > 0) {
+          actualGradeDown = val;
+          break;
+        }
+      }
+    }
+
+    if (actualGradeDown === 0 && relatedDetails.length > 0) {
+      for (const d of relatedDetails) {
+        const val = Number(d.actual_grade_down ?? d.grade_down_act ?? d.grade_down ?? 0);
+        if (val > 0) {
+          actualGradeDown = val;
+          break;
+        }
+      }
     }
     if (isNaN(actualGradeDown)) actualGradeDown = 0;
 
@@ -478,10 +497,27 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       claimGradeDown = Number(raw.claim_grade_down);
     } else if (raw.grade_down_claim !== undefined && raw.grade_down_claim !== null && raw.grade_down_claim !== '') {
       claimGradeDown = Number(raw.grade_down_claim);
-    } else if (raw.quality_matrix?.grade_down?.['1st']?.claim !== undefined) {
-      claimGradeDown = Number(raw.quality_matrix.grade_down['1st'].claim);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_grade_down !== undefined) {
-      claimGradeDown = Number(relatedDetails[0].claim_grade_down);
+    }
+
+    if (claimGradeDown === 0 && raw.quality_matrix?.grade_down) {
+      const qm = raw.quality_matrix.grade_down;
+      for (const k of ['1st', '2nd', '3rd', '4th', 'col1', 'col2', 'col3', 'col4']) {
+        const val = Number(qm[k]?.claim ?? 0);
+        if (val > 0) {
+          claimGradeDown = val;
+          break;
+        }
+      }
+    }
+
+    if (claimGradeDown === 0 && relatedDetails.length > 0) {
+      for (const d of relatedDetails) {
+        const val = Number(d.claim_grade_down ?? d.grade_down_claim ?? 0);
+        if (val > 0) {
+          claimGradeDown = val;
+          break;
+        }
+      }
     }
     if (isNaN(claimGradeDown)) claimGradeDown = 0;
     if (claimGradeDown <= 0 && actualGradeDown > 0) {
