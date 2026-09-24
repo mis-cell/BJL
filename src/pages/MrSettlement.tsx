@@ -2342,6 +2342,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           challan_weight: Number(faMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.challan_material_weight || inspMaster?.weight_qtl) || 0,
           supplier_net_wt: Number(faMaster?.supplier_net_weight || faMaster?.weight_qtl || inspMaster?.supplier_net_weight || inspMaster?.weight_qtl) || 0,
           electronic_scale_net: Number(faMaster?.electronic_net_weight || faMaster?.weight_qtl || inspMaster?.electronic_net_weight || inspMaster?.weight_qtl) || 0,
+          wt_ded_wt_1: Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0) > 50 
+            ? Number(((Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0)) / 10).toFixed(3))
+            : Number(Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0).toFixed(3)),
+          wt_ded_wt_2: Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0) > 50
+            ? Number(((Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0)) / 10).toFixed(3))
+            : Number(Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0).toFixed(3)),
+          wt_ded_wt_3: Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0) > 50
+            ? Number(((Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0)) / 10).toFixed(3))
+            : Number(Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0).toFixed(3)),
           summary_deduction_type: deductionSummaryText || '',
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -2435,6 +2444,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: inspMaster.arrival_no || '',
         arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
         remarks: inspMaster.remarks || '',
+        challan_weight: Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0),
+        supplier_net_wt: Number(inspMaster.supplier_net_weight || inspMaster.weight_qtl || 0),
+        electronic_scale_net: Number(inspMaster.electronic_net_weight || inspMaster.weight_qtl || 0),
+        wt_ded_wt_1: Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0) > 50 
+          ? Number(((Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0)) / 10).toFixed(3))
+          : Number(Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0).toFixed(3)),
+        wt_ded_wt_2: Number(inspMaster.supplier_net_weight || 0) > 50
+          ? Number(((Number(inspMaster.supplier_net_weight || 0)) / 10).toFixed(3))
+          : Number(Number(inspMaster.supplier_net_weight || 0).toFixed(3)),
+        wt_ded_wt_3: Number(inspMaster.electronic_net_weight || 0) > 50
+          ? Number(((Number(inspMaster.electronic_net_weight || 0)) / 10).toFixed(3))
+          : Number(Number(inspMaster.electronic_net_weight || 0).toFixed(3)),
         summary_deduction_type: deductionSummaryText || '',
         summary_deduction_rate: inspDeductionRate,
         summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),

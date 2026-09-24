@@ -239,6 +239,7 @@ export default function Dashboard({
   const [payments, setPayments] = React.useState<any[]>([]);
   const [recentAmad, setRecentAmad] = React.useState<any[]>([]);
   const [rawArrivals, setRawArrivals] = React.useState<any[]>([]);
+  const [rawFinalArrivals, setRawFinalArrivals] = React.useState<any[]>([]);
   const [rawPos, setRawPos] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [arrivalsMetrics, setArrivalsMetrics] = React.useState({
@@ -636,6 +637,7 @@ export default function Dashboard({
 
       setRecentAmad(arrivals.slice(0, 5));
       setRawArrivals(arrivals || []);
+      setRawFinalArrivals(finalArrivals || []);
       setRawPos(pos || []);
       setRawSaudas(saudas || []);
       setRawScp(scpRes || []);
@@ -1487,7 +1489,7 @@ export default function Dashboard({
             openingStocks={allOpeningStocks.length > 0 ? allOpeningStocks : stockNodeStocks}
             millIssueMasters={millIssueMasters}
             millIssueDetails={millIssueDetails}
-            finalArrivals={[]}
+            finalArrivals={rawFinalArrivals}
             paymentRecords={payments}
             loading={loading}
             onRefresh={loadStats}
