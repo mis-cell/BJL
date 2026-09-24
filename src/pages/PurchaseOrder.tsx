@@ -65,6 +65,12 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+import { PoCalculationModal } from '../components/purchase-order/PoCalculationModal';
+import { PoReopenModal } from '../components/purchase-order/PoReopenModal';
+import { PoConsignmentModal } from '../components/purchase-order/PoConsignmentModal';
+import { PoItemsGrid } from '../components/purchase-order/PoItemsGrid';
+import { poService } from '../services/poService';
+
 interface AreaDifferential {
   area: string;
   diffs: Record<string, number>;
@@ -6308,226 +6314,16 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
             {/* Form Body */}
             <div ref={poFormRef} className="space-y-5 w-full">
             
-             {/* Optional Calculator Modal */}
-            {isCalcOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in animate-duration-100">
-                <div className="bg-[#a8a8a8] border-2 border-white shadow-xl p-4 w-[500px] text-[11px] font-bold text-black flex gap-4 border-r-gray-500 border-b-gray-500">
-                   <div className="flex flex-col gap-2 pt-2 pb-2 pl-2">
-                     {['DRUMS', 'BALES', 'LOOSE', 'P.BALES', 'H.BALES'].map((unit) => (
-                        <label key={unit} className="flex items-center gap-2 cursor-pointer">
-                           <input  id={`calc_cond_${unit}`} aria-label={`calc cond ${unit}`}
-                             type="radio" 
-                             name="calc_cond" 
-                             className="w-3 h-3" 
-                             checked={formData.purchase_unit_name === unit}
-                             onChange={() => {
-                               handlePurchaseUnitChange(unit, formData.purchase_unit_code || '1');
-                               if (!formData.is_ptf) {
-                                 const isDrums = unit === 'DRUMS';
-                                 const unitWt = isDrums ? 50 : 147.5;
-                                 const wtMt = parseFloat(calcData.weight_per_lorry) || 0;
-                                 const lorries = parseFloat(calcData.total_lorries) || 1;
-                                 if (wtMt > 0) {
-                                   const totUnits = Math.round((wtMt * 1000) / unitWt);
-                                   const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                                   const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                   setCalcData(prev => ({
-                                     ...prev,
-                                     total_units: totUnits.toString(),
-                                     units_per_lorry: unitsPerLorryStr
-                                   }));
-                                 }
-                               }
-                             }}
-                           />
-                           <span>{unit}</span>
-                        </label>
-                     ))}
-                  </div>
-
-                  {/* Right side calculation block */}
-                  <div className="flex-1 border-[1.5px] border-l-white border-t-white border-r-gray-500 border-b-gray-500 p-4 mr-2 bg-[#a8a8a8]">
-                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-end">
-                          <span className="text-right pr-2">Total No of Lorries</span>
-                          <input  id="calcdata_total_lorries_3295" name="calcdata_total_lorries" aria-label="calcdata total lorries"
-                            type="number"
-                            step="any"
-                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
-                            value={calcData.total_lorries}
-                            onChange={(e) => {
-                              const lorriesVal = e.target.value;
-                              if (formData.is_ptf) {
-                                setCalcData(prev => ({ ...prev, total_lorries: lorriesVal }));
-                                return;
-                              }
-                              const lorries = parseFloat(lorriesVal) || 0;
-                              const totUnits = parseFloat(calcData.total_units) || 0;
-                              const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                              const unitWt = isDrums ? 50 : 147.5;
-
-                              if (lorries > 0 && totUnits > 0) {
-                                const unitsPerLorry = totUnits / lorries;
-                                const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  total_lorries: lorriesVal,
-                                  units_per_lorry: unitsPerLorryStr
-                                }));
-                              } else if (lorries > 0 && totUnits === 0 && parseFloat(calcData.weight_per_lorry) > 0) {
-                                const wtMt = parseFloat(calcData.weight_per_lorry) || 0;
-                                const calcTot = Math.round((wtMt * 1000) / unitWt);
-                                const unitsPerLorry = calcTot / lorries;
-                                const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  total_lorries: lorriesVal,
-                                  total_units: calcTot.toString(),
-                                  units_per_lorry: unitsPerLorryStr
-                                }));
-                              } else {
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  total_lorries: lorriesVal
-                                }));
-                              }
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-end">
-                          <span className="text-right pr-2">Units / Lorry</span>
-                          <input  id="calcdata_units_per_lorry_3317" name="calcdata_units_per_lorry" aria-label="calcdata units per lorry"
-                            type="number"
-                            step="any"
-                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
-                            value={calcData.units_per_lorry}
-                            onChange={(e) => {
-                              const unitsVal = e.target.value;
-                              if (formData.is_ptf) {
-                                setCalcData(prev => ({ ...prev, units_per_lorry: unitsVal }));
-                                return;
-                              }
-                              const unitsPerLorry = parseFloat(unitsVal) || 0;
-                              const lorries = parseFloat(calcData.total_lorries) || 0;
-                              const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                              const unitWt = isDrums ? 50 : 147.5;
-
-                              if (lorries > 0 && unitsPerLorry > 0) {
-                                const totUnits = Math.round(lorries * unitsPerLorry);
-                                const wtMt = ((totUnits * unitWt) / 1000).toFixed(3);
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  units_per_lorry: unitsVal,
-                                  total_units: totUnits.toString(),
-                                  weight_per_lorry: wtMt
-                                }));
-                              } else {
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  units_per_lorry: unitsVal
-                                }));
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-end">
-                          <span className="text-right pr-2">Total Units</span>
-                          <input  id="parsefloat_calcdata_total_3338" name="parsefloat_calcdata_total" aria-label="parsefloat calcdata total"
-                            type="number"
-                            step="any"
-                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
-                            value={calcData.total_units}
-                            onChange={(e) => {
-                              const totUnitsVal = e.target.value;
-                              if (formData.is_ptf) {
-                                setCalcData(prev => ({ ...prev, total_units: totUnitsVal }));
-                                return;
-                              }
-                              const totUnits = parseFloat(totUnitsVal) || 0;
-                              const lorries = parseFloat(calcData.total_lorries) || 0;
-                              const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                              const unitWt = isDrums ? 50 : 147.5;
-
-                              if (totUnits > 0) {
-                                const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                                const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                const wtMt = ((totUnits * unitWt) / 1000).toFixed(3);
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  total_units: totUnitsVal,
-                                  units_per_lorry: unitsPerLorryStr,
-                                  weight_per_lorry: wtMt
-                                }));
-                              } else {
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  total_units: totUnitsVal
-                                }));
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-end">
-                          <span className="text-right pr-2">Weight/Lorry (M.Ton)</span>
-                          <input  id="calcdata_weight_per_lorry_3348" name="calcdata_weight_per_lorry" aria-label="calcdata weight per lorry"
-                            type="number"
-                            step="any"
-                            className="w-32 bg-white border border-gray-400 p-0.5 text-black font-mono"
-                            value={calcData.weight_per_lorry}
-                            onChange={(e) => {
-                              const wtVal = e.target.value;
-                              if (formData.is_ptf) {
-                                setCalcData(prev => ({ ...prev, weight_per_lorry: wtVal }));
-                                return;
-                              }
-                              const wtMt = parseFloat(wtVal) || 0;
-                              const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                              const unitWt = isDrums ? 50 : 147.5;
-                              const lorries = parseFloat(calcData.total_lorries) || 1;
-
-                              if (wtMt > 0) {
-                                // Auto fill Total Units: 29.500mt / 147.5 = 200 (Bales) or 29.500mt / 50 = 590 (Drums)
-                                const totUnits = Math.round((wtMt * 1000) / unitWt);
-                                // Units / Lorry = Total Units / Total No of Lorries
-                                const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                                const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  weight_per_lorry: wtVal,
-                                  total_units: totUnits.toString(),
-                                  units_per_lorry: unitsPerLorryStr
-                                }));
-                              } else {
-                                setCalcData(prev => ({ 
-                                  ...prev, 
-                                  weight_per_lorry: wtVal
-                                }));
-                              }
-                            }}
-                            onBlur={() => {
-                              if (calcData.weight_per_lorry && !isNaN(Number(calcData.weight_per_lorry))) {
-                                setCalcData(prev => ({ ...prev, weight_per_lorry: Number(prev.weight_per_lorry).toFixed(3) }));
-                              }
-                            }}
-                          />
-                        </div>
-                     </div>
-                  </div>
-                  
-                  <div className="flex items-end justify-center pb-4 pl-2 pr-2">
-                     <button 
-                        className="bg-[#d4d0c8] border-[1.5px] border-t-white border-l-white border-b-gray-600 border-r-gray-600 px-6 py-1 active:border-t-gray-600 active:border-l-gray-600 active:border-b-white active:border-r-white font-bold"
-                        onClick={handleCalculateOk}
-                     >
-                        Ok
-                     </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Modular Calculator Helper Modal */}
+            <PoCalculationModal
+              isOpen={isCalcOpen}
+              onClose={() => setIsCalcOpen(false)}
+              onApply={handleCalculateOk}
+              calcData={calcData}
+              setCalcData={setCalcData}
+              isPtf={formData.is_ptf}
+              purchaseUnitName={formData.purchase_unit_name}
+            />
 
             <LegacyFieldset legend="Purchase Order Information Header">
               <div className="grid grid-cols-12 gap-x-2 gap-y-1">
