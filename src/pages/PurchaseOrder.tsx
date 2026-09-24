@@ -3122,19 +3122,38 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     try {
       const poNoClean = String(poHeader.po_no || '').trim();
       const poNoUpper = poNoClean.toUpperCase();
-      const allDetails = await dbModule.fetchAll(DETAIL_TABLE).catch(() => []);
-      let filteredDetails = (allDetails || [])
-        .filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNoUpper)
-        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
+      
+      let filteredDetails: any[] = [];
+      if (supabase) {
+        try {
+          const { data: directDetails } = await supabase
+            .from(DETAIL_TABLE)
+            .select('*')
+            .ilike('po_no', poNoClean)
+            .order('srl_no', { ascending: true });
+          if (directDetails && directDetails.length > 0) {
+            filteredDetails = directDetails;
+          }
+        } catch (e) {
+          console.warn(`Direct query on ${DETAIL_TABLE} failed:`, e);
+        }
+      }
+
+      if (!filteredDetails || filteredDetails.length === 0) {
+        const allDetails = await dbModule.fetchAll(DETAIL_TABLE).catch(() => []);
+        filteredDetails = (allDetails || [])
+          .filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNoUpper)
+          .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
+      }
       
       // Fallback: If no details in current table, query sauda_check_point_details, purchase_detail_master, temporary_material_received, or sauda_quality_details
       if (!filteredDetails || filteredDetails.length === 0) {
         if (supabase) {
-          const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoClean);
+          const { data: scpDet } = await supabase.from('sauda_check_point_details').select('*').ilike('po_no', poNoClean).order('srl_no', { ascending: true });
           if (scpDet && scpDet.length > 0) {
             filteredDetails = scpDet;
           } else {
-            const { data: pdmDet } = await supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoClean);
+            const { data: pdmDet } = await supabase.from('purchase_detail_master').select('*').ilike('po_no', poNoClean).order('srl_no', { ascending: true });
             if (pdmDet && pdmDet.length > 0) {
               filteredDetails = pdmDet;
             }
@@ -3210,13 +3229,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
 
-      // Deduplicate items so duplicate DB entries are merged/filtered cleanly
+      // Deduplicate items only if duplicate DB entries exist with exact identical srl_no and grade
       const seenItemKeys = new Set<string>();
-      const dedupedDetails = (filteredDetails || []).filter((d: any) => {
+      const dedupedDetails = (filteredDetails || []).filter((d: any, idx: number) => {
         const rawG = d.grade_code || d.quality || d.grade || '';
         const rawA = d.agency_code || d.agency || '';
         const rawM = d.marka_code || d.marka || '';
-        const key = `${rawG}_${rawA}_${rawM}_${d.srl_no || ''}`;
+        const srl = d.srl_no || d.srl || (idx + 1);
+        const key = `${rawG}_${rawA}_${rawM}_${srl}`;
         if (!rawG && !rawA && !rawM) return true;
         if (seenItemKeys.has(key)) return false;
         seenItemKeys.add(key);
@@ -3688,17 +3708,18 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
              }
          }
 
-         // Batch insert items in one fast network request
+         // Batch insert items in one fast network request and sync dbModule
          if (supabase && itemsToInsert.length > 0) {
            try {
              await supabase.from(DETAIL_TABLE).insert(itemsToInsert);
            } catch (batchErr) {
              console.warn(`Batch insert on ${DETAIL_TABLE} failed, inserting individually:`, batchErr);
              for (const row of itemsToInsert) {
-               await dbModule.insert(DETAIL_TABLE, row).catch(() => {});
+               await supabase.from(DETAIL_TABLE).insert(row).catch(() => {});
              }
            }
-         } else if (itemsToInsert.length > 0) {
+         }
+         if (itemsToInsert.length > 0) {
            for (const row of itemsToInsert) {
              await dbModule.insert(DETAIL_TABLE, row).catch(() => {});
            }
