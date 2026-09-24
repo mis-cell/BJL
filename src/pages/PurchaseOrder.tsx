@@ -4644,13 +4644,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     if (statusFilter === 'cancelled') {
       return isCancelled;
     }
-    // Stage split on the same table. A P.O "belongs in Final P.O" when ANY of:
-    //   • it was manually finalised (status 'final'/'moved_to_final'), OR
-    //   • workflow_stage is 'final_po'
-    // Everything else stays in the Temporary P.O / Sauda Check Point register.
-    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final' || p.workflow_stage === 'final_po';
-    if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo && p.status === 'temp') return false; // Final P.O: hide temp rows
+    // Active views never show cancelled POs unless cancelled filter is active
+    if (isCancelled) return false;
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4842,10 +4837,6 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       return isCancelled;
     }
     if (isCancelled) return false;
-
-    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final' || p.workflow_stage === 'final_po';
-    if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo && p.status === 'temp') return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
