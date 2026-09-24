@@ -3601,7 +3601,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         const y = String(b || '').trim().toUpperCase();
         return x !== '' && x === y;
       };
-      const matchingFinal = (arrivals || []).filter((ar: any) => exactPoNo(finalPoNo, ar.po_no));
+      const matchingFinal = (allFinalArrivals || []).filter((ar: any) => exactPoNo(finalPoNo, ar.po_no));
       const weightOf = (ar: any) => Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10;
       const totalReceivedMt = matchingFinal.reduce((sum: number, ar: any) => sum + weightOf(ar), 0);
 
