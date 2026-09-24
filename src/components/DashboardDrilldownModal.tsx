@@ -42,8 +42,6 @@ export default function DashboardDrilldownModal({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
-  if (!isOpen) return null;
-
   // Filtered dataset
   const filteredRecords = useMemo(() => {
     return contracts.filter(c => {
@@ -151,6 +149,8 @@ export default function DashboardDrilldownModal({
   const handlePrint = () => {
     window.print();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
