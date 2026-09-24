@@ -213,3 +213,145 @@ export interface BardanaVoucher {
   remark?: string;
   created_at: string;
 }
+
+export interface PurchaseDetailItem {
+  item_id?: string;
+  po_no: string;
+  srl_no?: number;
+  crop_year?: string;
+  grade_code?: string;
+  agency_code?: string;
+  marka_code?: string;
+  quantity?: number;
+  weight_mt?: number;
+  rate_qntl?: number;
+  premium?: number;
+}
+
+export interface PurchaseMaster {
+  po_id?: string;
+  financial_year: string;
+  purchase_order?: string;
+  po_type?: string;
+  ptf_no?: string;
+  pending?: boolean;
+  po_no: string;
+  po_date: string;
+  broker?: string;
+  supplier?: string;
+  challan_supplier?: string;
+  area?: string;
+  trans_paid_by?: string;
+  weight_unit_kgs?: number;
+  against_cancellation?: string;
+  purchase_unit_code?: string;
+  purchase_unit_name?: string;
+  total_lorries?: number;
+  units_per_lorry?: number;
+  total_units?: number;
+  weight_per_lorry?: number;
+  total_contract_mt?: number;
+  marka_type?: string;
+  marka_penalty?: number;
+  qty_penalty?: number;
+  delivery_from?: string;
+  delivery_to?: string;
+  grace_days?: number;
+  delivery_penalty?: number;
+  contract_po_no?: string;
+  contract_date?: string;
+  rate_detail?: string;
+  delivery_schedule?: string;
+  terms_condition?: string;
+  remarks?: string;
+  po_identification?: string;
+  b_rate?: number;
+  premium?: number;
+  s_date?: string;
+  status?: string;
+  created_at?: string;
+  items?: PurchaseDetailItem[];
+}
+
+export interface PaymentMaster {
+  payment_id?: string;
+  voucher_no: string;
+  voucher_date?: string;
+  financial_year?: string;
+  payment_date?: string;
+  mr_no?: string;
+  mr_date?: string;
+  arrival_no?: string;
+  arrival_date?: string;
+  po_no?: string;
+  po_date?: string;
+  supplier?: string;
+  party_name?: string;
+  broker?: string;
+  arrival_area?: string;
+  total_packets?: number;
+  total_weight?: number;
+  b_rate?: number;
+  premium?: number;
+  gross_amount?: number;
+  sett_amount?: number;
+  deduction_amount?: number;
+  total_amount?: number;
+  payable_amt?: number;
+  paid_amount?: number;
+  net_amt?: number;
+  tds_amt?: number;
+  claim_amount?: number;
+  status?: string;
+  remarks?: string;
+  created_at?: string;
+}
+
+export interface PaymentDetailItem {
+  id?: number;
+  payment_id?: string;
+  voucher_no: string;
+  mr_no?: string;
+  col_index?: number;
+  grade?: string;
+  area?: string;
+  agency?: string;
+  marka_crop?: string;
+  quantity?: number;
+  arr_qty_wt?: number;
+  min_qty_wt?: number;
+  wt_phota?: number;
+  wt_quantity?: number;
+  rate_value?: number;
+  premium?: number;
+  sett_pct?: number;
+  deduction_rate?: number;
+  sett_rate?: number;
+  quantity_qtl?: number;
+  amount?: number;
+  gd_claim?: number;
+  gd_sett?: number;
+  gd_rev?: number;
+  gd_final?: number;
+  moist_claim?: number;
+  moist_sett?: number;
+  moist_rev?: number;
+  moist_final?: number;
+  dust_claim?: number;
+  dust_sett?: number;
+  dust_rev?: number;
+  dust_final?: number;
+  ncv_claim?: number;
+  ncv_sett?: number;
+  ncv_rev?: number;
+  ncv_final?: number;
+  po_grade_claim?: number;
+  po_grade_sett?: number;
+  po_grade_rev?: number;
+  po_grade_final?: number;
+  adjust_type?: string;
+  remark?: string;
+  claim_settlement?: number;
+  created_at?: string;
+}
+
