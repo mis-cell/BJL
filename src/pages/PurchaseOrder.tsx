@@ -2839,6 +2839,129 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     setSelectedItemSrl(null);
   };
 
+  const handleSyncFromSource = async () => {
+    const poVal = String(formData.ptf_no || formData.no || formData.contract_po_no || '').trim();
+    if (!poVal) {
+      alert("Please specify a PO / PTF / Contract No first.");
+      return;
+    }
+    const poClean = poVal.replace(/\(PTF\)/gi, '').trim();
+    const poToken = (poVal.split('/').pop() || '').replace(/[^0-9]/g, '');
+    const poUpper = poVal.toUpperCase();
+
+    let foundItems: any[] = [];
+    
+    // 1. Check temporary_material_received (Arrival Receipt Grades)
+    try {
+      let tempArr: any = null;
+      if (supabase) {
+        const { data } = await supabase
+          .from('temporary_material_received')
+          .select('*')
+          .or(`po_no.ilike.%${poClean}%,ptf_no.ilike.%${poClean}%,temporary_arrival_no.ilike.%${poToken || poClean}%`)
+          .limit(1)
+          .maybeSingle();
+        tempArr = data;
+      }
+      if (!tempArr) {
+        const allAmads = await dbModule.fetchAll('temporary_material_received').catch(() => []);
+        tempArr = (allAmads || []).find((am: any) => {
+          const aPo = String(am.po_no || '').toUpperCase();
+          const aPtf = String(am.ptf_no || '').toUpperCase();
+          const aArr = String(am.temporary_arrival_no || am.amad_no || '').toUpperCase();
+          return aPo.includes(poUpper) || aPtf.includes(poUpper) || aArr.includes(poToken) || poUpper.includes(aArr);
+        });
+      }
+
+      if (tempArr && Array.isArray(tempArr.grid_details) && tempArr.grid_details.length > 0) {
+        foundItems = tempArr.grid_details.map((gd: any, i: number) => {
+          const rawGrade = gd.receipt_grade_code || gd.grade_code || gd.challan_grade || '';
+          const gradeObj = gradeList.find(g => g.grade_code === rawGrade || g.grade_name?.trim().toUpperCase() === rawGrade?.trim().toUpperCase());
+          const rawAgency = gd.agency_code || gd.agency || '';
+          const agencyObj = agencyList.find(a => a.agency_code === rawAgency || a.agency_name?.trim().toUpperCase() === rawAgency?.trim().toUpperCase());
+          const rawMarka = gd.challan_marka_code || gd.marka_code || '';
+          const markaObj = markaList.find(m => m.marka_code === rawMarka || m.marka_name?.trim().toUpperCase() === rawMarka?.trim().toUpperCase());
+
+          const qtyVal = Number(gd.quantity_rcpt || gd.quantity_chln || gd.quantity || gd.qty || 0);
+          const wtVal = (gd.netto_pnto !== undefined && Number(gd.netto_pnto) > 0)
+            ? Number(gd.netto_pnto)
+            : Number(gd.netto_mt || gd.weight || 0);
+
+          return {
+            srl: i + 1,
+            crop: gd.crop_year || '2026-27',
+            grade_code: gradeObj?.grade_code || rawGrade,
+            grade_name: gradeObj?.grade_name || gd.receipt_grade_name || gd.grade_name || gd.challan_grade_name || rawGrade,
+            agency_code: agencyObj?.agency_code || rawAgency,
+            agency_name: agencyObj?.agency_name || gd.agency_name || rawAgency,
+            marka_code: markaObj?.marka_code || rawMarka,
+            marka_name: markaObj?.marka_name || gd.challan_marka_name || rawMarka,
+            qty: qtyVal,
+            weight: wtVal,
+            rate: Number(gd.rate || 0),
+            premium: Number(gd.premium || 0)
+          };
+        });
+      }
+    } catch (e) {
+      console.warn("Error looking up arrival details:", e);
+    }
+
+    // 2. If not found, check sauda_quality_details
+    if (!foundItems || foundItems.length === 0) {
+      try {
+        const saudaToken = (formData.contract_po_no || poVal).split('/').pop() || '';
+        let qDet: any[] = [];
+        if (supabase) {
+          const { data: saudaRec } = await supabase.from('sauda_master').select('*').or(`session.eq.${poVal},sauda_no.eq.${saudaToken}`).maybeSingle();
+          if (saudaRec) {
+            const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', saudaRec.sauda_id);
+            if (data && data.length > 0) qDet = data;
+          }
+        }
+        if (qDet && qDet.length > 0) {
+          foundItems = qDet.map((qd: any, i: number) => {
+            const rawGrade = qd.quality || '';
+            const gradeObj = gradeList.find(g => g.grade_code === rawGrade || g.grade_name?.trim().toUpperCase() === rawGrade?.trim().toUpperCase());
+            const rawAgency = qd.agency || '';
+            const agencyObj = agencyList.find(a => a.agency_code === rawAgency || a.agency_name?.trim().toUpperCase() === rawAgency?.trim().toUpperCase());
+            const rawMarka = qd.marka || '';
+            const markaObj = markaList.find(m => m.marka_code === rawMarka || m.marka_name?.trim().toUpperCase() === rawMarka?.trim().toUpperCase());
+
+            return {
+              srl: i + 1,
+              crop: '2026-27',
+              grade_code: gradeObj?.grade_code || rawGrade,
+              grade_name: gradeObj?.grade_name || rawGrade,
+              agency_code: agencyObj?.agency_code || rawAgency,
+              agency_name: agencyObj?.agency_name || rawAgency,
+              marka_code: markaObj?.marka_code || rawMarka,
+              marka_name: markaObj?.marka_name || rawMarka,
+              qty: Number(qd.qty || 0),
+              weight: Number(qd.weight || 0),
+              rate: Number(qd.rs || 0),
+              premium: Number(qd.premium || 0)
+            };
+          });
+        }
+      } catch (e) {
+        console.warn("Error looking up sauda quality details:", e);
+      }
+    }
+
+    if (foundItems && foundItems.length > 0) {
+      const sorted = [...foundItems].sort((a, b) => compareQualities(a.grade_name || a.grade_code, b.grade_name || b.grade_code));
+      const reindexed = sorted.map((item, idx) => ({ ...item, srl: idx + 1 }));
+      setFormData(prev => ({
+        ...prev,
+        items: reindexed
+      }));
+      alert(`✅ Successfully restored ${reindexed.length} grade rows from Arrival/Sauda records!`);
+    } else {
+      alert("No original Arrival or Sauda grade records found for this PO number. You can use '+ Spawn Row' to add TD6, TD7 manually.");
+    }
+  };
+
   const generateNextPtfNo = (list: any[] = poList) => {
     const finYear = '2026-2027';
     let maxNum = 0;
@@ -6869,6 +6992,14 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
                     )}
                  </div>
                  <div className="flex gap-1.5 pr-1">
+                    <button 
+                      type="button"
+                      onClick={handleSyncFromSource}
+                      title="Restore original grades from Arrival receipt or Sauda book"
+                      className="bg-amber-600 border border-amber-500 text-white hover:bg-amber-500 px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
+                    >
+                      <RefreshCcw className="w-3 h-3 text-white" /> Restore Grades
+                    </button>
                     <button 
                       type="button"
                       onClick={handleAddItem}
