@@ -3061,12 +3061,15 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         ? Number(poHeader.total_contract_mt).toFixed(3)
         : (isBales && sumWt > 0 ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || ''));
 
+      const isPtfRecord = Boolean(poHeader.is_ptf || poHeader.ptf_no || String(poHeader.po_no || '').includes('(PTF)') || String(poHeader.po_identification || '').toLowerCase().includes('advance') || String(poHeader.po_identification || '').toLowerCase().includes('ptf'));
+      const ptfNoVal = poHeader.ptf_no || (String(poHeader.po_no || '').includes('(PTF)') ? poHeader.po_no : '');
+
       setFormData({
-        is_ptf: !!poHeader.ptf_no,
+        is_ptf: isPtfRecord,
         purchase_order: poHeader.purchase_order || 'FINAL PO',
         po_type: poHeader.po_type || 'Normal',
-        ptf_no: poHeader.ptf_no || '',
-        pending: poHeader.pending ? 'Yes' : 'No',
+        ptf_no: ptfNoVal,
+        pending: (poHeader.pending === true || poHeader.pending === 'Yes' || poHeader.pending === 1 || String(poHeader.pending).toLowerCase() === 'true') ? 'Yes' : 'No',
         no: poHeader.po_no || '',
         date: poHeader.po_date || todayStr,
         broker_code: brokerList.find(b => b.brok_name === poHeader.broker || b.brok_code === poHeader.broker)?.brok_code || '',
@@ -4641,20 +4644,13 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     if (statusFilter === 'cancelled') {
       return isCancelled;
     }
-    // Active views never show cancelled POs.
-    if (isCancelled) return false;
     // Stage split on the same table. A P.O "belongs in Final P.O" when ANY of:
     //   • it was manually finalised (status 'final'/'moved_to_final'), OR
-    //   • every field matches Material Inspection (auto-move on full match), OR
-    //   • it is a PTF entry (a direct Final P.O — e.g. BJC0156/26-27).
-    // Everything else (pending arrival, or a real mismatch awaiting Ruka →
-    // Material Inspection clearing) stays in the Temporary P.O register.
-    // Section split by status. Temporary P.O (Sauda Check Point) = NOT yet final; Final P.O = final.
-    // A P.O appears in exactly ONE section — never both — so the two are fully
-    // independent. Clicking "Pass" flips status to 'final', moving it from Sauda Check Point to Final P.O.
-    const isFinalizedPo = p.status !== 'temp';
+    //   • workflow_stage is 'final_po'
+    // Everything else stays in the Temporary P.O / Sauda Check Point register.
+    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final' || p.workflow_stage === 'final_po';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
+    if (!isTempPo && !isFinalizedPo && p.status === 'temp') return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
@@ -4847,9 +4843,9 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
     if (isCancelled) return false;
 
-    const isFinalizedPo = p.status !== 'temp';
+    const isFinalizedPo = p.status === 'final' || p.status === 'moved_to_final' || p.workflow_stage === 'final_po';
     if (isTempPo && isFinalizedPo) return false;   // Temporary P.O (Sauda Check Point): hide final rows
-    if (!isTempPo && !isFinalizedPo) return false; // Final P.O: hide temp rows
+    if (!isTempPo && !isFinalizedPo && p.status === 'temp') return false; // Final P.O: hide temp rows
 
     const canSeeCompleted = canViewCompletedData();
     const pendingStr = String(p.pending ?? '').trim().toLowerCase();
