@@ -249,8 +249,8 @@ export default function InspectionDrilldownModal({
         {/* Aggregate KPI Ribbon */}
         <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0 text-xs font-sans">
           <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Lots Inspected</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">{filteredStats.count} Lots</span>
+            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">MR Inspected</span>
+            <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">{filteredStats.count} MR</span>
           </div>
           <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
             <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Weight</span>
@@ -353,7 +353,7 @@ export default function InspectionDrilldownModal({
                 onClick={() => { setPremiumFilter('ALL'); setCurrentPage(1); }}
                 className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", premiumFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
               >
-                All Lots
+                All MR
               </button>
               <button
                 onClick={() => { setPremiumFilter('PREMIUM_ONLY'); setCurrentPage(1); }}

@@ -847,11 +847,11 @@ export default function ExecutiveBiDashboard({
 
         {/* Year-level KPI Highlights Ribbon (5 Essential Cards) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-2.5 text-xs font-sans">
-          {/* Total Lots & Weight - Count MR_No number only */}
+          {/* Total MR & Weight - Count MR_No number only */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Lots / Weight</span>
+            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Weight</span>
             <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
-              {inspMetrics.totalInspectionsCount} Lots
+              {inspMetrics.totalInspectionsCount} MR
             </span>
             <span className="text-[10.5px] font-mono font-bold text-emerald-900">
               {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
@@ -898,7 +898,7 @@ export default function ExecutiveBiDashboard({
           <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/30">
             <span className="text-[9.5px] text-amber-900 font-bold block uppercase tracking-wider">⚡ Premium (SCP)</span>
             <span className="font-mono font-extrabold text-amber-950 text-sm block">
-              {inspMetrics.totalPremiumLots} Lots
+              {inspMetrics.totalPremiumLots} MR
             </span>
             <span className="text-[10px] text-amber-800 font-medium">
               {inspMetrics.totalPremiumSum > 0 ? `₹${formatIndianCurrency(inspMetrics.totalPremiumSum)}` : (inspMetrics.totalPremiumLots > 0 ? `Avg ₹${inspMetrics.avgPremiumRate}/Qtl` : 'From Payment / SCP')}
@@ -914,7 +914,7 @@ export default function ExecutiveBiDashboard({
                 key={`insp-${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenInspectionModal({
                   title: `Inspection Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalInspections} lots inspected in ${m.monthName} ${m.year} (${m.lotsWithMoistureClaim} lots with moisture claim)`,
+                  subtitle: `${m.totalInspections} MRs inspected in ${m.monthName} ${m.year} (${m.lotsWithMoistureClaim} MRs with moisture claim)`,
                   inspections: m.inspections
                 })}
                 className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
@@ -930,9 +930,9 @@ export default function ExecutiveBiDashboard({
                     </h3>
                   </div>
 
-                  {/* Inspected Lots / Weight */}
+                  {/* Inspected MR / Weight */}
                   <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Lots / Wt:</span>
+                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">MR / Wt:</span>
                     <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">
                       {m.totalInspections} <span className="text-[9.5px] font-normal text-slate-500">({m.totalWeightMt.toFixed(1)} MT)</span>
                     </span>
@@ -969,7 +969,7 @@ export default function ExecutiveBiDashboard({
                   <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0] bg-amber-50/40 -mx-1 px-1 rounded">
                     <span className="text-[10px] text-amber-900 font-bold">⚡ Premium:</span>
                     <span className="font-mono font-bold text-[10px] text-amber-950">
-                      {m.premiumLotsCount > 0 ? `${m.premiumLotsCount} Lots (${m.premiumTotalSum > 0 ? `₹${formatIndianCurrency(m.premiumTotalSum)}` : `₹${m.avgPremiumRate}/Q`})` : '0'}
+                      {m.premiumLotsCount > 0 ? `${m.premiumLotsCount} MR (${m.premiumTotalSum > 0 ? `₹${formatIndianCurrency(m.premiumTotalSum)}` : `₹${m.avgPremiumRate}/Q`})` : '0'}
                     </span>
                   </div>
                 </div>
