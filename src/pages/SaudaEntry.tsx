@@ -124,8 +124,7 @@ export default function SaudaEntry({
       copy.area = (copy.area || '').toUpperCase();
       
       const realQD = (copy.quality_details || [])
-        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs)
-        .sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs);
 
       if (copy.units_per_lorry === undefined && copy.units_per_lorry_type && !isNaN(Number(copy.units_per_lorry_type))) {
         copy.units_per_lorry = Number(copy.units_per_lorry_type);
@@ -608,8 +607,7 @@ export default function SaudaEntry({
           await dbModule.delete('sauda_quality_details', 'sauda_id', inserted.sauda_id);
         }
 
-        const sortedQd = [...qd].sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-        for (const row of sortedQd) {
+        for (const row of qd) {
           if (row.quality || row.qty || row.rs || row.marka || row.agency) {
             try {
               await dbModule.insert('sauda_quality_details', {

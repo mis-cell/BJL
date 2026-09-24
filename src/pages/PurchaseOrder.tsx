@@ -1716,7 +1716,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const details = await dbModule.fetchAll(DETAIL_TABLE);
       const filtered = details
         .filter((d: any) => d.po_no === poHeader.po_no)
-        .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
+        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filtered.map((d: any, idx: number) => {
@@ -2982,8 +2982,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
     }
 
     if (foundItems && foundItems.length > 0) {
-      const sorted = [...foundItems].sort((a, b) => compareQualities(a.grade_name || a.grade_code, b.grade_name || b.grade_code));
-      const reindexed = sorted.map((item, idx) => ({ ...item, srl: idx + 1 }));
+      const reindexed = foundItems.map((item, idx) => ({ ...item, srl: idx + 1 }));
       const totalQty = reindexed.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
       const totalWt = reindexed.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
 
@@ -3126,7 +3125,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const allDetails = await dbModule.fetchAll(DETAIL_TABLE).catch(() => []);
       let filteredDetails = (allDetails || [])
         .filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNoUpper)
-        .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
+        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
       
       // Fallback: If no details in current table, query sauda_check_point_details, purchase_detail_master, temporary_material_received, or sauda_quality_details
       if (!filteredDetails || filteredDetails.length === 0) {
@@ -3577,13 +3576,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       };
 
       // Received = only Final M.R (final_arrival). No temp/dummy data.
-      const allFinalArrivals = await dbModule.fetchAll('final_arrival').catch(() => []);
       const exactPoNo = (a: any, b: any) => {
         const x = String(a || '').trim().toUpperCase();
         const y = String(b || '').trim().toUpperCase();
         return x !== '' && x === y;
       };
-      const matchingFinal = allFinalArrivals.filter((ar: any) => exactPoNo(finalPoNo, ar.po_no));
+      const matchingFinal = (arrivals || []).filter((ar: any) => exactPoNo(finalPoNo, ar.po_no));
       const weightOf = (ar: any) => Number(ar.weight_qtl || ar.weight || ar.electronic_net_weight || 0) / 10;
       const totalReceivedMt = matchingFinal.reduce((sum: number, ar: any) => sum + weightOf(ar), 0);
 
@@ -3634,9 +3632,8 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         s_date: formData.s_date || null
       };
 
-      // Save Master Record cleanly using upsert/update
-      const allMasters = await dbModule.fetchAll(MASTER_TABLE).catch(() => []);
-      const alreadyExists = (allMasters || []).some((p: any) => p.po_no === finalPoNo);
+      // Save Master Record quickly using upsert/update (avoid loading full table)
+      const alreadyExists = (poList || []).some((p: any) => String(p.po_no).trim().toUpperCase() === finalPoNo.toUpperCase());
 
       if (supabase) {
         try {
@@ -3667,10 +3664,10 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       await dbModule.delete(DETAIL_TABLE, 'po_no', finalPoNo).catch(() => {});
       
       if (formData.items && formData.items.length > 0) {
-         const sortedItems = [...formData.items].sort((a: any, b: any) => compareQualities(a.grade_name || a.grade_code || '', b.grade_name || b.grade_code || ''));
+         // Preserve EXACT user sequence as ordered on screen
          const itemsToInsert: any[] = [];
-         for (let i = 0; i < sortedItems.length; i++) {
-             const item = sortedItems[i];
+         for (let i = 0; i < formData.items.length; i++) {
+             const item = formData.items[i];
              if (item.grade_code || item.marka_code || item.grade_name || item.qty || item.weight) {
                  const detailRow = {
                      po_no: finalPoNo,
@@ -3691,30 +3688,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
              }
          }
 
-         // Insert each distinct row once via dbModule with Supabase direct fallback
-         for (const row of itemsToInsert) {
+         // Batch insert items in one fast network request
+         if (supabase && itemsToInsert.length > 0) {
            try {
-             await dbModule.insert(DETAIL_TABLE, row);
-           } catch (insertErr) {
-             console.warn(`dbModule.insert failed on ${DETAIL_TABLE}, trying direct fallback:`, insertErr);
-             if (supabase) {
-               const baseRow: any = {
-                 po_no: row.po_no,
-                 srl_no: row.srl_no,
-                 crop_year: row.crop_year,
-                 grade_code: row.grade_code,
-                 agency_code: row.agency_code,
-                 marka_code: row.marka_code,
-                 quantity: row.quantity,
-                 weight_mt: row.weight_mt,
-                 rate_qntl: row.rate_qntl
-               };
-               try {
-                 await supabase.from(DETAIL_TABLE).insert(baseRow);
-               } catch (e) {
-                 console.warn(`Supabase fallback insert warning:`, e);
-               }
+             await supabase.from(DETAIL_TABLE).insert(itemsToInsert);
+           } catch (batchErr) {
+             console.warn(`Batch insert on ${DETAIL_TABLE} failed, inserting individually:`, batchErr);
+             for (const row of itemsToInsert) {
+               await dbModule.insert(DETAIL_TABLE, row).catch(() => {});
              }
+           }
+         } else if (itemsToInsert.length > 0) {
+           for (const row of itemsToInsert) {
+             await dbModule.insert(DETAIL_TABLE, row).catch(() => {});
            }
          }
       }
@@ -4399,7 +4385,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const details = await dbModule.fetchAll(DETAIL_TABLE);
       const filtered = details
         .filter((d: any) => d.po_no === poHeader.po_no)
-        .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
+        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filtered.map((d: any, idx: number) => {
@@ -4730,7 +4716,7 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
       const details = await dbModule.fetchAll(DETAIL_TABLE);
       const filtered = details
         .filter((d: any) => d.po_no === poHeader.po_no)
-        .sort((a: any, b: any) => compareQualities(getGradeNameForCompare(a.grade_code || ''), getGradeNameForCompare(b.grade_code || '')));
+        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filtered.map((d: any, idx: number) => {

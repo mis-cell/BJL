@@ -196,8 +196,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       }
       
       const realQD = (copy.quality_details || [])
-        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs)
-        .sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs);
 
       const existingCount = realQD.length;
       if (existingCount < 7) {
@@ -765,8 +764,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
            await dbModule.delete('satta_quality_details', 'satta_id', inserted.satta_id);
         }
 
-        const sortedQd = [...qd].sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-        for (const row of sortedQd) {
+        for (const row of qd) {
           if (row.quality || row.qty || row.rs || row.marka || row.agency) {
              try {
                 await dbModule.insert('satta_quality_details', {
