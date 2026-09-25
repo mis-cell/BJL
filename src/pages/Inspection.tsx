@@ -1706,21 +1706,21 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       setDetailRows(prev => prev.map(r => ({
         ...r,
         moisture_act: r.moisture_act || numVal,
-        settlement_moisture: (r.settlement_moisture && r.settlement_moisture > 0) ? r.settlement_moisture : numVal
+        settlement_moisture: (r.settlement_moisture && Number(r.settlement_moisture) > 0) ? r.settlement_moisture : numVal
       })));
     } else if (field === 'actual_dust' || field === 'claim_dust') {
       const numVal = Number(value) || 0;
       setDetailRows(prev => prev.map(r => ({
         ...r,
         dust_act: r.dust_act || numVal,
-        settlement_dust: (r.settlement_dust && r.settlement_dust > 0) ? r.settlement_dust : numVal
+        settlement_dust: (r.settlement_dust && Number(r.settlement_dust) > 0) ? r.settlement_dust : numVal
       })));
     } else if (field === 'actual_ncv' || field === 'claim_ncv') {
       const numVal = Number(value) || 0;
       setDetailRows(prev => prev.map(r => ({
         ...r,
         ncv_act: r.ncv_act || numVal,
-        settlement_ncv: (r.settlement_ncv && r.settlement_ncv > 0) ? r.settlement_ncv : numVal
+        settlement_ncv: (r.settlement_ncv && Number(r.settlement_ncv) > 0) ? r.settlement_ncv : numVal
       })));
     }
   };
