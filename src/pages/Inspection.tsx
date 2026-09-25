@@ -646,6 +646,36 @@ export const getFieldInputStyle = (isBlocked: boolean, customClasses = "") => {
   return `w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 bg-white text-slate-900 transition-all ${customClasses}`;
 };
 
+// Calculate Reduced Weight and Final Receipt Wt. (Claim)
+export const computeDetailRowWeights = (row: Partial<InspectionDetailRow>): { reduced_weight: number; final_receipt_wt: number } => {
+  const gross = Number(row.receipt_gross_wt) > 0 
+    ? Number(row.receipt_gross_wt) 
+    : (Number(row.challan_gross_wt) || 0);
+  const addW = Number(row.add_weight) || 0;
+  const lessW = Number(row.less_weight) || 0;
+  
+  let redWt = row.reduced_weight !== undefined && row.reduced_weight !== null && Number(row.reduced_weight) > 0
+    ? Number(row.reduced_weight)
+    : (gross > 0 ? Number((gross + addW - lessW).toFixed(3)) : 0);
+
+  if (gross > 0 && (redWt === 0 || (addW > 0 || lessW > 0))) {
+    redWt = Number((gross + addW - lessW).toFixed(3));
+  }
+  
+  const mClaim = Number(row.moisture_claim) || 0;
+  const dClaim = Number(row.dust_claim) || 0;
+  
+  const baseWt = redWt > 0 ? redWt : gross;
+  const moistDeduct = (baseWt * mClaim) / 100;
+  const dustDeduct = (baseWt * dClaim) / 100;
+  
+  const finalWt = baseWt - moistDeduct - dustDeduct;
+  return {
+    reduced_weight: Number(redWt.toFixed(3)),
+    final_receipt_wt: Number(Math.max(0, finalWt).toFixed(3))
+  };
+};
+
 // Calculate Quantity in Metric Tons (MT)
 export const calculateQtyInMt = (row: InspectionDetailRow): number => {
   if (row.challan_gross_wt && Number(row.challan_gross_wt) > 0) {
@@ -1597,8 +1627,16 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             rate_qntl: rateVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
-            final_receipt_wt: nettoVal,
-            reduced_weight: nettoVal,
+            add_weight: Number(item.add_weight || 0),
+            less_weight: Number(item.less_weight || 0),
+            ...computeDetailRowWeights({
+              receipt_gross_wt: nettoVal,
+              challan_gross_wt: nettoVal,
+              add_weight: Number(item.add_weight || 0),
+              less_weight: Number(item.less_weight || 0),
+              moisture_claim: Number(item.moisture_claim || item.claim_moisture || 0),
+              dust_claim: Number(item.dust_claim || item.claim_dust || 0)
+            }),
             moisture_act: moistAct,
             moisture_claim: Number(item.moisture_claim || item.claim_moisture || 0),
             grade_down_act: gdAct,
@@ -1931,8 +1969,15 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           gross_weight_batch: Number(item.gross_weight_batch || item.batch_gross_weight || nettoVal || 0),
           add_weight: Number(item.add_weight || 0),
           less_weight: Number(item.less_weight || 0),
-          reduced_weight: nettoVal,
-          final_receipt_wt: nettoVal,
+          ...computeDetailRowWeights({
+            receipt_gross_wt: nettoVal,
+            challan_gross_wt: nettoVal,
+            reduced_weight: item.reduced_weight !== undefined ? Number(item.reduced_weight) : undefined,
+            add_weight: Number(item.add_weight || 0),
+            less_weight: Number(item.less_weight || 0),
+            moisture_claim: moistClaim,
+            dust_claim: dustClaim
+          }),
           lorry_moisture_min: lMin,
           lorry_moisture_max: lMax,
           lorry_read_min: lMin,
@@ -2373,8 +2418,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
             unit: unitVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
-            reduced_weight: nettoVal,
-            final_receipt_wt: nettoVal,
+            add_weight: Number(item.add_weight || 0),
+            less_weight: Number(item.less_weight || 0),
+            ...computeDetailRowWeights({
+              receipt_gross_wt: nettoVal,
+              challan_gross_wt: nettoVal,
+              reduced_weight: item.reduced_weight !== undefined ? Number(item.reduced_weight) : undefined,
+              add_weight: Number(item.add_weight || 0),
+              less_weight: Number(item.less_weight || 0),
+              moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
+              dust_claim: Number(item.dust_claim || item.claim_dust || rec.claim_dust || 0)
+            }),
             moisture_act: moistAct,
             moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
             grade_down_act: gdAct,
@@ -2427,8 +2481,17 @@ export default function Inspection({ onNavigate }: InspectionProps) {
               unit: unitVal,
               challan_gross_wt: nettoVal,
               receipt_gross_wt: nettoVal,
-              reduced_weight: nettoVal,
-              final_receipt_wt: nettoVal,
+              add_weight: Number(item.add_weight || 0),
+              less_weight: Number(item.less_weight || 0),
+              ...computeDetailRowWeights({
+                receipt_gross_wt: nettoVal,
+                challan_gross_wt: nettoVal,
+                reduced_weight: item.reduced_weight !== undefined ? Number(item.reduced_weight) : undefined,
+                add_weight: Number(item.add_weight || 0),
+                less_weight: Number(item.less_weight || 0),
+                moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
+                dust_claim: Number(item.dust_claim || item.claim_dust || rec.claim_dust || 0)
+              }),
               moisture_act: moistAct,
               moisture_claim: Number(item.moisture_claim || item.claim_moisture || rec.claim_moisture || 0),
               grade_down_act: gdAct,
@@ -2558,7 +2621,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        //currentRow.lorry_read_avg = avg;
+        currentRow.lorry_read_avg = avg;
       }
 
       // Auto Calculate Insp. Moisture Read Avg from Min & Max
@@ -2571,7 +2634,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        //currentRow.insp_read_avg = avg;
+        currentRow.insp_read_avg = avg;
       }
 
       // Auto-pull AVERAGE Value between Lorry Read Avg & Insp Read Avg into Moisture % Act.
@@ -2592,7 +2655,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
         }
         if (combinedMoistAvg > 0) {
-          currentRow.moisture_act = lorryAvg;
+          currentRow.moisture_act = combinedMoistAvg;
         }
       }
 
@@ -2632,63 +2695,20 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         currentRow.ncv_claim = Number(value) || 0;
       }
 
-      // Reduced weight calculation
-      if ((Number(currentRow.receipt_gross_wt) > 0) && (field === "add_weight" || field === "less_weight") ) {
-        if ((currentRow.less_weight as any) === 'undefined' || currentRow.less_weight === undefined || isNaN(currentRow.less_weight)) {
-          currentRow.less_weight = 0;
-        }
-        if ((currentRow.add_weight as any) === 'undefined' || currentRow.add_weight === undefined || isNaN(currentRow.add_weight)) {
-          currentRow.add_weight = 0;
-        }
-        let reducewtt = Number(currentRow.receipt_gross_wt) + Number(currentRow.add_weight) - Number(currentRow.less_weight);
-        currentRow.reduced_weight = Number(reducewtt.toFixed(3));
-        currentRow.final_receipt_wt = Number(reducewtt.toFixed(3));
-      }
-      
-
-      /* if (
-        Number(currentRow.receipt_gross_wt) > 0 &&
-        (field === "moisture_claim" ||
-          field === "lorry_read_min" ||
-          field === "lorry_read_max" ||
-          field === "lorry_read_avg" ||
-          field === "moisture_act" ||
-          field === "area" ||
-          field === "receipt_gross_wt" ||
-          field === "add_weight" ||
-          field === "less_weight")
-      ) {
-        const claimMoist = Number(currentRow.moisture_claim) || 0;
-        const baseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
-        const moisturediduct = ((baseWt / 100) * claimMoist);
-        const finalrecieptwt = baseWt - Number(moisturediduct.toFixed(3));
-        currentRow.final_receipt_wt = Number(finalrecieptwt.toFixed(3));
-      } */
-     if (
-        Number(currentRow.receipt_gross_wt) > 0 &&
-        (field === "moisture_claim" ||
-          field === "lorry_read_min" ||
-          field === "lorry_read_max" ||
-          field === "lorry_read_avg" ||
-          field === "moisture_act" ||
-          field === "area" ||
-          field === "receipt_gross_wt" ||
-          field === "add_weight" ||
-          field === "dust_act" ||
-          field === "dust_claim" ||
-          field === "less_weight")
-      ) {
-        let ductdiductwt = 0;
-        let moisturediduct = 0;
-        const claimDusttotal = Number(currentRow.dust_claim) || 0;
-        const totalbaseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
-        ductdiductwt = ((totalbaseWt / 100) * claimDusttotal);
-
-        const claimMoist = Number(currentRow.moisture_claim) || 0;
-        const baseWt = Number(currentRow.reduced_weight) || Number(currentRow.receipt_gross_wt);
-        moisturediduct = ((baseWt / 100) * claimMoist);
-        const finalrecieptwt = baseWt - Number(moisturediduct.toFixed(3)) - Number(ductdiductwt.toFixed(3));
-        currentRow.final_receipt_wt = Number(finalrecieptwt.toFixed(3));
+      // Recalculate Reduced Weight and Final Receipt Wt. (Claim)
+      const weights = computeDetailRowWeights(currentRow);
+      currentRow.reduced_weight = field === "reduced_weight" ? (Number(value) || 0) : weights.reduced_weight;
+      if (field === "final_receipt_wt") {
+        currentRow.final_receipt_wt = Number(value) || 0;
+      } else {
+        const base = currentRow.reduced_weight > 0 
+          ? currentRow.reduced_weight 
+          : (Number(currentRow.receipt_gross_wt) || Number(currentRow.challan_gross_wt) || 0);
+        const mClaim = Number(currentRow.moisture_claim) || 0;
+        const dClaim = Number(currentRow.dust_claim) || 0;
+        const mDeduct = (base * mClaim) / 100;
+        const dDeduct = (base * dClaim) / 100;
+        currentRow.final_receipt_wt = Number(Math.max(0, base - mDeduct - dDeduct).toFixed(3));
       }
         
       updated[index] = currentRow;
@@ -2696,25 +2716,51 @@ export default function Inspection({ onNavigate }: InspectionProps) {
     });
   };
 
-  // Auto-sync moisture_claim for all detail rows whenever moistureLogicRules or arrival_date updates
+  // Auto-sync moisture_claim and final_receipt_wt for all detail rows whenever moistureLogicRules, arrival_date, or detailRows are present
   useEffect(() => {
-    if (moistureLogicRules && moistureLogicRules.length > 0 && detailRows.length > 0) {
+    if (detailRows.length > 0) {
       setDetailRows(prev => {
         let hasChanges = false;
         const updated = prev.map(row => {
-          const actM = Number(row.moisture_act) || ((Number(row.lorry_read_avg) > 0 ) ? Number(((Number(row.lorry_read_avg) + Number(0))).toFixed(2)) : (Number(row.lorry_read_avg) || 0));
-          if (actM > 0) {
-            const calculatedClaim = calculateClaimMoisture(actM, headerForm.arrival_date || headerForm.mr_date, row.area || (headerForm as any).area, moistureLogicRules);
-            if (row.moisture_claim !== calculatedClaim) {
-              hasChanges = true;
-              let nextRow = { ...row, moisture_act: row.moisture_act || actM, moisture_claim: calculatedClaim };
-              if (Number(row.receipt_gross_wt) > 0) {
-                const baseWt = Number(row.reduced_weight) || Number(row.receipt_gross_wt);
-                const moisturediduct = ((baseWt / 100) * calculatedClaim);
-                nextRow.final_receipt_wt = Number((baseWt - Number(moisturediduct.toFixed(3))).toFixed(3));
-              }
-              return nextRow;
-            }
+          const lAvg = Number(row.lorry_read_avg) || 0;
+          const iAvg = Number(row.insp_read_avg) || 0;
+          const avgRead = (lAvg > 0 && iAvg > 0) ? Number(((lAvg + iAvg) / 2).toFixed(2)) : (lAvg || iAvg || 0);
+          const actM = Number(row.moisture_act) || avgRead;
+          
+          let calculatedClaim = Number(row.moisture_claim) || 0;
+          if (actM > 0 && moistureLogicRules && moistureLogicRules.length > 0) {
+            calculatedClaim = calculateClaimMoisture(
+              actM,
+              headerForm.arrival_date || headerForm.mr_date,
+              row.area || (headerForm as any).area,
+              moistureLogicRules
+            );
+          }
+
+          const baseWt = Number(row.reduced_weight) > 0 
+            ? Number(row.reduced_weight) 
+            : (Number(row.receipt_gross_wt) > 0 ? Number(row.receipt_gross_wt) : (Number(row.challan_gross_wt) || 0));
+          
+          const claimM = calculatedClaim > 0 ? calculatedClaim : (Number(row.moisture_claim) || 0);
+          const claimD = Number(row.dust_claim) || 0;
+          const moistDeduct = (baseWt * claimM) / 100;
+          const dustDeduct = (baseWt * claimD) / 100;
+          const expectedFinalWt = baseWt > 0 ? Number((baseWt - moistDeduct - dustDeduct).toFixed(3)) : 0;
+
+          const currentFinalWt = Number(row.final_receipt_wt) || 0;
+          const needsClaimUpdate = calculatedClaim > 0 && row.moisture_claim !== calculatedClaim;
+          const needsFinalWtUpdate = baseWt > 0 && (claimM > 0 || claimD > 0) && (
+            Math.abs(currentFinalWt - expectedFinalWt) > 0.001 || currentFinalWt === baseWt
+          );
+
+          if (needsClaimUpdate || needsFinalWtUpdate) {
+            hasChanges = true;
+            return {
+              ...row,
+              moisture_act: row.moisture_act || actM,
+              moisture_claim: claimM,
+              final_receipt_wt: expectedFinalWt
+            };
           }
           return row;
         });
@@ -2969,7 +3015,19 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         claim_ncv: Number(row.ncv_claim || (row as any).claim_ncv || 0) || 0,
         actual_grade_down: Number(row.grade_down_act || (row as any).actual_grade_down || 0) || 0,
         claim_grade_down: Number(row.grade_down_claim || (row as any).claim_grade_down || 0) || 0,
-        final_receipt_wt: Number(row.final_receipt_wt) || 0,
+        final_receipt_wt: (() => {
+          const baseWt = Number(row.reduced_weight) > 0 ? Number(row.reduced_weight) : (Number(row.receipt_gross_wt) || Number(row.challan_gross_wt) || 0);
+          const mClaim = Number(row.moisture_claim || (row as any).claim_moisture || 0);
+          const dClaim = Number(row.dust_claim || (row as any).claim_dust || 0);
+          const calcFinal = Number((baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100)).toFixed(3));
+          if (row.final_receipt_wt !== undefined && row.final_receipt_wt !== null && Number(row.final_receipt_wt) > 0) {
+            if (Number(row.final_receipt_wt) === baseWt && (mClaim > 0 || dClaim > 0)) {
+              return calcFinal;
+            }
+            return Number(row.final_receipt_wt);
+          }
+          return calcFinal;
+        })(),
         settlement_moisture: Number(row.settlement_moisture) || 0,
         settlement_grade_down: Number(row.settlement_grade_down) || 0,
         settlement_dust: Number(row.settlement_dust) || 0,
@@ -4855,16 +4913,26 @@ export default function Inspection({ onNavigate }: InspectionProps) {
                             </td>
 
                             {/* Final Receipt Wt */}
-                            <td className="p-1.5 border-r border-slate-200">
+                            <td className="p-1.5 border-r border-slate-200 bg-indigo-50/20">
                               <input
                                 type="number"
-                                step="0.01"
+                                step="0.001"
                                 readOnly={isFinalReceiptWtBlocked}
                                 tabIndex={isFinalReceiptWtBlocked ? -1 : 0}
-                                title={isFinalReceiptWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-                                value={row.final_receipt_wt || 0}
+                                title={isFinalReceiptWtBlocked ? "Auto-populated (Manual edit blocked)" : "Final Receipt Wt. (Claim) = Reduced Weight - Moisture Claim % - Dust Claim %"}
+                                value={(() => {
+                                  const baseWt = Number(row.reduced_weight) > 0 ? Number(row.reduced_weight) : (Number(row.receipt_gross_wt) || 0);
+                                  const mClaim = Number(row.moisture_claim) || 0;
+                                  const dClaim = Number(row.dust_claim) || 0;
+                                  if (baseWt > 0 && (mClaim > 0 || dClaim > 0)) {
+                                    if (row.final_receipt_wt === undefined || row.final_receipt_wt === null || Number(row.final_receipt_wt) === baseWt || Number(row.final_receipt_wt) <= 0) {
+                                      return Number((baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100)).toFixed(3));
+                                    }
+                                  }
+                                  return row.final_receipt_wt !== undefined && row.final_receipt_wt !== null ? row.final_receipt_wt : (baseWt || 0);
+                                })()}
                                 onChange={(e) => !isFinalReceiptWtBlocked && handleDetailChange(idx, "final_receipt_wt", Number(e.target.value))}
-                                className={getFieldInputStyle(isFinalReceiptWtBlocked, "font-mono font-bold")}
+                                className={getFieldInputStyle(isFinalReceiptWtBlocked, "font-mono font-black text-indigo-950 bg-indigo-50/60 text-center")}
                               />
                             </td>
 

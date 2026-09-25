@@ -18,6 +18,14 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 dotenv.config();
 
+process.on('uncaughtException', (err) => {
+  console.error('[Process] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Helper to clean RFC 2047 encoded words if any remain
 function cleanMimeWords(str: string): string {
   if (!str) return '';
@@ -340,7 +348,7 @@ async function syncEmailsBackground() {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // 1. CORS & No-Cache middleware
   app.use((req, res, next) => {
@@ -2040,7 +2048,7 @@ async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -2052,11 +2060,15 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
     syncEmailsBackground().catch(err => {
       console.error("Background email sync failed to start:", err);
     });
+  });
+
+  server.on("error", (err: any) => {
+    console.error("Server listener error:", err);
   });
 }
 

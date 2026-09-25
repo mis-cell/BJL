@@ -3135,10 +3135,19 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
           const { data: directDetails } = await supabase
             .from(DETAIL_TABLE)
             .select('*')
-            .ilike('po_no', poNoClean)
+            .eq('po_no', poNoClean)
             .order('srl_no', { ascending: true });
           if (directDetails && directDetails.length > 0) {
             filteredDetails = directDetails;
+          } else {
+            const { data: ilikeDetails } = await supabase
+              .from(DETAIL_TABLE)
+              .select('*')
+              .ilike('po_no', poNoClean)
+              .order('srl_no', { ascending: true });
+            if (ilikeDetails && ilikeDetails.length > 0) {
+              filteredDetails = ilikeDetails;
+            }
           }
         } catch (e) {
           console.warn(`Direct query on ${DETAIL_TABLE} failed:`, e);
@@ -3277,12 +3286,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
         return {
           srl: index + 1,
-          crop: d.crop_year || d.crop || '2025-26',
-          grade_code: gradeObj?.grade_code || rawGrade,
+          crop: d.crop_year || d.crop || '2026-27',
+          grade_code: gradeObj?.grade_code || d.grade_code || rawGrade,
           grade_name: gradeObj?.grade_name || d.grade_name || rawGrade || '',
-          agency_code: agencyObj?.agency_code || rawAgency,
+          agency_code: agencyObj?.agency_code || d.agency_code || rawAgency,
           agency_name: agencyObj?.agency_name || d.agency_name || rawAgency || '',
-          marka_code: markaObj?.marka_code || rawMarka,
+          marka_code: markaObj?.marka_code || d.marka_code || rawMarka,
           marka_name: markaObj?.marka_name || d.marka_name || rawMarka || '',
           qty: qtyVal,
           weight: weightVal,
@@ -3573,9 +3582,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
 
     setLoading(true);
     try {
-      let finalPoNo = formData.is_ptf ? formData.ptf_no : formData.no;
+      let finalPoNo = String(formData.no || (formData.is_ptf ? formData.ptf_no : '') || '').trim();
       if (!finalPoNo) {
-        finalPoNo = `PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        finalPoNo = formData.is_ptf && formData.ptf_no
+          ? formData.ptf_no
+          : `PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       }
 
       // Safe matching helper
@@ -3679,58 +3690,12 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
         await dbModule.insert(MASTER_TABLE, payload).catch(() => {});
       }
 
-      // Clear old detail rows cleanly before inserting new distinct rows
-      if (supabase) {
-        try {
-          await supabase.from(DETAIL_TABLE).delete().eq('po_no', finalPoNo);
-        } catch (e) {
-          console.warn(`Supabase delete from ${DETAIL_TABLE} warning:`, e);
-        }
-      }
-      await dbModule.delete(DETAIL_TABLE, 'po_no', finalPoNo).catch(() => {});
-      
-      if (formData.items && formData.items.length > 0) {
-         // Preserve EXACT user sequence as ordered on screen
-         const itemsToInsert: any[] = [];
-         for (let i = 0; i < formData.items.length; i++) {
-             const item = formData.items[i];
-             if (item.grade_code || item.marka_code || item.grade_name || item.qty || item.weight) {
-                 const detailRow = {
-                     po_no: finalPoNo,
-                     srl_no: i + 1,
-                     crop_year: String(item.crop || '2026-27'),
-                     grade_code: String(item.grade_code || item.grade_name || '').trim(),
-                     grade_name: String(item.grade_name || item.grade_code || '').trim(),
-                     agency_code: String(item.agency_code || item.agency_name || '').trim(),
-                     agency_name: String(item.agency_name || item.agency_code || '').trim(),
-                     marka_code: String(item.marka_code || item.marka_name || '').trim(),
-                     marka_name: String(item.marka_name || item.marka_code || '').trim(),
-                     quantity: Math.round(Number(item.qty || 0)) || 0,
-                     weight_mt: Number(Number(item.weight || 0).toFixed(3)) || 0,
-                     rate_qntl: Number(Number(item.rate || 0).toFixed(2)) || 0,
-                     premium: Number(Number(item.premium || 0).toFixed(2)) || 0
-                 };
-                 itemsToInsert.push(detailRow);
-             }
-         }
-
-         // Batch insert items in one fast network request and sync dbModule
-         if (supabase && itemsToInsert.length > 0) {
-           try {
-             await supabase.from(DETAIL_TABLE).insert(itemsToInsert);
-           } catch (batchErr) {
-             console.warn(`Batch insert on ${DETAIL_TABLE} failed, inserting individually:`, batchErr);
-             for (const row of itemsToInsert) {
-               await supabase.from(DETAIL_TABLE).insert(row).catch(() => {});
-             }
-           }
-         }
-         if (itemsToInsert.length > 0) {
-           for (const row of itemsToInsert) {
-             await dbModule.insert(DETAIL_TABLE, row).catch(() => {});
-           }
-         }
-      }
+      // Persist detail rows atomically and reliably via poService
+      await poService.savePoDetails(DETAIL_TABLE, finalPoNo, formData.items, {
+        gradeList,
+        agencyList,
+        markaList
+      });
       
       window.dispatchEvent(new CustomEvent('app-data-updated'));
       alert(`Purchase Order ${finalPoNo} saved successfully!`);
@@ -4345,7 +4310,11 @@ export default function PurchaseOrder({ onClose, selectedYear, isTempPo = false,
               marka_code: mMatch ? mMatch.marka_code : (rawMarka || ''),
               quantity: qty,
               weight_mt: Number(wt),
-              rate_qntl: rate
+              rate_qntl: rate,
+              premium: Number(d.premium || 0),
+              grade_name: gMatch ? gMatch.grade_name : (d.grade_name || rawGrade || ''),
+              agency_name: aMatch ? aMatch.agency_name : (d.agency_name || rawAgency || ''),
+              marka_name: mMatch ? mMatch.marka_name : (d.marka_name || rawMarka || '')
             };
           });
           await supabase.from('purchase_detail_master').delete().eq('po_no', item.po_no);
