@@ -178,6 +178,57 @@ export interface DetailFieldConfig {
   type: "text" | "number" | "select";
 }
 
+export const detailFieldsConfig: DetailFieldConfig[] = [
+  { name: "arrival_grade", label: "Arrival Grade", type: "text" },
+  { name: "stock_grade_code", label: "Stock Grade Code", type: "text" },
+  { name: "stock_grade_name", label: "Stock Grade Name", type: "text" },
+  { name: "area", label: "Area", type: "text" },
+  { name: "agency", label: "Agency", type: "text" },
+  { name: "marks", label: "Marks / Marka", type: "text" },
+  { name: "crop_year", label: "Crop Year", type: "text" },
+  { name: "lot", label: "Lot", type: "text" },
+  { name: "quantity", label: "Quantity", type: "number" },
+  { name: "unit", label: "Unit", type: "text" },
+  { name: "challan_gross_wt", label: "Challan Gross Wt. MT.", type: "number" },
+  { name: "receipt_gross_wt", label: "Receipt Gross Wt. MT.", type: "number" },
+  { name: "gross_weight_batch", label: "Gross Weight (Batch)", type: "number" },
+  { name: "add_weight", label: "Add Weight M.Ton", type: "number" },
+  { name: "less_weight", label: "Less Weight M.Ton", type: "number" },
+  { name: "reduced_weight", label: "Reduced Weight M.Ton", type: "number" },
+  { name: "lorry_moisture_min", label: "Lorry Moisture Min", type: "number" },
+  { name: "lorry_moisture_max", label: "Lorry Moisture Max", type: "number" },
+  { name: "lorry_read_min", label: "Lorry Moisture Read Min", type: "number" },
+  { name: "lorry_read_max", label: "Lorry Moisture Read Max", type: "number" },
+  { name: "lorry_read_avg", label: "Lorry Moisture Read Avg", type: "number" },
+  { name: "insp_read_min", label: "Insp. Moisture Read Min", type: "number" },
+  { name: "insp_read_max", label: "Insp. Moisture Read Max", type: "number" },
+  { name: "insp_read_avg", label: "Insp. Moisture Read Avg", type: "number" },
+  { name: "moisture_act", label: "Moisture % Actual", type: "number" },
+  { name: "moisture_claim", label: "Moisture % Claim", type: "number" },
+  { name: "dust_act", label: "Dust % Actual", type: "number" },
+  { name: "dust_claim", label: "Dust % Claim", type: "number" },
+  { name: "ncv_act", label: "NCV % Actual", type: "number" },
+  { name: "ncv_claim", label: "NCV % Claim", type: "number" },
+  { name: "grade_down_act", label: "Grade Down % Actual", type: "number" },
+  { name: "grade_down_claim", label: "Grade Down % Claim", type: "number" },
+  { name: "final_receipt_wt", label: "Final Receipt Wt. (Claim)", type: "number" },
+  { name: "settlement_moisture", label: "Mill Settlement % Moisture", type: "number" },
+  { name: "settlement_grade_down", label: "Mill Settlement % Gr. Down", type: "number" },
+  { name: "settlement_dust", label: "Mill Settlement % Dust", type: "number" },
+  { name: "settlement_ncv", label: "Mill Settlement % NCV", type: "number" },
+  { name: "ropes_weight", label: "Ropes Weight (Kg)", type: "number" },
+  { name: "ropes_tot_wt_grd", label: "Ropes Tot. Wt. Grd%", type: "number" },
+  { name: "ropes_grade", label: "Ropes Grade", type: "text" },
+  { name: "chotta_weight", label: "Chotta & Habi Jabi Weight (Kg)", type: "number" },
+  { name: "chotta_tot_wt_grd", label: "Chotta & Habi Jabi Tot. Wt. Grd%", type: "number" },
+  { name: "chotta_grade", label: "Chotta & Habi Jabi Grade", type: "text" },
+  { name: "tolerable", label: "Tolerable", type: "select" },
+  { name: "premium", label: "Premium (MT Mode)", type: "select" },
+  { name: "amount", label: "Amount (₹)", type: "number" },
+  { name: "row_remarks", label: "Remarks", type: "text" },
+  { name: "jqi_remarks", label: "JCI Remarks", type: "text" }
+];
+
 export interface InspectionProps {
   onNavigate?: (page: string) => void;
 }
