@@ -769,7 +769,14 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               return <span className="text-[10px] text-slate-400 font-medium italic">-</span>;
                             }
 
-                            if (tol.status === "exact") {
+                            const diffMt = typeof tol?.diffMt === 'number' && !isNaN(tol.diffMt)
+                              ? tol.diffMt
+                              : (typeof tol?.differenceMt === 'number' && !isNaN(tol.differenceMt)
+                                ? tol.differenceMt
+                                : (rcvd - contract));
+                            const absDiff = Math.abs(diffMt);
+
+                            if (absDiff < 0.0005) {
                               return (
                                 <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                                   Exact (0.00 MT)
@@ -777,7 +784,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               );
                             }
 
-                            if (tol.status === "excess") {
+                            if (diffMt > 0) {
                               return (
                                 <span className={cn(
                                   "text-[9.5px] font-black px-2 py-0.5 rounded border shadow-2xs inline-flex items-center gap-1",
@@ -785,7 +792,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                     ? "bg-blue-50 text-blue-800 border-blue-200"
                                     : "bg-blue-100 text-blue-900 border-blue-300"
                                 )}>
-                                  <span>+{Math.abs(tol.differenceMt).toFixed(3)} MT Excess</span>
+                                  <span>+{absDiff.toFixed(3)} MT Excess</span>
                                 </span>
                               );
                             }
@@ -797,7 +804,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                   ? "bg-amber-50 text-amber-800 border-amber-200"
                                   : "bg-amber-100 text-amber-900 border-amber-300"
                               )}>
-                                <span>-{Math.abs(tol.differenceMt).toFixed(3)} MT Short</span>
+                                <span>-{absDiff.toFixed(3)} MT Short</span>
                               </span>
                             );
                          })()}

@@ -22,6 +22,8 @@ export interface WeightToleranceResult {
   receivedQtl: number;
   diffMt: number;
   diffQtl: number;
+  differenceMt: number;
+  differenceQtl: number;
   absDiffMt: number;
   absDiffQtl: number;
   unit: string;
@@ -154,6 +156,8 @@ export function calculateWeightTolerance(
     receivedQtl,
     diffMt,
     diffQtl,
+    differenceMt: diffMt,
+    differenceQtl: diffQtl,
     absDiffMt,
     absDiffQtl,
     unit: unitStr,
