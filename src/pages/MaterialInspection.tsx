@@ -29,6 +29,13 @@ import {
   parseDateOnly,
   safeRenderText
 } from "../types/inspection.types";
+import {
+  initialMasterState,
+  createEmptyRow,
+  initialQualityMatrix,
+  calculateClaimMoisture,
+  exportInspectionsToExcel
+} from "../services/inspectionService";
 import { SupabaseAutoCompleteInput } from "../components/inspection/SupabaseAutoCompleteInput";
 import { InspectionBasicInfoCard } from "../components/inspection/InspectionBasicInfoCard";
 import { InspectionLorrySettlementCard } from "../components/inspection/InspectionLorrySettlementCard";
@@ -506,65 +513,7 @@ export default function MaterialInspection({
     actions: "Actions",
   };
 
-  // Default initial blank State
-  const initialMasterState = (): InspectionMaster => ({
-    mr_no: `MR/INSP/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`,
-    mr_date: new Date().toISOString().split("T")[0],
-    arrival_no: "",
-    arrival_date: new Date().toISOString().split("T")[0],
-    po_no: "",
-    po_date: new Date().toISOString().split("T")[0],
-    broker_name: "",
-    supplier_name: "",
-    lorry_number: "",
-    actual_moisture: 0,
-    claim_moisture: 0,
-    actual_dust: 0,
-    claim_dust: 0,
-    actual_ncv: 0,
-    claim_ncv: 0,
-    detention_days: 0,
-    unloading_date: new Date().toISOString().split("T")[0],
-    mill_po_no: "",
-    mill_po_date: new Date().toISOString().split("T")[0],
-    mr_spcl_print: "",
-    remarks: "",
-    delivery_claim: 0,
-    deduction_type: "",
-    deduction_types: [],
-    deduction_rate: 0,
-    deduction_qty: 0,
-    deduction_amount: 0,
-    advance_amount: 0,
-    on_account_advance_amount: 0,
-    settlement_amount: 0,
-    sent_settlement_date: "",
-    lorry_returned: "No",
-    lorry_returned_other_mill: "No",
-    mr_print_date: new Date().toISOString().split("T")[0],
-    consignment_no: "",
-    consignment_date: new Date().toISOString().split("T")[0],
-    arrival_remarks: "",
-    arival_apmc_fees: 0,
-  });
-
-  const createEmptyRow = (srl: number): InspectionDetailRow => ({
-    srl_no: srl,
-    arrival_grade: "",
-    stock_grade_code: "",
-    stock_grade_name: "",
-    area: "",
-    agency: "",
-    marka: "",
-    crop_year: "2026-2027",
-    lot: "",
-    quantity: "",
-    unit: "BALES",
-    challan_gross_wt: "",
-    receipt_gross_wt: "",
-  });
-
-  const [showWeightsBreakdown, setShowWeightsBreakdown] = useState<boolean>(true);
+    const [showWeightsBreakdown, setShowWeightsBreakdown] = useState<boolean>(true);
   const [unitList, setUnitList] = useState<string[]>(["BALES", "DRUMS", "LOOSE", "P.BALES", "H.BALES", "BAGS", "KGS", "M.T."]);
   const [moistureLogicRules, setMoistureLogicRules] = useState<any[]>([]);
 
@@ -595,116 +544,11 @@ export default function MaterialInspection({
 
   const [hoveredField, setHoveredField] = useState<string | null>(null);
 
-  // Calculate Claim Moisture % based on moisture_logic rules
-  // Formula: Claim Moisture % = CEIL(MAX(0, Actual Moisture % - Applicable Moisture %))
-  const calculateClaimMoisture = (
-    actualM: number,
-    dateStr: string,
-    areaStr: string,
-    rules: any[] = []
-  ): number => {
-    if (!actualM || actualM <= 0) return 0;
-
-    let month = 7;
-    if (dateStr) {
-      const trimmed = String(dateStr).trim();
-      const isoMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-      if (isoMatch) {
-        month = parseInt(isoMatch[2], 10) || 7;
-      } else {
-        const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-        if (ddmmyyyyMatch) {
-          month = parseInt(ddmmyyyyMatch[2], 10) || 7;
-        } else {
-          const parts = trimmed.split("-");
-          if (parts.length === 3) {
-            if (parts[0].length === 4) month = parseInt(parts[1], 10) || 7;
-            else if (parts[2].length === 4) month = parseInt(parts[1], 10) || 7;
-          }
-        }
-      }
-    }
-
-    const isWetSeason = month >= 1 && month <= 6;
-    const seasonKeyword = isWetSeason ? "JANUARY TO JUNE" : "JULY TO DECEMBER";
-    const cleanArea = String(areaStr || "").trim().toUpperCase();
-    const isDaisee = cleanArea.includes("DAISEE");
-
-    let threshold = isDaisee ? (isWetSeason ? 18 : 20) : (isWetSeason ? 16 : 18);
-
-    const allRules = rules && rules.length > 0 ? rules : [
-      { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 20%" },
-      { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 18%" },
-      { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 18%" },
-      { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 16%" },
-    ];
-
-    const exactMatch = allRules.find((r) => {
-      const rSeason = (r.season || "").toUpperCase();
-      const rArea = (r.operating_area || "").toUpperCase();
-      const seasonMatch = rSeason.includes(seasonKeyword);
-      return seasonMatch && cleanArea && rArea === cleanArea;
-    });
-
-    const categoryMatch = allRules.find((r) => {
-      const rSeason = (r.season || "").toUpperCase();
-      const rArea = (r.operating_area || "").toUpperCase();
-      const seasonMatch = rSeason.includes(seasonKeyword);
-      const areaMatch = isDaisee ? (rArea.includes("DAISEE") && !rArea.includes("NON-DAISEE")) : (rArea.includes("NON-DAISEE") || rArea.includes("STANDARD") || (!rArea.includes("DAISEE") && cleanArea && (rArea.includes(cleanArea) || cleanArea.includes(rArea))));
-      return seasonMatch && areaMatch;
-    });
-
-    const matched = exactMatch || categoryMatch;
-    if (matched && matched.threshold_limit) {
-      const matchVal = String(matched.threshold_limit).match(/(\d+(\.\d+)?)/);
-      if (matchVal) {
-        threshold = parseFloat(matchVal[1]);
-      }
-    }
-
-    const excess = actualM - threshold;
-    if (excess <= 0) return 0;
-    return Math.ceil(excess);
-  };
-
-  const [masterData, setMasterData] =
+    const [masterData, setMasterData] =
     useState<InspectionMaster>(initialMasterState());
   const [detailsList, setDetailsList] = useState<InspectionDetailRow[]>(
     [1, 2, 3, 4, 5].map(createEmptyRow),
   );
-
-  const initialQualityMatrix = () => ({
-    grade_down: {
-      '1st': { dept: '', claim: '', sett: '' },
-      '2nd': { dept: '', claim: '', sett: '' },
-      '3rd': { dept: '', claim: '', sett: '' },
-      '4th': { dept: '', claim: '', sett: '' },
-    },
-    moisture: {
-      '1st': { dept: '', claim: '', sett: '' },
-      '2nd': { dept: '', claim: '', sett: '' },
-      '3rd': { dept: '', claim: '', sett: '' },
-      '4th': { dept: '', claim: '', sett: '' },
-    },
-    dust: {
-      '1st': { dept: '', claim: '', sett: '' },
-      '2nd': { dept: '', claim: '', sett: '' },
-      '3rd': { dept: '', claim: '', sett: '' },
-      '4th': { dept: '', claim: '', sett: '' },
-    },
-    moc: {
-      '1st': { dept: '', claim: '', sett: '' },
-      '2nd': { dept: '', claim: '', sett: '' },
-      '3rd': { dept: '', claim: '', sett: '' },
-      '4th': { dept: '', claim: '', sett: '' },
-    },
-    po_rate: {
-      '1st': { dept: '', claim: '', sett: '' },
-      '2nd': { dept: '', claim: '', sett: '' },
-      '3rd': { dept: '', claim: '', sett: '' },
-      '4th': { dept: '', claim: '', sett: '' },
-    },
-  });
 
   const [qualityMatrix, setQualityMatrix] = useState<any>(initialQualityMatrix());
   const [showAllFourSpecs, setShowAllFourSpecs] = useState(true);
