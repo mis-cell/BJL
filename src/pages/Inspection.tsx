@@ -1740,7 +1740,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         } else if (min > 0 || max > 0) {
           avg = min || max;
         }
-        currentRow.lorry_read_avg = avg;
+        //currentRow.lorry_read_avg = avg;
       }
 
       // Auto Calculate Insp. Moisture Read Avg from Min & Max
@@ -1760,7 +1760,7 @@ export default function Inspection({ onNavigate }: InspectionProps) {
       if (
         field === "lorry_read_min" ||
         field === "lorry_read_max" ||
-        field === "lorry_read_avg" ||
+        //field === "lorry_read_avg" ||
         field === "insp_read_min" ||
         field === "insp_read_max" ||
         field === "insp_read_avg"
@@ -1774,12 +1774,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
           combinedMoistAvg = Number((lorryAvg || inspAvg).toFixed(2));
         }
         if (combinedMoistAvg > 0) {
-          currentRow.moisture_act = combinedMoistAvg;
+          //currentRow.moisture_act = combinedMoistAvg;
         }
       }
 
       // Automatically calculate Claim Moisture % based on moisture_logic rules whenever moisture reading, moisture_act, or area changes
-      if (
+      /* if (
         field === "lorry_read_min" ||
         field === "lorry_read_max" ||
         field === "lorry_read_avg" ||
@@ -1788,7 +1788,12 @@ export default function Inspection({ onNavigate }: InspectionProps) {
         field === "insp_read_avg" ||
         field === "moisture_act" ||
         field === "area"
-      ) {
+      ) { */
+        if (
+          field === "lorry_read_avg" ||
+          field === "area"
+        ) {
+        currentRow.moisture_act = currentRow.lorry_read_avg;
         const actM = Number(currentRow.moisture_act) || 0;
         const arrDate = headerForm.arrival_date || headerForm.mr_date || "";
         const rowArea = currentRow.area || (headerForm as any).area || "";
