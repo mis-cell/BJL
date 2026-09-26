@@ -548,6 +548,9 @@ export async function runDatabaseMigrations() {
             ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS total_unit INTEGER DEFAULT 0;
             ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS wt_per_lorry NUMERIC(15,3);
             ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS total_wt_in_ton NUMERIC(15,3);
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS is_checked BOOLEAN DEFAULT FALSE;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS checked_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS checked_at TIMESTAMPTZ;
           END $$;
 
           DROP VIEW IF EXISTS material_inspection CASCADE;

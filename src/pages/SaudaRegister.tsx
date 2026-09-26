@@ -37,7 +37,7 @@ import SaudaPrintSlip from '../components/SaudaPrintSlip';
 import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
-import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData } from '../lib/permissions';
+import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserAdmin, getCurrentUserContext } from '../lib/permissions';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
 
@@ -259,6 +259,38 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, startDate, endDate, statusTab]);
+
+  const handleToggleCheck = async (entry: Sauda) => {
+    const userCtx = getCurrentUserContext();
+    const canCheck = isUserAdmin() || isUserId10() || userCtx.userRole === 'ADMIN' || userCtx.userLevel === 'L5';
+
+    if (!canCheck) {
+      alert("🔒 Permission Denied: Only User ID 10 or System Admin can mark Sauda contracts as Checked.");
+      return;
+    }
+
+    const currentlyChecked = Boolean(entry.is_checked || entry.status === 'CHECKED' || entry.approval_status === 'CHECKED' || entry.approval_status === 'APPROVED');
+    const nextChecked = !currentlyChecked;
+    const checkerName = userCtx.userName || userCtx.username || userCtx.userId || (isUserAdmin() ? 'ADMIN' : 'User 10');
+
+    const updatePayload = {
+      is_checked: nextChecked,
+      checked_by: nextChecked ? checkerName : null,
+      checked_at: nextChecked ? new Date().toISOString() : null,
+      status: nextChecked ? 'CHECKED' : 'PENDING',
+      approval_status: nextChecked ? 'CHECKED' : 'PENDING'
+    };
+
+    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+
+    if (entry.sauda_id) {
+      try {
+        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
+      } catch (err) {
+        console.error("Error updating check status in Supabase:", err);
+      }
+    }
+  };
 
   const handleSendMail = async (sauda: Sauda) => {
     const sId = sauda.sauda_id;
@@ -1050,7 +1082,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   <th className="px-4 py-2 text-left">Broker</th>
                   <th className="px-4 py-2 text-left">Supplier</th>
                   <th className="px-3 py-2 text-center">Unit/Lorry</th>
-                  <th className="px-3 py-2 text-right">T. Unit</th>
                   <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>
                   <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>
                   <th className="px-3 py-2 text-center">Status</th>
@@ -1060,10 +1091,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               <tbody className="divide-y divide-slate-100">
                 {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
-                  const { status: st } = getSaudaStatusAndWeight(entry);
-                  const entryStatus = String(entry.status || entry.approval_status || '').toLowerCase();
-                  const isApproved = entryStatus === 'approved' || Boolean(entry.approved_by && entryStatus !== 'rejected');
-                  const isRejected = entryStatus === 'rejected' || Boolean(entry.rejected_by && entryStatus === 'rejected');
+                  const isChecked = Boolean(
+                    entry.is_checked || 
+                    String(entry.status || '').toUpperCase() === 'CHECKED' || 
+                    String(entry.approval_status || '').toUpperCase() === 'CHECKED' || 
+                    String(entry.status || '').toUpperCase() === 'APPROVED' || 
+                    String(entry.approval_status || '').toUpperCase() === 'APPROVED'
+                  );
+                  const checkerName = entry.checked_by || entry.approved_by || (isChecked ? 'User 10' : '');
 
                   return (
                     <tr 
@@ -1095,9 +1130,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className="px-3 text-center text-slate-700">
                         {entry.units_per_lorry_type}
                       </td>
-                      <td className="px-3 text-right font-bold font-mono">
-                        {entry.total_unit}
-                      </td>
                       <td className="px-3 text-center font-bold font-mono">
                         <span className={cn(
                           "px-2 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wide",
@@ -1114,26 +1146,33 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                         ₹{Number(entry.b_rate).toLocaleString()}
                       </td>
                       <td className="px-3 text-center">
-                        <div className="flex flex-col items-center justify-center gap-0.5">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span 
-                              className={cn(
-                                "inline-block w-2 h-2 rounded-full shrink-0", 
-                                isApproved ? 'bg-emerald-500' : isRejected ? 'bg-rose-500' : st === 'completed' ? 'bg-emerald-500' : st === 'partial' ? 'bg-blue-500' : 'bg-amber-500'
-                              )} 
-                            />
-                            <span className={cn("font-bold text-[11px] font-mono whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
-                              {(Number(entry.total_wt_in_ton) || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} Ton
-                            </span>
-                          </div>
-                          {entry.approved_by && (
-                            <span className={cn("text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight", isSelected ? "bg-emerald-800 text-amber-300" : "bg-emerald-100 text-emerald-900")}>
-                              ✓ Approved by: {entry.approved_by}
-                            </span>
+                        <div className="flex flex-col items-center justify-center gap-0.5 py-0.5">
+                          {isChecked ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleCheck(entry); }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
+                              title="Checked (Click to toggle / uncheck)"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                              <span>Checked</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleCheck(entry); }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-900 border border-slate-300 hover:border-amber-400 transition-all cursor-pointer"
+                              title="Click to mark as Checked (User ID 10 or Admin)"
+                            >
+                              <Clock className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Check</span>
+                            </button>
                           )}
-                          {entry.rejected_by && (
-                            <span className={cn("text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight", isSelected ? "bg-rose-900 text-rose-200" : "bg-rose-100 text-rose-900")}>
-                              ✕ Rejected by: {entry.rejected_by}
+
+                          {isChecked && checkerName && (
+                            <span className={cn(
+                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
+                              isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                            )}>
+                              ✓ {checkerName}
                             </span>
                           )}
                         </div>

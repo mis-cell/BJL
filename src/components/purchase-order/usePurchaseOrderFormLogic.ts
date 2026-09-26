@@ -1232,9 +1232,9 @@ export function usePurchaseOrderFormLogic({
       return true;
     }
 
-    // Only approved Sauda contracts proceed to Sauda Check Point
-    const isApproved = st === 'approved' || appSt === 'approved' || Boolean(s.approved_by);
-    if (!isApproved) {
+    // Only Checked Sauda contracts proceed to Sauda Check Point
+    const isChecked = s.is_checked === true || st === 'checked' || appSt === 'checked' || st === 'approved' || appSt === 'approved' || Boolean(s.checked_by) || Boolean(s.approved_by);
+    if (!isChecked) {
       return false;
     }
 

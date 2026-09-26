@@ -154,6 +154,9 @@ export interface Sauda {
   approved_at?: string;
   rejected_by?: string;
   rejected_at?: string;
+  is_checked?: boolean;
+  checked_by?: string;
+  checked_at?: string;
   created_at?: string;
   quality_details?: SaudaQualityDetail[];
 }
