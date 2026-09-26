@@ -58,7 +58,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+              <div className="flex flex-wrap justify-end gap-2 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => this.setState({ hasError: false, error: null })}
+                  className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 font-bold text-xs uppercase transition-colors shadow-xs"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Try In-Place Recovery
+                </button>
                 <button
                   type="button"
                   onClick={() => {

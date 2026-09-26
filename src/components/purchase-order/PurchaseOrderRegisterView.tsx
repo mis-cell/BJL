@@ -343,13 +343,18 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                if (selectedPoNo) {
                  const match = poList.find(p => p.po_no === selectedPoNo);
                  if (match) handlePrintPo(match);
-               } else {
-                 alert("Please select a Purchase Order row in the table first.");
                }
              }}
-             className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+             disabled={!selectedPoNo}
+             className={cn(
+               "px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2",
+               selectedPoNo
+                 ? "bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] cursor-pointer active:scale-95"
+                 : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
+             )}
+             title={selectedPoNo ? "Print Selected Purchase Order" : "Select a Purchase Order row in the table first"}
            >
-             <Printer className="w-4 h-4 text-slate-600" /> Print Selected
+             <Printer className="w-4 h-4" /> Print Selected
            </button>
 
            {canEditOrDelete() && (
@@ -357,13 +362,18 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                onClick={() => {
                  if (selectedPoNo) {
                    handleDeletePo(selectedPoNo);
-                 } else {
-                   alert("Please select a Purchase Order in the table first.");
                  }
                }}
-               className="bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 hover:border-rose-400 px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+               disabled={!selectedPoNo}
+               className={cn(
+                 "px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2",
+                 selectedPoNo
+                   ? "bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 hover:border-rose-400 cursor-pointer active:scale-95"
+                   : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
+               )}
+               title={selectedPoNo ? "Delete Selected Purchase Order" : "Select a Purchase Order row in the table first"}
              >
-               <Trash2 className="w-4 h-4 text-rose-600" /> Delete Selected
+               <Trash2 className="w-4 h-4" /> Delete Selected
              </button>
            )}
 
@@ -588,7 +598,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                            const isClosed = Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
 
                            if (isClosed && !isAdminUser) {
-                             alert(`🔒 Closed Sauda Record: Sauda #${item.po_no} is Closed.\n\nClosed Sauda records can only be opened or edited by an Admin.`);
+                             if (setClosedNoticePo) setClosedNoticePo(item);
                              return;
                            }
 
@@ -842,13 +852,14 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                             const saudaTd5Rate = parseFloat(item.b_rate || 0) > 0 ? parseFloat(item.b_rate) : getTd5BaseRateForDate(saudaDateStr);
                             const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
-                            const td5RateDiff = Math.abs(arrivalTd5Rate - saudaTd5Rate);
+                            const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
 
                             // 2. Excess beyond allowed tolerance
                             if (tol.isOverDelivery) {
-                              const excessMt = tol.excessOverToleranceMt;
-                              const excessQtl = tol.excessOverToleranceQtl;
-                              const penaltyAmount = Math.round(td5RateDiff * excessQtl * 100) / 100;
+                              const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
+                              const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
+                              const rawPenalty = td5RateDiff * excessQtl;
+                              const penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
 
                               return (
                                 <div
@@ -869,8 +880,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                             // 3. Short under allowed tolerance
                             if (tol.isUnderDelivery) {
-                              const shortMt = tol.shortUnderToleranceMt;
-                              const shortQtl = tol.shortUnderToleranceQtl;
+                              const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
+                              const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
 
                               return (
                                 <div

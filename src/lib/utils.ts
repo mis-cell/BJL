@@ -210,6 +210,44 @@ export function canApproveMismatch(): boolean {
 }
 
 /**
+ * Safely parses any number, returning a fallback finite number.
+ * Never returns NaN or Infinity.
+ */
+export function safeNum(val: any, fallback: number = 0): number {
+  if (val === null || val === undefined || val === '') return fallback;
+  if (typeof val === 'number') {
+    return isFinite(val) ? val : fallback;
+  }
+  const cleanStr = String(val).replace(/,/g, '').trim();
+  const parsed = parseFloat(cleanStr);
+  return isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Safely converts any value to fixed decimals string, never returning 'NaN'.
+ */
+export function safeFixed(val: any, decimals: number = 2, fallback: string = '0.00'): string {
+  const num = safeNum(val, NaN);
+  if (isNaN(num)) return fallback;
+  return num.toFixed(decimals);
+}
+
+/**
+ * Safely parses JSON with fallback, immune to SyntaxError or corrupted storage.
+ */
+export function safeJsonParse<T>(jsonStr: any, fallback: T): T {
+  if (!jsonStr) return fallback;
+  if (typeof jsonStr !== 'string') {
+    return typeof jsonStr === 'object' ? (jsonStr as T) : fallback;
+  }
+  try {
+    return JSON.parse(jsonStr) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Robust Date Sanitizer for PostgreSQL DATE columns.
  * Prevents 400 (Bad Request) errors caused by empty strings, formatted placeholder dates, or invalid date values.
  * Returns ISO YYYY-MM-DD or null.

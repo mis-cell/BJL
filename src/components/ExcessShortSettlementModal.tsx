@@ -11,6 +11,7 @@ import {
   Printer, 
   ShieldCheck,
   Lock,
+  Unlock,
   Layers,
   FileSpreadsheet,
   Check,
@@ -21,7 +22,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
-import { cn } from '../lib/utils';
+import { cn, safeNum } from '../lib/utils';
 
 interface ExcessShortSettlementModalProps {
   po: any;
@@ -114,6 +115,8 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   sattaCalculatedRates = [],
   sattaBaseRates = []
 }) => {
+  if (!po) return null;
+
   const poNo = String(po.po_no || po.contract_po_no || '').trim();
   const saudaNo = String(po.sauda_no || po.sauda_ref || po.po_no || '').trim();
   const supplierName = String(po.supplier || po.supplier_name || po.supp_name || 'SOHANLALL CHANDANMULL AND CO.').trim();
@@ -121,9 +124,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const unit = String(po.purchase_unit_name || po.unit_type || po.unit || 'BALES').toUpperCase();
   
   // Sauda Quantity
-  const contractMt = parseFloat(po.total_contract_mt || po.contract_weight_mt || po.total_wt_in_ton || po.weight_mt || po.contract_mt || (po.weight_qtl ? po.weight_qtl / 10 : 0) || 0) || 10.767;
+  const contractMt = Math.max(0, parseFloat(po.total_contract_mt || po.contract_weight_mt || po.total_wt_in_ton || po.weight_mt || po.contract_mt || (po.weight_qtl ? po.weight_qtl / 10 : 0) || 0) || 10.767);
   const saudaQtyQtl = contractMt * 10;
-  const contractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.base_rate || 0) || 13300;
+  const contractRate = Math.max(0, parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.base_rate || 0) || 13300);
 
   const cleanPoVal = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const cleanKey = cleanPoVal(poNo);
@@ -198,6 +201,17 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Close modal safely on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Load Sauda, Temporary Arrivals, Final Arrivals, and Satta Base Rates
   useEffect(() => {
@@ -453,46 +467,55 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
   // Which Satta Rate is used for Deduction
   const applicableRate = useMemo(() => {
+    let rate = 0;
     switch (selectedRateMode) {
       case 'last_arrival_satta':
-        return arrivalBaseRate;
+        rate = arrivalBaseRate;
+        break;
       case 'sauda_satta':
-        return saudaBaseRate;
+        rate = saudaBaseRate;
+        break;
       case 'custom':
-        return customRateInput;
+        rate = customRateInput;
+        break;
       case 'rate_difference':
       default:
-        return rateDifference;
+        rate = rateDifference;
+        break;
     }
+    return isNaN(rate) || rate < 0 ? 0 : Math.round(rate * 100) / 100;
   }, [selectedRateMode, arrivalBaseRate, saudaBaseRate, rateDifference, customRateInput]);
 
   const applicableRateLabel = useMemo(() => {
     switch (selectedRateMode) {
       case 'last_arrival_satta':
-        return `Last Temporary Arrival Satta Rate (₹${arrivalBaseRate.toLocaleString()}/Qtl)`;
+        return `Last Temporary Arrival Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'sauda_satta':
-        return `Sauda Satta Rate (₹${saudaBaseRate.toLocaleString()}/Qtl)`;
+        return `Sauda Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'custom':
-        return `Custom Satta Rate (₹${customRateInput.toLocaleString()}/Qtl)`;
+        return `Custom Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'rate_difference':
       default:
-        return `TD5 Rate Difference |Temp Arrival − Sauda| (₹${rateDifference.toLocaleString()}/Qtl)`;
+        return `TD5 Rate Difference |Temp Arrival − Sauda| (₹${applicableRate.toLocaleString()}/Qtl)`;
     }
-  }, [selectedRateMode, arrivalBaseRate, saudaBaseRate, rateDifference, customRateInput]);
+  }, [selectedRateMode, applicableRate]);
 
   // Total Deduction Calculation: Deductible Quantity × Applicable Rate = Total Deduction
   const totalCalculatedAmount = useMemo(() => {
-    const calc = deductibleQtyQtl * applicableRate;
-    return Math.round(calc * 100) / 100;
+    const qty = isNaN(deductibleQtyQtl) || deductibleQtyQtl < 0 ? 0 : deductibleQtyQtl;
+    const rate = isNaN(applicableRate) || applicableRate < 0 ? 0 : applicableRate;
+    const calc = qty * rate;
+    return isNaN(calc) || calc < 0 ? 0 : Math.round(calc * 100) / 100;
   }, [deductibleQtyQtl, applicableRate]);
 
   // Total Final Payable
   const totalFinalPayable = useMemo(() => {
-    if (totalCalculatedAmount === 0) return existingSaudaAmount;
+    const saudaAmt = isNaN(existingSaudaAmount) || existingSaudaAmount < 0 ? 0 : existingSaudaAmount;
+    if (totalCalculatedAmount === 0) return saudaAmt;
     if (isExcess) {
-      return Math.round((existingSaudaAmount + totalCalculatedAmount) * 100) / 100;
+      return Math.round((saudaAmt + totalCalculatedAmount) * 100) / 100;
     }
-    return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
+    return Math.max(0, Math.round((saudaAmt - totalCalculatedAmount) * 100) / 100);
   }, [isExcess, existingSaudaAmount, totalCalculatedAmount]);
 
   // PO / Header Grade Resolution
@@ -680,6 +703,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const handleSaveSettlement = async () => {
     if (isSettled) return;
 
+    if (selectedRateMode === 'custom' && (customRateInput <= 0 || isNaN(customRateInput)) && deductibleQtyQtl > 0) {
+      setSaveMessage("⚠️ Custom Rate Mode: Please enter a valid rate greater than 0 before saving.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
 
@@ -799,7 +827,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-[1000] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+    >
       
       {/* Printable Slip Container */}
       <div className="hidden print:block fixed inset-0 bg-white text-black p-8 font-sans">
@@ -1443,6 +1478,22 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           <div className="flex items-center gap-2">
             {isSettled ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const confirmUnlock = window.confirm(
+                      `⚠️ Unlock Settlement for Revision?\n\nThis will allow adjusting the deduction rate basis, custom rate, deductible quantity, or audit remarks for PO #${poNo}.\n\nDo you want to unlock?`
+                    );
+                    if (confirmUnlock) {
+                      setIsSettled(false);
+                      setSaveMessage("⚠️ Record unlocked. Update your parameters and click 'Save & Lock Settlement' to commit.");
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Unlock to revise rate mode, remarks, or calculation"
+                >
+                  <Unlock className="w-3.5 h-3.5 text-amber-700" /> Revise / Unlock
+                </button>
                 <button
                   type="button"
                   onClick={handlePrint}

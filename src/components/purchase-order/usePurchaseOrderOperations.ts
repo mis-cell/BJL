@@ -279,7 +279,6 @@ export function usePurchaseOrderOperations({
         title: 'Email Dispatch Failed',
         message: `Failed to send email: ${err.message || String(err)}`
       });
-      alert(`Failed to send email: ${err.message || String(err)}`);
       setTimeout(() => {
         setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
       }, 3000);
@@ -288,10 +287,17 @@ export function usePurchaseOrderOperations({
 
   const handleDeletePo = async (poNo: string) => {
     if (!canDeleteData()) {
-      alert("🔒 Access Denied: Only Admin users (L5 / System Administrator) are authorized to permanently delete records.");
+      setEmailNotification({
+        type: 'warning',
+        title: 'Access Denied',
+        message: 'Only Admin users (L5 / System Administrator) are authorized to permanently delete records.'
+      });
       return;
     }
-    const confirmed = window.confirm(`Are you sure you want to PERMANENTLY DELETE Purchase Order ${poNo}?\nThis action will delete all items and records linked to this PO.`);
+    const confirmed = await askConfirm(
+      `Are you sure you want to PERMANENTLY DELETE Purchase Order ${poNo}?\nThis action will delete all items and records linked to this PO.`,
+      { title: 'Permanent Delete Warning', tone: 'danger', confirmLabel: 'Delete Forever' }
+    );
     if (!confirmed) return;
 
     try {
@@ -329,11 +335,19 @@ export function usePurchaseOrderOperations({
       setSelectedPoNo(null);
 
       window.dispatchEvent(new CustomEvent('app-data-updated'));
-      alert(`Purchase Order ${poNo} deleted permanently.`);
+      setEmailNotification({
+        type: 'success',
+        title: 'Deleted Successfully',
+        message: `Purchase Order ${poNo} was deleted permanently.`
+      });
       await fetchPosAndMasters();
     } catch (err: any) {
       console.error("Failed to delete PO: ", err);
-      alert("Delete failed: " + (err.message || err));
+      setEmailNotification({
+        type: 'error',
+        title: 'Delete Failed',
+        message: err.message || 'An error occurred during deletion.'
+      });
     }
   };
 
@@ -358,10 +372,18 @@ export function usePurchaseOrderOperations({
       }));
 
       setMismatchModalPo(null);
-      alert(`✅ Mismatch Approved for Sauda #${targetPo.po_no}!\nStatus updated to PASS. Click the green PASS button in the dashboard to move to Final P.O.`);
+      setEmailNotification({
+        type: 'success',
+        title: 'Mismatch Approved',
+        message: `Mismatch Approved for Sauda #${targetPo.po_no}! Status updated to PASS. Click the green PASS button to move to Final P.O.`
+      });
       await fetchPosAndMasters();
     } catch (err: any) {
-      alert(`Failed to approve mismatch: ${err.message || err}`);
+      setEmailNotification({
+        type: 'error',
+        title: 'Approval Failed',
+        message: `Failed to approve mismatch: ${err.message || err}`
+      });
     }
   };
 
@@ -548,13 +570,20 @@ export function usePurchaseOrderOperations({
                          userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX';
 
     if (!isAuthorized) {
-      alert("🔒 Access Denied: Only an Admin or Level 4 User can manually Close a Sauda.");
+      setEmailNotification({
+        type: 'warning',
+        title: 'Access Denied',
+        message: 'Only an Admin or Level 4 User can manually Close a Sauda.'
+      });
       return;
     }
 
     const cleanPo = String(item.po_no || '').trim().toUpperCase();
     const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
-    const confirmed = window.confirm(`Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted, and will not be shown in Temporary Arrival.`);
+    const confirmed = await askConfirm(
+      `Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted, and will not be shown in Temporary Arrival.`,
+      { title: 'Close Sauda Confirmation', confirmLabel: 'Close Sauda' }
+    );
     if (!confirmed) return;
 
     try {
@@ -592,7 +621,11 @@ export function usePurchaseOrderOperations({
       fetchPosAndMasters();
     } catch (err: any) {
       console.error("Failed to close sauda:", err);
-      alert("Failed to close sauda: " + (err.message || String(err)));
+      setEmailNotification({
+        type: 'error',
+        title: 'Operation Failed',
+        message: 'Failed to close sauda: ' + (err.message || String(err))
+      });
     }
   };
 
@@ -784,10 +817,18 @@ export function usePurchaseOrderOperations({
       window.dispatchEvent(new CustomEvent('app-data-updated'));
       window.dispatchEvent(new CustomEvent('mismatch_resolved', { detail: { poNo: item.po_no } }));
 
-      alert(`PO #${item.po_no} successfully passed to Final P.O!`);
+      setEmailNotification({
+        type: 'success',
+        title: 'Moved to Final P.O',
+        message: `PO #${item.po_no} successfully passed to Final P.O!`
+      });
       await fetchPosAndMasters();
     } catch (e: any) {
-      alert('Failed to move to Final P.O: ' + (e.message || 'Database error.'));
+      setEmailNotification({
+        type: 'error',
+        title: 'Final P.O Transfer Failed',
+        message: 'Failed to move to Final P.O: ' + (e.message || 'Database error.')
+      });
     }
   };
 
