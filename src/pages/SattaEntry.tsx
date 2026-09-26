@@ -370,17 +370,17 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
         setMarkas(markaData || []);
         let finalBaseRates = (baseRatesResult && baseRatesResult.data) ? baseRatesResult.data : [];
         if (finalBaseRates.length > 0) {
-          setDbBaseRates(finalBaseRates);
-          const active = finalBaseRates[0];
-          if (active && active.base_rate) {
+          setBaseRatesList(finalBaseRates);
+          const sorted = [...finalBaseRates].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+          const targetDt = formData.b_date || formData.date || today;
+          const eff = sorted.find((r: any) => r.start_date <= targetDt) || sorted[0];
+          if (eff && eff.base_rate) {
             setFormData(prev => ({
               ...prev,
-              b_rate: prev.b_rate && prev.b_rate > 0 ? prev.b_rate : Number(active.base_rate)
+              b_rate: prev.b_rate && prev.b_rate > 0 ? prev.b_rate : Number(eff.base_rate)
             }));
           }
         }
-
-        setBaseRatesList(finalBaseRates);
         if (finalBaseRates && finalBaseRates.length > 0) {
           const sorted = [...finalBaseRates].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
           const targetDt = formData.b_date || formData.date || today;

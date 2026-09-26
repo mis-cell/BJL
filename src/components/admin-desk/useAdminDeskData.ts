@@ -238,29 +238,62 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
         }
       }
 
-      const { data: dbTables, error } = await supabase.rpc("get_table_names");
-      if (error || !dbTables) {
-        setTables(TABLES);
-        if (!selectedTable) setSelectedTable(TABLES[0]);
+      let dbTableNames: string[] = [];
+      try {
+        const { data: allTables, error: rpcErr } = await supabase.rpc("get_all_tables");
+        if (!rpcErr && Array.isArray(allTables) && allTables.length > 0) {
+          dbTableNames = allTables;
+        }
+      } catch (e) {}
+
+      if (dbTableNames.length === 0) {
+        try {
+          const { data: sqlTables } = await supabase.rpc("exec_sql_return", {
+            query: "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+          });
+          if (Array.isArray(sqlTables) && sqlTables.length > 0) {
+            dbTableNames = sqlTables.map((r: any) => r.table_name || r.tablename).filter(Boolean);
+          }
+        } catch (e) {}
+      }
+
+      if (dbTableNames.length > 0) {
+        // Filter out system or backup tables
+        const validDbTables = dbTableNames.filter(t => !t.startsWith('pg_') && !t.startsWith('sql_') && !t.startsWith('temp_'));
+        
+        const mergedTables: TableDef[] = [];
+        
+        // Add matching predefined schemas
+        TABLES.forEach((known) => {
+          if (validDbTables.includes(known.name)) {
+            mergedTables.push(known);
+          }
+        });
+
+        // Add any additional Supabase tables
+        validDbTables.forEach((tName) => {
+          if (!mergedTables.find((t) => t.name === tName)) {
+            mergedTables.push({
+              name: tName,
+              label: tName.replace(/_/g, " ").toUpperCase(),
+              icon: Database,
+              pk: tName === "user_master" ? "user_id" : (tName.endsWith("_id") ? tName : "id"),
+            });
+          }
+        });
+
+        // Alphabetical sort by label
+        mergedTables.sort((a, b) => a.label.localeCompare(b.label));
+
+        setTables(mergedTables);
+        if (!selectedTable || !mergedTables.find(t => t.name === selectedTable.name)) {
+          setSelectedTable(mergedTables[0]);
+        }
         return;
       }
 
-      const mergedTables: TableDef[] = TABLES.map((t) => ({ ...t }));
-      dbTables.forEach((tName: string) => {
-        if (!mergedTables.find((t) => t.name === tName)) {
-          mergedTables.push({
-            name: tName,
-            label: tName.replace(/_/g, " ").toUpperCase(),
-            icon: Database,
-            pk: "id",
-          });
-        }
-      });
-
-      setTables(mergedTables);
-      if (!selectedTable) {
-        setSelectedTable(mergedTables[0]);
-      }
+      setTables(TABLES);
+      if (!selectedTable) setSelectedTable(TABLES[0]);
     } catch (err) {
       console.error(err);
       setTables(TABLES);
