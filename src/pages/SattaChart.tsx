@@ -197,7 +197,7 @@ export default function SattaChart({
   isEmbedded?: boolean;
   onNavigate?: (page: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix' | 'history'>('base_rate');
+  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix'>('base_rate');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
   const [showUploadSuccessModal, setShowUploadSuccessModal] = useState<boolean>(false);
@@ -1191,19 +1191,6 @@ export default function SattaChart({
             <FileSpreadsheet className="h-4 w-4" />
             <span>Live Pivot Matrix</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('history')}
-            className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
-              activeTab === 'history'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
-                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
-            )}
-          >
-            <History className="h-4 w-4" />
-            <span>Audit History & Rate Logs ({rateHistory.length})</span>
-          </button>
           <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right shrink-0">
               <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Last Updated</div>
               <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
@@ -1233,7 +1220,7 @@ export default function SattaChart({
       )}
 
       {/* EXECUTIVE KPI ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Base Rate KPI */}
         <div className="bg-white p-3.5 rounded-2xl border border-[#E8E2D5] shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -1351,23 +1338,6 @@ export default function SattaChart({
           </div>
           <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
             <div className="bg-amber-500 h-full rounded-full w-[100%]" />
-          </div>
-        </div>
-
-        {/* Historic Audit Records KPI */}
-        <div className="bg-white p-3.5 rounded-2xl border border-[#E8E2D5] shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-900">Historic Logs</span>
-            <History className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="text-xl font-numeric font-extrabold text-purple-950">
-            {rateHistory.length} Runs
-          </div>
-          <div className="text-[9px] font-bold text-purple-700 mt-1">
-            Audit Trail Active
-          </div>
-          <div className="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
-            <div className="bg-purple-600 h-full rounded-full w-[80%]" />
           </div>
         </div>
       </div>
