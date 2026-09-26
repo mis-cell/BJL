@@ -53,36 +53,37 @@ import { cn } from "./lib/utils";
 import bjlAsset from "./assets/asset_bjl.png";
 import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
-import TemporaryArrival from "./pages/TemporaryArrival";
-import AmadRegister from "./pages/AmadRegister";
-import SaudaEntry from "./pages/SaudaEntry";
-import BardanaVouchers from "./pages/BardanaVouchers";
-import DirectoryView from "./pages/DirectoryView";
-import Reports from "./pages/Reports";
-import Dashboard from "./pages/Dashboard";
-import StockSummary from "./pages/StockSummary";
-import ConfigGuide from "./pages/ConfigGuide";
-import SaudaRegister from "./pages/SaudaRegister";
-import SmsSaudaDesk from "./pages/SmsSaudaDesk";
-import SattaRegister from "./pages/SattaRegister";
-import SattaEntry from "./pages/SattaEntry";
-import SattaChart from "./pages/SattaChart";
-import PurchaseOrder from "./pages/PurchaseOrder";
-import MaterialIssue from "./pages/MaterialIssue";
-import AdminDesk from "./pages/AdminDesk";
-import AIPortal from "./pages/AIPortal";
-import MaterialInspection from "./pages/MaterialInspection";
-import Inspection from "./pages/Inspection";
-import WeightBridge from "./pages/WeightBridge";
-import MrSettlement from "./pages/MrSettlement";
-import ClosingStockEntry from "./pages/ClosingStockEntry";
-import MismatchCase from "./pages/MismatchCase";
-import ClubPOMR from "./pages/ClubPOMR";
-import FinalArrival from "./pages/FinalArrival";
-import RequisitionDesk from "./pages/RequisitionDesk";
-import PaymentModule from "./pages/PaymentModule";
-import TredeReport from "./pages/TredeReport";
-import LorryDispatchSystem from "./pages/LorryDispatchSystem";
+// Lazy-loaded page components for fast initial load & code-splitting
+const TemporaryArrival = React.lazy(() => import("./pages/TemporaryArrival"));
+const AmadRegister = React.lazy(() => import("./pages/AmadRegister"));
+const SaudaEntry = React.lazy(() => import("./pages/SaudaEntry"));
+const BardanaVouchers = React.lazy(() => import("./pages/BardanaVouchers"));
+const DirectoryView = React.lazy(() => import("./pages/DirectoryView"));
+const Reports = React.lazy(() => import("./pages/Reports"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const StockSummary = React.lazy(() => import("./pages/StockSummary"));
+const ConfigGuide = React.lazy(() => import("./pages/ConfigGuide"));
+const SaudaRegister = React.lazy(() => import("./pages/SaudaRegister"));
+const SmsSaudaDesk = React.lazy(() => import("./pages/SmsSaudaDesk"));
+const SattaRegister = React.lazy(() => import("./pages/SattaRegister"));
+const SattaEntry = React.lazy(() => import("./pages/SattaEntry"));
+const SattaChart = React.lazy(() => import("./pages/SattaChart"));
+const PurchaseOrder = React.lazy(() => import("./pages/PurchaseOrder"));
+const MaterialIssue = React.lazy(() => import("./pages/MaterialIssue"));
+const AdminDesk = React.lazy(() => import("./pages/AdminDesk"));
+const AIPortal = React.lazy(() => import("./pages/AIPortal"));
+const MaterialInspection = React.lazy(() => import("./pages/MaterialInspection"));
+const Inspection = React.lazy(() => import("./pages/Inspection"));
+const WeightBridge = React.lazy(() => import("./pages/WeightBridge"));
+const MrSettlement = React.lazy(() => import("./pages/MrSettlement"));
+const ClosingStockEntry = React.lazy(() => import("./pages/ClosingStockEntry"));
+const MismatchCase = React.lazy(() => import("./pages/MismatchCase"));
+const ClubPOMR = React.lazy(() => import("./pages/ClubPOMR"));
+const FinalArrival = React.lazy(() => import("./pages/FinalArrival"));
+const RequisitionDesk = React.lazy(() => import("./pages/RequisitionDesk"));
+const PaymentModule = React.lazy(() => import("./pages/PaymentModule"));
+const TredeReport = React.lazy(() => import("./pages/TredeReport"));
+const LorryDispatchSystem = React.lazy(() => import("./pages/LorryDispatchSystem"));
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
 
@@ -94,6 +95,22 @@ import { useIdleTimer } from "./hooks/useIdleTimer";
 
 
 import { AuthScreen } from "./components/auth/AuthScreen";
+
+const PageLoadingFallback = () => (
+  <div className="flex-1 flex flex-col items-center justify-center h-full w-full min-h-[350px] p-8 text-slate-500">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-9 h-9 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin shadow-sm" />
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+          Loading Module...
+        </span>
+        <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+          Preparing workspace data
+        </span>
+      </div>
+    </div>
+  </div>
+);
 
 type Page =
   | "dashboard"
@@ -1058,7 +1075,7 @@ export default function App() {
                   </div>
                 </LegacyLayout>
               ) : (
-                <>
+                <React.Suspense fallback={<PageLoadingFallback />}>
                   <div
                     className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
                   >
@@ -1323,7 +1340,7 @@ export default function App() {
                   onNavigate={(page) => globalNavigate(page as Page)}
                 />
               </div>
-                </>
+                </React.Suspense>
               )}
             </div>
           </div>
