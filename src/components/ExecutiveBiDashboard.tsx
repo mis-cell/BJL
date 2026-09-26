@@ -740,7 +740,7 @@ export default function ExecutiveBiDashboard({
                 key={`${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenDrilldown({
                   title: `Month Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending)`,
+                  subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending, ${m.partialContracts} partial)`,
                   contracts: m.contracts
                 })}
                 className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none"
@@ -774,6 +774,19 @@ export default function ExecutiveBiDashboard({
                         : "bg-emerald-100 text-emerald-900 border border-emerald-300"
                     )}>
                       {m.pendingContracts > 0 ? `${m.pendingContracts}` : '0'}
+                    </span>
+                  </div>
+
+                  {/* Partial Count */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Partial:</span>
+                    <span className={cn(
+                      "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
+                      m.partialContracts > 0 
+                        ? "bg-blue-100 text-blue-900 border border-blue-300" 
+                        : "bg-gray-100 text-gray-700 border border-gray-300"
+                    )}>
+                      {m.partialContracts > 0 ? `${m.partialContracts}` : '0'}
                     </span>
                   </div>
                 </div>

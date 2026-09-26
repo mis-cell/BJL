@@ -64,12 +64,8 @@ export default function DashboardDrilldownModal({
       }
 
       // Arrival Filter
-      if (arrivalFilter !== 'ALL') {
-        if (arrivalFilter === 'PENDING') {
-          if (c.arrivalStatus !== 'PENDING' && c.arrivalStatus !== 'PARTIAL' && c.pendingWeightMt <= 0) return false;
-        } else if (c.arrivalStatus !== arrivalFilter) {
-          return false;
-        }
+      if (arrivalFilter !== 'ALL' && c.arrivalStatus !== arrivalFilter) {
+        return false;
       }
 
       // Payment Filter
@@ -264,9 +260,9 @@ export default function DashboardDrilldownModal({
               className="h-8 px-2.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-semibold text-[#1E331B] focus:outline-none"
             >
               <option value="ALL">All Arrivals</option>
-              <option value="PENDING">Pending (All Pending & Partial)</option>
+              <option value="PENDING">Pending (Un-arrived)</option>
+              <option value="PARTIAL">Partially Received</option>
               <option value="RECEIVED">Fully Received</option>
-              <option value="PARTIAL">Partially Received Only</option>
             </select>
 
             {/* Payment Status selector */}

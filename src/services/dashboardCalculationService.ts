@@ -52,10 +52,12 @@ export interface MonthSummary {
   saudaContracts: number;
   ptfContracts: number;
   pendingContracts: number;
+  partialContracts: number;
   totalWeightMt: number;
   saudaWeightMt: number;
   ptfWeightMt: number;
   pendingWeightMt: number;
+  partialWeightMt: number;
   totalContractValue: number;
   paidAmount: number;
   remainingAmount: number;
@@ -1397,10 +1399,12 @@ export function computeDashboardMetrics(params: {
     let mSaudaContracts = 0;
     let mPtfContracts = 0;
     let mPendingContracts = 0;
+    let mPartialContracts = 0;
     let mTotalWeightMt = 0;
     let mSaudaWeightMt = 0;
     let mPtfWeightMt = 0;
     let mPendingWeightMt = 0;
+    let mPartialWeightMt = 0;
     let mTotalContractValue = 0;
     let mPaidAmount = 0;
     let mRemainingAmount = 0;
@@ -1419,9 +1423,12 @@ export function computeDashboardMetrics(params: {
         mPtfWeightMt += c.totalWeightMt;
       }
 
-      if (c.arrivalStatus === 'PENDING' || c.arrivalStatus === 'PARTIAL') {
+      if (c.arrivalStatus === 'PENDING') {
         mPendingContracts++;
         mPendingWeightMt += c.pendingWeightMt;
+      } else if (c.arrivalStatus === 'PARTIAL') {
+        mPartialContracts++;
+        mPartialWeightMt += c.pendingWeightMt;
       }
     });
 
@@ -1433,10 +1440,12 @@ export function computeDashboardMetrics(params: {
       saudaContracts: mSaudaContracts,
       ptfContracts: mPtfContracts,
       pendingContracts: mPendingContracts,
+      partialContracts: mPartialContracts,
       totalWeightMt: Number(mTotalWeightMt.toFixed(2)),
       saudaWeightMt: Number(mSaudaWeightMt.toFixed(2)),
       ptfWeightMt: Number(mPtfWeightMt.toFixed(2)),
       pendingWeightMt: Number(mPendingWeightMt.toFixed(2)),
+      partialWeightMt: Number(mPartialWeightMt.toFixed(2)),
       totalContractValue: Number(mTotalContractValue.toFixed(2)),
       paidAmount: Number(mPaidAmount.toFixed(2)),
       remainingAmount: Number(mRemainingAmount.toFixed(2)),
