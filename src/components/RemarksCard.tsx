@@ -59,27 +59,12 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
           <div className="flex flex-col gap-1.5">
             <label htmlFor="b_date_61" className="text-xs font-semibold text-slate-700">B. Date</label>
             <input
- id="b_date_61" aria-label="B. Date"              type="date"
+              id="b_date_61" aria-label="B. Date"              type="date"
               name="b_date"
               value={formData.b_date || ''}
               onChange={onChange}
               className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] transition-all shadow-2xs cursor-pointer"
             />
-          </div>
-
-          {/* Superior / Normal Marks */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="superior_normal_marks_73" className="text-xs font-semibold text-slate-700">Superior/Normal</label>
-            <select
- id="superior_normal_marks_73" aria-label="Superior/Normal"              name="superior_normal_marks"
-              value={formData.superior_normal_marks || 'New (F2)'}
-              onChange={onChange}
-              className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] transition-all shadow-2xs cursor-pointer"
-            >
-              <option value="New (F2)">New (F2)</option>
-              <option value="Superior">Superior</option>
-              <option value="Normal">Normal</option>
-            </select>
           </div>
 
           {/* Digital Signature Upload */}
