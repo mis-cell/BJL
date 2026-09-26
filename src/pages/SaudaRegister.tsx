@@ -37,7 +37,7 @@ import SaudaPrintSlip from '../components/SaudaPrintSlip';
 import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
-import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
+import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
 
@@ -236,41 +236,76 @@ const generateSaudaHtmlEmail = (s: Sauda) => {
 };
 
 export default function SaudaRegister({ onClose, onNew, isActive = true }: { onClose?: () => void; onNew?: () => void; isActive?: boolean }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [statusTab, setStatusTab] = useState<'pending' | 'all'>('pending');
   const [saudaList, setSaudaList] = useState<Sauda[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [poList, setPoList] = useState<any[]>([]);
-  const [scpList, setScpList] = useState<any[]>([]);
   const [arrivalsList, setArrivalsList] = useState<any[]>([]);
+  const [scpList, setScpList] = useState<any[]>([]);
+  const [selectedSaudaId, setSelectedSaudaId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingSauda, setEditingSauda] = useState<Sauda | null>(null);
   const [printingSauda, setPrintingSauda] = useState<Sauda | null>(null);
   const [printingBook, setPrintingBook] = useState(false);
-  const [selectedSaudaId, setSelectedSaudaId] = useState<string | null>(null);
-  const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
   const [isAccountsModalOpen, setIsAccountsModalOpen] = useState(false);
-  const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'idle' | 'sending' | 'success' | 'error'>>({});
+  const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'sending' | 'sent' | 'error' | 'success' | 'idle'>>({});
+  const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
 
-  // 100-rows per page pagination (searches full dataset, displays paginated)
+  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(100);
+  const [pageSize, setPageSize] = useState(25);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'rejected' | 'all'>('pending');
+
+  const isUser10 = isUserId10();
+  const isUser2 = isUserId2();
+  const isAdminOrL4 = isUserAdmin() || isL5OrAdmin();
+
+  const canSeeChecked = isAdminOrL4 && !isUser10;
+  const canSeeRejected = (isAdminOrL4 || isUser2) && !isUser10;
+  const canSeeAllHistory = isAdminOrL4 && !isUser10 && !isUser2;
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, startDate, endDate, statusTab]);
+    if (isUser10 && !isUserAdmin()) {
+      if (statusTab !== 'pending') setStatusTab('pending');
+    } else if (isUser2 && !isUserAdmin() && !isL5OrAdmin()) {
+      if (statusTab === 'checked' || statusTab === 'all') setStatusTab('pending');
+    }
+  }, [statusTab, isUser10, isUser2]);
 
-  const handleToggleCheck = async (entry: Sauda) => {
+  const isCheckedSauda = (s: Sauda) => {
+    return Boolean(
+      s.is_checked || 
+      String(s.status || '').toUpperCase() === 'CHECKED' || 
+      String(s.approval_status || '').toUpperCase() === 'CHECKED' ||
+      String(s.status || '').toUpperCase() === 'APPROVED' ||
+      String(s.approval_status || '').toUpperCase() === 'APPROVED'
+    );
+  };
+
+  const isRejectedSauda = (s: Sauda) => {
+    return Boolean(
+      String(s.status || '').toUpperCase() === 'REJECTED' || 
+      String(s.approval_status || '').toUpperCase() === 'REJECTED' ||
+      Boolean(s.rejected_by)
+    );
+  };
+
+  const isPendingUncheckedSauda = (s: Sauda) => {
+    return !isCheckedSauda(s) && !isRejectedSauda(s) && !isSaudaInCheckPointOrPo(s);
+  };
+
+  const handleMarkCheck = async (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
-    const canCheck = isUserAdmin() || isUserId10() || userCtx.userRole === 'ADMIN' || userCtx.userLevel === 'L5';
+    const canCheck = isUserAdmin() || isUserId10() || isL5OrAdmin() || userCtx.userRole === 'ADMIN';
 
     if (!canCheck) {
       alert("🔒 Permission Denied: Only User ID 10 or System Admin can mark Sauda contracts as Checked.");
       return;
     }
 
-    const currentlyChecked = Boolean(entry.is_checked || entry.status === 'CHECKED' || entry.approval_status === 'CHECKED' || entry.approval_status === 'APPROVED');
+    const currentlyChecked = isCheckedSauda(entry);
     const nextChecked = !currentlyChecked;
     const checkerName = userCtx.userName || userCtx.username || userCtx.userId || (isUserAdmin() ? 'ADMIN' : 'User 10');
 
@@ -279,7 +314,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       checked_by: nextChecked ? checkerName : null,
       checked_at: nextChecked ? new Date().toISOString() : null,
       status: nextChecked ? 'CHECKED' : 'PENDING',
-      approval_status: nextChecked ? 'CHECKED' : 'PENDING'
+      approval_status: nextChecked ? 'CHECKED' : 'PENDING',
+      rejected_by: null,
+      rejected_at: null
     };
 
     setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
@@ -289,6 +326,40 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
       } catch (err) {
         console.error("Error updating check status in Supabase:", err);
+      }
+    }
+  };
+
+  const handleMarkReject = async (entry: Sauda) => {
+    const userCtx = getCurrentUserContext();
+    const canReject = isUserAdmin() || isL5OrAdmin() || isUserId2() || userCtx.userRole === 'ADMIN';
+
+    if (!canReject) {
+      alert("🔒 Permission Denied: Only System Admin, Level 4 User, or User ID 2 can Reject Sauda contracts.");
+      return;
+    }
+
+    const currentlyRejected = isRejectedSauda(entry);
+    const nextRejected = !currentlyRejected;
+    const rejectorName = userCtx.userName || userCtx.username || userCtx.userId || 'Admin';
+
+    const updatePayload = {
+      is_checked: false,
+      checked_by: null,
+      checked_at: null,
+      status: nextRejected ? 'REJECTED' : 'PENDING',
+      approval_status: nextRejected ? 'REJECTED' : 'PENDING',
+      rejected_by: nextRejected ? rejectorName : null,
+      rejected_at: nextRejected ? new Date().toISOString() : null
+    };
+
+    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+
+    if (entry.sauda_id) {
+      try {
+        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
+      } catch (err) {
+        console.error("Error updating reject status in Supabase:", err);
       }
     }
   };
@@ -820,10 +891,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   }
 
   const filteredSaudas = saudaList.filter(s => {
-    // When viewing Pending mode (default), hide Saudas that have moved into Sauda Check Point or P.O.
-    const isAlreadyMovedToCheckPoint = isSaudaInCheckPointOrPo(s);
-    if (statusTab === 'pending' && isAlreadyMovedToCheckPoint) {
-      return false;
+    // Filtering by Status Tab
+    if (statusTab === 'pending') {
+      if (!isPendingUncheckedSauda(s)) return false;
+    } else if (statusTab === 'checked') {
+      if (!isCheckedSauda(s)) return false;
+    } else if (statusTab === 'rejected') {
+      if (!isRejectedSauda(s)) return false;
     }
 
     const term = searchTerm.toLowerCase().trim();
@@ -853,9 +927,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     return true;
   }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
 
-  const pendingSaudas = saudaList.filter(s => !isSaudaInCheckPointOrPo(s));
+  const pendingSaudas = saudaList.filter(s => isPendingUncheckedSauda(s));
+  const checkedSaudas = saudaList.filter(s => isCheckedSauda(s));
+  const rejectedSaudas = saudaList.filter(s => isRejectedSauda(s));
   const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
+
   const pendingSaudasCount = pendingSaudas.length;
+  const checkedSaudasCount = checkedSaudas.length;
+  const rejectedSaudasCount = rejectedSaudas.length;
   const totalSaudas = saudaList.length;
   const pendingWeightTons = pendingSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const totalWeightTons = saudaList.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
@@ -924,8 +1003,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
         {/* 2. Large Search & Date Filter Section */}
         <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
-          {/* Segmented View Switcher: Pending vs All */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+          {/* Segmented View Switcher: Pending vs Checked vs Rejected vs All */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0 flex-wrap gap-1">
             <button
               type="button"
               onClick={() => setStatusTab('pending')}
@@ -936,7 +1015,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   : "text-slate-600 hover:text-slate-900"
               )}
             >
-              <span>Pending Saudas</span>
+              <span>Main Dashboard (Pending)</span>
               <span className={cn(
                 "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
                 statusTab === 'pending' ? "bg-emerald-700/80 text-white" : "bg-slate-200 text-slate-600"
@@ -944,24 +1023,69 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 {pendingSaudasCount}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setStatusTab('all')}
-              className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
-                statusTab === 'all'
-                  ? "bg-[#174C2C] text-white shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              <span>All Saudas History</span>
-              <span className={cn(
-                "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
-                statusTab === 'all' ? "bg-emerald-700/80 text-white" : "bg-slate-200 text-slate-600"
-              )}>
-                {totalSaudas}
-              </span>
-            </button>
+
+            {canSeeChecked && (
+              <button
+                type="button"
+                onClick={() => setStatusTab('checked')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  statusTab === 'checked'
+                    ? "bg-emerald-800 text-white shadow-2xs"
+                    : "text-emerald-800 hover:bg-emerald-50"
+                )}
+              >
+                <span>Checked Section</span>
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                  statusTab === 'checked' ? "bg-emerald-950 text-white" : "bg-emerald-100 text-emerald-900"
+                )}>
+                  {checkedSaudasCount}
+                </span>
+              </button>
+            )}
+
+            {canSeeRejected && (
+              <button
+                type="button"
+                onClick={() => setStatusTab('rejected')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  statusTab === 'rejected'
+                    ? "bg-rose-800 text-white shadow-2xs"
+                    : "text-rose-800 hover:bg-rose-50"
+                )}
+              >
+                <span>Reject Section</span>
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                  statusTab === 'rejected' ? "bg-rose-950 text-white" : "bg-rose-100 text-rose-900"
+                )}>
+                  {rejectedSaudasCount}
+                </span>
+              </button>
+            )}
+
+            {canSeeAllHistory && (
+              <button
+                type="button"
+                onClick={() => setStatusTab('all')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
+                  statusTab === 'all'
+                    ? "bg-[#174C2C] text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <span>All Saudas History</span>
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                  statusTab === 'all' ? "bg-emerald-700/80 text-white" : "bg-slate-200 text-slate-600"
+                )}>
+                  {totalSaudas}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Large Search Box */}
@@ -1045,6 +1169,60 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               <span>Print Book</span>
             </button>
 
+            {/* Quick Section Switchers Beside Print Book */}
+            <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
+              <button
+                type="button"
+                onClick={() => setStatusTab('pending')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                  statusTab === 'pending'
+                    ? "bg-[#174C2C] text-white shadow-2xs"
+                    : "text-slate-700 hover:bg-slate-200"
+                )}
+                title="Main Dashboard (Pending Saudas)"
+              >
+                <span>Main Dashboard</span>
+                <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
+              </button>
+
+              {canSeeChecked && (
+                <button
+                  type="button"
+                  onClick={() => setStatusTab('checked')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                    statusTab === 'checked'
+                      ? "bg-emerald-800 text-white shadow-2xs"
+                      : "text-emerald-800 hover:bg-emerald-100/60"
+                  )}
+                  title="Checked Section"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Checked</span>
+                  <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
+                </button>
+              )}
+
+              {canSeeRejected && (
+                <button
+                  type="button"
+                  onClick={() => setStatusTab('rejected')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                    statusTab === 'rejected'
+                      ? "bg-rose-800 text-white shadow-2xs"
+                      : "text-rose-800 hover:bg-rose-100/60"
+                  )}
+                  title="Reject Section"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reject Section</span>
+                  <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
+                </button>
+              )}
+            </div>
+
             <button
               onClick={handleCsvDownload}
               className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
@@ -1100,7 +1278,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     String(entry.status || '').toUpperCase() === 'APPROVED' || 
                     String(entry.approval_status || '').toUpperCase() === 'APPROVED'
                   );
+                  const isRejected = Boolean(
+                    String(entry.status || '').toUpperCase() === 'REJECTED' || 
+                    String(entry.approval_status || '').toUpperCase() === 'REJECTED' ||
+                    Boolean(entry.rejected_by)
+                  );
                   const checkerName = entry.checked_by || entry.approved_by || (isChecked ? 'User 10' : '');
+                  const rejectorName = entry.rejected_by || (isRejected ? 'Admin' : '');
 
                   return (
                     <tr 
@@ -1148,25 +1332,45 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                         ₹{Number(entry.b_rate).toLocaleString()}
                       </td>
                       <td className="px-3 text-center">
-                        <div className="flex flex-col items-center justify-center gap-0.5 py-0.5">
+                        <div className="flex flex-col items-center justify-center gap-1 py-1">
                           {isChecked ? (
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleToggleCheck(entry); }}
+                              onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
                               title="Checked (Click to toggle / uncheck)"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
                               <span>Checked</span>
                             </button>
-                          ) : (
+                          ) : isRejected ? (
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleToggleCheck(entry); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-900 border border-slate-300 hover:border-amber-400 transition-all cursor-pointer"
-                              title="Click to mark as Checked (User ID 10 or Admin)"
+                              onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
+                              title="Rejected (Click to toggle / un-reject)"
                             >
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              <span>Check</span>
+                              <X className="w-3.5 h-3.5 text-white" />
+                              <span>Rejected</span>
                             </button>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                                title="Click to Check (User ID 10 or Admin)"
+                              >
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 hover:text-white" />
+                                <span>Check</span>
+                              </button>
+
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
+                                title="Click to Reject (Admin, Level 4, or User 2)"
+                              >
+                                <X className="w-3 h-3 text-rose-600 hover:text-white" />
+                                <span>Reject</span>
+                              </button>
+                            </div>
                           )}
 
                           {isChecked && checkerName && (
@@ -1175,6 +1379,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                               isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
                             )}>
                               ✓ {checkerName}
+                            </span>
+                          )}
+
+                          {isRejected && rejectorName && (
+                            <span className={cn(
+                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
+                              isSelected ? "bg-rose-900 text-rose-200" : "bg-rose-100 text-rose-900 border border-rose-200"
+                            )}>
+                              ✗ {rejectorName}
                             </span>
                           )}
                         </div>
