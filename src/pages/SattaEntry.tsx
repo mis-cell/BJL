@@ -369,75 +369,14 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
         setGrades(gradeData || []);
         setMarkas(markaData || []);
         let finalBaseRates = (baseRatesResult && baseRatesResult.data) ? baseRatesResult.data : [];
-        const hasAprilFirst = finalBaseRates.some((r: any) => r.start_date === '2026-04-01');
-        if (supabase && finalBaseRates.length < 10 && !hasAprilFirst) {
-          console.log("Empty or sparse Satta history table in SattaEntry. Silently seeding previous historical records...");
-          const seedList = [
-            { start: '2026-04-01', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-01T11:00:00.000Z' },
-            { start: '2026-04-02', rate: 16700, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-02T11:00:00.000Z' },
-            { start: '2026-04-03', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-03T11:00:00.000Z' },
-            { start: '2026-04-04', rate: 17200, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-04T11:00:00.000Z' },
-            { start: '2026-04-07', rate: 17300, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-07T11:00:00.000Z' },
-            { start: '2026-04-09', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-09T11:00:00.000Z' },
-            { start: '2026-04-10', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-10T11:00:00.000Z' },
-            { start: '2026-04-15', rate: 16501, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-15T11:00:00.000Z' },
-            { start: '2026-04-16', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-16T11:00:00.000Z' },
-            { start: '2026-04-22', rate: 16700, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-22T11:00:00.000Z' },
-            { start: '2026-04-24', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-24T11:00:00.000Z' },
-            { start: '2026-04-25', rate: 17300, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-25T11:00:00.000Z' },
-            { start: '2026-04-27', rate: 17500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-27T11:00:00.000Z' },
-            { start: '2026-04-30', rate: 17100, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-30T11:00:00.000Z' },
-            { start: '2026-05-01', rate: 17500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-05-01T11:00:00.000Z' },
-          ];
-
-          for (const item of seedList) {
-            await supabase.from('satta_calculated_rates').delete().eq('start_date', item.start);
-            await supabase.from('satta_base_rates').delete().eq('start_date', item.start);
-
-            const { data: rRecord, error: rErr } = await supabase
-              .from('satta_base_rates')
-              .insert({
-                base_rate: item.rate,
-                start_date: item.start,
-                remarks: item.remarks,
-                created_at: item.created_at
-              })
-              .select()
-              .single();
-
-            if (rErr) continue;
-
-            const calcRows: any[] = [];
-            const diffsToUse = differentialsResult?.data || [];
-            
-            EXCEL_SEED_DATA.forEach(row => {
-              Object.keys(row.diffs).forEach(grade => {
-                const dbDiff = diffsToUse.find((d: any) => d.area === row.area && d.grade === grade);
-                const diffVal = dbDiff ? Number(dbDiff.differential) : row.diffs[grade];
-                calcRows.push({
-                  base_rate_id: rRecord.id,
-                  base_rate: item.rate,
-                  start_date: item.start,
-                  area: row.area,
-                  grade: grade,
-                  differential: diffVal,
-                  final_rate: item.rate + diffVal
-                });
-              });
-            });
-
-            if (calcRows.length > 0) {
-              await supabase.from('satta_calculated_rates').insert(calcRows);
-            }
-          }
-
-          // Refetch fresh rates
-          const { data: fetchedFresh } = await supabase
-            .from('satta_base_rates')
-            .select('*')
-            .order('start_date', { ascending: false });
-          if (fetchedFresh) {
-            finalBaseRates = fetchedFresh;
+        if (finalBaseRates.length > 0) {
+          setDbBaseRates(finalBaseRates);
+          const active = finalBaseRates[0];
+          if (active && active.base_rate) {
+            setFormData(prev => ({
+              ...prev,
+              b_rate: prev.b_rate && prev.b_rate > 0 ? prev.b_rate : Number(active.base_rate)
+            }));
           }
         }
 

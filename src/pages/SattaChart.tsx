@@ -68,6 +68,21 @@ const ALL_GRADES = [
   'BOT', 'B.BOT', 'X.BOT', 'DRUMS'
 ];
 
+export const MONTH_COLS = [
+  { name: 'APR', month: '04', days: 30, yearOffset: 0 },
+  { name: 'MAY', month: '05', days: 31, yearOffset: 0 },
+  { name: 'JUN', month: '06', days: 30, yearOffset: 0 },
+  { name: 'JUL', month: '07', days: 31, yearOffset: 0 },
+  { name: 'AUG', month: '08', days: 31, yearOffset: 0 },
+  { name: 'SEP', month: '09', days: 30, yearOffset: 0 },
+  { name: 'OCT', month: '10', days: 31, yearOffset: 0 },
+  { name: 'NOV', month: '11', days: 30, yearOffset: 0 },
+  { name: 'DEC', month: '12', days: 31, yearOffset: 0 },
+  { name: 'JAN', month: '01', days: 31, yearOffset: 1 },
+  { name: 'FEB', month: '02', days: 28, yearOffset: 1 },
+  { name: 'MAR', month: '03', days: 31, yearOffset: 1 }
+];
+
 interface AreaDifferential {
   area: string;
   diffs: Record<string, number>;
@@ -199,7 +214,9 @@ export default function SattaChart({
   isEmbedded?: boolean;
   onNavigate?: (page: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'matrix' | 'analytics' | 'history'>('matrix');
+  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix' | 'analytics' | 'history'>('base_rate');
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
   const [showUploadSuccessModal, setShowUploadSuccessModal] = useState<boolean>(false);
   
   // Rate Inputs
@@ -259,6 +276,17 @@ export default function SattaChart({
       handleViewHistoryDetails(rateHistory[0]);
     }
   }, [historySubTab, rateHistory]);
+
+  // Fast rate lookup map by date key (YYYY-MM-DD)
+  const rateLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    rateHistory.forEach(r => {
+      if (r.start_date && r.base_rate !== undefined && r.base_rate !== null) {
+        map.set(r.start_date, Number(r.base_rate));
+      }
+    });
+    return map;
+  }, [rateHistory]);
 
   const ensureSattaTablesExist = async () => {
     if (!supabase) return;
@@ -556,27 +584,10 @@ export default function SattaChart({
         throw error;
       }
 
-      const hasAprilFirst = data && data.some((r: any) => r.start_date === '2026-04-01');
-      if (data && data.length < 10 && !hasAprilFirst) {
-        console.log("Empty or sparse Satta history table. Silently auto-seeding previous historical records...");
-        await silentSeedHistoricalList();
-        
-        const { data: freshlySeeded, error: refetchErr } = await supabase
-          .from('satta_base_rates')
-          .select('*')
-          .order('start_date', { ascending: false })
-          .order('created_at', { ascending: false });
-        
-        if (!refetchErr && freshlySeeded) {
-          setRateHistory(freshlySeeded);
-          if (freshlySeeded.length > 0 && !selectedHistoryRun) {
-            handleViewHistoryDetails(freshlySeeded[0]);
-          }
-          return;
-        }
-      }
-
       setRateHistory(data || []);
+      if (data && data.length > 0 && !selectedHistoryRun) {
+        handleViewHistoryDetails(data[0]);
+      }
     } catch (err) {
       console.error("Error fetching rate logs:", err);
     }
@@ -1180,13 +1191,26 @@ export default function SattaChart({
           </div> */}
 
         {/* Navigation Tabs */}
-        <div className="flex pt-2 gap-4 overflow-x-auto">
+        <div className="flex pt-2 gap-3 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('base_rate')}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
+              activeTab === 'base_rate'
+                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
+                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
+            )}
+          >
+            <DollarSign className="h-4 w-4" />
+            <span>Satta Chart Base Rate</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('matrix')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
               activeTab === 'matrix'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
+                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
             )}
           >
@@ -1197,9 +1221,9 @@ export default function SattaChart({
           <button
             onClick={() => setActiveTab('analytics')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
               activeTab === 'analytics'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
+                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
             )}
           >
@@ -1210,16 +1234,16 @@ export default function SattaChart({
           <button
             onClick={() => setActiveTab('history')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2",
+              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
               activeTab === 'history'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105"
+                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
                 : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
             )}
           >
             <History className="h-4 w-4" />
             <span>Audit History & Rate Logs ({rateHistory.length})</span>
           </button>
-          <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right">
+          <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right shrink-0">
               <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Last Updated</div>
               <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
                 <Clock className="h-3 w-3 text-[#D4AF37]" />
@@ -1388,6 +1412,129 @@ export default function SattaChart({
       </div>
 
       {/* MAIN CONTENT AREA BY TAB */}
+
+      {/* TAB 0: SATTA CHART BASE RATE (SIMPLIFIED FULL-YEAR & DAILY MATRIX VIEW) */}
+      {activeTab === 'base_rate' && (
+        <div className="space-y-4">
+          {/* SIMPLIFIED CONTROLS */}
+          <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#E8E2D5] shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-[#1E331B] text-[#D4AF37] rounded-2xl shadow-inner">
+                <DollarSign className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-base md:text-lg font-black text-[#1E331B] tracking-tight font-serif">
+                  Satta Chart Base Rate
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Full-Year Daily Base Rate Matrix dynamically loaded from Supabase database
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 bg-[#FAF8F5] px-3.5 py-2 rounded-xl border border-slate-300">
+                <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Year:</span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent text-sm font-black text-[#1E331B] outline-none cursor-pointer pr-2"
+                >
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                  <option value={2027}>2027</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  loadChartConfig();
+                  fetchRateHistory();
+                }}
+                disabled={isLoading}
+                className="bg-[#1E331B] hover:bg-[#2A4726] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+              >
+                <RefreshCcw className={`h-4 w-4 text-[#D4AF37] ${isLoading ? 'animate-spin' : ''}`} />
+                <span>View Full Year</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPrintPreview(true)}
+                className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#1E331B] font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print Preview</span>
+              </button>
+            </div>
+          </div>
+
+          {/* FULL-YEAR DAILY BASE RATE MATRIX TABLE */}
+          <div className="bg-white rounded-2xl border border-[#E8E2D5] shadow-sm overflow-hidden">
+            <div className="bg-[#1E331B] text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5 text-[#D4AF37]" />
+                <span className="text-sm font-black uppercase tracking-wider">
+                  Full-Year Daily Base Rate Schedule ({selectedYear})
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-emerald-200">
+                <span>Database Source: <strong className="text-white font-mono">satta_base_rates</strong></span>
+                <span className="text-[#D4AF37]">•</span>
+                <span>Active Recorded Days: <strong className="text-white font-mono">{rateHistory.length}</strong></span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-center border-collapse">
+                <thead>
+                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#1E331B] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 border-r border-slate-300 sticky left-0 bg-[#FAF8F5] z-10 w-16 text-slate-800">
+                      Date
+                    </th>
+                    {MONTH_COLS.map((m) => (
+                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#1E331B]">
+                        {m.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs font-mono">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const dayStr = String(day).padStart(2, '0');
+                    return (
+                      <tr key={day} className="hover:bg-amber-50/60 transition-colors">
+                        <td className="py-2 px-3 font-bold text-slate-700 bg-[#FAF8F5] border-r border-slate-300 sticky left-0 z-10">
+                          {dayStr}
+                        </td>
+                        {MONTH_COLS.map((m) => {
+                          const targetYear = selectedYear + (m.yearOffset || 0);
+                          const dateKey = `${targetYear}-${m.month}-${dayStr}`;
+                          const hasDay = day <= m.days;
+                          const rateVal = hasDay ? rateLookup.get(dateKey) : null;
+
+                          return (
+                            <td key={m.name} className="py-2 px-2 border-r border-slate-100 text-slate-800">
+                              {rateVal && rateVal > 0 ? (
+                                <span className="font-bold text-[#1E331B] bg-emerald-50 text-emerald-950 px-2 py-0.5 rounded border border-emerald-200 inline-block min-w-[58px]">
+                                  {rateVal.toLocaleString('en-IN')}
+                                </span>
+                              ) : (
+                                <span className="text-slate-300 font-normal">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* TAB 1: LIVE PIVOT MATRIX & CONTROL SIDEBAR */}
       {activeTab === 'matrix' && (
@@ -2222,6 +2369,122 @@ export default function SattaChart({
               >
                 <Save className="h-4 w-4 text-[#D4AF37]" />
                 <span>Publish Schedule</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT PREVIEW MODAL */}
+      {showPrintPreview && (
+        <div className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl border-2 border-[#D4AF37] my-auto overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="bg-[#1E331B] text-white px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37] print:hidden">
+              <div className="flex items-center gap-2.5">
+                <Printer className="h-5 w-5 text-[#D4AF37]" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                  Print Preview — Satta Chart Base Rate ({selectedYear})
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#1E331B] font-black px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print (A4)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPrintPreview(false)}
+                  className="bg-white/10 hover:bg-white/20 text-white p-1.5 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Content Section */}
+            <div id="satta-print-area" className="p-6 md:p-8 bg-white text-slate-900 font-sans print:p-0">
+              <div className="text-center mb-6 border-b-2 border-slate-900 pb-4">
+                <h1 className="text-xl md:text-2xl font-black font-serif tracking-tight text-slate-900 uppercase">
+                  SATTA CHART BASE RATE
+                </h1>
+                <div className="text-sm font-bold text-slate-700 mt-1">
+                  Bally Jute Company Limited • Jute Season Base Rate Schedule
+                </div>
+                <div className="text-xs font-mono font-bold text-slate-600 mt-0.5">
+                  Year: {selectedYear} • Source: Supabase Base Rate Master
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-center border-collapse border border-slate-900 text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-900 font-black uppercase">
+                      <th className="py-2 px-2 border-r border-slate-900 w-12 text-slate-900">Date</th>
+                      {MONTH_COLS.map((m) => (
+                        <th key={m.name} className="py-2 px-2 border-r border-slate-900 text-slate-900">
+                          {m.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-400 font-mono text-[11px]">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const dayStr = String(day).padStart(2, '0');
+                      return (
+                        <tr key={day} className="border-b border-slate-300">
+                          <td className="py-1.5 px-2 font-bold bg-slate-50 border-r border-slate-900 text-slate-900">
+                            {dayStr}
+                          </td>
+                          {MONTH_COLS.map((m) => {
+                            const targetYear = selectedYear + (m.yearOffset || 0);
+                            const dateKey = `${targetYear}-${m.month}-${dayStr}`;
+                            const hasDay = day <= m.days;
+                            const rateVal = hasDay ? rateLookup.get(dateKey) : null;
+
+                            return (
+                              <td key={m.name} className="py-1.5 px-1.5 border-r border-slate-400 text-slate-900">
+                                {rateVal && rateVal > 0 ? (
+                                  <span className="font-bold">{rateVal.toLocaleString('en-IN')}</span>
+                                ) : (
+                                  <span className="text-slate-400 font-normal">—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-300 flex justify-between items-center text-[10px] text-slate-500 font-medium print:mt-4">
+                <span>Generated by Bally Jute ERP Base Rate Module</span>
+                <span>Page 1 of 1 • Official Satta Matrix</span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end gap-2 print:hidden">
+              <button
+                type="button"
+                onClick={() => setShowPrintPreview(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                Close Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="bg-[#1E331B] hover:bg-[#2A4726] text-white font-black px-5 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow cursor-pointer active:scale-95"
+              >
+                <Printer className="h-4 w-4 text-[#D4AF37]" />
+                <span>Print Report</span>
               </button>
             </div>
           </div>
