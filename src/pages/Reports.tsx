@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { History } from 'lucide-react';
+import {
+  FileText,
+  TrendingUp,
+  Truck,
+  MapPin,
+  Layers,
+  Wallet,
+  BarChart3,
+  History
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import LegacyLayout from '../components/LegacyLayout';
 import PurchaseOrderSummary from '../components/PurchaseOrderSummary';
@@ -9,30 +18,41 @@ import { SaudaDashboardView } from '../components/reports/SaudaDashboardView';
 import { SaudaAdvancedReportsView } from '../components/reports/SaudaAdvancedReportsView';
 import { MapWisePOView } from '../components/reports/MapWisePOView';
 import { DataAggregationView } from '../components/reports/DataAggregationView';
+import PaymentReport from '../components/PaymentReport';
+import PaymentModule from './TredeReport';
 import { dbModule } from '../services/dbModule';
 
 export default function Reports({ onClose, initialReportType }: { onClose?: () => void; initialReportType?: string }) {
   const [reportType, setReportType] = useState<
-    'amad' | 'sauda_analyze' | 'po_summary' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report' | 'trade'
+    'po_summary' | 'sauda_analyze' | 'amad' | 'map_wise_po' | 'data_aggregation' | 'global_analytics' | 'payment_report' | 'trade'
   >(() => {
     if (initialReportType) {
       const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
       if (clean === 'trade_report' || clean === 'trade') return 'trade';
+      if (clean === 'payment_report' || clean === 'payment') return 'payment_report';
+      if (clean === 'amad' || clean === 'temporary_arrival') return 'amad';
+      if (
+        clean === 'po_summary' ||
+        clean === 'po' ||
+        clean === 'sauda_check_point' ||
+        clean === 'sauda_check' ||
+        clean === 'saudacheckpoint'
+      ) {
+        return 'po_summary';
+      }
+      if (clean === 'map_wise_po' || clean === 'map_wise' || clean === 'map') return 'map_wise_po';
+      if (clean === 'data_aggregation' || clean === 'data_agg') return 'data_aggregation';
       if (
         clean === 'sauda_analyze' ||
         clean === 'report1' ||
-        clean === 'po_summary' ||
-        clean === 'map_wise_po' ||
-        clean === 'map_wise' ||
-        clean === 'data_aggregation' ||
-        clean === 'global_analytics' ||
-        clean === 'payment_report' ||
-        clean === 'amad'
+        clean === 'sauda' ||
+        clean === 'analytics' ||
+        clean === 'percentage_analytics'
       ) {
-        return (clean === 'report1' ? 'sauda_analyze' : clean === 'map_wise' ? 'map_wise_po' : clean) as any;
+        return 'sauda_analyze';
       }
     }
-    return 'sauda_analyze';
+    return 'po_summary';
   });
 
   useEffect(() => {
@@ -40,16 +60,30 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
       const clean = initialReportType.toLowerCase().replace('reports:', '').trim();
       if (clean === 'trade_report' || clean === 'trade') {
         setReportType('trade');
+      } else if (clean === 'payment_report' || clean === 'payment') {
+        setReportType('payment_report');
+      } else if (clean === 'amad' || clean === 'temporary_arrival') {
+        setReportType('amad');
+      } else if (
+        clean === 'po_summary' ||
+        clean === 'po' ||
+        clean === 'sauda_check_point' ||
+        clean === 'sauda_check' ||
+        clean === 'saudacheckpoint'
+      ) {
+        setReportType('po_summary');
+      } else if (clean === 'map_wise_po' || clean === 'map_wise' || clean === 'map') {
+        setReportType('map_wise_po');
+      } else if (clean === 'data_aggregation' || clean === 'data_agg') {
+        setReportType('data_aggregation');
       } else if (
         clean === 'sauda_analyze' ||
-        clean === 'po_summary' ||
-        clean === 'map_wise_po' ||
-        clean === 'data_aggregation' ||
-        clean === 'global_analytics' ||
-        clean === 'payment_report' ||
-        clean === 'amad'
+        clean === 'report1' ||
+        clean === 'sauda' ||
+        clean === 'analytics' ||
+        clean === 'percentage_analytics'
       ) {
-        setReportType(clean as any);
+        setReportType('sauda_analyze');
       }
     }
   }, [initialReportType]);
@@ -61,16 +95,30 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
         const clean = String(tab).toLowerCase().replace('reports:', '').trim();
         if (clean === 'trade_report' || clean === 'trade') {
           setReportType('trade');
+        } else if (clean === 'payment_report' || clean === 'payment') {
+          setReportType('payment_report');
+        } else if (clean === 'amad' || clean === 'temporary_arrival') {
+          setReportType('amad');
+        } else if (
+          clean === 'po_summary' ||
+          clean === 'po' ||
+          clean === 'sauda_check_point' ||
+          clean === 'sauda_check' ||
+          clean === 'saudacheckpoint'
+        ) {
+          setReportType('po_summary');
+        } else if (clean === 'map_wise_po' || clean === 'map_wise' || clean === 'map') {
+          setReportType('map_wise_po');
+        } else if (clean === 'data_aggregation' || clean === 'data_agg') {
+          setReportType('data_aggregation');
         } else if (
           clean === 'sauda_analyze' ||
-          clean === 'po_summary' ||
-          clean === 'map_wise_po' ||
-          clean === 'data_aggregation' ||
-          clean === 'global_analytics' ||
-          clean === 'payment_report' ||
-          clean === 'amad'
+          clean === 'report1' ||
+          clean === 'sauda' ||
+          clean === 'analytics' ||
+          clean === 'percentage_analytics'
         ) {
-          setReportType(clean as any);
+          setReportType('sauda_analyze');
         }
       }
     };
@@ -209,39 +257,100 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
     <LegacyLayout title="Reports & Analytics" onClose={onClose}>
       <div className="space-y-4">
         {/* Module Selector win95 Tab styling */}
-        <div className="flex flex-wrap items-center gap-1.5 px-2 py-2 bg-green-900 border-2 border-green-950 rounded-xl">
-          {/* Report1 (formerly Sauda Analyze) */}
-          <button
-            id="tab-report1"
-            onClick={() => setReportType('sauda_analyze')}
-            className={cn(
-              "px-5 h-9 text-[11px] sm:text-xs font-black uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150 shadow-sm",
-              reportType === 'sauda_analyze'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30 font-black scale-[1.02]"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            Report
-          </button>
-
-          {/* MAP WISE (formerly Map Wise P.O) */}
-          <button
-            id="tab-map-wise"
-            onClick={() => setReportType('map_wise_po')}
-            className={cn(
-              "px-5 h-9 text-[11px] sm:text-xs font-black uppercase tracking-wide",
-              "rounded-lg border transition-all duration-150 shadow-sm",
-              reportType === 'map_wise_po'
-                ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30 font-black scale-[1.02]"
-                : "bg-green-950 text-green-100 border-green-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
-            )}
-          >
-            MAP WISE
-          </button>
+        <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-2 bg-emerald-950 border-2 border-emerald-900 rounded-xl shadow-md">
+          {[
+            {
+              id: 'po_summary' as const,
+              buttonId: 'tab-po-summary',
+              label: 'Sauda Check Point',
+              icon: FileText,
+              badge: '10 Reports'
+            },
+            {
+              id: 'sauda_analyze' as const,
+              buttonId: 'tab-report1',
+              label: 'Sauda Analytics',
+              icon: TrendingUp,
+              badge: 'Analytics'
+            },
+            {
+              id: 'amad' as const,
+              buttonId: 'tab-amad',
+              label: 'Amad Register',
+              icon: Truck,
+              badge: `${amadData.length}`
+            },
+            {
+              id: 'map_wise_po' as const,
+              buttonId: 'tab-map-wise',
+              label: 'MAP WISE P.O',
+              icon: MapPin,
+              badge: 'GIS'
+            },
+            {
+              id: 'data_aggregation' as const,
+              buttonId: 'tab-data-aggregation',
+              label: 'Data Aggregation',
+              icon: Layers,
+              badge: 'Aggregator'
+            },
+            {
+              id: 'payment_report' as const,
+              buttonId: 'tab-payment',
+              label: 'Payment Report',
+              icon: Wallet,
+              badge: 'Finance'
+            },
+            {
+              id: 'trade' as const,
+              buttonId: 'tab-trade',
+              label: 'Trade Report',
+              icon: BarChart3,
+              badge: 'Trade'
+            }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = reportType === tab.id;
+            return (
+              <button
+                key={tab.id}
+                id={tab.buttonId}
+                onClick={() => setReportType(tab.id)}
+                className={cn(
+                  "px-3 sm:px-4 h-9 text-[11px] sm:text-xs font-black uppercase tracking-wide",
+                  "rounded-lg border transition-all duration-150 shadow-sm flex items-center gap-2",
+                  isActive
+                    ? "bg-yellow-400 text-green-950 border-yellow-300 shadow-md shadow-yellow-500/30 scale-[1.02]"
+                    : "bg-emerald-900 text-emerald-100 border-emerald-800 hover:bg-yellow-400 hover:text-green-950 hover:border-yellow-300"
+                )}
+              >
+                <Icon className={cn("w-3.5 h-3.5 shrink-0", isActive ? "text-green-950" : "text-emerald-300")} />
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={cn(
+                      "text-[8.5px] font-black px-1.5 py-0.5 rounded-full leading-none",
+                      isActive
+                        ? "bg-green-950 text-yellow-300"
+                        : "bg-emerald-950 text-emerald-300"
+                    )}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* --- 1. AMAD REGISTER VIEW --- */}
+        {/* --- 1. SAUDA CHECK POINT (P.O SUMMARY) --- */}
+        {reportType === 'po_summary' && (
+          <div className="space-y-4" id="report-sauda-checkpoint-container">
+            <PurchaseOrderSummary refreshTrigger={refreshTrigger} />
+          </div>
+        )}
+
+        {/* --- 2. AMAD REGISTER VIEW --- */}
         {reportType === 'amad' && (
           <AmadReportView
             amadData={amadData}
@@ -250,7 +359,7 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
           />
         )}
 
-        {/* --- 2. SAUDA ANALYZE (OUT) --- */}
+        {/* --- 3. SAUDA ANALYZE (OUT) --- */}
         {reportType === 'sauda_analyze' && (
           <div
             className="bg-gradient-to-br from-emerald-50 via-white to-green-50 border border-emerald-200 rounded-2xl shadow-lg p-3 sm:p-4 space-y-4"
@@ -333,13 +442,6 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
           </div>
         )}
 
-        {/* --- 3. PO SUMMARY --- */}
-        {reportType === 'po_summary' && (
-          <div className="bg-emerald-800 border-2 border-emerald-950 shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 rounded-sm">
-            <PurchaseOrderSummary refreshTrigger={refreshTrigger} />
-          </div>
-        )}
-
         {/* --- 4. MAP WISE P.O --- */}
         {reportType === 'map_wise_po' && (
           <MapWisePOView
@@ -357,6 +459,20 @@ export default function Reports({ onClose, initialReportType }: { onClose?: () =
             saudaData={saudaData}
             poDetails={poDetails}
           />
+        )}
+
+        {/* --- 6. PAYMENT REPORT --- */}
+        {reportType === 'payment_report' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-md p-2 sm:p-4">
+            <PaymentReport onClose={() => setReportType('po_summary')} />
+          </div>
+        )}
+
+        {/* --- 7. TRADE REPORT --- */}
+        {reportType === 'trade' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-md p-2 sm:p-4">
+            <PaymentModule onClose={() => setReportType('po_summary')} />
+          </div>
         )}
 
         {/* Bottom Status Ribbon */}

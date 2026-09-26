@@ -331,6 +331,8 @@ export default function PurchaseOrder({
             actionMenu={actionMenu}
             setActionMenu={setActionMenu}
             canEditOrDelete={canEditOrDelete}
+            sattaBaseRates={sattaBases && sattaBases.length > 0 ? sattaBases : sattaBaseRates}
+            allTempArrivals={allTempArrivals}
           />
         </LegacyLayout>
       )}

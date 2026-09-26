@@ -186,13 +186,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     );
   });
   const [settledAt, setSettledAt] = useState<string | null>(null);
-  const [settledBy, setSettledBy] = useState<string | null>(null);
+  const [settledBy, setSettledBy] = useState<string | null>('Operator');
   const [approvalLevel, setApprovalLevel] = useState<string>('ADMIN');
 
   // Applicable Rate Selection Mode
   type RateMode = 'rate_difference' | 'last_arrival_satta' | 'sauda_satta' | 'custom';
   const [selectedRateMode, setSelectedRateMode] = useState<RateMode>('rate_difference');
   const [customRateInput, setCustomRateInput] = useState<number>(0);
+  const [deductionQtyMode, setDeductionQtyMode] = useState<'beyond_tolerance' | 'full_variance'>('beyond_tolerance');
 
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -406,11 +407,13 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   };
 
   const saudaBaseRate = useMemo(() => {
-    const fromPo = parseFloat(po.rate || po.purchase_rate || po.base_rate || 0);
-    return fromPo > 0 ? fromPo : getSattaBaseRateOnDate(saudaDate);
+    // User policy: Sauda Date means P.O Date TD5 base rate
+    const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
+    return fromBrate > 0 ? fromBrate : getSattaBaseRateOnDate(saudaDate);
   }, [saudaDate, liveBaseRates, sattaBaseRates, po]);
 
   const arrivalBaseRate = useMemo(() => {
+    // User policy: Temporary Arrival Date TD5 base rate
     return getSattaBaseRateOnDate(lastArrivalDate);
   }, [lastArrivalDate, liveBaseRates, sattaBaseRates]);
 
@@ -434,16 +437,19 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const isWithinTolerance = absDiffQtl <= (tolerance.toleranceQtl + 0.001);
 
   // Policy-compliant Deductible Quantity
-  // "Deduct only the quantity exceeding the allowed tolerance. Do not deduct the full Excess or Short quantity before applying the tolerance."
-  // "Deductible Quantity = Excess/Short Difference − Allowed Tolerance"
-  const deductibleQtyQtl = isWithinTolerance ? 0 : Math.max(0, absDiffQtl - tolerance.toleranceQtl);
+  // Standard policy: Deduct only the quantity exceeding the allowed tolerance (Lower of 3% or 15 Quintal / 1,500 kg).
+  // Operator can also switch to 'full_variance' if full deduction is required.
+  const beyondToleranceQtyQtl = isWithinTolerance ? 0 : Math.max(0, absDiffQtl - tolerance.toleranceQtl);
+  const deductibleQtyQtl = deductionQtyMode === 'full_variance' ? absDiffQtl : beyondToleranceQtyQtl;
   const deductibleQtyMt = deductibleQtyQtl / 10;
 
   // Policy Status Label
-  const policyStatusText: 'Within Tolerance – No Deduction' | 'Excess Deduction' | 'Short Deduction' = 
-    isWithinTolerance 
-      ? 'Within Tolerance – No Deduction' 
-      : (isExcess ? 'Excess Deduction' : 'Short Deduction');
+  const policyStatusText: string = 
+    deductionQtyMode === 'full_variance'
+      ? (isExcess ? 'Full Excess Deduction' : (isShort ? 'Full Short Deduction' : 'No Variance'))
+      : (isWithinTolerance 
+          ? 'Within Tolerance – No Deduction' 
+          : (isExcess ? 'Excess Deduction' : 'Short Deduction'));
 
   // Which Satta Rate is used for Deduction
   const applicableRate = useMemo(() => {
@@ -470,25 +476,24 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         return `Custom Satta Rate (₹${customRateInput.toLocaleString()}/Qtl)`;
       case 'rate_difference':
       default:
-        return `Rate Difference |Temp Arrival − Sauda| (₹${rateDifference.toLocaleString()}/Qtl)`;
+        return `TD5 Rate Difference |Temp Arrival − Sauda| (₹${rateDifference.toLocaleString()}/Qtl)`;
     }
   }, [selectedRateMode, arrivalBaseRate, saudaBaseRate, rateDifference, customRateInput]);
 
   // Total Deduction Calculation: Deductible Quantity × Applicable Rate = Total Deduction
   const totalCalculatedAmount = useMemo(() => {
-    if (isWithinTolerance) return 0;
     const calc = deductibleQtyQtl * applicableRate;
     return Math.round(calc * 100) / 100;
-  }, [isWithinTolerance, deductibleQtyQtl, applicableRate]);
+  }, [deductibleQtyQtl, applicableRate]);
 
   // Total Final Payable
   const totalFinalPayable = useMemo(() => {
-    if (isWithinTolerance) return existingSaudaAmount;
+    if (totalCalculatedAmount === 0) return existingSaudaAmount;
     if (isExcess) {
       return Math.round((existingSaudaAmount + totalCalculatedAmount) * 100) / 100;
     }
     return Math.round((existingSaudaAmount - totalCalculatedAmount) * 100) / 100;
-  }, [isWithinTolerance, isExcess, existingSaudaAmount, totalCalculatedAmount]);
+  }, [isExcess, existingSaudaAmount, totalCalculatedAmount]);
 
   // PO / Header Grade Resolution
   const resolvedGrade = useMemo(() => {
@@ -700,14 +705,16 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       last_arrival_date: normalizeToYMD(lastArrivalDate),
       applicable_rate: Number(applicableRate),
       rate_basis: selectedRateMode,
+      rate_difference: Number(rateDifference),
       deduction_qty_mt: Number(deductibleQtyMt.toFixed(3)),
+      deduction_qty_qtl: Number(deductibleQtyQtl.toFixed(2)),
       deduction_amount: Number(totalCalculatedAmount),
       status: 'approved',
       remarks: remarks || `${policyStatusText}: Deductible ${deductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl = ₹${totalCalculatedAmount}.`,
       arrival_numbers: arrivalNumbersString,
       grade_breakdown: JSON.stringify(gradeBreakdownList),
-      approved_by: 'Operator',
-      approval_level: 'ADMIN',
+      approved_by: settledBy || 'Operator',
+      approval_level: approvalLevel || 'ADMIN',
       created_at: nowIso,
       updated_at: nowIso
     };
@@ -774,8 +781,8 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
       setIsSettled(true);
       setSettledAt(nowIso);
-      setSettledBy('Operator');
-      setApprovalLevel('ADMIN');
+      setSettledBy(settledBy || 'Operator');
+      setApprovalLevel(approvalLevel || 'ADMIN');
       setSaveMessage("✓ Settlement record saved and locked into sauda_check_point_deductions!");
 
       if (onSaveSuccess) onSaveSuccess();
@@ -991,9 +998,64 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     ? "bg-purple-100/70 border-purple-300 text-purple-950" 
                     : "bg-amber-100/70 border-amber-300 text-amber-950"
               )}>
-                <span className="text-[8.5px] font-extrabold uppercase block">Deductible Qty</span>
+                <span className="text-[8.5px] font-extrabold uppercase block">
+                  {isWithinTolerance ? 'Tolerance Status' : (isExcess ? 'Net Excess Qty' : 'Net Short Qty')}
+                </span>
                 <strong className="text-xs font-black block mt-0.5">{deductibleQtyMt.toFixed(3)} MT</strong>
                 <span className="text-[8.5px] font-bold">({deductibleQtyQtl.toFixed(2)} Qtl • {policyStatusText})</span>
+              </div>
+            </div>
+
+            {/* TD5 Rate & Penalty Audit Policy Box */}
+            <div className="mt-2 bg-gradient-to-r from-amber-50/70 via-indigo-50/50 to-emerald-50/70 p-2.5 rounded-md border border-indigo-200/80 text-[10.5px] font-mono">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-1.5 mb-1.5">
+                <span className="font-black text-indigo-950 uppercase text-[9.5px] flex items-center gap-1">
+                  <span>⚖️</span> TOLERANCE &amp; TD5 PENALTY POLICY APPLIED:
+                </span>
+                <span className="text-[8.5px] font-bold bg-white text-indigo-900 px-2 py-0.5 rounded border border-indigo-200">
+                  Tolerance: Min(3% of {contractMt.toFixed(3)} MT, 1.500 MT) = ±{tolerance.toleranceMt.toFixed(3)} MT
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="bg-white p-1.5 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">1. Sauda (P.O) Date TD5 Rate</span>
+                  <span className="font-black text-slate-900 text-[11px]">₹{saudaBaseRate.toLocaleString()}</span>
+                  <span className="text-[8px] text-slate-500 block">on {formatDisplayDate(saudaDate)}</span>
+                </div>
+
+                <div className="bg-white p-1.5 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">2. Temp Arrival Date TD5 Rate</span>
+                  <span className="font-black text-emerald-900 text-[11px]">₹{arrivalBaseRate.toLocaleString()}</span>
+                  <span className="text-[8px] text-slate-500 block">on {formatDisplayDate(lastArrivalDate)}</span>
+                </div>
+
+                <div className="bg-white p-1.5 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">3. TD5 Rate Difference</span>
+                  <span className="font-black text-amber-700 text-[11px]">|₹{arrivalBaseRate.toLocaleString()} − ₹{saudaBaseRate.toLocaleString()}| = ₹{rateDifference.toLocaleString()}/Qtl</span>
+                  <span className="text-[8px] text-amber-600 block">per Quintal basis</span>
+                </div>
+
+                <div className={cn(
+                  "p-1.5 rounded border",
+                  isWithinTolerance && totalCalculatedAmount === 0
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-900" 
+                    : isExcess 
+                      ? "bg-purple-50 border-purple-300 text-purple-900" 
+                      : "bg-amber-50 border-amber-300 text-amber-900"
+                )}>
+                  <span className="text-[8px] uppercase font-bold block">
+                    {isWithinTolerance && totalCalculatedAmount === 0 ? '4. Excess Penalty' : (isExcess ? '4. Excess Penalty Amount' : '4. Short Deduction Amount')}
+                  </span>
+                  <span className="font-black text-[11px] block">
+                    ₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-[7.5px] opacity-80 block truncate">
+                    {isWithinTolerance && totalCalculatedAmount === 0
+                      ? `Within ±${tolerance.toleranceMt.toFixed(3)} MT Tol (₹0.00)` 
+                      : `₹${applicableRate.toLocaleString()}/Qtl × ${deductibleQtyQtl.toFixed(2)} Qtl`}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -1058,7 +1120,275 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             </div>
           </div>
 
-          {/* DEDUCTION SUMMARY STRIP */}
+          {/* SECTION 3: DEDUCTION CALCULATION & RATE BASIS (Deduction Part) */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Calculator className="w-4 h-4 text-indigo-600" />
+                <h3 className="font-black uppercase tracking-wider text-[11px] text-slate-800">
+                  3. Deduction Rate Basis &amp; Calculation Configuration (Deduction Part)
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  Allowed Tol: ±{tolerance.toleranceMt.toFixed(3)} MT ({tolerance.toleranceQtl.toFixed(2)} Qtl)
+                </span>
+                <span className={cn(
+                  "text-[9px] font-mono font-black px-2 py-0.5 rounded border",
+                  isWithinTolerance && deductionQtyMode === 'beyond_tolerance'
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                    : isExcess
+                      ? "bg-purple-50 text-purple-900 border-purple-300"
+                      : "bg-amber-50 text-amber-900 border-amber-300"
+                )}>
+                  {isWithinTolerance && deductionQtyMode === 'beyond_tolerance'
+                    ? "✓ WITHIN TOLERANCE"
+                    : isExcess
+                      ? `+${absDiffMt.toFixed(3)} MT EXCESS`
+                      : `-${absDiffMt.toFixed(3)} MT SHORT`}
+                </span>
+              </div>
+            </div>
+
+            {/* Rate Basis Mode Cards */}
+            <div>
+              <label className="text-[10px] font-black uppercase text-slate-600 block mb-1.5 tracking-wider">
+                Select Deduction Rate Basis (₹ / Quintal)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono">
+                
+                {/* 1. TD5 Rate Difference (Default Policy) */}
+                <div
+                  onClick={() => !isSettled && setSelectedRateMode('rate_difference')}
+                  className={cn(
+                    "p-2.5 rounded-lg border text-left transition-all relative",
+                    isSettled ? "cursor-default" : "cursor-pointer hover:border-indigo-400 hover:shadow-xs",
+                    selectedRateMode === 'rate_difference'
+                      ? "bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200"
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="text-[8.5px] font-black uppercase text-indigo-900">
+                      1. TD5 Rate Difference
+                    </span>
+                    <span className="text-[7.5px] font-bold bg-indigo-200/70 text-indigo-950 px-1 rounded">
+                      POLICY DEFAULT
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="text-sm font-black text-indigo-950">₹{rateDifference.toLocaleString()}</span>
+                    <span className="text-[8.5px] text-slate-500">/ Qtl</span>
+                  </div>
+                  <p className="text-[8px] text-slate-600 mt-1 leading-tight">
+                    |Temp Arrival (₹{arrivalBaseRate}) − Sauda (₹{saudaBaseRate})|
+                  </p>
+                </div>
+
+                {/* 2. Last Temp Arrival Satta Rate */}
+                <div
+                  onClick={() => !isSettled && setSelectedRateMode('last_arrival_satta')}
+                  className={cn(
+                    "p-2.5 rounded-lg border text-left transition-all relative",
+                    isSettled ? "cursor-default" : "cursor-pointer hover:border-indigo-400 hover:shadow-xs",
+                    selectedRateMode === 'last_arrival_satta'
+                      ? "bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200"
+                  )}
+                >
+                  <span className="text-[8.5px] font-black uppercase text-slate-700 block">
+                    2. Temp Arrival Satta Rate
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="text-sm font-black text-emerald-900">₹{arrivalBaseRate.toLocaleString()}</span>
+                    <span className="text-[8.5px] text-slate-500">/ Qtl</span>
+                  </div>
+                  <p className="text-[8px] text-slate-600 mt-1 leading-tight">
+                    On {formatDisplayDate(lastArrivalDate)} ({lastArrivalMrNo})
+                  </p>
+                </div>
+
+                {/* 3. Sauda Satta Rate (PO Date) */}
+                <div
+                  onClick={() => !isSettled && setSelectedRateMode('sauda_satta')}
+                  className={cn(
+                    "p-2.5 rounded-lg border text-left transition-all relative",
+                    isSettled ? "cursor-default" : "cursor-pointer hover:border-indigo-400 hover:shadow-xs",
+                    selectedRateMode === 'sauda_satta'
+                      ? "bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200"
+                  )}
+                >
+                  <span className="text-[8.5px] font-black uppercase text-slate-700 block">
+                    3. Sauda Satta Base Rate
+                  </span>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="text-sm font-black text-slate-900">₹{saudaBaseRate.toLocaleString()}</span>
+                    <span className="text-[8.5px] text-slate-500">/ Qtl</span>
+                  </div>
+                  <p className="text-[8px] text-slate-600 mt-1 leading-tight">
+                    On {formatDisplayDate(saudaDate)} (P.O Date)
+                  </p>
+                </div>
+
+                {/* 4. Custom Rate */}
+                <div
+                  onClick={() => !isSettled && setSelectedRateMode('custom')}
+                  className={cn(
+                    "p-2.5 rounded-lg border text-left transition-all relative",
+                    isSettled ? "cursor-default" : "cursor-pointer hover:border-indigo-400 hover:shadow-xs",
+                    selectedRateMode === 'custom'
+                      ? "bg-indigo-50/90 border-indigo-500 ring-2 ring-indigo-500/20"
+                      : "bg-slate-50 border-slate-200"
+                  )}
+                >
+                  <span className="text-[8.5px] font-black uppercase text-slate-700 block">
+                    4. Custom Rate
+                  </span>
+                  <div className="mt-1 flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-slate-600">₹</span>
+                    <input
+                      type="number"
+                      step="1"
+                      disabled={isSettled}
+                      value={customRateInput || ''}
+                      onChange={(e) => {
+                        setSelectedRateMode('custom');
+                        setCustomRateInput(parseFloat(e.target.value) || 0);
+                      }}
+                      placeholder="0"
+                      className="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <span className="text-[8.5px] text-slate-500">/Qtl</span>
+                  </div>
+                  <p className="text-[8px] text-slate-600 mt-1 leading-tight">
+                    Manual override rate
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Deductible Quantity Selection & Math Formula */}
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono text-[10.5px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-1.5 mb-2">
+                <span className="font-extrabold uppercase text-[9.5px] text-slate-700 flex items-center gap-1">
+                  <Scale className="w-3.5 h-3.5 text-slate-600" />
+                  Deductible Quantity Basis:
+                </span>
+                {!isSettled && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDeductionQtyMode('beyond_tolerance')}
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[8.5px] font-black transition-colors border cursor-pointer",
+                        deductionQtyMode === 'beyond_tolerance'
+                          ? "bg-indigo-600 text-white border-indigo-700 shadow-2xs"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                      )}
+                    >
+                      Beyond Tolerance Only ({Math.max(0, absDiffQtl - tolerance.toleranceQtl).toFixed(2)} Qtl)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeductionQtyMode('full_variance')}
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[8.5px] font-black transition-colors border cursor-pointer",
+                        deductionQtyMode === 'full_variance'
+                          ? "bg-indigo-600 text-white border-indigo-700 shadow-2xs"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                      )}
+                    >
+                      Full Variance ({absDiffQtl.toFixed(2)} Qtl)
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">Gross Variance</span>
+                  <span className={cn(
+                    "font-black text-sm",
+                    diffMt >= 0 ? "text-purple-700" : "text-amber-700"
+                  )}>
+                    {diffMt >= 0 ? `+${diffMt.toFixed(3)}` : diffMt.toFixed(3)} MT
+                  </span>
+                  <span className="text-[8.5px] text-slate-500 block">
+                    ({diffQtl >= 0 ? `+${diffQtl.toFixed(2)}` : diffQtl.toFixed(2)} Qtl)
+                  </span>
+                </div>
+
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">Allowed Tolerance</span>
+                  <span className="font-black text-sm text-indigo-900">±{tolerance.toleranceMt.toFixed(3)} MT</span>
+                  <span className="text-[8.5px] text-slate-500 block">(±{tolerance.toleranceQtl.toFixed(2)} Qtl)</span>
+                </div>
+
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">Deductible Quantity</span>
+                  <span className="font-black text-sm text-slate-900">{deductibleQtyMt.toFixed(3)} MT</span>
+                  <span className="text-[8.5px] text-slate-700 block font-bold">({deductibleQtyQtl.toFixed(2)} Qtl)</span>
+                </div>
+
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">Applicable Rate</span>
+                  <span className="font-black text-sm text-emerald-800">₹{applicableRate.toLocaleString()}</span>
+                  <span className="text-[8.5px] text-slate-500 block">/ Qtl</span>
+                </div>
+              </div>
+
+              {/* Formula String */}
+              <div className="mt-2 p-1.5 rounded bg-amber-50/80 border border-amber-200 flex flex-wrap items-center justify-between gap-1 text-[9.5px]">
+                <span className="font-bold text-amber-950 flex items-center gap-1">
+                  <span>📐</span>
+                  <span>Formula: </span>
+                  <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300">
+                    {deductibleQtyQtl.toFixed(2)} Qtl × ₹{applicableRate.toLocaleString()}/Qtl = ₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </code>
+                </span>
+                <span className="font-black text-amber-900">
+                  Total Deduction: ₹{totalCalculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            {/* Remarks & Approval Level Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-xs">
+              <div className="sm:col-span-2 flex flex-col">
+                <label className="text-[9px] font-black uppercase text-slate-600 mb-0.5">
+                  Settlement Remarks / Audit Notes
+                </label>
+                <input
+                  type="text"
+                  disabled={isSettled}
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder={`${policyStatusText}: Deductible ${deductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl.`}
+                  className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans disabled:bg-slate-100 disabled:text-slate-500"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[9px] font-black uppercase text-slate-600 mb-0.5">
+                  Approval Level
+                </label>
+                <select
+                  disabled={isSettled}
+                  value={approvalLevel}
+                  onChange={(e) => setApprovalLevel(e.target.value)}
+                  className="bg-white border border-slate-300 rounded px-2 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="ADMIN">ADMIN (System Administrator)</option>
+                  <option value="L5_OFFICER">L5 OFFICER (Authorizer)</option>
+                  <option value="MILL_MANAGER">MILL MANAGER</option>
+                  <option value="GENERAL_MANAGER">GENERAL MANAGER</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
           <div className="bg-slate-950 text-white p-3 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
             <div>
               <span className="text-[9px] font-bold uppercase text-amber-400 block tracking-wider">

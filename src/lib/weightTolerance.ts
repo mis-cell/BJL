@@ -34,6 +34,8 @@ export interface WeightToleranceResult {
   fixedToleranceQtl: number;
   toleranceMt: number;
   toleranceQtl: number;
+  tolerableLimitMt: number;
+  tolerableLimitQtl: number;
   tolerancePct: number;
   toleranceBasis: '3% (Lower)' | '1500 KG (Lower)' | 'Standard';
   minAcceptableMt: number;
@@ -42,13 +44,18 @@ export interface WeightToleranceResult {
   maxAcceptableQtl: number;
   excessOverToleranceMt: number;
   excessOverToleranceQtl: number;
+  excessMt: number;
+  excessQtl: number;
   excessOverContractMt: number;
   excessOverContractQtl: number;
   shortUnderToleranceMt: number;
   shortUnderToleranceQtl: number;
+  shortMt: number;
+  shortQtl: number;
   deductibleQtyMt: number;
   deductibleQtyQtl: number;
   policyStatus: 'Within Tolerance – No Deduction' | 'Excess Deduction' | 'Short Deduction' | 'Pending Arrival';
+  isWithinTolerance: boolean;
   isAcceptable: boolean;
   isCompleted: boolean;
   isUnderDelivery: boolean;
@@ -57,6 +64,7 @@ export interface WeightToleranceResult {
   statusLabel: 'COMPLETED' | 'PARTIAL' | 'PENDING' | 'WEIGHT MISMATCH';
   formattedTolerance: string; // e.g. "±1.500 MT (15.00 Qtl)"
   formattedRange: string;     // e.g. "63.502 – 66.502 MT (635.02 – 665.02 Qtl)"
+  excessShortLabel: string;   // e.g. "Tolerable (±1.500 MT)" or "+1.200 MT Excess" or "-0.800 MT Short"
 }
 
 export function isBaleUnit(unit: string | null | undefined): boolean {
@@ -149,6 +157,17 @@ export function calculateWeightTolerance(
     }
   }
 
+  let excessShortLabel = 'Exact (0.00 MT)';
+  if (receivedMt <= 0) {
+    excessShortLabel = '-';
+  } else if (isWithinTolerance) {
+    excessShortLabel = `Tolerable (±${toleranceMt.toFixed(3)} MT)`;
+  } else if (isOverDelivery) {
+    excessShortLabel = `+${excessOverToleranceMt.toFixed(3)} MT Excess`;
+  } else if (isUnderDelivery) {
+    excessShortLabel = `-${shortUnderToleranceMt.toFixed(3)} MT Short`;
+  }
+
   return {
     contractMt,
     receivedMt,
@@ -168,6 +187,8 @@ export function calculateWeightTolerance(
     fixedToleranceQtl,
     toleranceMt,
     toleranceQtl,
+    tolerableLimitMt: toleranceMt,
+    tolerableLimitQtl: toleranceQtl,
     tolerancePct,
     toleranceBasis,
     minAcceptableMt,
@@ -176,13 +197,18 @@ export function calculateWeightTolerance(
     maxAcceptableQtl,
     excessOverToleranceMt,
     excessOverToleranceQtl,
+    excessMt: excessOverToleranceMt,
+    excessQtl: excessOverToleranceQtl,
     excessOverContractMt,
     excessOverContractQtl,
     shortUnderToleranceMt,
     shortUnderToleranceQtl,
+    shortMt: shortUnderToleranceMt,
+    shortQtl: shortUnderToleranceQtl,
     deductibleQtyMt,
     deductibleQtyQtl,
     policyStatus,
+    isWithinTolerance,
     isAcceptable: isWithinTolerance,
     isCompleted: isWithinTolerance,
     isUnderDelivery,
@@ -190,6 +216,39 @@ export function calculateWeightTolerance(
     status,
     statusLabel,
     formattedTolerance: `±${toleranceQtl.toFixed(2)} Qtl (${toleranceMt.toFixed(3)} MT)`,
-    formattedRange: `${minAcceptableQtl.toFixed(2)} – ${maxAcceptableQtl.toFixed(2)} Qtl (${minAcceptableMt.toFixed(3)} – ${maxAcceptableMt.toFixed(3)} MT)`
+    formattedRange: `${minAcceptableQtl.toFixed(2)} – ${maxAcceptableQtl.toFixed(2)} Qtl (${minAcceptableMt.toFixed(3)} – ${maxAcceptableMt.toFixed(3)} MT)`,
+    excessShortLabel
+  };
+}
+
+/**
+ * Penalty calculation on Excess Quantity:
+ * Based on Sauda Date (P.O Date) TD5 base rate and Temporary Arrival Date TD5 base rate:
+ * Formula: Penalty = |TD5 Arrival Date Rate − TD5 Sauda Date Rate| * Excess Quantity (in Quintals)
+ */
+export function calculateExcessPenalty(
+  excessQtl: number,
+  saudaTd5BaseRate: number,
+  arrivalTd5BaseRate: number
+): {
+  saudaTd5BaseRate: number;
+  arrivalTd5BaseRate: number;
+  rateDifference: number;
+  excessQtl: number;
+  penaltyAmount: number;
+  formula: string;
+} {
+  const sRate = Math.max(0, Number(saudaTd5BaseRate) || 0);
+  const aRate = Math.max(0, Number(arrivalTd5BaseRate) || 0);
+  const rateDifference = Math.abs(aRate - sRate);
+  const eq = Math.max(0, Number(excessQtl) || 0);
+  const penaltyAmount = Math.round(rateDifference * eq * 100) / 100;
+  return {
+    saudaTd5BaseRate: sRate,
+    arrivalTd5BaseRate: aRate,
+    rateDifference,
+    excessQtl: eq,
+    penaltyAmount,
+    formula: `|TD5 Arrival Rate (₹${aRate.toLocaleString()}) − TD5 Sauda Date Rate (₹${sRate.toLocaleString()})| = ₹${rateDifference.toLocaleString()}/Qtl × ${eq.toFixed(2)} Qtl = ₹${penaltyAmount.toLocaleString()}`
   };
 }

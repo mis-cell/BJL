@@ -85,6 +85,8 @@ export interface PurchaseOrderRegisterViewProps {
   actionMenu: any;
   setActionMenu: (menu: any) => void;
   canEditOrDelete: () => boolean;
+  sattaBaseRates?: any[];
+  allTempArrivals?: any[];
 }
 
 export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps> = ({
@@ -140,7 +142,38 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
   actionMenu,
   setActionMenu,
   canEditOrDelete,
+  sattaBaseRates = [],
+  allTempArrivals = []
 }) => {
+  const normalizeDateYMD = (d: any) => {
+    if (!d) return '';
+    const str = String(d).trim();
+    if (str.length >= 10 && str[4] === '-' && str[7] === '-') return str.slice(0, 10);
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    return str.slice(0, 10);
+  };
+
+  const getTd5BaseRateForDate = (dateStr: string): number => {
+    const targetYmd = normalizeDateYMD(dateStr);
+    const baseList = sattaBaseRates || [];
+    if (baseList.length > 0) {
+      const matches = baseList.filter((b: any) => {
+        const bDateYmd = normalizeDateYMD(b.start_date || b.start || b.date || '');
+        return bDateYmd && bDateYmd <= targetYmd;
+      }).sort((a: any, b: any) => {
+        const d1 = normalizeDateYMD(a.start_date || a.start || a.date || '');
+        const d2 = normalizeDateYMD(b.start_date || b.start || b.date || '');
+        return d2.localeCompare(d1);
+      });
+      if (matches.length > 0) {
+        const r = Number(matches[0].base_rate || matches[0].rate || 0);
+        if (r > 0) return r;
+      }
+    }
+    return 13500;
+  };
+
   return (
     <div className="space-y-3">
       {/* Top Stat Cards & Chart layout */}
@@ -502,11 +535,11 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   </th>
                   <th 
                     onClick={() => handleSort('excess_short')}
-                    className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[130px]"
-                    title="Sort by Excess / Short"
+                    className="px-3 text-center border-r border-slate-200 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[155px]"
+                    title="Sort by Excess / Short. Policy: Lower of 3% or 1500 kg is Tolerable; Penalty = TD5 Difference × Excess Qtl"
                   >
                     <div className="flex items-center justify-center gap-1">
-                      <span>Excess / Short</span>
+                      <span>Excess / Short (Tol: 3% / 1500kg)</span>
                       {renderSortIndicator('excess_short')}
                     </div>
                   </th>
@@ -758,7 +791,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       </td>
 
                       {/* EXCESS / SHORT WEIGHT Column */}
-                      <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[130px]">
+                      <td className="px-3 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[155px]">
                          {(() => {
                             const contract = parseFloat(item.total_contract_mt || 0) || 0;
                             const rcvd = Number(item.received_weight_mt || 0);
@@ -766,46 +799,106 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
 
                             if (rcvd <= 0) {
-                              return <span className="text-[10px] text-slate-400 font-medium italic">-</span>;
-                            }
-
-                            const diffMt = typeof tol?.diffMt === 'number' && !isNaN(tol.diffMt)
-                              ? tol.diffMt
-                              : (typeof tol?.differenceMt === 'number' && !isNaN(tol.differenceMt)
-                                ? tol.differenceMt
-                                : (rcvd - contract));
-                            const absDiff = Math.abs(diffMt);
-
-                            if (absDiff < 0.0005) {
                               return (
-                                <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  Exact (0.00 MT)
-                                </span>
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                  className="cursor-pointer group flex flex-col items-center justify-center"
+                                  title="No arrival received yet. Click to view Sauda tolerance & deduction parameters."
+                                >
+                                  <span className="text-[10px] text-slate-400 font-medium italic group-hover:text-indigo-600 transition-colors">Pending Arrival</span>
+                                </div>
                               );
                             }
 
-                            if (diffMt > 0) {
+                            // 1. Within tolerance (Lower of 3% or 1500 kg / 1.500 MT) => Tolerable
+                            if (tol.isWithinTolerance) {
                               return (
-                                <span className={cn(
-                                  "text-[9.5px] font-black px-2 py-0.5 rounded border shadow-2xs inline-flex items-center gap-1",
-                                  tol.isCompleted
-                                    ? "bg-blue-50 text-blue-800 border-blue-200"
-                                    : "bg-blue-100 text-blue-900 border-blue-300"
-                                )}>
-                                  <span>+{absDiff.toFixed(3)} MT Excess</span>
-                                </span>
+                                <div 
+                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
+                                  title={`Weight within allowed tolerance (Lower of 3% or 1500 kg = ±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
+                                >
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs group-hover:bg-emerald-100 transition-colors">
+                                    ✓ TOLERABLE (±{tol.toleranceMt.toFixed(3)} MT)
+                                  </span>
+                                  <span className="text-[7.5px] font-semibold text-slate-400">
+                                    Diff: {tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT (No Penalty)
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            // Find Temporary Arrival record for this PO to get Temporary Arrival Date
+                            const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                            const targetPo = cleanPo(item.po_no);
+                            const targetSauda = cleanPo(item.sauda_no || item.contract_po_no);
+                            const matchedArrival = allTempArrivals?.find((ar: any) => {
+                              const arPo = cleanPo(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
+                              return arPo && (arPo === targetPo || arPo === targetSauda);
+                            });
+
+                            const saudaDateStr = item.s_date || item.po_date || item.date || item.contract_date || item.created_at?.slice(0, 10) || '';
+                            const arrivalDateStr = matchedArrival?.date || matchedArrival?.arrival_date || item.last_arrival_date || item.arrival_date || saudaDateStr;
+
+                            const saudaTd5Rate = parseFloat(item.b_rate || 0) > 0 ? parseFloat(item.b_rate) : getTd5BaseRateForDate(saudaDateStr);
+                            const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
+                            const td5RateDiff = Math.abs(arrivalTd5Rate - saudaTd5Rate);
+
+                            // 2. Excess beyond allowed tolerance
+                            if (tol.isOverDelivery) {
+                              const excessMt = tol.excessOverToleranceMt;
+                              const excessQtl = tol.excessOverToleranceQtl;
+                              const penaltyAmount = Math.round(td5RateDiff * excessQtl * 100) / 100;
+
+                              return (
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
+                                  title={`Excess exceeds allowed tolerance by ${excessMt.toFixed(3)} MT (${excessQtl.toFixed(2)} Qtl).\nSauda Date (${saudaDateStr}) TD5: ₹${saudaTd5Rate} | Temp Arrival Date (${arrivalDateStr}) TD5: ₹${arrivalTd5Rate}\nTD5 Diff: ₹${td5RateDiff}/Qtl\nPenalty: ₹${penaltyAmount.toLocaleString()}\nClick to open Excess/Short Settlement.`}
+                                >
+                                  <span className="text-[9.5px] font-black px-2 py-0.5 rounded border border-purple-300 bg-purple-50 text-purple-900 shadow-2xs group-hover:bg-purple-100 transition-colors inline-flex items-center gap-1">
+                                    <span>+{excessMt.toFixed(3)} MT Excess</span>
+                                    <span className="text-[8px] opacity-75">({excessQtl.toFixed(1)} Qtl)</span>
+                                  </span>
+                                  <span className="text-[8px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-full shadow-2xs">
+                                    Penalty: ₹{penaltyAmount.toLocaleString()} (TD5 Diff: ₹{td5RateDiff})
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            // 3. Short under allowed tolerance
+                            if (tol.isUnderDelivery) {
+                              const shortMt = tol.shortUnderToleranceMt;
+                              const shortQtl = tol.shortUnderToleranceQtl;
+
+                              return (
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
+                                  title={`Short under allowed tolerance by ${shortMt.toFixed(3)} MT (${shortQtl.toFixed(2)} Qtl).\nAllowed Tol: ±${tol.toleranceMt.toFixed(3)} MT\nClick to open Excess/Short Settlement.`}
+                                >
+                                  <span className="text-[9.5px] font-black px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-900 shadow-2xs group-hover:bg-amber-100 transition-colors inline-flex items-center gap-1">
+                                    <span>-{shortMt.toFixed(3)} MT Short</span>
+                                    <span className="text-[8px] opacity-75">({shortQtl.toFixed(1)} Qtl)</span>
+                                  </span>
+                                  <span className="text-[8px] font-bold text-amber-700">
+                                    Beyond ±{tol.toleranceMt.toFixed(3)} MT Tol.
+                                  </span>
+                                </div>
                               );
                             }
 
                             return (
-                              <span className={cn(
-                                "text-[9.5px] font-black px-2 py-0.5 rounded border shadow-2xs inline-flex items-center gap-1",
-                                tol.isCompleted
-                                  ? "bg-amber-50 text-amber-800 border-amber-200"
-                                  : "bg-amber-100 text-amber-900 border-amber-300"
-                              )}>
-                                <span>-{absDiff.toFixed(3)} MT Short</span>
-                              </span>
+                              <div
+                                onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
+                                className="cursor-pointer group flex flex-col items-center justify-center"
+                                title="Exact weight match (0.00 MT). Click to open settlement & deduction details."
+                              >
+                                <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 group-hover:bg-emerald-100 transition-colors">
+                                  Exact (0.00 MT)
+                                </span>
+                              </div>
                             );
                          })()}
                       </td>

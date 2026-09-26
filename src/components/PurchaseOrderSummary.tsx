@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { dbModule } from '../services/dbModule';
 import { cn } from '../lib/utils';
+import { calculateWeightTolerance, calculateExcessPenalty } from '../lib/weightTolerance';
 
 interface PurchaseMaster {
   po_id: string;
@@ -117,7 +118,8 @@ const PO_REPORTS = [
   { key: 'r7', name: '7. Logistics Freight & Lorry Payload Registry', description: 'Vehicle count registry, average units/lorries, and aggregate freight payloads.' },
   { key: 'r8', name: '8. Agency-wide Sourcing Audit', description: 'Sourcing performances and actual transaction lines registered at each localized Agency station.' },
   { key: 'r9', name: '9. Pending Execution Status Log', description: 'Active open order commitments vs warehouse-dispatched fully compiled purchase contracts.' },
-  { key: 'r10', name: '10. Base Rate (B-Rate) price Variance GAP', description: 'Granular comparison between theoretical base reference rates and final settled invoice rates.' }
+  { key: 'r10', name: '10. Base Rate (B-Rate) price Variance GAP', description: 'Granular comparison between theoretical base reference rates and final settled invoice rates.' },
+  { key: 'r11', name: '11. Weight Tolerance & Excess/Short Penalty Audit', description: 'Tolerance policy (3% or 1500 kg lower limit), net excess/short calculations, Sauda P.O date to Temp Arrival date TD5 rate difference, and excess penalties.' }
 ];
 
 export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigger?: number }) {
@@ -126,6 +128,8 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
   const [poDetails, setPoDetails] = useState<any[]>([]);
   const [agencyList, setAgencyList] = useState<any[]>([]);
   const [gradeList, setGradeList] = useState<any[]>([]);
+  const [sattaBaseRates, setSattaBaseRates] = useState<any[]>([]);
+  const [tempArrivals, setTempArrivals] = useState<any[]>([]);
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
 
   // Layout View Mode
@@ -168,17 +172,21 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
   const fetchPurchaseOrders = async () => {
     setLoading(true);
     try {
-      const [data, details, agencies, grades] = await Promise.all([
+      const [data, details, agencies, grades, rates, arrivals] = await Promise.all([
         dbModule.fetchAll('purchase_master').catch(() => []),
         dbModule.fetchAll('purchase_detail_master').catch(() => []),
         dbModule.fetchAll('agency_master').catch(() => []),
-        dbModule.fetchAll('grade_master').catch(() => [])
+        dbModule.fetchAll('grade_master').catch(() => []),
+        dbModule.fetchAll('satta_base_rates').catch(() => []),
+        dbModule.fetchAll('temporary_material_received').catch(() => [])
       ]);
       
       setOriginalData((data || []) as PurchaseMaster[]);
       setPoDetails(details || []);
       setAgencyList(agencies || []);
       setGradeList(grades || []);
+      setSattaBaseRates(rates || []);
+      setTempArrivals(arrivals || []);
     } catch (err) {
       console.error("Error fetching purchase order metrics:", err);
     } finally {
@@ -757,12 +765,103 @@ export default function PurchaseOrderSummary({ refreshTrigger }: { refreshTrigge
       }));
       result.chartType = 'line';
     }
+    else if (activePoReportKey === 'r11') {
+      // 11. Weight Tolerance & Excess/Short Penalty Audit
+      result.headers = [
+        'PO / SAUDA NO',
+        'SUPPLIER / PARTY',
+        'CONTRACT MT (QTL)',
+        'RECEIVED MT (QTL)',
+        'TOLERANCE (3% / 1500KG)',
+        'TOLERABLE RANGE',
+        'AUDIT STATUS',
+        'NET EXCESS / SHORT',
+        'SAUDA TD5 (₹)',
+        'ARRIVAL TD5 (₹)',
+        'TD5 DIFF (₹)',
+        'EXCESS PENALTY (INR)'
+      ];
+
+      result.rows = poFilteredByPeriod.map((po: any) => {
+        const contractMt = parseFloat(po.total_contract_mt || 0) || 0;
+        const rcvdMt = Number(po.received_weight_mt || 0);
+        const tol = calculateWeightTolerance(contractMt, rcvdMt, po.purchase_unit_name);
+
+        const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        const targetPo = cleanPo(po.po_no);
+        const targetSauda = cleanPo(po.contract_po_no);
+        const matchedArr = tempArrivals.find((ar: any) => {
+          const arPo = cleanPo(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
+          return arPo && (arPo === targetPo || arPo === targetSauda);
+        });
+
+        const sDate = (po.s_date || po.po_date || po.contract_date || po.date || '').slice(0, 10);
+        const aDate = (matchedArr?.date || matchedArr?.arrival_date || po.last_arrival_date || sDate).slice(0, 10);
+
+        const getBaseRate = (dStr: string) => {
+          if (sattaBaseRates.length > 0) {
+            const matches = sattaBaseRates.filter((b: any) => {
+              const bDate = (b.start_date || b.date || '').slice(0, 10);
+              return bDate && bDate <= dStr;
+            }).sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
+            if (matches.length > 0) return Number(matches[0].base_rate || matches[0].rate || 0);
+          }
+          return 13500;
+        };
+
+        const saudaTd5 = parseFloat(po.b_rate || 0) > 0 ? parseFloat(po.b_rate) : getBaseRate(sDate);
+        const arrivalTd5 = getBaseRate(aDate);
+        const penaltyInfo = calculateExcessPenalty(tol.excessOverToleranceQtl, saudaTd5, arrivalTd5);
+
+        let auditBadge = 'Tolerable (OK)';
+        if (rcvdMt <= 0) auditBadge = 'Pending Arrival';
+        else if (tol.isOverDelivery) auditBadge = 'Excess Surcharged 🔴';
+        else if (tol.isUnderDelivery) auditBadge = 'Short Delivery 🟡';
+
+        let netVarText = '0.00 MT (Within Tol)';
+        if (tol.isOverDelivery) {
+          netVarText = `+${tol.excessOverToleranceMt.toFixed(3)} MT (+${tol.excessOverToleranceQtl.toFixed(2)} Qtl)`;
+        } else if (tol.isUnderDelivery) {
+          netVarText = `-${tol.shortUnderToleranceMt.toFixed(3)} MT (-${tol.shortUnderToleranceQtl.toFixed(2)} Qtl)`;
+        }
+
+        return [
+          po.po_no,
+          po.supplier || 'DIRECT',
+          `${contractMt.toFixed(3)} MT (${tol.contractQtl.toFixed(1)} Qtl)`,
+          `${rcvdMt.toFixed(3)} MT (${tol.receivedQtl.toFixed(1)} Qtl)`,
+          `±${tol.toleranceMt.toFixed(3)} MT (${tol.toleranceQtl.toFixed(1)} Qtl)`,
+          tol.formattedRange,
+          auditBadge,
+          netVarText,
+          `₹${saudaTd5.toLocaleString('en-IN')}`,
+          `₹${arrivalTd5.toLocaleString('en-IN')}`,
+          `₹${penaltyInfo.rateDifference.toLocaleString('en-IN')}`,
+          tol.isOverDelivery ? `₹${penaltyInfo.penaltyAmount.toLocaleString('en-IN')}` : '₹0.00'
+        ];
+      });
+
+      result.chartData = poFilteredByPeriod.slice(0, 10).map((po: any) => {
+        const contractMt = parseFloat(po.total_contract_mt || 0) || 0;
+        const rcvdMt = Number(po.received_weight_mt || 0);
+        const tol = calculateWeightTolerance(contractMt, rcvdMt, po.purchase_unit_name);
+        return {
+          name: po.po_no,
+          contract: contractMt,
+          received: rcvdMt,
+          allowedTol: tol.toleranceMt,
+          excessMt: tol.excessOverToleranceMt,
+          shortMt: tol.shortUnderToleranceMt
+        };
+      });
+      result.chartType = 'bar';
+    }
 
     result.totalCount = poFilteredByPeriod.length;
     result.totalMT = parseFloat(poFilteredByPeriod.reduce((sum, po) => sum + (Number(po.total_contract_mt) || 0), 0).toFixed(3));
 
     return result;
-  }, [poFilteredByPeriod, filteredPoDetails, activePoReportKey, gradeList, agencyList]);
+  }, [poFilteredByPeriod, filteredPoDetails, activePoReportKey, gradeList, agencyList, sattaBaseRates, tempArrivals]);
 
   // Helper to trigger download of detailed purchase orders with all fields and columns
   const triggerContractsCSVDownload = (pos: PurchaseMaster[], filename: string) => {
