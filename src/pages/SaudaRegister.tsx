@@ -1209,7 +1209,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           {entry.session}
                         </td>
                       )}
-                      <td className={cn("font-bold uppercase text-xs leading-snug break-words whitespace-normal", isUser10 ? "px-2 max-w-[220px]" : "px-4 truncate max-w-[150px]")}>
+                      <td className={cn("font-bold uppercase text-xs whitespace-nowrap truncate", isUser10 ? "px-2 max-w-[220px]" : "px-4 max-w-[150px]")}>
                         {entry.broker}
                       </td>
                       {!isUser10 && (
