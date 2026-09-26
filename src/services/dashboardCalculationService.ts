@@ -691,7 +691,19 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
     });
 
-    const avgMoisture = list.length > 0 ? Number((moistSum / list.length).toFixed(1)) : 0;
+    const moistCount = list.filter(r => r.actualMoisture > 0).length;
+    const claimMoistCount = list.filter(r => r.claimMoisture > 0).length;
+    const dustCount = list.filter(r => r.actualDust > 0).length;
+    const claimDustCount = list.filter(r => r.claimDust > 0).length;
+    const gradeDownCount = list.filter(r => r.actualGradeDown > 0).length;
+    const claimGradeDownCount = list.filter(r => r.claimGradeDown > 0).length;
+
+    const avgMoisture = moistCount > 0 ? Number((moistSum / moistCount).toFixed(1)) : 0;
+    const avgClaimMoisture = claimMoistCount > 0 ? Number((claimMoistSum / claimMoistCount).toFixed(1)) : 0;
+    const avgDust = dustCount > 0 ? Number((dustSum / dustCount).toFixed(1)) : 0;
+    const avgClaimDust = claimDustCount > 0 ? Number((claimDustSum / claimDustCount).toFixed(1)) : 0;
+    const avgGradeDown = gradeDownCount > 0 ? Number((gradeDownSum / gradeDownCount).toFixed(1)) : 0;
+    const avgClaimGradeDown = claimGradeDownCount > 0 ? Number((claimGradeDownSum / claimGradeDownCount).toFixed(1)) : 0;
 
     return {
       monthIndex: mIdx,
@@ -700,11 +712,11 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       totalInspections: list.length,
       totalWeightMt: Number(totWt.toFixed(2)),
       avgMoisture,
-      avgClaimMoisture: Number((claimMoistSum / list.length).toFixed(1)),
-      avgDust: Number((dustSum / list.length).toFixed(1)),
-      avgClaimDust: Number((claimDustSum / list.length).toFixed(1)),
-      avgGradeDown: Number((gradeDownSum / list.length).toFixed(1)),
-      avgClaimGradeDown: Number((claimGradeDownSum / list.length).toFixed(1)),
+      avgClaimMoisture,
+      avgDust,
+      avgClaimDust,
+      avgGradeDown,
+      avgClaimGradeDown,
       totalChottaHabijabiKg: Number(totChottaHbKg.toFixed(1)),
       totalChottaHabijabiClaim: Number(totChottaHbClaim.toFixed(2)),
       premiumLotsCount: premLots,
@@ -749,12 +761,19 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalClaimAmount += r.totalClaimAmount;
   });
 
-  const overallAvgMoisture = totalInspectionsCount > 0 ? Number((totalMoistSum / totalInspectionsCount).toFixed(1)) : 0;
-  const overallAvgClaimMoisture = totalInspectionsCount > 0 ? Number((totalClaimMoistSum / totalInspectionsCount).toFixed(1)) : 0;
-  const overallAvgDust = totalInspectionsCount > 0 ? Number((totalDustSum / totalInspectionsCount).toFixed(1)) : 0;
-  const overallAvgClaimDust = totalInspectionsCount > 0 ? Number((totalClaimDustSum / totalInspectionsCount).toFixed(1)) : 0;
-  const overallAvgGradeDown = totalInspectionsCount > 0 ? Number((totalGradeDownSum / totalInspectionsCount).toFixed(1)) : 0;
-  const overallAvgClaimGradeDown = totalInspectionsCount > 0 ? Number((totalClaimGradeDownSum / totalInspectionsCount).toFixed(1)) : 0;
+  const yearMoistCount = yearInspections.filter(r => r.actualMoisture > 0).length;
+  const yearClaimMoistCount = yearInspections.filter(r => r.claimMoisture > 0).length;
+  const yearDustCount = yearInspections.filter(r => r.actualDust > 0).length;
+  const yearClaimDustCount = yearInspections.filter(r => r.claimDust > 0).length;
+  const yearGradeDownCount = yearInspections.filter(r => r.actualGradeDown > 0).length;
+  const yearClaimGradeDownCount = yearInspections.filter(r => r.claimGradeDown > 0).length;
+
+  const overallAvgMoisture = yearMoistCount > 0 ? Number((totalMoistSum / yearMoistCount).toFixed(1)) : 0;
+  const overallAvgClaimMoisture = yearClaimMoistCount > 0 ? Number((totalClaimMoistSum / yearClaimMoistCount).toFixed(1)) : 0;
+  const overallAvgDust = yearDustCount > 0 ? Number((totalDustSum / yearDustCount).toFixed(1)) : 0;
+  const overallAvgClaimDust = yearClaimDustCount > 0 ? Number((totalClaimDustSum / yearClaimDustCount).toFixed(1)) : 0;
+  const overallAvgGradeDown = yearGradeDownCount > 0 ? Number((totalGradeDownSum / yearGradeDownCount).toFixed(1)) : 0;
+  const overallAvgClaimGradeDown = yearClaimGradeDownCount > 0 ? Number((totalClaimGradeDownSum / yearClaimGradeDownCount).toFixed(1)) : 0;
   const avgPremiumRate = totalPremiumLots > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : 0;
 
   return {

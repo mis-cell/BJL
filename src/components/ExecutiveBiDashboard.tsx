@@ -845,8 +845,8 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* Year-level KPI Highlights Ribbon (5 Essential Cards) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-2.5 text-xs font-sans">
+        {/* Year-level KPI Highlights Ribbon (4 Essential Cards) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 text-xs font-sans">
           {/* Total MR & Weight - Count MR_No number only */}
           <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
             <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Weight</span>
@@ -869,17 +869,6 @@ export default function ExecutiveBiDashboard({
             </span>
             <span className="text-[10px] font-mono font-bold text-rose-700">
               Avg Clm: {inspMetrics.overallAvgClaimMoisture}%
-            </span>
-          </div>
-
-          {/* Dust % & Claim */}
-          <div className="bg-white p-2.5 rounded-xl border border-[#D6CAA8] shadow-2xs">
-            <span className="text-[9.5px] text-[#5A6E54] font-bold block uppercase tracking-wider">Dust % (Claim)</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-sm block">
-              {inspMetrics.overallAvgDust}%
-            </span>
-            <span className="text-[10px] font-mono font-bold text-rose-700">
-              Avg Clm: {inspMetrics.overallAvgClaimDust}%
             </span>
           </div>
 
@@ -946,14 +935,6 @@ export default function ExecutiveBiDashboard({
                       m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
                     )}>
                       {m.avgMoisture}% {m.avgClaimMoisture > 0 && <span className="text-rose-700 font-semibold text-[9.5px]">(Clm {m.avgClaimMoisture}%)</span>}
-                    </span>
-                  </div>
-
-                  {/* Dust % & Claim */}
-                  <div className="flex items-center justify-between py-0.5 border-t border-[#F2EDE0]">
-                    <span className="text-[10.5px] text-[#5A6E54] font-semibold">Dust:</span>
-                    <span className="font-mono font-bold text-[10px] text-[#1E331B]">
-                      {m.avgDust}% {m.avgClaimDust > 0 && <span className="text-rose-700 font-semibold text-[9.5px]">(Clm {m.avgClaimDust}%)</span>}
                     </span>
                   </div>
 
