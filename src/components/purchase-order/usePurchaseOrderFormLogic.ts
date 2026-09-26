@@ -1206,7 +1206,14 @@ export function usePurchaseOrderFormLogic({
   };
 
   const displaySaudas = saudaList.filter(s => {
-    const isPending = !s.status || String(s.status).trim().toLowerCase() !== 'completed';
+    const st = String(s.status || '').toLowerCase().trim();
+    const appSt = String(s.approval_status || '').toLowerCase().trim();
+
+    // Rejected contracts must NEVER appear in Sauda Check Point P.O Contract dropdown
+    if (st === 'rejected' || appSt === 'rejected') {
+      return false;
+    }
+
     const saudaPoDisplayNo = (formatPoNumber(s) || '').trim().toUpperCase();
     const saudaNo = String(s.sauda_no || '').trim().toUpperCase();
     const saudaSession = String(s.session || '').trim().toUpperCase();
@@ -1224,6 +1231,14 @@ export function usePurchaseOrderFormLogic({
     if (isCurrentlySelectedInForm) {
       return true;
     }
+
+    // Only approved Sauda contracts proceed to Sauda Check Point
+    const isApproved = st === 'approved' || appSt === 'approved' || Boolean(s.approved_by);
+    if (!isApproved) {
+      return false;
+    }
+
+    const isPending = !s.status || String(s.status).trim().toLowerCase() !== 'completed';
 
     const isAlreadyUsed = poList.some(p => {
       const sId = String(s.sauda_id || s.id || '').trim().toUpperCase();

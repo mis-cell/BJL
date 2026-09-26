@@ -148,7 +148,12 @@ export interface Sauda {
   b_date?: string;
   superior_normal_marks?: string;
   signature_url?: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status?: string;
+  approval_status?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
   created_at?: string;
   quality_details?: SaudaQualityDetail[];
 }

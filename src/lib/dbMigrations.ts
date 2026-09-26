@@ -456,6 +456,9 @@ export async function runDatabaseMigrations() {
           ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS satta_remarks TEXT;
           ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_by TEXT;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';
           ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_level TEXT DEFAULT 'L3/L5';
           ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;
 

@@ -727,6 +727,43 @@ export function isL5OrAdmin(): boolean {
   return isUserAdmin() || level === 'L5' || level === 'L4';
 }
 
+export function isUserId10(roleOrContext?: any): boolean {
+  let uid = '';
+  let uname = '';
+  if (roleOrContext && typeof roleOrContext === 'object') {
+    uid = String(roleOrContext.userId || roleOrContext.user_id || '').trim().toLowerCase();
+    uname = String(roleOrContext.username || roleOrContext.userName || '').trim().toLowerCase();
+  } else if (typeof roleOrContext === 'string') {
+    uid = roleOrContext.trim().toLowerCase();
+    uname = roleOrContext.trim().toLowerCase();
+  } else {
+    const ctx = getCurrentUserContext();
+    uid = String(ctx?.userId || (ctx as any)?.user_id || '').trim().toLowerCase();
+    uname = String(ctx?.username || ctx?.userName || '').trim().toLowerCase();
+  }
+
+  let sessionUid = '';
+  let sessionUname = '';
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const rawSess = window.localStorage.getItem('bally_auth_session');
+      if (rawSess) {
+        const parsed = JSON.parse(rawSess);
+        sessionUid = String(parsed?.userId || parsed?.user_id || '').trim().toLowerCase();
+        sessionUname = String(parsed?.username || parsed?.userName || '').trim().toLowerCase();
+      }
+    }
+  } catch {}
+
+  const targets = ['010', '10', 'user010', 'user 010', 'user10', 'user 10'];
+  return (
+    targets.includes(uid) ||
+    targets.includes(uname) ||
+    targets.includes(sessionUid) ||
+    targets.includes(sessionUname)
+  );
+}
+
 export function canEditOrDelete(recordOrUser?: any): boolean {
   const ctx = getCurrentUserContext();
   if (isUserAdmin() || isL5OrAdmin()) return true;

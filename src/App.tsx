@@ -630,7 +630,7 @@ export default function App() {
     return true;
   };
 
-  // Global Ctrl+K command listener
+  // Global Ctrl+K command listener and app-navigate listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -640,8 +640,17 @@ export default function App() {
         setHighlightedCommandIndex(0);
       }
     };
+    const handleAppNavigate = (e: any) => {
+      if (e.detail?.page) {
+        globalNavigate(e.detail.page as Page, e.detail.subId);
+      }
+    };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("app-navigate", handleAppNavigate);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("app-navigate", handleAppNavigate);
+    };
   }, []);
 
   // Refs to always have fresh state values for async/sync logging without stale closure problems
@@ -1158,6 +1167,7 @@ export default function App() {
                 className={currentPage === "satta_chart" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
               >
                 <SattaChart
+                  onNavigate={(p) => globalNavigate(p as Page)}
                   onClose={() => {
                     if (currentPage === "satta_chart") {
                       closePage("satta_chart", "dashboard");
@@ -1677,15 +1687,15 @@ export default function App() {
               <button
                 onClick={() => {
                   setShowGlobalSattaWarning(false);
-                  globalNavigate('satta');
+                  globalNavigate('satta_chart');
                 }}
-                className="flex-1 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 bg-[#174C2C] hover:bg-[#205c36] active:bg-[#133b23] text-amber-300 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Go to Satta Desk ↗</span>
+                <span>Upload Satta Chart ↗</span>
               </button>
               <button
                 onClick={() => setShowGlobalSattaWarning(false)}
-                className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
+                className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
               >
                 Cancel
               </button>

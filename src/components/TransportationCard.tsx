@@ -83,17 +83,22 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
 
         {/* Units/Lorry - NUMERIC INPUT */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="units_per_lorry_input" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-            <span>Units/Lorry</span>
+          <label htmlFor="units_per_lorry_input" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <span>Units/Lorry</span>
+            </span>
+            <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300 font-bold uppercase">
+              {String(formData.unit_type || '').toUpperCase().includes('DRUM') ? '50 KG/Drum' : '147.5 KG/Bale'}
+            </span>
           </label>
           <input
             id="units_per_lorry_input"
             aria-label="Units/Lorry"
             type="number"
-            step="1"
+            step="any"
             min="0"
             name="units_per_lorry"
-            placeholder="e.g. 150"
+            placeholder="e.g. 80"
             value={formData.units_per_lorry !== undefined && formData.units_per_lorry !== null ? formData.units_per_lorry : (Number(formData.units_per_lorry_type) || '')}
             onChange={onChange}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
@@ -104,7 +109,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
         <div className="flex flex-col gap-1.5">
           <label htmlFor="total_unit_56" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
             <span>Total Unit</span>
-            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto (Lorry × Units/Lorry)</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Lorry × Units/Lorry</span>
           </label>
           <input
             id="total_unit_56"
@@ -117,17 +122,17 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
           />
         </div>
 
-        {/* Weight/Lorry = Total Wt. in Ton / No. of Lorries */}
+        {/* Weight/Lorry = Units/Lorry * KG / 1000 */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="wt_per_lorry_68" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
             <span>Wt/Lorry (MT)</span>
-            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Total Wt / Lorry</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto (MT)</span>
           </label>
           <input
             id="wt_per_lorry_68"
             aria-label="Wt/Lorry"
             type="number"
-            step="0.001"
+            step="any"
             name="wt_per_lorry"
             value={formData.wt_per_lorry ?? 0}
             onChange={onChange}
@@ -154,15 +159,16 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
         {/* Total Weight in Ton */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="total_wt_in_ton_98" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span>Total Wt. in Ton</span>
-            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto</span>
+            <span>Total Wt. in Ton (MT)</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Auto / Input</span>
           </label>
           <input
             id="total_wt_in_ton_98"
             aria-label="Total Wt. in Ton"
             type="number"
-            step="0.001"
+            step="any"
             name="total_wt_in_ton"
+            placeholder="e.g. 10"
             value={formData.total_wt_in_ton ?? 0}
             onChange={onChange}
             className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"

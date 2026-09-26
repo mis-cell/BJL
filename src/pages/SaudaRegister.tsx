@@ -1051,6 +1051,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   <th className="px-4 py-2 text-left">Supplier</th>
                   <th className="px-3 py-2 text-center">Unit/Lorry</th>
                   <th className="px-3 py-2 text-right">T. Unit</th>
+                  <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>
                   <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>
                   <th className="px-3 py-2 text-center">Status</th>
                   <th className="px-3 py-2 text-center">Actions</th>
@@ -1060,6 +1061,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
                   const { status: st } = getSaudaStatusAndWeight(entry);
+                  const entryStatus = String(entry.status || entry.approval_status || '').toLowerCase();
+                  const isApproved = entryStatus === 'approved' || Boolean(entry.approved_by && entryStatus !== 'rejected');
+                  const isRejected = entryStatus === 'rejected' || Boolean(entry.rejected_by && entryStatus === 'rejected');
+
                   return (
                     <tr 
                       key={entry.sauda_id} 
@@ -1093,20 +1098,44 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className="px-3 text-right font-bold font-mono">
                         {entry.total_unit}
                       </td>
+                      <td className="px-3 text-center font-bold font-mono">
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wide",
+                          isSelected
+                            ? "bg-amber-400 text-slate-950"
+                            : String(entry.unit_type || '').toUpperCase().includes('DRUM')
+                              ? "bg-purple-100 text-purple-900 border border-purple-300"
+                              : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        )}>
+                          {entry.unit_type || 'BALES'}
+                        </span>
+                      </td>
                       <td className={cn("px-4 text-right font-black font-mono", isSelected ? "text-amber-300 bg-[#123e24]" : "text-rose-700 bg-rose-50/30")}>
                         ₹{Number(entry.b_rate).toLocaleString()}
                       </td>
                       <td className="px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span 
-                            className={cn(
-                              "inline-block w-2 h-2 rounded-full shrink-0", 
-                              st === 'completed' ? 'bg-emerald-500' : st === 'partial' ? 'bg-blue-500' : 'bg-amber-500'
-                            )} 
-                          />
-                          <span className={cn("font-bold text-[11px] font-mono whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
-                            {(Number(entry.total_wt_in_ton) || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} Ton
-                          </span>
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span 
+                              className={cn(
+                                "inline-block w-2 h-2 rounded-full shrink-0", 
+                                isApproved ? 'bg-emerald-500' : isRejected ? 'bg-rose-500' : st === 'completed' ? 'bg-emerald-500' : st === 'partial' ? 'bg-blue-500' : 'bg-amber-500'
+                              )} 
+                            />
+                            <span className={cn("font-bold text-[11px] font-mono whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
+                              {(Number(entry.total_wt_in_ton) || 0).toLocaleString(undefined, { maximumFractionDigits: 3 })} Ton
+                            </span>
+                          </div>
+                          {entry.approved_by && (
+                            <span className={cn("text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight", isSelected ? "bg-emerald-800 text-amber-300" : "bg-emerald-100 text-emerald-900")}>
+                              ✓ Approved by: {entry.approved_by}
+                            </span>
+                          )}
+                          {entry.rejected_by && (
+                            <span className={cn("text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight", isSelected ? "bg-rose-900 text-rose-200" : "bg-rose-100 text-rose-900")}>
+                              ✕ Rejected by: {entry.rejected_by}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 text-center">
@@ -1157,7 +1186,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 })}
                 {filteredSaudas.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-14 text-center text-slate-500 bg-slate-50/50">
+                    <td colSpan={11} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                           <ClipboardList className="h-8 w-8 text-[#174C2C]" />
