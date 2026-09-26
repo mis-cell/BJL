@@ -862,9 +862,47 @@ export function useInspectionLogic() {
       const updated = [...prev];
       const row = { ...updated[index], [field]: value };
       
+      // 1. Auto-calculate Lorry Read Avg if Min or Max present
+      const lorryMin = Number(row.lorry_read_min) || 0;
+      const lorryMax = Number(row.lorry_read_max) || 0;
+      if (lorryMin > 0 && lorryMax > 0) {
+        row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
+      } else if (lorryMin > 0 || lorryMax > 0) {
+        row.lorry_read_avg = lorryMin || lorryMax;
+      }
+
+      // 2. Auto-calculate Inspection Read Avg if Min or Max present
+      const inspMin = Number(row.insp_read_min) || 0;
+      const inspMax = Number(row.insp_read_max) || 0;
+      if (inspMin > 0 && inspMax > 0) {
+        row.insp_read_avg = Number(((inspMin + inspMax) / 2).toFixed(2));
+      } else if (inspMin > 0 || inspMax > 0) {
+        row.insp_read_avg = inspMin || inspMax;
+      }
+
+      // 3. Auto-calculate Moisture Actual %
+      const lAvg = Number(row.lorry_read_avg) || 0;
+      const iAvg = Number(row.insp_read_avg) || 0;
+      if (lAvg > 0 && iAvg > 0) {
+        row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
+      } else if (lAvg > 0 || iAvg > 0) {
+        row.moisture_act = lAvg || iAvg;
+      }
+
+      // 4. Auto-calculate Moisture Claim % based on Moisture Logic Rules
+      const dateForRules = String(headerForm.mr_date || headerForm.arrival_date || new Date().toISOString().split('T')[0]);
+      row.moisture_claim = calculateClaimMoisture(
+        Number(row.moisture_act) || 0,
+        dateForRules,
+        row.area || "",
+        moistureLogicRules
+      );
+
+      // 5. Compute Reduced Weight & Final Receipt Weight (Claim)
       const computedWeights = computeDetailRowWeights(row);
       Object.assign(row, computedWeights);
 
+      // 6. Compute Quantity in MT & Row Amount
       row.qty_in_mt = calculateQtyInMt(row);
       row.amount = calculateRowAmount(row);
 
