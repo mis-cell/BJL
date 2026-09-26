@@ -1257,20 +1257,20 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                   <th className="px-3 py-2 text-center">Date</th>
                   <th className="px-3 py-2 text-center">Order No.</th>
-                  <th className="px-3 py-2 text-center">Session</th>
+                  {!isUser10 && <th className="px-3 py-2 text-center">Session</th>}
                   <th className="px-4 py-2 text-left">Broker</th>
-                  <th className="px-4 py-2 text-left">Supplier</th>
-                  <th className="px-3 py-2 text-center">Unit/Lorry</th>
+                  {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
+                  {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
                   <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>
                   <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>
                   <th className="px-3 py-2 text-center">Status</th>
-                  {(isUserAdmin() || isL5OrAdmin()) && <th className="px-3 py-2 text-center">Actions</th>}
+                  {(isAdminOrL4 || isUser10) && <th className="px-3 py-2 text-center">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
-                  const canSeeActions = isUserAdmin() || isL5OrAdmin();
+                  const canSeeActions = isAdminOrL4 || isUser10;
                   const isChecked = Boolean(
                     entry.is_checked || 
                     String(entry.status || '').toUpperCase() === 'CHECKED' || 
@@ -1304,18 +1304,24 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className={cn("px-3 text-center font-bold", isSelected ? "text-amber-300" : "text-slate-900")}>
                         #{entry.sauda_no}
                       </td>
-                      <td className={cn("px-3 text-center text-[10px] font-mono", isSelected ? "text-emerald-100" : "text-slate-500")}>
-                        {entry.session}
-                      </td>
+                      {!isUser10 && (
+                        <td className={cn("px-3 text-center text-[10px] font-mono", isSelected ? "text-emerald-100" : "text-slate-500")}>
+                          {entry.session}
+                        </td>
+                      )}
                       <td className="px-4 font-bold uppercase truncate max-w-[150px]">
                         {entry.broker}
                       </td>
-                      <td className={cn("px-4 uppercase truncate max-w-[150px]", isSelected ? "text-emerald-100" : "text-slate-600")}>
-                        {entry.supplier}
-                      </td>
-                      <td className="px-3 text-center text-slate-700">
-                        {entry.units_per_lorry_type}
-                      </td>
+                      {!isUser10 && (
+                        <td className={cn("px-4 uppercase truncate max-w-[150px]", isSelected ? "text-emerald-100" : "text-slate-600")}>
+                          {entry.supplier}
+                        </td>
+                      )}
+                      {!isUser10 && (
+                        <td className="px-3 text-center text-slate-700">
+                          {entry.units_per_lorry_type}
+                        </td>
+                      )}
                       <td className="px-3 text-center font-bold font-mono">
                         <span className={cn(
                           "px-2 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wide",
@@ -1394,72 +1400,90 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       </td>
                       {canSeeActions && (
                         <td className="px-3 text-center relative">
-                          <div className="relative inline-block text-left">
+                          {isUser10 ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenActionDropdownId(openActionDropdownId === entry.sauda_id ? null : (entry.sauda_id || null));
+                                handlePrint(entry);
                               }}
                               className={cn(
-                                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border flex items-center gap-1 transition-all cursor-pointer shadow-xs",
-                                isSelected 
-                                  ? "bg-white/20 text-white border-white/30 hover:bg-white/30" 
-                                  : "bg-slate-100 text-slate-800 border-slate-300 hover:bg-amber-100 hover:border-amber-400"
+                                "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
+                                isSelected
+                                  ? "bg-white/20 text-amber-300 hover:bg-white/30"
+                                  : "bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-slate-900 border border-slate-300"
                               )}
+                              title="Print Sauda Slip"
                             >
-                              <span>Actions</span>
-                              <ChevronDown className="w-3 h-3" />
+                              <Printer className="w-4 h-4" />
                             </button>
+                          ) : (
+                            <div className="relative inline-block text-left">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenActionDropdownId(openActionDropdownId === entry.sauda_id ? null : (entry.sauda_id || null));
+                                }}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border flex items-center gap-1 transition-all cursor-pointer shadow-xs",
+                                  isSelected 
+                                    ? "bg-white/20 text-white border-white/30 hover:bg-white/30" 
+                                    : "bg-slate-100 text-slate-800 border-slate-300 hover:bg-amber-100 hover:border-amber-400"
+                                )}
+                              >
+                                <span>Actions</span>
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
 
-                            {openActionDropdownId === entry.sauda_id && (
-                              <>
-                                <div 
-                                  className="fixed inset-0 z-20" 
-                                  onClick={(e) => { e.stopPropagation(); setOpenActionDropdownId(null); }} 
-                                />
-                                <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenActionDropdownId(null);
-                                      handleDelete(entry.sauda_id!);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
-                                    title="Delete Sauda"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                    <span>Delete</span>
-                                  </button>
+                              {openActionDropdownId === entry.sauda_id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-20" 
+                                    onClick={(e) => { e.stopPropagation(); setOpenActionDropdownId(null); }} 
+                                  />
+                                  <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenActionDropdownId(null);
+                                        handleDelete(entry.sauda_id!);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
+                                      title="Delete Sauda"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                      <span>Delete</span>
+                                    </button>
 
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenActionDropdownId(null);
-                                      handlePrint(entry);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
-                                    title="Print Sauda Slip"
-                                  >
-                                    <Printer className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                                    <span>Print</span>
-                                  </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenActionDropdownId(null);
+                                        handlePrint(entry);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
+                                      title="Print Sauda Slip"
+                                    >
+                                      <Printer className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                      <span>Print</span>
+                                    </button>
 
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenActionDropdownId(null);
-                                      handleSendMail(entry);
-                                    }}
-                                    className="w-full px-3 py-1.5 text-left text-indigo-700 hover:bg-indigo-50 font-bold flex items-center gap-2 cursor-pointer"
-                                    title="Send Mail"
-                                  >
-                                    <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                    <span>Mail</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenActionDropdownId(null);
+                                        handleSendMail(entry);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left text-indigo-700 hover:bg-indigo-50 font-bold flex items-center gap-2 cursor-pointer"
+                                      title="Send Mail"
+                                    >
+                                      <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                      <span>Mail</span>
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </td>
                       )}
                     </tr>
@@ -1467,7 +1491,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 })}
                 {filteredSaudas.length === 0 && (
                   <tr>
-                    <td colSpan={isUserAdmin() || isL5OrAdmin() ? 10 : 9} className="py-14 text-center text-slate-500 bg-slate-50/50">
+                    <td colSpan={isUser10 ? 7 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                           <ClipboardList className="h-8 w-8 text-[#174C2C]" />
