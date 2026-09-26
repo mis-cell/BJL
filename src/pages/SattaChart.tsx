@@ -37,23 +37,6 @@ import {
   HelpCircle
 } from 'lucide-react';
 import Papa from 'papaparse';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  AreaChart, 
-  Area, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  Legend 
-} from 'recharts';
 import { cn, sanitizeCsvData } from '../lib/utils';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import LegacyLayout, { LegacyButton } from '../components/LegacyLayout';
@@ -214,7 +197,7 @@ export default function SattaChart({
   isEmbedded?: boolean;
   onNavigate?: (page: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix' | 'analytics' | 'history'>('base_rate');
+  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix' | 'history'>('base_rate');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
   const [showUploadSuccessModal, setShowUploadSuccessModal] = useState<boolean>(false);
@@ -287,6 +270,42 @@ export default function SattaChart({
     });
     return map;
   }, [rateHistory]);
+
+  // Monthly Base Rate Summary Statistics (AVG, MAX, MIN across months)
+  const monthlySummaryStats = useMemo(() => {
+    return MONTH_COLS.map((m) => {
+      const targetYear = selectedYear + (m.yearOffset || 0);
+      const rates: number[] = [];
+      for (let day = 1; day <= m.days; day++) {
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${targetYear}-${m.month}-${dayStr}`;
+        const rateVal = rateLookup.get(dateKey);
+        if (rateVal && rateVal > 0) {
+          rates.push(rateVal);
+        }
+      }
+      if (rates.length === 0) {
+        return {
+          month: m.name,
+          avg: null,
+          max: null,
+          min: null,
+          count: 0
+        };
+      }
+      const sum = rates.reduce((a, b) => a + b, 0);
+      const avg = sum / rates.length;
+      const max = Math.max(...rates);
+      const min = Math.min(...rates);
+      return {
+        month: m.name,
+        avg: avg.toFixed(2),
+        max: max.toFixed(2),
+        min: min.toFixed(2),
+        count: rates.length
+      };
+    });
+  }, [selectedYear, rateLookup]);
 
   const ensureSattaTablesExist = async () => {
     if (!supabase) return;
@@ -1019,51 +1038,6 @@ export default function SattaChart({
     };
   }, [dbDifferentials, baseRate, rateHistory]);
 
-  // Area-level calculations for chart visualizations
-  const areaChartData = useMemo(() => {
-    const items = EXCEL_SEED_DATA.map(row => {
-      let sum = 0;
-      let count = 0;
-      ALL_GRADES.forEach(grade => {
-        const diffVal = dbDifferentials[row.area]?.[grade] !== undefined
-          ? dbDifferentials[row.area][grade]
-          : row.diffs[grade];
-        if (diffVal !== undefined) {
-          sum += (baseRate + diffVal);
-          count++;
-        }
-      });
-      const avg = count > 0 ? Math.round(sum / count) : baseRate;
-      return { area: row.area, avgRate: avg, count };
-    });
-
-    const highest = [...items].filter(i => i.count > 0).sort((a, b) => b.avgRate - a.avgRate).slice(0, 8);
-    const lowest = [...items].filter(i => i.count > 0).sort((a, b) => a.avgRate - b.avgRate).slice(0, 8);
-    return { highest, lowest };
-  }, [dbDifferentials, baseRate]);
-
-  // Line Chart Trend Data (Historical Base Rates)
-  const rateTrendData = useMemo(() => {
-    const sorted = [...rateHistory].sort((a, b) => a.start_date.localeCompare(b.start_date));
-    return sorted.map(r => ({
-      date: formatDateDMY(r.start_date),
-      baseRate: Number(r.base_rate),
-      northernTD6: Number(r.base_rate) + 3200,
-      purneaTD5: Number(r.base_rate) + 500,
-      baduriaTD5: Number(r.base_rate) - 300,
-      sheoraphullyHBJB: Number(r.base_rate) - 1000
-    }));
-  }, [rateHistory]);
-
-  // Distribution Donut Chart Data
-  const distributionData = useMemo(() => [
-    { name: 'Very High Premium (≥₹1000)', value: metrics.highPremiumCount, color: '#1E331B' },
-    { name: 'Moderate Premium (>0)', value: metrics.moderatePremiumCount, color: '#2E7D32' },
-    { name: 'Base Rate (0)', value: metrics.baseCount, color: '#C5A059' },
-    { name: 'Discount Grade (<0)', value: metrics.discountCount, color: '#E65100' },
-    { name: 'Critical Discount (<-1000)', value: metrics.criticalDiscountCount, color: '#C62828' },
-  ].filter(d => d.value > 0), [metrics]);
-
   // Combined and Search-Filtered Table Rows
   const allAreaRows = useMemo(() => {
     const areaMap = new Map<string, Record<string, number>>();
@@ -1216,19 +1190,6 @@ export default function SattaChart({
           >
             <FileSpreadsheet className="h-4 w-4" />
             <span>Live Pivot Matrix</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
-              activeTab === 'analytics'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
-                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
-            )}
-          >
-            <BarChart3 className="h-4 w-4" />
-            <span>Market Intelligence Charts</span>
           </button>
 
           <button
@@ -1467,6 +1428,28 @@ export default function SattaChart({
                 <Printer className="h-4 w-4" />
                 <span>Print Preview</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    if (typeof window !== 'undefined' && window.localStorage) {
+                      window.localStorage.setItem('satta_chart_uploaded', 'true');
+                      window.localStorage.setItem('satta_chart_upload_date', new Date().toISOString().split('T')[0]);
+                    }
+                    window.dispatchEvent(new CustomEvent('satta-chart-uploaded'));
+                  } catch {}
+                  if (onNavigate) {
+                    onNavigate('sauda_entry');
+                  } else {
+                    window.location.hash = '#sauda_entry';
+                  }
+                }}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                <span>Proceed to NEW SAUDA CONTRACT ENTRY</span>
+                <ArrowRight className="h-4 w-4 text-amber-300" />
+              </button>
             </div>
           </div>
 
@@ -1529,6 +1512,91 @@ export default function SattaChart({
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* MONTHLY SUMMARY TABLE (AVG / MAX / MIN) */}
+          <div className="bg-white rounded-2xl border border-[#E8E2D5] shadow-sm overflow-hidden mt-4">
+            <div className="bg-[#1E331B] text-white px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-[#D4AF37]" />
+                <span className="text-sm font-black uppercase tracking-wider">
+                  Satta Chart Base Rate Monthly Summary ({selectedYear})
+                </span>
+              </div>
+              <div className="text-xs text-emerald-200">
+                <span>Calculated Metrics: <strong className="text-white font-mono">AVG • MAX • MIN</strong></span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-center border-collapse">
+                <thead>
+                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#1E331B] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 border-r border-slate-300 sticky left-0 bg-[#FAF8F5] z-10 w-16 text-slate-800 text-center">
+                      
+                    </th>
+                    {MONTH_COLS.map((m) => (
+                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#1E331B]">
+                        {m.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs font-mono">
+                  {/* AVG Row */}
+                  <tr className="hover:bg-amber-50/60 transition-colors">
+                    <td className="py-2.5 px-3 font-black text-slate-800 bg-[#FAF8F5] border-r border-slate-300 sticky left-0 z-10 text-center">
+                      AVG
+                    </td>
+                    {monthlySummaryStats.map((stat) => (
+                      <td key={`avg-${stat.month}`} className="py-2.5 px-2 border-r border-slate-100 font-bold text-slate-800">
+                        {stat.avg ? (
+                          <span className="font-bold text-[#1E331B] bg-emerald-50 text-emerald-950 px-2 py-0.5 rounded border border-emerald-200 inline-block min-w-[58px]">
+                            {stat.avg}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-normal">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* MAX Row */}
+                  <tr className="hover:bg-amber-50/60 transition-colors">
+                    <td className="py-2.5 px-3 font-black text-slate-800 bg-[#FAF8F5] border-r border-slate-300 sticky left-0 z-10 text-center">
+                      MAX
+                    </td>
+                    {monthlySummaryStats.map((stat) => (
+                      <td key={`max-${stat.month}`} className="py-2.5 px-2 border-r border-slate-100 font-bold text-slate-800">
+                        {stat.max ? (
+                          <span className="font-bold text-emerald-800 bg-emerald-100/70 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300 inline-block min-w-[58px]">
+                            {stat.max}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-normal">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* MIN Row */}
+                  <tr className="hover:bg-amber-50/60 transition-colors">
+                    <td className="py-2.5 px-3 font-black text-slate-800 bg-[#FAF8F5] border-r border-slate-300 sticky left-0 z-10 text-center">
+                      MIN
+                    </td>
+                    {monthlySummaryStats.map((stat) => (
+                      <td key={`min-${stat.month}`} className="py-2.5 px-2 border-r border-slate-100 font-bold text-slate-800">
+                        {stat.min ? (
+                          <span className="font-bold text-rose-800 bg-rose-50 text-rose-950 px-2 py-0.5 rounded border border-rose-200 inline-block min-w-[58px]">
+                            {stat.min}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 font-normal">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1967,134 +2035,6 @@ export default function SattaChart({
         </div>
       )}
 
-      {/* TAB 2: MARKET TREND CHARTS & ANALYTICS */}
-      {activeTab === 'analytics' && (
-        <div className="space-y-6">
-          
-          <div className="bg-white p-4 rounded-2xl border border-[#E8E2D5] shadow-sm flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-serif font-black text-[#1E331B] flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-[#D4AF37]" />
-                Market Trend Intelligence Analytics
-              </h2>
-              <p className="text-xs text-slate-500 font-medium">Visual analysis of historical rate trends, regional price differentials, and grade distributions</p>
-            </div>
-            <div className="flex gap-2">
-              <span className="bg-[#1E331B] text-white text-xs font-mono font-bold px-3 py-1.5 rounded-xl border border-[#D4AF37]">
-                Base Rate Benchmark: ₹{baseRate.toLocaleString()}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Chart 1: Daily Base Rate Trend (Line Chart) */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E331B] flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-[#D4AF37]" />
-                  Historical Base Rate Trend Line
-                </h3>
-                <span className="text-[10px] font-bold text-slate-500 font-mono">{rateTrendData.length} Historic Dates</span>
-              </div>
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <LineChart data={rateTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={['dataMin - 500', 'dataMax + 500']} tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <RechartsTooltip formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Base Rate']} />
-                    <Line type="monotone" dataKey="baseRate" stroke="#1E331B" strokeWidth={3} dot={{ fill: '#D4AF37', r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Chart 2: Top 5 Area Trends (Multi-Line Chart) */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E331B] flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-emerald-600" />
-                  Top 5 Regional Area Comparisons
-                </h3>
-                <span className="text-[10px] font-bold text-slate-500">TD5 / TD6 Series</span>
-              </div>
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <LineChart data={rateTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <RechartsTooltip formatter={(value: any) => [`₹${Number(value).toLocaleString()}`]} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Line type="monotone" dataKey="northernTD6" name="Northern (TD6)" stroke="#1E331B" strokeWidth={2} />
-                    <Line type="monotone" dataKey="purneaTD5" name="Purnea Bihar (TD5)" stroke="#2E7D32" strokeWidth={2} />
-                    <Line type="monotone" dataKey="baduriaTD5" name="Baduria (TD5)" stroke="#E65100" strokeWidth={2} />
-                    <Line type="monotone" dataKey="sheoraphullyHBJB" name="Sheoraphully (HBJB)" stroke="#C62828" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Chart 3: Highest Rate Areas (Bar Chart) */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E331B] flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-[#D4AF37]" />
-                  Highest Premium Areas (Avg Rate)
-                </h3>
-                <span className="text-[10px] font-bold text-emerald-700">Top 8 Regions</span>
-              </div>
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <BarChart data={areaChartData.highest}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="area" tick={{ fontSize: 9, fill: '#1E331B', fontWeight: 'bold' }} interval={0} angle={-15} textAnchor="end" />
-                    <YAxis domain={['dataMin - 1000', 'dataMax + 1000']} tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <RechartsTooltip formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Avg Area Rate']} />
-                    <Bar dataKey="avgRate" fill="#1E331B" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Chart 4: Grade Distribution Donut Chart */}
-            <div className="bg-white p-5 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E331B] flex items-center gap-2">
-                  <PieChartIcon className="h-4 w-4 text-[#D4AF37]" />
-                  Differential Category Distribution
-                </h3>
-                <span className="text-[10px] font-bold text-slate-500">Premium vs Discount</span>
-              </div>
-              <div className="h-72 w-full flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <PieChart>
-                    <Pie
-                      data={distributionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={95}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {distributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip formatter={(val: any) => [`${val} Grade Cells`, 'Count']} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
       {/* TAB 3: AUDIT HISTORY & RATE CHANGE LOGS */}
       {activeTab === 'history' && (
         <div className="space-y-4">
@@ -2459,6 +2399,51 @@ export default function SattaChart({
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Print Preview Monthly Summary Table */}
+              <div className="mt-4 overflow-x-auto">
+                <div className="text-[11px] font-black uppercase text-slate-900 mb-1">
+                  Monthly Base Rate Summary (AVG / MAX / MIN)
+                </div>
+                <table className="w-full text-center border-collapse border border-slate-900 text-[11px] font-mono">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-900 font-black">
+                      <th className="py-1.5 px-2 border-r border-slate-900 w-12 text-slate-900 text-center">Metric</th>
+                      {MONTH_COLS.map((m) => (
+                        <th key={m.name} className="py-1.5 px-1.5 border-r border-slate-900 text-slate-900">
+                          {m.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-400">
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-bold bg-slate-50 border-r border-slate-900 text-slate-900">AVG</td>
+                      {monthlySummaryStats.map((stat) => (
+                        <td key={`print-avg-${stat.month}`} className="py-1 px-1 border-r border-slate-400 font-bold">
+                          {stat.avg || '—'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-b border-slate-300">
+                      <td className="py-1 px-2 font-bold bg-slate-50 border-r border-slate-900 text-slate-900">MAX</td>
+                      {monthlySummaryStats.map((stat) => (
+                        <td key={`print-max-${stat.month}`} className="py-1 px-1 border-r border-slate-400 font-bold">
+                          {stat.max || '—'}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <td className="py-1 px-2 font-bold bg-slate-50 border-r border-slate-900 text-slate-900">MIN</td>
+                      {monthlySummaryStats.map((stat) => (
+                        <td key={`print-min-${stat.month}`} className="py-1 px-1 border-r border-slate-400 font-bold">
+                          {stat.min || '—'}
+                        </td>
+                      ))}
+                    </tr>
                   </tbody>
                 </table>
               </div>

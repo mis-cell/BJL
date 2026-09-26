@@ -306,13 +306,14 @@ export function useInspectionLogic() {
             ]);
           };
 
-          const miCols = "mr_no, mr_date, date, arrival_no, arrival_date, po_no, po_date, supplier_name, broker_name, lorry_number, actual_moisture, claim_moisture, actual_dust, claim_dust, actual_ncv, claim_ncv, detention_days, unloading_date, mill_po_no, mill_po_date, remarks, deduction_type, deduction_rate, deduction_qty, deduction_amount, status, created_at, updated_at, deductions, deduction_rows, deduction_types, arrival_area, arrival_area_name, arrival_area_code, unit, unit_name, agency, area, marka, marks, rate, amount, quantity, gross_weight, net_weight, actual_grade_down, claim_grade_down, final_receipt_wt, arrival_grade, stock_grade_code, stock_grade_name";
-          const faCols = "final_arrival_no, arrival_no, mr_no, final_arrival_id, temporary_arrival_no, lorry_number, po_no, po_date, date, supplier, challan_supplier, broker, status, created_at, arrival_date, unit_name, unit_code, arrival_area_name, arrival_area_code, total_packets, weight_qtl, actual_gross_weight, actual_tare_weight, electronic_net_weight, grid_details";
+          const miCols = "*";
+          const faCols = "*";
 
-          const [miRes, mimRes, faRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
+          const [miRes, mimRes, faRes, tmrRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
             withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false }))),
             withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("final_arrival").select(faCols).order("created_at", { ascending: false }))),
+            withTimeout(Promise.resolve(supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })),
@@ -333,7 +334,22 @@ export function useInspectionLogic() {
             });
           }
           if (faRes.data && Array.isArray(faRes.data)) {
-            faList = faRes.data;
+            faList = [...faRes.data];
+          }
+          if (tmrRes?.data && Array.isArray(tmrRes.data)) {
+            const existingFaNos = new Set(faList.map(f => (f.final_arrival_no || f.temporary_arrival_no || f.arrival_no || '').trim().toUpperCase()).filter(Boolean));
+            tmrRes.data.forEach((t: any) => {
+              const tNo = (t.temporary_arrival_no || t.arrival_no || '').trim().toUpperCase();
+              if (tNo && !existingFaNos.has(tNo)) {
+                faList.push({
+                  ...t,
+                  final_arrival_no: t.temporary_arrival_no || t.arrival_no,
+                  arrival_no: t.temporary_arrival_no || t.arrival_no,
+                  arrival_date: t.date || t.temporary_arrival_date
+                });
+                existingFaNos.add(tNo);
+              }
+            });
           }
           if (dMasterRes && dMasterRes.data && Array.isArray(dMasterRes.data) && dMasterRes.data.length > 0) {
             setDeductionMasterList(dMasterRes.data);
@@ -471,7 +487,7 @@ export function useInspectionLogic() {
 
   useLiveAutoRefresh(fetchInspectionRecords, [], { tables: ['material_inspection', 'material_inspection_details', 'final_arrival', 'purchase_master', 'purchase_detail_master', 'temporary_material_received', 'moisture_logic', 'deduction_master'] });
 
-  const loadDetailsForPo = async (poNo: string) => {
+  const loadDetailsForPo = async (poNo: string, overrideArrivalData?: any) => {
     if (!poNo) return;
     try {
       const poClean = poNo.trim();
@@ -496,17 +512,17 @@ export function useInspectionLogic() {
 
         if (gradesRes.data) {
           gradesRes.data.forEach((g: any) => {
-            if (g.grade_code && g.grade_name) gradeMap[g.grade_code] = g.grade_name;
+            if (g.grade_code && g.grade_name) gradeMap[String(g.grade_code).trim()] = g.grade_name;
           });
         }
         if (agenciesRes.data) {
           agenciesRes.data.forEach((a: any) => {
-            if (a.agency_code && a.agency_name) agencyMap[a.agency_code] = a.agency_name;
+            if (a.agency_code && a.agency_name) agencyMap[String(a.agency_code).trim()] = a.agency_name;
           });
         }
         if (markasRes.data) {
           markasRes.data.forEach((m: any) => {
-            if (m.marka_code && m.marka_name) markaMap[m.marka_code] = m.marka_name;
+            if (m.marka_code && m.marka_name) markaMap[String(m.marka_code).trim()] = m.marka_name;
           });
         }
 
@@ -516,9 +532,9 @@ export function useInspectionLogic() {
           setHeaderForm(prev => ({
             ...prev,
             po_no: pm.po_no || prev.po_no,
-            po_date: pm.po_date || pm.date || prev.po_date,
-            supplier_name: pm.supplier || pm.challan_supplier || prev.supplier_name,
-            broker_name: pm.broker || prev.broker_name,
+            po_date: sanitizeDate(pm.po_date || pm.date) || prev.po_date,
+            supplier_name: pm.supplier || pm.challan_supplier || pm.supplier_name || prev.supplier_name,
+            broker_name: pm.broker || pm.broker_name || prev.broker_name,
             lorry_number: pm.lorry_no || pm.lorry_number || prev.lorry_number
           }));
         } else if (scpHeaderRes.data && scpHeaderRes.data.length > 0) {
@@ -527,7 +543,7 @@ export function useInspectionLogic() {
           setHeaderForm(prev => ({
             ...prev,
             po_no: scp.po_no || prev.po_no,
-            po_date: scp.po_date || scp.s_date || prev.po_date,
+            po_date: sanitizeDate(scp.po_date || scp.s_date) || prev.po_date,
             supplier_name: scp.supplier_name || scp.supplier || prev.supplier_name,
             broker_name: scp.broker_name || scp.broker || prev.broker_name,
             lorry_number: scp.lorry_number || prev.lorry_number
@@ -552,7 +568,7 @@ export function useInspectionLogic() {
       }
 
       if (matchedItems && matchedItems.length > 0) {
-        let resolvedUnitName = (pmData?.unit_name || pmData?.unit || "").toString().trim().toUpperCase();
+        let resolvedUnitName = (pmData?.unit_name || pmData?.unit || overrideArrivalData?.unit_name || overrideArrivalData?.unit || "").toString().trim().toUpperCase();
         if (!resolvedUnitName && matchedItems.length > 0) {
           for (const itm of matchedItems) {
             const u = (itm.unit || itm.unit_name || "").toString().trim().toUpperCase();
@@ -564,29 +580,29 @@ export function useInspectionLogic() {
         }
 
         const details: InspectionDetailRow[] = matchedItems.map((item: any, i: number) => {
-          const gradeCode = item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "";
-          const resolvedGradeName = gradeMap[gradeCode] || item.grade_name || item.receipt_grade_name || item.challan_grade_name || item.variety || item.item_name || item.grade || gradeCode;
-          const agencyCode = item.agency_code || "";
-          const resolvedAgencyName = agencyMap[agencyCode] || item.agency_name || item.agency || agencyCode;
-          const markaCode = item.marka_code || item.challan_marka_code || "";
-          const resolvedMarkaName = markaMap[markaCode] || item.marka_name || item.challan_marka_name || item.marka || item.marks || markaCode;
-          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || "").toUpperCase();
+          const gradeCode = String(item.grade_code || item.receipt_grade_code || item.stock_grade_code || item.item_code || "").trim();
+          const resolvedGradeName = item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.item_name || item.grade || gradeMap[gradeCode] || gradeCode || "";
+          const agencyCode = String(item.agency_code || "").trim();
+          const resolvedAgencyName = item.agency_name || item.agency || agencyMap[agencyCode] || agencyCode || "";
+          const markaCode = String(item.marka_code || item.challan_marka_code || "").trim();
+          const resolvedMarkaName = item.marka_name || item.challan_marka_name || item.marka || item.marks || markaMap[markaCode] || markaCode || "";
+          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || overrideArrivalData?.arrival_area_name || overrideArrivalData?.area || "").toUpperCase();
           const nettoVal = Number(item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== "" ? item.netto_pnto : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || item.net_wt || 0));
           let qtyVal = 0;
-          if (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== "") {
+          if (item.quantity_rcpt !== undefined && item.quantity_rcpt !== null && item.quantity_rcpt !== "" && Number(item.quantity_rcpt) > 0) {
             qtyVal = Number(item.quantity_rcpt);
-          } else if (item.quantity_chln !== undefined && item.quantity_chln !== null && item.quantity_chln !== "") {
+          } else if (item.quantity_chln !== undefined && item.quantity_chln !== null && item.quantity_chln !== "" && Number(item.quantity_chln) > 0) {
             qtyVal = Number(item.quantity_chln);
-          } else if (item.quantity !== undefined && item.quantity !== null && item.quantity !== "") {
+          } else if (item.quantity !== undefined && item.quantity !== null && item.quantity !== "" && Number(item.quantity) > 0) {
             qtyVal = Number(item.quantity);
-          } else if (item.bales !== undefined && item.bales !== null && item.bales !== "") {
+          } else if (item.bales !== undefined && item.bales !== null && item.bales !== "" && Number(item.bales) > 0) {
             qtyVal = Number(item.bales);
           }
           const itemUnit = (item.unit || item.unit_name || "").toString().trim().toUpperCase();
           const unitVal = (itemUnit && itemUnit !== "BALES") ? itemUnit : (resolvedUnitName || itemUnit || "BALES");
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
-          return {
+          const row: InspectionDetailRow = {
             srl_no: item.srl_no || (i + 1),
             arrival_grade: resolvedGradeName,
             stock_grade_code: gradeCode,
@@ -596,21 +612,33 @@ export function useInspectionLogic() {
             agency_code: agencyCode,
             marks: resolvedMarkaName,
             crop_year: item.crop_year || "2026-27",
+            lot: item.lot || item.lot_no || item.lot_number || "",
             quantity: qtyVal,
             unit: unitVal,
             rate: rateVal,
             rate_qntl: rateVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
+            gross_weight_batch: nettoVal,
             add_weight: Number(item.add_weight || 0),
             less_weight: Number(item.less_weight || 0),
             tolerable: "Yes",
-            expanded: false
+            expanded: false,
+            is_auto: true
           };
+
+          const computedWeights = computeDetailRowWeights(row);
+          Object.assign(row, computedWeights);
+          row.qty_in_mt = calculateQtyInMt(row);
+          row.amount = calculateRowAmount(row);
+
+          return row;
         });
 
-        setDetailRows(details);
-        showToast(`Loaded ${details.length} PO detail rows.`);
+        if (details.length > 0) {
+          setDetailRows(details);
+          showToast(`Loaded ${details.length} PO detail rows.`);
+        }
       }
     } catch (e) {
       console.warn("Could not load PO details:", e);
@@ -619,24 +647,189 @@ export function useInspectionLogic() {
 
   const populateFromFinalArrival = async (fa: any) => {
     try {
-      const arrNo = fa.final_arrival_no || fa.arrival_no || "";
+      const arrNo = fa.final_arrival_no || fa.arrival_no || fa.temporary_arrival_no || fa.mr_no || "";
       const isLoose = (fa.unit_name || fa.unit_code || fa.unit || "").toString().trim().toUpperCase().includes("LOOSE");
-      const resolvedUnit = isLoose ? "LOOSE" : (fa.unit_name || "BALES");
+      const resolvedUnit = isLoose ? "LOOSE" : (fa.unit_name || fa.unit || "BALES");
+      const resolvedArea = fa.arrival_area_name || fa.area || fa.arrival_area || "";
 
-      setHeaderForm(prev => ({
-        ...prev,
-        arrival_no: arrNo,
-        arrival_date: fa.arrival_date || fa.date || prev.arrival_date,
-        po_no: fa.po_no || prev.po_no,
-        po_date: fa.po_date || prev.po_date,
-        supplier_name: fa.supplier || fa.challan_supplier || prev.supplier_name,
-        broker_name: fa.broker || prev.broker_name,
-        lorry_number: fa.lorry_number || prev.lorry_number,
-        unit_name: resolvedUnit
-      }));
+      // 1. Update Header Form with full details from the selected arrival
+      setHeaderForm(prev => {
+        const next: InspectionMasterRecord = {
+          ...prev,
+          arrival_no: arrNo,
+          arrival_date: sanitizeDate(fa.arrival_date || fa.final_arrival_date || fa.date || fa.temporary_arrival_date) || prev.arrival_date,
+          po_no: fa.po_no || prev.po_no,
+          po_date: sanitizeDate(fa.po_date || fa.date) || prev.po_date,
+          supplier_name: fa.supplier || fa.challan_supplier || fa.supplier_name || prev.supplier_name,
+          broker_name: fa.broker || fa.broker_name || prev.broker_name,
+          lorry_number: fa.lorry_number || fa.lorry_no || prev.lorry_number,
+          arrival_area: resolvedArea || prev.arrival_area,
+          arrival_area_name: resolvedArea || prev.arrival_area_name,
+          unit_name: resolvedUnit,
+          unloading_date: sanitizeDate(fa.unloading_date || fa.arrival_date || fa.date) || prev.unloading_date,
+          actual_moisture: Number(fa.actual_moisture) || prev.actual_moisture || 0,
+          claim_moisture: Number(fa.claim_moisture) || prev.claim_moisture || 0,
+          actual_dust: Number(fa.actual_dust) || prev.actual_dust || 0,
+          claim_dust: Number(fa.claim_dust) || prev.claim_dust || 0,
+          actual_ncv: Number(fa.actual_ncv) || prev.actual_ncv || 0,
+          claim_ncv: Number(fa.claim_ncv) || prev.claim_ncv || 0,
+          detention_days: Number(fa.detention_days) || prev.detention_days || 0,
+          mr_spcl_print: fa.mr_spcl_print || prev.mr_spcl_print || "",
+          remarks: fa.remarks || prev.remarks || ""
+        };
 
+        if (next.actual_moisture > 0 && (!next.claim_moisture || next.claim_moisture === 0)) {
+          next.claim_moisture = calculateClaimMoisture(
+            Number(next.actual_moisture) || 0,
+            next.arrival_date,
+            next.arrival_area || next.arrival_area_name || "",
+            moistureLogicRules
+          );
+        }
+        return next;
+      });
+
+      // 2. Extract detail items from fa.grid_details
+      let rawGridItems: any[] = [];
+      if (fa.grid_details) {
+        if (Array.isArray(fa.grid_details)) {
+          rawGridItems = fa.grid_details;
+        } else if (typeof fa.grid_details === 'string') {
+          try {
+            const parsed = JSON.parse(fa.grid_details);
+            if (Array.isArray(parsed)) rawGridItems = parsed;
+          } catch (e) {}
+        }
+      }
+
+      // If grid_details was not embedded, query Supabase for arrival record details
+      if (rawGridItems.length === 0 && supabase) {
+        try {
+          const arrClean = arrNo.trim();
+          const [faDbRes, tmrDbRes, fadRes, tmdRes] = await Promise.all([
+            arrClean ? supabase.from('final_arrival').select('*').or(`final_arrival_no.eq.${arrClean},arrival_no.eq.${arrClean},temporary_arrival_no.eq.${arrClean}`).maybeSingle() : Promise.resolve({ data: null }),
+            arrClean ? supabase.from('temporary_material_received').select('*').eq('temporary_arrival_no', arrClean).maybeSingle() : Promise.resolve({ data: null }),
+            arrClean ? supabase.from('final_arrival_details').select('*').eq('final_arrival_no', arrClean) : Promise.resolve({ data: null }),
+            arrClean ? supabase.from('temporary_material_details').select('*').eq('temporary_arrival_no', arrClean) : Promise.resolve({ data: null })
+          ]);
+
+          const foundFa = faDbRes.data;
+          const foundTmr = tmrDbRes.data;
+
+          if (foundFa?.grid_details) {
+            const parsed = typeof foundFa.grid_details === 'string' ? JSON.parse(foundFa.grid_details) : foundFa.grid_details;
+            if (Array.isArray(parsed) && parsed.length > 0) rawGridItems = parsed;
+          } else if (foundTmr?.grid_details) {
+            const parsed = typeof foundTmr.grid_details === 'string' ? JSON.parse(foundTmr.grid_details) : foundTmr.grid_details;
+            if (Array.isArray(parsed) && parsed.length > 0) rawGridItems = parsed;
+          } else if (fadRes.data && Array.isArray(fadRes.data) && fadRes.data.length > 0) {
+            rawGridItems = fadRes.data;
+          } else if (tmdRes.data && Array.isArray(tmdRes.data) && tmdRes.data.length > 0) {
+            rawGridItems = tmdRes.data;
+          }
+        } catch (e) {
+          console.warn("DB lookup error for arrival details:", e);
+        }
+      }
+
+      // If we have arrival grid items, map them to InspectionDetailRow
+      if (rawGridItems.length > 0) {
+        let gradeMap: Record<string, string> = {};
+        let agencyMap: Record<string, string> = {};
+        let markaMap: Record<string, string> = {};
+
+        if (supabase) {
+          const [gradesRes, agenciesRes, markasRes] = await Promise.all([
+            supabase.from('grade_master').select('*'),
+            supabase.from('agency_master').select('*'),
+            supabase.from('marka_master').select('*')
+          ]);
+          if (gradesRes.data) {
+            gradesRes.data.forEach((g: any) => {
+              if (g.grade_code && g.grade_name) gradeMap[String(g.grade_code).trim()] = g.grade_name;
+            });
+          }
+          if (agenciesRes.data) {
+            agenciesRes.data.forEach((a: any) => {
+              if (a.agency_code && a.agency_name) agencyMap[String(a.agency_code).trim()] = a.agency_name;
+            });
+          }
+          if (markasRes.data) {
+            markasRes.data.forEach((m: any) => {
+              if (m.marka_code && m.marka_name) markaMap[String(m.marka_code).trim()] = m.marka_name;
+            });
+          }
+        }
+
+        const details: InspectionDetailRow[] = rawGridItems.map((item: any, i: number) => {
+          const gradeCode = String(item.receipt_grade_code || item.grade_code || item.stock_grade_code || item.item_code || "").trim();
+          const resolvedGradeName = item.receipt_grade_name || item.challan_grade_name || item.grade_name || item.variety || item.grade || item.item_name || gradeMap[gradeCode] || gradeCode || "";
+
+          const agencyCode = String(item.agency_code || "").trim();
+          const resolvedAgencyName = item.agency_name || item.agency || agencyMap[agencyCode] || agencyCode || "";
+
+          const markaCode = String(item.challan_marka_code || item.marka_code || "").trim();
+          const resolvedMarkaName = item.challan_marka_name || item.marka_name || item.marks || item.marka || markaMap[markaCode] || markaCode || "";
+
+          const areaName = (item.area_name || item.area || item.arrival_area_name || item.arrival_area || fa.arrival_area_name || fa.area || resolvedArea || "").toUpperCase();
+
+          const qtyChln = Number(item.quantity_chln || 0);
+          const qtyRcpt = Number(item.quantity_rcpt || 0);
+          const qtyVal = qtyRcpt > 0 ? qtyRcpt : (qtyChln > 0 ? qtyChln : Number(item.quantity || item.bales || item.total_packets || item.qty || 0));
+
+          const nettoVal = Number(
+            item.netto_pnto !== undefined && item.netto_pnto !== null && item.netto_pnto !== ""
+              ? item.netto_pnto
+              : (item.weight_mt || item.quantity_mt || item.challan_gross_wt || item.receipt_gross_wt || item.gross_weight || item.weight || (item.weight_kgs ? Number(item.weight_kgs) / 1000 : 0))
+          );
+
+          const itemUnit = (item.unit || item.unit_name || fa.unit_name || fa.unit || resolvedUnit || "BALES").toString().trim().toUpperCase();
+          const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
+
+          const row: InspectionDetailRow = {
+            srl_no: item.srl_no || (i + 1),
+            arrival_grade: resolvedGradeName,
+            stock_grade_code: gradeCode,
+            stock_grade_name: resolvedGradeName,
+            area: areaName,
+            agency: resolvedAgencyName,
+            agency_code: agencyCode,
+            marks: resolvedMarkaName,
+            crop_year: item.crop_year || "2026-27",
+            lot: item.lot || item.lot_no || item.lot_number || "",
+            quantity: qtyVal,
+            unit: itemUnit,
+            rate: rateVal,
+            rate_qntl: rateVal,
+            challan_gross_wt: nettoVal,
+            receipt_gross_wt: nettoVal,
+            gross_weight_batch: nettoVal,
+            add_weight: Number(item.add_weight || 0),
+            less_weight: Number(item.less_weight || 0),
+            tolerable: "Yes",
+            expanded: false,
+            is_auto: true
+          };
+
+          const computedWeights = computeDetailRowWeights(row);
+          Object.assign(row, computedWeights);
+          row.qty_in_mt = calculateQtyInMt(row);
+          row.amount = calculateRowAmount(row);
+
+          return row;
+        });
+
+        const validDetails = details.filter(r => Boolean(r.arrival_grade || r.stock_grade_name || (Number(r.quantity) > 0) || (Number(r.challan_gross_wt) > 0)));
+        if (validDetails.length > 0) {
+          setDetailRows(validDetails);
+          showToast(`Loaded ${validDetails.length} arrival inspection detail rows.`);
+          return;
+        }
+      }
+
+      // Fallback: If no arrival grid items found, load from PO
       if (fa.po_no) {
-        await loadDetailsForPo(fa.po_no);
+        await loadDetailsForPo(fa.po_no, fa);
       }
       showToast(`Selected Final Arrival #${arrNo}`);
     } catch (e) {

@@ -70,14 +70,17 @@ const compareQualities = (aStr: string, bStr: string): number => {
 export default function SaudaEntry({ 
   initialData, 
   onSave, 
-  onCancel 
+  onCancel,
+  onNavigate
 }: { 
   initialData?: any; 
   onSave?: (d: any) => void; 
   onCancel?: () => void;
+  onNavigate?: (page: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [showPrintSlip, setShowPrintSlip] = useState(false);
+  const [isSattaChartUploaded, setIsSattaChartUploaded] = useState<boolean>(true);
 
   const [brokers, setBrokers] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
@@ -194,6 +197,10 @@ export default function SaudaEntry({
         if (agcData) setAgencies(agcData);
         if (gradeData) setGrades(gradeData);
         if (markaData) setMarkas(markaData);
+        const hasSattaRates = (sattaBaseRates && sattaBaseRates.length > 0) || (sattaDiffs && sattaDiffs.length > 0);
+        const hasLocalStorageUpload = typeof window !== 'undefined' && localStorage.getItem('satta_chart_uploaded') === 'true';
+        setIsSattaChartUploaded(Boolean(hasSattaRates || hasLocalStorageUpload));
+
         if (sattaBaseRates && sattaBaseRates.length > 0) {
           setBaseRatesList(sattaBaseRates);
           const sorted = [...sattaBaseRates].sort((a: any, b: any) => (b.start_date || '').localeCompare(a.start_date || ''));
@@ -751,6 +758,23 @@ export default function SaudaEntry({
               <span>Back</span>
             </button>
           </div>
+        </div>
+
+        {/* Satta Chart Verification Badge */}
+        <div className="bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+            <span className="font-extrabold text-emerald-950 uppercase tracking-wide">
+              Step 1: Satta Chart Active (Source Rate: ₹{formData.b_rate ? Number(formData.b_rate).toLocaleString() : '17,500'})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate ? onNavigate('satta_chart') : (window.location.hash = '#satta_chart')}
+            className="px-3 py-1 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+          >
+            Review / Update Satta Chart →
+          </button>
         </div>
 
         {/* 2. Main Form Content */}

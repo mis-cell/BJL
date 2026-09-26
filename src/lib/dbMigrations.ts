@@ -536,6 +536,18 @@ export async function runDatabaseMigrations() {
             ELSE
               ALTER TABLE satta_master ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC(15,2);
             END IF;
+            -- sauda_master columns
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS unit_type TEXT DEFAULT 'BALES';
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC(15,2);
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS units_per_lorry_type TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS total_unit INTEGER DEFAULT 0;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS wt_per_lorry NUMERIC(15,3);
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS total_wt_in_ton NUMERIC(15,3);
           END $$;
 
           DROP VIEW IF EXISTS material_inspection CASCADE;

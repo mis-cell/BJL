@@ -1147,6 +1147,7 @@ export default function App() {
                   <SaudaEntry
                     onCancel={() => closePage("sauda_entry", "sauda")}
                     onSave={() => closePage("sauda_entry", "sauda")}
+                    onNavigate={(page) => globalNavigate(page as Page)}
                   />
                 </div>
               )}
