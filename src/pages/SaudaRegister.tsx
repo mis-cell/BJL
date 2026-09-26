@@ -1152,19 +1152,19 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         {/* 4. Data Table */}
         <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
           <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full border-collapse text-xs min-w-[1050px]">
+            <table className={cn("w-full border-collapse text-xs", isUser10 ? "min-w-full" : "min-w-[1050px]")}>
               <thead className="bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10">
                 <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                  <th className="px-3 py-2 text-center">Date</th>
-                  <th className="px-3 py-2 text-center">Order No.</th>
+                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[80px]" : "px-3")}>Date</th>
+                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[75px]" : "px-3")}>Order No.</th>
                   {!isUser10 && <th className="px-3 py-2 text-center">Session</th>}
-                  <th className="px-4 py-2 text-left">Broker</th>
+                  <th className={cn("py-2 text-left", isUser10 ? "px-2" : "px-4")}>Broker</th>
                   {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
                   {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
-                  <th className="px-3 py-2 text-center">Status</th>
-                  {(isAdminOrL4 || isUser10) && <th className="px-3 py-2 text-center">Actions</th>}
+                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[140px]" : "px-3")}>Status</th>
+                  {(isAdminOrL4 || isUser10) && <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-1 w-[45px]" : "px-3")}>Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1198,10 +1198,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           : (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
                       )}
                     >
-                      <td className={cn("px-3 text-center font-mono text-[11px]", isSelected ? "text-white" : "text-slate-500")}>
+                      <td className={cn("text-center font-mono text-[11px] whitespace-nowrap", isUser10 ? "px-2" : "px-3", isSelected ? "text-white" : "text-slate-500")}>
                         {new Date(entry.date).toLocaleDateString('en-GB')}
                       </td>
-                      <td className={cn("px-3 text-center font-bold", isSelected ? "text-amber-300" : "text-slate-900")}>
+                      <td className={cn("text-center font-bold whitespace-nowrap", isUser10 ? "px-2" : "px-3", isSelected ? "text-amber-300" : "text-slate-900")}>
                         #{entry.sauda_no}
                       </td>
                       {!isUser10 && (
@@ -1209,7 +1209,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           {entry.session}
                         </td>
                       )}
-                      <td className="px-4 font-bold uppercase truncate max-w-[150px]">
+                      <td className={cn("font-bold uppercase text-xs leading-snug break-words whitespace-normal", isUser10 ? "px-2 max-w-[220px]" : "px-4 truncate max-w-[150px]")}>
                         {entry.broker}
                       </td>
                       {!isUser10 && (
