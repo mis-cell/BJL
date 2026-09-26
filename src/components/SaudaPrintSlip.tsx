@@ -32,7 +32,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
   };
 
   return (
-    <div className="bg-white w-[148mm] h-[210mm] min-h-[210mm] max-h-[210mm] mx-auto p-6 flex flex-col font-sans text-black print:w-[148mm] print:h-[210mm] print:max-h-[210mm] print:p-6 print:m-0 box-border text-[11px] leading-relaxed relative overflow-hidden page-break-inside-avoid shadow-lg print:shadow-none">
+    <div className="bg-white w-full max-w-[148mm] sm:w-[148mm] min-h-[210mm] mx-auto p-3 sm:p-6 flex flex-col font-sans text-black print:w-[148mm] print:h-[210mm] print:max-h-[210mm] print:p-6 print:m-0 box-border text-[10px] sm:text-[11px] leading-relaxed relative overflow-x-auto page-break-inside-avoid shadow-lg print:shadow-none">
        {/* Invoice/Contract Header */}
        <div className="flex justify-between items-center mb-2 flex-none border-b-2 border-black pb-2">
           <div className="flex items-center gap-3">
