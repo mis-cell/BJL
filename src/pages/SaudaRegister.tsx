@@ -677,21 +677,23 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           }
         `}</style>
         {/* Viewer Toolbar */}
-        <div className="flex-none bg-[#323639] shadow-md px-6 py-3 flex justify-between items-center no-print">
-          <div className="flex items-center gap-4">
-             <button onClick={() => setPrintingSauda(null)} className="p-2 text-gray-300 hover:bg-white/10 rounded-full transition">
+        <div className="flex-none bg-[#323639] shadow-md px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center no-print">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+             <button onClick={() => setPrintingSauda(null)} className="p-1.5 sm:p-2 text-gray-300 hover:bg-white/10 rounded-full transition shrink-0" title="Close Preview">
                <ArrowLeft className="w-5 h-5" />
              </button>
-             <span className="text-white font-medium">Sauda_Contract_#{printingSauda.sauda_no}.pdf</span>
+             <span className="text-white font-medium text-xs sm:text-sm truncate max-w-[180px] sm:max-w-xs">Sauda_Contract_#{printingSauda.sauda_no}.pdf</span>
           </div>
-          <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded shadow flex items-center gap-2 font-bold transition">
+          <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded shadow flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold transition shrink-0">
              <Printer className="w-4 h-4" /> Print
           </button>
         </div>
 
         {/* Scrollable Canvas */}
-        <div className="flex-1 overflow-y-auto p-8 flex justify-center print:p-0 print:overflow-visible">
-           <SaudaPrintSlip sauda={printingSauda} />
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-2 sm:p-8 flex justify-center items-start print:p-0 print:overflow-visible">
+           <div className="w-full max-w-[148mm] flex justify-center">
+             <SaudaPrintSlip sauda={printingSauda} />
+           </div>
         </div>
       </div>
     );
@@ -1159,8 +1161,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   <th className="px-4 py-2 text-left">Broker</th>
                   {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
-                  <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>
-                  <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>
+                  {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
+                  {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
                   <th className="px-3 py-2 text-center">Status</th>
                   {(isAdminOrL4 || isUser10) && <th className="px-3 py-2 text-center">Actions</th>}
                 </tr>
@@ -1220,21 +1222,25 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           {entry.units_per_lorry_type}
                         </td>
                       )}
-                      <td className="px-3 text-center font-bold font-mono">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wide",
-                          isSelected
-                            ? "bg-amber-400 text-slate-950"
-                            : String(entry.unit_type || '').toUpperCase().includes('DRUM')
-                              ? "bg-purple-100 text-purple-900 border border-purple-300"
-                              : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        )}>
-                          {entry.unit_type || 'BALES'}
-                        </span>
-                      </td>
-                      <td className={cn("px-4 text-right font-black font-mono", isSelected ? "text-amber-300 bg-[#123e24]" : "text-rose-700 bg-rose-50/30")}>
-                        ₹{Number(entry.b_rate).toLocaleString()}
-                      </td>
+                      {!isUser10 && (
+                        <td className="px-3 text-center font-bold font-mono">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wide",
+                            isSelected
+                              ? "bg-amber-400 text-slate-950"
+                              : String(entry.unit_type || '').toUpperCase().includes('DRUM')
+                                ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                          )}>
+                            {entry.unit_type || 'BALES'}
+                          </span>
+                        </td>
+                      )}
+                      {!isUser10 && (
+                        <td className={cn("px-4 text-right font-black font-mono", isSelected ? "text-amber-300 bg-[#123e24]" : "text-rose-700 bg-rose-50/30")}>
+                          ₹{Number(entry.b_rate).toLocaleString()}
+                        </td>
+                      )}
                       <td className="px-3 text-center">
                         <div className="flex flex-col items-center justify-center gap-1 py-1">
                           {isChecked ? (
@@ -1389,7 +1395,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 })}
                 {filteredSaudas.length === 0 && (
                   <tr>
-                    <td colSpan={isUser10 ? 7 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
+                    <td colSpan={isUser10 ? 5 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                           <ClipboardList className="h-8 w-8 text-[#174C2C]" />
