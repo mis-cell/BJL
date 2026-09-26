@@ -1222,23 +1222,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 </button>
               )}
             </div>
-
-            <button
-              onClick={handleCsvDownload}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-              title="Download full Sauda Contract database as CSV"
-            >
-              <Download className="h-4 w-4" />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              onClick={() => setIsAccountsModalOpen(true)}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Calculator className="h-4 w-4" />
-              <span>Accounts</span>
-            </button>
           </div>
 
           <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-4 py-1.5 flex flex-col text-right">
