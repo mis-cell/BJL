@@ -116,7 +116,7 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
 
       let loadedRecords = (data || []) as FinalArrivalRecord[];
       if (!isArchiveView) {
-        loadedRecords = loadedRecords.filter(r => r.status !== 'settled' && !(r as any).archived_at);
+        loadedRecords = loadedRecords.filter(r => !(r as any).archived_at);
       }
       setRecords(loadedRecords);
 

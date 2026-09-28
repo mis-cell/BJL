@@ -27,6 +27,7 @@ interface FinalArrivalStatsRibbonProps {
 }
 
 export function FinalArrivalStatsRibbon({
+  stats,
   filteredLoadsCount,
   totalBales,
   totalWeightMt,
@@ -43,17 +44,17 @@ export function FinalArrivalStatsRibbon({
     <div className="space-y-3.5">
       {/* KPI CARDS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* KPI 1 */}
+        {/* KPI 1: Total M.R. */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#1E4D2B]/40 transition-all group">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Filtered Loads</span>
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Final M.R.</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#1E4D2B] flex items-center justify-center group-hover:scale-110 transition-transform">
               <Truck className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl font-bold font-mono text-slate-900">{filteredLoadsCount} <span className="text-xs font-sans font-semibold text-slate-600">Lorries</span></p>
+          <p className="text-xl font-bold font-mono text-slate-900">{filteredLoadsCount} <span className="text-xs font-sans font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">M.R</span></p>
           <p className="text-[10px] font-medium text-emerald-700 mt-1 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active Final M.R
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {stats.totalVehicles > 0 ? `${stats.totalVehicles} Vehicles / Lorries` : 'All Active Final M.R Records'}
           </p>
         </div>
 
