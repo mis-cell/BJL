@@ -28,7 +28,8 @@ import {
   Send,
   ClipboardList,
   Scale,
-  IndianRupee
+  IndianRupee,
+  Eye
 } from 'lucide-react';
 import { cn, sanitizeCsvData, getApiUrl } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -640,60 +641,96 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       <div className="fixed inset-0 z-[200] bg-[#525659] flex flex-col print:bg-white print:static print:z-auto print-modal">
         <style>{`
           @media print {
-            /* Bulletproof print reset: completely hide everything in #root and outside of the print modal */
             #root {
-               display: none !important;
+              display: none !important;
             }
+
             .no-print {
-               display: none !important;
+              display: none !important;
             }
-            /* Reset body limits to allow natural print flow */
+
             html, body {
-               height: auto !important;
-               min-height: 0 !important;
-               overflow: visible !important;
-               max-height: none !important;
-               background: white !important;
-               border: none !important;
-               box-shadow: none !important;
-               padding: 0 !important;
-               margin: 0 !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              max-height: none !important;
+              background: white !important;
+              border: none !important;
+              box-shadow: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
             }
-            /* Position print content perfectly at page start */
+
             .print-modal {
-               position: static !important;
-               background: white !important;
-               box-shadow: none !important;
-               border: none !important;
-               margin: 0 !important;
-               padding: 0 !important;
-               width: 100% !important;
-               height: auto !important;
+              position: static !important;
+              background: white !important;
+              box-shadow: none !important;
+              border: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              height: auto !important;
             }
+
             @page {
-               size: A5 portrait;
-               margin: 0;
+              size: A5 portrait;
+              margin: 0;
             }
           }
         `}</style>
+
         {/* Viewer Toolbar */}
-        <div className="flex-none bg-[#323639] shadow-md px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center no-print">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-             <button onClick={() => setPrintingSauda(null)} className="p-1.5 sm:p-2 text-gray-300 hover:bg-white/10 rounded-full transition shrink-0" title="Close Preview">
-               <ArrowLeft className="w-5 h-5" />
-             </button>
-             <span className="text-white font-medium text-xs sm:text-sm truncate max-w-[180px] sm:max-w-xs">Sauda_Contract_#{printingSauda.sauda_no}.pdf</span>
+        <div className="flex-none w-full bg-[#323639] shadow-md no-print">
+          <div className="w-full px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center">
+            
+            {isUser10 ? (
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                <button
+                  onClick={() => setPrintingSauda(null)}
+                  className="p-1.5 sm:p-2 text-gray-300 hover:bg-white/10 rounded-full transition shrink-0"
+                  title="Close Preview"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                <span className="text-white font-medium text-xs sm:text-sm truncate">
+                  Sauda Details # {printingSauda.sauda_no}
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                  <button
+                    onClick={() => setPrintingSauda(null)}
+                    className="p-1.5 sm:p-2 text-gray-300 hover:bg-white/10 rounded-full transition shrink-0"
+                    title="Close Preview"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+
+                  <span className="text-white font-medium text-xs sm:text-sm truncate">
+                    Sauda_Contract_#{printingSauda.sauda_no}.pdf
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => window.print()}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded shadow flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold transition shrink-0"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </button>
+              </>
+            )}
+
           </div>
-          <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-500 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded shadow flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold transition shrink-0">
-             <Printer className="w-4 h-4" /> Print
-          </button>
         </div>
 
         {/* Scrollable Canvas */}
         <div className="flex-1 overflow-y-auto overflow-x-auto p-2 sm:p-8 flex justify-center items-start print:p-0 print:overflow-visible">
-           <div className="w-full max-w-[148mm] flex justify-center">
-             <SaudaPrintSlip sauda={printingSauda} />
-           </div>
+          <div className="w-full max-w-[148mm] flex justify-center">
+            <SaudaPrintSlip sauda={printingSauda} />
+          </div>
         </div>
       </div>
     );
@@ -1062,7 +1099,87 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
         {/* 3. Action Toolbar (Green Filled & White Outline Buttons) */}
         <div className="flex flex-wrap items-center justify-between gap-3 my-1">
-          <div className="flex items-center gap-2 flex-wrap">
+          {isUser10 ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* <button
+                onClick={onNew}
+                className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Plus className="h-4 w-4 text-amber-300" />
+                <span>New Sauda</span>
+              </button> */}
+
+              <button
+                onClick={() => {
+                  if (selectedSaudaId) {
+                    const sauda = saudaList.find(s => s.sauda_id === selectedSaudaId);
+                    if (sauda) handlePrint(sauda);
+                  } else {
+                    setPrintingBook(true);
+                  }
+                }}
+                className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print Book</span>
+              </button>
+
+              {/* Quick Section Switchers Beside Print Book */}
+              <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setStatusTab('pending')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                    statusTab === 'pending'
+                      ? "bg-[#174C2C] text-white shadow-2xs"
+                      : "text-slate-700 hover:bg-slate-200"
+                  )}
+                  title="Main Dashboard (Pending Saudas)"
+                >
+                  <span>Main Dashboard</span>
+                  <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
+                </button>
+
+                {canSeeChecked && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('checked')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'checked'
+                        ? "bg-emerald-800 text-white shadow-2xs"
+                        : "text-emerald-800 hover:bg-emerald-100/60"
+                    )}
+                    title="Checked Section"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Checked</span>
+                    <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
+                  </button>
+                )}
+
+                {canSeeRejected && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('rejected')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'rejected'
+                        ? "bg-rose-800 text-white shadow-2xs"
+                        : "text-rose-800 hover:bg-rose-100/60"
+                    )}
+                    title="Reject Section"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject Section</span>
+                    <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ):(
+            <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={onNew}
               className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
@@ -1140,6 +1257,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               )}
             </div>
           </div>
+          )}
 
           <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-4 py-1.5 flex flex-col text-right">
             <span className="text-[10px] font-extrabold uppercase text-amber-800 tracking-wider">Book Total Value</span>
@@ -1318,7 +1436,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                               )}
                               title="Print Sauda Slip"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
                           ) : (
                             <div className="relative inline-block text-left">
