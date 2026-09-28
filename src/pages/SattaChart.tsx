@@ -38,9 +38,10 @@ import {
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { cn, sanitizeCsvData } from '../lib/utils';
-import { enforceEditOrDeletePermission } from '../lib/permissions';
+import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
 import LegacyLayout, { LegacyButton } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
+import { refreshSattaCache } from '../services/sattaRateService';
 
 // Complete grades list in order from the official Satta chart specification
 const ALL_GRADES = [
@@ -82,16 +83,27 @@ const formatDateDMY = (dateStr: string | null) => {
   return dateStr;
 };
 
+const formatDateTime = (isoStr?: string | null) => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return isoStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return `${day}-${month}-${year} ${timeStr}`;
+};
+
 export default function SattaChart({ 
   onClose, 
   isEmbedded = false,
   onNavigate
 }: { 
   onClose?: () => void; 
-  isEmbedded?: boolean;
+  isEmbedded?: boolean; 
   onNavigate?: (page: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix'>('base_rate');
+  const [activeTab, setActiveTab] = useState<'base_rate' | 'matrix' | 'diff_history'>('base_rate');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [showPrintPreview, setShowPrintPreview] = useState<boolean>(false);
   const [showUploadSuccessModal, setShowUploadSuccessModal] = useState<boolean>(false);
@@ -108,6 +120,16 @@ export default function SattaChart({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{message: string, success: boolean} | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+
+  // Differential History Audit State
+  const [diffHistoryLogs, setDiffHistoryLogs] = useState<any[]>([]);
+  const [isDiffHistoryLoading, setIsDiffHistoryLoading] = useState<boolean>(false);
+  const [diffFilterDateFrom, setDiffFilterDateFrom] = useState<string>('');
+  const [diffFilterDateTo, setDiffFilterDateTo] = useState<string>('');
+  const [diffFilterArea, setDiffFilterArea] = useState<string>('ALL');
+  const [diffFilterGrade, setDiffFilterGrade] = useState<string>('ALL');
+  const [diffFilterChangedBy, setDiffFilterChangedBy] = useState<string>('ALL');
+  const [diffFilterSearch, setDiffFilterSearch] = useState<string>('');
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -140,12 +162,14 @@ export default function SattaChart({
   useEffect(() => {
     loadChartConfig();
     fetchRateHistory();
+    fetchDiffHistory();
   }, []);
 
   useLiveAutoRefresh(() => {
     loadChartConfig();
     fetchRateHistory();
-  }, [], { tables: ['satta_base_rates', 'satta_differentials', 'satta_calculated_rates'] });
+    fetchDiffHistory();
+  }, [], { tables: ['satta_base_rates', 'satta_differentials', 'satta_calculated_rates', 'satta_differential_audit_logs'] });
 
   // Auto-select latest instance when entering range_list mode
   useEffect(() => {
@@ -241,7 +265,20 @@ export default function SattaChart({
          remarks TEXT,
          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
        );`,
-      `ALTER TABLE IF EXISTS satta_base_rate_audit_logs DISABLE ROW LEVEL SECURITY;`
+      `ALTER TABLE IF EXISTS satta_base_rate_audit_logs DISABLE ROW LEVEL SECURITY;`,
+      `CREATE TABLE IF NOT EXISTS satta_differential_audit_logs (
+         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         changed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+         area TEXT NOT NULL,
+         grade TEXT NOT NULL,
+         old_differential NUMERIC(15,2),
+         new_differential NUMERIC(15,2) NOT NULL,
+         differential_change NUMERIC(15,2),
+         changed_by TEXT DEFAULT 'ADMIN',
+         remarks TEXT,
+         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+       );`,
+      `ALTER TABLE IF EXISTS satta_differential_audit_logs DISABLE ROW LEVEL SECURITY;`
     ];
 
     for (const sql of queries) {
@@ -423,6 +460,14 @@ export default function SattaChart({
       canonicalArea = 'L/A TARABARI';
     }
 
+    const oldDiff = dbDifferentials[canonicalArea]?.[grade] !== undefined
+      ? Number(dbDifferentials[canonicalArea][grade])
+      : null;
+    const diffChange = oldDiff !== null ? numericDiff - oldDiff : null;
+    const changedDate = new Date().toISOString().split('T')[0];
+    const userCtx = getCurrentUserContext();
+    const changedBy = userCtx?.username || userCtx?.userName || 'ADMIN';
+
     try {
       setIsLoading(true);
       const { error } = await supabase
@@ -438,6 +483,21 @@ export default function SattaChart({
 
       if (error) throw error;
 
+      // Record audit history in Supabase satta_differential_audit_logs
+      await supabase
+        .from('satta_differential_audit_logs')
+        .insert({
+          changed_date: changedDate,
+          area: canonicalArea,
+          grade,
+          old_differential: oldDiff,
+          new_differential: numericDiff,
+          differential_change: diffChange,
+          changed_by: changedBy,
+          remarks: `Live Pivot Matrix edit: ${oldDiff !== null ? (oldDiff >= 0 ? '+' : '') + oldDiff : 'New'} → ${(numericDiff >= 0 ? '+' : '') + numericDiff}`,
+          created_at: new Date().toISOString()
+        });
+
       // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows
       if (canonicalArea === 'L/A TARABARI') {
         supabase.from('satta_differentials').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
@@ -452,15 +512,41 @@ export default function SattaChart({
         }
       }));
 
+      // Refresh differential history table & central rate cache
+      fetchDiffHistory();
+      refreshSattaCache().catch(() => {});
+
       setEditingCell(null);
       setSaveStatus({
-        message: `Differential for ${canonicalArea} [${grade}] updated to ${numericDiff >= 0 ? '+' : ''}${numericDiff}.`,
+        message: `Differential for ${canonicalArea} [${grade}] updated to ${numericDiff >= 0 ? '+' : ''}${numericDiff}. Change recorded in Differential History!`,
         success: true
       });
     } catch (exc: any) {
       alert("Error saving differential: " + exc.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fetch Differential History from Supabase
+  const fetchDiffHistory = async () => {
+    if (!supabase) return;
+    setIsDiffHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('satta_differential_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching satta_differential_audit_logs from Supabase:', error);
+      } else {
+        setDiffHistoryLogs(data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load differential history:', err);
+    } finally {
+      setIsDiffHistoryLoading(false);
     }
   };
 
@@ -981,6 +1067,86 @@ export default function SattaChart({
     return ALL_GRADES;
   }, [selectedGradeFilter]);
 
+  const distinctDiffAreas = useMemo(() => {
+    const set = new Set<string>();
+    diffHistoryLogs.forEach((l: any) => {
+      if (l.area) set.add(String(l.area).trim().toUpperCase());
+    });
+    Object.keys(dbDifferentials).forEach(a => {
+      if (a) set.add(a.trim().toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [diffHistoryLogs, dbDifferentials]);
+
+  const distinctDiffGrades = useMemo(() => {
+    const set = new Set<string>();
+    diffHistoryLogs.forEach((l: any) => {
+      if (l.grade) set.add(String(l.grade).trim().toUpperCase());
+    });
+    ALL_GRADES.forEach(g => set.add(g));
+    return Array.from(set);
+  }, [diffHistoryLogs]);
+
+  const distinctDiffUsers = useMemo(() => {
+    const set = new Set<string>();
+    diffHistoryLogs.forEach((l: any) => {
+      if (l.changed_by) set.add(String(l.changed_by).trim().toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [diffHistoryLogs]);
+
+  const filteredDiffHistoryLogs = useMemo(() => {
+    return diffHistoryLogs.filter((log: any) => {
+      // Date from
+      if (diffFilterDateFrom && log.changed_date && log.changed_date < diffFilterDateFrom) {
+        return false;
+      }
+      // Date to
+      if (diffFilterDateTo && log.changed_date && log.changed_date > diffFilterDateTo) {
+        return false;
+      }
+      // Area filter
+      if (diffFilterArea !== 'ALL') {
+        const logArea = String(log.area || '').trim().toUpperCase();
+        const filterArea = diffFilterArea.trim().toUpperCase();
+        if (logArea !== filterArea) return false;
+      }
+      // Grade filter
+      if (diffFilterGrade !== 'ALL') {
+        const logGrade = String(log.grade || '').trim().toUpperCase();
+        const filterGrade = diffFilterGrade.trim().toUpperCase();
+        if (logGrade !== filterGrade) return false;
+      }
+      // Changed By filter
+      if (diffFilterChangedBy !== 'ALL') {
+        const logUser = String(log.changed_by || '').trim().toUpperCase();
+        const filterUser = diffFilterChangedBy.trim().toUpperCase();
+        if (logUser !== filterUser) return false;
+      }
+      // Search
+      if (diffFilterSearch.trim()) {
+        const q = diffFilterSearch.trim().toLowerCase();
+        const matchArea = String(log.area || '').toLowerCase().includes(q);
+        const matchGrade = String(log.grade || '').toLowerCase().includes(q);
+        const matchUser = String(log.changed_by || '').toLowerCase().includes(q);
+        const matchRemarks = String(log.remarks || '').toLowerCase().includes(q);
+        const matchDate = formatDateDMY(log.changed_date).toLowerCase().includes(q);
+        if (!matchArea && !matchGrade && !matchUser && !matchRemarks && !matchDate) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    diffHistoryLogs,
+    diffFilterDateFrom,
+    diffFilterDateTo,
+    diffFilterArea,
+    diffFilterGrade,
+    diffFilterChangedBy,
+    diffFilterSearch
+  ]);
+
   const content = (
     <div className="space-y-6 max-w-full font-sans pb-12 bg-[#FAF8F5] min-h-screen text-[#1A2619]">
       
@@ -1089,6 +1255,19 @@ export default function SattaChart({
           >
             <FileSpreadsheet className="h-4 w-4" />
             <span>Live Pivot Matrix</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('diff_history')}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
+              activeTab === 'diff_history'
+                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
+                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
+            )}
+          >
+            <History className="h-4 w-4" />
+            <span>Differential History</span>
           </button>
           <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right shrink-0">
               <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Last Updated</div>
@@ -1729,6 +1908,327 @@ export default function SattaChart({
 
           </div>
 
+        </div>
+      )}
+
+      {/* TAB 2: DEDICATED DIFFERENTIAL HISTORY AUDIT VIEW */}
+      {activeTab === 'diff_history' && (
+        <div className="space-y-4">
+          {/* HEADER & TOP ACTIONS */}
+          <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#E8E2D5] shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-[#1E331B] text-[#D4AF37] rounded-2xl shadow-inner">
+                <History className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base md:text-lg font-black text-[#1E331B] tracking-tight font-serif">
+                    Differential History
+                  </h2>
+                  <span className="text-[10px] font-sans font-extrabold bg-[#D4AF37] text-[#1E331B] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Live Supabase Audit
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Complete chronological audit of every differential edit made in LIVE PIVOT MATRIX (DATE • AREA • GRADE • PREVIOUS • NEW • CHANGE)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('matrix')}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[#1E331B]" />
+                <span>Open Live Matrix</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchDiffHistory}
+                disabled={isDiffHistoryLoading}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCcw className={cn("h-3.5 w-3.5", isDiffHistoryLoading && "animate-spin")} />
+                <span>{isDiffHistoryLoading ? "Refreshing..." : "Refresh"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const exportRows = filteredDiffHistoryLogs.map((log: any, idx: number) => ({
+                    "Srl": idx + 1,
+                    "Date": formatDateDMY(log.changed_date),
+                    "Area Name": log.area,
+                    "Grade": log.grade,
+                    "Previous Differential": log.old_differential !== null && log.old_differential !== undefined ? log.old_differential : '',
+                    "New Differential": log.new_differential !== null && log.new_differential !== undefined ? log.new_differential : '',
+                    "Change": log.differential_change !== null && log.differential_change !== undefined ? (log.differential_change > 0 ? `+${log.differential_change}` : log.differential_change) : '',
+                    "Changed By": log.changed_by || 'ADMIN',
+                    "Changed At": formatDateTime(log.created_at),
+                    "Remarks": log.remarks || ''
+                  }));
+                  handleCsvExport(exportRows, `Differential_History_${new Date().toISOString().split('T')[0]}.csv`);
+                }}
+                disabled={filteredDiffHistoryLogs.length === 0}
+                className="px-3.5 py-2 bg-[#1E331B] hover:bg-[#2A4726] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                <Download className="h-3.5 w-3.5 text-[#D4AF37]" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          {/* FILTERS TOOLBAR */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#1E331B] uppercase tracking-wider">
+                <Filter className="h-3.5 w-3.5 text-[#D4AF37]" />
+                <span>Audit Filters</span>
+              </div>
+              <div className="text-xs text-slate-500 font-medium">
+                Showing <strong className="text-[#1E331B] font-black">{filteredDiffHistoryLogs.length}</strong> of {diffHistoryLogs.length} audit entries
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* Search */}
+              <div className="lg:col-span-2">
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Search</label>
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={diffFilterSearch}
+                    onChange={(e) => setDiffFilterSearch(e.target.value)}
+                    placeholder="Search Area, Grade, User..."
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:bg-white"
+                  />
+                  {diffFilterSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDiffFilterSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Date From */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={diffFilterDateFrom}
+                  onChange={(e) => setDiffFilterDateFrom(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:bg-white font-mono"
+                />
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={diffFilterDateTo}
+                  onChange={(e) => setDiffFilterDateTo(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:bg-white font-mono"
+                />
+              </div>
+
+              {/* Area Name Dropdown */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Area Name</label>
+                <select
+                  value={diffFilterArea}
+                  onChange={(e) => setDiffFilterArea(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:bg-white"
+                >
+                  <option value="ALL">All Areas ({distinctDiffAreas.length})</option>
+                  {distinctDiffAreas.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Grade Dropdown */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Grade</label>
+                <select
+                  value={diffFilterGrade}
+                  onChange={(e) => setDiffFilterGrade(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:bg-white"
+                >
+                  <option value="ALL">All Grades ({distinctDiffGrades.length})</option>
+                  {distinctDiffGrades.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Sub-row for Changed By & Reset */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase text-slate-500">Changed By:</span>
+                  <select
+                    value={diffFilterChangedBy}
+                    onChange={(e) => setDiffFilterChangedBy(e.target.value)}
+                    className="px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                  >
+                    <option value="ALL">All Users ({distinctDiffUsers.length})</option>
+                    {distinctDiffUsers.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {(diffFilterSearch || diffFilterDateFrom || diffFilterDateTo || diffFilterArea !== 'ALL' || diffFilterGrade !== 'ALL' || diffFilterChangedBy !== 'ALL') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiffFilterSearch('');
+                      setDiffFilterDateFrom('');
+                      setDiffFilterDateTo('');
+                      setDiffFilterArea('ALL');
+                      setDiffFilterGrade('ALL');
+                      setDiffFilterChangedBy('ALL');
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                    <span>Reset Filters</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Breadcrumb / Summary Badge */}
+              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                <span>Exact Audit:</span>
+                <span className="font-bold text-[#1E331B]">DATE → AREA → GRADE → PREVIOUS → NEW → CHANGE</span>
+              </div>
+            </div>
+          </div>
+
+          {/* AUDIT TABLE */}
+          <div className="bg-white rounded-2xl border border-[#E8E2D5] shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#1E331B] text-white text-xs font-black uppercase tracking-wider border-b-2 border-[#D4AF37]">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Area Name</th>
+                    <th className="py-3 px-4">Grade</th>
+                    <th className="py-3 px-4 text-right">Previous Differential</th>
+                    <th className="py-3 px-4 text-right">New Differential</th>
+                    <th className="py-3 px-4 text-center">Change</th>
+                    <th className="py-3 px-4 text-center">Changed By</th>
+                    <th className="py-3 px-4 text-right">Changed At</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs">
+                  {isDiffHistoryLoading ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        <RefreshCcw className="h-6 w-6 text-[#D4AF37] animate-spin mx-auto mb-2" />
+                        <div className="font-bold text-slate-700">Loading Differential History from Supabase...</div>
+                      </td>
+                    </tr>
+                  ) : filteredDiffHistoryLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        <History className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                        <div className="font-bold text-slate-700">No Differential History Found</div>
+                        <div className="text-xs text-slate-400 mt-1">
+                          {diffHistoryLogs.length > 0 
+                            ? "Try adjusting your filters above to see more records." 
+                            : "Edits made in Live Pivot Matrix will automatically appear here."}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDiffHistoryLogs.map((log: any) => {
+                      const changeVal = log.differential_change;
+                      const hasChange = changeVal !== null && changeVal !== undefined;
+                      const isPositive = hasChange && changeVal > 0;
+                      const isNegative = hasChange && changeVal < 0;
+
+                      return (
+                        <tr key={log.id} className="hover:bg-amber-50/50 transition-colors">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-800 whitespace-nowrap">
+                            {formatDateDMY(log.changed_date)}
+                          </td>
+                          <td className="py-3 px-4 font-extrabold text-[#1E331B] whitespace-nowrap">
+                            {log.area}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-md font-mono font-black text-xs bg-slate-100 text-slate-800 border border-slate-300">
+                              {log.grade}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-slate-600 whitespace-nowrap">
+                            {log.old_differential !== null && log.old_differential !== undefined ? (
+                              <span className={cn(
+                                "font-bold",
+                                log.old_differential > 0 ? "text-emerald-700" : log.old_differential < 0 ? "text-rose-700" : "text-slate-700"
+                              )}>
+                                {log.old_differential > 0 ? `+${log.old_differential}` : log.old_differential}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono whitespace-nowrap">
+                            {log.new_differential !== null && log.new_differential !== undefined ? (
+                              <span className={cn(
+                                "font-black text-sm",
+                                log.new_differential > 0 ? "text-emerald-800" : log.new_differential < 0 ? "text-rose-800" : "text-slate-800"
+                              )}>
+                                {log.new_differential > 0 ? `+${log.new_differential}` : log.new_differential}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            {hasChange ? (
+                              <span className={cn(
+                                "inline-flex items-center gap-0.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-black",
+                                isPositive 
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  : isNegative 
+                                  ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                  : "bg-slate-100 text-slate-600 border border-slate-300"
+                              )}>
+                                {isPositive && <ArrowUpRight className="h-3 w-3 text-emerald-700" />}
+                                {isNegative && <ArrowDownRight className="h-3 w-3 text-rose-700" />}
+                                {isPositive ? `+${changeVal}` : changeVal}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
+                              {log.changed_by || 'ADMIN'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-slate-500 whitespace-nowrap">
+                            {formatDateTime(log.created_at)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
