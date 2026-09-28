@@ -376,8 +376,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const cleanPo = normalizePoRef(poRaw);
 
     // Detail rows for this MR if any
-    const relatedDetails = detailRowsByMr.get(cleanMr) || raw.grid_details || raw.details || [];
-
+    const relatedDetailsRaw = detailRowsByMr.get(cleanMr) || raw.grid_details || raw.details || [];
+    //const relatedDetails = detailRowsByMr.get(cleanMr) || raw.grid_details || raw.details || [];
+    const relatedDetails = Array.isArray(relatedDetailsRaw) ? relatedDetailsRaw : [];
     // Robust Weight Calculation in MT & Qtl
     let wtMt = 0;
     if (relatedDetails.length > 0) {
