@@ -68,6 +68,21 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
+        // 1. Check if an empty string caused a type mismatch error (e.g. invalid input syntax for type integer: "")
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+          let converted = false;
+          Object.keys(payload).forEach(k => {
+            if (payload[k] === '') {
+              payload[k] = null;
+              converted = true;
+            }
+          });
+          if (converted) {
+            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
+            continue;
+          }
+        }
+
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
           console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying insert...`);
@@ -97,6 +112,20 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+          let converted = false;
+          Object.keys(payload).forEach(k => {
+            if (payload[k] === '') {
+              payload[k] = null;
+              converted = true;
+            }
+          });
+          if (converted) {
+            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
+            continue;
+          }
+        }
+
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
           console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying upsert...`);
@@ -127,6 +156,20 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+          let converted = false;
+          Object.keys(payload).forEach(k => {
+            if (payload[k] === '') {
+              payload[k] = null;
+              converted = true;
+            }
+          });
+          if (converted) {
+            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
+            continue;
+          }
+        }
+
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
           console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying update...`);

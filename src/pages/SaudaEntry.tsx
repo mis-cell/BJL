@@ -665,6 +665,27 @@ export default function SaudaEntry({
         'created_at'
       ];
 
+      const toIntegerOrNull = (v: any) => {
+        if (v === null || v === undefined || String(v).trim() === '') return null;
+        const n = parseInt(String(v).replace(/[^0-9\-]/g, ''), 10);
+        return isNaN(n) ? null : n;
+      };
+
+      const toNumericOrNull = (v: any) => {
+        if (v === null || v === undefined || String(v).trim() === '') return null;
+        const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+        return isNaN(n) ? null : n;
+      };
+
+      const toDateOrNull = (v: any) => {
+        if (!v || String(v).trim() === '') return null;
+        const s = String(v).trim();
+        if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
+        const parsed = new Date(s);
+        if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+        return null;
+      };
+
       const saudaPayload: Record<string, any> = {};
       SAUDA_MASTER_FIELDS.forEach(field => {
         if ((saudaData as any)[field] !== undefined) {
@@ -672,12 +693,25 @@ export default function SaudaEntry({
         }
       });
 
-      // Ensure units_per_lorry is stored strictly as numeric
-      const numericUnitsPerLorry = (formData.units_per_lorry !== undefined && formData.units_per_lorry !== null && String(formData.units_per_lorry) !== '' && !isNaN(Number(formData.units_per_lorry)))
-        ? Number(formData.units_per_lorry)
-        : (formData.units_per_lorry_type && !isNaN(Number(formData.units_per_lorry_type)) ? Number(formData.units_per_lorry_type) : null);
+      // Strongly sanitize types so Postgres never receives "" for integer, numeric, or date fields
+      saudaPayload.no_of_lorries = toIntegerOrNull(saudaData.no_of_lorries) ?? 1;
+      saudaPayload.total_unit = toIntegerOrNull(saudaData.total_unit) ?? 0;
+      saudaPayload.shipment_days = toIntegerOrNull(saudaData.shipment_days) ?? 0;
+
+      const numericUnitsPerLorry = toNumericOrNull(formData.units_per_lorry) ?? toNumericOrNull(formData.units_per_lorry_type);
       saudaPayload.units_per_lorry = numericUnitsPerLorry;
       saudaPayload.units_per_lorry_type = numericUnitsPerLorry !== null ? String(numericUnitsPerLorry) : (formData.units_per_lorry_type || formData.unit_type || 'BALES');
+
+      saudaPayload.wt_per_lorry = toNumericOrNull(saudaData.wt_per_lorry) ?? 0;
+      saudaPayload.total_wt_in_ton = toNumericOrNull(saudaData.total_wt_in_ton) ?? 0;
+      saudaPayload.shipment_penalty = toNumericOrNull(saudaData.shipment_penalty) ?? 0;
+      saudaPayload.marks_claim = toNumericOrNull(saudaData.marks_claim) ?? 0;
+      saudaPayload.quantity_claim = toNumericOrNull(saudaData.quantity_claim) ?? 0;
+      saudaPayload.b_rate = toNumericOrNull(saudaData.b_rate) ?? 0;
+
+      saudaPayload.date = toDateOrNull(saudaData.date) || today;
+      saudaPayload.shipment_date = toDateOrNull(saudaData.shipment_date);
+      saudaPayload.b_date = toDateOrNull(saudaData.b_date) || saudaPayload.date;
 
       let inserted;
       let isEditMode = !!saudaPayload.sauda_id;
@@ -708,12 +742,12 @@ export default function SaudaEntry({
             try {
               await dbModule.insert('sauda_quality_details', {
                 sauda_id: inserted.sauda_id,
-                financial_year: inserted.financial_year || saudaData.financial_year,
-                quality: row.quality,
-                qty: Number(row.qty) || 0,
-                agency: row.agency || '',
-                marka: row.marka || '',
-                rs: Number(row.rs) || 0
+                financial_year: inserted.financial_year || saudaData.financial_year || '2026-2027',
+                quality: String(row.quality || '').trim(),
+                qty: toNumericOrNull(row.qty) ?? 0,
+                agency: String(row.agency || '').trim(),
+                marka: String(row.marka || '').trim(),
+                rs: toNumericOrNull(row.rs) ?? 0
               });
             } catch (e) {
               console.error(e);
