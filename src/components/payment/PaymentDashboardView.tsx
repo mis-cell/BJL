@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Wallet, 
   DollarSign, 
@@ -9,10 +9,19 @@ import {
   BookOpen, 
   Download, 
   RefreshCcw, 
-  Trash2 
+  Trash2,
+  Calendar,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Layers,
+  X,
+  ArrowRight
 } from 'lucide-react';
 import { PaymentMaster } from '../../types/payment.types';
 import { cn, formatIndianCurrency } from '../../lib/utils';
+import { parseRecordDate } from '../../services/dashboardCalculationService';
 import { PaginationControls } from '../PaginationControls';
 
 export interface PaymentDashboardViewProps {
@@ -29,7 +38,25 @@ export interface PaymentDashboardViewProps {
   onEdit: (p: PaymentMaster) => void;
   onViewLedger: (partyName: string) => void;
   onDelete: (voucherNo: string) => void;
-  onExportPdf: () => void;
+  onExportPdf: (customList?: PaymentMaster[]) => void;
+}
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const MONTH_SHORT_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+function getPaymentDate(p: PaymentMaster): string {
+  return p.payment_date || p.payable_bill_date || p.sett_date || (p as any).payment_settlementdate || p.arrival_date || p.po_date || (p as any).created_at || '';
+}
+
+function getArrivalDate(a: any): string {
+  return a.arrival_date || a.date || a.unloading_date || a.mr_date || a.gate_entry_date || a.created_at || '';
 }
 
 export function PaymentDashboardView({
@@ -48,120 +75,507 @@ export function PaymentDashboardView({
   onDelete,
   onExportPdf
 }: PaymentDashboardViewProps) {
-  // Totals calculations
-  const totalPaidSum = paymentList.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
-  const totalPayableSum = paymentList.reduce((sum, p) => sum + (Number(p.payable_amt || p.total_amount || 0)), 0);
-  const totalPendingSum = paymentList.reduce((sum, p) => {
-    const payable = Number(p.payable_amt || p.total_amount || 0);
-    const paid = Number(p.paid_amount || 0);
-    const pending = payable - paid;
-    return sum + (pending > 0 ? pending : 0);
-  }, 0);
+  // Extract all available years from payment records and arrivals
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    const currentYr = new Date().getFullYear();
+    years.add(currentYr);
 
-  const completedCount = paymentList.filter(
-    p => (p.status || p.payment_status || '').toLowerCase() === 'completed' || 
-         (p.status || p.payment_status || '').toLowerCase() === 'paid'
-  ).length;
+    paymentList.forEach(p => {
+      const d = getPaymentDate(p);
+      const parsed = parseRecordDate(d);
+      if (parsed.isValid && parsed.year >= 2000 && parsed.year <= 2100) {
+        years.add(parsed.year);
+      }
+    });
 
-  const pendingCount = paymentList.filter(p => {
-    const payable = Number(p.payable_amt || p.total_amount || 0);
-    const paid = Number(p.paid_amount || 0);
-    return (payable - paid) > 0 || (p.status || p.payment_status || '').toLowerCase() === 'pending';
-  }).length;
+    verifiedArrivals.forEach(a => {
+      const d = getArrivalDate(a);
+      const parsed = parseRecordDate(d);
+      if (parsed.isValid && parsed.year >= 2000 && parsed.year <= 2100) {
+        years.add(parsed.year);
+      }
+    });
 
-  const filteredPayments = paymentList.filter(p => {
-    if (!searchFilter.trim()) return true;
-    const term = searchFilter.toLowerCase().trim();
-    return (
-      (p.voucher_no && p.voucher_no.toLowerCase().includes(term)) ||
-      (p.party_name && p.party_name.toLowerCase().includes(term)) ||
-      (p.supplier && p.supplier.toLowerCase().includes(term)) ||
-      (p.mr_no && p.mr_no.toLowerCase().includes(term)) ||
-      (p.po_no && p.po_no.toLowerCase().includes(term)) ||
-      (p.reference_no && p.reference_no.toLowerCase().includes(term))
-    );
+    return Array.from(years).sort((a, b) => b - a);
+  }, [paymentList, verifiedArrivals]);
+
+  // Year and Month selection state
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    return availableYears.length > 0 ? availableYears[0] : new Date().getFullYear();
   });
+
+  // Keep selectedYear synced if availableYears updates
+  const activeYear = availableYears.includes(selectedYear) ? selectedYear : (availableYears[0] || new Date().getFullYear());
+
+  // Month filter: null = All Months in activeYear, 0-11 = specific month
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [collapseMonthSummary, setCollapseMonthSummary] = useState(false);
+
+  // Pre-calculate month-wise aggregates for the selectedYear
+  const monthSummaries = useMemo(() => {
+    return Array.from({ length: 12 }, (_, mIdx) => {
+      const monthPayments = paymentList.filter(p => {
+        const d = getPaymentDate(p);
+        const parsed = parseRecordDate(d);
+        return parsed.isValid && parsed.year === activeYear && parsed.month === mIdx;
+      });
+
+      const monthArrivals = verifiedArrivals.filter(a => {
+        const d = getArrivalDate(a);
+        const parsed = parseRecordDate(d);
+        return parsed.isValid && parsed.year === activeYear && parsed.month === mIdx;
+      });
+
+      const totalPaid = monthPayments.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
+      const totalPayable = monthPayments.reduce((sum, p) => sum + Number(p.payable_amt || p.total_amount || 0), 0);
+      const totalPending = monthPayments.reduce((sum, p) => {
+        const payable = Number(p.payable_amt || p.total_amount || 0);
+        const paid = Number(p.paid_amount || 0);
+        const pending = payable - paid;
+        return sum + (pending > 0 ? pending : 0);
+      }, 0);
+
+      const completedCount = monthPayments.filter(p => {
+        const payable = Number(p.payable_amt || p.total_amount || 0);
+        const paid = Number(p.paid_amount || 0);
+        return (payable > 0 && paid >= payable - 0.01) ||
+               (p.status || p.payment_status || '').toLowerCase() === 'completed' ||
+               (p.status || p.payment_status || '').toLowerCase() === 'paid';
+      }).length;
+
+      const pendingCount = monthPayments.filter(p => {
+        const payable = Number(p.payable_amt || p.total_amount || 0);
+        const paid = Number(p.paid_amount || 0);
+        return (payable - paid) > 0 || (p.status || p.payment_status || '').toLowerCase() === 'pending';
+      }).length;
+
+      return {
+        monthIndex: mIdx,
+        monthName: MONTH_NAMES[mIdx],
+        shortName: MONTH_SHORT_NAMES[mIdx],
+        year: activeYear,
+        vouchersCount: monthPayments.length,
+        totalPaid,
+        totalPayable,
+        totalPending,
+        completedCount,
+        pendingCount,
+        verifiedArrivalsCount: monthArrivals.length,
+        payments: monthPayments,
+        arrivals: monthArrivals
+      };
+    });
+  }, [paymentList, verifiedArrivals, activeYear]);
+
+  // Filter records based on selected Year & Month
+  const yearMonthFilteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
+      const d = getPaymentDate(p);
+      const parsed = parseRecordDate(d);
+      
+      // If date is unparseable or year 0, we include it when no specific month is selected or keep in current year
+      if (!parsed.isValid || parsed.year === 0) {
+        return selectedMonth === null;
+      }
+
+      if (parsed.year !== activeYear) return false;
+      if (selectedMonth !== null && parsed.month !== selectedMonth) return false;
+      return true;
+    });
+  }, [paymentList, activeYear, selectedMonth]);
+
+  // Verified arrivals in active scope
+  const scopedVerifiedArrivals = useMemo(() => {
+    return verifiedArrivals.filter(a => {
+      const d = getArrivalDate(a);
+      const parsed = parseRecordDate(d);
+      if (!parsed.isValid || parsed.year === 0) {
+        return selectedMonth === null;
+      }
+      if (parsed.year !== activeYear) return false;
+      if (selectedMonth !== null && parsed.month !== selectedMonth) return false;
+      return true;
+    });
+  }, [verifiedArrivals, activeYear, selectedMonth]);
+
+  // Calculate active scope totals (displayed on the top KPI cards)
+  const totalPaidSum = useMemo(() => {
+    return yearMonthFilteredPayments.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
+  }, [yearMonthFilteredPayments]);
+
+  const totalPayableSum = useMemo(() => {
+    return yearMonthFilteredPayments.reduce((sum, p) => sum + Number(p.payable_amt || p.total_amount || 0), 0);
+  }, [yearMonthFilteredPayments]);
+
+  const totalPendingSum = useMemo(() => {
+    return yearMonthFilteredPayments.reduce((sum, p) => {
+      const payable = Number(p.payable_amt || p.total_amount || 0);
+      const paid = Number(p.paid_amount || 0);
+      const pending = payable - paid;
+      return sum + (pending > 0 ? pending : 0);
+    }, 0);
+  }, [yearMonthFilteredPayments]);
+
+  const completedCount = useMemo(() => {
+    return yearMonthFilteredPayments.filter(p => {
+      const payable = Number(p.payable_amt || p.total_amount || 0);
+      const paid = Number(p.paid_amount || 0);
+      return (payable > 0 && paid >= payable - 0.01) ||
+             (p.status || p.payment_status || '').toLowerCase() === 'completed' ||
+             (p.status || p.payment_status || '').toLowerCase() === 'paid';
+    }).length;
+  }, [yearMonthFilteredPayments]);
+
+  const pendingCount = useMemo(() => {
+    return yearMonthFilteredPayments.filter(p => {
+      const payable = Number(p.payable_amt || p.total_amount || 0);
+      const paid = Number(p.paid_amount || 0);
+      return (payable - paid) > 0 || (p.status || p.payment_status || '').toLowerCase() === 'pending';
+    }).length;
+  }, [yearMonthFilteredPayments]);
+
+  // Combined with text search for the data table
+  const finalFilteredPayments = useMemo(() => {
+    if (!searchFilter.trim()) return yearMonthFilteredPayments;
+    const term = searchFilter.toLowerCase().trim();
+    return yearMonthFilteredPayments.filter(p => {
+      return (
+        (p.voucher_no && p.voucher_no.toLowerCase().includes(term)) ||
+        (p.party_name && p.party_name.toLowerCase().includes(term)) ||
+        (p.supplier && p.supplier.toLowerCase().includes(term)) ||
+        (p.mr_no && p.mr_no.toLowerCase().includes(term)) ||
+        (p.po_no && p.po_no.toLowerCase().includes(term)) ||
+        (p.reference_no && p.reference_no.toLowerCase().includes(term)) ||
+        (p.bank_name && p.bank_name.toLowerCase().includes(term)) ||
+        (p.payment_mode && p.payment_mode.toLowerCase().includes(term))
+      );
+    });
+  }, [yearMonthFilteredPayments, searchFilter]);
+
+  // Scope label for UI badges
+  const activeScopeLabel = selectedMonth !== null 
+    ? `${MONTH_NAMES[selectedMonth]} ${activeYear}` 
+    : `FY / Year ${activeYear} (All Months)`;
 
   return (
     <div className="space-y-4">
-      {/* Dashboard Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3 rounded-xl border border-indigo-700/50 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
-            <h3 className="text-xl font-black mt-0.5">{paymentList.length}</h3>
-            <p className="text-[9px] text-indigo-300 mt-0.5">Records in `payment_master`</p>
+      {/* 1. TOP EXECUTIVE SUMMARY CARDS (DYNAMIC MONTH-WISE KPI METRICS) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5">
+              <Wallet className="w-4 h-4 text-purple-700" />
+              Payment KPI Summary
+            </span>
+            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300">
+              {activeScopeLabel}
+            </span>
           </div>
-          <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-300">
-            <Wallet className="w-5 h-5" />
-          </div>
+
+          {selectedMonth !== null && (
+            <button
+              onClick={() => setSelectedMonth(null)}
+              className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+              Reset to All Months ({activeYear})
+            </button>
+          )}
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Total Paid Amount</p>
-            <h3 className="text-lg font-black mt-0.5">{formatIndianCurrency(totalPaidSum)}</h3>
-            <p className="text-[9px] text-emerald-300 mt-0.5">{completedCount} Vouchers Cleared</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Card 1: Total Vouchers */}
+          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3 rounded-xl border border-indigo-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
+              <h3 className="text-xl font-black mt-0.5">{yearMonthFilteredPayments.length}</h3>
+              <p className="text-[9px] text-indigo-300 mt-0.5 truncate">{activeScopeLabel}</p>
+            </div>
+            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-300 shrink-0 ml-2">
+              <Wallet className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">Total Payable Value</p>
-            <h3 className="text-lg font-black mt-0.5">{formatIndianCurrency(totalPayableSum)}</h3>
-            <p className="text-[9px] text-purple-300 mt-0.5">Total Gross Invoice Value</p>
+          {/* Card 2: Total Paid Amount */}
+          <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Total Paid Amount</p>
+              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPaidSum)}</h3>
+              <p className="text-[9px] text-emerald-300 mt-0.5">{completedCount} Vouchers Cleared</p>
+            </div>
+            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300 shrink-0 ml-2">
+              <DollarSign className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-amber-400" />
-              Pending / Retention
-            </p>
-            <h3 className="text-lg font-black mt-0.5 text-amber-300">{formatIndianCurrency(totalPendingSum)}</h3>
-            <p className="text-[9px] text-amber-200 mt-0.5 font-semibold">{pendingCount} Outstanding / Retention</p>
+          {/* Card 3: Total Payable Value */}
+          <div className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">Total Payable Value</p>
+              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPayableSum)}</h3>
+              <p className="text-[9px] text-purple-300 mt-0.5">Total Gross Invoice Value</p>
+            </div>
+            <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300 shrink-0 ml-2">
+              <TrendingUp className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300">
-            <Clock className="w-5 h-5 text-amber-400" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-slate-800 to-slate-950 text-white p-3 rounded-xl border border-slate-700/50 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Verified Arrivals</p>
-            <h3 className="text-xl font-black mt-0.5">{verifiedArrivals.length}</h3>
-            <p className="text-[9px] text-slate-400 mt-0.5">Ready for Payment</p>
+          {/* Card 4: Pending / Retention */}
+          <div className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-amber-400" />
+                Pending / Retention
+              </p>
+              <h3 className="text-lg font-black mt-0.5 text-amber-300 truncate">{formatIndianCurrency(totalPendingSum)}</h3>
+              <p className="text-[9px] text-amber-200 mt-0.5 font-semibold">{pendingCount} Outstanding / Retention</p>
+            </div>
+            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
+              <Clock className="w-5 h-5 text-amber-400" />
+            </div>
           </div>
-          <div className="p-2 bg-slate-700/40 rounded-lg text-slate-300">
-            <FileCheck className="w-5 h-5" />
+
+          {/* Card 5: Verified Arrivals */}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-950 text-white p-3 rounded-xl border border-slate-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Verified Arrivals</p>
+              <h3 className="text-xl font-black mt-0.5">{scopedVerifiedArrivals.length}</h3>
+              <p className="text-[9px] text-slate-400 mt-0.5">Ready for Payment</p>
+            </div>
+            <div className="p-2 bg-slate-700/40 rounded-lg text-slate-300 shrink-0 ml-2">
+              <FileCheck className="w-5 h-5" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Search Bar & Toolbar */}
+      {/* 2. MONTH-WISE SUMMARY SECTION (LIKE IN MAIN DASHBOARD) */}
+      <div className="bg-gradient-to-b from-purple-50/70 to-slate-50 border-2 border-purple-200/80 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
+        {/* Section Header with Dynamic Year Dropdown Filter & Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-200/80 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-900 text-purple-200 shadow-xs">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-black text-purple-950 tracking-wide flex items-center gap-2 flex-wrap">
+                <span>Month-Wise Payment Operations Summary</span>
+                <span className="text-xs font-mono font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md border border-purple-300">
+                  FY / Year {activeYear}
+                </span>
+              </h2>
+              <p className="text-[11px] text-purple-800/80 font-medium mt-0.5">
+                Click any month card to view its vouchers, paid amount, and pending retentions.
+              </p>
+            </div>
+          </div>
+
+          {/* Dynamic Year Selector & Collapse Drawer Toggle */}
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <label htmlFor="payment-year-select" className="text-xs font-bold text-purple-950 flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-purple-700" />
+              <span>Year:</span>
+            </label>
+            <select
+              id="payment-year-select"
+              value={activeYear}
+              onChange={(e) => {
+                setSelectedYear(Number(e.target.value));
+                setSelectedMonth(null);
+                setCurrentPage(1);
+              }}
+              className="h-8 px-2.5 bg-white border-2 border-purple-800 rounded-lg text-xs font-mono font-bold text-purple-950 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-600"
+            >
+              {availableYears.map(yr => (
+                <option key={yr} value={yr} className="font-mono font-bold">
+                  {yr}
+                </option>
+              ))}
+            </select>
+
+            {/* All Months Filter Pill */}
+            <button
+              onClick={() => {
+                setSelectedMonth(null);
+                setCurrentPage(1);
+              }}
+              className={cn(
+                "h-8 px-3 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer",
+                selectedMonth === null
+                  ? "bg-purple-800 text-white border-purple-900 shadow-xs"
+                  : "bg-white text-purple-900 border-purple-300 hover:bg-purple-100"
+              )}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>All Months</span>
+            </button>
+
+            {/* Collapse / Expand Toggle */}
+            <button
+              onClick={() => setCollapseMonthSummary(!collapseMonthSummary)}
+              className="h-8 px-2.5 bg-white border border-purple-300 hover:bg-purple-100 rounded-lg text-xs font-bold text-purple-900 transition-colors flex items-center gap-1 cursor-pointer"
+              title={collapseMonthSummary ? "Expand Month-Wise Grid" : "Collapse Month-Wise Grid"}
+            >
+              {collapseMonthSummary ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              <span>{collapseMonthSummary ? "Expand" : "Collapse"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Month Cards Grid (12 Responsive Month Cards like in Main Dashboard) */}
+        {!collapseMonthSummary && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {monthSummaries.map((m) => {
+              const isSelected = selectedMonth === m.monthIndex;
+              const hasData = m.vouchersCount > 0 || m.verifiedArrivalsCount > 0;
+
+              return (
+                <div
+                  key={`${m.year}-${m.monthIndex}`}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedMonth(null);
+                    } else {
+                      setSelectedMonth(m.monthIndex);
+                    }
+                    setCurrentPage(1);
+                  }}
+                  className={cn(
+                    "rounded-xl p-2.5 transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs relative",
+                    isSelected
+                      ? "bg-gradient-to-br from-purple-900 to-indigo-950 text-white border-2 border-purple-400 shadow-md ring-2 ring-purple-400/40"
+                      : hasData
+                        ? "bg-white border-2 border-purple-200/90 hover:border-purple-600 hover:shadow-md text-slate-800"
+                        : "bg-white/70 border border-slate-200 hover:border-purple-300 text-slate-500 opacity-90"
+                  )}
+                  title={`Click to filter Payment Operations to ${m.monthName} ${m.year}`}
+                >
+                  <div>
+                    {/* Card Header: Month Name + Year + Active Badge */}
+                    <div className={cn(
+                      "flex items-center justify-between gap-1 mb-1.5 pb-1 border-b",
+                      isSelected ? "border-purple-700/60" : "border-slate-100"
+                    )}>
+                      <h3 className={cn(
+                        "text-xs font-black uppercase tracking-wider flex items-center gap-1 truncate",
+                        isSelected ? "text-purple-100" : "text-purple-950"
+                      )}>
+                        <span className={cn(
+                          "w-2 h-2 rounded-full shrink-0",
+                          isSelected ? "bg-emerald-400" : hasData ? "bg-purple-600" : "bg-slate-300"
+                        )} />
+                        <span>{m.shortName}</span>
+                      </h3>
+                      <span className={cn(
+                        "text-[9px] font-mono font-semibold",
+                        isSelected ? "text-purple-200" : "text-slate-500"
+                      )}>
+                        {m.year}
+                      </span>
+                    </div>
+
+                    {/* Vouchers Count */}
+                    <div className={cn(
+                      "flex items-center justify-between text-[11px] py-0.5 border-b",
+                      isSelected ? "border-purple-800/60" : "border-slate-100"
+                    )}>
+                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                        Vouchers:
+                      </span>
+                      <span className={cn(
+                        "font-mono font-black",
+                        isSelected ? "text-white" : "text-purple-950"
+                      )}>
+                        {m.vouchersCount}
+                      </span>
+                    </div>
+
+                    {/* Paid Amount */}
+                    <div className={cn(
+                      "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
+                      isSelected ? "border-purple-800/60" : "border-slate-100"
+                    )}>
+                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                        Paid:
+                      </span>
+                      <span className={cn(
+                        "font-mono font-bold truncate max-w-[85px]",
+                        isSelected ? "text-emerald-300" : "text-emerald-700"
+                      )}>
+                        {formatIndianCurrency(m.totalPaid)}
+                      </span>
+                    </div>
+
+                    {/* Payable Amount */}
+                    <div className={cn(
+                      "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
+                      isSelected ? "border-purple-800/60" : "border-slate-100"
+                    )}>
+                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                        Payable:
+                      </span>
+                      <span className={cn(
+                        "font-mono font-bold truncate max-w-[85px]",
+                        isSelected ? "text-purple-200" : "text-slate-800"
+                      )}>
+                        {formatIndianCurrency(m.totalPayable)}
+                      </span>
+                    </div>
+
+                    {/* Pending / Retention */}
+                    <div className="flex items-center justify-between text-[10px] pt-1">
+                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                        Pending:
+                      </span>
+                      <span className={cn(
+                        "font-mono font-black px-1.5 py-0.2 rounded text-[9px]",
+                        isSelected
+                          ? m.totalPending > 0 ? "bg-amber-400 text-amber-950 font-black" : "bg-emerald-500/30 text-emerald-200"
+                          : m.totalPending > 0 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-50 text-emerald-700"
+                      )}>
+                        {m.totalPending > 0 ? formatIndianCurrency(m.totalPending) : '₹0'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Footer / Action Hint */}
+                  <div className={cn(
+                    "mt-2 pt-1 border-t border-dashed text-[9px] font-bold flex items-center justify-between transition-transform",
+                    isSelected 
+                      ? "border-purple-700 text-purple-200" 
+                      : "border-slate-200 text-purple-700 group-hover:translate-x-0.5"
+                  )}>
+                    <span>{isSelected ? '✓ Filter Active' : 'View Month'}</span>
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 3. SEARCH BAR & TOOLBAR */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
+        <div className="relative flex-1 min-w-0 sm:min-w-[240px] w-full sm:w-auto">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             id="search_by_voucher_no_payment_dashboard"
             name="search_by_voucher_no_payment_dashboard"
             aria-label="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."
             type="text"
-            placeholder="Search by Voucher No, Party Name, M.R No, P.O No, Reference..."
+            placeholder="Search by Voucher No, Party Name, M.R No, P.O No, Bank..."
             value={searchFilter}
-            onChange={e => setSearchFilter(e.target.value)}
+            onChange={e => {
+              setSearchFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => onViewLedger('')}
             className="px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -169,13 +583,15 @@ export function PaymentDashboardView({
             <BookOpen className="w-3.5 h-3.5" />
             Party Ledger View
           </button>
+          
           <button
-            onClick={onExportPdf}
+            onClick={() => onExportPdf(finalFilteredPayments)}
             className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            Export PDF
+            Export PDF ({finalFilteredPayments.length})
           </button>
+
           <button
             onClick={onRefresh}
             disabled={loading}
@@ -187,15 +603,33 @@ export function PaymentDashboardView({
         </div>
       </div>
 
-      {/* Payment Master Data Table */}
+      {/* Active Filter Notification Ribbon (if Month is filtered) */}
+      {selectedMonth !== null && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 px-3 flex items-center justify-between text-xs font-bold text-purple-900">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-purple-700" />
+            <span>
+              Showing {MONTH_NAMES[selectedMonth]} {activeYear} ({finalFilteredPayments.length} Payment Vouchers found)
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedMonth(null)}
+            className="px-2.5 py-1 bg-white hover:bg-purple-100 text-purple-800 rounded-lg border border-purple-300 text-[10px] uppercase font-black tracking-wider transition-colors cursor-pointer"
+          >
+            Clear Month Filter (View All)
+          </button>
+        </div>
+      )}
+
+      {/* 4. PAYMENT MASTER DATA TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
           <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
             <Wallet className="w-4 h-4 text-purple-600" />
-            Payment Master Records ({filteredPayments.length})
+            Payment Master Records ({finalFilteredPayments.length})
           </h3>
           <span className="text-[10px] text-slate-500 font-semibold">
-            Real-Time Database Sync (`payment_master`)
+            Real-Time Supabase `payment_master` • {activeScopeLabel}
           </span>
         </div>
 
@@ -216,17 +650,19 @@ export function PaymentDashboardView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredPayments.length > 0 ? (
-                filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p, idx) => {
+              {finalFilteredPayments.length > 0 ? (
+                finalFilteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p, idx) => {
                   const payable = Number(p.payable_amt || p.total_amount || 0);
                   const paid = Number(p.paid_amount || 0);
                   const pending = payable - paid;
                   const isAdvanceYes = (p.advance_payment_done || 'No').toLowerCase() === 'yes';
+                  const dateStr = getPaymentDate(p);
+
                   return (
                     <tr key={p.payment_id || p.voucher_no || idx} className="hover:bg-purple-50/40 transition-colors">
                       <td className="p-2.5 font-bold font-mono text-purple-900">{p.voucher_no}</td>
                       <td className="p-2.5 font-medium text-slate-600">
-                        {p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN') : '-'}
+                        {dateStr ? new Date(dateStr).toLocaleDateString('en-IN') : '-'}
                       </td>
                       <td className="p-2.5 font-semibold text-slate-800">
                         {p.party_name || p.supplier || '-'}
@@ -319,7 +755,7 @@ export function PaymentDashboardView({
               ) : (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-400 italic text-xs">
-                    No payment records found in `payment_master`. Click "New Payment Voucher" to create one.
+                    No payment records found for {activeScopeLabel}.
                   </td>
                 </tr>
               )}
@@ -330,7 +766,7 @@ export function PaymentDashboardView({
         <div className="mt-2">
           <PaginationControls
             currentPage={currentPage}
-            totalItems={filteredPayments.length}
+            totalItems={finalFilteredPayments.length}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}

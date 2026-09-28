@@ -227,7 +227,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             setViewMode('ledger');
           }}
           onDelete={handleDeletePayment}
-          onExportPdf={() => handleExportPdf(paymentList)}
+          onExportPdf={(customList) => handleExportPdf(customList || paymentList)}
         />
       )}
 
