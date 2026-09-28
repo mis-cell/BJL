@@ -865,6 +865,35 @@ export default function SattaChart({
         setUploadProgress(60);
 
         try {
+          const changedDate = new Date().toISOString().split('T')[0];
+          const userCtx = getCurrentUserContext();
+          const changedBy = userCtx?.username || userCtx?.userName || 'ADMIN';
+          const nowIso = new Date().toISOString();
+
+          // Prepare audit log entries for any differential that changed or was newly set
+          const auditLogRows: any[] = [];
+          upsertRows.forEach(item => {
+            const oldVal = dbDifferentials[item.area]?.[item.grade] !== undefined
+              ? Number(dbDifferentials[item.area][item.grade])
+              : null;
+            const newVal = Number(item.differential);
+
+            if (oldVal === null || oldVal !== newVal) {
+              const diffChange = oldVal !== null ? newVal - oldVal : null;
+              auditLogRows.push({
+                changed_date: changedDate,
+                area: item.area,
+                grade: item.grade,
+                old_differential: oldVal,
+                new_differential: newVal,
+                differential_change: diffChange,
+                changed_by: `${changedBy} (CSV)`,
+                remarks: `CSV Upload: ${oldVal !== null ? (oldVal >= 0 ? '+' : '') + oldVal : 'New'} → ${(newVal >= 0 ? '+' : '') + newVal}`,
+                created_at: nowIso
+              });
+            }
+          });
+
           if (supabase) {
             // Upsert in safe batches of 100 rows to ensure fast, failure-proof execution
             const batchSize = 100;
@@ -883,8 +912,18 @@ export default function SattaChart({
                     .upsert([item], { onConflict: 'area,grade' });
                 }
               }
-              const currentProgress = 60 + Math.round(((i + batch.length) / upsertRows.length) * 35);
-              setUploadProgress(Math.min(currentProgress, 95));
+              const currentProgress = 60 + Math.round(((i + batch.length) / upsertRows.length) * 20);
+              setUploadProgress(Math.min(currentProgress, 80));
+            }
+
+            // Record audit logs in satta_differential_audit_logs so they show in Differential History
+            if (auditLogRows.length > 0) {
+              for (let i = 0; i < auditLogRows.length; i += batchSize) {
+                const auditBatch = auditLogRows.slice(i, i + batchSize);
+                await supabase
+                  .from('satta_differential_audit_logs')
+                  .insert(auditBatch);
+              }
             }
           }
 
@@ -897,9 +936,13 @@ export default function SattaChart({
             return copy;
           });
 
+          // Refresh differential history table & central rate cache
+          fetchDiffHistory();
+          refreshSattaCache().catch(() => {});
+
           setUploadProgress(100);
           setSaveStatus({
-            message: `Satta Chart CSV uploaded successfully! Saved ${upsertRows.length} area-grade differentials.`,
+            message: `Satta Chart CSV uploaded successfully! Saved ${upsertRows.length} area-grade differentials (${auditLogRows.length} logged in Differential History).`,
             success: true
           });
 
@@ -1929,9 +1972,6 @@ export default function SattaChart({
                     Live Supabase Audit
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Complete chronological audit of every differential edit made in LIVE PIVOT MATRIX (DATE • AREA • GRADE • PREVIOUS • NEW • CHANGE)
-                </p>
               </div>
             </div>
 
@@ -2105,12 +2145,6 @@ export default function SattaChart({
                     <span>Reset Filters</span>
                   </button>
                 )}
-              </div>
-
-              {/* Breadcrumb / Summary Badge */}
-              <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
-                <span>Exact Audit:</span>
-                <span className="font-bold text-[#1E331B]">DATE → AREA → GRADE → PREVIOUS → NEW → CHANGE</span>
               </div>
             </div>
           </div>
