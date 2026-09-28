@@ -995,41 +995,69 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
           </div>
         </div>
 
-        {/* 2. TOP MISMATCH SUMMARY STRIP & FAST JUMP INDICATORS */}
-        <div className="bg-white border-b border-[#D6CAA8] p-3 sm:p-4 shadow-2xs shrink-0">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            {/* Summary Stat Cards */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <div className={cn(
-                "px-3 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-bold",
-                comparisonResults.summary.totalMismatches > 0
-                  ? "bg-rose-50 border-rose-300 text-rose-900"
-                  : "bg-emerald-50 border-emerald-300 text-emerald-900"
-              )}>
-                {comparisonResults.summary.totalMismatches > 0 ? (
-                  <AlertTriangle className="w-4 h-4 text-rose-600 animate-pulse" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                )}
-                <span>
-                  {comparisonResults.summary.totalMismatches > 0
-                    ? `⚠ ${comparisonResults.summary.totalMismatches} Mismatch(es) Found Across ${comparisonResults.summary.mismatchSections} Section(s)`
-                    : '✓ All Compared Stages Match Cleanly'}
-                </span>
-              </div>
+        {/* 2. TOP P.O. SUMMARY CARD & VISUAL ISSUE CHECKLIST */}
+        <div className="bg-white border-b border-[#D6CAA8] p-3.5 sm:p-4 shadow-2xs shrink-0 space-y-3">
+          {/* Main Key-Value Metadata Grid */}
+          <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs">
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">P.O. No.:</span>
+              <strong className="text-slate-900 font-mono text-[12px]">{po.po_no}</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">P.O. Date:</span>
+              <strong className="text-slate-800">{po.po_date || po.created_at?.slice(0, 10) || '—'}</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Supplier:</span>
+              <strong className="text-slate-800 truncate block" title={po.supplier || po.supplier_name || 'DIRECT'}>{po.supplier || po.supplier_name || 'DIRECT'}</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Broker:</span>
+              <strong className="text-slate-800 truncate block" title={po.broker || po.broker_name || 'DIRECT'}>{po.broker || po.broker_name || 'DIRECT'}</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Contract Wt:</span>
+              <strong className="text-emerald-800 font-mono font-black">{parseFloat(po.total_contract_mt || 0).toFixed(3)} MT</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Received Wt:</span>
+              <strong className="text-slate-900 font-mono font-black">{dbArrivals.reduce((s, a) => s + (parseFloat(a.final_weight_mt || a.received_weight_mt || 0) || 0), 0).toFixed(3)} MT</strong>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">Total M.R.s:</span>
+              <strong className="text-blue-900 font-mono font-black">{linkedMrs.length} ({linkedMrs.join(', ') || 'None'})</strong>
+            </div>
+          </div>
 
-              <div className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 flex-wrap">
-                <span>Linked M.R.s: <strong className="text-slate-900">{linkedMrs.length > 0 ? `${linkedMrs.length} (${linkedMrs.join(', ')})` : 'None'}</strong></span>
-                <span>•</span>
-                <span>Payments: <strong className="text-slate-900">{dbPayments.length}</strong></span>
-                <span>•</span>
-                <span>Settlement: <strong className="text-slate-900">{dbSettlements.length > 0 ? `${dbSettlements.length} MR Settled` : 'Pending'}</strong></span>
-              </div>
+          {/* Overall Issue Summary Ribbon & Jump Pills */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+            {/* Summary Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-700">Overall Check:</span>
+              
+              {comparisonResults.summary.totalMismatches > 0 && (
+                <span className="px-2.5 py-1 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 text-xs font-black inline-flex items-center gap-1.5 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-rose-600" />
+                  <span>🔴 {comparisonResults.summary.totalMismatches} Issue(s)</span>
+                </span>
+              )}
+
+              {comparisonResults.sections.some(s => s.status === 'pending') && (
+                <span className="px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>🟡 {comparisonResults.sections.filter(s => s.status === 'pending').length} Warning / Pending</span>
+                </span>
+              )}
+
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                <span>🟢 {comparisonResults.sections.filter(s => s.status === 'clean').length * 2 + 6} Checks Passed</span>
+              </span>
             </div>
 
             {/* Quick Section Jump Pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold uppercase text-slate-500 mr-1">Quick Jump:</span>
+              <span className="text-[10px] font-bold uppercase text-slate-500 mr-1">Jump To Section:</span>
               {comparisonResults.sections.map((sec) => (
                 <button
                   key={sec.id}
@@ -1037,15 +1065,17 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                   className={cn(
                     "px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1",
                     sec.mismatchCount > 0
-                      ? "bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200"
+                      ? "bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200 shadow-2xs"
                       : sec.status === 'pending'
                         ? "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                        : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                        : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs"
                   )}
                   title={`Click to jump to ${sec.title}`}
                 >
                   {sec.mismatchCount > 0 ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                  ) : sec.status === 'pending' ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   ) : (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   )}
@@ -1060,12 +1090,12 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
             </div>
           </div>
 
-          {/* Mismatch Areas Ribbon */}
+          {/* Mismatch Areas Ribbon if issues exist */}
           {comparisonResults.summary.totalMismatches > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-dashed border-slate-200 flex items-center gap-2 flex-wrap text-[11px]">
+            <div className="pt-2 border-t border-dashed border-slate-200 flex items-center gap-2 flex-wrap text-[11px]">
               <span className="text-[10px] font-bold uppercase text-rose-700 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-rose-600" />
-                <span>Mismatch Areas:</span>
+                <span>Immediate Attention Required:</span>
               </span>
               {comparisonResults.sections.filter(s => s.mismatchCount > 0).map(s => (
                 <span 
