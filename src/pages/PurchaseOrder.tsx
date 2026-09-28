@@ -333,6 +333,7 @@ export default function PurchaseOrder({
             canEditOrDelete={canEditOrDelete}
             sattaBaseRates={sattaBases && sattaBases.length > 0 ? sattaBases : sattaBaseRates}
             allTempArrivals={allTempArrivals}
+            allInspections={allInspections}
           />
         </LegacyLayout>
       )}

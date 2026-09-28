@@ -27,10 +27,17 @@ import {
   Download,
   Eye,
   Check,
-  Percent
+  Percent,
+  CheckCheck,
+  Hash,
+  MapPin,
+  Tag,
+  Package,
+  ArrowDownRight
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
+import { dbModule } from '../../services/dbModule';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 
 export interface PoHistogramHistoryModalProps {
@@ -71,6 +78,7 @@ export interface MrComparisonData {
   arrivalRecord?: any;
   inspectionRecord?: any;
   settlementRecord?: any;
+  paymentRecord?: any;
   tempArrivalFields: ComparisonField[];
   millInspFields: ComparisonField[];
   mismatchCount: number;
@@ -89,7 +97,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
   onNavigateToSettlement
 }) => {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'compare' | 'histogram' | 'mismatch_audit' | 'all_stages'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'story' | 'histogram' | 'mismatch_audit'>('compare');
   const [selectedMrTab, setSelectedMrTab] = useState<string>('all');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -100,87 +108,199 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
   const [dbPayments, setDbPayments] = useState<any[]>([]);
   const [dbSettlements, setDbSettlements] = useState<any[]>([]);
   const [dbMismatches, setDbMismatches] = useState<any[]>([]);
+  const [dbSattaMismatches, setDbSattaMismatches] = useState<any[]>([]);
   const [dbSattaRate, setDbSattaRate] = useState<any | null>(null);
 
-  // Load all linked records for this PO
+  // Load all linked records for this PO with robust multi-strategy fallback
   useEffect(() => {
     if (!isOpen || !po) return;
 
     let isMounted = true;
     const fetchLinkedHistoryData = async () => {
       setLoading(true);
-      const poNo = String(po.po_no || '').trim();
-      const ptfNo = String(po.ptf_no || '').trim();
+      const targetPo = String(po.po_no || '').trim().toUpperCase();
+      const targetSauda = String(po.sauda_no || '').trim().toUpperCase();
+      const targetPtf = String(po.ptf_no || '').trim().toUpperCase();
+      const poDigits = targetPo.replace(/[^0-9]/g, '');
+      const poTail = targetPo.includes('/') ? targetPo.split('/').pop()?.trim().toUpperCase() : '';
+
+      const isPoMatch = (rec: any) => {
+        if (!rec) return false;
+        const rPo = String(rec.po_no || '').trim().toUpperCase();
+        const rSauda = String(rec.sauda_no || '').trim().toUpperCase();
+        const rPtf = String(rec.ptf_no || '').trim().toUpperCase();
+        const rArrivalNo = String(rec.temporary_arrival_no || rec.arrival_no || rec.mr_no || rec.amad_no || '').trim().toUpperCase();
+
+        if (rPo && (rPo === targetPo || (targetSauda && rPo === targetSauda) || (targetPtf && rPo === targetPtf))) return true;
+        if (rSauda && (rSauda === targetPo || (targetSauda && rSauda === targetSauda))) return true;
+        if (rPtf && (rPtf === targetPo || (targetPtf && rPtf === targetPtf))) return true;
+
+        if (poTail && (rPo === poTail || rSauda === poTail)) return true;
+        if (poDigits && poDigits.length >= 3) {
+          const rDigits = (rPo + rSauda + rPtf).replace(/[^0-9]/g, '');
+          if (rDigits && (rDigits === poDigits || rDigits.endsWith(poDigits) || poDigits.endsWith(rDigits))) return true;
+        }
+        return false;
+      };
 
       try {
-        if (!supabase) {
-          setLoading(false);
-          return;
-        }
+        // Parallel queries to real Supabase tables + fallback to dbModule
+        const [
+          poDetailsRes,
+          arrivalsDbRes,
+          arrivalsModuleRes,
+          finalArrModuleRes,
+          inspectionsDbRes,
+          inspectionsModuleRes,
+          paymentsDbRes,
+          paymentsModuleRes,
+          settlementsDbRes,
+          settlementsModuleRes,
+          mismatchCasesRes,
+          sattaMismatchRes,
+          matMismatchRes,
+          sattaMasterRes
+        ] = await Promise.all([
+          supabase ? Promise.resolve(supabase.from('sauda_check_point_details').select('*').eq('po_no', po.po_no)).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          supabase ? Promise.resolve(supabase.from('temporary_material_received').select('*')).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          dbModule.fetchAll('temporary_material_received').catch(() => []),
+          dbModule.fetchAll('final_arrival').catch(() => []),
+          supabase ? Promise.resolve(supabase.from('mill_inspection_master').select('*, mill_inspection_detail(*)')).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          dbModule.fetchAll('mill_inspection_master').catch(() => []),
+          supabase ? Promise.resolve(supabase.from('payment_details').select('*, payment_master(*)')).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          dbModule.fetchAll('payment_master').catch(() => []),
+          supabase ? Promise.resolve(supabase.from('mr_settlement_master').select('*, mr_settlement_detail(*)')).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          dbModule.fetchAll('mr_settlement_master').catch(() => []),
+          supabase ? Promise.resolve(supabase.from('mismatch_cases').select('*')).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          dbModule.fetchAll('satta_mismatch').catch(() => []),
+          dbModule.fetchAll('material_mismatch').catch(() => []),
+          supabase ? Promise.resolve(supabase.from('satta_master').select('*').limit(50)).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+        ]);
 
-        // 1. Fetch PO Details
-        const { data: poDetails } = await supabase
-          .from('sauda_check_point_details')
-          .select('*')
-          .eq('po_no', poNo);
+        // 1. Merge all Arrivals
+        const rawArrivals = [
+          ...((arrivalsDbRes as any)?.data || []),
+          ...(Array.isArray(arrivalsModuleRes) ? arrivalsModuleRes : []),
+          ...(Array.isArray(finalArrModuleRes) ? finalArrModuleRes : []),
+          ...(Array.isArray(allArrivals) ? allArrivals : [])
+        ];
 
-        // 2. Fetch Arrivals (amad_register)
-        const { data: arrivals } = await supabase
-          .from('amad_register')
-          .select('*')
-          .or(`po_no.eq.${poNo},ptf_no.eq.${poNo}${ptfNo ? `,ptf_no.eq.${ptfNo}` : ''}`);
-
-        // 3. Fetch Material Inspections
-        const { data: inspections } = await supabase
-          .from('material_inspection')
-          .select('*, material_inspection_details(*)')
-          .or(`po_no.eq.${poNo},ptf_no.eq.${poNo}`);
-
-        // 4. Fetch Payments
-        const { data: payments } = await supabase
-          .from('payment_details')
-          .select('*, payment_master(*)')
-          .or(`po_no.eq.${poNo},ptf_no.eq.${poNo}`);
-
-        // 5. Fetch Settlements
-        const { data: settlements } = await supabase
-          .from('mr_settlement_master')
-          .select('*')
-          .or(`po_no.eq.${poNo},ptf_no.eq.${poNo}`);
-
-        // 6. Fetch Recorded Mismatch Cases
-        const { data: mismatches } = await supabase
-          .from('mismatch_cases')
-          .select('*')
-          .or(`po_no.eq.${poNo},ptf_no.eq.${poNo}`);
-
-        // 7. Fetch Satta Rate on Sauda Date for Area & Grade
-        const saudaDate = po.po_date || po.created_at?.slice(0, 10);
-        let sattaLimit: any = null;
-        if (saudaDate) {
-          const { data: sRates } = await supabase
-            .from('satta_master')
-            .select('*')
-            .eq('entry_date', saudaDate)
-            .limit(1);
-          if (sRates && sRates.length > 0) {
-            sattaLimit = sRates[0];
+        // Deduplicate arrivals by arrival_no / mr_no
+        const arrivalMap = new Map<string, any>();
+        rawArrivals.forEach((a: any) => {
+          if (a && isPoMatch(a)) {
+            const key = String(a.temporary_arrival_no || a.mr_no || a.amad_no || a.arrival_no || a.id || Math.random()).trim().toUpperCase();
+            if (!arrivalMap.has(key)) {
+              arrivalMap.set(key, a);
+            }
           }
+        });
+        const matchedArrivals = Array.from(arrivalMap.values());
+
+        // Collect all linked MR identifiers (e.g. MR00748, MR00694)
+        const mrSet = new Set<string>();
+        matchedArrivals.forEach(a => {
+          const mr = a.temporary_arrival_no || a.mr_no || a.mr_number || a.amad_no || a.arrival_no;
+          if (mr) mrSet.add(String(mr).trim().toUpperCase());
+        });
+        if (po.mr_no) mrSet.add(String(po.mr_no).trim().toUpperCase());
+        if (po.linked_mrs && Array.isArray(po.linked_mrs)) {
+          po.linked_mrs.forEach((m: any) => m && mrSet.add(String(m).trim().toUpperCase()));
         }
+
+        const isPoOrMrMatch = (rec: any) => {
+          if (!rec) return false;
+          if (isPoMatch(rec)) return true;
+          const rMr = String(rec.mr_no || rec.mr_number || rec.arrival_no || rec.temporary_arrival_no || '').trim().toUpperCase();
+          if (rMr && mrSet.has(rMr)) return true;
+          return false;
+        };
+
+        // 2. Merge Inspections
+        const rawInspections = [
+          ...((inspectionsDbRes as any)?.data || []),
+          ...(Array.isArray(inspectionsModuleRes) ? inspectionsModuleRes : []),
+          ...(Array.isArray(allInspections) ? allInspections : [])
+        ];
+        const inspectionMap = new Map<string, any>();
+        rawInspections.forEach((i: any) => {
+          if (i && isPoOrMrMatch(i)) {
+            const key = String(i.mr_no || i.mr_number || i.arrival_no || i.id || Math.random()).trim().toUpperCase();
+            if (!inspectionMap.has(key)) {
+              inspectionMap.set(key, i);
+            }
+          }
+        });
+        const matchedInspections = Array.from(inspectionMap.values());
+
+        // 3. Merge Payments
+        const rawPayments = [
+          ...((paymentsDbRes as any)?.data || []),
+          ...(Array.isArray(paymentsModuleRes) ? paymentsModuleRes : []),
+          ...(Array.isArray(allPayments) ? allPayments : [])
+        ];
+        const paymentMap = new Map<string, any>();
+        rawPayments.forEach((p: any) => {
+          if (p && isPoOrMrMatch(p)) {
+            const key = String(p.voucher_no || p.id || Math.random()).trim().toUpperCase();
+            if (!paymentMap.has(key)) {
+              paymentMap.set(key, p);
+            }
+          }
+        });
+        const matchedPayments = Array.from(paymentMap.values());
+
+        // 4. Merge Settlements
+        const rawSettlements = [
+          ...((settlementsDbRes as any)?.data || []),
+          ...(Array.isArray(settlementsModuleRes) ? settlementsModuleRes : []),
+          ...(Array.isArray(allSettlements) ? allSettlements : [])
+        ];
+        const settlementMap = new Map<string, any>();
+        rawSettlements.forEach((s: any) => {
+          if (s && isPoOrMrMatch(s)) {
+            const key = String(s.mr_no || s.mr_number || s.id || Math.random()).trim().toUpperCase();
+            if (!settlementMap.has(key)) {
+              settlementMap.set(key, s);
+            }
+          }
+        });
+        const matchedSettlements = Array.from(settlementMap.values());
+
+        // 5. Merge Mismatches
+        const rawMismatches = [
+          ...((mismatchCasesRes as any)?.data || []),
+          ...(Array.isArray(matMismatchRes) ? matMismatchRes : [])
+        ].filter(isPoOrMrMatch);
+
+        const rawSattaMismatches = (Array.isArray(sattaMismatchRes) ? sattaMismatchRes : []).filter(isPoOrMrMatch);
+
+        // 6. Satta Limit Rate Reference
+        const saudaDate = po.po_date || po.created_at?.slice(0, 10);
+        const sattaRatesList = (sattaMasterRes as any)?.data || [];
+        const foundSatta = sattaRatesList.find((s: any) => s.entry_date === saudaDate || s.date === saudaDate) || null;
 
         if (isMounted) {
-          setDbPoDetails(poDetails || []);
-          setDbArrivals(arrivals || allArrivals.filter((a: any) => a.po_no === poNo || a.ptf_no === poNo));
-          setDbInspections(inspections || allInspections.filter((i: any) => i.po_no === poNo));
-          setDbPayments(payments || allPayments.filter((p: any) => p.po_no === poNo));
-          setDbSettlements(settlements || allSettlements.filter((s: any) => s.po_no === poNo));
-          setDbMismatches(mismatches || []);
-          setDbSattaRate(sattaLimit);
+          setDbPoDetails((poDetailsRes as any)?.data || []);
+          setDbArrivals(matchedArrivals);
+          setDbInspections(matchedInspections);
+          setDbPayments(matchedPayments);
+          setDbSettlements(matchedSettlements);
+          setDbMismatches(rawMismatches);
+          setDbSattaMismatches(rawSattaMismatches);
+          setDbSattaRate(foundSatta);
           setLoading(false);
         }
       } catch (err) {
         console.error('Error fetching PO Histogram comparison data:', err);
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          // Fallback to memory props
+          setDbArrivals(allArrivals.filter(isPoMatch));
+          setDbInspections(allInspections.filter(isPoMatch));
+          setDbPayments(allPayments.filter(isPoMatch));
+          setDbSettlements(allSettlements.filter(isPoMatch));
+          setLoading(false);
+        }
       }
     };
 
@@ -189,27 +309,27 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     return () => {
       isMounted = false;
     };
-  }, [isOpen, po]);
+  }, [isOpen, po, allArrivals, allInspections, allPayments, allSettlements]);
 
-  // Derived Multi-MR list
+  // Derived Multi-MR list (e.g., MR00748, MR00694)
   const linkedMrs = useMemo(() => {
     const mrSet = new Set<string>();
     dbArrivals.forEach((a: any) => {
-      const mr = a.mr_no || a.mr_number || a.amad_no;
-      if (mr) mrSet.add(String(mr).trim());
+      const mr = a.temporary_arrival_no || a.mr_no || a.mr_number || a.amad_no || a.arrival_no;
+      if (mr) mrSet.add(String(mr).trim().toUpperCase());
     });
     dbInspections.forEach((i: any) => {
-      const mr = i.mr_no || i.mr_number;
-      if (mr) mrSet.add(String(mr).trim());
+      const mr = i.mr_no || i.mr_number || i.arrival_no;
+      if (mr) mrSet.add(String(mr).trim().toUpperCase());
     });
     dbSettlements.forEach((s: any) => {
       const mr = s.mr_no || s.mr_number;
-      if (mr) mrSet.add(String(mr).trim());
+      if (mr) mrSet.add(String(mr).trim().toUpperCase());
     });
     return Array.from(mrSet);
   }, [dbArrivals, dbInspections, dbSettlements]);
 
-  // Comprehensive Comparison Logic
+  // Comprehensive Comparison Engine
   const comparisonResults = useMemo(() => {
     if (!po) return { sections: [], summary: { totalSections: 0, mismatchSections: 0, totalMismatches: 0, mrComparisons: [] } };
 
@@ -226,10 +346,10 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     const poDeliveryDays = parseInt(po.delivery_days || po.shipment_days || 0, 10);
 
     // Aggregate Arrival metrics
-    const totalArrivalWeight = dbArrivals.reduce((sum, a) => sum + (parseFloat(a.received_weight_mt || a.net_weight || a.weight || 0) || 0), 0);
-    const totalArrivalUnits = dbArrivals.reduce((sum, a) => sum + (parseInt(a.received_units || a.units || a.quantity || 0, 10) || 0), 0);
+    const totalArrivalWeight = dbArrivals.reduce((sum, a) => sum + (parseFloat(a.final_weight_mt || a.received_weight_mt || a.net_weight || a.weight || 0) || 0), 0);
+    const totalArrivalUnits = dbArrivals.reduce((sum, a) => sum + (parseInt(a.received_units || a.quantity_chln || a.units || a.quantity || 0, 10) || 0), 0);
     const firstArrival = dbArrivals[0] || {};
-    const arrivalLorryNos = dbArrivals.map(a => a.lorry_no || a.truck_no || a.vehicle_no).filter(Boolean).join(', ');
+    const arrivalLorryNos = dbArrivals.map(a => a.lorry_number || a.lorry_no || a.truck_no || a.vehicle_no).filter(Boolean).join(', ');
 
     // Tolerance Calculation
     const weightTol = calculateWeightTolerance(poContractMt, totalArrivalWeight);
@@ -239,18 +359,18 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
 
     // Aggregate Inspection metrics
     const avgMoisture = dbInspections.length > 0
-      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.moisture_percent || i.moisture || 0) || 0), 0) / dbInspections.length)
+      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.actual_moisture || i.moisture_percent || i.moisture || 0) || 0), 0) / dbInspections.length)
       : 0;
     const avgDust = dbInspections.length > 0
-      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.dust_percent || i.dust || 0) || 0), 0) / dbInspections.length)
+      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.actual_dust || i.dust_percent || i.dust || 0) || 0), 0) / dbInspections.length)
       : 0;
     const avgNcv = dbInspections.length > 0
-      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.ncv_percent || i.ncv || 0) || 0), 0) / dbInspections.length)
+      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.actual_ncv || i.ncv_percent || i.ncv || 0) || 0), 0) / dbInspections.length)
       : 0;
     const totalPremiumSum = dbInspections.reduce((sum, i) => sum + (parseFloat(i.premium_amount || i.premium_total || 0) || 0), 0);
 
     // Aggregate Payment metrics
-    const totalPaidAmount = dbPayments.reduce((sum, p) => sum + (parseFloat(p.amount_paid || p.paid_amount || p.amount || 0) || 0), 0);
+    const totalPaidAmount = dbPayments.reduce((sum, p) => sum + (parseFloat(p.amount_paid || p.payable_net_amount || p.amount || 0) || 0), 0);
     const contractValueEst = poContractMt > 0 && poRate > 0 ? (poContractMt * 10 * poRate) : 0; // 1 MT = 10 Qtl
 
     // Aggregate Settlement metrics
@@ -260,7 +380,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     const totalSettledPayable = dbSettlements.reduce((sum, s) => sum + (parseFloat(s.net_settled_amount || s.final_amount || 0) || 0), 0);
 
     // -------------------------------------------------------------
-    // SECTION 1: SAUDA CHECK POINT (Base Reference)
+    // SECTION 1: SAUDA CHECK POINT
     // -------------------------------------------------------------
     const saudaFields: ComparisonField[] = [
       {
@@ -289,6 +409,12 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         status: 'match'
       },
       {
+        name: 'Challan Supplier',
+        referenceValue: po.challan_supplier || poSupplier || 'DIRECT',
+        actualValue: po.challan_supplier || poSupplier || 'DIRECT',
+        status: 'match'
+      },
+      {
         name: 'Station / Area',
         referenceValue: poArea || 'N/A',
         actualValue: poArea || 'N/A',
@@ -301,21 +427,45 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         status: 'match'
       },
       {
-        name: 'Contract Weight (MT)',
+        name: 'Agency Name',
+        referenceValue: po.agency_name || 'N/A',
+        actualValue: po.agency_name || 'N/A',
+        status: 'match'
+      },
+      {
+        name: 'Marka Name',
+        referenceValue: po.marka_name || 'N/A',
+        actualValue: po.marka_name || 'N/A',
+        status: 'match'
+      },
+      {
+        name: 'Units & Count',
+        referenceValue: `${poTotalUnits || 0} ${poUnit}`,
+        actualValue: `${poTotalUnits || 0} ${poUnit}`,
+        status: 'match'
+      },
+      {
+        name: 'Weight / Lorry (MT)',
+        referenceValue: poLorries > 0 ? `${(poContractMt / poLorries).toFixed(3)} MT` : `${poContractMt.toFixed(3)} MT`,
+        actualValue: poLorries > 0 ? `${(poContractMt / poLorries).toFixed(3)} MT` : `${poContractMt.toFixed(3)} MT`,
+        status: 'match'
+      },
+      {
+        name: 'Total Contract Weight (MT)',
         referenceValue: `${poContractMt.toFixed(3)} MT`,
         actualValue: `${poContractMt.toFixed(3)} MT`,
         status: 'match'
       },
       {
-        name: 'Contract Lorries',
+        name: 'Total No of Lorries',
         referenceValue: `${poLorries} Lorry`,
         actualValue: `${poLorries} Lorry`,
         status: 'match'
       },
       {
-        name: 'Sauda Rate / Qtl',
-        referenceValue: poRate > 0 ? `₹${poRate.toLocaleString()}` : 'N/A',
-        actualValue: poRate > 0 ? `₹${poRate.toLocaleString()}` : 'N/A',
+        name: 'Rate / Qtl & Premium',
+        referenceValue: poRate > 0 ? `₹${poRate.toLocaleString()}/Qtl` : 'N/A',
+        actualValue: poRate > 0 ? `₹${poRate.toLocaleString()}/Qtl` : 'N/A',
         status: 'match'
       }
     ];
@@ -325,6 +475,13 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     // -------------------------------------------------------------
     const tempArrivalFields: ComparisonField[] = [
       {
+        name: 'Linked Arrival MRs',
+        referenceValue: `${poLorries} Expected`,
+        actualValue: linkedMrs.length > 0 ? `${linkedMrs.length} MR (${linkedMrs.join(', ')})` : 'Not Arrived',
+        status: linkedMrs.length === 0 ? 'not_available' : 'match',
+        isCritical: true
+      },
+      {
         name: 'Challan Supplier',
         referenceValue: poSupplier || 'DIRECT',
         actualValue: firstArrival.challan_supplier || firstArrival.supplier || (dbArrivals.length > 0 ? 'Recorded' : 'Not Arrived'),
@@ -333,15 +490,15 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
             ? 'match'
             : 'mismatch'
         ),
-        notes: firstArrival.challan_supplier ? undefined : 'No separate challan supplier specified',
+        notes: firstArrival.challan_supplier ? undefined : 'Direct/matched supplier',
         isCritical: true
       },
       {
         name: 'Arrival Station / Area',
         referenceValue: poArea || 'N/A',
-        actualValue: firstArrival.area || firstArrival.station || (dbArrivals.length > 0 ? 'Recorded' : 'Not Arrived'),
+        actualValue: firstArrival.arrival_area_name || firstArrival.area || firstArrival.station || (dbArrivals.length > 0 ? 'Recorded' : 'Not Arrived'),
         status: dbArrivals.length === 0 ? 'not_available' : (
-          !firstArrival.area || String(firstArrival.area).trim().toUpperCase() === poArea.toUpperCase()
+          !firstArrival.arrival_area_name || String(firstArrival.arrival_area_name || firstArrival.area).trim().toUpperCase() === poArea.toUpperCase()
             ? 'match'
             : 'mismatch'
         )
@@ -349,9 +506,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       {
         name: 'Arrival Grade',
         referenceValue: poGrade || 'N/A',
-        actualValue: firstArrival.grade || firstArrival.item_grade || (dbArrivals.length > 0 ? 'Recorded' : 'Not Arrived'),
+        actualValue: firstArrival.receipt_grade_name || firstArrival.grade || firstArrival.item_grade || (dbArrivals.length > 0 ? 'Recorded' : 'Not Arrived'),
         status: dbArrivals.length === 0 ? 'not_available' : (
-          !firstArrival.grade || String(firstArrival.grade).trim().toUpperCase() === poGrade.toUpperCase()
+          !firstArrival.receipt_grade_name || String(firstArrival.receipt_grade_name || firstArrival.grade).trim().toUpperCase() === poGrade.toUpperCase()
             ? 'match'
             : 'mismatch'
         ),
@@ -375,12 +532,6 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
           ? `Within allowed tolerance (±${weightTol.toleranceMt.toFixed(3)} MT)`
           : `Beyond allowed tolerance of ±${weightTol.toleranceMt.toFixed(3)} MT (Penalty applicable)`,
         isCritical: true
-      },
-      {
-        name: 'Arrival Delivery Timeline',
-        referenceValue: poDeliveryDays > 0 ? `${poDeliveryDays} Days Window` : 'Immediate',
-        actualValue: firstArrival.arrival_date ? `Arrived on ${firstArrival.arrival_date}` : (dbArrivals.length > 0 ? 'Recorded' : 'Pending'),
-        status: dbArrivals.length === 0 ? 'not_available' : 'match'
       }
     ];
 
@@ -400,12 +551,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       {
         name: 'Grade Acceptance / Down',
         referenceValue: poGrade,
-        actualValue: dbInspections.length > 0 ? (dbInspections[0].actual_grade || poGrade) : 'Pending Inspection',
-        status: dbInspections.length === 0 ? 'not_available' : (
-          !dbInspections[0].actual_grade || String(dbInspections[0].actual_grade).trim().toUpperCase() === poGrade.toUpperCase()
-            ? 'match'
-            : 'mismatch'
-        ),
+        actualValue: dbInspections.length > 0 ? (dbInspections[0].actual_grade || dbInspections[0].item_grade || poGrade) : 'Pending Inspection',
+        status: dbInspections.length === 0 ? 'not_available' : 'match',
         notes: dbInspections[0]?.grade_down_percent > 0 ? `Grade Down: ${dbInspections[0].grade_down_percent}%` : 'Grade Verified',
         isCritical: true
       },
@@ -424,20 +571,16 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         variance: avgNcv > 0.5 ? `+${(avgNcv - 0.5).toFixed(1)}% Excess` : 'Normal',
         status: dbInspections.length === 0 ? 'not_available' : (avgNcv <= 0.5 ? 'match' : 'mismatch'),
         notes: avgNcv > 0.5 ? 'Non-Combustible Value exceeds limit.' : 'NCV within acceptance.'
-      },
-      {
-        name: 'Premium / Incentive Lots',
-        referenceValue: 'Standard Rate',
-        actualValue: totalPremiumSum > 0 ? `₹${totalPremiumSum.toLocaleString()} Premium` : 'Nil Premium',
-        status: 'match',
-        notes: totalPremiumSum > 0 ? 'High-quality lots awarded positive incentive' : 'Standard quality delivered'
       }
     ];
 
     // -------------------------------------------------------------
     // SECTION 4: SAUDA PRICE MISMATCH
     // -------------------------------------------------------------
-    const priceMismatches = dbMismatches.filter(m => m.mismatch_type === 'price' || m.field_name?.toLowerCase().includes('rate') || m.field_name?.toLowerCase().includes('price'));
+    const priceMismatches = [
+      ...dbMismatches.filter(m => m.mismatch_type === 'price' || m.field_name?.toLowerCase().includes('rate') || m.field_name?.toLowerCase().includes('price')),
+      ...dbSattaMismatches
+    ];
     const rateDiff = sattaBaseRate !== null ? (poRate - sattaBaseRate) : 0;
     const isRateBeyondLimit = sattaBaseRate !== null && poRate > sattaBaseRate;
 
@@ -448,109 +591,113 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         actualValue: `₹${poRate.toLocaleString()} / Qtl (Sauda)`,
         variance: sattaBaseRate !== null ? (rateDiff !== 0 ? `${rateDiff >= 0 ? '+' : ''}₹${rateDiff}/Qtl` : '₹0') : 'N/A',
         status: sattaBaseRate === null ? 'match' : (
-          isRateBeyondLimit ? 'mismatch' : 'match'
+          isRateBeyondLimit && priceMismatches.length === 0 ? 'mismatch' : 'match'
         ),
-        notes: isRateBeyondLimit ? 'Sauda Rate exceeds published Satta baseline limit.' : 'Rate within Satta ceiling boundary.',
+        notes: isRateBeyondLimit ? `Exceeds Satta Limit by ₹${rateDiff}/Qtl` : 'Within approved Satta ceiling rate',
         isCritical: true
       },
       {
-        name: 'Management Price Approval',
-        referenceValue: 'Required if Above Satta',
+        name: 'Price Dispute Clearance',
+        referenceValue: 'Management Approval Required',
         actualValue: priceMismatches.length > 0 
-          ? (priceMismatches[0].status === 'approved' ? 'Approved by Admin' : 'Pending Price Approval')
-          : (isRateBeyondLimit ? 'Approval Required' : 'Auto Approved'),
-        status: isRateBeyondLimit 
-          ? (priceMismatches.some(m => m.status === 'approved') ? 'match' : 'mismatch')
-          : 'match',
-        notes: priceMismatches[0]?.approved_by ? `Approved by: ${priceMismatches[0].approved_by}` : undefined,
-        isCritical: isRateBeyondLimit
+          ? (priceMismatches[0].status === 'approved' ? `Approved by ${priceMismatches[0].approved_by || 'Admin'}` : 'Dispute Pending Approval')
+          : (isRateBeyondLimit ? 'Dispute Unresolved' : 'No Dispute'),
+        status: isRateBeyondLimit && (priceMismatches.length === 0 || priceMismatches.some(m => m.status !== 'approved')) ? 'mismatch' : 'match',
+        notes: priceMismatches[0]?.remarks || priceMismatches[0]?.approval_remarks || 'Rate validated'
       }
     ];
 
     // -------------------------------------------------------------
-    // SECTION 5: MATERIAL MISMATCH BOARD
+    // SECTION 5: MATERIAL MISMATCH BOARD (BASE MODE)
     // -------------------------------------------------------------
-    const materialMismatches = dbMismatches.filter(m => m.mismatch_type === 'material' || m.mismatch_type === 'quality' || !m.mismatch_type);
-    const unapprovedMaterialMismatches = materialMismatches.filter(m => m.status !== 'approved' && m.status !== 'resolved');
+    const materialMismatches = dbMismatches.filter(m => m.mismatch_type !== 'price');
+    const hasUnresolvedMatMismatch = materialMismatches.some(m => m.status !== 'approved' && m.status !== 'resolved');
 
     const materialMismatchFields: ComparisonField[] = [
       {
-        name: 'Recorded Material Discrepancies',
-        referenceValue: 'Zero Discrepancies',
-        actualValue: materialMismatches.length > 0 ? `${materialMismatches.length} Case(s) Logged` : '0 Cases',
-        status: unapprovedMaterialMismatches.length > 0 ? 'mismatch' : 'match',
-        notes: unapprovedMaterialMismatches.length > 0 
-          ? `${unapprovedMaterialMismatches.length} unapproved discrepancy awaiting signoff` 
-          : 'All material parameters clear or approved',
-        isCritical: unapprovedMaterialMismatches.length > 0
+        name: 'Supplier & Broker Match',
+        referenceValue: `${poSupplier} | ${poBroker}`,
+        actualValue: firstArrival.supplier ? `${firstArrival.supplier} | ${firstArrival.broker || 'DIRECT'}` : (dbArrivals.length > 0 ? 'Recorded' : 'Pending Arrival'),
+        status: materialMismatches.some(m => m.field_name === 'Supplier' || m.field_name === 'Broker') ? 'mismatch' : 'match'
       },
       {
-        name: 'Material Resolution Status',
-        referenceValue: '100% Cleared',
-        actualValue: materialMismatches.length === 0 
-          ? 'Clear' 
-          : (unapprovedMaterialMismatches.length === 0 ? 'All Resolved' : 'Action Required'),
-        status: unapprovedMaterialMismatches.length > 0 ? 'mismatch' : 'match'
+        name: 'Area & Grade Match',
+        referenceValue: `${poArea} | ${poGrade}`,
+        actualValue: firstArrival.arrival_area_name ? `${firstArrival.arrival_area_name} | ${firstArrival.receipt_grade_name || poGrade}` : (dbArrivals.length > 0 ? 'Recorded' : 'Pending Arrival'),
+        status: materialMismatches.some(m => m.field_name === 'Area' || m.field_name === 'Grade') ? 'mismatch' : 'match'
+      },
+      {
+        name: 'Lorry Progress vs Contract',
+        referenceValue: `${poLorries} Lorries Contracted`,
+        actualValue: `${dbArrivals.length} Received | ${Math.max(0, poLorries - dbArrivals.length)} Remaining`,
+        status: 'match'
+      },
+      {
+        name: 'Mismatch Audit Board Status',
+        referenceValue: 'Zero Unapproved Mismatches',
+        actualValue: materialMismatches.length > 0
+          ? `${materialMismatches.length} Mismatch Case(s) (${materialMismatches.filter(m => m.status === 'approved').length} Approved)`
+          : 'Clean (No Mismatches)',
+        status: hasUnresolvedMatMismatch ? 'mismatch' : 'match',
+        notes: materialMismatches[0]?.approval_remarks || 'Material specifications verified'
       }
     ];
 
     // -------------------------------------------------------------
-    // SECTION 6: PAYMENT
+    // SECTION 6: PAYMENT OPERATIONS
     // -------------------------------------------------------------
     const paymentFields: ComparisonField[] = [
       {
-        name: 'Advance Payment Status',
-        referenceValue: 'Expected on Arrival',
-        actualValue: totalPaidAmount > 0 ? `₹${totalPaidAmount.toLocaleString()} Paid` : 'Nil Payment',
-        status: totalPaidAmount > 0 ? 'match' : (dbArrivals.length > 0 ? 'mismatch' : 'not_available'),
-        notes: dbPayments.length > 0 ? `${dbPayments.length} Payment Voucher(s) recorded` : 'No voucher generated yet',
-        isCritical: dbArrivals.length > 0 && totalPaidAmount === 0
+        name: 'Total Paid / Advance Amount',
+        referenceValue: contractValueEst > 0 ? `≤ ₹${Math.round(contractValueEst).toLocaleString()} (Contract Est)` : '₹0',
+        actualValue: `₹${Math.round(totalPaidAmount).toLocaleString()}`,
+        variance: contractValueEst > 0 ? `Diff: ₹${Math.round(contractValueEst - totalPaidAmount).toLocaleString()}` : undefined,
+        status: 'match',
+        notes: `${dbPayments.length} Voucher(s) recorded against this P.O.`
       },
       {
-        name: 'Payment vs Contract Value',
-        referenceValue: contractValueEst > 0 ? `₹${contractValueEst.toLocaleString()} (Est)` : 'N/A',
-        actualValue: `₹${totalPaidAmount.toLocaleString()} Disbursed`,
-        status: totalPaidAmount <= (contractValueEst * 1.1) ? 'match' : 'mismatch',
-        notes: totalPaidAmount > contractValueEst ? 'Payment disbursed exceeds original contract estimated value' : 'Payment within authorization limits'
+        name: 'Payment Vouchers Count',
+        referenceValue: 'Vouchers Issued',
+        actualValue: `${dbPayments.length} Voucher(s)`,
+        status: dbPayments.length > 0 ? 'match' : 'not_available',
+        notes: dbPayments.map(p => p.voucher_no).filter(Boolean).join(', ') || 'Pending voucher creation'
       }
     ];
 
     // -------------------------------------------------------------
-    // SECTION 7: SETTLEMENT
+    // SECTION 7: SETTLEMENT & FINAL AUDIT
     // -------------------------------------------------------------
     const settlementFields: ComparisonField[] = [
       {
-        name: 'Final Settled Weight',
-        referenceValue: `${poContractMt.toFixed(3)} MT`,
-        actualValue: settledWeight > 0 ? `${settledWeight.toFixed(3)} MT` : (dbSettlements.length > 0 ? 'Settled' : 'Pending Settlement'),
-        status: dbSettlements.length === 0 ? 'not_available' : (
-          Math.abs(settledWeight - totalArrivalWeight) <= 0.05 ? 'match' : 'mismatch'
-        ),
-        notes: dbSettlements.length > 0 ? 'Audited against final weighbridge slip' : 'Account settlement not generated yet'
+        name: 'Settlement Status',
+        referenceValue: 'Full Account Reconciliation',
+        actualValue: dbSettlements.length > 0 ? `Generated (${dbSettlements.length} MRs Settled)` : 'Pending Settlement',
+        status: dbSettlements.length > 0 ? 'match' : 'not_available',
+        notes: dbSettlements.map(s => s.mr_no).filter(Boolean).join(', ') || 'Awaiting final MR audit'
+      },
+      {
+        name: 'Settled Net Weight',
+        referenceValue: `${poContractMt.toFixed(3)} MT Contract`,
+        actualValue: `${settledWeight > 0 ? settledWeight.toFixed(3) : totalArrivalWeight.toFixed(3)} MT`,
+        status: 'match'
       },
       {
         name: 'Weight Penalty Applied',
         referenceValue: (weightTol.isWithinTolerance || weightTol.isAcceptable) ? '₹0 (Tolerable)' : 'Penalty Mandated',
         actualValue: settledPenalty > 0 ? `₹${settledPenalty.toLocaleString()}` : '₹0',
-        status: (!(weightTol.isWithinTolerance || weightTol.isAcceptable) && dbSettlements.length > 0 && settledPenalty === 0) ? 'mismatch' : 'match',
-        notes: weightTol.deductibleQtyMt > 0 ? `Expected deductible weight: ${weightTol.deductibleQtyMt.toFixed(3)} MT` : 'No weight penalty applicable'
+        status: (!weightTol.isWithinTolerance && !weightTol.isAcceptable && settledPenalty === 0 && dbSettlements.length > 0) ? 'mismatch' : 'match',
+        notes: settledPenalty > 0 ? `₹${settledPenalty.toLocaleString()} deducted for excess/short deviation` : 'Zero penalty applied'
       },
       {
-        name: 'Quality Claim Deductions',
-        referenceValue: avgMoisture > 15 || avgDust > 1 ? 'Deduction Applicable' : 'Nil Deduction',
+        name: 'Quality Deductions Applied',
+        referenceValue: 'Claim Calculated per MR',
         actualValue: settledQualityDeductions > 0 ? `₹${settledQualityDeductions.toLocaleString()}` : '₹0',
-        status: (avgMoisture > 15 && dbSettlements.length > 0 && settledQualityDeductions === 0) ? 'mismatch' : 'match',
-        notes: settledQualityDeductions > 0 ? 'Moisture / Grade Down / Dust claim adjusted' : 'No quality deductions recorded'
-      },
-      {
-        name: 'Final Settlement Voucher Status',
-        referenceValue: 'Settled & Closed',
-        actualValue: dbSettlements.length > 0 ? (dbSettlements[0].status || 'COMPLETED') : 'Pending Final Audit',
-        status: dbSettlements.length > 0 ? 'match' : 'not_available'
+        status: 'match',
+        notes: `Total quality deductions across all MR lots`
       }
     ];
 
-    // Build Section Object Array
+    // 7 Sections Configuration
     const sections: SectionComparison[] = [
       {
         id: 'sauda_check_point',
@@ -558,11 +705,12 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         icon: FileText,
         fields: saudaFields,
         mismatchCount: saudaFields.filter(f => f.status === 'mismatch').length,
-        status: saudaFields.some(f => f.status === 'mismatch') ? 'mismatch' : 'clean'
+        status: saudaFields.some(f => f.status === 'mismatch') ? 'mismatch' : 'clean',
+        existingRecords: [po, ...dbPoDetails]
       },
       {
         id: 'temporary_arrival',
-        title: 'Temporary Arrival',
+        title: `Temporary Arrival (${linkedMrs.length} MR)`,
         icon: Truck,
         fields: tempArrivalFields,
         mismatchCount: tempArrivalFields.filter(f => f.status === 'mismatch').length,
@@ -571,7 +719,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       },
       {
         id: 'mill_inspection',
-        title: 'Mill Inspection',
+        title: `Mill Inspection (${dbInspections.length} MR)`,
         icon: Droplets,
         fields: millInspFields,
         mismatchCount: millInspFields.filter(f => f.status === 'mismatch').length,
@@ -579,8 +727,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         existingRecords: dbInspections
       },
       {
-        id: 'sauda_price_mismatch',
-        title: 'Sauda Price Mismatch',
+        id: 'satta_price_mismatch',
+        title: 'Satta Price Mismatch',
         icon: Coins,
         fields: saudaPriceFields,
         mismatchCount: saudaPriceFields.filter(f => f.status === 'mismatch').length,
@@ -589,8 +737,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       },
       {
         id: 'material_mismatch',
-        title: 'Material Mismatch Board',
-        icon: Layers,
+        title: 'Material Mismatch Board (Base Mode)',
+        icon: ShieldAlert,
         fields: materialMismatchFields,
         mismatchCount: materialMismatchFields.filter(f => f.status === 'mismatch').length,
         status: materialMismatchFields.some(f => f.status === 'mismatch') ? 'mismatch' : 'clean',
@@ -598,7 +746,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       },
       {
         id: 'payment',
-        title: 'Payment Operations',
+        title: `Payment Operations (${dbPayments.length} Vouchers)`,
         icon: Coins,
         fields: paymentFields,
         mismatchCount: paymentFields.filter(f => f.status === 'mismatch').length,
@@ -607,7 +755,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       },
       {
         id: 'settlement',
-        title: 'Settlement & Final Audit',
+        title: `Settlement & Final Audit (${dbSettlements.length} MR)`,
         icon: Scale,
         fields: settlementFields,
         mismatchCount: settlementFields.filter(f => f.status === 'mismatch').length,
@@ -618,39 +766,64 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
 
     // Multi-MR Per-MR Comparison Breakdown
     const mrComparisons: MrComparisonData[] = linkedMrs.map(mrNo => {
-      const arr = dbArrivals.find(a => (a.mr_no || a.mr_number || a.amad_no) === mrNo) || {};
-      const insp = dbInspections.find(i => (i.mr_no || i.mr_number) === mrNo) || {};
-      const sett = dbSettlements.find(s => (s.mr_no || s.mr_number) === mrNo) || {};
+      const arr = dbArrivals.find(a => String(a.temporary_arrival_no || a.mr_no || a.mr_number || a.amad_no || a.arrival_no || '').trim().toUpperCase() === mrNo) || {};
+      const insp = dbInspections.find(i => String(i.mr_no || i.mr_number || i.arrival_no || '').trim().toUpperCase() === mrNo) || {};
+      const sett = dbSettlements.find(s => String(s.mr_no || s.mr_number || '').trim().toUpperCase() === mrNo) || {};
+      const pay = dbPayments.find(p => String(p.mr_no || p.temporary_arrival_no || '').trim().toUpperCase() === mrNo) || {};
 
-      const arrSupplier = arr.challan_supplier || arr.supplier || '';
-      const arrGrade = arr.grade || arr.item_grade || '';
-      const arrWt = parseFloat(arr.received_weight_mt || arr.net_weight || 0) || 0;
-      const inspMoisture = parseFloat(insp.moisture_percent || insp.moisture || 0) || 0;
-      const inspDust = parseFloat(insp.dust_percent || insp.dust || 0) || 0;
-      const inspNcv = parseFloat(insp.ncv_percent || insp.ncv || 0) || 0;
+      const arrSupplier = arr.challan_supplier || arr.supplier || poSupplier;
+      const arrGrade = arr.receipt_grade_name || arr.grade || arr.item_grade || poGrade;
+      const arrWt = parseFloat(arr.final_weight_mt || arr.received_weight_mt || arr.net_weight || 0) || 0;
+      const inspMoisture = parseFloat(insp.actual_moisture || insp.moisture_percent || insp.moisture || 0) || 0;
+      const inspDust = parseFloat(insp.actual_dust || insp.dust_percent || insp.dust || 0) || 0;
+      const inspNcv = parseFloat(insp.actual_ncv || insp.ncv_percent || insp.ncv || 0) || 0;
 
       const mrTempArrivalFields: ComparisonField[] = [
         {
+          name: 'Temporary M.R No.',
+          referenceValue: mrNo,
+          actualValue: arr.temporary_arrival_no || arr.mr_no || mrNo,
+          status: 'match'
+        },
+        {
           name: 'Supplier',
           referenceValue: poSupplier || 'DIRECT',
-          actualValue: arrSupplier || 'Direct Match',
+          actualValue: arrSupplier || poSupplier,
           status: !arrSupplier || arrSupplier.toUpperCase() === poSupplier.toUpperCase() ? 'match' : 'mismatch'
         },
         {
-          name: 'Grade',
+          name: 'Challan Supplier',
+          referenceValue: poSupplier || 'DIRECT',
+          actualValue: arr.challan_supplier || arrSupplier || poSupplier,
+          status: 'match'
+        },
+        {
+          name: 'Broker',
+          referenceValue: poBroker || 'DIRECT',
+          actualValue: arr.broker || poBroker || 'DIRECT',
+          status: 'match'
+        },
+        {
+          name: 'Lorry Number',
+          referenceValue: 'Expected Lorry',
+          actualValue: arr.lorry_number || arr.lorry_no || arr.truck_no || 'Recorded',
+          status: 'match'
+        },
+        {
+          name: 'Arrival Area',
+          referenceValue: poArea || 'N/A',
+          actualValue: arr.arrival_area_name || arr.area || poArea || 'N/A',
+          status: 'match'
+        },
+        {
+          name: 'Receipt Grade',
           referenceValue: poGrade,
           actualValue: arrGrade || poGrade,
           status: !arrGrade || arrGrade.toUpperCase() === poGrade.toUpperCase() ? 'match' : 'mismatch'
         },
         {
-          name: 'Lorry No',
-          referenceValue: 'Expected Lorry',
-          actualValue: arr.lorry_no || arr.truck_no || 'Recorded',
-          status: 'match'
-        },
-        {
-          name: 'Received Weight (MT)',
-          referenceValue: poLorries > 0 ? `~${(poContractMt / poLorries).toFixed(3)} MT/Lorry` : `${poContractMt.toFixed(3)} MT`,
+          name: 'Final Weight (MT)',
+          referenceValue: poLorries > 0 ? `~${(poContractMt / poLorries).toFixed(3)} MT` : `${poContractMt.toFixed(3)} MT`,
           actualValue: `${arrWt.toFixed(3)} MT`,
           status: 'match'
         }
@@ -658,22 +831,40 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
 
       const mrMillInspFields: ComparisonField[] = [
         {
-          name: 'Moisture (%)',
+          name: 'Actual Moisture (%)',
           referenceValue: '≤ 15.0%',
           actualValue: `${inspMoisture.toFixed(1)}%`,
           status: inspMoisture <= 15.0 ? 'match' : 'mismatch'
         },
         {
-          name: 'Dust (%)',
+          name: 'Actual Dust (%)',
           referenceValue: '≤ 1.0%',
           actualValue: `${inspDust.toFixed(1)}%`,
           status: inspDust <= 1.0 ? 'match' : 'mismatch'
         },
         {
-          name: 'NCV (%)',
+          name: 'Actual NCV (%)',
           referenceValue: '≤ 0.5%',
           actualValue: `${inspNcv.toFixed(1)}%`,
           status: inspNcv <= 0.5 ? 'match' : 'mismatch'
+        },
+        {
+          name: 'Claim Moisture (%)',
+          referenceValue: '0.0%',
+          actualValue: `${parseFloat(insp.claim_moisture || 0).toFixed(1)}%`,
+          status: 'match'
+        },
+        {
+          name: 'Claim Dust (%)',
+          referenceValue: '0.0%',
+          actualValue: `${parseFloat(insp.claim_dust || 0).toFixed(1)}%`,
+          status: 'match'
+        },
+        {
+          name: 'Claim NCV (%)',
+          referenceValue: '0.0%',
+          actualValue: `${parseFloat(insp.claim_ncv || 0).toFixed(1)}%`,
+          status: 'match'
         }
       ];
 
@@ -685,6 +876,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         arrivalRecord: arr,
         inspectionRecord: insp,
         settlementRecord: sett,
+        paymentRecord: pay,
         tempArrivalFields: mrTempArrivalFields,
         millInspFields: mrMillInspFields,
         mismatchCount: mrMismatchCount
@@ -703,7 +895,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         mrComparisons
       }
     };
-  }, [po, dbArrivals, dbInspections, dbPayments, dbSettlements, dbMismatches, dbSattaRate, linkedMrs]);
+  }, [po, dbArrivals, dbInspections, dbPayments, dbSettlements, dbMismatches, dbSattaMismatches, dbSattaRate, linkedMrs]);
 
   // Toggle Section Accordion
   const toggleSection = (id: string) => {
@@ -748,7 +940,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 )}
               </div>
               <p className="text-xs text-emerald-100/80 font-sans mt-0.5">
-                Full-spectrum cross-stage data comparison & instant mismatch highlight
+                Full-spectrum cross-stage data comparison & instant mismatch highlight across all 7 lifecycle stages
               </p>
             </div>
           </div>
@@ -765,13 +957,22 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 Compare & Highlight
               </button>
               <button
+                onClick={() => setActiveTab('story')}
+                className={cn(
+                  "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
+                  activeTab === 'story' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
+                )}
+              >
+                7-Stage Story
+              </button>
+              <button
                 onClick={() => setActiveTab('histogram')}
                 className={cn(
                   "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
                   activeTab === 'histogram' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
                 )}
               >
-                Lifecycle Histogram
+                Turnaround Timeline
               </button>
               <button
                 onClick={() => setActiveTab('mismatch_audit')}
@@ -780,7 +981,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                   activeTab === 'mismatch_audit' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
                 )}
               >
-                Mismatch Board ({dbMismatches.length})
+                Mismatch Board ({dbMismatches.length + dbSattaMismatches.length})
               </button>
             </div>
 
@@ -817,12 +1018,12 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 </span>
               </div>
 
-              <div className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2">
-                <span>Linked M.R.s: <strong className="text-slate-900">{linkedMrs.length}</strong></span>
+              <div className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 flex-wrap">
+                <span>Linked M.R.s: <strong className="text-slate-900">{linkedMrs.length > 0 ? `${linkedMrs.length} (${linkedMrs.join(', ')})` : 'None'}</strong></span>
                 <span>•</span>
                 <span>Payments: <strong className="text-slate-900">{dbPayments.length}</strong></span>
                 <span>•</span>
-                <span>Settlement: <strong className="text-slate-900">{dbSettlements.length > 0 ? 'Generated' : 'Pending'}</strong></span>
+                <span>Settlement: <strong className="text-slate-900">{dbSettlements.length > 0 ? `${dbSettlements.length} MR Settled` : 'Pending'}</strong></span>
               </div>
             </div>
 
@@ -884,11 +1085,254 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
           {loading ? (
             <div className="py-16 text-center text-slate-500 space-y-2">
               <RefreshCw className="w-8 h-8 text-emerald-700 animate-spin mx-auto" />
-              <p className="font-bold text-sm">Cross-comparing all 7 lifecycle stages...</p>
-              <p className="text-xs text-slate-400">Comparing Sauda Check Point, Temporary Arrival, Mill Inspection, Payments, and Settlement</p>
+              <p className="font-bold text-sm">Cross-comparing all 7 lifecycle stages across linked MRs...</p>
+              <p className="text-xs text-slate-400">Loading Sauda Check Point, Temporary Arrival, Mill Inspection, Satta Price, Material Mismatch, Payment, and Settlement records</p>
+            </div>
+          ) : activeTab === 'story' ? (
+            /* TAB: 7-STAGE SEQUENTIAL P.O. STORY */
+            <div className="space-y-6">
+              
+              {/* STAGE 1: SAUDA CHECK POINT */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 1: Sauda Check Point Contract Master</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold">
+                    P.O. {po.po_no}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Broker:</span> <strong className="text-slate-800">{po.broker || po.broker_name || 'DIRECT'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Supplier:</span> <strong className="text-slate-800">{po.supplier || po.supplier_name || 'DIRECT'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Challan Supplier:</span> <strong className="text-slate-800">{po.challan_supplier || po.supplier || 'DIRECT'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Area:</span> <strong className="text-slate-800">{po.area || po.station || 'N/A'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Total Lorries:</span> <strong className="text-slate-800">{po.total_no_of_lorries || po.contract_lorries || 1}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Units / Lorry:</span> <strong className="text-slate-800">{po.units_per_lorry || po.units_lorry || 'N/A'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Total Units (Count):</span> <strong className="text-slate-800">{po.total_units || po.total_unit || 0}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Weight/Lorry (MT):</span> <strong className="text-slate-800">{po.weight_per_lorry || (parseFloat(po.total_contract_mt || 0) / Math.max(1, parseInt(po.total_no_of_lorries || 1))).toFixed(3)} MT</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Total Contract (MT):</span> <strong className="text-emerald-800 font-mono font-black">{parseFloat(po.total_contract_mt || 0).toFixed(3)} MT</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Delivery Range:</span> <strong className="text-slate-800">{po.delivery_from || po.po_date || '—'} to {po.delivery_to || '—'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Grace Days:</span> <strong className="text-slate-800">{po.grace_days || 0} Days</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Delivery Penalty:</span> <strong className="text-slate-800">{po.delivery_penalty || 'Standard'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Grade Name:</span> <strong className="text-slate-800">{po.grade || po.grade_name || 'N/A'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Agency Name:</span> <strong className="text-slate-800">{po.agency_name || 'N/A'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Marka Name:</span> <strong className="text-slate-800">{po.marka_name || 'N/A'}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Rate / Qtl:</span> <strong className="text-emerald-800 font-mono font-black">₹{parseFloat(po.rate || po.price || 0).toLocaleString()}</strong></div>
+                  <div><span className="text-slate-400 block text-[10px] uppercase font-bold">Premium:</span> <strong className="text-slate-800">{po.premium || 'Nil'}</strong></div>
+                </div>
+              </div>
+
+              {/* STAGE 2: TEMPORARY ARRIVAL (Per Linked MR) */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 2: Temporary Arrival Records ({dbArrivals.length} Arrivals Linked)</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-mono font-bold">
+                    Linked MRs: {linkedMrs.join(', ') || 'None'}
+                  </span>
+                </div>
+
+                {dbArrivals.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs italic">
+                    No Temporary Arrival records logged yet for this P.O.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {dbArrivals.map((arr, idx) => (
+                      <div key={arr.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#D6CAA8] pb-1.5">
+                          <span className="text-xs font-mono font-black text-[#1E331B] flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>M.R. No: {arr.temporary_arrival_no || arr.mr_no || arr.amad_no || `Arrival #${idx + 1}`}</span>
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-600">
+                            Date: <strong>{arr.date || arr.arrival_date || arr.lorry_date || '—'}</strong>
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-[11px]">
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Challan Supplier:</span> <strong className="text-slate-800">{arr.challan_supplier || arr.supplier || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Supplier:</span> <strong className="text-slate-800">{arr.supplier || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Broker:</span> <strong className="text-slate-800">{arr.broker || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Lorry Number:</span> <strong className="text-slate-800 font-mono">{arr.lorry_number || arr.lorry_no || arr.truck_no || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Unit:</span> <strong className="text-slate-800">{arr.unit_name || arr.unit || 'BALES'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">A.P.M.C Fees (₹):</span> <strong className="text-slate-800">₹{parseFloat(arr.apmc_fees || 0).toLocaleString()}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Arrival Area:</span> <strong className="text-slate-800">{arr.arrival_area_name || arr.area || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Receipt Grade:</span> <strong className="text-slate-800">{arr.receipt_grade_name || arr.grade || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Agency Name:</span> <strong className="text-slate-800">{arr.agency_name || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Challan Marka:</span> <strong className="text-slate-800">{arr.challan_marka_name || arr.marka_name || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Netto (MT):</span> <strong className="text-slate-800 font-mono">{parseFloat(arr.netto_mt || 0).toFixed(3)} MT</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Quantity Chln:</span> <strong className="text-slate-800">{arr.quantity_chln || arr.received_units || 0}</strong></div>
+                        </div>
+
+                        {/* Weight Comparison Grid */}
+                        <div className="bg-white border border-slate-200 rounded-lg p-2.5">
+                          <div className="text-[10px] font-bold uppercase text-slate-500 mb-1 flex items-center gap-1">
+                            <Scale className="w-3 h-3 text-slate-600" />
+                            <span>Weighbridge Breakdown (Gross / Tare / Net):</span>
+                          </div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 text-[10px] font-mono">
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">CHALLAN GROSS</span><strong>{arr.supplier_challan_gross || arr.challan_gross_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">MILL GROSS</span><strong>{arr.actual_gross_weight || arr.mill_gross_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">ELECTRONIC GROSS</span><strong>{arr.electronic_gross_weight || arr.electronic_gross_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">CHALLAN TARE</span><strong>{arr.supplier_tare_weight || arr.challan_tare_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">MILL TARE</span><strong>{arr.actual_tare_weight || arr.mill_tare_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">ELECTRONIC TARE</span><strong>{arr.electronic_tare_weight || arr.electronic_tare_wt || 0}</strong></div>
+                            <div className="bg-slate-50 p-1.5 rounded border"><span className="text-slate-400 block text-[8.5px]">MILL NET</span><strong>{arr.actual_net_weight || arr.mill_net_wt || 0}</strong></div>
+                            <div className="bg-emerald-50 p-1.5 rounded border border-emerald-300 text-emerald-900"><span className="text-emerald-700 block text-[8.5px] font-bold">FINAL WEIGHT (MT)</span><strong>{parseFloat(arr.final_weight_mt || arr.received_weight_mt || 0).toFixed(3)} MT</strong></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* STAGE 3: MILL INSPECTION */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <Droplets className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 3: Mill Inspection & Quality Audit ({dbInspections.length} Inspections Linked)</span>
+                  </h3>
+                </div>
+
+                {dbInspections.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs italic">
+                    No Mill Inspection records logged yet for this P.O.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {dbInspections.map((insp, idx) => (
+                      <div key={insp.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#D6CAA8] pb-1.5">
+                          <span className="text-xs font-mono font-black text-[#1E331B]">
+                            M.R. No: {insp.mr_no || insp.arrival_no || `Inspection #${idx + 1}`}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-600">
+                            Inspection Date: <strong>{insp.mr_date || insp.date || '—'}</strong>
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-[11px]">
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Arrival No:</span> <strong className="text-slate-800 font-mono">{insp.arrival_no || insp.mr_no || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Supplier:</span> <strong className="text-slate-800">{insp.supplier_name || insp.supplier || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Broker:</span> <strong className="text-slate-800">{insp.broker_name || insp.broker || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Actual Moisture:</span> <strong className={cn(parseFloat(insp.actual_moisture || 0) > 15 ? "text-rose-700" : "text-emerald-800")}>{parseFloat(insp.actual_moisture || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Actual Dust:</span> <strong className={cn(parseFloat(insp.actual_dust || 0) > 1 ? "text-rose-700" : "text-slate-800")}>{parseFloat(insp.actual_dust || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Actual NCV:</span> <strong className={cn(parseFloat(insp.actual_ncv || 0) > 0.5 ? "text-rose-700" : "text-slate-800")}>{parseFloat(insp.actual_ncv || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Claim Moisture:</span> <strong className="text-slate-800">{parseFloat(insp.claim_moisture || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Claim Dust:</span> <strong className="text-slate-800">{parseFloat(insp.claim_dust || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Claim NCV:</span> <strong className="text-slate-800">{parseFloat(insp.claim_ncv || 0).toFixed(1)}%</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Detention Days:</span> <strong className="text-slate-800">{insp.detention_days || 0} Days</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Unloading Date:</span> <strong className="text-slate-800">{insp.unloading_date || '—'}</strong></div>
+                          <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Mill P.O. No:</span> <strong className="text-slate-800 font-mono">{insp.mill_po_no || '—'}</strong></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* STAGE 4: SATTA PRICE MISMATCH */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 4: Satta Price Mismatch Verification</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-[11px]">
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Sauda No. & Date:</span> <strong className="text-slate-800 font-mono">{po.po_no} ({po.po_date || '—'})</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Supplier & Broker:</span> <strong className="text-slate-800">{po.supplier || 'DIRECT'} | {po.broker || 'DIRECT'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Area & Grade:</span> <strong className="text-slate-800">{po.area || '—'} | {po.grade || '—'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Sauda Rate (₹/Qtl):</span> <strong className="text-emerald-800 font-mono font-black">₹{parseFloat(po.rate || 0).toLocaleString()}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Satta Limit Rate (₹/Qtl):</span> <strong className="text-slate-700 font-mono">{dbSattaRate?.base_rate ? `₹${Number(dbSattaRate.base_rate).toLocaleString()}` : 'Standard Satta'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Variance / Excess:</span> <strong className="text-slate-800 font-mono">{dbSattaRate?.base_rate ? `₹${(parseFloat(po.rate || 0) - Number(dbSattaRate.base_rate)).toFixed(0)}` : '₹0'}</strong></div>
+                </div>
+              </div>
+
+              {/* STAGE 5: MATERIAL MISMATCH */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 5: Material Mismatch Board (Base Mode)</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-[11px]">
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">P.O. Number & Date:</span> <strong className="text-slate-800 font-mono">{po.po_no} ({po.po_date || '—'})</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Supplier & Broker:</span> <strong className="text-slate-800">{po.supplier || 'DIRECT'} | {po.broker || 'DIRECT'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Area & Grade:</span> <strong className="text-slate-800">{po.area || '—'} | {po.grade || '—'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Lorries (Contract|Recv|Rem):</span> <strong className="text-slate-800">{po.total_no_of_lorries || 1} | {dbArrivals.length} | {Math.max(0, (po.total_no_of_lorries || 1) - dbArrivals.length)}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Mismatched Fields:</span> <strong className="text-emerald-800">{dbMismatches.length > 0 ? dbMismatches.map(m => m.field_name).join(', ') : 'None (Zero Mismatches)'}</strong></div>
+                  <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Audit Status:</span> <strong className="text-emerald-800">Verified & Approved</strong></div>
+                </div>
+              </div>
+
+              {/* STAGE 6: PAYMENT OPERATIONS */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 6: Payment Operations ({dbPayments.length} Vouchers)</span>
+                  </h3>
+                </div>
+
+                {dbPayments.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs italic">
+                    No Payment Vouchers created yet for this P.O.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {dbPayments.map((pay, idx) => (
+                      <div key={pay.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Voucher No:</span> <strong className="text-slate-800 font-mono">{pay.voucher_no || `VOUCHER-${idx + 1}`}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Payment Date:</span> <strong className="text-slate-800">{pay.payment_date || pay.date || '—'}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Party / Supplier:</span> <strong className="text-slate-800">{pay.party_name || pay.supplier_name || po.supplier || '—'}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Broker:</span> <strong className="text-slate-800">{pay.broker_name || po.broker || 'DIRECT'}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Payable Net Amount (₹):</span> <strong className="text-emerald-800 font-mono font-black">₹{parseFloat(pay.amount_paid || pay.payable_net_amount || pay.amount || 0).toLocaleString()}</strong></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* STAGE 7: SETTLEMENT */}
+              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-serif font-black text-[#1E331B] flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-emerald-700" />
+                    <span>Stage 7: Settlement Master & Final Deduction Ledger ({dbSettlements.length} MR Settled)</span>
+                  </h3>
+                </div>
+
+                {dbSettlements.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs italic">
+                    Account Settlement is pending for this P.O.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {dbSettlements.map((sett, idx) => (
+                      <div key={sett.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Settlement MR No:</span> <strong className="text-slate-800 font-mono">{sett.mr_no || `SETTLEMENT-${idx + 1}`}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Settled Weight (MT):</span> <strong className="text-slate-800 font-mono">{parseFloat(sett.settled_weight_mt || 0).toFixed(3)} MT</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Quality Deductions:</span> <strong className="text-rose-700 font-mono">₹{parseFloat(sett.total_deduction_amount || 0).toLocaleString()}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Weight Penalty:</span> <strong className="text-rose-700 font-mono">₹{parseFloat(sett.penalty_amount || 0).toLocaleString()}</strong></div>
+                        <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Net Final Amount:</span> <strong className="text-emerald-800 font-mono font-black">₹{parseFloat(sett.net_settled_amount || 0).toLocaleString()}</strong></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           ) : activeTab === 'histogram' ? (
-            /* TAB 2: LIFECYCLE HISTOGRAM & TIMELINE */
+            /* TAB: LIFECYCLE HISTOGRAM & TIMELINE */
             <div className="space-y-4">
               <div className="bg-white border border-[#D6CAA8] rounded-xl p-4 shadow-xs">
                 <h3 className="text-sm font-serif font-black text-[#1E331B] mb-2 flex items-center gap-2">
@@ -900,9 +1344,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 py-4">
                   {[
                     { title: '1. Sauda Entry', date: po.po_date || po.created_at?.slice(0, 10), icon: FileText, status: 'complete', val: `${parseFloat(po.total_contract_mt || 0).toFixed(2)} MT` },
-                    { title: '2. Temp Arrival', date: dbArrivals[0]?.arrival_date || 'Pending', icon: Truck, status: dbArrivals.length > 0 ? 'complete' : 'pending', val: `${dbArrivals.reduce((s, a) => s + (parseFloat(a.received_weight_mt || 0) || 0), 0).toFixed(2)} MT` },
-                    { title: '3. Mill Inspection', date: dbInspections[0]?.created_at?.slice(0, 10) || 'Pending', icon: Droplets, status: dbInspections.length > 0 ? 'complete' : 'pending', val: `${dbInspections.length} MR(s)` },
-                    { title: '4. Payment', date: dbPayments[0]?.created_at?.slice(0, 10) || 'Pending', icon: Coins, status: dbPayments.length > 0 ? 'complete' : 'pending', val: `₹${dbPayments.reduce((s, p) => s + (parseFloat(p.amount_paid || 0) || 0), 0).toLocaleString()}` },
+                    { title: '2. Temp Arrival', date: dbArrivals[0]?.date || dbArrivals[0]?.arrival_date || 'Pending', icon: Truck, status: dbArrivals.length > 0 ? 'complete' : 'pending', val: `${dbArrivals.reduce((s, a) => s + (parseFloat(a.final_weight_mt || a.received_weight_mt || 0) || 0), 0).toFixed(2)} MT` },
+                    { title: '3. Mill Inspection', date: dbInspections[0]?.mr_date || dbInspections[0]?.created_at?.slice(0, 10) || 'Pending', icon: Droplets, status: dbInspections.length > 0 ? 'complete' : 'pending', val: `${dbInspections.length} MR(s)` },
+                    { title: '4. Payment', date: dbPayments[0]?.payment_date || dbPayments[0]?.created_at?.slice(0, 10) || 'Pending', icon: Coins, status: dbPayments.length > 0 ? 'complete' : 'pending', val: `₹${dbPayments.reduce((s, p) => s + (parseFloat(p.amount_paid || p.payable_net_amount || 0) || 0), 0).toLocaleString()}` },
                     { title: '5. Settlement', date: dbSettlements[0]?.created_at?.slice(0, 10) || 'Pending', icon: Scale, status: dbSettlements.length > 0 ? 'complete' : 'pending', val: dbSettlements.length > 0 ? 'Audited' : 'Pending' }
                   ].map((step, idx) => (
                     <div key={step.title} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 flex flex-col justify-between text-center relative">
@@ -923,7 +1367,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
             </div>
           ) : activeTab === 'mismatch_audit' ? (
-            /* TAB 3: RECORDED MISMATCH CASES BOARD */
+            /* TAB: RECORDED MISMATCH CASES BOARD */
             <div className="space-y-4">
               <div className="bg-white border border-[#D6CAA8] rounded-xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
@@ -932,13 +1376,13 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                     <span>Database Mismatch Cases & Approval Audit Log</span>
                   </h3>
                   <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-0.5 rounded border">
-                    {dbMismatches.length} Recorded
+                    {dbMismatches.length + dbSattaMismatches.length} Recorded
                   </span>
                 </div>
 
-                {dbMismatches.length === 0 ? (
+                {dbMismatches.length === 0 && dbSattaMismatches.length === 0 ? (
                   <div className="py-8 text-center text-slate-400 font-medium text-xs">
-                    No active or logged mismatch cases recorded in Supabase for this P.O.
+                    No active or logged mismatch cases recorded in Supabase for this P.O. All specifications match cleanly.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -955,7 +1399,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {dbMismatches.map((m, idx) => (
+                        {[...dbMismatches, ...dbSattaMismatches].map((m, idx) => (
                           <tr key={m.id || idx} className="hover:bg-amber-50/50 font-sans">
                             <td className="p-2 font-bold text-[#1E331B] border-r">{m.field_name || m.mismatch_type || 'General'}</td>
                             <td className="p-2 font-mono text-slate-700 border-r">{m.expected_value || '—'}</td>
@@ -964,7 +1408,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                             <td className="p-2 border-r">
                               <span className={cn(
                                 "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase",
-                                m.status === 'approved' ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                                m.status === 'approved' || m.status === 'resolved' ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
                               )}>
                                 {m.status || 'PENDING'}
                               </span>
@@ -983,7 +1427,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
             /* TAB 1: FULL COMPARE & MISMATCH HIGHLIGHT */
             <div className="space-y-4">
               
-              {/* Multi-MR Filter Pills (if more than 1 MR exists) */}
+              {/* Multi-MR Filter Pills */}
               {linkedMrs.length > 1 && (
                 <div className="bg-white border border-[#D6CAA8] rounded-xl p-2.5 flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-[#1E331B] flex items-center gap-1">

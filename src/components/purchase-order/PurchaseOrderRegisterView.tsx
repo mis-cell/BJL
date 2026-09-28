@@ -89,6 +89,7 @@ export interface PurchaseOrderRegisterViewProps {
   canEditOrDelete: () => boolean;
   sattaBaseRates?: any[];
   allTempArrivals?: any[];
+  allInspections?: any[];
 }
 
 export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps> = ({
@@ -145,7 +146,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
   setActionMenu,
   canEditOrDelete,
   sattaBaseRates = [],
-  allTempArrivals = []
+  allTempArrivals = [],
+  allInspections = []
 }) => {
   const [histogramModalPo, setHistogramModalPo] = useState<any | null>(null);
 
@@ -1103,6 +1105,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
           po={histogramModalPo}
           allPayments={allPayments}
           allSettlements={allSettlements}
+          allArrivals={allTempArrivals}
+          allInspections={allInspections}
         />
       )}
     </div>
