@@ -982,21 +982,21 @@ export default function ExecutiveBiDashboard({
           </span>
         </div>
 
-        {/* Month Cards Grid (1/4 size compact cards showing MR/WT, Inspection, Payment, Settlement) */}
+        {/* Month Cards Grid (Restored with MR/WT, Moisture, Grade Down, Premium & Operational Counts) */}
         {inspMetrics.monthInspectionSummaries.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
             {inspMetrics.monthInspectionSummaries.map((m) => (
               <div
                 key={`insp-${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenInspectionModal({
                   title: `Inspection Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalInspections} MRs inspected, ${m.paymentCount} payments, ${m.settlementCount} settlements in ${m.monthName} ${m.year}`,
+                  subtitle: `${m.totalInspections} MRs inspected (${m.totalWeightMt.toFixed(1)} MT) • Moisture: ${m.avgMoisture}% • Grade Down: ${m.avgGradeDown}% • Premium: ${m.premiumLotsCount} MR`,
                   inspections: m.inspections,
                   payments: m.payments,
                   settlements: m.settlements
                 })}
                 className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
-                title={`Click to view ${m.monthName} ${m.year} inspection, payment, and settlement details`}
+                title={`Click to view ${m.monthName} ${m.year} inspection, quality, payment, and settlement details`}
               >
                 <div>
                   {/* Card Header: Month Name + Year */}
@@ -1016,33 +1016,84 @@ export default function ExecutiveBiDashboard({
                     </span>
                   </div>
 
-                  {/* Inspection Count */}
+                  {/* Moisture (Mouister) */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Inspection:</span>
-                    <div className="flex items-center gap-1 font-mono font-extrabold text-blue-800 text-xs">
-                      <span>{m.inspectionCount}</span>
-                      {m.millInspectionCount > 0 && (
-                        <span className="text-[9.5px] font-normal text-slate-500 font-sans" title="Mill Inspections">
-                          (Mill: {m.millInspectionCount})
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
+                    <div className="flex items-center gap-1 font-mono text-xs">
+                      <span className={cn(
+                        "font-extrabold",
+                        m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
+                      )}>
+                        {m.avgMoisture}%
+                      </span>
+                      {m.avgClaimMoisture > 0 && (
+                        <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Moisture: ${m.avgClaimMoisture}%`}>
+                          (Clm {m.avgClaimMoisture}%)
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Payment Count */}
+                  {/* Grade Down */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Payment:</span>
-                    <span className="font-mono font-extrabold text-emerald-800 text-xs">
-                      {m.paymentCount}
-                    </span>
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
+                    <div className="flex items-center gap-1 font-mono text-xs">
+                      <span className="font-extrabold text-[#1E331B]">
+                        {m.avgGradeDown}%
+                      </span>
+                      {m.avgClaimGradeDown > 0 && (
+                        <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Grade Down: ${m.avgClaimGradeDown}%`}>
+                          (Clm {m.avgClaimGradeDown}%)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Settlement Count */}
+                  {/* Premium */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Settlement:</span>
-                    <span className="font-mono font-extrabold text-purple-800 text-xs">
-                      {m.settlementCount}
+                    <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
+                      <span>⚡</span> Premium:
                     </span>
+                    <div className="flex items-center gap-1 font-mono text-xs">
+                      {m.premiumLotsCount > 0 ? (
+                        <div className="text-right">
+                          <span className="font-extrabold text-amber-900">{m.premiumLotsCount} MR</span>
+                          {m.premiumTotalSum > 0 ? (
+                            <span className="text-[9.5px] text-amber-800 font-bold block">
+                              ₹{formatIndianCurrency(m.premiumTotalSum)}
+                            </span>
+                          ) : (m.avgPremiumRate > 0 ? (
+                            <span className="text-[9px] text-amber-700 font-normal block">
+                              @{m.avgPremiumRate}/Q
+                            </span>
+                          ) : null)}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 font-normal">-</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Operational Activity Strip: Insp • Pay • Sett */}
+                  <div className="mt-1.5 pt-1.5 border-t border-[#F2EDE0] grid grid-cols-3 gap-1 text-[10px] text-center bg-[#FAF7F0] p-1 rounded-lg">
+                    <div title={`Total Inspections: ${m.inspectionCount}${m.millInspectionCount > 0 ? ` (Material: ${m.materialInspectionCount}, Mill: ${m.millInspectionCount})` : ''}`}>
+                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Insp</div>
+                      <div className="font-mono font-extrabold text-blue-900 text-xs">
+                        {m.inspectionCount}
+                      </div>
+                    </div>
+                    <div title={`Payment Vouchers: ${m.paymentCount}`}>
+                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Pay</div>
+                      <div className="font-mono font-extrabold text-emerald-900 text-xs">
+                        {m.paymentCount}
+                      </div>
+                    </div>
+                    <div title={`Audited MR Settlements: ${m.settlementCount}`}>
+                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Sett</div>
+                      <div className="font-mono font-extrabold text-purple-900 text-xs">
+                        {m.settlementCount}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
