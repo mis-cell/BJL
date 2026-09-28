@@ -255,12 +255,16 @@ export default function SaudaEntry({
     return res.found ? res.finalRate : null;
   };
 
-  const getUnitWeightKg = (unitType?: string) => {
+  const getUnitWeightKg = (unitType?: string): number | null => {
     const clean = String(unitType || '').trim().toUpperCase();
     if (clean.includes('DRUM')) {
       return 50; // 50 KG per unit for Drums
     }
-    return 147.5; // 147.5 KG per unit for Bales / others
+    if (clean === 'BALES' || clean === 'BALE') {
+      return 147.5; // 147.5 KG per unit for standard Bales
+    }
+    // LOOSE, P.BALES, H.BALES, etc. are blank manual inputs
+    return null;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -285,98 +289,149 @@ export default function SaudaEntry({
       const lorries = Math.max(1, parseFloat(name === 'no_of_lorries' ? value : (prev.no_of_lorries as any)) || 1);
 
       // 1. When user enters Total Wt. in Ton:
-      // Units/Lorry = Total Weight in KG ÷ (147.5 or 50) ÷ No. of Lorries
-      // Wt/Lorry (MT) = Total Wt. in Ton ÷ No. of Lorries
       if (name === 'total_wt_in_ton') {
         const totalWt = parseFloat(value) || 0;
         updated.total_wt_in_ton = totalWt;
-        if (totalWt > 0) {
-          const totalWeightKg = totalWt * 1000;
-          const totalUnits = totalWeightKg / unitWeightKg;
-          const unitsPerLorry = parseFloat((totalUnits / lorries).toFixed(2));
-          const wtPerLorry = parseFloat((totalWt / lorries).toFixed(3));
-          
-          updated.units_per_lorry = unitsPerLorry;
-          updated.units_per_lorry_type = String(unitsPerLorry);
-          updated.total_unit = Math.round(totalUnits);
-          updated.wt_per_lorry = wtPerLorry;
+        const wtPerLorry = parseFloat((totalWt / lorries).toFixed(3));
+        updated.wt_per_lorry = wtPerLorry;
+
+        if (unitWeightKg && unitWeightKg > 0) {
+          // BALE (147.5 kg) or DRUM (50 kg) auto conversion
+          if (totalWt > 0) {
+            const totalWeightKg = totalWt * 1000;
+            const totalUnits = totalWeightKg / unitWeightKg;
+            const unitsPerLorry = parseFloat((totalUnits / lorries).toFixed(2));
+            
+            updated.units_per_lorry = unitsPerLorry;
+            updated.units_per_lorry_type = String(unitsPerLorry);
+            updated.total_unit = Math.round(totalUnits);
+          } else {
+            updated.units_per_lorry = '';
+            updated.units_per_lorry_type = '';
+            updated.total_unit = '';
+          }
         } else {
-          updated.units_per_lorry = 0;
-          updated.units_per_lorry_type = '0';
-          updated.total_unit = 0;
-          updated.wt_per_lorry = 0;
+          // LOOSE, P.BALES, H.BALES: Leave Units/Lorry blank/manual
+          const existingManualUnits = parseFloat(prev.units_per_lorry as any);
+          if (existingManualUnits > 0) {
+            updated.total_unit = Math.round(existingManualUnits * lorries);
+          } else {
+            updated.units_per_lorry = '';
+            updated.units_per_lorry_type = '';
+            updated.total_unit = '';
+          }
         }
       }
 
       // 2. When user enters Units/Lorry:
-      // Wt/Lorry (MT) = Units/Lorry × (147.5 or 50) ÷ 1000
-      // Total Wt. in Ton = Wt/Lorry (MT) × No. of Lorries
-      // Total Unit = Units/Lorry × No. of Lorries
       if (name === 'units_per_lorry') {
         const units = parseFloat(value) || 0;
-        updated.units_per_lorry = units;
-        updated.units_per_lorry_type = String(units);
-        if (units > 0) {
-          const wtPerLorry = parseFloat(((units * unitWeightKg) / 1000).toFixed(3));
-          const totalUnits = Math.round(units * lorries);
-          const totalWt = parseFloat((wtPerLorry * lorries).toFixed(3));
+        updated.units_per_lorry = value === '' ? '' : value;
+        updated.units_per_lorry_type = String(value);
 
-          updated.wt_per_lorry = wtPerLorry;
+        if (units > 0) {
+          const totalUnits = Math.round(units * lorries);
           updated.total_unit = totalUnits;
-          updated.total_wt_in_ton = totalWt;
+
+          if (unitWeightKg && unitWeightKg > 0) {
+            const wtPerLorry = parseFloat(((units * unitWeightKg) / 1000).toFixed(3));
+            const totalWt = parseFloat((wtPerLorry * lorries).toFixed(3));
+            updated.wt_per_lorry = wtPerLorry;
+            updated.total_wt_in_ton = totalWt;
+          }
         } else {
-          updated.wt_per_lorry = 0;
-          updated.total_unit = 0;
-          updated.total_wt_in_ton = 0;
+          updated.total_unit = '';
+          if (unitWeightKg && unitWeightKg > 0) {
+            updated.wt_per_lorry = 0;
+            updated.total_wt_in_ton = 0;
+          }
         }
       }
 
-      // 3. When No. of Lorries changes:
+      // 3. When user enters Total Unit:
+      if (name === 'total_unit') {
+        const tUnits = parseFloat(value) || 0;
+        updated.total_unit = value === '' ? '' : value;
+
+        if (tUnits > 0) {
+          const uPerLorry = parseFloat((tUnits / lorries).toFixed(2));
+          updated.units_per_lorry = uPerLorry;
+          updated.units_per_lorry_type = String(uPerLorry);
+
+          if (unitWeightKg && unitWeightKg > 0) {
+            const totalWt = parseFloat(((tUnits * unitWeightKg) / 1000).toFixed(3));
+            updated.total_wt_in_ton = totalWt;
+            updated.wt_per_lorry = parseFloat((totalWt / lorries).toFixed(3));
+          }
+        } else {
+          updated.units_per_lorry = '';
+          updated.units_per_lorry_type = '';
+        }
+      }
+
+      // 4. When No. of Lorries changes:
       if (name === 'no_of_lorries') {
-        const lCount = parseFloat(value) || 1;
+        const lCount = Math.max(1, parseFloat(value) || 1);
         const currentUnitsPerLorry = parseFloat(prev.units_per_lorry as any) || 0;
         const currentTotalWt = parseFloat(prev.total_wt_in_ton as any) || 0;
 
-        if (currentUnitsPerLorry > 0) {
-          const wtPerLorry = parseFloat(((currentUnitsPerLorry * unitWeightKg) / 1000).toFixed(3));
-          updated.wt_per_lorry = wtPerLorry;
-          updated.total_unit = Math.round(currentUnitsPerLorry * lCount);
-          updated.total_wt_in_ton = parseFloat((wtPerLorry * lCount).toFixed(3));
-        } else if (currentTotalWt > 0) {
-          const totalWeightKg = currentTotalWt * 1000;
-          const totalUnits = totalWeightKg / unitWeightKg;
-          updated.units_per_lorry = parseFloat((totalUnits / lCount).toFixed(2));
-          updated.units_per_lorry_type = String(updated.units_per_lorry);
-          updated.total_unit = Math.round(totalUnits);
+        if (currentTotalWt > 0) {
           updated.wt_per_lorry = parseFloat((currentTotalWt / lCount).toFixed(3));
         }
-      }
 
-      // 4. When Unit Type changes (e.g., BALES <-> DRUMS):
-      if (name === 'unit_type') {
-        const currentUnitsPerLorry = parseFloat(prev.units_per_lorry as any) || 0;
-        const currentTotalWt = parseFloat(prev.total_wt_in_ton as any) || 0;
-
-        if (currentUnitsPerLorry > 0) {
-          const wtPerLorry = parseFloat(((currentUnitsPerLorry * unitWeightKg) / 1000).toFixed(3));
-          updated.wt_per_lorry = wtPerLorry;
-          updated.total_unit = Math.round(currentUnitsPerLorry * lorries);
-          updated.total_wt_in_ton = parseFloat((wtPerLorry * lorries).toFixed(3));
-        } else if (currentTotalWt > 0) {
-          const totalWeightKg = currentTotalWt * 1000;
-          const totalUnits = totalWeightKg / unitWeightKg;
-          updated.units_per_lorry = parseFloat((totalUnits / lorries).toFixed(2));
-          updated.units_per_lorry_type = String(updated.units_per_lorry);
-          updated.total_unit = Math.round(totalUnits);
-          updated.wt_per_lorry = parseFloat((currentTotalWt / lorries).toFixed(3));
+        if (unitWeightKg && unitWeightKg > 0) {
+          if (currentUnitsPerLorry > 0) {
+            const wtPerLorry = parseFloat(((currentUnitsPerLorry * unitWeightKg) / 1000).toFixed(3));
+            updated.wt_per_lorry = wtPerLorry;
+            updated.total_unit = Math.round(currentUnitsPerLorry * lCount);
+            updated.total_wt_in_ton = parseFloat((wtPerLorry * lCount).toFixed(3));
+          } else if (currentTotalWt > 0) {
+            const totalWeightKg = currentTotalWt * 1000;
+            const totalUnits = totalWeightKg / unitWeightKg;
+            updated.units_per_lorry = parseFloat((totalUnits / lCount).toFixed(2));
+            updated.units_per_lorry_type = String(updated.units_per_lorry);
+            updated.total_unit = Math.round(totalUnits);
+          }
+        } else {
+          // Manual unit types
+          if (currentUnitsPerLorry > 0) {
+            updated.total_unit = Math.round(currentUnitsPerLorry * lCount);
+          }
         }
       }
 
+      // 5. When Unit Type changes (e.g., BALES, DRUMS, LOOSE, P.BALES, H.BALES):
+      if (name === 'unit_type') {
+        const newUnitWeightKg = getUnitWeightKg(finalValue);
+        const currentTotalWt = parseFloat(prev.total_wt_in_ton as any) || 0;
+
+        if (newUnitWeightKg && newUnitWeightKg > 0) {
+          if (currentTotalWt > 0) {
+            const totalWeightKg = currentTotalWt * 1000;
+            const totalUnits = totalWeightKg / newUnitWeightKg;
+            const unitsPerLorry = parseFloat((totalUnits / lorries).toFixed(2));
+            updated.units_per_lorry = unitsPerLorry;
+            updated.units_per_lorry_type = String(unitsPerLorry);
+            updated.total_unit = Math.round(totalUnits);
+            updated.wt_per_lorry = parseFloat((currentTotalWt / lorries).toFixed(3));
+          }
+        } else {
+          // Switching to LOOSE, P.BALES, H.BALES -> clear auto-calculated units to blank
+          updated.units_per_lorry = '';
+          updated.units_per_lorry_type = '';
+          updated.total_unit = '';
+          if (currentTotalWt > 0) {
+            updated.wt_per_lorry = parseFloat((currentTotalWt / lorries).toFixed(3));
+          }
+        }
+      }
+
+      // 6. When Wt/Lorry changes:
       if (name === 'wt_per_lorry') {
         const wt = parseFloat(value) || 0;
         updated.wt_per_lorry = wt;
         updated.total_wt_in_ton = parseFloat((lorries * wt).toFixed(3));
-        if (unitWeightKg > 0) {
+        if (unitWeightKg && unitWeightKg > 0) {
           const units = parseFloat(((wt * 1000) / unitWeightKg).toFixed(2));
           updated.units_per_lorry = units;
           updated.units_per_lorry_type = String(units);

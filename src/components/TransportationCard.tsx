@@ -87,9 +87,49 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             <span className="flex items-center gap-1">
               <span>Units/Lorry</span>
             </span>
-            <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300 font-bold uppercase">
-              {String(formData.unit_type || '').toUpperCase().includes('DRUM') ? '50 KG/Drum' : '147.5 KG/Bale'}
-            </span>
+            {(() => {
+              const uType = String(formData.unit_type || '').toUpperCase().trim();
+              if (uType.includes('DRUM')) {
+                return (
+                  <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300 font-bold uppercase">
+                    50 KG/DRUM
+                  </span>
+                );
+              }
+              if (uType === 'BALES' || uType === 'BALE') {
+                return (
+                  <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.2 rounded border border-emerald-300 font-bold uppercase">
+                    147.5 KG/BALE
+                  </span>
+                );
+              }
+              if (uType.includes('P.BALE') || uType.includes('P. BALE') || uType.includes('P BALE')) {
+                return (
+                  <span className="text-[9px] bg-purple-50 text-purple-800 px-1.5 py-0.2 rounded border border-purple-300 font-bold uppercase">
+                    MANUAL / P.BALES
+                  </span>
+                );
+              }
+              if (uType.includes('H.BALE') || uType.includes('H. BALE') || uType.includes('H BALE')) {
+                return (
+                  <span className="text-[9px] bg-purple-50 text-purple-800 px-1.5 py-0.2 rounded border border-purple-300 font-bold uppercase">
+                    MANUAL / H.BALES
+                  </span>
+                );
+              }
+              if (uType.includes('LOOSE')) {
+                return (
+                  <span className="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded border border-amber-300 font-bold uppercase">
+                    MANUAL / LOOSE
+                  </span>
+                );
+              }
+              return (
+                <span className="text-[9px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded border border-slate-300 font-bold uppercase">
+                  MANUAL
+                </span>
+              );
+            })()}
           </label>
           <input
             id="units_per_lorry_input"
@@ -98,8 +138,8 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             step="any"
             min="0"
             name="units_per_lorry"
-            placeholder="e.g. 80"
-            value={formData.units_per_lorry !== undefined && formData.units_per_lorry !== null ? formData.units_per_lorry : (Number(formData.units_per_lorry_type) || '')}
+            placeholder={String(formData.unit_type || '').toUpperCase().includes('LOOSE') ? 'Manual count' : 'e.g. 80'}
+            value={formData.units_per_lorry !== undefined && formData.units_per_lorry !== null ? formData.units_per_lorry : ''}
             onChange={onChange}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
           />
@@ -109,14 +149,19 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
         <div className="flex flex-col gap-1.5">
           <label htmlFor="total_unit_56" className="text-xs font-semibold text-slate-700 flex items-center justify-between">
             <span>Total Unit</span>
-            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">Lorry × Units/Lorry</span>
+            <span className="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">
+              {String(formData.unit_type || '').toUpperCase().includes('LOOSE') || String(formData.unit_type || '').toUpperCase().includes('P.BALE') || String(formData.unit_type || '').toUpperCase().includes('H.BALE')
+                ? 'MANUAL / TOTAL'
+                : 'Lorry × Units/Lorry'}
+            </span>
           </label>
           <input
             id="total_unit_56"
             aria-label="Total Unit"
             type="number"
             name="total_unit"
-            value={formData.total_unit ?? 0}
+            placeholder="0"
+            value={formData.total_unit !== undefined && formData.total_unit !== null ? formData.total_unit : ''}
             onChange={onChange}
             className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
