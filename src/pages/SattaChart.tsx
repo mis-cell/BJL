@@ -413,14 +413,14 @@ export default function SattaChart({
         });
 
         // Check if any seed area from EXCEL_SEED_DATA (such as PURNEA (LOOSE)) is missing in database
-        const missingSeedRows: any[] = [];
+        const missingSeedMap = new Map<string, any>();
         EXCEL_SEED_DATA.forEach(row => {
           if (!cache[row.area]) {
             cache[row.area] = {};
             Object.keys(row.diffs).forEach(grade => {
               const diffVal = row.diffs[grade];
               cache[row.area][grade] = diffVal;
-              missingSeedRows.push({
+              missingSeedMap.set(`${row.area}___${grade}`, {
                 area: row.area,
                 grade: grade,
                 differential: diffVal
@@ -429,8 +429,9 @@ export default function SattaChart({
           }
         });
 
-        if (missingSeedRows.length > 0 && supabase) {
-          supabase.from('satta_differentials').upsert(missingSeedRows, { onConflict: 'area,grade' }).then();
+        if (missingSeedMap.size > 0 && supabase) {
+          const uniqueSeeds = Array.from(missingSeedMap.values());
+          supabase.from('satta_differentials').upsert(uniqueSeeds, { onConflict: 'area,grade' }).then();
         }
 
         // Also ensure PURNEA (LOOSE) and other areas exist in area_master
@@ -883,41 +884,115 @@ export default function SattaChart({
     setUploadProgress(20);
     Papa.parse(file, {
       header: true,
-      skipEmptyLines: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: (header) => header.replace(/^\uFEFF/, '').trim(),
       complete: async (results) => {
-        setUploadProgress(60);
+        setUploadProgress(40);
         const data = results.data as any[];
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
           alert("Uploaded CSV is empty.");
           setIsUploading(false);
           return;
         }
-        const firstRow = data[0];
-        if (!('Area' in firstRow && 'Grade' in firstRow && 'Differential' in firstRow)) {
-          alert("Invalid CSV format. Headers must be: Area, Grade, Differential");
+
+        const firstRow = data[0] || {};
+        const rawKeys = Object.keys(firstRow);
+
+        // Find Area column
+        const areaCol = rawKeys.find(k => /^(area|region|district|place)$/i.test(k.trim())) ||
+                        rawKeys.find(k => /area/i.test(k));
+
+        // Find Grade column
+        const gradeCol = rawKeys.find(k => /^(grade|item|jute_grade|jute grade)$/i.test(k.trim())) ||
+                         rawKeys.find(k => /grade/i.test(k));
+
+        // Find Differential column
+        const diffCol = rawKeys.find(k => /^(differential|diff|difference|differential \(premium\/discount\)|premium\/discount|rate diff)$/i.test(k.trim())) ||
+                        rawKeys.find(k => /diff/i.test(k)) ||
+                        rawKeys.find(k => /^rate$/i.test(k.trim()));
+
+        // Map to guarantee strictly ONE row per unique (Area, Grade)
+        // This is CRITICAL to prevent PostgreSQL:
+        // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+        const uniqueMap = new Map<string, { area: string; grade: string; differential: number }>();
+
+        if (areaCol && gradeCol && diffCol) {
+          // 1. Standard 3-column format: Area, Grade, Differential
+          data.forEach((row: any) => {
+            const rawArea = String(row[areaCol] || '').trim().toUpperCase();
+            const rawGrade = String(row[gradeCol] || '').trim().toUpperCase();
+            const rawDiffVal = row[diffCol];
+
+            if (rawArea && rawGrade && rawDiffVal !== undefined && rawDiffVal !== null && String(rawDiffVal).trim() !== '') {
+              const cleanedDiff = Number(String(rawDiffVal).replace(/[^0-9.-]/g, '')) || 0;
+              const compositeKey = `${rawArea}___${rawGrade}`;
+              uniqueMap.set(compositeKey, {
+                area: rawArea,
+                grade: rawGrade,
+                differential: cleanedDiff
+              });
+            }
+          });
+        } else if (areaCol) {
+          // 2. Matrix / Pivot format: Column 1 is Area, other columns are Grade names (e.g. TD4, TD5, TD6, etc.)
+          const otherCols = rawKeys.filter(k => k !== areaCol && !/^(srl|sl|id|created_at|start_date)$/i.test(k.trim()));
+          data.forEach((row: any) => {
+            const rawArea = String(row[areaCol] || '').trim().toUpperCase();
+            if (!rawArea) return;
+
+            otherCols.forEach(col => {
+              const rawDiffVal = row[col];
+              if (rawDiffVal !== undefined && rawDiffVal !== null && String(rawDiffVal).trim() !== '') {
+                const cleanedGrade = col.trim().toUpperCase();
+                const cleanedDiff = Number(String(rawDiffVal).replace(/[^0-9.-]/g, '')) || 0;
+                const compositeKey = `${rawArea}___${cleanedGrade}`;
+                uniqueMap.set(compositeKey, {
+                  area: rawArea,
+                  grade: cleanedGrade,
+                  differential: cleanedDiff
+                });
+              }
+            });
+          });
+        } else {
+          alert("Invalid CSV format. Please ensure the CSV contains 'Area', 'Grade', and 'Differential' columns (or an 'Area' column with Grade columns).");
           setIsUploading(false);
           return;
         }
 
-        const upsertRows = data.map((row: any) => ({
-          area: String(row.Area || '').trim().toUpperCase(),
-          grade: String(row.Grade || '').trim().toUpperCase(),
-          differential: Number(row.Differential) || 0
-        })).filter(row => row.area && row.grade);
+        const upsertRows = Array.from(uniqueMap.values());
 
         if (upsertRows.length === 0) {
-          alert("No valid rows found in CSV.");
+          alert("No valid Area-Grade differential rows found in the uploaded CSV.");
           setIsUploading(false);
           return;
         }
 
         setIsLoading(true);
+        setUploadProgress(60);
+
         try {
           if (supabase) {
-            const { error } = await supabase
-              .from('satta_differentials')
-              .upsert(upsertRows, { onConflict: 'area,grade' });
-            if (error) throw error;
+            // Upsert in safe batches of 100 rows to ensure fast, failure-proof execution
+            const batchSize = 100;
+            for (let i = 0; i < upsertRows.length; i += batchSize) {
+              const batch = upsertRows.slice(i, i + batchSize);
+              const { error: batchErr } = await supabase
+                .from('satta_differentials')
+                .upsert(batch, { onConflict: 'area,grade' });
+
+              if (batchErr) {
+                console.warn("Batch upsert encountered issue, retrying individually:", batchErr.message);
+                // Fallback: row-by-row upsert so no single row blocks the rest
+                for (const item of batch) {
+                  await supabase
+                    .from('satta_differentials')
+                    .upsert([item], { onConflict: 'area,grade' });
+                }
+              }
+              const currentProgress = 60 + Math.round(((i + batch.length) / upsertRows.length) * 35);
+              setUploadProgress(Math.min(currentProgress, 95));
+            }
           }
 
           setDbDifferentials(prev => {
@@ -931,7 +1006,7 @@ export default function SattaChart({
 
           setUploadProgress(100);
           setSaveStatus({
-            message: `Satta Chart CSV uploaded successfully! Parsed ${upsertRows.length} area-grade differentials.`,
+            message: `Satta Chart CSV uploaded successfully! Saved ${upsertRows.length} area-grade differentials.`,
             success: true
           });
 

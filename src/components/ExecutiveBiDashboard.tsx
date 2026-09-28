@@ -966,23 +966,7 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* Quality, Claim & Premium Sub-strip */}
-        <div className="flex items-center gap-3 flex-wrap text-xs bg-white px-3.5 py-2 rounded-xl border border-[#D6CAA8] shadow-2xs font-sans">
-          <span className="text-[10px] uppercase font-bold text-[#5A6E54] tracking-wider">Quality & Premium Audit:</span>
-          <span className="font-semibold text-[#1E331B]">
-            Moisture: <strong className={inspMetrics.overallAvgMoisture <= 15 ? "text-emerald-800 font-mono" : "text-amber-800 font-mono"}>{inspMetrics.overallAvgMoisture}%</strong> {inspMetrics.overallAvgClaimMoisture > 0 && <span className="text-rose-700 font-mono text-[10.5px]">(Clm {inspMetrics.overallAvgClaimMoisture}%)</span>}
-          </span>
-          <span className="text-slate-300">•</span>
-          <span className="font-semibold text-[#1E331B]">
-            Grade Down: <strong className="font-mono">{inspMetrics.overallAvgGradeDown}%</strong> {inspMetrics.overallAvgClaimGradeDown > 0 && <span className="text-rose-700 font-mono text-[10.5px]">(Clm {inspMetrics.overallAvgClaimGradeDown}%)</span>}
-          </span>
-          <span className="text-slate-300">•</span>
-          <span className="font-semibold text-amber-900">
-            ⚡ Premium (SCP): <strong className="font-mono">{inspMetrics.totalPremiumLots} MR</strong> {inspMetrics.totalPremiumSum > 0 ? `(₹${formatIndianCurrency(inspMetrics.totalPremiumSum)})` : (inspMetrics.totalPremiumLots > 0 ? `(Avg ₹${inspMetrics.avgPremiumRate}/Q)` : '')}
-          </span>
-        </div>
-
-        {/* Month Cards Grid (Restored with MR/WT, Moisture, Grade Down, Premium & Operational Counts) */}
+        {/* Month Cards Grid */}
         {inspMetrics.monthInspectionSummaries.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
             {inspMetrics.monthInspectionSummaries.map((m) => (
@@ -990,7 +974,7 @@ export default function ExecutiveBiDashboard({
                 key={`insp-${m.year}-${m.monthIndex}`}
                 onClick={() => handleOpenInspectionModal({
                   title: `Inspection Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalInspections} MRs inspected (${m.totalWeightMt.toFixed(1)} MT) • Moisture: ${m.avgMoisture}% • Grade Down: ${m.avgGradeDown}% • Premium: ${m.premiumLotsCount} MR`,
+                  subtitle: `${m.totalInspections} MRs inspected • ${m.inspectionCount} Inspections • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
                   inspections: m.inspections,
                   payments: m.payments,
                   settlements: m.settlements
@@ -1008,15 +992,44 @@ export default function ExecutiveBiDashboard({
                     </h3>
                   </div>
 
-                  {/* MR / WT */}
+                  {/* 1. MR (Just MR) */}
                   <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">MR / WT:</span>
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
                     <span className="font-mono font-extrabold text-[#1E331B] text-xs">
-                      {m.totalInspections} <span className="text-[10px] font-normal text-slate-500">({m.totalWeightMt.toFixed(1)} MT)</span>
+                      {m.totalInspections}
                     </span>
                   </div>
 
-                  {/* Moisture (Mouister) */}
+                  {/* 2. INSP */}
+                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
+                    <div className="flex items-center gap-1 font-mono font-extrabold text-blue-900 text-xs">
+                      <span>{m.inspectionCount}</span>
+                      {m.millInspectionCount > 0 && (
+                        <span className="text-[9.5px] font-normal text-slate-500 font-sans" title="Mill Inspections">
+                          (Mill: {m.millInspectionCount})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. Paym */}
+                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Paym:</span>
+                    <span className="font-mono font-extrabold text-emerald-800 text-xs">
+                      {m.paymentCount}
+                    </span>
+                  </div>
+
+                  {/* 4. Sett */}
+                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                    <span className="text-[11px] text-[#5A6E54] font-semibold">Sett:</span>
+                    <span className="font-mono font-extrabold text-purple-800 text-xs">
+                      {m.settlementCount}
+                    </span>
+                  </div>
+
+                  {/* 5. Moisture */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                     <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
                     <div className="flex items-center gap-1 font-mono text-xs">
@@ -1034,7 +1047,7 @@ export default function ExecutiveBiDashboard({
                     </div>
                   </div>
 
-                  {/* Grade Down */}
+                  {/* 6. Grade Down */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                     <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
                     <div className="flex items-center gap-1 font-mono text-xs">
@@ -1049,7 +1062,7 @@ export default function ExecutiveBiDashboard({
                     </div>
                   </div>
 
-                  {/* Premium */}
+                  {/* 7. Premium */}
                   <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                     <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
                       <span>⚡</span> Premium:
@@ -1071,28 +1084,6 @@ export default function ExecutiveBiDashboard({
                       ) : (
                         <span className="text-slate-400 font-normal">-</span>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Operational Activity Strip: Insp • Pay • Sett */}
-                  <div className="mt-1.5 pt-1.5 border-t border-[#F2EDE0] grid grid-cols-3 gap-1 text-[10px] text-center bg-[#FAF7F0] p-1 rounded-lg">
-                    <div title={`Total Inspections: ${m.inspectionCount}${m.millInspectionCount > 0 ? ` (Material: ${m.materialInspectionCount}, Mill: ${m.millInspectionCount})` : ''}`}>
-                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Insp</div>
-                      <div className="font-mono font-extrabold text-blue-900 text-xs">
-                        {m.inspectionCount}
-                      </div>
-                    </div>
-                    <div title={`Payment Vouchers: ${m.paymentCount}`}>
-                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Pay</div>
-                      <div className="font-mono font-extrabold text-emerald-900 text-xs">
-                        {m.paymentCount}
-                      </div>
-                    </div>
-                    <div title={`Audited MR Settlements: ${m.settlementCount}`}>
-                      <div className="text-[#5A6E54] font-semibold text-[8.5px] uppercase">Sett</div>
-                      <div className="font-mono font-extrabold text-purple-900 text-xs">
-                        {m.settlementCount}
-                      </div>
                     </div>
                   </div>
                 </div>

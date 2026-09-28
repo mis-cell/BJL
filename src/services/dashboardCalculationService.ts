@@ -382,7 +382,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: 'mill', is_mill: true });
   });
 
-  // 3. Process generic inspection records
+  // 3. Process generic inspection records if passed
   inspections.forEach((item, idx) => {
     const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.amad_no || item.id || `MR-${idx}`;
     const mr = normalizePoRef(rawMr);
@@ -395,23 +395,16 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: existing?.inspection_source || (isMill ? 'mill' : 'material') });
   });
 
-  // 4. Also register any arrivals that have an MR No if not already in the map
-  arrivals.forEach((item, idx) => {
-    if (item.mr_no || item.amad_no) {
-      const mr = normalizePoRef(item.mr_no || item.amad_no || `ARR-${idx}`);
-      if (mr && !mapByMr.has(mr)) {
-        mapByMr.set(mr, { ...item, source: 'arrival', inspection_source: 'material' });
-      }
-    }
-  });
-
   const parsedInspections: InspectionRecord[] = [];
   const yearsSet = new Set<number>();
 
   mapByMr.forEach((raw, cleanMr) => {
-    const dateStr = raw.mr_date || raw.inspection_date || raw.date || raw.arrival_date || raw.unloading_date || raw.created_at || '';
-    const { year, month: monthIndex } = parseRecordDate(dateStr);
-    yearsSet.add(year);
+    // Column Name from Screenshot 3: "Arrival Date"
+    const dateStr = raw.arrival_date || raw.date || raw.inspection_date || raw.mr_date || raw.unloading_date || raw.created_at || '';
+    const { year, month: monthIndex, isValid } = parseRecordDate(dateStr);
+    if (isValid && year > 0) {
+      yearsSet.add(year);
+    }
 
     const poRaw = raw.po_no || raw.mill_po_no || raw.contract_no || raw.sauda_no || '';
     const cleanPo = normalizePoRef(poRaw);
@@ -687,15 +680,32 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     });
   });
 
+  // Pre-populate available years from payment and settlement dates as well
+  paymentRecords.forEach(p => {
+    const rawDate = p.date || p.payment_date || p.created_at;
+    if (rawDate) {
+      const { year: pYear, isValid } = parseRecordDate(rawDate);
+      if (isValid && pYear > 0) yearsSet.add(pYear);
+    }
+  });
+
+  settlements.forEach(s => {
+    const rawDate = s.audit_date || s.sett_date || s.date || s.bill_date || s.created_at;
+    if (rawDate) {
+      const { year: sYear, isValid } = parseRecordDate(rawDate);
+      if (isValid && sYear > 0) yearsSet.add(sYear);
+    }
+  });
+
   const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
   if (availableYears.length === 0) availableYears.push(2026);
   const activeYear = selectedYear && yearsSet.has(selectedYear) ? selectedYear : availableYears[0];
 
   const yearInspections = parsedInspections.filter(r => r.year === activeYear);
 
-  // 1. Index payments for activeYear by month
+  // 1. Index payments for activeYear by month (Column Name from Screenshot 4: "Date" / payment_date)
   const paymentsByMonth = new Map<number, any[]>();
-  // 2. Index settlements for activeYear by month
+  // 2. Index settlements for activeYear by month (Column Name from Screenshot 5: "Audit Date" / sett_date)
   const settlementsByMonth = new Map<number, any[]>();
 
   for (let m = 0; m < 12; m++) {
@@ -703,55 +713,32 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     settlementsByMonth.set(m, []);
   }
 
-  // Pre-index MRs from year inspections to map their month
-  const mrToMonthMap = new Map<string, number>();
-  yearInspections.forEach(r => {
-    if (r.cleanMrNo) mrToMonthMap.set(r.cleanMrNo, r.month);
-    if (r.mrNo) mrToMonthMap.set(normalizePoRef(r.mrNo), r.month);
-  });
-
-  // Assign payments
+  // Assign payments by payment Date
   let totalYearPayments = 0;
   paymentRecords.forEach(p => {
-    const rawDate = p.payment_date || p.date || p.created_at || p.arrival_date || p.sett_date;
-    const { year: pYear, month: pMonth } = parseRecordDate(rawDate);
-    const mrKey = normalizePoRef(p.mr_no || p.arrival_no || '');
-    const linkedMonth = mrKey ? mrToMonthMap.get(mrKey) : undefined;
+    const rawDate = p.date || p.payment_date || p.created_at;
+    const { year: pYear, month: pMonth, isValid } = parseRecordDate(rawDate);
     
-    const isYearMatch = pYear === activeYear;
-    const hasLinkedMonth = linkedMonth !== undefined;
-    
-    if (isYearMatch || hasLinkedMonth || (availableYears.length === 1 && !pYear)) {
+    if (isValid && pYear === activeYear && pMonth >= 0 && pMonth < 12) {
       totalYearPayments++;
-      const targetMonth = isYearMatch ? pMonth : (hasLinkedMonth ? linkedMonth : pMonth);
-      if (targetMonth >= 0 && targetMonth < 12) {
-        paymentsByMonth.get(targetMonth)?.push(p);
-      }
+      paymentsByMonth.get(pMonth)?.push(p);
     }
   });
 
-  // Assign settlements
+  // Assign settlements by Audit Date
   let totalYearSettlements = 0;
   settlements.forEach(s => {
-    const rawDate = s.audit_date || s.sett_date || s.date || s.created_at || s.bill_date;
-    const { year: sYear, month: sMonth } = parseRecordDate(rawDate);
-    const mrKey = normalizePoRef(s.mr_no || s.arrival_no || '');
-    const linkedMonth = mrKey ? mrToMonthMap.get(mrKey) : undefined;
+    const rawDate = s.audit_date || s.sett_date || s.date || s.bill_date || s.created_at;
+    const { year: sYear, month: sMonth, isValid } = parseRecordDate(rawDate);
 
-    const isYearMatch = sYear === activeYear;
-    const hasLinkedMonth = linkedMonth !== undefined;
-
-    if (isYearMatch || hasLinkedMonth || (availableYears.length === 1 && !sYear)) {
+    if (isValid && sYear === activeYear && sMonth >= 0 && sMonth < 12) {
       totalYearSettlements++;
-      const targetMonth = isYearMatch ? sMonth : (hasLinkedMonth ? linkedMonth : sMonth);
-      if (targetMonth >= 0 && targetMonth < 12) {
-        settlementsByMonth.get(targetMonth)?.push(s);
-      }
+      settlementsByMonth.get(sMonth)?.push(s);
     }
   });
 
-  const effectiveYearPayments = totalYearPayments > 0 ? totalYearPayments : paymentRecords.length;
-  const effectiveYearSettlements = totalYearSettlements > 0 ? totalYearSettlements : settlements.length;
+  const effectiveYearPayments = totalYearPayments;
+  const effectiveYearSettlements = totalYearSettlements;
 
   // Group by Month (0 to 11)
   const monthInspectionSummaries: MonthInspectionSummary[] = Array.from({ length: 12 }, (_, mIdx) => {
@@ -949,18 +936,28 @@ export function getPoSuffix(poStr: string): string {
 /**
  * Robust date parser returning standard date object and parts
  */
-export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string; year: number; month: number } {
+export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string; year: number; month: number; isValid: boolean } {
   const fallback = new Date();
   if (!rawDate) {
     return {
       dateObj: fallback,
-      dateStr: fallback.toISOString().slice(0, 10),
-      year: fallback.getFullYear(),
-      month: fallback.getMonth()
+      dateStr: '',
+      year: 0,
+      month: -1,
+      isValid: false
     };
   }
 
   const str = String(rawDate).trim();
+  if (!str) {
+    return {
+      dateObj: fallback,
+      dateStr: '',
+      year: 0,
+      month: -1,
+      isValid: false
+    };
+  }
   
   // Handle DD-MM-YYYY or DD/MM/YYYY
   if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
@@ -974,7 +971,8 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
         dateObj: d,
         dateStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
         year,
-        month
+        month,
+        isValid: true
       };
     }
   }
@@ -986,15 +984,17 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
       dateObj: parsed,
       dateStr: parsed.toISOString().slice(0, 10),
       year: parsed.getFullYear(),
-      month: parsed.getMonth()
+      month: parsed.getMonth(),
+      isValid: true
     };
   }
 
   return {
     dateObj: fallback,
-    dateStr: fallback.toISOString().slice(0, 10),
-    year: fallback.getFullYear(),
-    month: fallback.getMonth()
+    dateStr: '',
+    year: 0,
+    month: -1,
+    isValid: false
   };
 }
 
