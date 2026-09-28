@@ -168,6 +168,11 @@ export function PaymentDashboardView({
     });
   }, [paymentList, verifiedArrivals, activeYear]);
 
+  // Only show month cards that HAVE DATA
+  const activeMonthSummaries = useMemo(() => {
+    return monthSummaries.filter(m => m.vouchersCount > 0 || m.verifiedArrivalsCount > 0 || m.totalPaid > 0 || m.totalPayable > 0);
+  }, [monthSummaries]);
+
   // Filter records based on selected Year & Month
   const yearMonthFilteredPayments = useMemo(() => {
     return paymentList.filter(p => {
@@ -350,29 +355,21 @@ export function PaymentDashboardView({
         </div>
       </div>
 
-      {/* 2. MONTH-WISE SUMMARY SECTION (LIKE IN MAIN DASHBOARD) */}
-      <div className="bg-gradient-to-b from-purple-50/70 to-slate-50 border-2 border-purple-200/80 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3">
-        {/* Section Header with Dynamic Year Dropdown Filter & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-200/80 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-900 text-purple-200 shadow-xs">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* 2. MONTH-WISE SUMMARY SECTION (SINGLE LINE & ONLY MONTHS WITH DATA) */}
+      <div className="bg-gradient-to-b from-purple-50/70 to-slate-50 border-2 border-purple-200/80 rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2.5">
+        {/* Compact Clean Control Toolbar */}
+        <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-purple-900 text-purple-200 shadow-xs">
+              <Calendar className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-black text-purple-950 tracking-wide flex items-center gap-2 flex-wrap">
-                <span>Month-Wise Payment Operations Summary</span>
-                <span className="text-xs font-mono font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md border border-purple-300">
-                  FY / Year {activeYear}
-                </span>
-              </h2>
-              <p className="text-[11px] text-purple-800/80 font-medium mt-0.5">
-                Click any month card to view its vouchers, paid amount, and pending retentions.
-              </p>
-            </div>
+            <span className="text-xs font-black uppercase tracking-wider text-purple-950">
+              Month-Wise Summary {activeMonthSummaries.length > 0 ? `(${activeMonthSummaries.length} Active ${activeMonthSummaries.length === 1 ? 'Month' : 'Months'})` : ''}
+            </span>
           </div>
 
-          {/* Dynamic Year Selector & Collapse Drawer Toggle */}
-          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Dynamic Year Selector & Controls */}
+          <div className="flex items-center gap-2 flex-wrap">
             <label htmlFor="payment-year-select" className="text-xs font-bold text-purple-950 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5 text-purple-700" />
               <span>Year:</span>
@@ -415,7 +412,7 @@ export function PaymentDashboardView({
             <button
               onClick={() => setCollapseMonthSummary(!collapseMonthSummary)}
               className="h-8 px-2.5 bg-white border border-purple-300 hover:bg-purple-100 rounded-lg text-xs font-bold text-purple-900 transition-colors flex items-center gap-1 cursor-pointer"
-              title={collapseMonthSummary ? "Expand Month-Wise Grid" : "Collapse Month-Wise Grid"}
+              title={collapseMonthSummary ? "Expand Month Cards" : "Collapse Month Cards"}
             >
               {collapseMonthSummary ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
               <span>{collapseMonthSummary ? "Expand" : "Collapse"}</span>
@@ -423,136 +420,139 @@ export function PaymentDashboardView({
           </div>
         </div>
 
-        {/* Month Cards Grid (12 Responsive Month Cards like in Main Dashboard) */}
+        {/* Month Cards Grid (SINGLE LINE ROW, ONLY ACTIVE MONTHS WITH DATA) */}
         {!collapseMonthSummary && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-            {monthSummaries.map((m) => {
-              const isSelected = selectedMonth === m.monthIndex;
-              const hasData = m.vouchersCount > 0 || m.verifiedArrivalsCount > 0;
+          activeMonthSummaries.length > 0 ? (
+            <div className="flex flex-row flex-nowrap overflow-x-auto gap-2.5 pb-2 pt-0.5 scrollbar-thin">
+              {activeMonthSummaries.map((m) => {
+                const isSelected = selectedMonth === m.monthIndex;
 
-              return (
-                <div
-                  key={`${m.year}-${m.monthIndex}`}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedMonth(null);
-                    } else {
-                      setSelectedMonth(m.monthIndex);
-                    }
-                    setCurrentPage(1);
-                  }}
-                  className={cn(
-                    "rounded-xl p-2.5 transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs relative",
-                    isSelected
-                      ? "bg-gradient-to-br from-purple-900 to-indigo-950 text-white border-2 border-purple-400 shadow-md ring-2 ring-purple-400/40"
-                      : hasData
-                        ? "bg-white border-2 border-purple-200/90 hover:border-purple-600 hover:shadow-md text-slate-800"
-                        : "bg-white/70 border border-slate-200 hover:border-purple-300 text-slate-500 opacity-90"
-                  )}
-                  title={`Click to filter Payment Operations to ${m.monthName} ${m.year}`}
-                >
-                  <div>
-                    {/* Card Header: Month Name + Year + Active Badge */}
-                    <div className={cn(
-                      "flex items-center justify-between gap-1 mb-1.5 pb-1 border-b",
-                      isSelected ? "border-purple-700/60" : "border-slate-100"
-                    )}>
-                      <h3 className={cn(
-                        "text-xs font-black uppercase tracking-wider flex items-center gap-1 truncate",
-                        isSelected ? "text-purple-100" : "text-purple-950"
+                return (
+                  <div
+                    key={`${m.year}-${m.monthIndex}`}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedMonth(null);
+                      } else {
+                        setSelectedMonth(m.monthIndex);
+                      }
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      "min-w-[185px] flex-1 max-w-[240px] shrink-0 rounded-xl p-2.5 transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs relative",
+                      isSelected
+                        ? "bg-gradient-to-br from-purple-900 to-indigo-950 text-white border-2 border-purple-400 shadow-md ring-2 ring-purple-400/40"
+                        : "bg-white border-2 border-purple-200/90 hover:border-purple-600 hover:shadow-md text-slate-800"
+                    )}
+                    title={`Click to filter Payment Operations to ${m.monthName} ${m.year}`}
+                  >
+                    <div>
+                      {/* Card Header: Month Name + Year */}
+                      <div className={cn(
+                        "flex items-center justify-between gap-1 mb-1.5 pb-1 border-b",
+                        isSelected ? "border-purple-700/60" : "border-slate-100"
                       )}>
+                        <h3 className={cn(
+                          "text-xs font-black uppercase tracking-wider flex items-center gap-1 truncate",
+                          isSelected ? "text-purple-100" : "text-purple-950"
+                        )}>
+                          <span className={cn(
+                            "w-2 h-2 rounded-full shrink-0",
+                            isSelected ? "bg-emerald-400" : "bg-purple-600"
+                          )} />
+                          <span>{m.shortName}</span>
+                        </h3>
                         <span className={cn(
-                          "w-2 h-2 rounded-full shrink-0",
-                          isSelected ? "bg-emerald-400" : hasData ? "bg-purple-600" : "bg-slate-300"
-                        )} />
-                        <span>{m.shortName}</span>
-                      </h3>
-                      <span className={cn(
-                        "text-[9px] font-mono font-semibold",
-                        isSelected ? "text-purple-200" : "text-slate-500"
+                          "text-[9px] font-mono font-semibold",
+                          isSelected ? "text-purple-200" : "text-slate-500"
+                        )}>
+                          {m.year}
+                        </span>
+                      </div>
+
+                      {/* Vouchers Count */}
+                      <div className={cn(
+                        "flex items-center justify-between text-[11px] py-0.5 border-b",
+                        isSelected ? "border-purple-800/60" : "border-slate-100"
                       )}>
-                        {m.year}
-                      </span>
+                        <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                          Vouchers:
+                        </span>
+                        <span className={cn(
+                          "font-mono font-black",
+                          isSelected ? "text-white" : "text-purple-950"
+                        )}>
+                          {m.vouchersCount}
+                        </span>
+                      </div>
+
+                      {/* Paid Amount */}
+                      <div className={cn(
+                        "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
+                        isSelected ? "border-purple-800/60" : "border-slate-100"
+                      )}>
+                        <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                          Paid:
+                        </span>
+                        <span className={cn(
+                          "font-mono font-bold truncate max-w-[95px]",
+                          isSelected ? "text-emerald-300" : "text-emerald-700"
+                        )}>
+                          {formatIndianCurrency(m.totalPaid)}
+                        </span>
+                      </div>
+
+                      {/* Payable Amount */}
+                      <div className={cn(
+                        "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
+                        isSelected ? "border-purple-800/60" : "border-slate-100"
+                      )}>
+                        <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                          Payable:
+                        </span>
+                        <span className={cn(
+                          "font-mono font-bold truncate max-w-[95px]",
+                          isSelected ? "text-purple-200" : "text-slate-800"
+                        )}>
+                          {formatIndianCurrency(m.totalPayable)}
+                        </span>
+                      </div>
+
+                      {/* Pending / Retention */}
+                      <div className="flex items-center justify-between text-[10px] pt-1">
+                        <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                          Pending:
+                        </span>
+                        <span className={cn(
+                          "font-mono font-black px-1.5 py-0.2 rounded text-[9px]",
+                          isSelected
+                            ? m.totalPending > 0 ? "bg-amber-400 text-amber-950 font-black" : "bg-emerald-500/30 text-emerald-200"
+                            : m.totalPending > 0 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-50 text-emerald-700"
+                        )}>
+                          {m.totalPending > 0 ? formatIndianCurrency(m.totalPending) : '₹0'}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Vouchers Count */}
+                    {/* Card Footer / Action Hint */}
                     <div className={cn(
-                      "flex items-center justify-between text-[11px] py-0.5 border-b",
-                      isSelected ? "border-purple-800/60" : "border-slate-100"
+                      "mt-2 pt-1 border-t border-dashed text-[9px] font-bold flex items-center justify-between transition-transform",
+                      isSelected 
+                        ? "border-purple-700 text-purple-200" 
+                        : "border-slate-200 text-purple-700 group-hover:translate-x-0.5"
                     )}>
-                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
-                        Vouchers:
-                      </span>
-                      <span className={cn(
-                        "font-mono font-black",
-                        isSelected ? "text-white" : "text-purple-950"
-                      )}>
-                        {m.vouchersCount}
-                      </span>
-                    </div>
-
-                    {/* Paid Amount */}
-                    <div className={cn(
-                      "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
-                      isSelected ? "border-purple-800/60" : "border-slate-100"
-                    )}>
-                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
-                        Paid:
-                      </span>
-                      <span className={cn(
-                        "font-mono font-bold truncate max-w-[85px]",
-                        isSelected ? "text-emerald-300" : "text-emerald-700"
-                      )}>
-                        {formatIndianCurrency(m.totalPaid)}
-                      </span>
-                    </div>
-
-                    {/* Payable Amount */}
-                    <div className={cn(
-                      "flex items-center justify-between text-[10px] py-0.5 border-b border-dashed",
-                      isSelected ? "border-purple-800/60" : "border-slate-100"
-                    )}>
-                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
-                        Payable:
-                      </span>
-                      <span className={cn(
-                        "font-mono font-bold truncate max-w-[85px]",
-                        isSelected ? "text-purple-200" : "text-slate-800"
-                      )}>
-                        {formatIndianCurrency(m.totalPayable)}
-                      </span>
-                    </div>
-
-                    {/* Pending / Retention */}
-                    <div className="flex items-center justify-between text-[10px] pt-1">
-                      <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
-                        Pending:
-                      </span>
-                      <span className={cn(
-                        "font-mono font-black px-1.5 py-0.2 rounded text-[9px]",
-                        isSelected
-                          ? m.totalPending > 0 ? "bg-amber-400 text-amber-950 font-black" : "bg-emerald-500/30 text-emerald-200"
-                          : m.totalPending > 0 ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-50 text-emerald-700"
-                      )}>
-                        {m.totalPending > 0 ? formatIndianCurrency(m.totalPending) : '₹0'}
-                      </span>
+                      <span>{isSelected ? '✓ Active Filter' : 'View Month'}</span>
+                      <ArrowRight className="w-2.5 h-2.5" />
                     </div>
                   </div>
-
-                  {/* Card Footer / Action Hint */}
-                  <div className={cn(
-                    "mt-2 pt-1 border-t border-dashed text-[9px] font-bold flex items-center justify-between transition-transform",
-                    isSelected 
-                      ? "border-purple-700 text-purple-200" 
-                      : "border-slate-200 text-purple-700 group-hover:translate-x-0.5"
-                  )}>
-                    <span>{isSelected ? '✓ Filter Active' : 'View Month'}</span>
-                    <ArrowRight className="w-2.5 h-2.5" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white border border-purple-200 rounded-xl p-4 text-center text-slate-500 text-xs font-semibold">
+              No payment transactions found for year {activeYear}. Please select another year from the dropdown above.
+            </div>
+          )
         )}
       </div>
 
