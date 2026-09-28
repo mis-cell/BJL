@@ -27,6 +27,7 @@ import {
   Coins, 
   Users, 
   ChevronDown,
+  ChevronUp,
   Activity,
   Award,
   Clock,
@@ -163,6 +164,15 @@ export default function ExecutiveBiDashboard({
 
   // View Controls
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [collapseMonthSummary, setCollapseMonthSummary] = useState(false);
+  const [collapseInspectionSummary, setCollapseInspectionSummary] = useState(false);
+
+  const allPanelsCollapsed = collapseMonthSummary && collapseInspectionSummary;
+  const toggleAllPanels = () => {
+    const nextState = !allPanelsCollapsed;
+    setCollapseMonthSummary(nextState);
+    setCollapseInspectionSummary(nextState);
+  };
 
   // 1. Central Single-Source-of-Truth Calculation
   const dbMetrics = useMemo(() => {
@@ -320,6 +330,20 @@ export default function ExecutiveBiDashboard({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleAllPanels}
+            className={cn(
+              "px-3 py-1.5 border rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs",
+              allPanelsCollapsed 
+                ? "bg-amber-400/20 text-amber-300 border-amber-400/40 hover:bg-amber-400/30" 
+                : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+            )}
+            title={allPanelsCollapsed ? "Expand all granular breakdown panels" : "Collapse all granular breakdown panels (View only KPI Summary Cards)"}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>{allPanelsCollapsed ? "Expand All Panels" : "Collapse All Panels"}</span>
+          </button>
+
           <button
             onClick={onRefresh}
             disabled={loading}
@@ -718,8 +742,8 @@ export default function ExecutiveBiDashboard({
             </div>
           </div>
 
-          {/* Dynamic Year Selector Dropdown */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Dynamic Year Selector Dropdown & Collapse Drawer Toggle */}
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
             <label htmlFor="dashboard-year-select" className="text-xs font-bold font-sans text-[#1E331B] flex items-center gap-1">
               <Filter className="w-3.5 h-3.5 text-[#5A6E54]" />
               <span>Select Year:</span>
@@ -736,80 +760,91 @@ export default function ExecutiveBiDashboard({
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={() => setCollapseMonthSummary(!collapseMonthSummary)}
+              className="h-9 px-3 bg-white border-2 border-[#1E331B] rounded-xl text-xs font-mono font-bold text-[#1E331B] shadow-xs cursor-pointer flex items-center gap-1.5 hover:bg-[#FAF7F0] transition-colors"
+              title={collapseMonthSummary ? "Expand Month-Wise Summary" : "Collapse Month-Wise Summary"}
+            >
+              {collapseMonthSummary ? <ChevronDown className="w-3.5 h-3.5 text-emerald-800" /> : <ChevronUp className="w-3.5 h-3.5 text-emerald-800" />}
+              <span>{collapseMonthSummary ? "Expand" : "Collapse"}</span>
+            </button>
           </div>
         </div>
 
         {/* Month Cards Grid (Half-size compact cards) */}
-        {dbMetrics.monthSummaries.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-2">
-            {dbMetrics.monthSummaries.map((m) => (
-              <div
-                key={`${m.year}-${m.monthIndex}`}
-                onClick={() => handleOpenDrilldown({
-                  title: `Month Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending, ${m.partialContracts} partial)`,
-                  contracts: m.contracts
-                })}
-                className="bg-white border border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-[11px]"
-                title={`Click to view ${m.monthName} ${m.year} contract records`}
-              >
-                <div>
-                  {/* Card Header: Month Name + Year */}
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <h3 className="text-xs font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
-                      <span>{m.monthName}</span>
-                    </h3>
-                    <span className="text-[9px] font-mono text-[#5A6E54]">{m.year}</span>
+        {!collapseMonthSummary && (
+          dbMetrics.monthSummaries.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-2">
+              {dbMetrics.monthSummaries.map((m) => (
+                <div
+                  key={`${m.year}-${m.monthIndex}`}
+                  onClick={() => handleOpenDrilldown({
+                    title: `Month Summary: ${m.monthName} ${m.year}`,
+                    subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending, ${m.partialContracts} partial)`,
+                    contracts: m.contracts
+                  })}
+                  className="bg-white border border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-[11px]"
+                  title={`Click to view ${m.monthName} ${m.year} contract records`}
+                >
+                  <div>
+                    {/* Card Header: Month Name + Year */}
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <h3 className="text-xs font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
+                        <span>{m.monthName}</span>
+                      </h3>
+                      <span className="text-[9px] font-mono text-[#5A6E54]">{m.year}</span>
+                    </div>
+
+                    {/* Contract Count */}
+                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-[#F2EDE0]">
+                      <span className="text-[#5A6E54] font-medium">Cont:</span>
+                      <span className="font-mono font-extrabold text-[#1E331B]">
+                        {m.totalContracts}
+                      </span>
+                    </div>
+
+                    {/* Pending Count */}
+                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
+                      <span className="text-[#5A6E54] font-medium">Pend:</span>
+                      <span className={cn(
+                        "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
+                        m.pendingContracts > 0 
+                          ? "bg-amber-100 text-amber-900 border border-amber-300" 
+                          : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                      )}>
+                        {m.pendingContracts > 0 ? `${m.pendingContracts}` : '0'}
+                      </span>
+                    </div>
+
+                    {/* Partial Count */}
+                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
+                      <span className="text-[#5A6E54] font-medium">Part:</span>
+                      <span className={cn(
+                        "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
+                        m.partialContracts > 0 
+                          ? "bg-blue-100 text-blue-900 border border-blue-300" 
+                          : "bg-gray-100 text-gray-700 border border-gray-300"
+                      )}>
+                        {m.partialContracts > 0 ? `${m.partialContracts}` : '0'}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Contract Count */}
-                  <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-[#F2EDE0]">
-                    <span className="text-[#5A6E54] font-medium">Cont:</span>
-                    <span className="font-mono font-extrabold text-[#1E331B]">
-                      {m.totalContracts}
-                    </span>
-                  </div>
-
-                  {/* Pending Count */}
-                  <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[#5A6E54] font-medium">Pend:</span>
-                    <span className={cn(
-                      "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
-                      m.pendingContracts > 0 
-                        ? "bg-amber-100 text-amber-900 border border-amber-300" 
-                        : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                    )}>
-                      {m.pendingContracts > 0 ? `${m.pendingContracts}` : '0'}
-                    </span>
-                  </div>
-
-                  {/* Partial Count */}
-                  <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[#5A6E54] font-medium">Part:</span>
-                    <span className={cn(
-                      "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
-                      m.partialContracts > 0 
-                        ? "bg-blue-100 text-blue-900 border border-blue-300" 
-                        : "bg-gray-100 text-gray-700 border border-gray-300"
-                    )}>
-                      {m.partialContracts > 0 ? `${m.partialContracts}` : '0'}
-                    </span>
+                  <div className="mt-1.5 pt-1 border-t border-dashed border-[#EAE2D2] text-[8.5px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+                    <span>Details</span>
+                    <span className="text-[9px]">→</span>
                   </div>
                 </div>
-
-                <div className="mt-1.5 pt-1 border-t border-dashed border-[#EAE2D2] text-[8.5px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-                  <span>Details</span>
-                  <span className="text-[9px]">→</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
-            <p className="text-sm font-semibold">No contract data found for year {activeYear}.</p>
-            <p className="text-xs text-[#5A6E54]/80 mt-0.5">Please select another year from the dropdown above.</p>
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
+              <p className="text-sm font-semibold">No contract data found for year {activeYear}.</p>
+              <p className="text-xs text-[#5A6E54]/80 mt-0.5">Please select another year from the dropdown above.</p>
+            </div>
+          )
         )}
 
       </div>
@@ -862,238 +897,252 @@ export default function ExecutiveBiDashboard({
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
+
+            <button
+              onClick={() => setCollapseInspectionSummary(!collapseInspectionSummary)}
+              className="h-8 px-3 bg-white border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-xl hover:bg-[#FAF7F0] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title={collapseInspectionSummary ? "Expand Inspection Summary" : "Collapse Inspection Summary"}
+            >
+              {collapseInspectionSummary ? <ChevronDown className="w-3.5 h-3.5 text-emerald-800" /> : <ChevronUp className="w-3.5 h-3.5 text-emerald-800" />}
+              <span>{collapseInspectionSummary ? "Expand" : "Collapse"}</span>
+            </button>
           </div>
         </div>
 
-        {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Inspection, Payment, Settlement) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 text-xs font-sans">
-          {/* Card 1: Total MR & Weight */}
-          <div 
-            onClick={() => handleOpenInspectionModal({
-              title: `All Inspected MRs & Deliveries (${activeYear})`,
-              subtitle: `Total ${inspMetrics.totalInspectionsCount} MRs with ${inspMetrics.totalInspectedWeightMt.toFixed(1)} MT inspected weight`,
-              inspections: inspMetrics.allInspections
-            })}
-            className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-[#1E331B] shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-            title="Click to view all inspected MR records"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Weight</span>
-              <span className="text-[10px] text-[#2E6B3E] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-            <span className="font-mono font-extrabold text-[#1E331B] text-base block">
-              {inspMetrics.totalInspectionsCount} MR
-            </span>
-            <span className="text-xs font-mono font-bold text-emerald-900 mt-0.5 block">
-              {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
-            </span>
-          </div>
-
-          {/* Card 2: Total Inspection Count */}
-          <div 
-            onClick={() => handleOpenInspectionModal({
-              title: `Total Inspections Breakdown (${activeYear})`,
-              subtitle: `Material Inspections: ${inspMetrics.totalMaterialInspectionsCount}, Mill Inspections: ${inspMetrics.totalMillInspectionsCount}`,
-              inspections: inspMetrics.allInspections
-            })}
-            className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-blue-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-            title="Click to view inspection breakdown"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-blue-900 font-bold block uppercase tracking-wider">Total Inspection</span>
-              <span className="text-[10px] text-blue-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-            <span className="font-mono font-extrabold text-blue-950 text-base block">
-              {inspMetrics.totalYearInspectionsCount} Count
-            </span>
-            <span className="text-xs text-blue-800 font-medium mt-0.5 block">
-              {inspMetrics.totalMillInspectionsCount > 0 
-                ? `Mat: ${inspMetrics.totalMaterialInspectionsCount} • Mill: ${inspMetrics.totalMillInspectionsCount}`
-                : 'Material Inspection'}
-            </span>
-          </div>
-
-          {/* Card 3: Total Payment Count */}
-          <div 
-            onClick={() => handleOpenInspectionModal({
-              title: `Total Payments Summary (${activeYear})`,
-              subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records`,
-              inspections: inspMetrics.allInspections,
-              payments: paymentRecords
-            })}
-            className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-emerald-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-            title="Click to view payment voucher records"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-emerald-900 font-bold block uppercase tracking-wider">Total Payment</span>
-              <span className="text-[10px] text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-            <span className="font-mono font-extrabold text-emerald-950 text-base block">
-              {inspMetrics.totalYearPaymentsCount} Count
-            </span>
-            <span className="text-xs text-emerald-800 font-medium mt-0.5 block">
-              Payment Vouchers
-            </span>
-          </div>
-
-          {/* Card 4: Total Settlement Count */}
-          <div 
-            onClick={() => handleOpenInspectionModal({
-              title: `Total Settlements Summary (${activeYear})`,
-              subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records`,
-              inspections: inspMetrics.allInspections,
-              settlements: settlements
-            })}
-            className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-purple-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-            title="Click to view settlement records"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-purple-900 font-bold block uppercase tracking-wider">Total Settlement</span>
-              <span className="text-[10px] text-purple-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-            </div>
-            <span className="font-mono font-extrabold text-purple-950 text-base block">
-              {inspMetrics.totalYearSettlementsCount} Count
-            </span>
-            <span className="text-xs text-purple-800 font-medium mt-0.5 block">
-              MR Settlements
-            </span>
-          </div>
-        </div>
-
-        {/* Month Cards Grid */}
-        {inspMetrics.monthInspectionSummaries.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
-            {inspMetrics.monthInspectionSummaries.map((m) => (
-              <div
-                key={`insp-${m.year}-${m.monthIndex}`}
+        {/* Year-level KPI Highlights Ribbon & Month Cards */}
+        {!collapseInspectionSummary && (
+          <>
+            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Inspection, Payment, Settlement) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 text-xs font-sans">
+              {/* Card 1: Total MR & Weight */}
+              <div 
                 onClick={() => handleOpenInspectionModal({
-                  title: `Inspection Summary: ${m.monthName} ${m.year}`,
-                  subtitle: `${m.totalInspections} MRs inspected • ${m.inspectionCount} Inspections • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
-                  inspections: m.inspections,
-                  payments: m.payments,
-                  settlements: m.settlements
+                  title: `All Inspected MRs & Deliveries (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalInspectionsCount} MRs with ${inspMetrics.totalInspectedWeightMt.toFixed(1)} MT inspected weight`,
+                  inspections: inspMetrics.allInspections
                 })}
-                className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
-                title={`Click to view ${m.monthName} ${m.year} inspection, quality, payment, and settlement details`}
+                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-[#1E331B] shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Click to view all inspected MR records"
               >
-                <div>
-                  {/* Card Header: Month Name + Year */}
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-700 shrink-0"></span>
-                      <span>{m.monthName}</span>
-                      <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
-                    </h3>
-                  </div>
-
-                  {/* 1. MR (Just MR) */}
-                  <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
-                    <span className="font-mono font-extrabold text-[#1E331B] text-xs">
-                      {m.totalInspections}
-                    </span>
-                  </div>
-
-                  {/* 2. INSP */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
-                    <div className="flex items-center gap-1 font-mono font-extrabold text-blue-900 text-xs">
-                      <span>{m.inspectionCount}</span>
-                      {m.millInspectionCount > 0 && (
-                        <span className="text-[9.5px] font-normal text-slate-500 font-sans" title="Mill Inspections">
-                          (Mill: {m.millInspectionCount})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 3. Paym */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Paym:</span>
-                    <span className="font-mono font-extrabold text-emerald-800 text-xs">
-                      {m.paymentCount}
-                    </span>
-                  </div>
-
-                  {/* 4. Sett */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Sett:</span>
-                    <span className="font-mono font-extrabold text-purple-800 text-xs">
-                      {m.settlementCount}
-                    </span>
-                  </div>
-
-                  {/* 5. Moisture */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
-                    <div className="flex items-center gap-1 font-mono text-xs">
-                      <span className={cn(
-                        "font-extrabold",
-                        m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
-                      )}>
-                        {m.avgMoisture}%
-                      </span>
-                      {m.avgClaimMoisture > 0 && (
-                        <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Moisture: ${m.avgClaimMoisture}%`}>
-                          (Clm {m.avgClaimMoisture}%)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 6. Grade Down */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
-                    <div className="flex items-center gap-1 font-mono text-xs">
-                      <span className="font-extrabold text-[#1E331B]">
-                        {m.avgGradeDown}%
-                      </span>
-                      {m.avgClaimGradeDown > 0 && (
-                        <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Grade Down: ${m.avgClaimGradeDown}%`}>
-                          (Clm {m.avgClaimGradeDown}%)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 7. Premium */}
-                  <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                    <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
-                      <span>⚡</span> Premium:
-                    </span>
-                    <div className="flex items-center gap-1 font-mono text-xs">
-                      {m.premiumLotsCount > 0 ? (
-                        <div className="text-right">
-                          <span className="font-extrabold text-amber-900">{m.premiumLotsCount} MR</span>
-                          {m.premiumTotalSum > 0 ? (
-                            <span className="text-[9.5px] text-amber-800 font-bold block">
-                              ₹{formatIndianCurrency(m.premiumTotalSum)}
-                            </span>
-                          ) : (m.avgPremiumRate > 0 ? (
-                            <span className="text-[9px] text-amber-700 font-normal block">
-                              @{m.avgPremiumRate}/Q
-                            </span>
-                          ) : null)}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 font-normal">-</span>
-                      )}
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Weight</span>
+                  <span className="text-[10px] text-[#2E6B3E] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
-
-                <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9px] font-bold text-[#1E331B] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-                  <span>View Details</span>
-                  <span className="text-[10px]">→</span>
-                </div>
+                <span className="font-mono font-extrabold text-[#1E331B] text-base block">
+                  {inspMetrics.totalInspectionsCount} MR
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-900 mt-0.5 block">
+                  {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
+                </span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
-            <p className="text-sm font-semibold">No inspection or moisture data found for year {activeYear}.</p>
-            <p className="text-xs text-[#5A6E54]/80 mt-0.5">Records logged in Material Inspection module will automatically display here.</p>
-          </div>
+
+              {/* Card 2: Total Inspection Count */}
+              <div 
+                onClick={() => handleOpenInspectionModal({
+                  title: `Total Inspections Breakdown (${activeYear})`,
+                  subtitle: `Material Inspections: ${inspMetrics.totalMaterialInspectionsCount}, Mill Inspections: ${inspMetrics.totalMillInspectionsCount}`,
+                  inspections: inspMetrics.allInspections
+                })}
+                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-blue-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Click to view inspection breakdown"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-blue-900 font-bold block uppercase tracking-wider">Total Inspection</span>
+                  <span className="text-[10px] text-blue-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                </div>
+                <span className="font-mono font-extrabold text-blue-950 text-base block">
+                  {inspMetrics.totalYearInspectionsCount} Count
+                </span>
+                <span className="text-xs text-blue-800 font-medium mt-0.5 block">
+                  {inspMetrics.totalMillInspectionsCount > 0 
+                    ? `Mat: ${inspMetrics.totalMaterialInspectionsCount} • Mill: ${inspMetrics.totalMillInspectionsCount}`
+                    : 'Material Inspection'}
+                </span>
+              </div>
+
+              {/* Card 3: Total Payment Count */}
+              <div 
+                onClick={() => handleOpenInspectionModal({
+                  title: `Total Payments Summary (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records`,
+                  inspections: inspMetrics.allInspections,
+                  payments: paymentRecords
+                })}
+                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-emerald-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Click to view payment voucher records"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-emerald-900 font-bold block uppercase tracking-wider">Total Payment</span>
+                  <span className="text-[10px] text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                </div>
+                <span className="font-mono font-extrabold text-emerald-950 text-base block">
+                  {inspMetrics.totalYearPaymentsCount} Count
+                </span>
+                <span className="text-xs text-emerald-800 font-medium mt-0.5 block">
+                  Payment Vouchers
+                </span>
+              </div>
+
+              {/* Card 4: Total Settlement Count */}
+              <div 
+                onClick={() => handleOpenInspectionModal({
+                  title: `Total Settlements Summary (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records`,
+                  inspections: inspMetrics.allInspections,
+                  settlements: settlements
+                })}
+                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-purple-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Click to view settlement records"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-purple-900 font-bold block uppercase tracking-wider">Total Settlement</span>
+                  <span className="text-[10px] text-purple-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                </div>
+                <span className="font-mono font-extrabold text-purple-950 text-base block">
+                  {inspMetrics.totalYearSettlementsCount} Count
+                </span>
+                <span className="text-xs text-purple-800 font-medium mt-0.5 block">
+                  MR Settlements
+                </span>
+              </div>
+            </div>
+
+            {/* Month Cards Grid */}
+            {inspMetrics.monthInspectionSummaries.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
+                {inspMetrics.monthInspectionSummaries.map((m) => (
+                  <div
+                    key={`insp-${m.year}-${m.monthIndex}`}
+                    onClick={() => handleOpenInspectionModal({
+                      title: `Inspection Summary: ${m.monthName} ${m.year}`,
+                      subtitle: `${m.totalInspections} MRs inspected • ${m.inspectionCount} Inspections • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
+                      inspections: m.inspections,
+                      payments: m.payments,
+                      settlements: m.settlements
+                    })}
+                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
+                    title={`Click to view ${m.monthName} ${m.year} inspection, quality, payment, and settlement details`}
+                  >
+                    <div>
+                      {/* Card Header: Month Name + Year */}
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-700 shrink-0"></span>
+                          <span>{m.monthName}</span>
+                          <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
+                        </h3>
+                      </div>
+
+                      {/* 1. MR (Just MR) */}
+                      <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
+                        <span className="font-mono font-extrabold text-[#1E331B] text-xs">
+                          {m.totalInspections}
+                        </span>
+                      </div>
+
+                      {/* 2. INSP */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
+                        <div className="flex items-center gap-1 font-mono font-extrabold text-blue-900 text-xs">
+                          <span>{m.inspectionCount}</span>
+                          {m.millInspectionCount > 0 && (
+                            <span className="text-[9.5px] font-normal text-slate-500 font-sans" title="Mill Inspections">
+                              (Mill: {m.millInspectionCount})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 3. Paym */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">Paym:</span>
+                        <span className="font-mono font-extrabold text-emerald-800 text-xs">
+                          {m.paymentCount}
+                        </span>
+                      </div>
+
+                      {/* 4. Sett */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">Sett:</span>
+                        <span className="font-mono font-extrabold text-purple-800 text-xs">
+                          {m.settlementCount}
+                        </span>
+                      </div>
+
+                      {/* 5. Moisture */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
+                        <div className="flex items-center gap-1 font-mono text-xs">
+                          <span className={cn(
+                            "font-extrabold",
+                            m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
+                          )}>
+                            {m.avgMoisture}%
+                          </span>
+                          {m.avgClaimMoisture > 0 && (
+                            <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Moisture: ${m.avgClaimMoisture}%`}>
+                              (Clm {m.avgClaimMoisture}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 6. Grade Down */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
+                        <div className="flex items-center gap-1 font-mono text-xs">
+                          <span className="font-extrabold text-[#1E331B]">
+                            {m.avgGradeDown}%
+                          </span>
+                          {m.avgClaimGradeDown > 0 && (
+                            <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Grade Down: ${m.avgClaimGradeDown}%`}>
+                              (Clm {m.avgClaimGradeDown}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 7. Premium */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
+                          <span>⚡</span> Premium:
+                        </span>
+                        <div className="flex items-center gap-1 font-mono text-xs">
+                          {m.premiumLotsCount > 0 ? (
+                            <div className="text-right">
+                              <span className="font-extrabold text-amber-900">{m.premiumLotsCount} MR</span>
+                              {m.premiumTotalSum > 0 ? (
+                                <span className="text-[9.5px] text-amber-800 font-bold block">
+                                  ₹{formatIndianCurrency(m.premiumTotalSum)}
+                                </span>
+                              ) : (m.avgPremiumRate > 0 ? (
+                                <span className="text-[9px] text-amber-700 font-normal block">
+                                  @{m.avgPremiumRate}/Q
+                                </span>
+                              ) : null)}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 font-normal">-</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9px] font-bold text-[#1E331B] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+                      <span>View Details</span>
+                      <span className="text-[10px]">→</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-[#D6CAA8] rounded-xl p-6 text-center text-[#5A6E54]">
+                <p className="text-sm font-semibold">No inspection or moisture data found for year {activeYear}.</p>
+                <p className="text-xs text-[#5A6E54]/80 mt-0.5">Records logged in Material Inspection module will automatically display here.</p>
+              </div>
+            )}
+          </>
         )}
 
       </div>
