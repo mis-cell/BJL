@@ -166,6 +166,13 @@ export interface MonthInspectionSummary {
   totalInspections: number;
   totalWeightMt: number;
   
+  // Specific Operational Counts
+  inspectionCount: number;
+  materialInspectionCount: number;
+  millInspectionCount: number;
+  paymentCount: number;
+  settlementCount: number;
+  
   // Averages & Totals
   avgMoisture: number;
   avgClaimMoisture: number;
@@ -186,17 +193,22 @@ export interface MonthInspectionSummary {
   lotsWithMoistureClaim: number;
   lotsWithQualityClaim: number;
   inspections: InspectionRecord[];
+  payments: any[];
+  settlements: any[];
 }
 
 export interface ComputeInspectionMetricsParams {
   inspections?: any[];
   inspectionDetails?: any[];
+  materialInspections?: any[];
+  millInspections?: any[];
   arrivals?: any[];
   saudaCheckPoints?: any[];
   saudaCheckPointDetails?: any[];
   paymentRecords?: any[];
   paymentDetails?: any[];
   pos?: any[];
+  settlements?: any[];
   selectedYear?: number;
 }
 
@@ -205,6 +217,11 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   allInspections: InspectionRecord[];
   totalInspectionsCount: number;
   totalInspectedWeightMt: number;
+  totalYearInspectionsCount: number;
+  totalMaterialInspectionsCount: number;
+  totalMillInspectionsCount: number;
+  totalYearPaymentsCount: number;
+  totalYearSettlementsCount: number;
   overallAvgMoisture: number;
   overallAvgClaimMoisture: number;
   overallAvgDust: number;
@@ -222,12 +239,15 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   const { 
     inspections = [], 
     inspectionDetails = [],
+    materialInspections = [],
+    millInspections = [],
     arrivals = [], 
     saudaCheckPoints = [],
     saudaCheckPointDetails = [],
     paymentRecords = [],
     paymentDetails = [],
     pos = [], 
+    settlements = [],
     selectedYear 
   } = params;
 
@@ -343,7 +363,26 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   // Build a consolidated map of inspection records by MR No ONLY
   const mapByMr = new Map<string, any>();
 
-  // 1. Process explicit material_inspection / mill_inspection_master records
+  // 1. Process material_inspection records
+  materialInspections.forEach((item, idx) => {
+    const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.amad_no || item.id || `MI-${idx}`;
+    const mr = normalizePoRef(rawMr);
+    if (!mr) return;
+    const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
+    mapByMr.set(mr, { ...arr, ...item, inspection_source: 'material' });
+  });
+
+  // 2. Process mill_inspection_master records
+  millInspections.forEach((item, idx) => {
+    const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.amad_no || item.id || `MIM-${idx}`;
+    const mr = normalizePoRef(rawMr);
+    if (!mr) return;
+    const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
+    const existing = mapByMr.get(mr);
+    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: 'mill', is_mill: true });
+  });
+
+  // 3. Process generic inspection records
   inspections.forEach((item, idx) => {
     const rawMr = item.mr_no || item.arrival_no || item.temporary_arrival_no || item.amad_no || item.id || `MR-${idx}`;
     const mr = normalizePoRef(rawMr);
@@ -351,15 +390,17 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     
     // Enrich with arrival data if available
     const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
-    mapByMr.set(mr, { ...arr, ...item, source: 'inspection' });
+    const isMill = item.inspection_source === 'mill' || item.is_mill || Boolean(item.mill_code) || Boolean(item.mill_name);
+    const existing = mapByMr.get(mr);
+    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: existing?.inspection_source || (isMill ? 'mill' : 'material') });
   });
 
-  // 2. Also register any arrivals that have an MR No if not already in the map
+  // 4. Also register any arrivals that have an MR No if not already in the map
   arrivals.forEach((item, idx) => {
     if (item.mr_no || item.amad_no) {
       const mr = normalizePoRef(item.mr_no || item.amad_no || `ARR-${idx}`);
       if (mr && !mapByMr.has(mr)) {
-        mapByMr.set(mr, { ...item, source: 'arrival' });
+        mapByMr.set(mr, { ...item, source: 'arrival', inspection_source: 'material' });
       }
     }
   });
@@ -652,10 +693,73 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
   const yearInspections = parsedInspections.filter(r => r.year === activeYear);
 
+  // 1. Index payments for activeYear by month
+  const paymentsByMonth = new Map<number, any[]>();
+  // 2. Index settlements for activeYear by month
+  const settlementsByMonth = new Map<number, any[]>();
+
+  for (let m = 0; m < 12; m++) {
+    paymentsByMonth.set(m, []);
+    settlementsByMonth.set(m, []);
+  }
+
+  // Pre-index MRs from year inspections to map their month
+  const mrToMonthMap = new Map<string, number>();
+  yearInspections.forEach(r => {
+    if (r.cleanMrNo) mrToMonthMap.set(r.cleanMrNo, r.month);
+    if (r.mrNo) mrToMonthMap.set(normalizePoRef(r.mrNo), r.month);
+  });
+
+  // Assign payments
+  let totalYearPayments = 0;
+  paymentRecords.forEach(p => {
+    const rawDate = p.payment_date || p.date || p.created_at || p.arrival_date || p.sett_date;
+    const { year: pYear, month: pMonth } = parseRecordDate(rawDate);
+    const mrKey = normalizePoRef(p.mr_no || p.arrival_no || '');
+    const linkedMonth = mrKey ? mrToMonthMap.get(mrKey) : undefined;
+    
+    const isYearMatch = pYear === activeYear;
+    const hasLinkedMonth = linkedMonth !== undefined;
+    
+    if (isYearMatch || hasLinkedMonth || (availableYears.length === 1 && !pYear)) {
+      totalYearPayments++;
+      const targetMonth = isYearMatch ? pMonth : (hasLinkedMonth ? linkedMonth : pMonth);
+      if (targetMonth >= 0 && targetMonth < 12) {
+        paymentsByMonth.get(targetMonth)?.push(p);
+      }
+    }
+  });
+
+  // Assign settlements
+  let totalYearSettlements = 0;
+  settlements.forEach(s => {
+    const rawDate = s.audit_date || s.sett_date || s.date || s.created_at || s.bill_date;
+    const { year: sYear, month: sMonth } = parseRecordDate(rawDate);
+    const mrKey = normalizePoRef(s.mr_no || s.arrival_no || '');
+    const linkedMonth = mrKey ? mrToMonthMap.get(mrKey) : undefined;
+
+    const isYearMatch = sYear === activeYear;
+    const hasLinkedMonth = linkedMonth !== undefined;
+
+    if (isYearMatch || hasLinkedMonth || (availableYears.length === 1 && !sYear)) {
+      totalYearSettlements++;
+      const targetMonth = isYearMatch ? sMonth : (hasLinkedMonth ? linkedMonth : sMonth);
+      if (targetMonth >= 0 && targetMonth < 12) {
+        settlementsByMonth.get(targetMonth)?.push(s);
+      }
+    }
+  });
+
+  const effectiveYearPayments = totalYearPayments > 0 ? totalYearPayments : paymentRecords.length;
+  const effectiveYearSettlements = totalYearSettlements > 0 ? totalYearSettlements : settlements.length;
+
   // Group by Month (0 to 11)
   const monthInspectionSummaries: MonthInspectionSummary[] = Array.from({ length: 12 }, (_, mIdx) => {
     const list = yearInspections.filter(r => r.month === mIdx);
-    if (list.length === 0) return null;
+    const monthPayments = paymentsByMonth.get(mIdx) || [];
+    const monthSettlements = settlementsByMonth.get(mIdx) || [];
+
+    if (list.length === 0 && monthPayments.length === 0 && monthSettlements.length === 0) return null;
 
     let totWt = 0;
     let moistSum = 0;
@@ -708,12 +812,20 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const avgGradeDown = gradeDownCount > 0 ? Number((gradeDownSum / gradeDownCount).toFixed(1)) : 0;
     const avgClaimGradeDown = claimGradeDownCount > 0 ? Number((claimGradeDownSum / claimGradeDownCount).toFixed(1)) : 0;
 
+    const matCount = list.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
+    const millCount = list.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
+
     return {
       monthIndex: mIdx,
       monthName: MONTH_NAMES[mIdx] || `Month ${mIdx + 1}`,
       year: activeYear,
       totalInspections: list.length,
       totalWeightMt: Number(totWt.toFixed(2)),
+      inspectionCount: list.length,
+      materialInspectionCount: matCount,
+      millInspectionCount: millCount,
+      paymentCount: monthPayments.length,
+      settlementCount: monthSettlements.length,
       avgMoisture,
       avgClaimMoisture,
       avgDust,
@@ -728,7 +840,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       totalClaimAmount: Number(totClaim.toFixed(2)),
       lotsWithMoistureClaim: moistClaimLots,
       lotsWithQualityClaim: qualClaimLots,
-      inspections: list
+      inspections: list,
+      payments: monthPayments,
+      settlements: monthSettlements
     };
   }).filter((m): m is MonthInspectionSummary => m !== null);
 
@@ -771,6 +885,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   const yearGradeDownCount = yearInspections.filter(r => r.actualGradeDown > 0).length;
   const yearClaimGradeDownCount = yearInspections.filter(r => r.claimGradeDown > 0).length;
 
+  const totalMaterialCount = yearInspections.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
+  const totalMillCount = yearInspections.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
+
   const overallAvgMoisture = yearMoistCount > 0 ? Number((totalMoistSum / yearMoistCount).toFixed(1)) : 0;
   const overallAvgClaimMoisture = yearClaimMoistCount > 0 ? Number((totalClaimMoistSum / yearClaimMoistCount).toFixed(1)) : 0;
   const overallAvgDust = yearDustCount > 0 ? Number((totalDustSum / yearDustCount).toFixed(1)) : 0;
@@ -784,6 +901,11 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     allInspections: yearInspections,
     totalInspectionsCount,
     totalInspectedWeightMt: Number(totalInspectedWeightMt.toFixed(2)),
+    totalYearInspectionsCount: totalInspectionsCount,
+    totalMaterialInspectionsCount: totalMaterialCount,
+    totalMillInspectionsCount: totalMillCount,
+    totalYearPaymentsCount: effectiveYearPayments,
+    totalYearSettlementsCount: effectiveYearSettlements,
     overallAvgMoisture,
     overallAvgClaimMoisture,
     overallAvgDust,

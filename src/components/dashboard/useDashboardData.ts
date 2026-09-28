@@ -89,7 +89,10 @@ export function useDashboardData(isActive: boolean = true) {
   });
 
   const [inspectionMasters, setInspectionMasters] = React.useState<any[]>([]);
+  const [materialInspections, setMaterialInspections] = React.useState<any[]>([]);
+  const [millInspections, setMillInspections] = React.useState<any[]>([]);
   const [inspectionDetails, setInspectionDetails] = React.useState<any[]>([]);
+  const [rawSettlements, setRawSettlements] = React.useState<any[]>([]);
   const [stockNodeStocks, setStockNodeStocks] = React.useState<any[]>([]);
   const [millIssueMasters, setMillIssueMasters] = React.useState<any[]>([]);
   const [millIssueDetails, setMillIssueDetails] = React.useState<any[]>([]);
@@ -296,7 +299,9 @@ export function useDashboardData(isActive: boolean = true) {
         })()
       ]);
 
-      const allMasters = [...(inspRes || []), ...(millInspRes || [])];
+      const taggedMaterial = (inspRes || []).map((m: any) => ({ ...m, inspection_source: 'material' }));
+      const taggedMill = (millInspRes || []).map((m: any) => ({ ...m, inspection_source: 'mill' }));
+      const allMasters = [...taggedMaterial, ...taggedMill];
       const mastersMap = new Map<string, any>();
       allMasters.forEach((m: any, idx: number) => {
         const k = String(m.mr_no || m.id || `M-${idx}`).trim().toUpperCase();
@@ -304,7 +309,9 @@ export function useDashboardData(isActive: boolean = true) {
       });
       const finalInspectionMasters = Array.from(mastersMap.values());
 
-      setInspectionMasters(finalInspectionMasters.length > 0 ? finalInspectionMasters : (inspRes || []));
+      setMaterialInspections(taggedMaterial);
+      setMillInspections(taggedMill);
+      setInspectionMasters(finalInspectionMasters.length > 0 ? finalInspectionMasters : taggedMaterial);
       setInspectionDetails([...(inspDetRes || []), ...(millDetRes || [])]);
       setPaymentDetails(paymentDetailsRes || []);
 
@@ -569,14 +576,18 @@ export function useDashboardData(isActive: boolean = true) {
         }
 
         try {
-          const { data: settledMasters } = await supabase.from('mr_settlement_master').select('mr_no');
-          if (settledMasters) {
+          const { data: settledMasters } = await supabase.from('mr_settlement_master').select('*').order('created_at', { ascending: false });
+          if (settledMasters && settledMasters.length > 0) {
             settledMasters.forEach((s: any) => {
               if (s.mr_no) settledMrNos.add(String(s.mr_no).trim().toUpperCase());
             });
+            setRawSettlements(settledMasters);
+          } else {
+            setRawSettlements(settlements || []);
           }
         } catch (e) {
           console.warn("Error resolving settled MRs:", e);
+          setRawSettlements(settlements || []);
         }
 
         try {
@@ -847,7 +858,10 @@ export function useDashboardData(isActive: boolean = true) {
     paymentDetails,
     recentAmad,
     inspectionMasters,
+    materialInspections,
+    millInspections,
     inspectionDetails,
+    rawSettlements,
     millIssueMasters,
     millIssueDetails,
     allOpeningStocks,

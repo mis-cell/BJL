@@ -16,6 +16,8 @@ interface InspectionDrilldownModalProps {
   title: string;
   subtitle?: string;
   inspections: InspectionRecord[];
+  payments?: any[];
+  settlements?: any[];
 }
 
 export default function InspectionDrilldownModal({
@@ -23,8 +25,11 @@ export default function InspectionDrilldownModal({
   onClose,
   title,
   subtitle,
-  inspections = []
+  inspections = [],
+  payments = [],
+  settlements = []
 }: InspectionDrilldownModalProps) {
+  const [activeTab, setActiveTab] = useState<'inspections' | 'payments' | 'settlements'>('inspections');
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('ALL');
   const [moistureFilter, setMoistureFilter] = useState<'ALL' | 'NORMAL' | 'HIGH'>('ALL');
@@ -124,10 +129,43 @@ export default function InspectionDrilldownModal({
     };
   }, [filteredRecords]);
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  // Filtered Payments
+  const filteredPayments = useMemo(() => {
+    if (!payments || payments.length === 0) return [];
+    if (!searchTerm) return payments;
+    const q = searchTerm.toLowerCase();
+    return payments.filter(p => {
+      const vNo = String(p.voucher_no || p.payment_no || '').toLowerCase();
+      const mrNo = String(p.mr_no || p.arrival_no || '').toLowerCase();
+      const poNo = String(p.po_no || '').toLowerCase();
+      const supp = String(p.supplier_name || p.supplier || '').toLowerCase();
+      const brok = String(p.broker_name || p.broker || '').toLowerCase();
+      return vNo.includes(q) || mrNo.includes(q) || poNo.includes(q) || supp.includes(q) || brok.includes(q);
+    });
+  }, [payments, searchTerm]);
+
+  // Filtered Settlements
+  const filteredSettlements = useMemo(() => {
+    if (!settlements || settlements.length === 0) return [];
+    if (!searchTerm) return settlements;
+    const q = searchTerm.toLowerCase();
+    return settlements.filter(s => {
+      const mrNo = String(s.mr_no || s.arrival_no || '').toLowerCase();
+      const poNo = String(s.po_no || '').toLowerCase();
+      const supp = String(s.supplier_name || s.supplier || '').toLowerCase();
+      const brok = String(s.broker_name || s.broker || '').toLowerCase();
+      return mrNo.includes(q) || poNo.includes(q) || supp.includes(q) || brok.includes(q);
+    });
+  }, [settlements, searchTerm]);
+
+  // Active dataset size and pagination
+  const activeCount = activeTab === 'inspections' ? filteredRecords.length : (activeTab === 'payments' ? filteredPayments.length : filteredSettlements.length);
+  const totalPages = Math.max(1, Math.ceil(activeCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedRows = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const paginatedInspections = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paginatedPayments = filteredPayments.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paginatedSettlements = filteredSettlements.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // Export CSV
   const handleExportCsv = () => {
@@ -220,18 +258,20 @@ export default function InspectionDrilldownModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCsv}
-              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Download filtered records as CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export CSV</span>
-            </button>
+            {activeTab === 'inspections' && (
+              <button
+                onClick={handleExportCsv}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Download filtered records as CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Export CSV</span>
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Print Inspection Report"
+              title="Print Report"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Print</span>
@@ -246,52 +286,167 @@ export default function InspectionDrilldownModal({
           </div>
         </div>
 
-        {/* Aggregate KPI Ribbon */}
-        <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0 text-xs font-sans">
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">MR Inspected</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">{filteredStats.count} MR</span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Weight</span>
-            <span className="font-mono font-extrabold text-emerald-900 text-xs sm:text-sm">
-              {filteredStats.totalWt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
-            </span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Moisture % & Claim</span>
+        {/* Section Navigation Tabs: Inspections, Payments, Settlements */}
+        <div className="bg-[#1E331B] px-4 pt-1 pb-0 flex items-center gap-2 border-b border-emerald-900/60 shrink-0">
+          <button
+            onClick={() => { setActiveTab('inspections'); setCurrentPage(1); }}
+            className={cn(
+              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              activeTab === 'inspections'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span>Inspections</span>
             <span className={cn(
-              "font-mono font-bold text-[11px] block truncate",
-              filteredStats.avgMoist <= 15 ? "text-emerald-800" : "text-amber-800"
+              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              activeTab === 'inspections' ? "bg-blue-100 text-blue-900 font-bold" : "bg-white/20 text-white"
             )}>
-              {filteredStats.avgMoist.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimMoist.toFixed(1)}%)</span>
+              {inspections.length}
             </span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Dust % & Claim</span>
-            <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
-              {filteredStats.avgDust.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimDust.toFixed(1)}%)</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('payments'); setCurrentPage(1); }}
+            className={cn(
+              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              activeTab === 'payments'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span>Payments</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              activeTab === 'payments' ? "bg-emerald-100 text-emerald-900 font-bold" : "bg-white/20 text-white"
+            )}>
+              {payments.length}
             </span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Grade Down %</span>
-            <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
-              {filteredStats.avgGradeDown.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimGradeDown.toFixed(1)}%)</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('settlements'); setCurrentPage(1); }}
+            className={cn(
+              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              activeTab === 'settlements'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span>Settlements</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              activeTab === 'settlements' ? "bg-purple-100 text-purple-900 font-bold" : "bg-white/20 text-white"
+            )}>
+              {settlements.length}
             </span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Chotta & HB</span>
-            <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">
-              {filteredStats.totalChottaHbKg.toLocaleString('en-IN', { minimumFractionDigits: 0 })} Kg
-            </span>
-          </div>
-          <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-            <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Claims</span>
-            <span className="font-mono font-extrabold text-rose-800 text-xs sm:text-sm">
-              ₹{formatIndianCurrency(filteredStats.totalClaim)}
-            </span>
-          </div>
+          </button>
         </div>
+
+        {/* Aggregate KPI Ribbon - INSPECTIONS */}
+        {activeTab === 'inspections' && (
+          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0 text-xs font-sans">
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">MR Inspected</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">{filteredStats.count} MR</span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Weight</span>
+              <span className="font-mono font-extrabold text-emerald-900 text-xs sm:text-sm">
+                {filteredStats.totalWt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Moisture % & Claim</span>
+              <span className={cn(
+                "font-mono font-bold text-[11px] block truncate",
+                filteredStats.avgMoist <= 15 ? "text-emerald-800" : "text-amber-800"
+              )}>
+                {filteredStats.avgMoist.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimMoist.toFixed(1)}%)</span>
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Dust % & Claim</span>
+              <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
+                {filteredStats.avgDust.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimDust.toFixed(1)}%)</span>
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Grade Down %</span>
+              <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
+                {filteredStats.avgGradeDown.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimGradeDown.toFixed(1)}%)</span>
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Chotta & HB</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">
+                {filteredStats.totalChottaHbKg.toLocaleString('en-IN', { minimumFractionDigits: 0 })} Kg
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Claims</span>
+              <span className="font-mono font-extrabold text-rose-800 text-xs sm:text-sm">
+                ₹{formatIndianCurrency(filteredStats.totalClaim)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Aggregate KPI Ribbon - PAYMENTS */}
+        {activeTab === 'payments' && (
+          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans">
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Payments</span>
+              <span className="font-mono font-extrabold text-emerald-900 text-base">{filteredPayments.length}</span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Paid Value</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-base">
+                ₹{formatIndianCurrency(filteredPayments.reduce((acc, p) => acc + (Number(p.net_payable_amount || p.amount || p.total_amount || 0)), 0))}
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct Suppliers</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-base">
+                {new Set(filteredPayments.map(p => p.supplier_name || p.supplier).filter(Boolean)).size}
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct Brokers</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-base">
+                {new Set(filteredPayments.map(p => p.broker_name || p.broker).filter(Boolean)).size}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Aggregate KPI Ribbon - SETTLEMENTS */}
+        {activeTab === 'settlements' && (
+          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans">
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settlements</span>
+              <span className="font-mono font-extrabold text-purple-900 text-base">{filteredSettlements.length}</span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settled Weight</span>
+              <span className="font-mono font-extrabold text-emerald-900 text-base">
+                {filteredSettlements.reduce((acc, s) => acc + (Number(s.electronic_scale_net || s.quantity || s.weight || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settled Value</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-base">
+                ₹{formatIndianCurrency(filteredSettlements.reduce((acc, s) => acc + (Number(s.net_payable_amount || s.amount || s.total_value || 0)), 0))}
+              </span>
+            </div>
+            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct MRs</span>
+              <span className="font-mono font-extrabold text-[#1E331B] text-base">
+                {new Set(filteredSettlements.map(s => s.mr_no || s.arrival_no).filter(Boolean)).size}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Filter Controls Bar */}
         <div className="p-3 bg-[#FAF7F0] border-b border-[#D6CAA8] flex flex-wrap items-center justify-between gap-2.5 shrink-0">
@@ -300,218 +455,315 @@ export default function InspectionDrilldownModal({
             <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
             <input
               type="text"
-              placeholder="Search MR No, PO, supplier, broker, vehicle, grade, premium..."
+              placeholder={activeTab === 'inspections' ? "Search MR No, PO, supplier, broker, vehicle, grade, premium..." : (activeTab === 'payments' ? "Search Voucher No, MR No, PO, supplier, broker..." : "Search MR No, PO, supplier, broker...")}
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="h-8 pl-8 pr-3 bg-white border border-[#D6CAA8] rounded-xl text-xs text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B] w-full shadow-2xs"
             />
           </div>
 
-          {/* Quick Filter Buttons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Moisture Filter */}
-            <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-              <button
-                onClick={() => { setMoistureFilter('ALL'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-              >
-                All Moist.
-              </button>
-              <button
-                onClick={() => { setMoistureFilter('NORMAL'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'NORMAL' ? "bg-emerald-700 text-white" : "text-slate-600 hover:text-emerald-800")}
-              >
-                ≤ 15%
-              </button>
-              <button
-                onClick={() => { setMoistureFilter('HIGH'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'HIGH' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
-              >
-                &gt; 15% High
-              </button>
-            </div>
+          {/* Quick Filter Buttons - only for Inspections */}
+          {activeTab === 'inspections' && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Moisture Filter */}
+              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
+                <button
+                  onClick={() => { setMoistureFilter('ALL'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
+                >
+                  All Moist.
+                </button>
+                <button
+                  onClick={() => { setMoistureFilter('NORMAL'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'NORMAL' ? "bg-emerald-700 text-white" : "text-slate-600 hover:text-emerald-800")}
+                >
+                  ≤ 15%
+                </button>
+                <button
+                  onClick={() => { setMoistureFilter('HIGH'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'HIGH' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
+                >
+                  &gt; 15% High
+                </button>
+              </div>
 
-            {/* Claim Filter */}
-            <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-              <button
-                onClick={() => { setClaimFilter('ALL'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-              >
-                All Claims
-              </button>
-              <button
-                onClick={() => { setClaimFilter('WITH_CLAIM'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'WITH_CLAIM' ? "bg-rose-700 text-white" : "text-slate-600 hover:text-rose-800")}
-              >
-                With Claims
-              </button>
-            </div>
+              {/* Claim Filter */}
+              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
+                <button
+                  onClick={() => { setClaimFilter('ALL'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
+                >
+                  All Claims
+                </button>
+                <button
+                  onClick={() => { setClaimFilter('WITH_CLAIM'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'WITH_CLAIM' ? "bg-rose-700 text-white" : "text-slate-600 hover:text-rose-800")}
+                >
+                  With Claims
+                </button>
+              </div>
 
-            {/* Premium Filter (Sauda Check Point) */}
-            <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-              <button
-                onClick={() => { setPremiumFilter('ALL'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", premiumFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-              >
-                All MR
-              </button>
-              <button
-                onClick={() => { setPremiumFilter('PREMIUM_ONLY'); setCurrentPage(1); }}
-                className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1", premiumFilter === 'PREMIUM_ONLY' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
-              >
-                <Zap className="w-2.5 h-2.5" />
-                <span>Premium Only (SCP)</span>
-              </button>
+              {/* Premium Filter (Sauda Check Point) */}
+              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
+                <button
+                  onClick={() => { setPremiumFilter('ALL'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", premiumFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
+                >
+                  All MR
+                </button>
+                <button
+                  onClick={() => { setPremiumFilter('PREMIUM_ONLY'); setCurrentPage(1); }}
+                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1", premiumFilter === 'PREMIUM_ONLY' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
+                >
+                  <Zap className="w-2.5 h-2.5" />
+                  <span>Premium Only (SCP)</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Table Content */}
         <div className="flex-1 overflow-auto p-3 sm:p-4">
-          <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
-              <thead>
-                <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
-                  <th className="p-2.5 font-bold">MR No</th>
-                  <th className="p-2.5 font-bold">Date</th>
-                  <th className="p-2.5 font-bold">Sauda / PO</th>
-                  <th className="p-2.5 font-bold">Supplier & Broker</th>
-                  <th className="p-2.5 font-bold">Grade & Wt (MT)</th>
-                  <th className="p-2.5 font-bold text-center">Moisture % (Act/Clm)</th>
-                  <th className="p-2.5 font-bold text-center">Dust % (Act/Clm)</th>
-                  <th className="p-2.5 font-bold text-center">Grade Down %</th>
-                  <th className="p-2.5 font-bold text-center">Chotta & Habi Jabi</th>
-                  <th className="p-2.5 font-bold text-center bg-amber-50/70 border-x border-amber-200">
-                    Premium <span className="text-[8.5px] font-normal text-amber-900 block">(Sauda Check Point)</span>
-                  </th>
-                  <th className="p-2.5 font-bold text-right">Total Claims (₹)</th>
-                  <th className="p-2.5 font-bold text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F2EDE0] font-sans">
-                {paginatedRows.length > 0 ? (
-                  paginatedRows.map((r, idx) => (
-                    <tr key={r.id || `insp-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                      {/* MR No */}
-                      <td className="p-2.5 font-mono font-bold text-[#1E331B]">
-                        {r.mrNo}
-                      </td>
-                      {/* Date */}
-                      <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">
-                        {r.date}
-                      </td>
-                      {/* PO / Contract */}
-                      <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">
-                        {r.poNo || '---'}
-                      </td>
-                      {/* Supplier & Broker */}
-                      <td className="p-2.5">
-                        <div className="font-bold text-[#1E331B] text-[11.5px]">{r.supplier}</div>
-                        <div className="text-[10px] text-slate-500 font-sans">{r.broker}</div>
-                      </td>
-                      {/* Grade & Weight */}
-                      <td className="p-2.5">
-                        <span className="font-bold text-emerald-900 font-mono text-[11px] block">{r.juteGrade}</span>
-                        <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">{r.weightMt.toFixed(3)} MT</span>
-                      </td>
-                      
-                      {/* Moisture % (Act & Claim) */}
-                      <td className="p-2.5 text-center font-mono">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded font-bold text-[10px]",
-                            r.actualMoisture <= 15 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900 border border-amber-300"
-                          )}>
-                            {r.actualMoisture.toFixed(1)}%
-                          </span>
-                          {r.claimMoisture > 0 && (
-                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                              Clm: {r.claimMoisture.toFixed(1)}%
+          {activeTab === 'inspections' && (
+            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
+                <thead>
+                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
+                    <th className="p-2.5 font-bold">MR No</th>
+                    <th className="p-2.5 font-bold">Date</th>
+                    <th className="p-2.5 font-bold">Sauda / PO</th>
+                    <th className="p-2.5 font-bold">Supplier & Broker</th>
+                    <th className="p-2.5 font-bold">Grade & Wt (MT)</th>
+                    <th className="p-2.5 font-bold text-center">Moisture % (Act/Clm)</th>
+                    <th className="p-2.5 font-bold text-center">Dust % (Act/Clm)</th>
+                    <th className="p-2.5 font-bold text-center">Grade Down %</th>
+                    <th className="p-2.5 font-bold text-center">Chotta & Habi Jabi</th>
+                    <th className="p-2.5 font-bold text-center bg-amber-50/70 border-x border-amber-200">
+                      Premium <span className="text-[8.5px] font-normal text-amber-900 block">(Sauda Check Point)</span>
+                    </th>
+                    <th className="p-2.5 font-bold text-right">Total Claims (₹)</th>
+                    <th className="p-2.5 font-bold text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F2EDE0] font-sans">
+                  {paginatedInspections.length > 0 ? (
+                    paginatedInspections.map((r, idx) => (
+                      <tr key={r.id || `insp-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
+                        <td className="p-2.5 font-mono font-bold text-[#1E331B]">{r.mrNo}</td>
+                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">{r.date}</td>
+                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">{r.poNo || '---'}</td>
+                        <td className="p-2.5">
+                          <div className="font-bold text-[#1E331B] text-[11.5px]">{r.supplier}</div>
+                          <div className="text-[10px] text-slate-500 font-sans">{r.broker}</div>
+                        </td>
+                        <td className="p-2.5">
+                          <span className="font-bold text-emerald-900 font-mono text-[11px] block">{r.juteGrade}</span>
+                          <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">{r.weightMt.toFixed(3)} MT</span>
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded font-bold text-[10px]",
+                              r.actualMoisture <= 15 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900 border border-amber-300"
+                            )}>
+                              {r.actualMoisture.toFixed(1)}%
                             </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Dust % (Act & Claim) */}
-                      <td className="p-2.5 text-center font-mono">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
-                            {r.actualDust.toFixed(1)}%
-                          </span>
-                          {r.claimDust > 0 && (
-                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                              Clm: {r.claimDust.toFixed(1)}%
+                            {r.claimMoisture > 0 && (
+                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
+                                Clm: {r.claimMoisture.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
+                              {r.actualDust.toFixed(1)}%
                             </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Grade Down % (Act & Claim) */}
-                      <td className="p-2.5 text-center font-mono">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
-                            {r.actualGradeDown.toFixed(1)}%
-                          </span>
-                          {r.claimGradeDown > 0 && (
-                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                              Clm: {r.claimGradeDown.toFixed(1)}%
+                            {r.claimDust > 0 && (
+                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
+                                Clm: {r.claimDust.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-center font-mono">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
+                              {r.actualGradeDown.toFixed(1)}%
                             </span>
+                            {r.claimGradeDown > 0 && (
+                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
+                                Clm: {r.claimGradeDown.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-center font-mono text-[11px]">
+                          {r.totalChottaHabijabiKg > 0 ? (
+                            <span className="px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                              {r.totalChottaHabijabiKg} Kg
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">0 Kg</span>
                           )}
-                        </div>
-                      </td>
-
-                      {/* Chotta & Habi Jabi */}
-                      <td className="p-2.5 text-center font-mono text-[11px]">
-                        {r.totalChottaHabijabiKg > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                            {r.totalChottaHabijabiKg} Kg
+                        </td>
+                        <td className="p-2.5 text-center font-mono bg-amber-50/40 border-x border-amber-200">
+                          {r.isPremium || (r.premium && r.premium !== "No" && r.premium !== "-") ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10.5px] bg-amber-100 text-amber-950 border border-amber-400 shadow-2xs">
+                              <Zap className="w-2.5 h-2.5 text-amber-700" />
+                              <span>{r.premium || 'Yes'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-[10px]">No Premium</span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-extrabold text-rose-800">
+                          {r.totalClaimAmount > 0 ? `₹${formatIndianCurrency(r.totalClaimAmount)}` : '₹0'}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
+                            {r.status || 'Audited'}
                           </span>
-                        ) : (
-                          <span className="text-slate-400">0 Kg</span>
-                        )}
-                      </td>
-
-                      {/* Premium (ONLY FROM SAUDA CHECK POINT) */}
-                      <td className="p-2.5 text-center font-mono bg-amber-50/40 border-x border-amber-200">
-                        {r.isPremium || (r.premium && r.premium !== "No" && r.premium !== "-") ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10.5px] bg-amber-100 text-amber-950 border border-amber-400 shadow-2xs">
-                            <Zap className="w-2.5 h-2.5 text-amber-700" />
-                            <span>{r.premium || 'Yes'}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-[10px]">No Premium</span>
-                        )}
-                      </td>
-
-                      {/* Total Claims (₹) */}
-                      <td className="p-2.5 text-right font-mono font-extrabold text-rose-800">
-                        {r.totalClaimAmount > 0 ? `₹${formatIndianCurrency(r.totalClaimAmount)}` : '₹0'}
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-2.5 text-center">
-                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
-                          {r.status || 'Audited'}
-                        </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={12} className="p-8 text-center text-slate-500 italic">
+                        No matching Inspection records found.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={12} className="p-8 text-center text-slate-500 italic">
-                      No matching Mill Inspection Information Entry records found.
-                    </td>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+                <thead>
+                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
+                    <th className="p-2.5 font-bold">Voucher No</th>
+                    <th className="p-2.5 font-bold">Date</th>
+                    <th className="p-2.5 font-bold">MR / Arrival</th>
+                    <th className="p-2.5 font-bold">PO No</th>
+                    <th className="p-2.5 font-bold">Supplier</th>
+                    <th className="p-2.5 font-bold">Broker</th>
+                    <th className="p-2.5 font-bold text-right">Amount (₹)</th>
+                    <th className="p-2.5 font-bold text-center">Status</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[#F2EDE0] font-sans">
+                  {paginatedPayments.length > 0 ? (
+                    paginatedPayments.map((p, idx) => (
+                      <tr key={p.id || `pay-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
+                        <td className="p-2.5 font-mono font-bold text-emerald-900">
+                          {p.voucher_no || p.payment_no || `VCH-${idx + 1}`}
+                        </td>
+                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">
+                          {p.payment_date || p.date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '---')}
+                        </td>
+                        <td className="p-2.5 font-mono text-[11px] text-[#1E331B] font-bold">
+                          {p.mr_no || p.arrival_no || '---'}
+                        </td>
+                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">
+                          {p.po_no || '---'}
+                        </td>
+                        <td className="p-2.5 font-bold text-[#1E331B] text-[11.5px]">
+                          {p.supplier_name || p.supplier || 'DIRECT'}
+                        </td>
+                        <td className="p-2.5 text-slate-600 text-[11px]">
+                          {p.broker_name || p.broker || 'DIRECT'}
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-extrabold text-emerald-800">
+                          ₹{formatIndianCurrency(Number(p.net_payable_amount || p.amount || p.total_amount || 0))}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
+                            {p.status || p.payment_status || 'Paid'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-500 italic">
+                        No payment records found for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'settlements' && (
+            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+                <thead>
+                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
+                    <th className="p-2.5 font-bold">MR No</th>
+                    <th className="p-2.5 font-bold">Audit Date</th>
+                    <th className="p-2.5 font-bold">PO No</th>
+                    <th className="p-2.5 font-bold">Supplier</th>
+                    <th className="p-2.5 font-bold">Broker</th>
+                    <th className="p-2.5 font-bold text-center">Weight (MT)</th>
+                    <th className="p-2.5 font-bold text-right">Settled Amount (₹)</th>
+                    <th className="p-2.5 font-bold text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F2EDE0] font-sans">
+                  {paginatedSettlements.length > 0 ? (
+                    paginatedSettlements.map((s, idx) => (
+                      <tr key={s.id || `sett-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
+                        <td className="p-2.5 font-mono font-bold text-purple-900">
+                          {s.mr_no || s.arrival_no || `SETT-${idx + 1}`}
+                        </td>
+                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">
+                          {s.audit_date || s.sett_date || s.date || (s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN') : '---')}
+                        </td>
+                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">
+                          {s.po_no || '---'}
+                        </td>
+                        <td className="p-2.5 font-bold text-[#1E331B] text-[11.5px]">
+                          {s.supplier_name || s.supplier || 'DIRECT'}
+                        </td>
+                        <td className="p-2.5 text-slate-600 text-[11px]">
+                          {s.broker_name || s.broker || 'DIRECT'}
+                        </td>
+                        <td className="p-2.5 text-center font-mono font-bold text-[#1E331B]">
+                          {Number(s.electronic_scale_net || s.quantity || s.weight || 0).toFixed(2)} MT
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-extrabold text-[#1E331B]">
+                          ₹{formatIndianCurrency(Number(s.net_payable_amount || s.amount || s.total_value || 0))}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-purple-100 border border-purple-300 text-purple-900">
+                            {s.status || s.payment_status || 'Settled'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-500 italic">
+                        No settlement records found for this period.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer / Pagination */}
         <div className="p-3 bg-[#FAF7F0] border-t border-[#D6CAA8] flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0 text-xs text-slate-600 font-mono">
           <span>
-            Showing page {safePage} of {totalPages} ({filteredRecords.length} records found)
+            Showing page {safePage} of {totalPages} ({activeCount} records found)
           </span>
           <div className="flex items-center gap-2">
             <button

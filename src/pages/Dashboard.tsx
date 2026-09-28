@@ -63,7 +63,10 @@ export default function Dashboard({
     paymentDetails,
     recentAmad,
     inspectionMasters,
+    materialInspections,
+    millInspections,
     inspectionDetails,
+    rawSettlements,
     millIssueMasters,
     millIssueDetails,
     allOpeningStocks,
@@ -201,7 +204,7 @@ export default function Dashboard({
             saudaCheckPointDetails={rawScpDetails}
             traders={[]}
             pos={rawPos}
-            settlements={[]}
+            settlements={rawSettlements}
             godowns={godowns}
             openingStocks={allOpeningStocks.length > 0 ? allOpeningStocks : stockNodeStocks}
             millIssueMasters={millIssueMasters}
@@ -210,6 +213,8 @@ export default function Dashboard({
             paymentRecords={payments}
             paymentDetails={paymentDetails}
             inspections={inspectionMasters}
+            materialInspections={materialInspections}
+            millInspections={millInspections}
             inspectionDetails={inspectionDetails}
             loading={loading}
             onRefresh={loadStats}
