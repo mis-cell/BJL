@@ -16,7 +16,7 @@ export interface BaseRateInfo {
   recordId?: string;
 }
 
-export const DEFAULT_BASE_RATE = 17500;
+export const DEFAULT_BASE_RATE = 0;
 
 // Format helper
 export const formatBaseRateDate = (dateStr?: string | null): string => {

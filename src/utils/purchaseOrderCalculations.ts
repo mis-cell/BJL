@@ -1,174 +1,35 @@
-export interface AreaDifferential {
-  area: string;
-  diffs: Record<string, number>;
-}
+/**
+ * Purchase Order Calculations & Satta Rate Integration
+ * 
+ * ALL Satta Rates for Purchase Orders originate strictly from the Supabase database tables
+ * (satta_base_rates, satta_differentials, satta_calculated_rates).
+ * NO HARDCODED RATES OR FALLBACK DATA.
+ */
 
-export const EXCEL_SEED_DATA: AreaDifferential[] = [
-  {
-    area: "DAISEE",
-    diffs: { TD4: 600, TD5: -300, TD6: -200, TD7: -500, TD8: -1000, "H.BALES": -50, DRUMS: -100 }
-  },
-  {
-    area: "TULSIHATTA",
-    diffs: { TD5: 750, TD6: 350, TD7: -50, TD8: -550 }
-  },
-  {
-    area: "BANGLADESH",
-    diffs: { "BTR HD KS": 2800, "BTR HD CS": 2300, "BTR HD BS": 1800, "BTR NB KS": 800, "BTR NB FFS": 1300, "BTR NB (SMR)": 200 }
-  },
-  {
-    area: "GRP LOOSE",
-    diffs: { TD5: 400, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "L/A TARABARI",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "U/ASSAM",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100, LOOSE: -200 }
-  },
-  {
-    area: "KANKI",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "RAIGANJ",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "DHULIYAAN",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "MALDA",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "BELAKOBA",
-    diffs: { TD4: 200, TD5: 0, TD6: -400, TD7: -900 }
-  },
-  {
-    area: "SONAPATIL",
-    diffs: { TD5: 750, TD6: 350, TD7: -50, TD8: -550 }
-  },
-  {
-    area: "DHUBRI",
-    diffs: { TD4: 700, TD5: 350, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "PURNEA",
-    diffs: { TD5: 450, TD6: 150, TD7: -250, TD8: -750 }
-  },
-  {
-    area: "SAHARSA",
-    diffs: { TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
-  },
-  {
-    area: "SUPAUL",
-    diffs: { TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
-  },
-  {
-    area: "KISHANGANJ",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "ISLAMPUR",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "MADHEPURA",
-    diffs: { TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
-  },
-  {
-    area: "FORBESGANJ",
-    diffs: { TD5: 450, TD6: 150, TD7: -250, TD8: -750 }
-  },
-  {
-    area: "GULABBAGH",
-    diffs: { TD5: 450, TD6: 150, TD7: -250, TD8: -750 }
-  },
-  {
-    area: "KASBA",
-    diffs: { TD5: 450, TD6: 150, TD7: -250, TD8: -750 }
-  },
-  {
-    area: "JALPAIGURI",
-    diffs: { TD4: 200, TD5: 0, TD6: -400, TD7: -900 }
-  },
-  {
-    area: "COOCHBEHAR",
-    diffs: { TD4: 200, TD5: 0, TD6: -400, TD7: -900 }
-  },
-  {
-    area: "DUMDUMA",
-    diffs: { TD4: 2000, TD5: 1600, TD6: 1100, TD7: 500, TD8: 100 }
-  },
-  {
-    area: "N/LAKHIMPUR",
-    diffs: { TD4: 2000, TD5: 1600, TD6: 1100, TD7: 500, TD8: 100 }
-  },
-  {
-    area: "DHEMAJI",
-    diffs: { TD4: 2000, TD5: 1600, TD6: 1100, TD7: 500, TD8: 100 }
-  },
-  {
-    area: "KOKRAJHAR",
-    diffs: { TD4: 700, TD5: 350, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "BONGAIGAON",
-    diffs: { TD4: 700, TD5: 350, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "NAGAON",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "KHARUPETIA",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "BARPETA ROAD",
-    diffs: { TD4: 1000, TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
-  },
-  {
-    area: "MANKACHAR",
-    diffs: { TD4: 500, TD5: 200, TD6: -100, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "AGARTALA",
-    diffs: { TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
-  },
-  {
-    area: "SILCHAR",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "KHARAGPUR",
-    diffs: { TD5: 0, TD6: -400, TD7: -800, TD8: -1300 }
-  },
-  {
-    area: "BAHARAMPUR",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "KRISHNANAGAR",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "KALYANI",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "HABRA",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "BONGAON",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  }
-];
+import {
+  resolveSattaRate,
+  fetchSingleSattaRate,
+  SattaBaseRate,
+  SattaDifferential,
+  SattaCalculatedRate,
+  SattaRateResult,
+  normalizeGrade,
+  getCandidateAreas
+} from '../services/sattaRateService';
+
+export {
+  resolveSattaRate,
+  fetchSingleSattaRate,
+  normalizeGrade,
+  getCandidateAreas
+};
+
+export type {
+  SattaBaseRate,
+  SattaDifferential,
+  SattaCalculatedRate,
+  SattaRateResult
+};
 
 export const PREDEFINED_RANKS: Record<string, number> = {
   // Top White / Mesta / Special
@@ -259,3 +120,29 @@ export const numberToWords = (num: number): string => {
   str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[Number(n[5][0])] + ' ' + a[Number(n[5][1])]) : '';
   return str.trim() + ' Rupees Only';
 };
+
+/**
+ * Calculates Satta Rate for a Purchase Order item strictly using Supabase data.
+ * Returns the final Satta Rate (₹/Qtl), or null if the rate is not found in Supabase.
+ */
+export function getPurchaseOrderSattaRate(params: {
+  agency?: string | null;
+  area?: string | null;
+  grade: string;
+  date?: string | null;
+  baseRate?: number | string | null;
+  baseRates?: SattaBaseRate[];
+  differentials?: SattaDifferential[];
+  calculatedRates?: SattaCalculatedRate[];
+}): SattaRateResult {
+  return resolveSattaRate({
+    agency: params.agency,
+    area: params.area,
+    grade: params.grade,
+    date: params.date,
+    customBaseRate: params.baseRate,
+    baseRates: params.baseRates,
+    differentials: params.differentials,
+    calculatedRates: params.calculatedRates
+  });
+}

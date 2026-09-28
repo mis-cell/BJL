@@ -20,6 +20,7 @@ import { supabase } from '../lib/supabase';
 import { comparePoInspection, compareSaudaTempArrival, PoMismatchDetail } from '../lib/poMatch';
 import LegacyLayout from '../components/LegacyLayout';
 import { getCurrentUserContext } from '../lib/permissions';
+import { resolveSattaRate } from '../services/sattaRateService';
 
 function safeStr(val: any, fallback = ''): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -43,98 +44,6 @@ function safeStr(val: any, fallback = ''): string {
 }
 
 const inMemorySattaResolutions: Record<string, any> = {};
-
-// Excel Seed Data for Satta differentials
-const EXCEL_SEED_DATA = [
-  {
-    area: "DAISEE",
-    diffs: { TD4: 600, TD5: -300, TD6: -200, TD7: -500, TD8: -1000, "H.BALES": -50, DRUMS: -100 }
-  },
-  {
-    area: "TULSIHATTA",
-    diffs: { TD5: 750, TD6: 350, TD7: -55, TD8: -550 }
-  },
-  {
-    area: "BANGLADESH",
-    diffs: { "BTR HD KS": 2800, "BTR HD CS": 2300, "BTR HD BS": 1800, "BTR NB KS": 800, "BTR NB FFS": 1300, "BTR NB (SMR)": 200 }
-  },
-  {
-    area: "GRP LOOSE",
-    diffs: { TD5: 400, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "L/A TARABARI",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "U/ASSAM",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100, LOOSE: -200 }
-  },
-  {
-    area: "KANKI",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "RAIGANJ",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "DHULIYAAN",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "SAMSI JUNGLE",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "RAIGANJ Loose",
-    diffs: { TD5: 400, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "NORTHERN",
-    diffs: { TD6: 3200, TD7: 2800, TD8: 2300, TD9: 1800, TD10: 1300, W5: 1800, W6: 1300 }
-  },
-  {
-    area: "GAJAL LOOSE",
-    diffs: {}
-  },
-  {
-    area: "BADURIA",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "BASIRHAT",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "GOLABRI D/D",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "HARIPAL",
-    diffs: { TD5: -300, TD6: -205, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "MAYNA D/S",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "S/N ISLAMPUR",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "SHEORAPHULLY",
-    diffs: { HBJB: -1000, ROPES: -1000, CUTTING: -700, "TH.WASTE": -10000, "RRY CUTT": -12000 }
-  },
-  {
-    area: "PURNEA(BIHAR)",
-    diffs: { TD5: 500, TD6: 100, TD7: -300, TD8: -800 }
-  },
-  {
-    area: "PURNEA (LOOSE)",
-    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
-  }
-];
 
 const GRADE_SATTA_VARIANCE_LIMITS: Record<string, number> = {
   'TD4': 0,
@@ -248,60 +157,29 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   };
 
   const getSattaRate = (date: string, poArea: string, poGrade: string, baseRates: any[], differentials: any[]) => {
-    if (!date) return { baseRate: 17500, differential: 0, finalRate: 17500 };
+    const res = resolveSattaRate({
+      area: poArea,
+      grade: poGrade,
+      date,
+      baseRates,
+      differentials
+    });
 
-    const sortedBase = [...baseRates].sort((a, b) => b.start_date.localeCompare(a.start_date));
-    const effectiveBase = sortedBase.find(r => r.start_date <= date) || sortedBase[sortedBase.length - 1];
-    const baseRate = effectiveBase ? Number(effectiveBase.base_rate) : 16700;
-
-    const cleanArea = (poArea || '').trim().toUpperCase();
-    const cleanGrade = (poGrade || '').trim().replace(/\./g, '').toUpperCase();
-
-    const lookupAreas = [cleanArea];
-    if (cleanArea === 'SEMI NORTHERN' || cleanArea.includes('SEMI NORTHERN')) {
-      lookupAreas.push('NORTHERN');
-    } else if (cleanArea === 'NORTHERN' || cleanArea.includes('NORTHERN')) {
-      lookupAreas.push('SEMI NORTHERN');
-    }
-
-    if (cleanArea.includes('PURNEA') || cleanArea.includes('BIHAR')) {
-      if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
-      if (!lookupAreas.includes('PURNEA')) lookupAreas.push('PURNEA');
-    }
-
-    let differential: number | undefined;
-    for (const lookupArea of lookupAreas) {
-      const match = differentials.find(d => 
-        (d.area || '').trim().toUpperCase() === lookupArea &&
-        (d.grade || '').trim().replace(/\./g, '').toUpperCase() === cleanGrade
-      );
-      if (match) {
-        differential = Number(match.differential);
-        break;
-      }
-    }
-
-    if (differential === undefined) {
-      for (const lookupArea of lookupAreas) {
-        const seedArea = EXCEL_SEED_DATA.find(r => r.area.toUpperCase() === lookupArea);
-        if (seedArea && seedArea.diffs) {
-          const key = Object.keys(seedArea.diffs).find(k => k.toUpperCase() === cleanGrade);
-          if (key) {
-            differential = (seedArea.diffs as Record<string, number>)[key];
-            break;
-          }
-        }
-      }
-    }
-
-    if (differential === undefined) {
-      differential = 0;
+    if (res.found && res.finalRate !== null) {
+      return {
+        baseRate: res.baseRate || 0,
+        differential: res.differential || 0,
+        finalRate: res.finalRate,
+        found: true
+      };
     }
 
     return {
-      baseRate,
-      differential,
-      finalRate: baseRate + differential
+      baseRate: res.baseRate || 0,
+      differential: 0,
+      finalRate: res.baseRate || 0,
+      found: false,
+      error: res.error || 'Rate not found in database'
     };
   };
 

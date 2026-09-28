@@ -71,113 +71,7 @@ interface AreaDifferential {
   diffs: Record<string, number>;
 }
 
-// Default differentials matching the official Excel specification
-const EXCEL_SEED_DATA: AreaDifferential[] = [
-  {
-    area: "DAISEE",
-    diffs: { TD4: 600, TD5: -300, TD6: -200, TD7: -500, TD8: -1000, "H.BALES": -50, DRUMS: -100 }
-  },
-  {
-    area: "TULSIHATTA",
-    diffs: { TD5: 750, TD6: 350, TD7: -50, TD8: -550 }
-  },
-  {
-    area: "BANGLADESH",
-    diffs: { "BTR HD KS": 2800, "BTR HD CS": 2300, "BTR HD BS": 1800, "BTR NB KS": 800, "BTR NB FFS": 1300, "BTR NB (SMR)": 200 }
-  },
-  {
-    area: "GRP LOOSE",
-    diffs: { TD5: 400, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "L/A TARABARI",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100 }
-  },
-  {
-    area: "U/ASSAM",
-    diffs: { TD4: 1800, TD5: 1400, TD6: 900, TD7: 300, TD8: -100, LOOSE: -200 }
-  },
-  {
-    area: "KANKI",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "RAIGANJ",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "DHULIYAAN",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "SAMSI JUNGLE",
-    diffs: { TD4: 0, TD5: -200, TD6: -500, TD7: -1000 }
-  },
-  {
-    area: "RAIGANJ Loose",
-    diffs: { TD5: 400, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
-    area: "NORTHERN",
-    diffs: { TD6: 3200, TD7: 2800, TD8: 2300, TD9: 1800, TD10: 1300, W5: 1800, W6: 1300 }
-  },
-  {
-    area: "GAJAL LOOSE",
-    diffs: {}
-  },
-  {
-    area: "BADURIA",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "BASIRHAT",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "GOLABRI D/D",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "HARIPAL",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "MAYNA D/S",
-    diffs: { TD5: -300, TD6: -200, TD7: -500, TD8: -1000 }
-  },
-  {
-    area: "S/N ISLAMPUR",
-    diffs: { TD5: 800, TD6: 400, TD7: 0, TD8: -500 }
-  },
-  {
-    area: "SHEORAPHULLY",
-    diffs: { HBJB: -1000, ROPES: -1000, CUTTING: -700, "TH.WASTE": -1000, "RRY CUTT": -1200 }
-  },
-  {
-    area: "GRP MESTA LOOSE",
-    diffs: { "M.S.MID": -500, "M.MID": -600, "M.BOT": -700, "M.B.BOT": -800, "M.X.BOT": -900 }
-  },
-  {
-    area: "PURNEA(BIHAR)",
-    diffs: { TD5: 500, TD6: -600, TD7: -1000, TD8: -1500 }
-  },
-  {
-    area: "BIHAR",
-    diffs: { TD5: 500, TD6: -600, TD7: -1000, TD8: -1500 }
-  },
-  {
-    area: "PURNEA (LOOSE)",
-    diffs: { TD5: 100, TD6: -300, TD7: -700, TD8: -1200 }
-  },
-  {
-    area: "ASSAM",
-    diffs: { "M.MID": -2000, BOT: -2100, "B.BOT": -2200, "X.X.BOT": -2350, "X.BOT": -2300 }
-  },
-  {
-    area: "S/N MESTA",
-    diffs: { "M.MID": -2000, BOT: -2100, "B.BOT": -2200, "X.BOT": -2300 }
-  }
-];
+// Area Differential interface (populated strictly from Supabase satta_differentials table)
 
 const formatDateDMY = (dateStr: string | null) => {
   if (!dateStr) return '';
@@ -432,78 +326,9 @@ export default function SattaChart({
           supabase.from('satta_calculated_rates').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
         }
 
-        // Check if any seed area from EXCEL_SEED_DATA (such as PURNEA (LOOSE)) is missing in database
-        const missingSeedMap = new Map<string, any>();
-        EXCEL_SEED_DATA.forEach(row => {
-          if (!cache[row.area]) {
-            cache[row.area] = {};
-            Object.keys(row.diffs).forEach(grade => {
-              const diffVal = row.diffs[grade];
-              cache[row.area][grade] = diffVal;
-              missingSeedMap.set(`${row.area}___${grade}`, {
-                area: row.area,
-                grade: grade,
-                differential: diffVal
-              });
-            });
-          }
-        });
-
-        if (missingSeedMap.size > 0 && supabase) {
-          const uniqueSeeds = Array.from(missingSeedMap.values());
-          supabase.from('satta_differentials').upsert(uniqueSeeds, { onConflict: 'area,grade' }).then();
-        }
-
-        // Also ensure PURNEA (LOOSE) and other areas exist in area_master
-        if (supabase) {
-          supabase.rpc('exec_sql', {
-            query: `
-              DO $$
-              BEGIN
-                IF EXISTS (SELECT FROM pg_tables WHERE schemaname='public' AND tablename='area_master') THEN
-                  IF NOT EXISTS (SELECT 1 FROM area_master WHERE UPPER(TRIM(area_name)) = 'PURNEA (LOOSE)' OR UPPER(TRIM(area_name)) = 'PURNEA LOOSE') THEN
-                    INSERT INTO area_master (area_code, area_name) VALUES ('PURNEA_LOOSE', 'PURNEA (LOOSE)');
-                  END IF;
-                END IF;
-              END $$;
-            `
-          }).then();
-        }
-
         setDbDifferentials(cache);
       } else {
-        // Seed initial differentials if database empty
-        console.log("Seeding base differentials into Supabase...");
-        const insertRows: any[] = [];
-        EXCEL_SEED_DATA.forEach(row => {
-          Object.keys(row.diffs).forEach(grade => {
-            insertRows.push({
-              area: row.area,
-              grade: grade,
-              differential: row.diffs[grade]
-            });
-          });
-        });
-
-        const { error: seedErr } = await supabase
-          .from('satta_differentials')
-          .insert(insertRows);
-
-        if (seedErr) throw seedErr;
-
-        // Re-load
-        const { data: reDiffs } = await supabase
-          .from('satta_differentials')
-          .select('*');
-
-        const cache: Record<string, Record<string, number>> = {};
-        if (reDiffs) {
-          reDiffs.forEach(item => {
-            if (!cache[item.area]) cache[item.area] = {};
-            cache[item.area][item.grade] = Number(item.differential);
-          });
-        }
-        setDbDifferentials(cache);
+        setDbDifferentials({});
       }
       setLastSyncedAt(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
@@ -514,96 +339,41 @@ export default function SattaChart({
   };
 
   const silentSeedHistoricalList = async (activeDiffs?: Record<string, Record<string, number>>) => {
+    // Satta rates must originate strictly from user input and Supabase tables, not hardcoded seed lists
     if (!supabase) return;
     try {
       const diffsToUse = activeDiffs || dbDifferentials || {};
-      const seedList = [
-        { start: '2026-04-01', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-01T11:00:00.000Z' },
-        { start: '2026-04-02', rate: 16700, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-02T11:00:00.000Z' },
-        { start: '2026-04-03', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-03T11:00:00.000Z' },
-        { start: '2026-04-04', rate: 17200, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-04T11:00:00.000Z' },
-        { start: '2026-04-07', rate: 17300, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-07T11:00:00.000Z' },
-        { start: '2026-04-09', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-09T11:00:00.000Z' },
-        { start: '2026-04-10', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-10T11:00:00.000Z' },
-        { start: '2026-04-15', rate: 16501, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-15T11:00:00.000Z' },
-        { start: '2026-04-16', rate: 16500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-16T11:00:00.000Z' },
-        { start: '2026-04-22', rate: 16700, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-22T11:00:00.000Z' },
-        { start: '2026-04-24', rate: 17000, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-24T11:00:00.000Z' },
-        { start: '2026-04-25', rate: 17300, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-25T11:00:00.000Z' },
-        { start: '2026-04-27', rate: 17500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-27T11:00:00.000Z' },
-        { start: '2026-04-30', rate: 17100, remarks: 'Audit Log - Range Change Logged', created_at: '2026-04-30T11:00:00.000Z' },
-        { start: '2026-05-01', rate: 17500, remarks: 'Audit Log - Range Change Logged', created_at: '2026-05-01T11:00:00.000Z' },
-      ];
+      const { data: baseRates } = await supabase
+        .from('satta_base_rates')
+        .select('*')
+        .order('start_date', { ascending: false });
 
-      let prevRate: number | null = null;
-      for (const item of seedList) {
-        await supabase.from('satta_calculated_rates').delete().eq('start_date', item.start);
-        await supabase.from('satta_base_rates').delete().eq('start_date', item.start);
-        await supabase.from('satta_base_rate_audit_logs').delete().eq('changed_date', item.start);
-
-        const { data: rRecord, error: rErr } = await supabase
-          .from('satta_base_rates')
-          .insert({
-            base_rate: item.rate,
-            start_date: item.start,
-            remarks: item.remarks,
-            created_at: item.created_at
-          })
-          .select()
-          .single();
-
-        if (rErr) continue;
-
-        await supabase.from('satta_base_rate_audit_logs').insert({
-          old_rate: prevRate,
-          new_rate: item.rate,
-          changed_date: item.start,
-          remarks: item.remarks || `Base rate initialized to ₹${item.rate}`,
-          created_at: item.created_at
-        });
-        prevRate = item.rate;
-
-        const calcRows: any[] = [];
-        
-        Object.keys(diffsToUse).forEach(area => {
-          const gradesCache = diffsToUse[area] || {};
-          Object.keys(gradesCache).forEach(grade => {
-            const diffVal = gradesCache[grade] || 0;
-            calcRows.push({
-              base_rate_id: rRecord.id,
-              base_rate: item.rate,
-              start_date: item.start,
-              area: area,
-              grade: grade,
-              differential: diffVal,
-              final_rate: item.rate + diffVal
-            });
-          });
-        });
-
-        EXCEL_SEED_DATA.forEach(row => {
-          if (!diffsToUse[row.area]) {
-            Object.keys(row.diffs).forEach(grade => {
-              const diffVal = row.diffs[grade] || 0;
+      if (baseRates && baseRates.length > 0) {
+        for (const item of baseRates) {
+          const calcRows: any[] = [];
+          Object.keys(diffsToUse).forEach(area => {
+            const gradesCache = diffsToUse[area] || {};
+            Object.keys(gradesCache).forEach(grade => {
+              const diffVal = gradesCache[grade] || 0;
               calcRows.push({
-                base_rate_id: rRecord.id,
-                base_rate: item.rate,
-                start_date: item.start,
-                area: row.area,
+                base_rate_id: item.id,
+                base_rate: Number(item.base_rate),
+                start_date: item.start_date,
+                area: area,
                 grade: grade,
                 differential: diffVal,
-                final_rate: item.rate + diffVal
+                final_rate: Number(item.base_rate) + diffVal
               });
             });
+          });
+          if (calcRows.length > 0) {
+            await supabase.from('satta_calculated_rates').delete().eq('start_date', item.start_date);
+            await supabase.from('satta_calculated_rates').insert(calcRows);
           }
-        });
-
-        if (calcRows.length > 0) {
-          await supabase.from('satta_calculated_rates').insert(calcRows);
         }
       }
     } catch (e) {
-      console.warn("Silent seeding warning:", e);
+      console.warn("Calculated rate synchronization warning:", e);
     }
   };
 
@@ -794,23 +564,6 @@ export default function SattaChart({
         });
       });
 
-      EXCEL_SEED_DATA.forEach(row => {
-        if (!dbDifferentials[row.area]) {
-          Object.keys(row.diffs).forEach(grade => {
-            const diffVal = row.diffs[grade] || 0;
-            calcRows.push({
-              base_rate_id: rRecord.id,
-              base_rate: baseRate,
-              start_date: startDate,
-              area: row.area,
-              grade: grade,
-              differential: diffVal,
-              final_rate: baseRate + diffVal
-            });
-          });
-        }
-      });
-
       const { error: batchErr } = await supabase
         .from('satta_calculated_rates')
         .insert(calcRows);
@@ -899,12 +652,8 @@ export default function SattaChart({
   const handleDownloadSampleCsv = () => {
     const headers = ['Area', 'Grade', 'Differential'];
     const rows: any[] = [];
-    EXCEL_SEED_DATA.forEach(row => {
-      Object.keys(row.diffs).forEach(grade => {
-        const areaName = row.area;
-        const diffVal = dbDifferentials[areaName]?.[grade] !== undefined
-          ? dbDifferentials[areaName][grade]
-          : row.diffs[grade];
+    Object.entries(dbDifferentials).forEach(([areaName, diffs]) => {
+      Object.entries(diffs).forEach(([grade, diffVal]) => {
         rows.push([areaName, grade, diffVal]);
       });
     });
@@ -1112,24 +861,22 @@ export default function SattaChart({
 
     const areaSet = new Set<string>();
 
-    EXCEL_SEED_DATA.forEach(row => {
-      areaSet.add(row.area);
+    Object.entries(dbDifferentials).forEach(([areaName, diffs]) => {
+      areaSet.add(areaName);
       ALL_GRADES.forEach(grade => {
-        const diffVal = dbDifferentials[row.area]?.[grade] !== undefined
-          ? dbDifferentials[row.area][grade]
-          : row.diffs[grade];
+        const diffVal = diffs[grade];
         if (diffVal !== undefined) {
           const finalVal = baseRate + diffVal;
           cellCount++;
           totalRateSum += finalVal;
           if (finalVal > maxRate) {
             maxRate = finalVal;
-            maxArea = row.area;
+            maxArea = areaName;
             maxGrade = grade;
           }
           if (finalVal < minRate) {
             minRate = finalVal;
-            minArea = row.area;
+            minArea = areaName;
             minGrade = grade;
           }
           if (diffVal >= 1000) highPremiumCount++;
@@ -1171,13 +918,9 @@ export default function SattaChart({
     };
   }, [dbDifferentials, baseRate, rateHistory]);
 
-  // Combined and Search-Filtered Table Rows
+  // Combined and Search-Filtered Table Rows derived strictly from Supabase dbDifferentials
   const allAreaRows = useMemo(() => {
     const areaMap = new Map<string, Record<string, number>>();
-    // Seed standard base market areas including PURNEA (LOOSE)
-    EXCEL_SEED_DATA.forEach(item => {
-      areaMap.set(item.area, { ...item.diffs });
-    });
     // Overlay dynamic differentials and additional regions from database
     Object.entries(dbDifferentials).forEach(([rawAreaName, diffs]) => {
       const upper = String(rawAreaName || '').trim().toUpperCase();

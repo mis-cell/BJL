@@ -6,6 +6,7 @@ import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
+import { resolveSattaRate } from '../services/sattaRateService';
 
 import LegacyLayout from '../components/LegacyLayout';
 import BasicDetailsCard from '../components/BasicDetailsCard';
@@ -243,51 +244,15 @@ export default function SaudaEntry({
 
   // Recalculate Satta rate for a quality row based on Date, Area, Grade
   const recalculateRowRate = (date: string, area: string, grade: string) => {
-    if (!date || !area || !grade || baseRatesList.length === 0) return null;
-
-    const dStr = date;
-    const sortedBaseRates = [...baseRatesList].sort((a, b) => b.start_date.localeCompare(a.start_date));
-    const effectiveBase = sortedBaseRates.find(r => r.start_date <= dStr) || sortedBaseRates[sortedBaseRates.length - 1];
-    const baseVal = effectiveBase ? Number(effectiveBase.base_rate) : 17500;
-
-    const cleanArea = area.trim().toUpperCase();
-    const cleanGrade = grade.trim().toUpperCase();
-
-    const lookupAreas = [cleanArea];
-    if (cleanArea === 'SEMI NORTHERN' || cleanArea.includes('SEMI NORTHERN')) {
-      lookupAreas.push('NORTHERN');
-    } else if (cleanArea === 'NORTHERN' || cleanArea.includes('NORTHERN')) {
-      lookupAreas.push('SEMI NORTHERN');
-    }
-
-    if (cleanArea.includes('PURNEA') || cleanArea.includes('BIHAR')) {
-      if (cleanArea.includes('LOOSE')) {
-        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.unshift('PURNEA (LOOSE)');
-        if (!lookupAreas.includes('PURNEA LOOSE')) lookupAreas.push('PURNEA LOOSE');
-      } else {
-        if (!lookupAreas.includes('PURNEA(BIHAR)')) lookupAreas.push('PURNEA(BIHAR)');
-        if (!lookupAreas.includes('PURNEA (BIHAR)')) lookupAreas.push('PURNEA (BIHAR)');
-        if (!lookupAreas.includes('PURNEA (LOOSE)')) lookupAreas.push('PURNEA (LOOSE)');
-      }
-    }
-
-    let diffVal: number | undefined;
-    for (const lookupArea of lookupAreas) {
-      const diffObj = dbDiffsList.find(
-        d => (d.area || '').toUpperCase() === lookupArea && 
-             (d.grade || '').toUpperCase() === cleanGrade
-      );
-      if (diffObj) {
-        diffVal = Number(diffObj.differential);
-        break;
-      }
-    }
-
-    if (diffVal !== undefined) {
-      return baseVal + diffVal;
-    }
-
-    return null;
+    if (!date || !area || !grade) return null;
+    const res = resolveSattaRate({
+      area,
+      grade,
+      date,
+      baseRates: baseRatesList,
+      differentials: dbDiffsList
+    });
+    return res.found ? res.finalRate : null;
   };
 
   const getUnitWeightKg = (unitType?: string) => {

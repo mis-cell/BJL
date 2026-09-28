@@ -414,10 +414,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         const r = Number(matches[0].base_rate || matches[0].rate || 0);
         if (r > 0) return r;
       }
+
+      const closestAvailable = Number(baseList[0].base_rate || baseList[0].rate || 0);
+      if (closestAvailable > 0) return closestAvailable;
     }
 
-    if (targetYmd <= '2026-04-10') return 13500;
-    return 13500;
+    return 0;
   };
 
   const saudaBaseRate = useMemo(() => {

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { poService } from '../../services/poService';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
-import { formatPoNumber, compareQualities, EXCEL_SEED_DATA } from '../../utils/purchaseOrderCalculations';
+import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
 import { PoFormData, PoCalcData, PoItemRow } from '../../types/purchaseOrder';
 
 interface UsePurchaseOrderFormLogicProps {
@@ -159,84 +159,26 @@ export function usePurchaseOrderFormLogic({
     const sDate = sDateStr || todayStr;
     const bRate = parseFloat(bRateStr) || 0;
 
-    const normAgency = (rowAgencyName || '').trim().toUpperCase();
-    const normGrade = (rowGradeName || '').trim().toUpperCase();
-    const normArea = (overrideArea || formData?.area || '').trim().toUpperCase();
+    const normAgency = (rowAgencyName || '').trim();
+    const normGrade = (rowGradeName || '').trim();
+    const normArea = (overrideArea || formData?.area || '').trim();
 
     if (!normGrade) return null;
     if (!normAgency && !normArea) return null;
 
-    let differential = 0;
-    let found = false;
+    const res = resolveSattaRate({
+      agency: normAgency,
+      area: normArea,
+      grade: normGrade,
+      date: sDate,
+      customBaseRate: bRate > 0 ? bRate : null,
+      baseRates: bases,
+      differentials: diffs,
+      calculatedRates: calcs
+    });
 
-    const sortedBases = [...bases]
-      .filter(b => b.start_date && b.start_date <= sDate)
-      .sort((a, b) => b.start_date.localeCompare(a.start_date));
-
-    const activeBase = sortedBases[0];
-
-    const lookupInSatta = (rawAreaToLookup: string) => {
-      if (!rawAreaToLookup) return null;
-      let areaToLookup = rawAreaToLookup.trim().toUpperCase();
-      if (
-        areaToLookup === 'LOWER ASSAM' ||
-        areaToLookup === 'BILASIPARA' ||
-        areaToLookup === 'L/A' ||
-        areaToLookup.includes('TARABARI') ||
-        areaToLookup === 'BELLOW ASSAM' ||
-        areaToLookup === 'BELOW ASSAM' ||
-        areaToLookup.includes('BELLOW')
-      ) {
-        areaToLookup = 'L/A TARABARI';
-      }
-
-      if (activeBase && calcs.length > 0) {
-        const match = calcs.find(c => 
-          c.start_date === activeBase.start_date &&
-          (c.area || '').trim().toUpperCase() === areaToLookup &&
-          (c.grade || '').trim().toUpperCase() === normGrade
-        );
-        if (match) {
-          return parseFloat(match.differential) || 0;
-        }
-      }
-
-      if (diffs.length > 0) {
-        const match = diffs.find(d => 
-          (d.area || '').trim().toUpperCase() === areaToLookup &&
-          (d.grade || '').trim().toUpperCase() === normGrade
-        );
-        if (match) {
-          return parseFloat(match.differential) || 0;
-        }
-      }
-
-      const matchArea = EXCEL_SEED_DATA.find(a => a.area.toUpperCase() === areaToLookup);
-      if (matchArea && matchArea.diffs) {
-        const diffVal = matchArea.diffs[normGrade];
-        if (diffVal !== undefined) {
-          return diffVal;
-        }
-      }
-
-      return null;
-    };
-
-    let diffVal = lookupInSatta(normAgency);
-    if (diffVal !== null) {
-      differential = diffVal;
-      found = true;
-    } else if (normArea && normArea !== normAgency) {
-      diffVal = lookupInSatta(normArea);
-      if (diffVal !== null) {
-        differential = diffVal;
-        found = true;
-      }
-    }
-
-    if (found) {
-      const baseToUse = bRate > 0 ? bRate : (activeBase ? parseFloat(activeBase.base_rate) || 0 : 0);
-      return baseToUse + differential;
+    if (res.found && res.finalRate !== null) {
+      return res.finalRate;
     }
 
     return null;
