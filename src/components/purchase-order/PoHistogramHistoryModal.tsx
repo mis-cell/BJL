@@ -369,9 +369,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         actualValue: `${totalArrivalWeight.toFixed(3)} MT`,
         variance: weightTol.diffMt !== 0 ? `${weightTol.diffMt >= 0 ? '+' : ''}${weightTol.diffMt.toFixed(3)} MT` : '0.000 MT',
         status: dbArrivals.length === 0 ? 'not_available' : (
-          weightTol.isTolerable ? 'match' : 'mismatch'
+          (weightTol.isWithinTolerance || weightTol.isAcceptable) ? 'match' : 'mismatch'
         ),
-        notes: weightTol.isTolerable 
+        notes: (weightTol.isWithinTolerance || weightTol.isAcceptable)
           ? `Within allowed tolerance (±${weightTol.toleranceMt.toFixed(3)} MT)`
           : `Beyond allowed tolerance of ±${weightTol.toleranceMt.toFixed(3)} MT (Penalty applicable)`,
         isCritical: true
@@ -530,10 +530,10 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       },
       {
         name: 'Weight Penalty Applied',
-        referenceValue: weightTol.isTolerable ? '₹0 (Tolerable)' : 'Penalty Mandated',
+        referenceValue: (weightTol.isWithinTolerance || weightTol.isAcceptable) ? '₹0 (Tolerable)' : 'Penalty Mandated',
         actualValue: settledPenalty > 0 ? `₹${settledPenalty.toLocaleString()}` : '₹0',
-        status: (!weightTol.isTolerable && dbSettlements.length > 0 && settledPenalty === 0) ? 'mismatch' : 'match',
-        notes: weightTol.penaltyAmount > 0 ? `Expected TD5 Difference penalty: ₹${weightTol.penaltyAmount.toLocaleString()}` : 'No weight penalty applicable'
+        status: (!(weightTol.isWithinTolerance || weightTol.isAcceptable) && dbSettlements.length > 0 && settledPenalty === 0) ? 'mismatch' : 'match',
+        notes: weightTol.deductibleQtyMt > 0 ? `Expected deductible weight: ${weightTol.deductibleQtyMt.toFixed(3)} MT` : 'No weight penalty applicable'
       },
       {
         name: 'Quality Claim Deductions',
@@ -546,7 +546,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         name: 'Final Settlement Voucher Status',
         referenceValue: 'Settled & Closed',
         actualValue: dbSettlements.length > 0 ? (dbSettlements[0].status || 'COMPLETED') : 'Pending Final Audit',
-        status: dbSettlements.length > 0 ? 'match' : (dbArrivals.length > 0 ? 'pending' : 'not_available')
+        status: dbSettlements.length > 0 ? 'match' : 'not_available'
       }
     ];
 

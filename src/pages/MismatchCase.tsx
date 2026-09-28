@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
   AlertTriangle, 
@@ -11,7 +11,14 @@ import {
   FileSpreadsheet, 
   RefreshCw,
   Info,
-  Lock
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Maximize2,
+  Minimize2,
+  Layers,
+  Eye
 } from 'lucide-react';
 import { cn, canApproveMismatch } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
@@ -114,6 +121,36 @@ export interface SattaMismatchItem {
   sourceLabel?: string;
 }
 
+export interface SattaGroupedItem {
+  key: string;
+  poNo: string;
+  saudaNo: string;
+  poDate: string;
+  supplierName: string;
+  brokerName: string;
+  items: SattaMismatchItem[];
+  hasDispute: boolean;
+  isAllResolved: boolean;
+  isAllOk: boolean;
+  disputeCount: number;
+  resolvedCount: number;
+  okCount: number;
+  totalCount: number;
+  areaList: string[];
+  gradeList: string[];
+  minSaudaRateQtl: number;
+  maxSaudaRateQtl: number;
+  minSattaLimitQtl: number;
+  maxSattaLimitQtl: number;
+  maxDifferenceQtl: number;
+  minDifferenceQtl: number;
+  status: 'dispute' | 'resolved' | 'ok';
+  latestResolvedBy?: string;
+  latestResolvedAt?: string;
+  latestApprovalLevel?: string;
+  latestResolutionNotes?: string;
+}
+
 export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?: () => void; variant?: 'satta' | 'material' }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'ruka_to_satta' | 'material_inspection'>(variant === 'material' ? 'material_inspection' : 'ruka_to_satta');
@@ -131,6 +168,24 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
   const [sattaFilterStatus, setSattaFilterStatus] = useState<'all' | 'dispute' | 'ok' | 'resolved'>('dispute');
   const [sattaSourceFilter, setSattaSourceFilter] = useState<'ALL' | 'sauda_master' | 'sauda_check_point' | 'purchase_master'>('ALL');
   const [savingSattaId, setSavingSattaId] = useState<string | null>(null);
+  const [expandedSaudaKeys, setExpandedSaudaKeys] = useState<Record<string, boolean>>({});
+
+  const toggleExpandSauda = (key: string) => {
+    setExpandedSaudaKeys(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const expandAllSaudas = (keys: string[]) => {
+    const next: Record<string, boolean> = {};
+    keys.forEach(k => { next[k] = true; });
+    setExpandedSaudaKeys(next);
+  };
+
+  const collapseAllSaudas = () => {
+    setExpandedSaudaKeys({});
+  };
 
   // 100-rows per page pagination (searches full dataset, displays paginated)
   const [currentPage, setCurrentPage] = useState(1);
@@ -1134,6 +1189,209 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
     }
   };
 
+  const handleResolveSattaGroup = async (group: SattaGroupedItem) => {
+    const groupKey = group.key;
+    setSavingSattaId(groupKey);
+    try {
+      const rawRemarks = remarksMap[groupKey] || remarksMap[group.poNo] || remarksMap[group.saudaNo] || '';
+      const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';
+
+      const ctx = getCurrentUserContext();
+      const username = ctx.username || ctx.userName || 'Administrator';
+      const approvalLevel = (ctx.userLevel || ctx.userRole || 'ADMIN').toUpperCase();
+      const nowIso = new Date().toISOString();
+
+      const itemPoNo = group.poNo;
+      const cleanPoNo = String(itemPoNo || '').trim().toUpperCase();
+      const cleanSaudaNo = String(group.saudaNo || '').trim().toUpperCase();
+
+      // Collect all tokens for this Sauda/PO
+      const saudaTokens = [
+        cleanPoNo,
+        cleanSaudaNo,
+        cleanPoNo.split('/').pop() || '',
+        cleanSaudaNo.split('/').pop() || '',
+        cleanPoNo.replace(/^BJCL\//i, ''),
+        cleanSaudaNo.replace(/^BJCL\//i, ''),
+        groupKey
+      ].filter(Boolean);
+
+      // Save tokens in localStorage for instant persistent caching
+      saudaTokens.forEach(token => {
+        try {
+          const payload = JSON.stringify({
+            resolvedBy: username,
+            resolvedAt: nowIso,
+            approvalLevel,
+            remarks: remarks.trim(),
+            status: 'resolved'
+          });
+          localStorage.setItem(`satta_resolved_${String(token).toUpperCase()}`, payload);
+          localStorage.setItem(`mismatch_resolved_${String(token).toUpperCase()}`, payload);
+          localStorage.setItem(`mismatch_cleared_${String(token).toUpperCase()}`, 'true');
+        } catch (e) {}
+      });
+
+      // Save each item resolution
+      for (const item of group.items) {
+        try {
+          const itemPayload = JSON.stringify({
+            resolvedBy: username,
+            resolvedAt: nowIso,
+            approvalLevel,
+            remarks: remarks.trim(),
+            status: 'resolved'
+          });
+          localStorage.setItem(`satta_resolved_${item.id.toUpperCase()}`, itemPayload);
+        } catch (e) {}
+
+        const recordUuid = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : 'sat_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+
+        const baseSattaRecord: Record<string, any> = {
+          id: recordUuid,
+          sauda_no: String(item.saudaNo || group.saudaNo || itemPoNo || '').trim(),
+          po_no: String(item.poNo || itemPoNo || '').trim(),
+          area: String(item.area || 'DAISEE'),
+          grade: String(item.grade || 'TD6'),
+          field: 'Price Dispute',
+          expected_value: String(item.sattaFinalRateQtl || ''),
+          actual_value: String(item.poRateQtl || ''),
+          expected_rate: Number(item.sattaFinalRateQtl || 0),
+          actual_rate: Number(item.poRateQtl || 0),
+          status: 'resolved',
+          remarks: `[APPROVED by ${username} (${approvalLevel}) on ${nowIso.split('T')[0]}]: ${remarks.trim()}`,
+        };
+
+        const extendedSattaRecord: Record<string, any> = {
+          ...baseSattaRecord,
+          mismatch_id: item.id,
+          approved_by: username,
+          approved_at: nowIso,
+          approval_level: approvalLevel,
+        };
+
+        if (supabase) {
+          try {
+            const searchToken = (item.saudaNo || item.poNo).split('/').pop() || item.poNo;
+            const { data: existingRows } = await supabase
+              .from('satta_mismatch')
+              .select('*')
+              .or(`mismatch_id.eq.${item.id},po_no.ilike.%${searchToken}%,sauda_no.ilike.%${searchToken}%`);
+
+            if (existingRows && existingRows.length > 0) {
+              const rowId = existingRows[0].id;
+              const updatePayload = { ...extendedSattaRecord };
+              delete updatePayload.id;
+              const { error: updErr } = await supabase.from('satta_mismatch').update(updatePayload).eq('id', rowId);
+              if (updErr) {
+                const basePayload = { ...baseSattaRecord };
+                delete basePayload.id;
+                await supabase.from('satta_mismatch').update(basePayload).eq('id', rowId);
+              }
+            } else {
+              const { error: insErr } = await supabase.from('satta_mismatch').insert(extendedSattaRecord);
+              if (insErr) {
+                await supabase.from('satta_mismatch').insert(baseSattaRecord);
+              }
+            }
+          } catch (e) {
+            console.warn("satta_mismatch write warning:", e);
+          }
+        }
+
+        await dbModule.insert('satta_mismatch', { ...extendedSattaRecord, id: item.id }).catch(() => {});
+      }
+
+      if (supabase) {
+        // Update sauda_master, sms_sauda, sauda_check_point, and purchase_master
+        for (const token of saudaTokens) {
+          try {
+            await supabase.from('sauda_master').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).ilike('sauda_no', `%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('sms_sauda').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).ilike('sauda_no', `%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('sauda_check_point').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).or(`po_no.ilike.%${token}%,contract_po_no.ilike.%${token}%`);
+          } catch (e) {}
+
+          try {
+            await supabase.from('purchase_master').update({
+              satta_dispute_approved: true,
+              mismatch_cleared: true,
+              satta_remarks: remarks.trim(),
+              approved_by: username,
+              approved_at: nowIso,
+              approval_level: approvalLevel,
+            }).or(`po_no.ilike.%${token}%,contract_po_no.ilike.%${token}%`);
+          } catch (e) {}
+        }
+      }
+
+      // Optimistically update local state immediately
+      setSattaMismatchList(prev => prev.map(s => {
+        const sKey = (s.poNo || s.saudaNo || s.id).trim().toUpperCase();
+        if (sKey === groupKey || s.poNo === itemPoNo || (s.saudaNo && s.saudaNo === group.saudaNo) || group.items.some(gi => gi.id === s.id)) {
+          return {
+            ...s,
+            status: 'resolved',
+            resolutionNotes: remarks.trim(),
+            resolvedBy: username,
+            resolvedAt: nowIso.split('T')[0],
+            approvalLevel: approvalLevel,
+          };
+        }
+        return s;
+      }));
+
+      // Clear input remarks
+      setRemarksMap(prev => {
+        const next = { ...prev };
+        delete next[groupKey];
+        delete next[group.poNo];
+        delete next[group.saudaNo];
+        group.items.forEach(gi => delete next[gi.id]);
+        return next;
+      });
+
+      window.dispatchEvent(new CustomEvent('satta_resolved', { detail: { poNo: itemPoNo, saudaNo: group.saudaNo } }));
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
+      await loadMismatches();
+
+      setSuccessToast(`Satta Price Dispute for Sauda [${itemPoNo}] (${group.items.length} quality items) approved, saved, and cleared by ${approvalLevel} level user.`);
+      setTimeout(() => setSuccessToast(null), 4000);
+    } catch (err) {
+      console.error('Failed to resolve Satta dispute group:', err);
+    } finally {
+      setSavingSattaId(null);
+    }
+  };
+
   const supplierOptions = Array.from(
     new Set(mismatchList.map(i => i.supplierName).filter(s => s && s !== 'N/A'))
   ).sort();
@@ -1190,6 +1448,109 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
     return matchesSearch && matchesStatus && matchesSource && matchesSupplier && matchesBroker;
   });
+
+  const sattaGroups: SattaGroupedItem[] = useMemo(() => {
+    const map = new Map<string, SattaMismatchItem[]>();
+    sattaMismatchList.forEach(item => {
+      const key = (item.poNo || item.saudaNo || item.id).trim().toUpperCase();
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(item);
+    });
+
+    const groups: SattaGroupedItem[] = [];
+    map.forEach((items, key) => {
+      const first = items[0];
+      const hasDispute = items.some(i => i.status === 'dispute');
+      const isAllResolved = items.every(i => i.status === 'resolved');
+      const isAllOk = items.every(i => i.status === 'ok');
+      const disputeCount = items.filter(i => i.status === 'dispute').length;
+      const resolvedCount = items.filter(i => i.status === 'resolved').length;
+      const okCount = items.filter(i => i.status === 'ok').length;
+
+      const areaList = Array.from(new Set(items.map(i => i.area).filter(Boolean)));
+      const gradeList = Array.from(new Set(items.map(i => i.grade).filter(Boolean)));
+
+      const saudaRates = items.map(i => i.poRateQtl);
+      const sattaLimits = items.map(i => i.sattaFinalRateQtl);
+      const diffs = items.map(i => i.differenceQtl);
+
+      const minSaudaRateQtl = Math.min(...saudaRates);
+      const maxSaudaRateQtl = Math.max(...saudaRates);
+      const minSattaLimitQtl = Math.min(...sattaLimits);
+      const maxSattaLimitQtl = Math.max(...sattaLimits);
+      const maxDifferenceQtl = Math.max(...diffs);
+      const minDifferenceQtl = Math.min(...diffs);
+
+      const resolvedItem = items.find(i => i.status === 'resolved' && (i.resolutionNotes || i.resolvedBy));
+
+      const overallStatus: 'dispute' | 'resolved' | 'ok' = hasDispute 
+        ? 'dispute' 
+        : (isAllResolved || resolvedCount > 0 ? 'resolved' : 'ok');
+
+      groups.push({
+        key,
+        poNo: first.poNo,
+        saudaNo: first.saudaNo || first.poNo,
+        poDate: first.poDate,
+        supplierName: first.supplierName,
+        brokerName: first.brokerName,
+        items,
+        hasDispute,
+        isAllResolved,
+        isAllOk,
+        disputeCount,
+        resolvedCount,
+        okCount,
+        totalCount: items.length,
+        areaList,
+        gradeList,
+        minSaudaRateQtl,
+        maxSaudaRateQtl,
+        minSattaLimitQtl,
+        maxSattaLimitQtl,
+        maxDifferenceQtl,
+        minDifferenceQtl,
+        status: overallStatus,
+        latestResolvedBy: resolvedItem?.resolvedBy || first.resolvedBy,
+        latestResolvedAt: resolvedItem?.resolvedAt || first.resolvedAt,
+        latestApprovalLevel: resolvedItem?.approvalLevel || first.approvalLevel,
+        latestResolutionNotes: resolvedItem?.resolutionNotes || first.resolutionNotes,
+      });
+    });
+
+    return groups;
+  }, [sattaMismatchList]);
+
+  const filteredSattaGroups = useMemo(() => {
+    return sattaGroups.filter(group => {
+      const matchesSearch = 
+        group.supplierName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.poNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (group.saudaNo && group.saudaNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        group.brokerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.areaList.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        group.gradeList.some(g => g.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesStatus = 
+        sattaFilterStatus === 'all' 
+          ? true 
+          : sattaFilterStatus === 'dispute' 
+            ? group.hasDispute 
+            : sattaFilterStatus === 'resolved' 
+              ? (group.isAllResolved || (group.resolvedCount > 0 && !group.hasDispute)) 
+              : group.isAllOk;
+
+      const matchesSupplier = 
+        selectedSupplier === 'ALL' ? true : group.supplierName.toLowerCase() === selectedSupplier.toLowerCase();
+
+      const matchesBroker = 
+        selectedBroker === 'ALL' ? true : group.brokerName.toLowerCase() === selectedBroker.toLowerCase();
+
+      return matchesSearch && matchesStatus && matchesSupplier && matchesBroker;
+    });
+  }, [sattaGroups, searchQuery, sattaFilterStatus, selectedSupplier, selectedBroker]);
 
   const downloadCSV = () => {
     let csvContent = "";
@@ -1646,8 +2007,30 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                 </div>
               </div>
 
-              {/* Second Row: Source Selector & Search Box */}
+              {/* Second Row: Expand Controls & Search Box */}
               <div className="pt-2 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => expandAllSaudas(filteredSattaGroups.map(g => g.key))}
+                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Expand all Sauda breakdown sub-tables"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5 text-indigo-700" />
+                    <span>Expand All Views</span>
+                  </button>
+                  <button
+                    onClick={collapseAllSaudas}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Collapse all breakdown views"
+                  >
+                    <Minimize2 className="h-3.5 w-3.5 text-slate-600" />
+                    <span>Collapse All</span>
+                  </button>
+                  <span className="text-[11px] text-slate-500 font-medium ml-2">
+                    Showing <strong className="text-slate-800">{filteredSattaGroups.length}</strong> Sauda Contracts ({filteredSattaList.length} Grade Items)
+                  </span>
+                </div>
+
                 {/* Search Box */}
                 <div className="relative w-full md:w-80 ml-auto">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -1655,7 +2038,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Sauda No, Supplier, Broker..."
+                    placeholder="Search Sauda No, Supplier, Broker, Grade..."
                     className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-300 rounded bg-white focus:outline-none focus:border-indigo-600 text-slate-800 font-medium"
                   />
                 </div>
@@ -1668,7 +2051,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                   <div className="animate-spin rounded-full h-7 w-7 border-2 border-indigo-700 border-t-transparent mx-auto" />
                   <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mt-3">Evaluating Sauda rates against Satta Chart parameters...</p>
                 </div>
-              ) : filteredSattaList.length === 0 ? (
+              ) : filteredSattaGroups.length === 0 ? (
                 <div className="p-12 text-center bg-slate-50">
                   <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-2" />
                   <h3 className="text-sm font-extrabold text-slate-800 uppercase">No Satta Price Mismatches</h3>
@@ -1688,127 +2071,299 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
                         <th className="p-3 border-r border-slate-200 bg-indigo-50/60 text-indigo-950 font-black">Satta Limit Rate (₹/Qtl)</th>
                         <th className="p-3 border-r border-slate-200">Variance / Excess (₹/Qtl)</th>
                         <th className="p-3 border-r border-slate-200">Status</th>
-                        <th className="p-3">Action & Approval Remarks</th>
+                        <th className="p-3 min-w-[220px]">Action & Approval Remarks</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {filteredSattaList.slice((sattaCurrentPage - 1) * sattaPageSize, sattaCurrentPage * sattaPageSize).map(item => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition align-top">
-                          <td className="p-3 border-r border-slate-200 font-mono">
-                            <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
-                              <span>{item.poNo}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-semibold mt-1">Date: {item.poDate}</div>
-                            {item.saudaNo && item.saudaNo !== 'N/A' && item.saudaNo !== item.poNo && (
-                              <div className="text-[9.5px] text-indigo-700 font-bold mt-0.5">Ref: {item.saudaNo}</div>
-                            )}
-                          </td>
-                          <td className="p-3 border-r border-slate-200">
-                            <div className="font-bold text-slate-800 uppercase">{item.supplierName}</div>
-                            <div className="text-[10.5px] text-slate-500 font-medium">Broker: <span className="font-semibold text-slate-700">{item.brokerName}</span></div>
-                          </td>
-                          <td className="p-3 border-r border-slate-200">
-                            <div className="font-bold text-slate-800">{item.area}</div>
-                            <div className="text-[11px] text-slate-600 font-medium">Grade: <span className="font-bold">{item.grade}</span></div>
-                          </td>
-                          <td className="p-3 border-r border-slate-200 bg-slate-50/50">
-                            <div className="font-black text-slate-900 text-sm">
-                              ₹ {item.poRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ Qtl</span>
-                            </div>
-                          </td>
-                          <td className="p-3 border-r border-slate-200 bg-indigo-50/30">
-                            <div className="font-black text-indigo-950 text-sm">
-                              ₹ {item.sattaFinalRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span>
-                            </div>
-                            <div className="text-[10px] font-semibold text-indigo-800 mt-0.5">
-                              (Base ₹{item.sattaBaseRateQtl.toLocaleString()} {item.differentialQtl >= 0 ? `+ Diff ₹${item.differentialQtl.toLocaleString()}` : `- Diff ₹${Math.abs(item.differentialQtl).toLocaleString()}`})
-                            </div>
-                          </td>
-                          <td className="p-3 border-r border-slate-200 font-black">
-                            {item.differenceQtl > 0 ? (
-                              <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-xs inline-block">
-                                ⚠️ + ₹ {item.differenceQtl.toLocaleString()} / Qtl
-                              </div>
-                            ) : item.differenceQtl < 0 ? (
-                              <div className="text-emerald-700 text-xs font-bold">
-                                - ₹ {Math.abs(item.differenceQtl).toLocaleString()} / Qtl
-                              </div>
-                            ) : (
-                              <span className="text-emerald-700 font-extrabold">Aligned</span>
-                            )}
-                          </td>
-                          <td className="p-3 border-r border-slate-200 font-bold uppercase">
-                            {item.status === 'dispute' ? (
-                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
-                                <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
-                                Price Dispute
-                              </span>
-                            ) : item.status === 'resolved' ? (
-                              <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-                                Approved / Cleared
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
-                                <Check className="h-3.5 w-3.5 text-blue-700" />
-                                OK
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3 min-w-[200px]">
-                            {item.status === 'dispute' ? (
-                              canApproveMismatch() ? (
-                                <div className="space-y-2">
-                                  <textarea
-                                    rows={2}
-                                    placeholder="Enter dispute clearance remarks..."
-                                    value={remarksMap[item.id] || ''}
-                                    onChange={(e) => setRemarksMap({ ...remarksMap, [item.id]: e.target.value })}
-                                    className="w-full text-xs p-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 bg-white"
-                                  />
-                                  <button
-                                    onClick={() => handleResolveSatta(item.id, item.poNo)}
-                                    disabled={savingSattaId === item.id}
-                                    className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-black uppercase px-3 py-1.5 rounded text-[10.5px] tracking-wider transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                                    title="Click to Save & Approve Price Dispute clearance"
-                                  >
-                                    {savingSattaId === item.id ? (
-                                      <>
-                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                        <span>Saving...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Check className="h-4 w-4" />
-                                        <span>Save & Approve Dispute</span>
-                                      </>
-                                    )}
-                                  </button>
+                      {filteredSattaGroups.slice((sattaCurrentPage - 1) * sattaPageSize, sattaCurrentPage * sattaPageSize).map(group => {
+                        const isExpanded = Boolean(expandedSaudaKeys[group.key]);
+                        const isDispute = group.hasDispute;
+                        const isResolved = group.isAllResolved || (group.resolvedCount > 0 && !group.hasDispute);
+
+                        return (
+                          <React.Fragment key={group.key}>
+                            {/* Main Sauda / PO Group Row */}
+                            <tr className={cn("hover:bg-slate-50 transition align-top", isExpanded && "bg-indigo-50/20")}>
+                              {/* 1. Sauda No & Date + Expand View Button */}
+                              <td className="p-3 border-r border-slate-200 font-mono">
+                                <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
+                                  <span>{group.poNo}</span>
                                 </div>
-                              ) : (
-                                <div className="bg-slate-100 border border-slate-200 text-slate-600 p-2 rounded text-[10px] font-bold text-center">
-                                  🔒 L3 / L5 Level User Approval Required
+                                <div className="text-[10px] text-slate-500 font-semibold mt-1">Date: {group.poDate}</div>
+                                {group.saudaNo && group.saudaNo !== 'N/A' && group.saudaNo !== group.poNo && (
+                                  <div className="text-[9.5px] text-indigo-700 font-bold mt-0.5">Ref: {group.saudaNo}</div>
+                                )}
+                                
+                                {/* Expand / Collapse View Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandSauda(group.key)}
+                                  className={cn(
+                                    "mt-2 px-2 py-1 rounded text-[11px] font-bold border transition flex items-center gap-1 cursor-pointer w-fit shadow-xs",
+                                    isExpanded 
+                                      ? "bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700" 
+                                      : "bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100"
+                                  )}
+                                  title="Click to toggle expanded view of individual grade rates"
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronUp className="h-3.5 w-3.5" />
+                                      <span>Collapse View</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="h-3.5 w-3.5 text-indigo-700" />
+                                      <span>Expand View ({group.items.length} {group.items.length === 1 ? 'Grade' : 'Grades'})</span>
+                                    </>
+                                  )}
+                                </button>
+                              </td>
+
+                              {/* 2. Supplier & Broker */}
+                              <td className="p-3 border-r border-slate-200">
+                                <div className="font-bold text-slate-800 uppercase">{group.supplierName}</div>
+                                <div className="text-[10.5px] text-slate-500 font-medium">Broker: <span className="font-semibold text-slate-700">{group.brokerName}</span></div>
+                              </td>
+
+                              {/* 3. Area & Grades */}
+                              <td className="p-3 border-r border-slate-200">
+                                <div className="font-bold text-slate-800">{group.areaList.join(', ') || 'DAISEE'}</div>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {group.gradeList.map((g, gIdx) => (
+                                    <span key={gIdx} className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-800 font-extrabold rounded text-[10px]">
+                                      {g}
+                                    </span>
+                                  ))}
                                 </div>
-                              )
-                            ) : item.status === 'resolved' ? (
-                              <div className="bg-emerald-50 border border-emerald-200 p-2 rounded text-[10px] text-slate-800 space-y-1">
-                                <div className="font-extrabold text-emerald-950 flex items-center gap-1">
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-                                  <span>Approval Record</span>
+                                <div className="text-[10px] text-slate-500 font-semibold mt-1">
+                                  {group.items.length} {group.items.length === 1 ? 'Quality Item' : 'Quality Items'}
                                 </div>
-                                <div><span className="font-bold">Approved By:</span> {item.resolvedBy || 'L3/L5 User'}</div>
-                                <div><span className="font-bold">Approval Level:</span> <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-950 font-black rounded text-[9.5px]">{item.approvalLevel || 'L3/L5'}</span></div>
-                                <div><span className="font-bold">Date:</span> {item.resolvedAt || 'N/A'}</div>
-                                <div><span className="font-bold">Remarks:</span> "{item.resolutionNotes || 'Approved'}"</div>
-                              </div>
-                            ) : (
-                              <div className="text-[11px] text-slate-500 font-medium italic">
-                                Rate within acceptable limits. No action required.
-                              </div>
+                              </td>
+
+                              {/* 4. Sauda Rate (₹/Qtl) */}
+                              <td className="p-3 border-r border-slate-200 bg-slate-50/50">
+                                <div className="font-black text-slate-900 text-sm">
+                                  {group.minSaudaRateQtl === group.maxSaudaRateQtl ? (
+                                    <>₹ {group.minSaudaRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ Qtl</span></>
+                                  ) : (
+                                    <>₹ {group.minSaudaRateQtl.toLocaleString()} – {group.maxSaudaRateQtl.toLocaleString()} <span className="text-[10px] font-bold text-slate-500">/ Qtl</span></>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* 5. Satta Limit Rate (₹/Qtl) */}
+                              <td className="p-3 border-r border-slate-200 bg-indigo-50/30">
+                                <div className="font-black text-indigo-950 text-sm">
+                                  {group.minSattaLimitQtl === group.maxSattaLimitQtl ? (
+                                    <>₹ {group.minSattaLimitQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span></>
+                                  ) : (
+                                    <>₹ {group.minSattaLimitQtl.toLocaleString()} – {group.maxSattaLimitQtl.toLocaleString()} <span className="text-[10px] font-bold text-indigo-700">/ Qtl</span></>
+                                  )}
+                                </div>
+                                <div className="text-[10px] font-semibold text-indigo-800 mt-0.5">
+                                  Active Satta Chart Range
+                                </div>
+                              </td>
+
+                              {/* 6. Variance / Excess (₹/Qtl) */}
+                              <td className="p-3 border-r border-slate-200 font-black">
+                                {isDispute ? (
+                                  <div className="text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded text-xs inline-block">
+                                    ⚠️ + ₹ {group.maxDifferenceQtl.toLocaleString()} / Qtl
+                                  </div>
+                                ) : group.minDifferenceQtl < 0 ? (
+                                  <div className="text-emerald-700 text-xs font-bold">
+                                    - ₹ {Math.abs(group.minDifferenceQtl).toLocaleString()} / Qtl
+                                  </div>
+                                ) : (
+                                  <span className="text-emerald-700 font-extrabold">Aligned</span>
+                                )}
+                              </td>
+
+                              {/* 7. Status */}
+                              <td className="p-3 border-r border-slate-200 font-bold uppercase">
+                                {isDispute ? (
+                                  <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
+                                    Price Dispute ({group.disputeCount})
+                                  </span>
+                                ) : isResolved ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                                    Approved / Cleared
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide">
+                                    <Check className="h-3.5 w-3.5 text-blue-700" />
+                                    OK
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 8. Action & Approval Remarks (Single Action for this Sauda/PO) */}
+                              <td className="p-3 min-w-[220px]">
+                                {isDispute ? (
+                                  canApproveMismatch() ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        rows={2}
+                                        placeholder={`Enter dispute clearance remarks for ${group.poNo}...`}
+                                        value={remarksMap[group.key] || remarksMap[group.poNo] || remarksMap[group.saudaNo] || ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setRemarksMap(prev => ({
+                                            ...prev,
+                                            [group.key]: val,
+                                            [group.poNo]: val,
+                                            [group.saudaNo]: val
+                                          }));
+                                        }}
+                                        className="w-full text-xs p-1.5 border border-slate-300 rounded focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 bg-white"
+                                      />
+                                      <button
+                                        onClick={() => handleResolveSattaGroup(group)}
+                                        disabled={savingSattaId === group.key}
+                                        className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-black uppercase px-3 py-1.5 rounded text-[10.5px] tracking-wider transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                                        title={`Save remarks & approve dispute for ${group.poNo}`}
+                                      >
+                                        {savingSattaId === group.key ? (
+                                          <>
+                                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                            <span>Saving...</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Check className="h-4 w-4" />
+                                            <span>Save & Approve Dispute{group.items.length > 1 ? ` (${group.items.length})` : ''}</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-slate-100 border border-slate-200 text-slate-600 p-2 rounded text-[10px] font-bold text-center">
+                                      🔒 L3 / L5 Level User Approval Required
+                                    </div>
+                                  )
+                                ) : isResolved ? (
+                                  <div className="bg-emerald-50 border border-emerald-200 p-2 rounded text-[10px] text-slate-800 space-y-1">
+                                    <div className="font-extrabold text-emerald-950 flex items-center gap-1">
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                                      <span>Approval Record</span>
+                                    </div>
+                                    <div><span className="font-bold">Approved By:</span> {group.latestResolvedBy || 'L3/L5 User'}</div>
+                                    <div><span className="font-bold">Approval Level:</span> <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-950 font-black rounded text-[9.5px]">{group.latestApprovalLevel || 'L3/L5'}</span></div>
+                                    <div><span className="font-bold">Date:</span> {group.latestResolvedAt || 'N/A'}</div>
+                                    <div><span className="font-bold">Remarks:</span> "{group.latestResolutionNotes || 'Approved'}"</div>
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-slate-500 font-medium italic">
+                                    Rate within acceptable limits. No action required.
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+
+                            {/* Expandable Breakdown View for this Sauda */}
+                            {isExpanded && (
+                              <tr className="bg-slate-50/80 border-y-2 border-indigo-200">
+                                <td colSpan={8} className="p-3 bg-gradient-to-r from-indigo-50/40 via-white to-indigo-50/40">
+                                  <div className="rounded-lg border border-indigo-200 bg-white p-3 shadow-xs space-y-2.5">
+                                    <div className="flex items-center justify-between pb-2 border-b border-indigo-100">
+                                      <div className="flex items-center gap-2 font-black text-indigo-950 text-xs uppercase tracking-wide">
+                                        <Layers className="h-4 w-4 text-indigo-700" />
+                                        <span>Detailed Grade & Rate Breakdown — Sauda {group.poNo}</span>
+                                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                                          {group.items.length} {group.items.length === 1 ? 'Grade' : 'Grades'}
+                                        </span>
+                                      </div>
+                                      <div className="text-[11px] font-bold text-slate-500">
+                                        Supplier: <strong className="text-slate-800">{group.supplierName}</strong> • Broker: <strong className="text-slate-800">{group.brokerName}</strong>
+                                      </div>
+                                    </div>
+
+                                    {/* Breakdown Sub-Table */}
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                          <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
+                                            <th className="py-2 px-2.5 border-r border-slate-200">#</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200">Area & Grade</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200 bg-slate-50">Sauda Rate (₹/Qtl)</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200 bg-indigo-50/40">Satta Base Rate</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200 bg-indigo-50/40">Differential</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200 bg-indigo-50/70 text-indigo-950 font-black">Satta Limit Rate (₹/Qtl)</th>
+                                            <th className="py-2 px-2.5 border-r border-slate-200">Variance / Excess</th>
+                                            <th className="py-2 px-2.5">Item Status</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200 text-[11px]">
+                                          {group.items.map((subItem, sIdx) => {
+                                            const subDispute = subItem.status === 'dispute';
+                                            const subResolved = subItem.status === 'resolved';
+
+                                            return (
+                                              <tr key={subItem.id} className="hover:bg-slate-50 transition">
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-bold text-slate-400">{sIdx + 1}</td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-bold text-slate-800">
+                                                  {subItem.area} – <span className="text-indigo-900 font-extrabold">{subItem.grade}</span>
+                                                </td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-black text-slate-900">
+                                                  ₹ {subItem.poRateQtl.toLocaleString()} <span className="text-[9.5px] font-bold text-slate-500">/ Qtl</span>
+                                                </td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-semibold text-slate-700">
+                                                  ₹ {subItem.sattaBaseRateQtl.toLocaleString()}
+                                                </td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-semibold text-slate-700">
+                                                  {subItem.differentialQtl >= 0 ? `+ ₹${subItem.differentialQtl.toLocaleString()}` : `- ₹${Math.abs(subItem.differentialQtl).toLocaleString()}`}
+                                                </td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-black text-indigo-950 bg-indigo-50/20">
+                                                  ₹ {subItem.sattaFinalRateQtl.toLocaleString()} <span className="text-[9.5px] font-bold text-indigo-700">/ Qtl</span>
+                                                </td>
+                                                <td className="py-2 px-2.5 border-r border-slate-200 font-black">
+                                                  {subItem.differenceQtl > 0 ? (
+                                                    <span className="text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[10.5px]">
+                                                      ⚠️ + ₹ {subItem.differenceQtl.toLocaleString()} / Qtl
+                                                    </span>
+                                                  ) : subItem.differenceQtl < 0 ? (
+                                                    <span className="text-emerald-700 font-bold">
+                                                      - ₹ {Math.abs(subItem.differenceQtl).toLocaleString()} / Qtl
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-emerald-700 font-bold">Aligned</span>
+                                                  )}
+                                                </td>
+                                                <td className="py-2 px-2.5 font-bold uppercase">
+                                                  {subDispute ? (
+                                                    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[9.5px] font-black">
+                                                      <AlertTriangle className="h-3 w-3 text-amber-700" />
+                                                      Price Dispute
+                                                    </span>
+                                                  ) : subResolved ? (
+                                                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 rounded-full text-[9.5px] font-black">
+                                                      <CheckCircle2 className="h-3 w-3 text-emerald-700" />
+                                                      Approved
+                                                    </span>
+                                                  ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-full text-[9.5px] font-black">
+                                                      <Check className="h-3 w-3 text-blue-700" />
+                                                      OK
+                                                    </span>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
-                          </td>
-                        </tr>
-                      ))}
+                          </React.Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1816,7 +2371,7 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
               <div className="mt-2">
                 <PaginationControls
                   currentPage={sattaCurrentPage}
-                  totalItems={filteredSattaList.length}
+                  totalItems={filteredSattaGroups.length}
                   pageSize={sattaPageSize}
                   onPageChange={setSattaCurrentPage}
                   onPageSizeChange={setSattaPageSize}
