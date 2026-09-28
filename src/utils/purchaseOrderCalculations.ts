@@ -133,10 +133,6 @@ export const EXCEL_SEED_DATA: AreaDifferential[] = [
     diffs: { TD4: 1000, TD5: 600, TD6: 200, TD7: -200, TD8: -700 }
   },
   {
-    area: "BILASIPARA",
-    diffs: { TD4: 700, TD5: 350, TD6: 0, TD7: -400, TD8: -900 }
-  },
-  {
     area: "MANKACHAR",
     diffs: { TD4: 500, TD5: 200, TD6: -100, TD7: -500, TD8: -1000 }
   },

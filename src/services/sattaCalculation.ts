@@ -195,9 +195,26 @@ export function getCandidateAreas(area?: string | null, agency?: string | null):
   if (cleanArea.includes('TULSIHATTA')) candidates.push('TULSIHATTA');
   if (cleanArea.includes('BANGLADESH')) candidates.push('BANGLADESH');
   if (cleanArea.includes('GRP LOOSE')) candidates.push('GRP LOOSE');
-  if (cleanArea.includes('TARABARI')) candidates.push('L/A TARABARI', 'TARABARI');
+
+  // Lower Assam / Tarabari / Bilasipara: "LOWER ASSAM & BILASIPARA & L/A TARABARI and all are Same Treat all As Same"
+  if (
+    cleanArea.includes('LOWER ASSAM') || 
+    cleanArea.includes('L/A') || 
+    cleanArea.includes('TARABARI') || 
+    cleanArea.includes('BILASIPARA') ||
+    cleanArea.includes('BELLOW ASSAM') ||
+    cleanArea.includes('BELOW ASSAM') ||
+    cleanAgency.includes('LOWER ASSAM') ||
+    cleanAgency.includes('BILASIPARA') ||
+    cleanAgency.includes('TARABARI') ||
+    cleanAgency.includes('BELLOW ASSAM') ||
+    cleanAgency.includes('BELOW ASSAM')
+  ) {
+    candidates.push('L/A TARABARI', 'LOWER ASSAM', 'BILASIPARA', 'L/A', 'TARABARI');
+  }
+
   if (cleanArea.includes('U/ASSAM') || cleanArea.includes('UPPER ASSAM')) candidates.push('U/ASSAM', 'ASSAM');
-  else if (cleanArea.includes('ASSAM')) candidates.push('ASSAM', 'U/ASSAM');
+  else if (cleanArea.includes('ASSAM') && !cleanArea.includes('LOWER')) candidates.push('ASSAM', 'U/ASSAM');
   if (cleanArea.includes('KANKI')) candidates.push('KANKI');
   if (cleanArea.includes('RAIGANJ')) {
     if (cleanArea.includes('LOOSE')) candidates.push('RAIGANJ Loose', 'RAIGANJ');

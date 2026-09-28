@@ -401,7 +401,21 @@ export default function SattaChart({
         // Map to structured cache and auto-sanitize extreme typos if any (> 5000)
         const cache: Record<string, Record<string, number>> = {};
         diffs.forEach(item => {
-          if (!cache[item.area]) cache[item.area] = {};
+          let area = String(item.area || '').trim().toUpperCase();
+          // LOWER ASSAM & BILASIPARA & L/A TARABARI are the exact same: treat all as L/A TARABARI
+          if (
+            area === 'LOWER ASSAM' || 
+            area === 'BILASIPARA' || 
+            area.includes('TARABARI') || 
+            area === 'L/A' ||
+            area === 'BELLOW ASSAM' ||
+            area === 'BELOW ASSAM' ||
+            area.includes('BELLOW') ||
+            area.includes('BELOW')
+          ) {
+            area = 'L/A TARABARI';
+          }
+          if (!cache[area]) cache[area] = {};
           let val = Number(item.differential);
           if (Math.abs(val) > 5000) {
             val = Math.round(val / 10);
@@ -409,8 +423,14 @@ export default function SattaChart({
               supabase.from('satta_differentials').update({ differential: val }).eq('id', item.id).then();
             }
           }
-          cache[item.area][item.grade] = val;
+          cache[area][item.grade] = val;
         });
+
+        // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows from database
+        if (supabase) {
+          supabase.from('satta_differentials').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
+          supabase.from('satta_calculated_rates').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
+        }
 
         // Check if any seed area from EXCEL_SEED_DATA (such as PURNEA (LOOSE)) is missing in database
         const missingSeedMap = new Map<string, any>();
@@ -618,13 +638,27 @@ export default function SattaChart({
     if (!editingCell || !supabase) return;
     const { area, grade, val } = editingCell;
     const numericDiff = Number(val) || 0;
+    let canonicalArea = area;
+    const upper = area.trim().toUpperCase();
+    if (
+      upper === 'LOWER ASSAM' ||
+      upper === 'BILASIPARA' ||
+      upper === 'L/A' ||
+      upper.includes('TARABARI') ||
+      upper === 'BELLOW ASSAM' ||
+      upper === 'BELOW ASSAM' ||
+      upper.includes('BELLOW') ||
+      upper.includes('BELOW')
+    ) {
+      canonicalArea = 'L/A TARABARI';
+    }
 
     try {
       setIsLoading(true);
       const { error } = await supabase
         .from('satta_differentials')
         .upsert({
-          area,
+          area: canonicalArea,
           grade,
           differential: numericDiff
         }, {
@@ -634,17 +668,23 @@ export default function SattaChart({
 
       if (error) throw error;
 
+      // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows
+      if (canonicalArea === 'L/A TARABARI') {
+        supabase.from('satta_differentials').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
+        supabase.from('satta_calculated_rates').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
+      }
+
       setDbDifferentials(prev => ({
         ...prev,
-        [area]: {
-          ...(prev[area] || {}),
+        [canonicalArea]: {
+          ...(prev[canonicalArea] || {}),
           [grade]: numericDiff
         }
       }));
 
       setEditingCell(null);
       setSaveStatus({
-        message: `Differential for ${area} [${grade}] updated to ${numericDiff >= 0 ? '+' : ''}${numericDiff}.`,
+        message: `Differential for ${canonicalArea} [${grade}] updated to ${numericDiff >= 0 ? '+' : ''}${numericDiff}.`,
         success: true
       });
     } catch (exc: any) {
@@ -916,10 +956,28 @@ export default function SattaChart({
         // "ON CONFLICT DO UPDATE command cannot affect row a second time"
         const uniqueMap = new Map<string, { area: string; grade: string; differential: number }>();
 
+        // Normalizer to treat LOWER ASSAM, BILASIPARA, and L/A TARABARI as identical
+        const normalizeUploadedArea = (raw: string): string => {
+          const upper = String(raw || '').trim().toUpperCase();
+          if (
+            upper === 'LOWER ASSAM' || 
+            upper === 'BILASIPARA' || 
+            upper === 'L/A' || 
+            upper.includes('TARABARI') ||
+            upper === 'BELLOW ASSAM' ||
+            upper === 'BELOW ASSAM' ||
+            upper.includes('BELLOW') ||
+            upper.includes('BELOW')
+          ) {
+            return 'L/A TARABARI';
+          }
+          return upper;
+        };
+
         if (areaCol && gradeCol && diffCol) {
           // 1. Standard 3-column format: Area, Grade, Differential
           data.forEach((row: any) => {
-            const rawArea = String(row[areaCol] || '').trim().toUpperCase();
+            const rawArea = normalizeUploadedArea(row[areaCol]);
             const rawGrade = String(row[gradeCol] || '').trim().toUpperCase();
             const rawDiffVal = row[diffCol];
 
@@ -937,7 +995,7 @@ export default function SattaChart({
           // 2. Matrix / Pivot format: Column 1 is Area, other columns are Grade names (e.g. TD4, TD5, TD6, etc.)
           const otherCols = rawKeys.filter(k => k !== areaCol && !/^(srl|sl|id|created_at|start_date)$/i.test(k.trim()));
           data.forEach((row: any) => {
-            const rawArea = String(row[areaCol] || '').trim().toUpperCase();
+            const rawArea = normalizeUploadedArea(row[areaCol]);
             if (!rawArea) return;
 
             otherCols.forEach(col => {
@@ -1121,11 +1179,26 @@ export default function SattaChart({
       areaMap.set(item.area, { ...item.diffs });
     });
     // Overlay dynamic differentials and additional regions from database
-    Object.entries(dbDifferentials).forEach(([areaName, diffs]) => {
-      if (areaMap.has(areaName)) {
-        areaMap.set(areaName, { ...areaMap.get(areaName), ...diffs });
+    Object.entries(dbDifferentials).forEach(([rawAreaName, diffs]) => {
+      const upper = String(rawAreaName || '').trim().toUpperCase();
+      // LOWER ASSAM & BILASIPARA & L/A TARABARI are the exact same: treat all as L/A TARABARI
+      const canonicalArea = (
+        upper === 'LOWER ASSAM' || 
+        upper === 'BILASIPARA' || 
+        upper === 'L/A' || 
+        upper.includes('TARABARI') ||
+        upper === 'BELLOW ASSAM' ||
+        upper === 'BELOW ASSAM' ||
+        upper.includes('BELLOW') ||
+        upper.includes('BELOW')
+      )
+        ? 'L/A TARABARI'
+        : rawAreaName;
+
+      if (areaMap.has(canonicalArea)) {
+        areaMap.set(canonicalArea, { ...areaMap.get(canonicalArea), ...diffs });
       } else {
-        areaMap.set(areaName, { ...diffs });
+        areaMap.set(canonicalArea, { ...diffs });
       }
     });
 
@@ -1137,7 +1210,15 @@ export default function SattaChart({
 
   const filteredSeedRows = useMemo(() => {
     return allAreaRows.filter(row => {
-      if (searchTerm && !row.area.toLowerCase().includes(searchTerm.toLowerCase())) {
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase().trim();
+        const areaLower = row.area.toLowerCase();
+        if (areaLower.includes(q)) return true;
+        // Search synonyms for Lower Assam (matches L/A TARABARI if user queries LOWER ASSAM, BILASIPARA, or BELLOW ASSAM)
+        if ((areaLower.includes('tarabari') || areaLower.includes('lower assam')) && 
+            (q.includes('lower') || q.includes('assam') || q.includes('bilasipara') || q.includes('tarabari') || q === 'l/a' || q.includes('bellow') || q.includes('below'))) {
+          return true;
+        }
         return false;
       }
       return true;

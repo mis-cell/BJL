@@ -175,8 +175,20 @@ export function usePurchaseOrderFormLogic({
 
     const activeBase = sortedBases[0];
 
-    const lookupInSatta = (areaToLookup: string) => {
-      if (!areaToLookup) return null;
+    const lookupInSatta = (rawAreaToLookup: string) => {
+      if (!rawAreaToLookup) return null;
+      let areaToLookup = rawAreaToLookup.trim().toUpperCase();
+      if (
+        areaToLookup === 'LOWER ASSAM' ||
+        areaToLookup === 'BILASIPARA' ||
+        areaToLookup === 'L/A' ||
+        areaToLookup.includes('TARABARI') ||
+        areaToLookup === 'BELLOW ASSAM' ||
+        areaToLookup === 'BELOW ASSAM' ||
+        areaToLookup.includes('BELLOW')
+      ) {
+        areaToLookup = 'L/A TARABARI';
+      }
 
       if (activeBase && calcs.length > 0) {
         const match = calcs.find(c => 
