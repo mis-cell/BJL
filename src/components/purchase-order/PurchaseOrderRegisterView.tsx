@@ -455,30 +455,30 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   <th 
                     onClick={() => handleSort('unit')}
                     className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
-                    title="Sort by Unit / Lorry"
+                    title="Sort by Unit"
                   >
                     <div className="flex items-center justify-center gap-1">
-                      <span>UNIT / LORRY</span>
+                      <span>UNIT</span>
                       {renderSortIndicator('unit')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('total_units')}
                     className="px-2.5 py-1.5 text-right border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
-                    title="Sort by Total Units"
+                    title="Sort by Count"
                   >
                     <div className="flex items-center justify-end gap-1">
-                      <span>TOTAL UNITS</span>
+                      <span>COUNT</span>
                       {renderSortIndicator('total_units')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('weight')}
                     className="px-2.5 py-1.5 text-right border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
-                    title="Sort by Weight (MT)"
+                    title="Sort by Weight"
                   >
                     <div className="flex items-center justify-end gap-1">
-                      <span>WEIGHT (MT)<br/><span className="text-[7.5px] font-medium opacity-70 normal-case">Rcvd / Contract</span></span>
+                      <span>WEIGHT</span>
                       {renderSortIndicator('weight')}
                     </div>
                   </th>
@@ -876,6 +876,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                           {/* PASS / MISMATCH STATUS */}
                           <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[80px]">
                             {(() => {
+                              const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+                              const receivedLorries = item.received_lorries || 0;
+                              const isClosed = Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0);
+
                               const isResolved = isPoMismatchResolved(item);
                               const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
 
@@ -894,18 +898,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 );
                               }
 
-                              const isPendingArrivalOrCheck = (
-                                item.pass_status === "pending" ||
-                                (stage === "temp_arrival_pending" && !item.pass_status && !item.received_lorries && !item.received_weight_mt && !item.last_arrival_date)
-                              );
-
-                              if (isPendingArrivalOrCheck) {
-                                return (
-                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs inline-flex items-center gap-1">
-                                    <Clock className="w-2.5 h-2.5 text-amber-600 shrink-0" />
-                                    <span>Pending</span>
-                                  </span>
-                                );
+                              // When Status is PENDING (not yet closed/completed), keep it completely blank
+                              if (!isClosed) {
+                                return null;
                               }
 
                               return (
@@ -920,6 +915,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                           {/* PROCESS STAGE & PASS ACTION */}
                           <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[110px]">
                             {(() => {
+                              const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+                              const receivedLorries = item.received_lorries || 0;
+                              const isClosed = Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0);
+
                               const isAdvDone = checkIsAdvancePaymentDone(item, allPayments);
                               const isSettlementDone = checkIsSettlementDone(item, allSettlements);
 
@@ -932,6 +931,16 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 );
                               }
 
+                              // If lorries are still open / arriving (Status PENDING), do not allow Pass to Final PO yet
+                              if (!isClosed) {
+                                return (
+                                  <span className="text-[8.5px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-300 inline-flex items-center gap-1" title="Contract lorries are still arriving / pending.">
+                                    <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                    <span>LORRY PENDING</span>
+                                  </span>
+                                );
+                              }
+
                               if (!isSettlementDone) {
                                 return (
                                   <button
@@ -940,7 +949,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                       e.stopPropagation(); 
                                       setExcessShortModalPo(item);
                                     }}
-                                    title="Advance Payment completed. Account Settlement is pending — Click to open Excess / Short Settlement."
+                                    title="All lorries arrived & Advance completed. Account Settlement is pending — Click to open Excess / Short Settlement."
                                     className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 uppercase cursor-pointer inline-flex items-center gap-1 whitespace-nowrap transition-colors shadow-2xs"
                                   >
                                     <Clock className="w-2.5 h-2.5 text-blue-700" />
@@ -953,7 +962,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                  title="Advance Payment & Settlement Completed! Click to Move this P.O to Final P.O"
+                                  title="Advance Payment, Lorries & Settlement Completed! Click to Move this P.O to Final P.O"
                                   className="text-[8.5px] font-black px-2 py-0.5 rounded bg-[#174C2C] hover:bg-[#103A20] text-white uppercase shadow-xs cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
                                 >
                                   <Check className="w-3 h-3 text-white stroke-[3]" />
