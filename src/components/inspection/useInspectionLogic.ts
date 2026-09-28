@@ -49,7 +49,7 @@ export function useInspectionLogic() {
 
   // Form State
   const [headerForm, setHeaderForm] = useState<InspectionMasterRecord>({
-    mr_no: `MRRC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    mr_no: "",
     mr_date: new Date().toISOString().split("T")[0],
     arrival_no: "",
     arrival_date: new Date().toISOString().split("T")[0],
@@ -656,6 +656,7 @@ export function useInspectionLogic() {
       setHeaderForm(prev => {
         const next: InspectionMasterRecord = {
           ...prev,
+          mr_no: arrNo || prev.mr_no,
           arrival_no: arrNo,
           arrival_date: sanitizeDate(fa.arrival_date || fa.final_arrival_date || fa.date || fa.temporary_arrival_date) || prev.arrival_date,
           po_no: fa.po_no || prev.po_no,
@@ -955,7 +956,7 @@ export function useInspectionLogic() {
 
   const handleOpenNewForm = () => {
     setHeaderForm({
-      mr_no: `MRRC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      mr_no: "",
       mr_date: new Date().toISOString().split("T")[0],
       arrival_no: "",
       arrival_date: new Date().toISOString().split("T")[0],
