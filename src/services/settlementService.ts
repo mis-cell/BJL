@@ -596,24 +596,79 @@ export const fetchSaudaCheckpointDeduction = async (cleanPoNo: string) => {
   try {
     const rawPoNo = cleanPoNo.trim().replace(/^#/, '');
     const poWithHash = '#' + rawPoNo;
+    const cleanAlphaPo = rawPoNo.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
+    // 1. Check local storage cache first
+    const localSavedStr = localStorage.getItem(`sauda_settlement_${cleanAlphaPo}`) || 
+                          localStorage.getItem(`sauda_settlement_${rawPoNo}`);
+    if (localSavedStr) {
+      try {
+        const parsed = JSON.parse(localSavedStr);
+        if (parsed && Number(parsed.deduction_amount) >= 0) return parsed;
+      } catch (e) {}
+    }
+
+    // 2. Query Supabase sauda_check_point_deductions table
     if (supabase) {
-      const { data } = await supabase
+      const { data: directList } = await supabase
         .from('sauda_check_point_deductions')
-        .select('*')
+        .select('*');
+
+      if (directList && directList.length > 0) {
+        const found = directList.find((item: any) => {
+          const itemPo = String(item.po_no || '').trim().replace(/^#/, '').toUpperCase();
+          const itemSauda = String(item.sauda_no || item.po_contract || '').trim().replace(/^#/, '').toUpperCase();
+          const itemPoClean = itemPo.replace(/[^a-zA-Z0-9]/g, '');
+          const itemSaudaClean = itemSauda.replace(/[^a-zA-Z0-9]/g, '');
+          return itemPo === rawPoNo.toUpperCase() ||
+                 itemSauda === rawPoNo.toUpperCase() ||
+                 (cleanAlphaPo && itemPoClean === cleanAlphaPo) ||
+                 (cleanAlphaPo && itemSaudaClean === cleanAlphaPo) ||
+                 itemPo.includes(rawPoNo.toUpperCase()) ||
+                 rawPoNo.toUpperCase().includes(itemPo);
+        });
+
+        if (found) return found;
+      }
+
+      // 3. Fallback check from purchase_master or sauda_check_point excess_short_deduction
+      const { data: poRecord } = await supabase
+        .from('purchase_master')
+        .select('po_no, excess_short_deduction, excess_short_status, total_contract_mt, contract_weight_mt, received_weight_mt, total_received_mt')
         .or(`po_no.eq.${rawPoNo},po_no.eq.${poWithHash}`)
-        .order('updated_at', { ascending: false })
-        .limit(1)
         .maybeSingle();
 
-      if (data) return data;
+      if (poRecord && Number(poRecord.excess_short_deduction) > 0) {
+        return {
+          po_no: poRecord.po_no || rawPoNo,
+          deduction_amount: Number(poRecord.excess_short_deduction),
+          variation_type: 'short',
+          remarks: 'Auto-retrieved from Sauda Check Point Total Short Weight Deduction'
+        };
+      }
+
+      const { data: scpRecord } = await supabase
+        .from('sauda_check_point')
+        .select('po_no, excess_short_deduction, excess_short_status')
+        .or(`po_no.eq.${rawPoNo},po_no.eq.${poWithHash}`)
+        .maybeSingle();
+
+      if (scpRecord && Number(scpRecord.excess_short_deduction) > 0) {
+        return {
+          po_no: scpRecord.po_no || rawPoNo,
+          deduction_amount: Number(scpRecord.excess_short_deduction),
+          variation_type: 'short',
+          remarks: 'Auto-retrieved from Sauda Check Point Total Short Weight Deduction'
+        };
+      }
     }
 
     const localRecords = await dbModule.fetchAll('sauda_check_point_deductions').catch(() => []);
     if (Array.isArray(localRecords) && localRecords.length > 0) {
       const found = localRecords.find((r: any) => {
         const rPo = String(r.po_no || '').trim().replace(/^#/, '').toUpperCase();
-        return rPo === rawPoNo.toUpperCase();
+        const rPoClean = rPo.replace(/[^a-zA-Z0-9]/g, '');
+        return rPo === rawPoNo.toUpperCase() || (cleanAlphaPo && rPoClean === cleanAlphaPo);
       });
       if (found) return found;
     }

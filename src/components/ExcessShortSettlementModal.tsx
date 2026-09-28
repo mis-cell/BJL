@@ -701,6 +701,125 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     ];
   }, [matchedTempArrivals, lastArrivalMrNo, lastArrivalDate, resolvedGrade, saudaBaseRate, arrivalBaseRate, rateDifference, liveBaseRates, sattaBaseRates, totalReceivedMt, contractMt, saudaQtyQtl, po]);
 
+  // Auto-sync calculated settlement to database and cache without requiring approval
+  useEffect(() => {
+    if (contractMt <= 0 || isSaving) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const nowIso = new Date().toISOString();
+        const payload = {
+          po_no: poNo,
+          sauda_no: saudaNo || poNo,
+          supplier: supplierName,
+          broker: brokerName,
+          contract_weight_mt: Number(contractMt.toFixed(3)),
+          tolerance_pct: Number(tolerance.tolerancePct.toFixed(2)),
+          tolerance_mt: Number(tolerance.toleranceMt.toFixed(3)),
+          tolerance_type: 'Lower of 3% or 1,500 kg (15 Quintal)',
+          min_acceptable_mt: Number(tolerance.minAcceptableMt.toFixed(3)),
+          max_acceptable_mt: Number(tolerance.maxAcceptableMt.toFixed(3)),
+          total_received_mt: Number(totalReceivedMt.toFixed(3)),
+          variation_type: isWithinTolerance ? 'within_tolerance' : (isExcess ? 'excess' : 'short'),
+          variation_mt: Number(absDiffMt.toFixed(3)),
+          selected_grade: resolvedGrade || 'TD6',
+          sauda_rate: Number(saudaBaseRate),
+          satta_rate: Number(arrivalBaseRate),
+          last_arrival_date: normalizeToYMD(lastArrivalDate),
+          applicable_rate: Number(applicableRate),
+          rate_basis: selectedRateMode,
+          rate_difference: Number(rateDifference),
+          deduction_qty_mt: Number(deductibleQtyMt.toFixed(3)),
+          deduction_qty_qtl: Number(deductibleQtyQtl.toFixed(2)),
+          deduction_amount: Number(totalCalculatedAmount),
+          status: 'approved',
+          remarks: remarks || `${policyStatusText}: Deductible ${deductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl = ₹${totalCalculatedAmount}.`,
+          arrival_numbers: arrivalNumbersString,
+          grade_breakdown: JSON.stringify(gradeBreakdownList),
+          approved_by: settledBy || 'System Auto-Calculated',
+          approval_level: approvalLevel || 'ADMIN',
+          created_at: nowIso,
+          updated_at: nowIso
+        };
+
+        // Cache locally immediately
+        localStorage.setItem(`sauda_settled_${cleanKey}`, 'true');
+        localStorage.setItem(`sauda_settlement_${cleanKey}`, JSON.stringify(payload));
+        if (cleanSaudaKey) {
+          localStorage.setItem(`sauda_settled_${cleanSaudaKey}`, 'true');
+          localStorage.setItem(`sauda_settlement_${cleanSaudaKey}`, JSON.stringify(payload));
+        }
+
+        if (supabase) {
+          if (existingRecordId) {
+            await supabase
+              .from('sauda_check_point_deductions')
+              .update(payload)
+              .eq('id', existingRecordId);
+          } else {
+            const { data } = await supabase
+              .from('sauda_check_point_deductions')
+              .insert(payload)
+              .select()
+              .single();
+            if (data?.id) setExistingRecordId(data.id);
+          }
+
+          await supabase
+            .from('purchase_master')
+            .update({
+              excess_short_deduction: totalCalculatedAmount,
+              excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+              final_payable_amount: totalFinalPayable,
+              is_settled: true
+            })
+            .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
+
+          await supabase
+            .from('sauda_check_point')
+            .update({
+              excess_short_deduction: totalCalculatedAmount,
+              excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+              final_payable_amount: totalFinalPayable,
+              is_settled: true
+            })
+            .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
+
+          if (saudaNo) {
+            await supabase
+              .from('sauda_master')
+              .update({
+                excess_short_deduction: totalCalculatedAmount,
+                excess_short_status: isWithinTolerance ? 'within_bounds' : 'settled',
+                final_payable_amount: totalFinalPayable,
+                is_settled: true
+              })
+              .eq('sauda_no', saudaNo);
+          }
+        }
+      } catch (e) {
+        console.warn("Auto-syncing settlement deduction:", e);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    contractMt,
+    totalReceivedMt,
+    totalCalculatedAmount,
+    applicableRate,
+    selectedRateMode,
+    isWithinTolerance,
+    isExcess,
+    isShort,
+    poNo,
+    saudaNo,
+    cleanKey,
+    cleanSaudaKey,
+    existingRecordId,
+    totalFinalPayable
+  ]);
+
   // Handle Save Settlement into sauda_check_point_deductions
   const handleSaveSettlement = async () => {
     if (isSettled) return;

@@ -266,41 +266,9 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
             />
           </div>
 
-          {/* Val Less Amt with Sauda Checkpoint Info */}
+          {/* Val Less Amt */}
           <div className="flex flex-col col-span-1">
-            <div className="group relative flex items-center justify-between gap-1 mb-0.5">
-              <div className="flex items-center gap-1">
-                <label htmlFor="val_less_amt_input" className="text-[9px] font-bold text-slate-600">Val Less Amt(-)</label>
-                <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
-                <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8.5px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
-                  <p className="text-amber-300 font-bold">Sauda Checkpoint Deduction</p>
-                  <p>Table: <code className="text-cyan-300">sauda_check_point_deductions</code></p>
-                  <p>PO Lookup: <code className="text-white">{selectedPoNo || masterData.po_no || "N/A"}</code></p>
-                  {saudaDeductionRecord ? (
-                    <>
-                      <p>Reason: <span className="text-amber-300 font-bold uppercase">{saudaDeductionRecord.variation_type || "N/A"}</span></p>
-                      <p>Deduction Amount: <span className="text-emerald-300 font-bold font-mono">₹{Number(saudaDeductionRecord.deduction_amount || 0).toFixed(2)}</span></p>
-                      <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT</span></p>
-                      <p className="text-amber-200 text-[7.5px] mt-1 border-t border-slate-700 pt-1 italic">* Applied on Last Final M.R.</p>
-                    </>
-                  ) : (
-                    <p className="text-slate-400 italic">No checkpoint deduction for this M.R.</p>
-                  )}
-                </div>
-              </div>
-
-              {saudaDeductionRecord && (
-                <span className={cn(
-                  "text-[7.5px] font-black px-1.5 py-0.2 rounded uppercase border shrink-0",
-                  saudaDeductionRecord.variation_type === "excess"
-                    ? "bg-amber-100 text-amber-900 border-amber-300"
-                    : "bg-rose-100 text-rose-900 border-rose-300"
-                )}>
-                  {saudaDeductionRecord.variation_type === "excess" ? "Excess Wt" : "Short Wt"}
-                </span>
-              )}
-            </div>
-
+            <label htmlFor="val_less_amt_input" className="text-[9px] font-bold text-slate-600 mb-0.5">Val Less Amt(-)</label>
             <input
               id="val_less_amt_input"
               name="val_less_amt"
@@ -361,14 +329,53 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
             />
           </div>
 
+          {/* Ex/Short (-) with Sauda Checkpoint Info */}
           <div className="flex flex-col col-span-2">
-            <label htmlFor="ex_short_input" className="text-[9px] font-bold text-slate-600 mb-0.5">Ex/Short (-)</label>
+            <div className="group relative flex items-center justify-between gap-1 mb-0.5">
+              <div className="flex items-center gap-1">
+                <label htmlFor="ex_short_input" className="text-[9px] font-bold text-[#991b1b]">Ex/Short (-)</label>
+                <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+                <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded-lg border border-slate-700 shadow-xl leading-normal font-normal normal-case">
+                  <p className="text-amber-300 font-bold text-[9px]">Sauda Checkpoint Short/Excess Weight Deduction</p>
+                  <p>Table: <code className="text-cyan-300">sauda_check_point_deductions</code></p>
+                  <p>PO Lookup: <code className="text-white">{selectedPoNo || masterData.po_no || "N/A"}</code></p>
+                  {saudaDeductionRecord ? (
+                    <div className="mt-1 space-y-0.5 border-t border-slate-700 pt-1">
+                      <p>Variation: <span className="text-amber-300 font-bold uppercase">{saudaDeductionRecord.variation_type || "short"}</span></p>
+                      <p>Total Short Weight Deduction Amount: <span className="text-emerald-300 font-black font-mono">₹{Number(saudaDeductionRecord.deduction_amount || masterData.val_ex_short || 0).toFixed(2)}</span></p>
+                      {saudaDeductionRecord.deduction_qty_mt && (
+                        <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT ({saudaDeductionRecord.deduction_qty_qtl} Qtl)</span></p>
+                      )}
+                      <p className="text-emerald-200 text-[8px] mt-1 italic font-semibold">✓ Automatically populated on Last Final M.R. without approval requirement</p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic mt-1">No checkpoint short weight deduction recorded for this P.O.</p>
+                  )}
+                </div>
+              </div>
+
+              {saudaDeductionRecord && (
+                <span className={cn(
+                  "text-[7.5px] font-black px-1.5 py-0.2 rounded uppercase border shrink-0",
+                  saudaDeductionRecord.variation_type === "excess"
+                    ? "bg-amber-100 text-amber-900 border-amber-300"
+                    : "bg-rose-100 text-rose-900 border-rose-300"
+                )}>
+                  {saudaDeductionRecord.variation_type === "excess" ? "Excess Wt" : "Short Wt Deduction"}
+                </span>
+              )}
+            </div>
+
             <input
               id="ex_short_input"
               name="ex_short"
               aria-label="Ex/Short (-)"
               type="number"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              step="0.01"
+              className={cn(
+                "border rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs shadow-2xs focus:border-indigo-500 focus:outline-none w-full",
+                Number(masterData.val_ex_short) > 0 ? "bg-[#fff1f2] border-[#fecdd3] text-[#991b1b]" : "bg-white border-slate-300 text-slate-800"
+              )}
               value={masterData.val_ex_short || ""}
               onChange={(e) => handleMasterChange("val_ex_short", parseFloat(e.target.value) || 0)}
             />

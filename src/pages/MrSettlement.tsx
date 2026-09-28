@@ -780,7 +780,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         if (Number(saudaDed.deduction_amount) > 0) {
           setMasterData(prev => ({
             ...prev,
-            val_less_amt: Number(saudaDed.deduction_amount)
+            val_ex_short: Number(saudaDed.deduction_amount)
           }));
         }
       } else {
@@ -1282,9 +1282,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_premium_amt: (existingMaster.val_premium_amt !== undefined && existingMaster.val_premium_amt !== null && Number(existingMaster.val_premium_amt) > 0)
               ? existingMaster.val_premium_amt
               : calculatedPremTotalAmt,
-            val_less_amt: isLastMr
-              ? (Number(existingMaster.val_less_amt) > 0 ? existingMaster.val_less_amt : Number(saudaDedRecord?.deduction_amount || 0))
-              : Number(existingMaster.val_less_amt || 0),
+            val_ex_short: isLastMr
+              ? (Number(existingMaster.val_ex_short) > 0 ? existingMaster.val_ex_short : Number(saudaDedRecord?.deduction_amount || 0))
+              : Number(existingMaster.val_ex_short || 0),
+            val_less_amt: Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
             final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
@@ -1401,7 +1402,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_instl_rate: calculatedPremWtQtl,
           summary_premium_amount: calculatedPremRatePerQtl,
           val_premium_amt: calculatedPremTotalAmt,
-          val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
+          val_ex_short: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
+          val_less_amt: 0,
           arival_apmc_fees: resolvedArrivalApmcFees,
           final_apmc_fees: 0,
           final_on_ac_adv: syncedPaidAmount
@@ -1506,7 +1508,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_instl_rate: calculatedPremWtQtl,
         summary_premium_amount: calculatedPremRatePerQtl,
         val_premium_amt: calculatedPremTotalAmt,
-        val_less_amt: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
+        val_ex_short: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
+        val_less_amt: 0,
         arival_apmc_fees: resolvedArrivalApmcFees,
         final_apmc_fees: 0,
         final_on_ac_adv: syncedPaidAmount
