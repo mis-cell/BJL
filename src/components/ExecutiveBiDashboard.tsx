@@ -772,10 +772,10 @@ export default function ExecutiveBiDashboard({
           </div>
         </div>
 
-        {/* Month Cards Grid (Half-size compact cards) */}
+        {/* Month Cards Grid (Dynamic auto-fit responsive grid filling 100% available space) */}
         {!collapseMonthSummary && (
           dbMetrics.monthSummaries.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-2">
+            <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(140px,1fr))]">
               {dbMetrics.monthSummaries.map((m) => (
                 <div
                   key={`${m.year}-${m.monthIndex}`}
@@ -784,32 +784,32 @@ export default function ExecutiveBiDashboard({
                     subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending, ${m.partialContracts} partial)`,
                     contracts: m.contracts
                   })}
-                  className="bg-white border border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-[11px]"
+                  className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
                   title={`Click to view ${m.monthName} ${m.year} contract records`}
                 >
                   <div>
                     {/* Card Header: Month Name + Year */}
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <h3 className="text-xs font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                    <div className="flex items-center justify-between gap-1 mb-1.5 pb-1 border-b border-[#F2EDE0]">
+                      <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1.5 truncate">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
                         <span>{m.monthName}</span>
                       </h3>
-                      <span className="text-[9px] font-mono text-[#5A6E54]">{m.year}</span>
+                      <span className="text-[10px] font-mono text-[#5A6E54] font-semibold">{m.year}</span>
                     </div>
 
                     {/* Contract Count */}
-                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-[#F2EDE0]">
-                      <span className="text-[#5A6E54] font-medium">Cont:</span>
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-[#F2EDE0]">
+                      <span className="text-[#5A6E54] font-semibold">Cont:</span>
                       <span className="font-mono font-extrabold text-[#1E331B]">
                         {m.totalContracts}
                       </span>
                     </div>
 
                     {/* Pending Count */}
-                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
-                      <span className="text-[#5A6E54] font-medium">Pend:</span>
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-dashed border-[#F2EDE0]">
+                      <span className="text-[#5A6E54] font-semibold">Pend:</span>
                       <span className={cn(
-                        "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
+                        "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
                         m.pendingContracts > 0 
                           ? "bg-amber-100 text-amber-900 border border-amber-300" 
                           : "bg-emerald-100 text-emerald-900 border border-emerald-300"
@@ -819,10 +819,10 @@ export default function ExecutiveBiDashboard({
                     </div>
 
                     {/* Partial Count */}
-                    <div className="flex items-center justify-between text-[11px] py-0.5 border-t border-dashed border-[#F2EDE0]">
-                      <span className="text-[#5A6E54] font-medium">Part:</span>
+                    <div className="flex items-center justify-between text-xs py-1">
+                      <span className="text-[#5A6E54] font-semibold">Part:</span>
                       <span className={cn(
-                        "font-mono font-bold px-1 py-0.2 rounded text-[9px]",
+                        "font-mono font-bold px-1.5 py-0.5 rounded text-[10px]",
                         m.partialContracts > 0 
                           ? "bg-blue-100 text-blue-900 border border-blue-300" 
                           : "bg-gray-100 text-gray-700 border border-gray-300"
@@ -832,9 +832,9 @@ export default function ExecutiveBiDashboard({
                     </div>
                   </div>
 
-                  <div className="mt-1.5 pt-1 border-t border-dashed border-[#EAE2D2] text-[8.5px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-                    <span>Details</span>
-                    <span className="text-[9px]">→</span>
+                  <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9.5px] font-bold text-[#2E6B3E] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+                    <span>View Details</span>
+                    <span className="text-[10px]">→</span>
                   </div>
                 </div>
               ))}
@@ -1007,9 +1007,9 @@ export default function ExecutiveBiDashboard({
               </div>
             </div>
 
-            {/* Month Cards Grid */}
+            {/* Month Cards Grid (Dynamic auto-fit responsive grid filling 100% available space) */}
             {inspMetrics.monthInspectionSummaries.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2.5 sm:gap-3">
+              <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
                 {inspMetrics.monthInspectionSummaries.map((m) => (
                   <div
                     key={`insp-${m.year}-${m.monthIndex}`}
@@ -1020,7 +1020,7 @@ export default function ExecutiveBiDashboard({
                       payments: m.payments,
                       settlements: m.settlements
                     })}
-                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs"
+                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
                     title={`Click to view ${m.monthName} ${m.year} inspection, quality, payment, and settlement details`}
                   >
                     <div>
