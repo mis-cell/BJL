@@ -1194,131 +1194,59 @@ export default function SattaChart({
     <div className="space-y-6 max-w-full font-sans pb-12 bg-[#FAF8F5] min-h-screen text-[#1A2619]">
       
       {/* TOP NAVIGATION & BREADCRUMB HEADER */}
-      <div className="bg-[#1E331B] text-white p-4 md:p-1 rounded-2xl shadow-xl  relative overflow-hidden">
+      <div className="bg-[#174C2C] text-white p-3 md:p-2 rounded-2xl shadow-xl border-2 border-[#103A20] relative overflow-hidden">
         {/* Subtle decorative background glow */}
        {/*  <div className="absolute -right-16 -top-16 w-64 h-44 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none" /> */}
           {/* <div className="absolute right-32 bottom-0 w-48 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" /> */}
         
-          {/* <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs text-[#D4AF37] font-semibold tracking-wider uppercase mb-1">
-                <span>Dashboard</span>
-                <ChevronRight className="h-3 w-3 text-slate-400" />
-                <span>Purchase</span>
-                <ChevronRight className="h-3 w-3 text-slate-400" />
-                <span className="text-white font-bold">Satta Dashboard</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 rounded-xl">
-                  <Sparkles className="h-6 w-6 text-[#D4AF37]" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-serif font-extrabold tracking-tight text-white flex items-center gap-2">
-                    Satta Dashboard
-                    <span className="text-xs font-sans font-extrabold bg-[#D4AF37] text-[#1E331B] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Live Market Intelligence
-                    </span>
-                  </h1>
-                  <p className="text-xs text-emerald-100/80 font-medium mt-0.5">
-                    Bally Jute Limited ERP • Real-time Market Rates, Differential Matrix & Area Analytics
-                  </p>
-                </div>
-              </div>
-            </div> 
-
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right">
-                <div className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-wider">Current Date</div>
-                <div className="text-xs font-mono font-bold text-white">
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-                </div>
-              </div>
-
-              <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right">
-                <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Last Updated</div>
-                <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
-                  <Clock className="h-3 w-3 text-[#D4AF37]" />
-                  <span>Today {lastSyncedAt}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => loadChartConfig(false)}
-                disabled={isLoading}
-                className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#1E331B] font-extrabold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
-              >
-                <RefreshCcw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                <span>{isLoading ? 'Syncing...' : 'Sync Data'}</span>
-              </button>
-
-              <button
-                onClick={handlePrint}
-                className="bg-[#162B14] hover:bg-[#2A4726] border border-[#D4AF37]/40 text-white font-bold px-3 py-2 rounded-xl text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Print Dashboard"
-              >
-                <Printer className="h-3.5 w-3.5 text-[#D4AF37]" />
-                <span className="hidden sm:inline">Print</span>
-              </button>
-
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className="bg-rose-900/60 hover:bg-rose-800 text-white p-2 rounded-xl transition-all cursor-pointer border border-rose-500/30"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div> */}
-
         {/* Navigation Tabs */}
-        <div className="flex pt-2 gap-3 overflow-x-auto">
+        <div className="flex pt-1 gap-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab('base_rate')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
+              "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'base_rate'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
-                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
+                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
+                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
             )}
           >
-            <DollarSign className="h-4 w-4" />
-            <span>Satta Chart Base Rate</span>
+            <DollarSign className={cn("h-4 w-4", activeTab === 'base_rate' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <span className="text-white font-black">Satta Chart Base Rate</span>
           </button>
 
           <button
             onClick={() => setActiveTab('matrix')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
+              "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'matrix'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
-                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
+                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
+                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
             )}
           >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span>Live Pivot Matrix</span>
+            <FileSpreadsheet className={cn("h-4 w-4", activeTab === 'matrix' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <span className="text-white font-black">Live Pivot Matrix</span>
           </button>
 
           <button
             onClick={() => setActiveTab('diff_history')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0",
+              "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'diff_history'
-                ? "bg-[#D4AF37] text-[#1E331B] shadow-lg scale-105 font-black"
-                : "bg-[#162B14]/80 text-white hover:bg-[#2A4726]"
+                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
+                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
             )}
           >
-            <History className="h-4 w-4" />
-            <span>Differential History</span>
+            <History className={cn("h-4 w-4", activeTab === 'diff_history' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <span className="text-white font-black">Differential History</span>
           </button>
-          <div className="bg-[#162B14] border border-[#D4AF37]/30 px-3.5 py-1.5 rounded-xl text-right shrink-0">
-              <div className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Last Updated</div>
-              <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
-                <Clock className="h-3 w-3 text-[#D4AF37]" />
-                <span>Today {lastSyncedAt}</span>
-              </div>
+
+          <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-right shrink-0">
+            <div className="text-[10px] text-emerald-300 font-black uppercase tracking-wider">Last Updated</div>
+            <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
+              <Clock className="h-3 w-3 text-[#D4AF37]" />
+              <span className="text-white font-black">Today {lastSyncedAt}</span>
             </div>
+          </div>
         </div>
       </div>
 

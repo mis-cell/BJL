@@ -405,24 +405,24 @@ export default function LegacyLayout({
       {/* Window Wrapper */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-hidden">
         
-        {/* Top Control Bar (Yellow/Black Hazard Striped Sub-header & Window Controls) */}
-        <div className="relative bg-[#faf7f0] border-b border-[#FAF7F0] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-xs z-30 w-full min-w-0 gap-2">
+        {/* Top Control Bar */}
+        <div className="relative bg-[#103A20] border-b border-[#0F351E] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-md z-30 w-full min-w-0 gap-2">
           {/* Left Brand Logo Area */}
           <div 
             onClick={handleBrandLogoClick} 
             className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none min-w-0 flex-1"
           >
             {/* BJ Monogram Badge */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1E331B] to-[#11220F] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-sm border border-[#2D4D28] group-hover:border-[#D4AF37] transition-all shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#174C2C] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-md border-2 border-[#D4AF37] group-hover:scale-105 transition-all shrink-0">
               BJ
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-serif text-sm sm:text-2xl font-bold text-[#1E331B] tracking-tight leading-none group-hover:text-[#3E5C38] transition-colors truncate">
+              <h1 className="font-serif text-sm sm:text-2xl font-black text-white tracking-tight leading-none group-hover:text-amber-300 transition-colors truncate">
                 Bally Jute Limited
               </h1>
-              <p className="text-[8px] sm:text-[9px] font-mono text-[#5A6E54] tracking-[0.15em] sm:tracking-[0.25em] uppercase font-semibold mt-0.5 truncate">
-                ESTD. 1979
+              <p className="text-[8px] sm:text-[9.5px] font-mono text-emerald-200 tracking-[0.15em] sm:tracking-[0.25em] uppercase font-bold mt-0.5 truncate">
+                ESTD. 1979 • RAW JUTE MANAGEMENT ERP
               </p>
             </div>
           </div>
@@ -431,22 +431,22 @@ export default function LegacyLayout({
              <button 
                onClick={handleMaximizeClick}
                title="Maximize / Restore"
-               className="h-5 w-5 bg-[#274024] hover:bg-[#345230] text-[#E2EDDE] border border-[#486343] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
+               className="h-5 w-5 bg-[#174C2C] hover:bg-[#235E39] text-white border border-[#2D7344] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
              >
                <Square className="h-2.5 w-2.5" />
              </button>
              <button 
                onClick={handleCloseClick}
                title="Close"
-               className="h-5 w-5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-500 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
+               className="h-5 w-5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
              >
                <X className="h-3 w-3" />
              </button>
           </div>
         </div>
 
-        {/* Main Header & Navigation Bar */}
-        <header className="bg-[#FAF7F0] border-b border-[#D6CAA8] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-sm relative z-50 gap-2 w-full min-w-0">
+        {/* Main Header & Navigation Bar (Same Green Colour As Footer) */}
+        <header className="bg-[#174C2C] border-b-2 border-[#103A20] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-lg relative z-50 gap-2 w-full min-w-0">
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
           <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 max-w-full">
@@ -463,19 +463,19 @@ export default function LegacyLayout({
                     type="button"
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs font-semibold transition-all relative cursor-pointer group max-w-full min-w-0",
+                      "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative cursor-pointer group max-w-full min-w-0",
                       isActive
-                        ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
-                        : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
+                        ? "text-white bg-[#0F351E] font-black shadow-md border border-[#235E39]"
+                        : "text-white font-bold hover:text-white hover:bg-[#215E38]"
                     )}
                   >
                     <IconComp className={cn(
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110 shrink-0",
-                      isActive ? "text-[#1E331B] stroke-[2.5]" : "text-[#7A8A74]"
+                      isActive ? "text-[#D4AF37] stroke-[2.5]" : "text-emerald-200"
                     )} />
-                    <span className="text-[11px] sm:text-[12.5px] tracking-tight truncate max-w-[120px] sm:max-w-none">{menu.label}</span>
+                    <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#1E331B] rounded-full" />
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#D4AF37] rounded-full" />
                     )}
                   </button>
                 );
@@ -495,23 +495,23 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer group select-none max-w-full min-w-0",
+                      "flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer group select-none max-w-full min-w-0",
                       isDropdownOpen
-                        ? "text-[#1E331B] bg-[#EAE2D2] font-bold shadow-xs"
-                        : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#F3ECE0]"
+                        ? "text-white bg-[#0F351E] font-black shadow-md border border-[#235E39]"
+                        : "text-white font-bold hover:text-white hover:bg-[#215E38]"
                     )}
                   >
-                    <IconComp className="w-3.5 h-3.5 text-[#7A8A74] group-hover:text-[#1E331B] transition-colors shrink-0" />
-                    <span className="text-[11px] sm:text-[12.5px] tracking-tight truncate max-w-[120px] sm:max-w-none">{menu.label}</span>
-                    <ChevronDown className={cn("w-3 h-3 transition-transform text-[#7A8A74] shrink-0", isDropdownOpen && "rotate-180 text-[#1E331B]")} />
+                    <IconComp className="w-3.5 h-3.5 text-emerald-200 group-hover:text-amber-300 transition-colors shrink-0" />
+                    <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-white font-bold shrink-0", isDropdownOpen && "rotate-180 text-amber-300")} />
                   </button>
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute top-full left-0 pt-1 z-[999] min-w-[200px] max-w-[calc(100vw-16px)]">
-                      <div className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="px-3 py-1 border-b border-[#EAE2D2] mb-1 bg-[#F3ECE0]/50">
-                          <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#5A6E54]">
+                    <div className="absolute top-full left-0 pt-1 z-[999] min-w-[220px] max-w-[calc(100vw-16px)]">
+                      <div className="bg-[#103A20] border-2 border-[#235E39] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="px-3.5 py-1.5 border-b border-[#1E4D2C] mb-1 bg-[#0A2615]">
+                          <span className="text-[10.5px] font-mono font-black uppercase tracking-wider text-amber-300">
                             {menu.label} Menu
                           </span>
                         </div>
@@ -526,12 +526,12 @@ export default function LegacyLayout({
                                 setActiveMenuDropdown(null);
                                 handleNavNavigation(sub.pageId);
                               }}
-                              className="w-full text-left px-3 py-2 hover:bg-[#1E331B] hover:text-[#FAF7F0] flex items-center gap-2.5 text-xs font-medium text-[#1E331B] transition-colors cursor-pointer group/item"
+                              className="w-full text-left px-3.5 py-2 hover:bg-[#1E4D2C] hover:text-white flex items-center gap-2.5 text-xs font-bold text-white transition-colors cursor-pointer group/item"
                             >
-                              <div className="w-5 h-5 rounded-md bg-[#EAE2D2]/80 group-hover/item:bg-[#FAF7F0] group-hover/item:text-[#1E331B] text-[#1E331B] flex items-center justify-center transition-colors shrink-0">
-                                <SubIcon className="w-3.5 h-3.5" />
+                              <div className="w-6 h-6 rounded-md bg-[#174C2C] border border-[#2D7344] group-hover/item:bg-[#D4AF37] group-hover/item:text-[#103A20] text-emerald-200 flex items-center justify-center transition-colors shrink-0">
+                                <SubIcon className="w-3.5 h-3.5 text-white" />
                               </div>
-                              <span className="truncate font-semibold text-[12px] uppercase tracking-tight">{sub.label}</span>
+                              <span className="truncate font-black text-[12px] uppercase tracking-tight text-white">{sub.label}</span>
                             </button>
                           );
                         })}
@@ -548,10 +548,10 @@ export default function LegacyLayout({
             {/* Realtime Connection Status Indicator Badge */}
             <div 
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs transition-all",
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-black shadow-xs transition-all",
                 isOnline 
-                  ? "bg-emerald-100/80 border-emerald-300 text-emerald-800" 
-                  : "bg-rose-100/80 border-rose-300 text-rose-800"
+                  ? "bg-[#103A20] border-[#2D7344] text-white font-bold" 
+                  : "bg-rose-950 border-rose-700 text-rose-300 font-bold"
               )}
               title={isOnline ? "Supabase Realtime Live Data Sync Active" : "Reconnecting to Supabase Live Sync..."}
             >
@@ -559,29 +559,29 @@ export default function LegacyLayout({
                 <>
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                   </span>
-                  <span className="hidden xs:inline">Live</span>
+                  <span className="hidden xs:inline text-white font-bold">Live</span>
                 </>
               ) : (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-rose-600"></span>
-                  <span className="hidden xs:inline">Offline</span>
+                  <span className="h-2 w-2 rounded-full bg-rose-500"></span>
+                  <span className="hidden xs:inline text-rose-200 font-bold">Offline</span>
                 </>
               )}
             </div>
 
-            {/* Subtle Notification Tray for New Material Mismatch or Satta Dispute Cases */}
+            {/* Notification Tray for New Material Mismatch or Satta Dispute Cases */}
             {(disputeSummary.materialMismatchCount > 0 || disputeSummary.sattaDisputeCount > 0) && (
               <div className="relative">
                 <button
                   onClick={() => setIsDisputeTrayOpen(!isDisputeTrayOpen)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-black shadow-xs transition-all cursor-pointer animate-pulse"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 hover:bg-amber-300 border border-amber-300 text-[#103A20] text-[11px] font-black shadow-md transition-all cursor-pointer animate-pulse"
                   title="New Material Mismatch or Satta Dispute Cases Opened"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-700 animate-bounce" />
-                  <span className="hidden md:inline">Cases:</span>
-                  <span className="bg-amber-700 text-white px-1.5 py-0.2 rounded-full text-[10px]">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#103A20]" />
+                  <span className="hidden md:inline font-black">Cases:</span>
+                  <span className="bg-[#103A20] text-amber-300 font-black px-1.5 py-0.2 rounded-full text-[10px]">
                     {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount}
                   </span>
                 </button>
@@ -649,12 +649,12 @@ export default function LegacyLayout({
             {/* Notification Badge Bell */}
             <button
               onClick={() => setIsNotifOpen(true)}
-              className="relative p-2 rounded-full bg-[#EAE2D2]/60 hover:bg-[#D6CAA8]/60 text-[#1E331B] border border-[#D6CAA8] transition-colors cursor-pointer"
+              className="relative p-2 rounded-full bg-[#103A20] hover:bg-[#215E38] text-white border border-[#2D7344] transition-colors cursor-pointer shadow-xs"
               title="Notifications"
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-4 h-4 text-white" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-700 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center border border-white">
                   {unreadCount}
                 </span>
               )}
@@ -664,21 +664,21 @@ export default function LegacyLayout({
             <div className="relative">
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-1.5 sm:gap-2 bg-[#EAE2D2]/60 hover:bg-[#D6CAA8]/60 border border-[#D6CAA8] rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold text-[#1E331B] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 bg-[#103A20] hover:bg-[#215E38] border border-[#2D7344] rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold text-white transition-colors cursor-pointer shadow-xs"
               >
-                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1E331B] text-[#FAF7F0] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#174C2C] border border-[#2D7344] text-[#D4AF37] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                   <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
-                <span className="hidden sm:inline font-bold">{currentUser}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#5A6E54]" />
+                <span className="hidden sm:inline font-bold text-white">{currentUser}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-white" />
               </button>
 
               {/* Profile Menu Dropdown Overlay */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-[#FAF7F0] border border-[#C5BA9E] rounded-xl shadow-xl py-2 z-50 text-xs text-[#1E331B]">
-                  <div className="px-4 py-2 border-b border-[#EAE2D2]">
-                    <p className="font-bold">{currentUser}</p>
-                    <p className="text-[10px] text-[#5A6E54]">Bally Jute Operator</p>
+                <div className="absolute right-0 mt-2 w-52 bg-[#103A20] border-2 border-[#235E39] rounded-xl shadow-2xl py-2 z-50 text-xs text-white">
+                  <div className="px-4 py-2 border-b border-[#1E4D2C] bg-[#0A2615]">
+                    <p className="font-bold text-white text-sm">{currentUser}</p>
+                    <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Bally Jute Operator</p>
                   </div>
                   {hasModulePermission('admindesk', effectiveAllowedModules, effectiveIsAdmin) && (
                     <button
@@ -686,7 +686,7 @@ export default function LegacyLayout({
                         setIsProfileMenuOpen(false);
                         handleNavNavigation('admindesk');
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                      className="w-full text-left px-4 py-2 hover:bg-[#1E4D2C] text-white flex items-center gap-2 font-bold cursor-pointer transition-colors"
                     >
                       <span>⚙️ Admin Desk</span>
                     </button>
@@ -697,7 +697,7 @@ export default function LegacyLayout({
                         setIsProfileMenuOpen(false);
                         handleNavNavigation('reports');
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-[#EAE2D2] flex items-center gap-2 font-medium cursor-pointer"
+                      className="w-full text-left px-4 py-2 hover:bg-[#1E4D2C] text-white flex items-center gap-2 font-bold cursor-pointer transition-colors"
                     >
                       <span>📊 System Reports</span>
                     </button>
@@ -706,11 +706,10 @@ export default function LegacyLayout({
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       window.dispatchEvent(new CustomEvent('app-close'));
-                      localStorage.clear()
-                      //window.history.replaceState({}, '', window.location.pathname);
+                      localStorage.clear();
                       window.location.replace(window.location.pathname);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-rose-50 text-rose-700 flex items-center gap-2 font-medium cursor-pointer border-t border-[#EAE2D2]"
+                    className="w-full text-left px-4 py-2 hover:bg-rose-900/50 text-rose-300 flex items-center gap-2 font-bold cursor-pointer border-t border-[#1E4D2C] transition-colors"
                   >
                     <span>🚪 Logout</span>
                   </button>

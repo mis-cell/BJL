@@ -1204,29 +1204,29 @@ export default function LorryDispatchSystem({
       {/* ==========================================
           1. TOP NAVIGATION BAR (BASE THEME)
          ========================================== */}
-      <header className="bg-[#EAE2D2] border border-[#C5BA9E] px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between shrink-0 shadow-sm rounded-xl gap-3 text-[#1E331B]">
+      <header className="bg-[#174C2C] border-2 border-[#103A20] px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between shrink-0 shadow-lg rounded-xl gap-3 text-white">
         {/* Left Brand Title & Role Info */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 bg-[#1E331B] text-[#FAF7F0] border border-[#2D4D28] rounded-xl shrink-0">
+          <div className="p-2 bg-[#103A20] text-[#D4AF37] border border-[#235E39] rounded-xl shrink-0">
             <Truck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm sm:text-base font-black tracking-tight uppercase truncate font-mono text-[#1E331B]">
+              <h1 className="text-sm sm:text-base font-black tracking-tight uppercase truncate font-mono text-white">
                 Bally Jute Mill Dispatch
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 bg-[#1E331B]/10 border border-[#1E331B]/20 text-[#1E331B] rounded text-[10px] font-mono font-bold uppercase">
+              <span className="hidden sm:inline-block px-2 py-0.5 bg-[#103A20] border border-[#235E39] text-emerald-300 rounded text-[10px] font-mono font-bold uppercase">
                 v4.8 Live
               </span>
             </div>
-            <p className="text-[11px] text-[#5A6E54] truncate">
-              Active Station: <strong className="text-[#1E331B] uppercase">{currentUserRole.replace("_", " ")}</strong>
+            <p className="text-[11px] text-emerald-200 truncate font-semibold">
+              Active Station: <strong className="text-white uppercase font-black">{currentUserRole.replace("_", " ")}</strong>
             </p>
           </div>
         </div>
 
         {/* Center Role Switcher Quick Pill */}
-        <div className="hidden lg:flex items-center gap-1.5 bg-[#FAF7F0] p-1 border border-[#C5BA9E] rounded-xl">
+        <div className="hidden lg:flex items-center gap-1.5 bg-[#103A20] p-1 border border-[#235E39] rounded-xl">
           {(["SUPER_ADMIN", "MAIN_GATE", "MILL_WEIGHTMENT", "ELECTRIC_WEIGHTMENT", "STORE_DEPT"] as UserRole[]).map((r) => (
             <button
               key={r}
@@ -1235,10 +1235,10 @@ export default function LorryDispatchSystem({
                 logAuditAction("ROLE_SWITCH", `Switched active station view to ${r}`);
               }}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase transition-all cursor-pointer whitespace-nowrap",
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer whitespace-nowrap",
                 currentUserRole === r
-                  ? "bg-[#1E331B] text-[#FAF7F0] shadow-md"
-                  : "text-[#5A6E54] hover:text-[#1E331B] hover:bg-[#EAE2D2]"
+                  ? "bg-[#D4AF37] text-[#103A20] font-black shadow-md"
+                  : "text-white font-bold hover:text-white hover:bg-[#174C2C]"
               )}
             >
               {r === "SUPER_ADMIN" ? "Admin" : r.replace("_", " ")}
