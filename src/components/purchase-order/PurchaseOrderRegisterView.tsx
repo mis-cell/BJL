@@ -937,10 +937,24 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 );
                               }
 
+                              const isPendingArrivalOrCheck = (
+                                item.pass_status === "pending" ||
+                                (stage === "temp_arrival_pending" && !item.pass_status && !item.received_lorries && !item.received_weight_mt && !item.last_arrival_date)
+                              );
+
+                              if (isPendingArrivalOrCheck) {
+                                return (
+                                  <span className="text-[9.5px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs inline-flex items-center gap-1">
+                                    <Clock className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                    <span>Pending</span>
+                                  </span>
+                                );
+                              }
+
                               return (
                                 <span className="text-[9.5px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs inline-flex items-center gap-1">
-                                  <Check className="w-2.5 h-2.5 text-emerald-600" />
-                                  <span>Clean Pass</span>
+                                  <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                  <span>Pass</span>
                                 </span>
                               );
                             })()}
