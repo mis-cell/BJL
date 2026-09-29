@@ -212,6 +212,7 @@ export default function ExecutiveBiDashboard({
       materialInspections,
       millInspections,
       arrivals,
+      finalArrivals,
       saudaCheckPoints,
       saudaCheckPointDetails,
       paymentRecords,
@@ -220,7 +221,7 @@ export default function ExecutiveBiDashboard({
       settlements,
       selectedYear: activeYear
     });
-  }, [inspections, inspectionDetails, materialInspections, millInspections, arrivals, saudaCheckPoints, saudaCheckPointDetails, paymentRecords, paymentDetails, pos, settlements, activeYear]);
+  }, [inspections, inspectionDetails, materialInspections, millInspections, arrivals, finalArrivals, saudaCheckPoints, saudaCheckPointDetails, paymentRecords, paymentDetails, pos, settlements, activeYear]);
 
   // Handler to open drilldown modal with specific records
   const handleOpenDrilldown = (params: {
@@ -912,59 +913,81 @@ export default function ExecutiveBiDashboard({
         {/* Year-level KPI Highlights Ribbon & Month Cards */}
         {!collapseInspectionSummary && (
           <>
-            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Inspection, Payment, Settlement) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 text-xs font-sans">
-              {/* Card 1: Total MR & Weight */}
+            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Final Arrival, Inspection, Payment, Settlement) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs font-sans">
+              {/* Card 1: Total MR & Weight (From Temporary Arrival) */}
               <div 
                 onClick={() => handleOpenInspectionModal({
-                  title: `All Inspected MRs & Deliveries (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalInspectionsCount} MRs with ${inspMetrics.totalInspectedWeightMt.toFixed(1)} MT inspected weight`,
+                  title: `All Temporary MRs & Gate Deliveries (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalYearTemporaryArrivalsCount} MRs with ${inspMetrics.totalYearBales.toLocaleString()} Bales/Drums and ${inspMetrics.totalYearArrivalWeightMt.toFixed(1)} MT arrival weight`,
                   inspections: inspMetrics.allInspections
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-[#1E331B] shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view all inspected MR records"
+                title="Click to view all Temporary Arrival MR records"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Weight</span>
+                  <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Temp Arrival</span>
                   <span className="text-[10px] text-[#2E6B3E] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
                 <span className="font-mono font-extrabold text-[#1E331B] text-base block">
-                  {inspMetrics.totalInspectionsCount} MR
+                  {inspMetrics.totalYearTemporaryArrivalsCount} MR
                 </span>
-                <span className="text-xs font-mono font-bold text-emerald-900 mt-0.5 block">
-                  {inspMetrics.totalInspectedWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
+                <span className="text-[11px] font-mono font-bold text-emerald-900 mt-0.5 block truncate">
+                  {inspMetrics.totalYearBales.toLocaleString()} Bales • {inspMetrics.totalYearArrivalWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
                 </span>
               </div>
 
-              {/* Card 2: Total Inspection Count */}
+              {/* Card 2: Final Arrival / FMR */}
+              <div 
+                onClick={() => handleOpenInspectionModal({
+                  title: `Final Arrival (FMR) Breakdown (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalYearFinalArrivalsCount} Final MRs created • ${inspMetrics.totalYearPendingFmrCount} Pending Below FMR`,
+                  inspections: inspMetrics.allInspections
+                })}
+                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-teal-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+                title="Click to view Final Arrival breakdown"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-teal-900 font-bold block uppercase tracking-wider">Final Arrival (FMR)</span>
+                  <span className="text-[10px] text-teal-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                </div>
+                <span className="font-mono font-extrabold text-teal-950 text-base block">
+                  {inspMetrics.totalYearFinalArrivalsCount} FMR
+                </span>
+                <span className="text-[11px] text-teal-800 font-medium mt-0.5 block truncate">
+                  {inspMetrics.totalYearPendingFmrCount > 0 ? `${inspMetrics.totalYearPendingFmrCount} Below FMR` : 'All FMR Completed'}
+                </span>
+              </div>
+
+              {/* Card 3: Total Inspection Count */}
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Inspections Breakdown (${activeYear})`,
-                  subtitle: `Material Inspections: ${inspMetrics.totalMaterialInspectionsCount}, Mill Inspections: ${inspMetrics.totalMillInspectionsCount}`,
+                  subtitle: `Completed Inspections: ${inspMetrics.totalYearInspectionsCount} • Pending Inspection: ${inspMetrics.totalPendingInspectionsCount}`,
                   inspections: inspMetrics.allInspections
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-blue-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view inspection breakdown"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-blue-900 font-bold block uppercase tracking-wider">Total Inspection</span>
+                  <span className="text-[10px] text-blue-900 font-bold block uppercase tracking-wider">Mill Inspection</span>
                   <span className="text-[10px] text-blue-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
                 <span className="font-mono font-extrabold text-blue-950 text-base block">
-                  {inspMetrics.totalYearInspectionsCount} Count
+                  {inspMetrics.totalYearInspectionsCount} Insp
                 </span>
-                <span className="text-xs text-blue-800 font-medium mt-0.5 block">
-                  {inspMetrics.totalMillInspectionsCount > 0 
-                    ? `Mat: ${inspMetrics.totalMaterialInspectionsCount} • Mill: ${inspMetrics.totalMillInspectionsCount}`
-                    : 'Material Inspection'}
+                <span className="text-[11px] text-blue-800 font-medium mt-0.5 block truncate">
+                  {inspMetrics.totalPendingInspectionsCount > 0 
+                    ? `${inspMetrics.totalPendingInspectionsCount} Pending • ${inspMetrics.totalYearInspectionsCount} Done` 
+                    : '100% Inspected'}
                 </span>
               </div>
 
-              {/* Card 3: Total Payment Count */}
+              {/* Card 4: Total Payment Count */}
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Payments Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records`,
+                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records with ₹${formatIndianCurrency(inspMetrics.totalYearPaidAmount)} paid`,
                   inspections: inspMetrics.allInspections,
                   payments: paymentRecords
                 })}
@@ -976,18 +999,18 @@ export default function ExecutiveBiDashboard({
                   <span className="text-[10px] text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
                 <span className="font-mono font-extrabold text-emerald-950 text-base block">
-                  {inspMetrics.totalYearPaymentsCount} Count
+                  {inspMetrics.totalYearPaymentsCount} Vouchers
                 </span>
-                <span className="text-xs text-emerald-800 font-medium mt-0.5 block">
-                  Payment Vouchers
+                <span className="text-[11px] font-mono font-bold text-emerald-800 mt-0.5 block truncate">
+                  ₹{formatIndianCurrency(inspMetrics.totalYearPaidAmount)} Paid
                 </span>
               </div>
 
-              {/* Card 4: Total Settlement Count */}
+              {/* Card 5: Total Settlement Count */}
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Settlements Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records`,
+                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records with ₹${formatIndianCurrency(inspMetrics.totalYearSettledAmount)} settled`,
                   inspections: inspMetrics.allInspections,
                   settlements: settlements
                 })}
@@ -999,78 +1022,121 @@ export default function ExecutiveBiDashboard({
                   <span className="text-[10px] text-purple-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
                 <span className="font-mono font-extrabold text-purple-950 text-base block">
-                  {inspMetrics.totalYearSettlementsCount} Count
+                  {inspMetrics.totalYearSettlementsCount} Settled
                 </span>
-                <span className="text-xs text-purple-800 font-medium mt-0.5 block">
-                  MR Settlements
+                <span className="text-[11px] font-mono font-bold text-purple-800 mt-0.5 block truncate">
+                  ₹{formatIndianCurrency(inspMetrics.totalYearSettledAmount)}
                 </span>
               </div>
             </div>
 
             {/* Month Cards Grid (Dynamic auto-fit responsive grid filling 100% available space) */}
             {inspMetrics.monthInspectionSummaries.length > 0 ? (
-              <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
+              <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(195px,1fr))]">
                 {inspMetrics.monthInspectionSummaries.map((m) => (
                   <div
                     key={`insp-${m.year}-${m.monthIndex}`}
                     onClick={() => handleOpenInspectionModal({
-                      title: `Inspection Summary: ${m.monthName} ${m.year}`,
-                      subtitle: `${m.totalInspections} MRs inspected • ${m.inspectionCount} Inspections • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
+                      title: `Operational Summary: ${m.monthName} ${m.year}`,
+                      subtitle: `${m.temporaryArrivalsCount} MRs Inward • ${m.finalArrivalsCount} FMR • ${m.inspectionCount} Inspections (${m.pendingInspectionCount} Pending) • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
                       inspections: m.inspections,
                       payments: m.payments,
                       settlements: m.settlements
                     })}
                     className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
-                    title={`Click to view ${m.monthName} ${m.year} inspection, quality, payment, and settlement details`}
+                    title={`Click to view ${m.monthName} ${m.year} Temporary Arrival, Final MR, Inspection, Payment, and Settlement details`}
                   >
                     <div>
                       {/* Card Header: Month Name + Year */}
-                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                      <div className="flex items-center justify-between gap-1 mb-1.5 pb-1 border-b border-[#F2EDE0]">
                         <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-700 shrink-0"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
                           <span>{m.monthName}</span>
                           <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
                         </h3>
-                      </div>
-
-                      {/* 1. MR (Just MR) */}
-                      <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
-                        <span className="font-mono font-extrabold text-[#1E331B] text-xs">
-                          {m.totalInspections}
+                        <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 bg-emerald-50 text-emerald-900 border border-emerald-200 rounded">
+                          {m.temporaryArrivalsCount} MR
                         </span>
                       </div>
 
-                      {/* 2. INSP */}
+                      {/* 1. MR (Temporary Arrival - Authoritative source from temporary_material_received) */}
+                      <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
+                        <div className="text-right">
+                          <span className="font-mono font-extrabold text-[#1E331B] text-xs">
+                            {m.temporaryArrivalsCount}
+                          </span>
+                          <span className="text-[9.5px] font-mono text-slate-500 block">
+                            {m.temporaryArrivalsBales.toLocaleString()} Bales • {m.temporaryArrivalsWeightMt} MT
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2. FMR (Final Arrival & Below-FMR count) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
-                        <div className="flex items-center gap-1 font-mono font-extrabold text-blue-900 text-xs">
-                          <span>{m.inspectionCount}</span>
-                          {m.millInspectionCount > 0 && (
-                            <span className="text-[9.5px] font-normal text-slate-500 font-sans" title="Mill Inspections">
-                              (Mill: {m.millInspectionCount})
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">FMR:</span>
+                        <div className="text-right font-mono text-xs">
+                          <span className="font-extrabold text-teal-900">
+                            {m.finalArrivalsCount}
+                          </span>
+                          {m.pendingFmrCount > 0 && (
+                            <span className="text-[9.5px] font-sans font-bold text-amber-800 block" title={`${m.pendingFmrCount} Temporary MRs awaiting Final MR`}>
+                              ({m.pendingFmrCount} Below FMR)
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* 3. Paym */}
+                      {/* 3. INSP (Mill Inspection - Completed vs Pending) */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
+                        <div className="text-right font-mono text-xs">
+                          <span className="font-extrabold text-blue-900">
+                            {m.inspectionCount}
+                          </span>
+                          {m.pendingInspectionCount > 0 ? (
+                            <span className="text-[9.5px] font-sans font-bold text-amber-700 block" title={`${m.pendingInspectionCount} MRs pending inspection`}>
+                              ({m.pendingInspectionCount} Pending)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-sans text-emerald-700 font-semibold block">
+                              (✓ Done)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 4. Paym (Payment Operations) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold">Paym:</span>
-                        <span className="font-mono font-extrabold text-emerald-800 text-xs">
-                          {m.paymentCount}
-                        </span>
+                        <div className="text-right font-mono text-xs">
+                          <span className="font-extrabold text-emerald-800">
+                            {m.paymentCount}
+                          </span>
+                          {m.paymentPaidAmount > 0 && (
+                            <span className="text-[9.5px] font-bold text-emerald-700 block">
+                              ₹{formatIndianCurrency(m.paymentPaidAmount)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* 4. Sett */}
+                      {/* 5. Sett (Settlement) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold">Sett:</span>
-                        <span className="font-mono font-extrabold text-purple-800 text-xs">
-                          {m.settlementCount}
-                        </span>
+                        <div className="text-right font-mono text-xs">
+                          <span className="font-extrabold text-purple-800">
+                            {m.settlementCount}
+                          </span>
+                          {m.settlementAmount > 0 && (
+                            <span className="text-[9.5px] font-bold text-purple-700 block">
+                              ₹{formatIndianCurrency(m.settlementAmount)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* 5. Moisture */}
+                      {/* 6. Moisture */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
                         <div className="flex items-center gap-1 font-mono text-xs">
@@ -1088,7 +1154,7 @@ export default function ExecutiveBiDashboard({
                         </div>
                       </div>
 
-                      {/* 6. Grade Down */}
+                      {/* 7. Grade Down */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
                         <div className="flex items-center gap-1 font-mono text-xs">
@@ -1103,7 +1169,7 @@ export default function ExecutiveBiDashboard({
                         </div>
                       </div>
 
-                      {/* 7. Premium */}
+                      {/* 8. Premium */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
                           <span>⚡</span> Premium:

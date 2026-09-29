@@ -159,21 +159,99 @@ export interface InspectionRecord {
   rawRecord: any;
 }
 
+/**
+ * Extracts Bales / Drum Quantity from Receipt details (grid_details) or fallback fields
+ */
+export function getRecordBales(item: any): number {
+  if (!item) return 0;
+  if (item.grid_details) {
+    let grid: any[] = [];
+    if (typeof item.grid_details === 'string') {
+      try {
+        const parsed = item.grid_details === 'undefined' || item.grid_details === 'null' ? [] : JSON.parse(item.grid_details === "undefined" ? "null" : item.grid_details);
+        if (Array.isArray(parsed)) grid = parsed;
+      } catch (e) {}
+    } else if (Array.isArray(item.grid_details)) {
+      grid = item.grid_details;
+    }
+
+    if (grid.length > 0) {
+      let hasChln = false;
+      let sumChln = 0;
+      grid.forEach((row: any) => {
+        const val = row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== ''
+          ? Number(row.quantity_chln)
+          : (row.chln !== undefined && row.chln !== null && row.chln !== '' ? Number(row.chln) : NaN);
+        if (!isNaN(val)) {
+          hasChln = true;
+          sumChln += val;
+        }
+      });
+      if (hasChln && sumChln > 0) return sumChln;
+
+      const fallback = grid.reduce((acc: number, row: any) => acc + (Number(row.quantity_chln) || Number(row.chln) || Number(row.quantity) || Number(row.qty) || Number(row.bales) || 0), 0);
+      if (fallback > 0) return fallback;
+    }
+  }
+  return Number(item.total_packets || item.packets || item.actual_bales || item.challan_bales || item.bales || item.quantity || 0);
+}
+
+/**
+ * Extracts lowest net weight in Metric Tons
+ */
+export function getRecordNetWeightMt(item: any): number {
+  if (!item) return 0;
+  const nets = [
+    Number(item.electronic_net_weight),
+    Number(item.supplier_net_weight),
+    Number(item.challan_material_weight),
+    Number(item.weight_reduced),
+    item.weight_qtl ? Number(item.weight_qtl) / 10 : 0,
+    Number(item.weight),
+    Number(item.quantity)
+  ].filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+  if (nets.length > 0) {
+    const minVal = Math.min(...nets);
+    return minVal > 50 ? minVal / 10 : minVal;
+  }
+  const gross = Number(item.total_actual_weight || item.weight_mt || item.challan_gross_wt || item.receipt_gross_wt || 0);
+  return gross > 100 ? gross / 1000 : (gross > 50 ? gross / 10 : gross);
+}
+
 export interface MonthInspectionSummary {
   monthIndex: number;
   monthName: string;
   year: number;
-  totalInspections: number;
+  totalInspections: number; // Represents total MR count from Temporary Arrival
   totalWeightMt: number;
   
-  // Specific Operational Counts
+  // 1. Temporary Arrival (MR) Specifics
+  temporaryArrivalsCount: number;
+  temporaryArrivalsBales: number;
+  temporaryArrivalsWeightMt: number;
+  
+  // 2. Final Arrival (FMR) Specifics
+  finalArrivalsCount: number;
+  finalArrivalsBales: number;
+  finalArrivalsWeightMt: number;
+  pendingFmrCount: number; // Below FMR / Pending Final Arrival
+  
+  // 3. Mill Inspection Specifics
   inspectionCount: number;
+  pendingInspectionCount: number;
   materialInspectionCount: number;
   millInspectionCount: number;
-  paymentCount: number;
-  settlementCount: number;
   
-  // Averages & Totals
+  // 4. Payment Specifics
+  paymentCount: number;
+  paymentPaidAmount: number;
+  paymentPayableAmount: number;
+  
+  // 5. Settlement Specifics
+  settlementCount: number;
+  settlementAmount: number;
+  
+  // Averages & Totals (Quality & Claims)
   avgMoisture: number;
   avgClaimMoisture: number;
   avgDust: number;
@@ -202,7 +280,8 @@ export interface ComputeInspectionMetricsParams {
   inspectionDetails?: any[];
   materialInspections?: any[];
   millInspections?: any[];
-  arrivals?: any[];
+  arrivals?: any[]; // temporary_material_received (TMR)
+  finalArrivals?: any[]; // final_arrival (FMR)
   saudaCheckPoints?: any[];
   saudaCheckPointDetails?: any[];
   paymentRecords?: any[];
@@ -212,16 +291,26 @@ export interface ComputeInspectionMetricsParams {
   selectedYear?: number;
 }
 
-export function computeInspectionMetrics(params: ComputeInspectionMetricsParams): {
+export interface InspectionMetricsResult {
   monthInspectionSummaries: MonthInspectionSummary[];
   allInspections: InspectionRecord[];
   totalInspectionsCount: number;
   totalInspectedWeightMt: number;
+  totalYearTemporaryArrivalsCount: number;
+  totalYearBales: number;
+  totalYearArrivalWeightMt: number;
+  totalYearFinalArrivalsCount: number;
+  totalYearFinalArrivalsBales: number;
+  totalYearFinalArrivalsWeightMt: number;
+  totalYearPendingFmrCount: number;
   totalYearInspectionsCount: number;
   totalMaterialInspectionsCount: number;
   totalMillInspectionsCount: number;
+  totalPendingInspectionsCount: number;
   totalYearPaymentsCount: number;
+  totalYearPaidAmount: number;
   totalYearSettlementsCount: number;
+  totalYearSettledAmount: number;
   overallAvgMoisture: number;
   overallAvgClaimMoisture: number;
   overallAvgDust: number;
@@ -235,13 +324,16 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   totalClaimAmount: number;
   availableYears: number[];
   selectedYear: number;
-} {
+}
+
+export function computeInspectionMetrics(params: ComputeInspectionMetricsParams): InspectionMetricsResult {
   const { 
     inspections = [], 
     inspectionDetails = [],
     materialInspections = [],
     millInspections = [],
     arrivals = [], 
+    finalArrivals = [],
     saudaCheckPoints = [],
     saudaCheckPointDetails = [],
     paymentRecords = [],
@@ -369,7 +461,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const mr = normalizePoRef(rawMr);
     if (!mr) return;
     const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
-    mapByMr.set(mr, { ...arr, ...item, inspection_source: 'material' });
+    mapByMr.set(mr, { ...arr, ...item, inspection_source: 'material', is_inspected: true, status: item.status || 'Completed' });
   });
 
   // 2. Process mill_inspection_master records
@@ -379,7 +471,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     if (!mr) return;
     const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
     const existing = mapByMr.get(mr);
-    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: 'mill', is_mill: true });
+    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: 'mill', is_mill: true, is_inspected: true, status: item.status || 'Completed' });
   });
 
   // 3. Process generic inspection records if passed
@@ -392,7 +484,23 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const arr = arrivalsByMr.get(mr) || arrivalsByMr.get(normalizePoRef(item.arrival_no || '')) || {};
     const isMill = item.inspection_source === 'mill' || item.is_mill || Boolean(item.mill_code) || Boolean(item.mill_name);
     const existing = mapByMr.get(mr);
-    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: existing?.inspection_source || (isMill ? 'mill' : 'material') });
+    mapByMr.set(mr, { ...arr, ...(existing || {}), ...item, inspection_source: existing?.inspection_source || (isMill ? 'mill' : 'material'), is_inspected: true, status: item.status || 'Completed' });
+  });
+
+  // 4. Process all arrivals from temporary_material_received (MRs)
+  // Ensures every Temporary Arrival record is represented. Uninspected records show as 'Pending'.
+  arrivals.forEach((item, idx) => {
+    const rawMr = item.mr_no || item.temporary_arrival_no || item.arrival_no || item.amad_no || item.amad_id || `ARR-${idx}`;
+    const mr = normalizePoRef(rawMr);
+    if (!mr) return;
+    if (!mapByMr.has(mr)) {
+      mapByMr.set(mr, {
+        ...item,
+        is_inspected: false,
+        status: item.inspection_status || item.status === 'inspected' ? 'Completed' : 'Pending',
+        inspection_source: 'arrival'
+      });
+    }
   });
 
   const parsedInspections: InspectionRecord[] = [];
@@ -680,7 +788,23 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     });
   });
 
-  // Pre-populate available years from payment and settlement dates as well
+  // Pre-populate available years from arrivals, finalArrivals, payments, and settlements
+  arrivals.forEach(a => {
+    const rawDate = a.date || a.temporary_arrival_date || a.amad_date || a.created_at;
+    if (rawDate) {
+      const { year: aYear, isValid } = parseRecordDate(rawDate);
+      if (isValid && aYear > 0) yearsSet.add(aYear);
+    }
+  });
+
+  finalArrivals.forEach(fa => {
+    const rawDate = fa.final_arrival_date || fa.date || fa.arrival_date || fa.created_at;
+    if (rawDate) {
+      const { year: fYear, isValid } = parseRecordDate(rawDate);
+      if (isValid && fYear > 0) yearsSet.add(fYear);
+    }
+  });
+
   paymentRecords.forEach(p => {
     const rawDate = p.date || p.payment_date || p.created_at;
     if (rawDate) {
@@ -701,52 +825,116 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   if (availableYears.length === 0) availableYears.push(2026);
   const activeYear = selectedYear && yearsSet.has(selectedYear) ? selectedYear : availableYears[0];
 
-  const yearInspections = parsedInspections.filter(r => r.year === activeYear);
-
-  // 1. Index payments for activeYear by month (Column Name from Screenshot 4: "Date" / payment_date)
+  // 1. Index Temporary Arrivals for activeYear by month
+  const arrivalsByMonth = new Map<number, any[]>();
+  // 2. Index Final Arrivals for activeYear by month & build final lookup set
+  const finalArrivalsByMonth = new Map<number, any[]>();
+  const finalArrivalsSet = new Set<string>();
+  // 3. Index payments for activeYear by month
   const paymentsByMonth = new Map<number, any[]>();
-  // 2. Index settlements for activeYear by month (Column Name from Screenshot 5: "Audit Date" / sett_date)
+  // 4. Index settlements for activeYear by month
   const settlementsByMonth = new Map<number, any[]>();
 
   for (let m = 0; m < 12; m++) {
+    arrivalsByMonth.set(m, []);
+    finalArrivalsByMonth.set(m, []);
     paymentsByMonth.set(m, []);
     settlementsByMonth.set(m, []);
   }
 
+  // Populate Temporary Arrivals
+  let yearTotalArrivalsBales = 0;
+  let yearTotalArrivalsWeightMt = 0;
+  const yearArrivals: any[] = [];
+  arrivals.forEach(a => {
+    const rawDate = a.date || a.temporary_arrival_date || a.amad_date || a.created_at;
+    const { year: aYear, month: aMonth, isValid } = parseRecordDate(rawDate);
+    if (isValid && aYear === activeYear && aMonth >= 0 && aMonth < 12) {
+      arrivalsByMonth.get(aMonth)?.push(a);
+      yearArrivals.push(a);
+      yearTotalArrivalsBales += getRecordBales(a);
+      yearTotalArrivalsWeightMt += getRecordNetWeightMt(a);
+    }
+  });
+
+  // Populate Final Arrivals and global Final Arrival set
+  let yearTotalFinalArrivalsCount = 0;
+  let yearTotalFinalBales = 0;
+  let yearTotalFinalWeightMt = 0;
+  finalArrivals.forEach((fa, idx) => {
+    const rawNo = fa.final_arrival_no || fa.arrival_no || fa.temporary_arrival_no || fa.mr_no || fa.amad_no || `FA-${idx}`;
+    const cleanNo = normalizePoRef(rawNo);
+    if (cleanNo) finalArrivalsSet.add(cleanNo);
+    if (fa.temporary_arrival_no) finalArrivalsSet.add(normalizePoRef(fa.temporary_arrival_no));
+    if (fa.mr_no) finalArrivalsSet.add(normalizePoRef(fa.mr_no));
+
+    const rawDate = fa.final_arrival_date || fa.date || fa.arrival_date || fa.created_at;
+    const { year: fYear, month: fMonth, isValid } = parseRecordDate(rawDate);
+    if (isValid && fYear === activeYear && fMonth >= 0 && fMonth < 12) {
+      finalArrivalsByMonth.get(fMonth)?.push(fa);
+      yearTotalFinalArrivalsCount++;
+      yearTotalFinalBales += getRecordBales(fa);
+      yearTotalFinalWeightMt += getRecordNetWeightMt(fa);
+    }
+  });
+
   // Assign payments by payment Date
   let totalYearPayments = 0;
+  let totalYearPaidAmount = 0;
   paymentRecords.forEach(p => {
     const rawDate = p.date || p.payment_date || p.created_at;
     const { year: pYear, month: pMonth, isValid } = parseRecordDate(rawDate);
     
     if (isValid && pYear === activeYear && pMonth >= 0 && pMonth < 12) {
       totalYearPayments++;
+      totalYearPaidAmount += Number(p.paid_amount || 0);
       paymentsByMonth.get(pMonth)?.push(p);
     }
   });
 
   // Assign settlements by Audit Date
   let totalYearSettlements = 0;
+  let totalYearSettledAmount = 0;
   settlements.forEach(s => {
     const rawDate = s.audit_date || s.sett_date || s.date || s.bill_date || s.created_at;
     const { year: sYear, month: sMonth, isValid } = parseRecordDate(rawDate);
 
     if (isValid && sYear === activeYear && sMonth >= 0 && sMonth < 12) {
       totalYearSettlements++;
+      totalYearSettledAmount += Number(s.net_payable_amount || s.amount || s.total_value || 0);
       settlementsByMonth.get(sMonth)?.push(s);
     }
   });
 
-  const effectiveYearPayments = totalYearPayments;
-  const effectiveYearSettlements = totalYearSettlements;
+  const yearInspections = parsedInspections.filter(r => r.year === activeYear);
 
   // Group by Month (0 to 11)
   const monthInspectionSummaries: MonthInspectionSummary[] = Array.from({ length: 12 }, (_, mIdx) => {
     const list = yearInspections.filter(r => r.month === mIdx);
+    const monthArrivals = arrivalsByMonth.get(mIdx) || [];
+    const monthFinalArrivals = finalArrivalsByMonth.get(mIdx) || [];
     const monthPayments = paymentsByMonth.get(mIdx) || [];
     const monthSettlements = settlementsByMonth.get(mIdx) || [];
 
-    if (list.length === 0 && monthPayments.length === 0 && monthSettlements.length === 0) return null;
+    const temporaryArrivalsCount = monthArrivals.length > 0 ? monthArrivals.length : list.length;
+    const temporaryArrivalsBales = monthArrivals.reduce((sum, a) => sum + getRecordBales(a), 0);
+    const temporaryArrivalsWeightMt = monthArrivals.reduce((sum, a) => sum + getRecordNetWeightMt(a), 0);
+
+    const finalArrivalsCount = monthFinalArrivals.length;
+    const finalArrivalsBales = monthFinalArrivals.reduce((sum, f) => sum + getRecordBales(f), 0);
+    const finalArrivalsWeightMt = monthFinalArrivals.reduce((sum, f) => sum + getRecordNetWeightMt(f), 0);
+    const pendingFmrCount = monthArrivals.filter(a => {
+      const k = normalizePoRef(a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id);
+      return !k || !finalArrivalsSet.has(k);
+    }).length;
+
+    const completedInspections = list.filter(r => r.status !== 'Pending');
+    const inspectionCount = completedInspections.length;
+    const pendingInspectionCount = list.filter(r => r.status === 'Pending').length || Math.max(0, temporaryArrivalsCount - inspectionCount);
+
+    if (temporaryArrivalsCount === 0 && finalArrivalsCount === 0 && inspectionCount === 0 && monthPayments.length === 0 && monthSettlements.length === 0) {
+      return null;
+    }
 
     let totWt = 0;
     let moistSum = 0;
@@ -764,7 +952,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     let moistClaimLots = 0;
     let qualClaimLots = 0;
 
-    list.forEach(r => {
+    const qualitySourceList = completedInspections.length > 0 ? completedInspections : list;
+
+    qualitySourceList.forEach(r => {
       totWt += r.weightMt;
       moistSum += r.actualMoisture;
       claimMoistSum += r.claimMoisture;
@@ -785,12 +975,12 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
     });
 
-    const moistCount = list.filter(r => r.actualMoisture > 0).length;
-    const claimMoistCount = list.filter(r => r.claimMoisture > 0).length;
-    const dustCount = list.filter(r => r.actualDust > 0).length;
-    const claimDustCount = list.filter(r => r.claimDust > 0).length;
-    const gradeDownCount = list.filter(r => r.actualGradeDown > 0).length;
-    const claimGradeDownCount = list.filter(r => r.claimGradeDown > 0).length;
+    const moistCount = qualitySourceList.filter(r => r.actualMoisture > 0).length;
+    const claimMoistCount = qualitySourceList.filter(r => r.claimMoisture > 0).length;
+    const dustCount = qualitySourceList.filter(r => r.actualDust > 0).length;
+    const claimDustCount = qualitySourceList.filter(r => r.claimDust > 0).length;
+    const gradeDownCount = qualitySourceList.filter(r => r.actualGradeDown > 0).length;
+    const claimGradeDownCount = qualitySourceList.filter(r => r.claimGradeDown > 0).length;
 
     const avgMoisture = moistCount > 0 ? Number((moistSum / moistCount).toFixed(1)) : 0;
     const avgClaimMoisture = claimMoistCount > 0 ? Number((claimMoistSum / claimMoistCount).toFixed(1)) : 0;
@@ -799,20 +989,35 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const avgGradeDown = gradeDownCount > 0 ? Number((gradeDownSum / gradeDownCount).toFixed(1)) : 0;
     const avgClaimGradeDown = claimGradeDownCount > 0 ? Number((claimGradeDownSum / claimGradeDownCount).toFixed(1)) : 0;
 
-    const matCount = list.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
-    const millCount = list.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
+    const matCount = qualitySourceList.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
+    const millCount = qualitySourceList.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
+
+    const paymentPaidAmount = monthPayments.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
+    const paymentPayableAmount = monthPayments.reduce((sum, p) => sum + Number(p.payable_amt || p.total_amount || 0), 0);
+    const settlementAmount = monthSettlements.reduce((sum, s) => sum + Number(s.net_payable_amount || s.amount || s.total_value || 0), 0);
 
     return {
       monthIndex: mIdx,
       monthName: MONTH_NAMES[mIdx] || `Month ${mIdx + 1}`,
       year: activeYear,
-      totalInspections: list.length,
-      totalWeightMt: Number(totWt.toFixed(2)),
-      inspectionCount: list.length,
+      totalInspections: temporaryArrivalsCount, // Displayed MR Count matches Temporary Arrival
+      totalWeightMt: temporaryArrivalsWeightMt > 0 ? Number(temporaryArrivalsWeightMt.toFixed(2)) : Number(totWt.toFixed(2)),
+      temporaryArrivalsCount,
+      temporaryArrivalsBales,
+      temporaryArrivalsWeightMt: Number(temporaryArrivalsWeightMt.toFixed(2)),
+      finalArrivalsCount,
+      finalArrivalsBales,
+      finalArrivalsWeightMt: Number(finalArrivalsWeightMt.toFixed(2)),
+      pendingFmrCount,
+      inspectionCount,
+      pendingInspectionCount,
       materialInspectionCount: matCount,
       millInspectionCount: millCount,
       paymentCount: monthPayments.length,
+      paymentPaidAmount,
+      paymentPayableAmount,
       settlementCount: monthSettlements.length,
+      settlementAmount,
       avgMoisture,
       avgClaimMoisture,
       avgDust,
@@ -833,7 +1038,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     };
   }).filter((m): m is MonthInspectionSummary => m !== null);
 
-  let totalInspectionsCount = yearInspections.length;
+  const inspectedRecords = yearInspections.filter(r => r.status !== 'Pending');
   let totalInspectedWeightMt = 0;
   let totalMoistSum = 0;
   let totalClaimMoistSum = 0;
@@ -847,7 +1052,8 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   let totalPremiumRateSum = 0;
   let totalClaimAmount = 0;
 
-  yearInspections.forEach(r => {
+  const qualitySourceAll = inspectedRecords.length > 0 ? inspectedRecords : yearInspections;
+  qualitySourceAll.forEach(r => {
     totalInspectedWeightMt += r.weightMt;
     totalMoistSum += r.actualMoisture;
     totalClaimMoistSum += r.claimMoisture;
@@ -865,15 +1071,15 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalClaimAmount += r.totalClaimAmount;
   });
 
-  const yearMoistCount = yearInspections.filter(r => r.actualMoisture > 0).length;
-  const yearClaimMoistCount = yearInspections.filter(r => r.claimMoisture > 0).length;
-  const yearDustCount = yearInspections.filter(r => r.actualDust > 0).length;
-  const yearClaimDustCount = yearInspections.filter(r => r.claimDust > 0).length;
-  const yearGradeDownCount = yearInspections.filter(r => r.actualGradeDown > 0).length;
-  const yearClaimGradeDownCount = yearInspections.filter(r => r.claimGradeDown > 0).length;
+  const yearMoistCount = qualitySourceAll.filter(r => r.actualMoisture > 0).length;
+  const yearClaimMoistCount = qualitySourceAll.filter(r => r.claimMoisture > 0).length;
+  const yearDustCount = qualitySourceAll.filter(r => r.actualDust > 0).length;
+  const yearClaimDustCount = qualitySourceAll.filter(r => r.claimDust > 0).length;
+  const yearGradeDownCount = qualitySourceAll.filter(r => r.actualGradeDown > 0).length;
+  const yearClaimGradeDownCount = qualitySourceAll.filter(r => r.claimGradeDown > 0).length;
 
-  const totalMaterialCount = yearInspections.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
-  const totalMillCount = yearInspections.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
+  const totalMaterialCount = qualitySourceAll.filter(r => r.rawRecord?.inspection_source === 'material' || (!r.rawRecord?.is_mill && !r.rawRecord?.mill_code && r.rawRecord?.source !== 'mill')).length;
+  const totalMillCount = qualitySourceAll.filter(r => r.rawRecord?.inspection_source === 'mill' || r.rawRecord?.is_mill || Boolean(r.rawRecord?.mill_code) || r.rawRecord?.source === 'mill').length;
 
   const overallAvgMoisture = yearMoistCount > 0 ? Number((totalMoistSum / yearMoistCount).toFixed(1)) : 0;
   const overallAvgClaimMoisture = yearClaimMoistCount > 0 ? Number((totalClaimMoistSum / yearClaimMoistCount).toFixed(1)) : 0;
@@ -883,16 +1089,33 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   const overallAvgClaimGradeDown = yearClaimGradeDownCount > 0 ? Number((totalClaimGradeDownSum / yearClaimGradeDownCount).toFixed(1)) : 0;
   const avgPremiumRate = totalPremiumLots > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : 0;
 
+  const totalYearTemporaryArrivalsCount = yearArrivals.length > 0 ? yearArrivals.length : yearInspections.length;
+  const totalYearPendingFmrCount = yearArrivals.filter(a => {
+    const k = normalizePoRef(a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id);
+    return !k || !finalArrivalsSet.has(k);
+  }).length;
+  const totalPendingInspectionsCount = yearInspections.filter(r => r.status === 'Pending').length;
+
   return {
     monthInspectionSummaries,
     allInspections: yearInspections,
-    totalInspectionsCount,
-    totalInspectedWeightMt: Number(totalInspectedWeightMt.toFixed(2)),
-    totalYearInspectionsCount: totalInspectionsCount,
+    totalInspectionsCount: totalYearTemporaryArrivalsCount,
+    totalInspectedWeightMt: yearTotalArrivalsWeightMt > 0 ? Number(yearTotalArrivalsWeightMt.toFixed(2)) : Number(totalInspectedWeightMt.toFixed(2)),
+    totalYearTemporaryArrivalsCount,
+    totalYearBales: yearTotalArrivalsBales,
+    totalYearArrivalWeightMt: Number(yearTotalArrivalsWeightMt.toFixed(2)),
+    totalYearFinalArrivalsCount: yearTotalFinalArrivalsCount,
+    totalYearFinalArrivalsBales: yearTotalFinalBales,
+    totalYearFinalArrivalsWeightMt: Number(yearTotalFinalWeightMt.toFixed(2)),
+    totalYearPendingFmrCount,
+    totalYearInspectionsCount: inspectedRecords.length > 0 ? inspectedRecords.length : totalMaterialCount + totalMillCount,
     totalMaterialInspectionsCount: totalMaterialCount,
     totalMillInspectionsCount: totalMillCount,
-    totalYearPaymentsCount: effectiveYearPayments,
-    totalYearSettlementsCount: effectiveYearSettlements,
+    totalPendingInspectionsCount,
+    totalYearPaymentsCount: totalYearPayments,
+    totalYearPaidAmount,
+    totalYearSettlementsCount: totalYearSettlements,
+    totalYearSettledAmount,
     overallAvgMoisture,
     overallAvgClaimMoisture,
     overallAvgDust,
