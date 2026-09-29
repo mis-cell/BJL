@@ -275,8 +275,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   };
 
   // Function to calculate 'pending_received' quantity by comparing contract against received sums
-  const calculatePendingReceived = (contractQty: number, totalCustomReceived: number): number => {
-    return Math.max(0, contractQty - totalCustomReceived);
+  const calculatePendingReceived = (contractQty: number, totalDelivered: number): number => {
+    return Math.max(0, Number((contractQty - totalDelivered).toFixed(3)));
   };
 
   // Form State
@@ -948,16 +948,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       
       let totalSettledMt = 0;
       if (settlementsForPo && settlementsForPo.length > 0) {
-        const mrNos = settlementsForPo.map(s => s.mr_no);
-        const { data: sDetails } = await supabase
-          .from('mr_settlement_detail')
-          .select('quantity')
-          .in('mr_no', mrNos);
-        if (sDetails && sDetails.length > 0) {
-          totalSettledMt = sDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-        }
+        // Prioritize electronic_scale_net from mr_settlement_master (which is always in MT)
+        totalSettledMt = settlementsForPo.reduce((sum, s) => sum + (Number(s.electronic_scale_net) || 0), 0);
+
         if (totalSettledMt === 0) {
-          totalSettledMt = settlementsForPo.reduce((sum, s) => sum + (Number(s.electronic_scale_net) || 0), 0);
+          const mrNos = settlementsForPo.map(s => s.mr_no);
+          const { data: sDetails } = await supabase
+            .from('mr_settlement_detail')
+            .select('quantity, arr_qty_wt, wt_quantity')
+            .in('mr_no', mrNos);
+          if (sDetails && sDetails.length > 0) {
+            totalSettledMt = sDetails.reduce((sum, r) => {
+              const q = Number(r.arr_qty_wt || r.wt_quantity || r.quantity) || 0;
+              // If q > 500, it's KG -> MT (/1000). If q > 50, it's Quintal or Bales count, not raw MT.
+              const mt = q > 500 ? q / 1000 : (q > 50 ? q / 10 : q);
+              return sum + mt;
+            }, 0);
+          }
         }
       }
 
@@ -977,13 +984,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       const contractQty = Number(poData.total_contract_mt) || 0;
-      const pendingQty = Math.max(0, contractQty - totalInspectedMt);
-      const pendingReceivedQty = calculatePendingReceived(contractQty, totalCustomReceivedMt);
+      const totalDeliveredMt = Number((totalCustomReceivedMt + totalInspectedMt).toFixed(3));
+      const pendingQty = calculatePendingReceived(contractQty, totalDeliveredMt);
+      const pendingReceivedQty = pendingQty;
 
       setPoStats({
         contractQty,
         receivedQty: totalInspectedMt,
-        settledQty: totalSettledMt,
+        settledQty: Number(totalSettledMt.toFixed(3)),
         pendingQty: pendingQty,
         customReceivedQty: totalCustomReceivedMt,
         pendingReceivedQty: pendingReceivedQty,
@@ -1245,53 +1253,75 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const calculatedPremRatePerQtl = calculatedPremWtQtl > 0 ? Number((calculatedPremTotalAmt / calculatedPremWtQtl).toFixed(2)) : 0;
       calculatedPremTotalAmt = Number(calculatedPremTotalAmt.toFixed(2));
 
-      // Extract comprehensive deduction details and summarized deduction types from Inspection Master / Details
+      // Extract comprehensive deduction details and summarized deduction types from mill_inspection_deduction table / Inspection Master
       let inspDeductionType = inspMaster?.deduction_type || '';
       let inspDeductionRate = Number(inspMaster?.deduction_rate) || 0;
       let inspDeductionQty = Number(inspMaster?.deduction_qty) || 0;
       let inspDeductionAmount = Number(inspMaster?.deduction_amount) || 0;
 
-      // Check if deductions or deduction_types array is stored in JSONB
-      const rawDeductionsArray = inspMaster?.deduction_types || inspMaster?.deductions;
       let parsedDeductions: SettlementDeductionItem[] = [];
-      let deductionSummaryText = inspDeductionType;
-      if (Array.isArray(rawDeductionsArray) && rawDeductionsArray.length > 0) {
-        parsedDeductions = rawDeductionsArray
-          .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '' && !String(d.deduction_type).includes('-- SELECT')) || (d.deduction && String(d.deduction).trim() !== '') || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
-          .map((d: any) => {
-            const name = String(d.deduction_type || d.deduction || d.name || '').trim();
-            const rate = Number(d.deduction_rate || d.rate) || 0;
-            const qty = Number(d.deduction_qty || d.qty) || 1;
-            const amt = Number(d.deduction_amount || d.amount) || Number((rate * qty).toFixed(2));
-            return { deduction_type: name, deduction_rate: rate, deduction_qty: qty, deduction_amount: amt };
-          });
 
+      // 1. Query mill_inspection_deduction table first for all detailed rows saved for this MR / arrival
+      try {
+        if (supabase) {
+          const { data: millDedList } = await supabase
+            .from('mill_inspection_deduction')
+            .select('*')
+            .or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`)
+            .order('created_at', { ascending: true });
+
+          if (millDedList && millDedList.length > 0) {
+            parsedDeductions = millDedList
+              .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '' && !String(d.deduction_type).includes('-- SELECT')) || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
+              .map((d: any) => {
+                const name = String(d.deduction_type || d.deduction || d.rule_name || '').trim();
+                const rate = Number(d.deduction_rate || d.rate) || 0;
+                const qty = Number(d.deduction_qty || d.qty) || 1;
+                const amt = Number(d.deduction_amount || d.amount) || Number((rate * qty).toFixed(2));
+                return { deduction_type: name, deduction_rate: rate, deduction_qty: qty, deduction_amount: amt };
+              });
+          }
+        }
+      } catch (e) {
+        console.warn("Could not query mill_inspection_deduction:", e);
+      }
+
+      // 2. Fallback to raw JSONB deductions array on inspMaster
+      if (parsedDeductions.length === 0) {
+        const rawDeductionsArray = inspMaster?.deduction_types || inspMaster?.deductions;
+        if (Array.isArray(rawDeductionsArray) && rawDeductionsArray.length > 0) {
+          parsedDeductions = rawDeductionsArray
+            .filter((d: any) => d && ((d.deduction_type && String(d.deduction_type).trim() !== '' && !String(d.deduction_type).includes('-- SELECT')) || (d.deduction && String(d.deduction).trim() !== '') || Number(d.deduction_amount || d.amount) > 0 || Number(d.deduction_rate || d.rate) > 0))
+            .map((d: any) => {
+              const name = String(d.deduction_type || d.deduction || d.name || '').trim();
+              const rate = Number(d.deduction_rate || d.rate) || 0;
+              const qty = Number(d.deduction_qty || d.qty) || 1;
+              const amt = Number(d.deduction_amount || d.amount) || Number((rate * qty).toFixed(2));
+              return { deduction_type: name, deduction_rate: rate, deduction_qty: qty, deduction_amount: amt };
+            });
+        }
+      }
+
+      let deductionSummaryText = inspDeductionType;
+      if (parsedDeductions.length > 0) {
         const typeSummaries = parsedDeductions.map(d => {
           if (d.deduction_amount > 0) return `${d.deduction_type} (₹${d.deduction_amount})`;
           if (d.deduction_rate > 0 && d.deduction_qty > 0) return `${d.deduction_type} (${d.deduction_qty} @ ₹${d.deduction_rate})`;
           return d.deduction_type;
         });
 
-        if (typeSummaries.length > 0) {
-          deductionSummaryText = typeSummaries.join(', ');
-        }
-        if (!inspDeductionAmount) {
-          inspDeductionAmount = parsedDeductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
-        }
-        if (parsedDeductions.length > 0) {
-          inspDeductionRate = parsedDeductions[0].deduction_rate;
-          inspDeductionQty = parsedDeductions[0].deduction_qty;
-        }
-      }
-
-      if (parsedDeductions.length === 0 && inspDeductionType && !inspDeductionType.includes('-- SELECT') && (inspDeductionRate > 0 || inspDeductionAmount > 0)) {
+        deductionSummaryText = typeSummaries.join(', ');
+        inspDeductionAmount = parsedDeductions.reduce((s: number, d: any) => s + (Number(d.deduction_amount) || 0), 0);
+        inspDeductionRate = parsedDeductions[0].deduction_rate;
+        inspDeductionQty = parsedDeductions[0].deduction_qty;
+      } else if (inspDeductionType && !inspDeductionType.includes('-- SELECT') && (inspDeductionRate > 0 || inspDeductionAmount > 0)) {
         parsedDeductions = [{
           deduction_type: inspDeductionType,
           deduction_rate: inspDeductionRate || inspDeductionAmount,
           deduction_qty: inspDeductionQty || 1,
           deduction_amount: inspDeductionAmount || Number(((inspDeductionRate || 0) * (inspDeductionQty || 1)).toFixed(2))
         }];
-      } else if (parsedDeductions.length === 0) {
+      } else {
         deductionSummaryText = '';
         inspDeductionRate = 0;
         inspDeductionQty = 0;
@@ -1308,15 +1338,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         if (existingMaster) {
           setIsEdit(true);
+          const hasMoreParsedDeductions = parsedDeductions.length > (existingMaster.deductions?.length || 0);
+          const effectiveDeductions = hasMoreParsedDeductions
+            ? parsedDeductions
+            : ((existingMaster.deductions && Array.isArray(existingMaster.deductions) && existingMaster.deductions.length > 0)
+                ? existingMaster.deductions
+                : (parsedDeductions.length > 0 ? parsedDeductions : []));
+          const effectiveDeductionAmount = hasMoreParsedDeductions
+            ? inspDeductionAmount
+            : ((Number(existingMaster.summary_deduction_amount) > 0) ? existingMaster.summary_deduction_amount : inspDeductionAmount);
+
           const mergedMaster = {
             ...existingMaster,
             summary_deduction_type: existingMaster.summary_deduction_type || deductionSummaryText || '',
             summary_deduction_rate: (Number(existingMaster.summary_deduction_rate) > 0) ? existingMaster.summary_deduction_rate : inspDeductionRate,
             summary_deduction_qty: (Number(existingMaster.summary_deduction_qty) > 0) ? existingMaster.summary_deduction_qty : (inspDeductionQty || (deductionSummaryText ? 1 : 0)),
-            summary_deduction_amount: (Number(existingMaster.summary_deduction_amount) > 0) ? existingMaster.summary_deduction_amount : inspDeductionAmount,
-            deductions: (existingMaster.deductions && Array.isArray(existingMaster.deductions) && existingMaster.deductions.length > 0)
-              ? existingMaster.deductions
-              : (parsedDeductions.length > 0 ? parsedDeductions : []),
+            summary_deduction_amount: effectiveDeductionAmount,
+            deductions: effectiveDeductions,
             summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null && Number(existingMaster.summary_premium_wt) > 0) 
               ? existingMaster.summary_premium_wt 
               : (existingMaster.summary_instl_rate || calculatedPremWtQtl),
