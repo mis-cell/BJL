@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLiveAutoRefresh } from "../hooks/useLiveAutoRefresh";
 import { motion, AnimatePresence } from "motion/react";
 import Papa from "papaparse";
