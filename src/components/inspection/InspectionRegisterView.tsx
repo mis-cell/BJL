@@ -3,7 +3,6 @@ import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp,
 import { PaginationControls } from "../PaginationControls";
 import { InspectionMasterRecord } from "../../types/inspection.types";
 import { formatIndianCurrency } from "../../lib/utils";
-import { MonthWiseCardsRibbon } from "../common/MonthWiseCardsRibbon";
 
 export interface InspectionRegisterViewProps {
   records?: InspectionMasterRecord[];

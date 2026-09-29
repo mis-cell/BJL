@@ -14,7 +14,6 @@ import { FinalArrivalFilterToolbar } from '../components/final-arrival/FinalArri
 import { FinalArrivalDataTable } from '../components/final-arrival/FinalArrivalDataTable';
 import { FinalArrivalDetailSlipModal } from '../components/final-arrival/FinalArrivalDetailSlipModal';
 import { FinalArrivalPrintModal } from '../components/final-arrival/FinalArrivalPrintModal';
-import { MonthWiseCardsRibbon } from '../components/common/MonthWiseCardsRibbon';
 
 export { calculateNetWeightVal, getRcptQty, getLowestNetWeight };
 
@@ -141,29 +140,6 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
           showConflictsAlert={showConflictsAlert}
           setShowConflictsAlert={setShowConflictsAlert}
           runReconcileFix={runReconcileFix}
-        />
-
-        {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
-        <MonthWiseCardsRibbon
-          records={records}
-          getDate={(r: any) => r?.date || (r as any)?.arrival_date || (r as any)?.created_at}
-          selectedMonth={selectedMonthFilter}
-          onSelectMonth={setSelectedMonthFilter}
-          title="MONTH-WISE SUMMARY"
-          unitLabel="Vouchers"
-          colorScheme="purple"
-          getCardMetrics={(items) => {
-            const totalBalesCount = items.reduce((sum, r) => sum + getRcptQty(r), 0);
-            const totalNetWt = items.reduce((sum, r) => sum + getLowestNetWeight(r), 0);
-            const pendingMrCount = items.filter(r => !(r.mr_no && r.mr_no.trim() !== '' && r.mr_no.trim().toUpperCase() !== 'DIRECT REGISTER')).length;
-
-            return [
-              { label: 'Vouchers:', value: items.length },
-              { label: 'Total Bales:', value: totalBalesCount.toLocaleString(), valueColor: 'text-emerald-700' },
-              { label: 'Net Weight:', value: `${totalNetWt.toFixed(2)} MT`, valueColor: 'text-slate-800' },
-              { label: 'Pending MR:', value: `${pendingMrCount} Loads`, isBadge: true },
-            ];
-          }}
         />
 
         {/* SEARCH, DATE FILTERS & ACTIONS */}

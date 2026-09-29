@@ -33,7 +33,6 @@ import { PaginationControls } from '../PaginationControls';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
 import { PoHistogramHistoryModal } from './PoHistogramHistoryModal';
-import { MonthWiseCardsRibbon } from '../common/MonthWiseCardsRibbon';
 
 export interface PurchaseOrderRegisterViewProps {
   isArchiveView: boolean;
@@ -291,33 +290,6 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
           </div>
         </div>
       </div>
-
-      {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
-      <MonthWiseCardsRibbon
-        records={scopedPos || poList}
-        getDate={(p: any) => p?.date || p?.po_date || p?.contract_date || p?.created_at}
-        selectedMonth={selectedMonth}
-        onSelectMonth={setSelectedMonth || (() => {})}
-        title="MONTH-WISE SUMMARY"
-        unitLabel="POs"
-        colorScheme="purple"
-        getCardMetrics={(items) => {
-          const totalContractMt = items.reduce((sum, p) => sum + (parseFloat(p.total_contract_mt) || 0), 0);
-          const totalReceivedMt = items.reduce((sum, p) => sum + (parseFloat(p.received_weight_mt) || 0), 0);
-          const pendingCount = items.filter(p => {
-            const pendingStr = String(p.pending ?? '').trim().toLowerCase();
-            const statusStr = String(p.status ?? '').trim().toLowerCase();
-            return !(pendingStr === 'no' || pendingStr === 'false' || p.pending === false || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || p.is_closed);
-          }).length;
-
-          return [
-            { label: 'Vouchers:', value: items.length },
-            { label: 'Contract Wt:', value: `${totalContractMt.toFixed(2)} MT`, valueColor: 'text-emerald-700' },
-            { label: 'Received Wt:', value: `${totalReceivedMt.toFixed(2)} MT`, valueColor: 'text-slate-800' },
-            { label: 'Pending:', value: `${pendingCount} POs`, isBadge: true },
-          ];
-        }}
-      />
 
       {/* Register Search and Mode Controls */}
       <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs flex flex-wrap lg:flex-nowrap items-center gap-2 justify-between">

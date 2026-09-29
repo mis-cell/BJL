@@ -42,7 +42,7 @@ import { Amad } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData } from '../lib/permissions';
 import { PaginationControls } from '../components/PaginationControls';
-import { MonthWiseCardsRibbon, parseMonthKey } from '../components/common/MonthWiseCardsRibbon';
+import { parseMonthKey } from '../components/common/MonthWiseCardsRibbon';
 
 export const calculateNetWeightVal = (
   gross: number,
@@ -727,29 +727,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <p className="text-[10px] font-medium text-slate-500 mt-1">Today 27 Jul 2026</p>
           </div>
         </div>
-
-        {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
-        <MonthWiseCardsRibbon
-          records={amadList}
-          getDate={(a: any) => a?.date || (a as any)?.amad_date || (a as any)?.arrival_date || (a as any)?.created_at}
-          selectedMonth={selectedMonthFilter}
-          onSelectMonth={setSelectedMonthFilter}
-          title="MONTH-WISE SUMMARY"
-          unitLabel="Vouchers"
-          colorScheme="purple"
-          getCardMetrics={(items) => {
-            const totalBalesCount = items.reduce((sum, a) => sum + (Number(a.actual_bales) || Number(a.challan_bales) || Number(a.total_packets) || 0), 0);
-            const totalGrossWt = items.reduce((sum, a) => sum + (parseFloat(String(a.gross_weight || (a as any).gross_weight_mt || 0)) || 0), 0);
-            const pendingInspection = items.filter(a => !inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase())).length;
-
-            return [
-              { label: 'Vouchers:', value: items.length },
-              { label: 'Total Bales:', value: totalBalesCount.toLocaleString(), valueColor: 'text-emerald-700' },
-              { label: 'Gross Wt:', value: `${totalGrossWt.toFixed(2)} MT`, valueColor: 'text-slate-800' },
-              { label: 'Pending:', value: `${pendingInspection} Loads`, isBadge: true },
-            ];
-          }}
-        />
 
         {/* 5. SEARCH & FILTER TOOLBAR */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
