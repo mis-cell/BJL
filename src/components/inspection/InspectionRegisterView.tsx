@@ -85,15 +85,29 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
         </div>
       </div>
 
-      {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+      {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
       <MonthWiseCardsRibbon
         records={records && records.length > 0 ? records : filteredRecords}
         getDate={(r: any) => r?.arrival_date || r?.mr_date || r?.inspection_date || r?.created_at}
         selectedMonth={selectedMonthFilter}
         onSelectMonth={setSelectedMonthFilter || (() => {})}
-        title="Mill Inspection Month-Wise Breakdown"
-        unitLabel="Inspections"
-        colorScheme="teal"
+        title="MONTH-WISE SUMMARY"
+        unitLabel="Vouchers"
+        colorScheme="purple"
+        getCardMetrics={(items) => {
+          const avgMoist = items.length > 0
+            ? (items.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / items.length).toFixed(1)
+            : '0.0';
+          const totalDed = items.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
+          const penaltyLots = items.filter(r => (Number(r.deduction_amount) || 0) > 0).length;
+
+          return [
+            { label: 'Vouchers:', value: items.length },
+            { label: 'Avg Moisture:', value: `${avgMoist}%`, valueColor: 'text-emerald-700' },
+            { label: 'Deductions:', value: formatIndianCurrency(totalDed), valueColor: 'text-slate-800' },
+            { label: 'Penalty Lots:', value: `${penaltyLots} Lots`, isBadge: true },
+          ];
+        }}
       />
 
       {/* Filter and Control Bar */}

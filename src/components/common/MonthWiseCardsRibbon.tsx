@@ -1,29 +1,37 @@
-import React, { useMemo } from 'react';
-import { Calendar, Filter, X, ChevronRight, Layers, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Calendar, Filter, Layers, ChevronUp, ChevronDown, ArrowRight } from 'lucide-react';
+import { cn, formatIndianCurrency } from '../../lib/utils';
+
+export interface CardMetricItem {
+  label: string;
+  value: string | number;
+  isBadge?: boolean;
+  badgeVariant?: 'amber' | 'emerald' | 'blue' | 'purple';
+  isHighlight?: boolean;
+  valueColor?: string;
+}
 
 export interface MonthWiseCardsRibbonProps<T = any> {
   records: T[];
   getDate: (record: T) => string | Date | null | undefined;
-  selectedMonth: string | null; // Format: 'YYYY-MM', e.g. '2026-04', or null for All
+  selectedMonth: string | null; // e.g. '2026-04' or null
   onSelectMonth: (monthKey: string | null) => void;
   title?: string;
   unitLabel?: string;
-  colorScheme?: 'emerald' | 'amber' | 'blue' | 'indigo' | 'purple' | 'slate' | 'teal';
+  getCardMetrics?: (monthRecords: T[]) => CardMetricItem[];
+  colorScheme?: 'purple' | 'emerald' | 'blue';
   className?: string;
-  showAllOption?: boolean;
 }
 
-export interface MonthData {
-  key: string;       // '2026-04'
-  monthName: string; // 'April'
+export interface ParsedMonthItem {
+  key: string;       // '2026-08'
+  monthIndex: number;// 0-11
+  monthName: string; // 'August'
+  shortName: string; // 'AUG'
   year: number;      // 2026
-  label: string;     // 'April 2026'
-  shortLabel: string;// 'Apr 2026'
-  count: number;
 }
 
-export function parseMonthKey(dateVal: any): { key: string; monthName: string; year: number; label: string; shortLabel: string } | null {
+export function parseMonthKey(dateVal: any): ParsedMonthItem | null {
   if (!dateVal) return null;
   const str = String(dateVal).trim();
   if (!str) return null;
@@ -32,21 +40,15 @@ export function parseMonthKey(dateVal: any): { key: string; monthName: string; y
   const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
   if (dmyMatch) {
     const day = parseInt(dmyMatch[1], 10);
-    const month = parseInt(dmyMatch[2], 10) - 1; // 0-indexed
+    const monthIndex = parseInt(dmyMatch[2], 10) - 1; // 0-indexed
     const year = parseInt(dmyMatch[3], 10);
-    if (!isNaN(day) && !isNaN(month) && !isNaN(year) && month >= 0 && month <= 11) {
-      const d = new Date(year, month, day);
+    if (!isNaN(day) && !isNaN(monthIndex) && !isNaN(year) && monthIndex >= 0 && monthIndex <= 11) {
+      const d = new Date(year, monthIndex, day);
       if (!isNaN(d.getTime())) {
-        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
         const monthName = d.toLocaleString('en-US', { month: 'long' });
-        const shortMonth = d.toLocaleString('en-US', { month: 'short' });
-        return {
-          key,
-          monthName,
-          year,
-          label: `${monthName} ${year}`,
-          shortLabel: `${shortMonth} ${year}`
-        };
+        const shortName = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+        return { key, monthIndex, monthName, shortName, year };
       }
     }
   }
@@ -55,17 +57,11 @@ export function parseMonthKey(dateVal: any): { key: string; monthName: string; y
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
     const year = d.getFullYear();
-    const month = d.getMonth();
-    const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const monthIndex = d.getMonth();
+    const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
     const monthName = d.toLocaleString('en-US', { month: 'long' });
-    const shortMonth = d.toLocaleString('en-US', { month: 'short' });
-    return {
-      key,
-      monthName,
-      year,
-      label: `${monthName} ${year}`,
-      shortLabel: `${shortMonth} ${year}`
-    };
+    const shortName = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+    return { key, monthIndex, monthName, shortName, year };
   }
 
   return null;
@@ -76,260 +72,312 @@ export const MonthWiseCardsRibbon = <T,>({
   getDate,
   selectedMonth,
   onSelectMonth,
-  title = "Month-Wise Distribution",
-  unitLabel = "Records",
-  colorScheme = "emerald",
+  title = "MONTH-WISE SUMMARY",
+  unitLabel = "Vouchers",
+  getCardMetrics,
+  colorScheme = "purple",
   className = "",
-  showAllOption = true,
 }: MonthWiseCardsRibbonProps<T>) => {
+  const [collapseMonthSummary, setCollapseMonthSummary] = useState(false);
 
-  // Aggregate records into month buckets
-  // REQUIREMENT: "If Any Month Have No Data Then This month Card Not Shown There"
-  const { monthCards, totalRecordsCount } = useMemo(() => {
-    const map = new Map<string, MonthData>();
-    let validCount = 0;
+  // Group records by year and month
+  // Strict requirement: "If Any Month Have No Data Then This month Card Not Shown There"
+  const { allGroupedMonths, availableYears, latestYear } = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      monthIndex: number;
+      monthName: string;
+      shortName: string;
+      year: number;
+      items: T[];
+    }>();
+
+    const yearsSet = new Set<number>();
 
     for (const r of records) {
       const d = getDate(r);
       const parsed = parseMonthKey(d);
       if (!parsed) continue;
 
-      validCount++;
+      yearsSet.add(parsed.year);
       const existing = map.get(parsed.key);
       if (existing) {
-        existing.count += 1;
+        existing.items.push(r);
       } else {
         map.set(parsed.key, {
           key: parsed.key,
+          monthIndex: parsed.monthIndex,
           monthName: parsed.monthName,
+          shortName: parsed.shortName,
           year: parsed.year,
-          label: parsed.label,
-          shortLabel: parsed.shortLabel,
-          count: 1
+          items: [r],
         });
       }
     }
 
-    // Strictly filter out any month with count <= 0 (if any)
-    const list = Array.from(map.values()).filter(m => m.count > 0);
+    const yrs = Array.from(yearsSet).sort((a, b) => b - a);
+    const monthsList = Array.from(map.values()).filter(m => m.items.length > 0);
+    // Sort chronological: from Jan to Dec or latest
+    monthsList.sort((a, b) => a.key.localeCompare(b.key));
 
-    // Sort descending by month key so current/latest month comes first, or chronological
-    list.sort((a, b) => b.key.localeCompare(a.key));
+    const currentYr = new Date().getFullYear();
+    const defaultYr = yrs.includes(currentYr) ? currentYr : (yrs[0] || currentYr);
 
-    return { monthCards: list, totalRecordsCount: validCount };
+    return {
+      allGroupedMonths: monthsList,
+      availableYears: yrs.length > 0 ? yrs : [currentYr],
+      latestYear: defaultYr,
+    };
   }, [records, getDate]);
 
-  // Color theme presets
-  const themeStyles = {
-    emerald: {
-      activeBorder: 'border-emerald-600 ring-2 ring-emerald-500 bg-emerald-50/80',
-      activeText: 'text-emerald-950',
-      activeBadge: 'bg-emerald-600 text-white',
-      cardHover: 'hover:border-emerald-300 hover:bg-emerald-50/30',
-      iconBg: 'bg-emerald-100 text-emerald-800',
-      headerAccent: 'text-emerald-800',
-      countText: 'text-emerald-900',
-    },
-    blue: {
-      activeBorder: 'border-blue-600 ring-2 ring-blue-500 bg-blue-50/80',
-      activeText: 'text-blue-950',
-      activeBadge: 'bg-blue-600 text-white',
-      cardHover: 'hover:border-blue-300 hover:bg-blue-50/30',
-      iconBg: 'bg-blue-100 text-blue-800',
-      headerAccent: 'text-blue-800',
-      countText: 'text-blue-900',
-    },
-    amber: {
-      activeBorder: 'border-amber-600 ring-2 ring-amber-500 bg-amber-50/80',
-      activeText: 'text-amber-950',
-      activeBadge: 'bg-amber-600 text-white',
-      cardHover: 'hover:border-amber-300 hover:bg-amber-50/30',
-      iconBg: 'bg-amber-100 text-amber-800',
-      headerAccent: 'text-amber-800',
-      countText: 'text-amber-900',
-    },
-    indigo: {
-      activeBorder: 'border-indigo-600 ring-2 ring-indigo-500 bg-indigo-50/80',
-      activeText: 'text-indigo-950',
-      activeBadge: 'bg-indigo-600 text-white',
-      cardHover: 'hover:border-indigo-300 hover:bg-indigo-50/30',
-      iconBg: 'bg-indigo-100 text-indigo-800',
-      headerAccent: 'text-indigo-800',
-      countText: 'text-indigo-900',
-    },
-    teal: {
-      activeBorder: 'border-teal-600 ring-2 ring-teal-500 bg-teal-50/80',
-      activeText: 'text-teal-950',
-      activeBadge: 'bg-teal-600 text-white',
-      cardHover: 'hover:border-teal-300 hover:bg-teal-50/30',
-      iconBg: 'bg-teal-100 text-teal-800',
-      headerAccent: 'text-teal-800',
-      countText: 'text-teal-900',
-    },
-    purple: {
-      activeBorder: 'border-purple-600 ring-2 ring-purple-500 bg-purple-50/80',
-      activeText: 'text-purple-950',
-      activeBadge: 'bg-purple-600 text-white',
-      cardHover: 'hover:border-purple-300 hover:bg-purple-50/30',
-      iconBg: 'bg-purple-100 text-purple-800',
-      headerAccent: 'text-purple-800',
-      countText: 'text-purple-900',
-    },
-    slate: {
-      activeBorder: 'border-slate-700 ring-2 ring-slate-600 bg-slate-100',
-      activeText: 'text-slate-950',
-      activeBadge: 'bg-slate-800 text-white',
-      cardHover: 'hover:border-slate-400 hover:bg-slate-50',
-      iconBg: 'bg-slate-200 text-slate-800',
-      headerAccent: 'text-slate-800',
-      countText: 'text-slate-900',
-    },
-  }[colorScheme] || {
-    activeBorder: 'border-emerald-600 ring-2 ring-emerald-500 bg-emerald-50/80',
-    activeText: 'text-emerald-950',
-    activeBadge: 'bg-emerald-600 text-white',
-    cardHover: 'hover:border-emerald-300 hover:bg-emerald-50/30',
-    iconBg: 'bg-emerald-100 text-emerald-800',
-    headerAccent: 'text-emerald-800',
-    countText: 'text-emerald-900',
-  };
+  // Active Year state
+  const [activeYear, setActiveYear] = useState<number>(latestYear);
 
-  // If there are zero months with data, return null or empty banner
-  if (monthCards.length === 0) {
+  useEffect(() => {
+    if (latestYear && !availableYears.includes(activeYear)) {
+      setActiveYear(latestYear);
+    }
+  }, [latestYear, availableYears, activeYear]);
+
+  // Filter months belonging to activeYear
+  // ONLY months that have records > 0 are present in allGroupedMonths
+  const activeMonthSummaries = useMemo(() => {
+    return allGroupedMonths.filter(m => m.year === activeYear);
+  }, [allGroupedMonths, activeYear]);
+
+  // If no records in entire dataset or for any year, do not render
+  if (allGroupedMonths.length === 0) {
     return null;
   }
 
+  // Visual Theme Palettes (defaults to exact purple from the user's screenshot)
+  const isPurple = colorScheme === 'purple';
+  const isEmerald = colorScheme === 'emerald';
+
+  const theme = isEmerald
+    ? {
+        bannerBg: 'bg-gradient-to-b from-emerald-50/70 to-slate-50 border-2 border-emerald-200/80',
+        iconBg: 'bg-[#174C2C] text-emerald-200',
+        titleColor: 'text-[#103A20]',
+        labelColor: 'text-[#103A20]',
+        selectBorder: 'border-2 border-[#174C2C] text-[#103A20] focus:ring-emerald-600',
+        allBtnActive: 'bg-[#174C2C] text-white border-[#103A20] shadow-xs',
+        allBtnInactive: 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100',
+        collapseBtn: 'border-emerald-300 hover:bg-emerald-100 text-emerald-900',
+        cardActive: 'bg-gradient-to-br from-[#103A20] to-[#174C2C] text-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40',
+        cardInactive: 'bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-md text-slate-800',
+        dotInactive: 'bg-emerald-600',
+        dotActive: 'bg-emerald-300',
+        headerTextActive: 'text-emerald-100',
+        headerTextInactive: 'text-emerald-950',
+        footerActive: 'border-emerald-700 text-emerald-200',
+        footerInactive: 'border-slate-200 text-emerald-700',
+      }
+    : {
+        // EXACT match with user's Payment Section screenshot
+        bannerBg: 'bg-gradient-to-b from-purple-50/70 to-slate-50 border-2 border-purple-200/80',
+        iconBg: 'bg-purple-900 text-purple-200',
+        titleColor: 'text-purple-950',
+        labelColor: 'text-purple-950',
+        selectBorder: 'border-2 border-purple-800 text-purple-950 focus:ring-purple-600',
+        allBtnActive: 'bg-purple-800 text-white border-purple-900 shadow-xs',
+        allBtnInactive: 'bg-white text-purple-900 border-purple-300 hover:bg-purple-100',
+        collapseBtn: 'border-purple-300 hover:bg-purple-100 text-purple-900',
+        cardActive: 'bg-gradient-to-br from-purple-900 to-indigo-950 text-white border-2 border-purple-400 shadow-md ring-2 ring-purple-400/40',
+        cardInactive: 'bg-white border-2 border-purple-200/90 hover:border-purple-600 hover:shadow-md text-slate-800',
+        dotInactive: 'bg-purple-600',
+        dotActive: 'bg-emerald-400',
+        headerTextActive: 'text-purple-100',
+        headerTextInactive: 'text-purple-950',
+        footerActive: 'border-purple-700 text-purple-200',
+        footerInactive: 'border-slate-200 text-purple-700',
+      };
+
   return (
-    <div className={cn("w-full bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs transition-all", className)}>
-      {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-slate-100">
+    <div className={cn(theme.bannerBg, "rounded-2xl p-2.5 sm:p-3 shadow-sm space-y-2.5", className)}>
+      {/* Compact Clean Control Toolbar (Matched with user's Payment screenshot) */}
+      <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
         <div className="flex items-center gap-2">
-          <div className={cn("p-1.5 rounded-lg shadow-2xs", themeStyles.iconBg)}>
+          <div className={cn("p-1.5 rounded-lg shadow-xs", theme.iconBg)}>
             <Calendar className="w-4 h-4" />
           </div>
-          <div>
-            <h3 className={cn("text-xs font-black uppercase tracking-wider", themeStyles.headerAccent)}>
-              {title}
-            </h3>
-            <p className="text-[10px] text-slate-400 font-medium">
-              Click any month card to filter records &middot; Showing {monthCards.length} active month{monthCards.length > 1 ? 's' : ''} (months with 0 data are hidden)
-            </p>
-          </div>
+          <span className={cn("text-xs font-black uppercase tracking-wider", theme.titleColor)}>
+            {title} {activeMonthSummaries.length > 0 ? `(${activeMonthSummaries.length} Active ${activeMonthSummaries.length === 1 ? 'Month' : 'Months'})` : ''}
+          </span>
         </div>
 
-        {selectedMonth && (
-          <button
-            type="button"
-            onClick={() => onSelectMonth(null)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer shadow-2xs"
-            title="Reset month filter and show all records"
+        {/* Dynamic Year Selector & Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <label htmlFor="summary-year-select" className={cn("text-xs font-bold flex items-center gap-1", theme.labelColor)}>
+            <Filter className="w-3.5 h-3.5 text-purple-700" />
+            <span>Year:</span>
+          </label>
+          <select
+            id="summary-year-select"
+            value={activeYear}
+            onChange={(e) => {
+              setActiveYear(Number(e.target.value));
+              onSelectMonth(null);
+            }}
+            className={cn("h-8 px-2.5 bg-white rounded-lg text-xs font-mono font-bold shadow-xs cursor-pointer focus:outline-none focus:ring-2", theme.selectBorder)}
           >
-            <X className="w-3.5 h-3.5 text-rose-500" />
-            <span>Clear Filter ({monthCards.find(m => m.key === selectedMonth)?.label || selectedMonth})</span>
-          </button>
-        )}
-      </div>
+            {availableYears.map(yr => (
+              <option key={yr} value={yr} className="font-mono font-bold">
+                {yr}
+              </option>
+            ))}
+          </select>
 
-      {/* Month Cards Scroll/Grid */}
-      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-        {/* Optional 'All Months' Overview Card */}
-        {showAllOption && (
+          {/* All Months Filter Pill */}
           <button
             type="button"
             onClick={() => onSelectMonth(null)}
             className={cn(
-              "flex-shrink-0 min-w-[130px] p-2.5 rounded-xl border text-left transition-all cursor-pointer select-none flex flex-col justify-between shadow-2xs",
-              selectedMonth === null
-                ? cn(themeStyles.activeBorder, "shadow-xs")
-                : "border-slate-200 bg-slate-50/50 hover:bg-white " + themeStyles.cardHover
+              "h-8 px-3 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer",
+              selectedMonth === null ? theme.allBtnActive : theme.allBtnInactive
             )}
-            title="View all records across all months"
           >
-            <div className="flex items-center justify-between gap-1 mb-1.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                All Months
-              </span>
-              <Layers className="w-3.5 h-3.5 text-slate-400" />
-            </div>
-            <div>
-              <div className="text-lg font-black text-slate-800 font-mono leading-none tracking-tight">
-                {totalRecordsCount.toLocaleString()}
-              </div>
-              <div className="text-[9.5px] font-semibold text-slate-400 mt-0.5">
-                Total {unitLabel}
-              </div>
-            </div>
-            {selectedMonth === null && (
-              <div className="mt-1.5 pt-1 border-t border-emerald-200/50 flex items-center gap-1 text-[9px] font-bold text-emerald-700">
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                <span>Showing All</span>
-              </div>
-            )}
+            <Layers className="w-3.5 h-3.5" />
+            <span>All Months</span>
           </button>
-        )}
 
-        {/* Individual Month Cards - Strictly showing only months with count > 0 */}
-        {monthCards.map((m) => {
-          const isSelected = selectedMonth === m.key;
-          return (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => onSelectMonth(isSelected ? null : m.key)}
-              className={cn(
-                "flex-shrink-0 min-w-[145px] p-2.5 rounded-xl border text-left transition-all cursor-pointer select-none flex flex-col justify-between shadow-2xs group relative overflow-hidden",
-                isSelected
-                  ? cn(themeStyles.activeBorder, "shadow-xs")
-                  : "border-slate-200 bg-white " + themeStyles.cardHover
-              )}
-              title={`Filter by ${m.label} (${m.count} ${unitLabel})`}
-            >
-              {/* Subtle top indicator bar */}
-              <div
-                className={cn(
-                  "absolute top-0 left-0 right-0 h-1 transition-all",
-                  isSelected ? "bg-emerald-600" : "bg-transparent group-hover:bg-slate-300"
-                )}
-              />
-
-              <div className="flex items-center justify-between gap-1 mb-1.5 pt-0.5">
-                <span className={cn(
-                  "text-[10.5px] font-black uppercase tracking-wider truncate",
-                  isSelected ? themeStyles.activeText : "text-slate-700 group-hover:text-slate-900"
-                )}>
-                  {m.label}
-                </span>
-                <span
-                  className={cn(
-                    "text-[9px] font-bold px-1.5 py-0.5 rounded-full transition-colors font-mono",
-                    isSelected ? themeStyles.activeBadge : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
-                  )}
-                >
-                  {m.year}
-                </span>
-              </div>
-
-              <div>
-                <div className={cn(
-                  "text-xl font-black font-mono leading-none tracking-tight",
-                  isSelected ? themeStyles.countText : "text-slate-800 group-hover:text-slate-900"
-                )}>
-                  {m.count.toLocaleString()}
-                </div>
-                <div className="text-[9.5px] font-semibold text-slate-400 mt-1 flex items-center justify-between">
-                  <span>{unitLabel}</span>
-                  {isSelected && (
-                    <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-0.5">
-                      <CheckCircle2 className="w-2.5 h-2.5" />
-                      Active
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+          {/* Collapse / Expand Toggle */}
+          <button
+            type="button"
+            onClick={() => setCollapseMonthSummary(!collapseMonthSummary)}
+            className={cn("h-8 px-2.5 bg-white border rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer", theme.collapseBtn)}
+            title={collapseMonthSummary ? "Expand Month Cards" : "Collapse Month Cards"}
+          >
+            {collapseMonthSummary ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            <span>{collapseMonthSummary ? "Expand" : "Collapse"}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Month Cards Grid (SINGLE LINE ROW, ONLY ACTIVE MONTHS WITH DATA) */}
+      {!collapseMonthSummary && (
+        activeMonthSummaries.length > 0 ? (
+          <div className="flex flex-row flex-nowrap overflow-x-auto gap-2.5 pb-2 pt-0.5 scrollbar-thin">
+            {activeMonthSummaries.map((m) => {
+              const isSelected = selectedMonth === m.key;
+              const count = m.items.length;
+
+              // Generate custom metric rows if provided, or default metrics
+              const customMetrics: CardMetricItem[] = getCardMetrics
+                ? getCardMetrics(m.items)
+                : [
+                    { label: `${unitLabel}:`, value: count, isHighlight: true }
+                  ];
+
+              return (
+                <div
+                  key={m.key}
+                  onClick={() => {
+                    if (isSelected) {
+                      onSelectMonth(null);
+                    } else {
+                      onSelectMonth(m.key);
+                    }
+                  }}
+                  className={cn(
+                    "min-w-[185px] flex-1 max-w-[240px] shrink-0 rounded-xl p-2.5 transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs relative",
+                    isSelected ? theme.cardActive : theme.cardInactive
+                  )}
+                  title={`Click to filter to ${m.monthName} ${m.year}`}
+                >
+                  <div>
+                    {/* Card Header: Month Name + Year */}
+                    <div className={cn(
+                      "flex items-center justify-between gap-1 mb-1.5 pb-1 border-b",
+                      isSelected ? "border-purple-700/60" : "border-slate-100"
+                    )}>
+                      <h3 className={cn(
+                        "text-xs font-black uppercase tracking-wider flex items-center gap-1 truncate",
+                        isSelected ? theme.headerTextActive : theme.headerTextInactive
+                      )}>
+                        <span className={cn(
+                          "w-2 h-2 rounded-full shrink-0",
+                          isSelected ? theme.dotActive : theme.dotInactive
+                        )} />
+                        <span>{m.shortName}</span>
+                      </h3>
+                      <span className={cn(
+                        "text-[9px] font-mono font-semibold",
+                        isSelected ? "text-purple-200" : "text-slate-500"
+                      )}>
+                        {m.year}
+                      </span>
+                    </div>
+
+                    {/* Metric Rows */}
+                    <div className="space-y-0.5">
+                      {customMetrics.map((met, idx) => {
+                        const isMainCount = idx === 0;
+
+                        if (met.isBadge) {
+                          return (
+                            <div key={idx} className="flex items-center justify-between text-[10px] pt-1">
+                              <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                                {met.label}
+                              </span>
+                              <span className={cn(
+                                "font-mono font-black px-1.5 py-0.5 rounded text-[9px]",
+                                isSelected
+                                  ? "bg-amber-400 text-amber-950 font-black"
+                                  : "bg-amber-100 text-amber-900 border border-amber-300"
+                              )}>
+                                {met.value}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              "flex items-center justify-between text-[10px] py-0.5",
+                              isMainCount
+                                ? cn("border-b text-[11px]", isSelected ? "border-purple-800/60" : "border-slate-100")
+                                : cn("border-b border-dashed", isSelected ? "border-purple-800/60" : "border-slate-100")
+                            )}
+                          >
+                            <span className={isSelected ? "text-purple-200 font-semibold" : "text-slate-500 font-semibold"}>
+                              {met.label}
+                            </span>
+                            <span className={cn(
+                              "font-mono truncate max-w-[105px]",
+                              isMainCount ? "font-black text-xs" : "font-bold",
+                              isSelected
+                                ? (met.valueColor || "text-white")
+                                : (met.valueColor || (isMainCount ? "text-purple-950" : "text-slate-800"))
+                            )}>
+                              {met.value}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Card Footer / Action Hint (Matches Payment screenshot: "View Month ->") */}
+                  <div className={cn(
+                    "mt-2 pt-1 border-t border-dashed text-[9px] font-bold flex items-center justify-between transition-transform",
+                    isSelected ? theme.footerActive : theme.footerInactive
+                  )}>
+                    <span>{isSelected ? '✓ Active Filter' : 'View Month'}</span>
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-4 text-center text-xs font-semibold text-slate-500 bg-white/70 rounded-xl border border-purple-100">
+            No active records found for year {activeYear}.
+          </div>
+        )
+      )}
     </div>
   );
 };

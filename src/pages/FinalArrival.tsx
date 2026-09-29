@@ -143,15 +143,27 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
           runReconcileFix={runReconcileFix}
         />
 
-        {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+        {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
         <MonthWiseCardsRibbon
           records={records}
-          getDate={(r: any) => r?.date || r?.arrival_date || r?.created_at}
+          getDate={(r: any) => r?.date || (r as any)?.arrival_date || (r as any)?.created_at}
           selectedMonth={selectedMonthFilter}
           onSelectMonth={setSelectedMonthFilter}
-          title="Final Arrival Month-Wise Breakdown"
-          unitLabel="Arrivals"
-          colorScheme="amber"
+          title="MONTH-WISE SUMMARY"
+          unitLabel="Vouchers"
+          colorScheme="purple"
+          getCardMetrics={(items) => {
+            const totalBalesCount = items.reduce((sum, r) => sum + getRcptQty(r), 0);
+            const totalNetWt = items.reduce((sum, r) => sum + getLowestNetWeight(r), 0);
+            const pendingMrCount = items.filter(r => !(r.mr_no && r.mr_no.trim() !== '' && r.mr_no.trim().toUpperCase() !== 'DIRECT REGISTER')).length;
+
+            return [
+              { label: 'Vouchers:', value: items.length },
+              { label: 'Total Bales:', value: totalBalesCount.toLocaleString(), valueColor: 'text-emerald-700' },
+              { label: 'Net Weight:', value: `${totalNetWt.toFixed(2)} MT`, valueColor: 'text-slate-800' },
+              { label: 'Pending MR:', value: `${pendingMrCount} Loads`, isBadge: true },
+            ];
+          }}
         />
 
         {/* SEARCH, DATE FILTERS & ACTIONS */}

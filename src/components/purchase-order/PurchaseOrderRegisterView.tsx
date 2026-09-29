@@ -292,15 +292,31 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
         </div>
       </div>
 
-      {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+      {/* Month-Wise Cards Ribbon (Only months with data are shown - Exactly matching Payment Section Card) */}
       <MonthWiseCardsRibbon
         records={scopedPos || poList}
         getDate={(p: any) => p?.date || p?.po_date || p?.contract_date || p?.created_at}
         selectedMonth={selectedMonth}
         onSelectMonth={setSelectedMonth || (() => {})}
-        title={isTempPo ? "Sauda Check Point Month-Wise Breakdown" : "P.O. Month-Wise Breakdown"}
+        title="MONTH-WISE SUMMARY"
         unitLabel="POs"
-        colorScheme="blue"
+        colorScheme="purple"
+        getCardMetrics={(items) => {
+          const totalContractMt = items.reduce((sum, p) => sum + (parseFloat(p.total_contract_mt) || 0), 0);
+          const totalReceivedMt = items.reduce((sum, p) => sum + (parseFloat(p.received_weight_mt) || 0), 0);
+          const pendingCount = items.filter(p => {
+            const pendingStr = String(p.pending ?? '').trim().toLowerCase();
+            const statusStr = String(p.status ?? '').trim().toLowerCase();
+            return !(pendingStr === 'no' || pendingStr === 'false' || p.pending === false || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || p.is_closed);
+          }).length;
+
+          return [
+            { label: 'Vouchers:', value: items.length },
+            { label: 'Contract Wt:', value: `${totalContractMt.toFixed(2)} MT`, valueColor: 'text-emerald-700' },
+            { label: 'Received Wt:', value: `${totalReceivedMt.toFixed(2)} MT`, valueColor: 'text-slate-800' },
+            { label: 'Pending:', value: `${pendingCount} POs`, isBadge: true },
+          ];
+        }}
       />
 
       {/* Register Search and Mode Controls */}
