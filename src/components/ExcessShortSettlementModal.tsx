@@ -512,7 +512,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     const targetPo = clean(poNo);
     const targetSauda = clean(saudaNo);
 
-    // 1. Check allScpDetails (PO details table matrix, e.g. Grade TD6 Rate = 11,000)
+    // 1. Check direct B Rate (Base Rate) from Sauda Check Point / Purchase Order Header
+    const fromBrate = parseFloat(po.b_rate || po.base_rate || po.b_rate_qtl || po.s_b_rate || po.sauda_b_rate || 0);
+    if (fromBrate > 0) return fromBrate;
+
+    // 2. Check allScpDetails (PO details table matrix, e.g. Grade TD6 Rate = 11,000)
     if (allScpDetails && allScpDetails.length > 0) {
       const scpMatches = allScpDetails.filter((d: any) => {
         const dPo = clean(d.po_no || d.sauda_no || d.contract_po_no);
@@ -534,7 +538,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     }
 
-    // 2. Check item / grade rates from grid_details or items matrix
+    // 3. Check item / grade rates from grid_details or items matrix
     let grid: any[] = [];
     if (Array.isArray(po.grid_details)) {
       grid = po.grid_details;
@@ -561,18 +565,15 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     }
 
-    // 3. Check Satta Base Rate on Sauda Date (e.g. 13-08-2026 -> 12,500)
+    // 4. Direct PO contract rate fields
+    const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || po.p_o_rate || po.grade_rate || po.po_rate || po.sauda_base_rate || po.final_rate || 0);
+    if (directContractRate > 0) return directContractRate;
+
+    // 5. Fallback to Satta Base Rate on Sauda Date (e.g. 13-08-2026 -> 12,500)
     const sattaOnSaudaDate = getSattaBaseRateOnDate(saudaDate);
     if (sattaOnSaudaDate > 0) {
       return sattaOnSaudaDate;
     }
-
-    // 4. Fallback to direct PO contract rate fields
-    const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || po.p_o_rate || po.grade_rate || po.po_rate || po.sauda_base_rate || po.final_rate || 0);
-    if (directContractRate > 0) return directContractRate;
-
-    const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
-    if (fromBrate > 0) return fromBrate;
 
     return 0;
   }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade, allScpDetails, poNo, saudaNo]);
