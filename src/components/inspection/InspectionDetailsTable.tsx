@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Printer, Save, Loader2, Lock, Sparkles } from "lucide-react";
+import { Plus, Printer, Save, Loader2, Sparkles } from "lucide-react";
 import {
   InspectionDetailRow,
   InspectionMasterRecord,
@@ -36,34 +36,14 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
   return (
     <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
       <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-extrabold text-slate-900">Inspection Details</h2>
-            <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-0.5 rounded-full border border-blue-200">
-              {detailRows.length} {detailRows.length === 1 ? "Row" : "Rows"}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Horizontal scroll + Expand Row on every record for comprehensive quality audit details
-          </p>
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-base font-extrabold text-slate-900">Inspection Details</h2>
+          <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-0.5 rounded-full border border-blue-200">
+            {detailRows.length} {detailRows.length === 1 ? "Row" : "Rows"}
+          </span>
         </div>
 
-        {/* Color Legend & Add Row */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs text-[11px]">
-            <span className="font-bold text-slate-500 mr-1">Field Legend:</span>
-            <span
-              className="inline-flex items-center gap-1 bg-blue-100/90 text-blue-900 border border-blue-300 px-2 py-0.5 rounded font-extrabold shadow-2xs"
-              title="Auto-populated from Arrival / PO / Master (Protected from manual edits)"
-            >
-              <Lock className="w-3 h-3 text-blue-700" />
-              Auto-Populated &amp; Blocked
-            </span>
-            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded font-medium">
-              Manual Entry Allowed
-            </span>
-          </div>
-
           <button
             type="button"
             onClick={onAddRow}
@@ -213,19 +193,8 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
       </div>
 
       {/* FOOTER BAR */}
-      <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs text-slate-600">
-          Tip: Use <b className="text-blue-700">Expand</b> to edit/view the complete row without losing the wide-table structure. <b className="text-rose-700">Delete</b> removes only that inspection row.
-        </div>
+      <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onAddRow}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>＋ Add New Inspection Row</span>
-          </button>
           <button
             type="button"
             onClick={onPrintRecord}

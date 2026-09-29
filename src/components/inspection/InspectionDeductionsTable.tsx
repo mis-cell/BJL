@@ -6,8 +6,8 @@ interface InspectionDeductionsTableProps {
   deductionRows: DeductionRow[];
   deductionMasterList: any[];
   totalDeductionAmount: number;
-  matchedDeductions: MatchedAutoDeduction[];
-  baleAudit: {
+  matchedDeductions?: MatchedAutoDeduction[];
+  baleAudit?: {
     totalBales: number;
     totalReceiptGrossWtMt: number;
     totalWeightKg: number;
@@ -23,8 +23,6 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
   deductionRows,
   deductionMasterList,
   totalDeductionAmount,
-  matchedDeductions,
-  baleAudit,
   onAddDeductionRow,
   onRemoveDeductionRow,
   onDeductionChange,
@@ -72,60 +70,6 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
         </div>
       </div>
 
-      {/* Auto-Policy Deduction Master Summary Banner */}
-      {(baleAudit.totalBales > 0 || matchedDeductions.length > 0) && (
-        <div className="mx-3 mt-3 px-3 py-2 bg-gradient-to-r from-amber-50/80 via-rose-50/50 to-slate-50 border border-amber-200/80 rounded-lg flex flex-col gap-2 text-xs">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1">
-                ⚖️ Auto Policy Audit:
-              </span>
-              {baleAudit.totalBales > 0 && (
-                <>
-                  <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
-                    Qty: <strong className="text-indigo-700">{baleAudit.totalBales} Bales</strong>
-                  </span>
-                  <span className="bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded font-mono font-bold text-[11px]">
-                    Gross Wt: <strong className="text-slate-900">{baleAudit.totalReceiptGrossWtMt.toFixed(3)} MT</strong> ({Math.round(baleAudit.totalWeightKg).toLocaleString()} KG)
-                  </span>
-                  <span className="bg-amber-100/80 border border-amber-300 text-amber-900 px-2.5 py-0.5 rounded font-mono font-black text-[11px]">
-                    Avg: {baleAudit.avgKgPerBale.toFixed(2)} KG/Bale
-                  </span>
-                </>
-              )}
-            </div>
-
-            {matchedDeductions.length === 0 ? (
-              <div className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
-                ✓ Standard Weights &amp; Conditions (No Automated Deductions Applicable)
-              </div>
-            ) : (
-              <div className="text-rose-800 font-bold text-[11px] bg-rose-100/70 px-2.5 py-0.5 rounded border border-rose-300 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
-                <span>{matchedDeductions.length} Policy Rule{matchedDeductions.length > 1 ? "s" : ""} Auto-Applied</span>
-              </div>
-            )}
-          </div>
-
-          {matchedDeductions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-200/60">
-              {matchedDeductions.map((m, mIdx) => (
-                <div
-                  key={mIdx}
-                  className="flex items-center gap-1.5 bg-white border border-rose-300 text-rose-900 px-2.5 py-0.5 rounded-md shadow-2xs text-[11px] font-bold"
-                >
-                  <span>{m.badge}</span>
-                  <span className="text-slate-400">|</span>
-                  <span className="text-rose-700 font-mono">
-                    ₹{m.rate.toFixed(2)} × {m.qty} = <strong>-₹{m.amount.toFixed(2)}</strong>
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="p-3 overflow-x-auto">
         <table className="w-full text-xs text-left border-collapse">
           <thead>
@@ -133,7 +77,7 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
               <th className="py-1.5 px-2.5 w-10 text-center">#</th>
               <th className="py-1.5 px-2.5">Deduction Type</th>
               <th className="py-1.5 px-2.5 w-32 text-right">Deduction Rate (₹)</th>
-              <th className="py-1.5 px-2.5 w-28 text-right">Qty / Units</th>
+              <th className="py-1.5 px-2.5 w-28 text-right">QTL</th>
               <th className="py-1.5 px-2.5 w-36 text-right">Deduction Amount (-)</th>
               <th className="py-1.5 px-2 w-12 text-center">Action</th>
             </tr>

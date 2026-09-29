@@ -220,10 +220,12 @@ export function useInspectionLogic() {
     const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
     let defaultQty = 0;
-    if (isBaleRule && totalGrossMt > 0) {
-      defaultQty = Number((totalGrossMt * 10).toFixed(2));
-    } else if (isBaleRule && autoCalc.totalBales > 0) {
-      defaultQty = autoCalc.totalBales;
+    if (isBaleRule) {
+      const qtlFromGross = totalGrossMt > 0 ? Number((totalGrossMt * 10).toFixed(2)) : 0;
+      const qtlFromAudit = autoCalc.totalReceiptGrossWtMt > 0 ? Number((autoCalc.totalReceiptGrossWtMt * 10).toFixed(2)) : 0;
+      const rawHeaderWt = Number(headerForm?.gross_weight || headerForm?.challan_weight || 0);
+      const qtlFromHeader = rawHeaderWt > 50 ? rawHeaderWt : Number((rawHeaderWt * 10).toFixed(2));
+      defaultQty = qtlFromGross > 0 ? qtlFromGross : (qtlFromAudit > 0 ? qtlFromAudit : (qtlFromHeader > 0 ? qtlFromHeader : (autoCalc.totalBales > 0 ? autoCalc.totalBales : 1)));
     } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
       defaultQty = Number((totalGrossMt * 10).toFixed(2));
     } else if (selectedName.includes("DELIVERY CLAIM")) {
