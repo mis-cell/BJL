@@ -42,6 +42,7 @@ import { Amad } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData } from '../lib/permissions';
 import { PaginationControls } from '../components/PaginationControls';
+import { MonthWiseCardsRibbon, parseMonthKey } from '../components/common/MonthWiseCardsRibbon';
 
 export const calculateNetWeightVal = (
   gross: number,
@@ -157,6 +158,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   const [searchTerm, setSearchTerm] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string | null>(null);
   const [amadList, setAmadList] = useState<Amad[]>([]);
   const [editingAmad, setEditingAmad] = useState<Amad | null>(null);
   const [selectedAmadId, setSelectedAmadId] = useState<string | null>(null);
@@ -169,7 +171,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDateFilter, endDateFilter]);
+  }, [searchTerm, startDateFilter, endDateFilter, selectedMonthFilter]);
 
   // Modern Printing Form State System for "MARKS & QUALITY RECEIVED"
   const [printData, setPrintData] = useState<any | null>(null);
@@ -468,6 +470,12 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
       matchDateRange = a.date <= endDateFilter;
     }
 
+    if (selectedMonthFilter) {
+      const rowDate = a.date || (a as any).amad_date || (a as any).arrival_date || (a as any).created_at;
+      const parsed = parseMonthKey(rowDate);
+      if (!parsed || parsed.key !== selectedMonthFilter) return false;
+    }
+
     if (!canViewCompletedData()) {
       const isInspected = inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase());
       if (isInspected) return false;
@@ -720,7 +728,16 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
         </div>
 
-
+        {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+        <MonthWiseCardsRibbon
+          records={amadList}
+          getDate={(a: any) => a?.date || a?.amad_date || a?.arrival_date || a?.created_at}
+          selectedMonth={selectedMonthFilter}
+          onSelectMonth={setSelectedMonthFilter}
+          title="Temporary Arrival Month-Wise Breakdown"
+          unitLabel="Arrivals"
+          colorScheme="emerald"
+        />
 
         {/* 5. SEARCH & FILTER TOOLBAR */}
         <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">

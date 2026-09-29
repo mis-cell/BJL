@@ -89,6 +89,8 @@ export default function PurchaseOrder({
     setStartDate,
     endDate,
     setEndDate,
+    selectedMonth,
+    setSelectedMonth,
     statusFilter,
     setStatusFilter,
     selectedPoNo,
@@ -299,6 +301,8 @@ export default function PurchaseOrder({
             setStartDate={setStartDate}
             endDate={endDate}
             setEndDate={setEndDate}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
             handleCsvDownload={handleCsvDownload}
             fetchPosAndMasters={fetchPosAndMasters}
             loading={loading}

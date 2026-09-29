@@ -20,6 +20,7 @@ import {
   sanitizeDate,
   calculateClaimMoisture,
 } from "../../utils/inspectionCalculations";
+import { parseMonthKey } from "../common/MonthWiseCardsRibbon";
 
 export function useInspectionLogic() {
   const [records, setRecords] = useState<InspectionMasterRecord[]>([]);
@@ -27,6 +28,7 @@ export function useInspectionLogic() {
   const [loading, setLoading] = useState<boolean>(true);
   const isFetchingRecordsRef = useRef<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function useInspectionLogic() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, selectedMonthFilter]);
 
   // Form State
   const [headerForm, setHeaderForm] = useState<InspectionMasterRecord>({
@@ -1265,6 +1267,12 @@ export function useInspectionLogic() {
       statusFilter === "all" ||
       (r.status || "Completed").toLowerCase() === statusFilter.toLowerCase();
 
+    if (selectedMonthFilter) {
+      const rowDate = r.arrival_date || r.mr_date || (r as any).inspection_date || (r as any).created_at;
+      const parsed = parseMonthKey(rowDate);
+      if (!parsed || parsed.key !== selectedMonthFilter) return false;
+    }
+
     return matchesQuery && matchesStatus;
   }).sort((a, b) => {
     if (sortField === "arrival_date") {
@@ -1337,6 +1345,8 @@ export function useInspectionLogic() {
     loading,
     searchQuery,
     setSearchQuery,
+    selectedMonthFilter,
+    setSelectedMonthFilter,
     statusFilter,
     setStatusFilter,
     viewMode,

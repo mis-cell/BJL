@@ -13,6 +13,7 @@ import {
   getLowestNetWeight,
   calculateNetWeightVal 
 } from './finalArrivalTypes';
+import { parseMonthKey } from '../common/MonthWiseCardsRibbon';
 
 interface UseFinalArrivalRegisterLogicProps {
   isArchiveView?: boolean;
@@ -24,6 +25,7 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
   const [searchQuery, setSearchQuery] = useState('');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<FinalArrivalRecord | null>(null);
 
@@ -33,7 +35,7 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, startDateFilter, endDateFilter]);
+  }, [searchQuery, startDateFilter, endDateFilter, selectedMonthFilter]);
 
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
 
@@ -691,6 +693,12 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
       matchDateRange = matchDateRange && (r.date <= endDateFilter);
     }
 
+    if (selectedMonthFilter) {
+      const rowDate = r.date || (r as any).arrival_date || (r as any).created_at;
+      const parsed = parseMonthKey(rowDate);
+      if (!parsed || parsed.key !== selectedMonthFilter) return false;
+    }
+
     if (!canViewCompletedData()) {
       const isCompleted = Boolean(r.mr_no && r.mr_no.trim() !== '' && r.mr_no.trim().toUpperCase() !== 'DIRECT REGISTER');
       if (isCompleted) return false;
@@ -729,6 +737,8 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
     setStartDateFilter,
     endDateFilter,
     setEndDateFilter,
+    selectedMonthFilter,
+    setSelectedMonthFilter,
     selectedRecordId,
     setSelectedRecordId,
     selectedRecord,

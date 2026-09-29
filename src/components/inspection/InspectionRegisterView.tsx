@@ -3,9 +3,13 @@ import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp,
 import { PaginationControls } from "../PaginationControls";
 import { InspectionMasterRecord } from "../../types/inspection.types";
 import { formatIndianCurrency } from "../../lib/utils";
+import { MonthWiseCardsRibbon } from "../common/MonthWiseCardsRibbon";
 
 export interface InspectionRegisterViewProps {
+  records?: InspectionMasterRecord[];
   filteredRecords: InspectionMasterRecord[];
+  selectedMonthFilter?: string | null;
+  setSelectedMonthFilter?: (m: string | null) => void;
   loading: boolean;
   totalInspections: number;
   avgMoisture: string | number;
@@ -28,7 +32,10 @@ export interface InspectionRegisterViewProps {
 }
 
 export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
+  records = [],
   filteredRecords,
+  selectedMonthFilter = null,
+  setSelectedMonthFilter,
   loading,
   totalInspections,
   avgMoisture,
@@ -77,6 +84,17 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
           <Printer className="w-8 h-8 text-amber-500/30" />
         </div>
       </div>
+
+      {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+      <MonthWiseCardsRibbon
+        records={records && records.length > 0 ? records : filteredRecords}
+        getDate={(r: any) => r?.arrival_date || r?.mr_date || r?.inspection_date || r?.created_at}
+        selectedMonth={selectedMonthFilter}
+        onSelectMonth={setSelectedMonthFilter || (() => {})}
+        title="Mill Inspection Month-Wise Breakdown"
+        unitLabel="Inspections"
+        colorScheme="teal"
+      />
 
       {/* Filter and Control Bar */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">

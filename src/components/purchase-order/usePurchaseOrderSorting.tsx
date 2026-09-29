@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { canViewCompletedData } from '../../lib/permissions';
+import { parseMonthKey } from '../common/MonthWiseCardsRibbon';
 
 export type SortKey = 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'closed_open' | 'excess_short' | 'pass_mismatch';
 export type StatusFilterType = 'all' | 'pending' | 'completed' | 'short' | 'excess' | 'cancelled';
@@ -24,6 +25,7 @@ export function usePurchaseOrderSorting({
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
   const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
 
@@ -32,7 +34,7 @@ export function usePurchaseOrderSorting({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDate, endDate, statusFilter]);
+  }, [searchTerm, startDate, endDate, statusFilter, selectedMonth]);
 
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
@@ -74,9 +76,13 @@ export function usePurchaseOrderSorting({
       
       if (!matchesSearch) return false;
 
-      const rowDate = p.date || p.po_date;
+      const rowDate = p.date || p.po_date || p.contract_date || p.created_at;
       if (startDate && (!rowDate || new Date(rowDate) < new Date(startDate))) return false;
       if (endDate && (!rowDate || new Date(rowDate) > new Date(endDate))) return false;
+      if (selectedMonth) {
+        const parsed = parseMonthKey(rowDate);
+        if (!parsed || parsed.key !== selectedMonth) return false;
+      }
 
       const isCancelled = p.status === 'cancelled';
       if (statusFilter === 'cancelled') {
@@ -358,6 +364,8 @@ export function usePurchaseOrderSorting({
     setStartDate,
     endDate,
     setEndDate,
+    selectedMonth,
+    setSelectedMonth,
     statusFilter,
     setStatusFilter,
     selectedPoNo,

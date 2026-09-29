@@ -14,6 +14,7 @@ import { FinalArrivalFilterToolbar } from '../components/final-arrival/FinalArri
 import { FinalArrivalDataTable } from '../components/final-arrival/FinalArrivalDataTable';
 import { FinalArrivalDetailSlipModal } from '../components/final-arrival/FinalArrivalDetailSlipModal';
 import { FinalArrivalPrintModal } from '../components/final-arrival/FinalArrivalPrintModal';
+import { MonthWiseCardsRibbon } from '../components/common/MonthWiseCardsRibbon';
 
 export { calculateNetWeightVal, getRcptQty, getLowestNetWeight };
 
@@ -46,6 +47,8 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
     setStartDateFilter,
     endDateFilter,
     setEndDateFilter,
+    selectedMonthFilter,
+    setSelectedMonthFilter,
     selectedRecordId,
     setSelectedRecordId,
     selectedRecord,
@@ -138,6 +141,17 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
           showConflictsAlert={showConflictsAlert}
           setShowConflictsAlert={setShowConflictsAlert}
           runReconcileFix={runReconcileFix}
+        />
+
+        {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+        <MonthWiseCardsRibbon
+          records={records}
+          getDate={(r: any) => r?.date || r?.arrival_date || r?.created_at}
+          selectedMonth={selectedMonthFilter}
+          onSelectMonth={setSelectedMonthFilter}
+          title="Final Arrival Month-Wise Breakdown"
+          unitLabel="Arrivals"
+          colorScheme="amber"
         />
 
         {/* SEARCH, DATE FILTERS & ACTIONS */}

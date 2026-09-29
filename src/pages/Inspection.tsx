@@ -59,10 +59,13 @@ export {
 
 export default function Inspection({ onNavigate, onClose }: InspectionProps) {
   const {
+    records,
     filteredRecords,
     loading,
     searchQuery,
     setSearchQuery,
+    selectedMonthFilter,
+    setSelectedMonthFilter,
     statusFilter,
     setStatusFilter,
     viewMode,
@@ -139,7 +142,10 @@ export default function Inspection({ onNavigate, onClose }: InspectionProps) {
         {/* VIEW MODE SWITCH */}
         {viewMode === "dashboard" ? (
           <InspectionRegisterView
+            records={records}
             filteredRecords={filteredRecords}
+            selectedMonthFilter={selectedMonthFilter}
+            setSelectedMonthFilter={setSelectedMonthFilter}
             loading={loading}
             totalInspections={totalInspections}
             avgMoisture={avgMoisture}

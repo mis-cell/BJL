@@ -33,6 +33,7 @@ import { PaginationControls } from '../PaginationControls';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
 import { PoHistogramHistoryModal } from './PoHistogramHistoryModal';
+import { MonthWiseCardsRibbon } from '../common/MonthWiseCardsRibbon';
 
 export interface PurchaseOrderRegisterViewProps {
   isArchiveView: boolean;
@@ -55,6 +56,8 @@ export interface PurchaseOrderRegisterViewProps {
   setStartDate: (date: string) => void;
   endDate: string;
   setEndDate: (date: string) => void;
+  selectedMonth?: string | null;
+  setSelectedMonth?: (monthKey: string | null) => void;
   handleCsvDownload: () => void;
   fetchPosAndMasters: () => void;
   loading: boolean;
@@ -113,6 +116,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
   setStartDate,
   endDate,
   setEndDate,
+  selectedMonth = null,
+  setSelectedMonth,
   handleCsvDownload,
   fetchPosAndMasters,
   loading,
@@ -286,6 +291,17 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
           </div>
         </div>
       </div>
+
+      {/* Month-Wise Cards Ribbon (Only months with data are shown) */}
+      <MonthWiseCardsRibbon
+        records={scopedPos || poList}
+        getDate={(p: any) => p?.date || p?.po_date || p?.contract_date || p?.created_at}
+        selectedMonth={selectedMonth}
+        onSelectMonth={setSelectedMonth || (() => {})}
+        title={isTempPo ? "Sauda Check Point Month-Wise Breakdown" : "P.O. Month-Wise Breakdown"}
+        unitLabel="POs"
+        colorScheme="blue"
+      />
 
       {/* Register Search and Mode Controls */}
       <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs flex flex-wrap lg:flex-nowrap items-center gap-2 justify-between">
