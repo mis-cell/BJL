@@ -659,6 +659,18 @@ export function useInspectionLogic() {
       const isLoose = (fa.unit_name || fa.unit_code || fa.unit || "").toString().trim().toUpperCase().includes("LOOSE");
       const resolvedUnit = isLoose ? "LOOSE" : (fa.unit_name || fa.unit || "BALES");
       const resolvedArea = fa.arrival_area_name || fa.area || fa.arrival_area || "";
+      const actMoist = Number(fa.actual_moisture) || 0;
+      let clmMoist = Number(fa.claim_moisture) || 0;
+      const actDust = Number(fa.actual_dust) || 0;
+      const clmDust = Number(fa.claim_dust) || 0;
+      const actNcv = Number(fa.actual_ncv) || 0;
+      const clmNcv = Number(fa.claim_ncv) || 0;
+      const detDays = Number(fa.detention_days) || 0;
+      const arrDate = sanitizeDate(fa.arrival_date || fa.final_arrival_date || fa.date || fa.temporary_arrival_date) || new Date().toISOString().split("T")[0];
+
+      if (actMoist > 0 && clmMoist === 0) {
+        clmMoist = calculateClaimMoisture(actMoist, arrDate, resolvedArea, moistureLogicRules);
+      }
 
       // 1. Update Header Form with full details from the selected arrival
       setHeaderForm(prev => {
@@ -666,7 +678,7 @@ export function useInspectionLogic() {
           ...prev,
           mr_no: arrNo || prev.mr_no,
           arrival_no: arrNo,
-          arrival_date: sanitizeDate(fa.arrival_date || fa.final_arrival_date || fa.date || fa.temporary_arrival_date) || prev.arrival_date,
+          arrival_date: arrDate,
           po_no: fa.po_no || prev.po_no,
           po_date: sanitizeDate(fa.po_date || fa.date) || prev.po_date,
           supplier_name: fa.supplier || fa.challan_supplier || fa.supplier_name || prev.supplier_name,
@@ -676,25 +688,16 @@ export function useInspectionLogic() {
           arrival_area_name: resolvedArea || prev.arrival_area_name,
           unit_name: resolvedUnit,
           unloading_date: sanitizeDate(fa.unloading_date || fa.arrival_date || fa.date) || prev.unloading_date,
-          actual_moisture: Number(fa.actual_moisture) || prev.actual_moisture || 0,
-          claim_moisture: Number(fa.claim_moisture) || prev.claim_moisture || 0,
-          actual_dust: Number(fa.actual_dust) || prev.actual_dust || 0,
-          claim_dust: Number(fa.claim_dust) || prev.claim_dust || 0,
-          actual_ncv: Number(fa.actual_ncv) || prev.actual_ncv || 0,
-          claim_ncv: Number(fa.claim_ncv) || prev.claim_ncv || 0,
-          detention_days: Number(fa.detention_days) || prev.detention_days || 0,
+          actual_moisture: actMoist,
+          claim_moisture: clmMoist,
+          actual_dust: actDust,
+          claim_dust: clmDust,
+          actual_ncv: actNcv,
+          claim_ncv: clmNcv,
+          detention_days: detDays,
           mr_spcl_print: fa.mr_spcl_print || prev.mr_spcl_print || "",
           remarks: fa.remarks || prev.remarks || ""
         };
-
-        if (next.actual_moisture > 0 && (!next.claim_moisture || next.claim_moisture === 0)) {
-          next.claim_moisture = calculateClaimMoisture(
-            Number(next.actual_moisture) || 0,
-            next.arrival_date,
-            next.arrival_area || next.arrival_area_name || "",
-            moistureLogicRules
-          );
-        }
         return next;
       });
 
@@ -715,17 +718,23 @@ export function useInspectionLogic() {
       if (rawGridItems.length === 0 && supabase) {
         try {
           const arrClean = arrNo.trim();
-          const [faDbRes, tmrDbRes, fadRes, tmdRes] = await Promise.all([
+          const [faDbRes, tmrDbRes, fadRes, tmdRes, midRes, millDetailRes] = await Promise.all([
             arrClean ? supabase.from('final_arrival').select('*').or(`final_arrival_no.eq.${arrClean},arrival_no.eq.${arrClean},temporary_arrival_no.eq.${arrClean}`).maybeSingle() : Promise.resolve({ data: null }),
             arrClean ? supabase.from('temporary_material_received').select('*').eq('temporary_arrival_no', arrClean).maybeSingle() : Promise.resolve({ data: null }),
             arrClean ? supabase.from('final_arrival_details').select('*').eq('final_arrival_no', arrClean) : Promise.resolve({ data: null }),
-            arrClean ? supabase.from('temporary_material_details').select('*').eq('temporary_arrival_no', arrClean) : Promise.resolve({ data: null })
+            arrClean ? supabase.from('temporary_material_details').select('*').eq('temporary_arrival_no', arrClean) : Promise.resolve({ data: null }),
+            arrClean ? supabase.from('material_inspection_details').select('*').eq('mr_no', arrClean) : Promise.resolve({ data: null }),
+            arrClean ? supabase.from('mill_inspection_detail').select('*').eq('mr_no', arrClean) : Promise.resolve({ data: null })
           ]);
 
           const foundFa = faDbRes.data;
           const foundTmr = tmrDbRes.data;
 
-          if (foundFa?.grid_details) {
+          if (midRes.data && Array.isArray(midRes.data) && midRes.data.length > 0) {
+            rawGridItems = midRes.data;
+          } else if (millDetailRes.data && Array.isArray(millDetailRes.data) && millDetailRes.data.length > 0) {
+            rawGridItems = millDetailRes.data;
+          } else if (foundFa?.grid_details) {
             const parsed = typeof foundFa.grid_details === 'string' ? JSON.parse(foundFa.grid_details) : foundFa.grid_details;
             if (Array.isArray(parsed) && parsed.length > 0) rawGridItems = parsed;
           } else if (foundTmr?.grid_details) {
@@ -795,6 +804,15 @@ export function useInspectionLogic() {
           const itemUnit = (item.unit || item.unit_name || fa.unit_name || fa.unit || resolvedUnit || "BALES").toString().trim().toUpperCase();
           const rateVal = Number(item.rate_qntl || item.rate || item.po_rate || 0);
 
+          const rowMoistureAct = Number(item.moisture_act !== undefined ? item.moisture_act : (item.actual_moisture !== undefined ? item.actual_moisture : actMoist));
+          const rowMoistureClaim = Number(item.moisture_claim !== undefined ? item.moisture_claim : (item.claim_moisture !== undefined ? item.claim_moisture : clmMoist));
+          const rowDustAct = Number(item.dust_act !== undefined ? item.dust_act : (item.actual_dust !== undefined ? item.actual_dust : actDust));
+          const rowDustClaim = Number(item.dust_claim !== undefined ? item.dust_claim : (item.claim_dust !== undefined ? item.claim_dust : clmDust));
+          const rowNcvAct = Number(item.ncv_act !== undefined ? item.ncv_act : (item.actual_ncv !== undefined ? item.actual_ncv : actNcv));
+          const rowNcvClaim = Number(item.ncv_claim !== undefined ? item.ncv_claim : (item.claim_ncv !== undefined ? item.claim_ncv : clmNcv));
+          const rowGradeDownAct = Number(item.grade_down_act || item.actual_grade_down || 0);
+          const rowGradeDownClaim = Number(item.grade_down_claim || item.claim_grade_down || 0);
+
           const row: InspectionDetailRow = {
             srl_no: item.srl_no || (i + 1),
             arrival_grade: resolvedGradeName,
@@ -812,10 +830,40 @@ export function useInspectionLogic() {
             rate_qntl: rateVal,
             challan_gross_wt: nettoVal,
             receipt_gross_wt: nettoVal,
-            gross_weight_batch: nettoVal,
+            gross_weight_batch: Number(item.gross_weight_batch || nettoVal),
             add_weight: Number(item.add_weight || 0),
             less_weight: Number(item.less_weight || 0),
-            tolerable: "Yes",
+            reduced_weight: Number(item.reduced_weight || nettoVal),
+            lorry_read_min: Number(item.lorry_read_min || item.lorry_moisture_min || 0),
+            lorry_read_max: Number(item.lorry_read_max || item.lorry_moisture_max || 0),
+            lorry_read_avg: Number(item.lorry_read_avg || item.lorry_moisture_avg || 0),
+            insp_read_min: Number(item.insp_read_min || item.insp_moisture_min || 0),
+            insp_read_max: Number(item.insp_read_max || item.insp_moisture_max || 0),
+            insp_read_avg: Number(item.insp_read_avg || item.insp_moisture_avg || rowMoistureAct || 0),
+            moisture_act: rowMoistureAct,
+            moisture_claim: rowMoistureClaim,
+            dust_act: rowDustAct,
+            dust_claim: rowDustClaim,
+            ncv_act: rowNcvAct,
+            ncv_claim: rowNcvClaim,
+            grade_down_act: rowGradeDownAct,
+            grade_down_claim: rowGradeDownClaim,
+            final_receipt_wt: Number(item.final_receipt_wt || nettoVal),
+            settlement_moisture: Number(item.settlement_moisture !== undefined ? item.settlement_moisture : rowMoistureAct),
+            settlement_grade_down: Number(item.settlement_grade_down !== undefined ? item.settlement_grade_down : rowGradeDownAct),
+            settlement_dust: Number(item.settlement_dust !== undefined ? item.settlement_dust : rowDustAct),
+            settlement_ncv: Number(item.settlement_ncv !== undefined ? item.settlement_ncv : rowNcvAct),
+            ropes_weight: Number(item.ropes_weight || 0),
+            ropes_tot_wt_grd: Number(item.ropes_tot_wt_grd || 0),
+            ropes_grade: item.ropes_grade || "",
+            chotta_weight: Number(item.chotta_weight || 0),
+            chotta_tot_wt_grd: Number(item.chotta_tot_wt_grd || 0),
+            chotta_grade: item.chotta_grade || "",
+            tolerable: item.tolerable || "Yes",
+            premium: item.premium || "",
+            is_premium: Boolean(item.is_premium),
+            row_remarks: item.row_remarks || "",
+            jci_remarks: item.jci_remarks || item.jqi_remarks || "",
             expanded: false,
             is_auto: true
           };
@@ -860,6 +908,38 @@ export function useInspectionLogic() {
       }
       return next;
     });
+
+    // Dynamically sync moisture/dust/ncv to detail rows if they are empty/default
+    if (['actual_moisture', 'claim_moisture', 'actual_dust', 'claim_dust', 'actual_ncv', 'claim_ncv'].includes(field as string)) {
+      setDetailRows(prev => prev.map(row => {
+        const updated = { ...row };
+        if (field === 'actual_moisture') {
+          const num = Number(value) || 0;
+          updated.moisture_act = num;
+          updated.insp_read_avg = num;
+          updated.settlement_moisture = num;
+        } else if (field === 'claim_moisture') {
+          updated.moisture_claim = Number(value) || 0;
+        } else if (field === 'actual_dust') {
+          const num = Number(value) || 0;
+          updated.dust_act = num;
+          updated.settlement_dust = num;
+        } else if (field === 'claim_dust') {
+          updated.dust_claim = Number(value) || 0;
+        } else if (field === 'actual_ncv') {
+          const num = Number(value) || 0;
+          updated.ncv_act = num;
+          updated.settlement_ncv = num;
+        } else if (field === 'claim_ncv') {
+          updated.ncv_claim = Number(value) || 0;
+        }
+        const computedWeights = computeDetailRowWeights(updated);
+        Object.assign(updated, computedWeights);
+        updated.qty_in_mt = calculateQtyInMt(updated);
+        updated.amount = calculateRowAmount(updated);
+        return updated;
+      }));
+    }
 
     if (field === 'po_no' && value) {
       loadDetailsForPo(String(value));
@@ -1003,39 +1083,134 @@ export function useInspectionLogic() {
   };
 
   const handleEditRecord = async (record: InspectionMasterRecord) => {
+    const actMoist = Number(record.actual_moisture) || 0;
+    const clmMoist = Number(record.claim_moisture) || 0;
+    const actDust = Number(record.actual_dust) || 0;
+    const clmDust = Number(record.claim_dust) || 0;
+    const actNcv = Number(record.actual_ncv) || 0;
+    const clmNcv = Number(record.claim_ncv) || 0;
+
     setHeaderForm({
       ...record,
       mr_date: sanitizeDate(record.mr_date || record.date),
       arrival_date: sanitizeDate(record.arrival_date || record.mr_date || record.date),
-      po_date: sanitizeDate(record.po_date)
+      po_date: sanitizeDate(record.po_date),
+      actual_moisture: actMoist,
+      claim_moisture: clmMoist,
+      actual_dust: actDust,
+      claim_dust: clmDust,
+      actual_ncv: actNcv,
+      claim_ncv: clmNcv
     });
 
     try {
       if (supabase && record.mr_no) {
-        const { data: detailsData } = await supabase
-          .from("material_inspection_details")
-          .select("*")
-          .eq("mr_no", record.mr_no)
-          .order("srl_no", { ascending: true });
+        const [midRes, millDetailRes, inspDetailRes] = await Promise.all([
+          supabase.from("material_inspection_details").select("*").eq("mr_no", record.mr_no).order("srl_no", { ascending: true }),
+          supabase.from("mill_inspection_detail").select("*").eq("mr_no", record.mr_no).order("srl_no", { ascending: true }),
+          supabase.from("inspection_details").select("*").eq("mr_no", record.mr_no).order("srl_no", { ascending: true })
+        ]);
 
-        if (detailsData && detailsData.length > 0) {
-          setDetailRows(detailsData.map(d => ({ ...d, expanded: false })));
-        } else if (record.grid_details) {
+        let rawDetails = (midRes.data && midRes.data.length > 0)
+          ? midRes.data
+          : ((millDetailRes.data && millDetailRes.data.length > 0)
+              ? millDetailRes.data
+              : (inspDetailRes.data || []));
+
+        if (rawDetails.length === 0 && record.grid_details) {
           try {
             const parsed = typeof record.grid_details === 'string' ? JSON.parse(record.grid_details) : record.grid_details;
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setDetailRows(parsed.map(d => ({ ...d, expanded: false })));
+              rawDetails = parsed;
             }
           } catch (e) {}
         }
 
-        const { data: dedData } = await supabase
-          .from("material_inspection_deductions")
-          .select("*")
-          .eq("mr_no", record.mr_no);
+        if (rawDetails.length > 0) {
+          const mappedRows: InspectionDetailRow[] = rawDetails.map((d: any, idx: number) => {
+            const rowMoistureAct = Number(d.moisture_act !== undefined ? d.moisture_act : (d.actual_moisture !== undefined ? d.actual_moisture : actMoist));
+            const rowMoistureClaim = Number(d.moisture_claim !== undefined ? d.moisture_claim : (d.claim_moisture !== undefined ? d.claim_moisture : clmMoist));
+            const rowDustAct = Number(d.dust_act !== undefined ? d.dust_act : (d.actual_dust !== undefined ? d.actual_dust : actDust));
+            const rowDustClaim = Number(d.dust_claim !== undefined ? d.dust_claim : (d.claim_dust !== undefined ? d.claim_dust : clmDust));
+            const rowNcvAct = Number(d.ncv_act !== undefined ? d.ncv_act : (d.actual_ncv !== undefined ? d.actual_ncv : actNcv));
+            const rowNcvClaim = Number(d.ncv_claim !== undefined ? d.ncv_claim : (d.claim_ncv !== undefined ? d.claim_ncv : clmNcv));
+            const rowGradeDownAct = Number(d.grade_down_act || d.actual_grade_down || 0);
+            const rowGradeDownClaim = Number(d.grade_down_claim || d.claim_grade_down || 0);
 
-        if (dedData && dedData.length > 0) {
-          setDeductionRows(dedData.map((d, idx) => ({
+            const netto = Number(d.receipt_gross_wt || d.challan_gross_wt || d.weight_mt || d.weight || 0);
+            const row: InspectionDetailRow = {
+              srl_no: d.srl_no || (idx + 1),
+              arrival_grade: d.arrival_grade || d.grade_name || d.stock_grade_name || "",
+              stock_grade_code: d.stock_grade_code || d.grade_code || "",
+              stock_grade_name: d.stock_grade_name || d.arrival_grade || d.grade_name || "",
+              area: d.area || record.arrival_area || "",
+              agency: d.agency || "",
+              agency_code: d.agency_code || "",
+              marks: d.marks || d.marka || "",
+              crop_year: d.crop_year || "2026-27",
+              lot: d.lot || d.lot_no || "",
+              quantity: Number(d.quantity || d.bales || d.packets || 0),
+              unit: d.unit || record.unit_name || "BALES",
+              rate: Number(d.rate || d.rate_qntl || 0),
+              rate_qntl: Number(d.rate_qntl || d.rate || 0),
+              challan_gross_wt: Number(d.challan_gross_wt || netto),
+              receipt_gross_wt: netto,
+              gross_weight_batch: Number(d.gross_weight_batch || netto),
+              add_weight: Number(d.add_weight || 0),
+              less_weight: Number(d.less_weight || 0),
+              reduced_weight: Number(d.reduced_weight || netto),
+              lorry_read_min: Number(d.lorry_read_min || d.lorry_moisture_min || 0),
+              lorry_read_max: Number(d.lorry_read_max || d.lorry_moisture_max || 0),
+              lorry_read_avg: Number(d.lorry_read_avg || d.lorry_moisture_avg || 0),
+              insp_read_min: Number(d.insp_read_min || d.insp_moisture_min || 0),
+              insp_read_max: Number(d.insp_read_max || d.insp_moisture_max || 0),
+              insp_read_avg: Number(d.insp_read_avg || d.insp_moisture_avg || rowMoistureAct || 0),
+              moisture_act: rowMoistureAct,
+              moisture_claim: rowMoistureClaim,
+              dust_act: rowDustAct,
+              dust_claim: rowDustClaim,
+              ncv_act: rowNcvAct,
+              ncv_claim: rowNcvClaim,
+              grade_down_act: rowGradeDownAct,
+              grade_down_claim: rowGradeDownClaim,
+              final_receipt_wt: Number(d.final_receipt_wt || netto),
+              settlement_moisture: Number(d.settlement_moisture !== undefined ? d.settlement_moisture : rowMoistureAct),
+              settlement_grade_down: Number(d.settlement_grade_down !== undefined ? d.settlement_grade_down : rowGradeDownAct),
+              settlement_dust: Number(d.settlement_dust !== undefined ? d.settlement_dust : rowDustAct),
+              settlement_ncv: Number(d.settlement_ncv !== undefined ? d.settlement_ncv : rowNcvAct),
+              ropes_weight: Number(d.ropes_weight || 0),
+              ropes_tot_wt_grd: Number(d.ropes_tot_wt_grd || 0),
+              ropes_grade: d.ropes_grade || "",
+              chotta_weight: Number(d.chotta_weight || 0),
+              chotta_tot_wt_grd: Number(d.chotta_tot_wt_grd || 0),
+              chotta_grade: d.chotta_grade || "",
+              tolerable: d.tolerable || "Yes",
+              premium: d.premium || "",
+              is_premium: Boolean(d.is_premium),
+              row_remarks: d.row_remarks || "",
+              jci_remarks: d.jci_remarks || d.jqi_remarks || "",
+              expanded: false
+            };
+            const computedWeights = computeDetailRowWeights(row);
+            Object.assign(row, computedWeights);
+            row.qty_in_mt = calculateQtyInMt(row);
+            row.amount = calculateRowAmount(row);
+            return row;
+          });
+          setDetailRows(mappedRows);
+        }
+
+        const [dedPrimaryRes, dedFallbackRes] = await Promise.all([
+          supabase.from("material_inspection_deductions").select("*").eq("mr_no", record.mr_no),
+          supabase.from("mill_inspection_deduction").select("*").eq("mr_no", record.mr_no)
+        ]);
+
+        const foundDed = (dedPrimaryRes.data && dedPrimaryRes.data.length > 0)
+          ? dedPrimaryRes.data
+          : (dedFallbackRes.data || []);
+
+        if (foundDed && foundDed.length > 0) {
+          setDeductionRows(foundDed.map((d: any, idx: number) => ({
             id: String(d.id || idx),
             deduction_type: d.deduction_type || "",
             deduction_rate: Number(d.deduction_rate) || 0,
@@ -1058,12 +1233,12 @@ export function useInspectionLogic() {
     setPrintingRecord(record);
     try {
       if (supabase && record.mr_no) {
-        const { data } = await supabase
-          .from("material_inspection_details")
-          .select("*")
-          .eq("mr_no", record.mr_no)
-          .order("srl_no", { ascending: true });
-        setPrintingDetails(data || detailRows);
+        const [midRes, millDetailRes] = await Promise.all([
+          supabase.from("material_inspection_details").select("*").eq("mr_no", record.mr_no).order("srl_no", { ascending: true }),
+          supabase.from("mill_inspection_detail").select("*").eq("mr_no", record.mr_no).order("srl_no", { ascending: true })
+        ]);
+        const data = (midRes.data && midRes.data.length > 0) ? midRes.data : (millDetailRes.data || []);
+        setPrintingDetails(data && data.length > 0 ? data : detailRows);
       } else {
         setPrintingDetails(detailRows);
       }
@@ -1109,8 +1284,8 @@ export function useInspectionLogic() {
         claim_ncv: Number(headerForm.claim_ncv) || 0,
         detention_days: Number(headerForm.detention_days) || 0,
         unloading_date: sanitizeDate(headerForm.unloading_date),
-        mill_po_no: headerForm.mill_po_no || "",
-        mill_po_date: sanitizeDate(headerForm.mill_po_date),
+        mill_po_no: headerForm.mill_po_no || headerForm.po_no || "",
+        mill_po_date: sanitizeDate(headerForm.mill_po_date || headerForm.po_date),
         mr_spcl_print: headerForm.mr_spcl_print || "",
         remarks: headerForm.remarks || "",
         deduction_type: headerForm.deduction_type || "",
@@ -1122,37 +1297,99 @@ export function useInspectionLogic() {
       };
 
       if (supabase) {
-        await supabase.from("material_inspection").upsert(masterPayload, { onConflict: "mr_no" });
+        // Save to BOTH material_inspection and mill_inspection_master
+        await Promise.all([
+          Promise.resolve(supabase.from("material_inspection").upsert(masterPayload, { onConflict: "mr_no" })),
+          Promise.resolve(supabase.from("mill_inspection_master").upsert({
+            ...masterPayload,
+            inspection_no: cleanMrNo,
+            supplier: masterPayload.supplier_name,
+            broker: masterPayload.broker_name,
+            lorry_no: masterPayload.lorry_number
+          }, { onConflict: "mr_no" })).catch(() => ({}))
+        ]);
 
-        // Save Details
-        await supabase.from("material_inspection_details").delete().eq("mr_no", cleanMrNo);
+        // Save Details to BOTH material_inspection_details and mill_inspection_detail
+        await Promise.all([
+          Promise.resolve(supabase.from("material_inspection_details").delete().eq("mr_no", cleanMrNo)),
+          Promise.resolve(supabase.from("mill_inspection_detail").delete().eq("mr_no", cleanMrNo)).catch(() => ({}))
+        ]);
+
         if (validDetails.length > 0) {
-          const detailInserts = validDetails.map((d, i) => ({
-            mr_no: cleanMrNo,
-            srl_no: i + 1,
-            arrival_grade: d.arrival_grade || d.stock_grade_name || "",
-            stock_grade_code: d.stock_grade_code || "",
-            stock_grade_name: d.stock_grade_name || d.arrival_grade || "",
-            area: d.area || "",
-            agency: d.agency || "",
-            marks: d.marks || "",
-            crop_year: d.crop_year || "2026-27",
-            quantity: Number(d.quantity) || 0,
-            unit: d.unit || "BALES",
-            rate: Number(d.rate) || 0,
-            challan_gross_wt: Number(d.challan_gross_wt) || 0,
-            receipt_gross_wt: Number(d.receipt_gross_wt) || Number(d.challan_gross_wt) || 0,
-            actual_moisture: Number(headerForm.actual_moisture) || 0,
-            actual_dust: Number(headerForm.actual_dust) || 0,
-            actual_ncv: Number(headerForm.actual_ncv) || 0,
-            created_at: new Date().toISOString()
-          }));
-          await supabase.from("material_inspection_details").insert(detailInserts);
+          const detailInserts = validDetails.map((d, i) => {
+            const netto = Number(d.receipt_gross_wt || d.challan_gross_wt || 0);
+            return {
+              mr_no: cleanMrNo,
+              po_no: headerForm.po_no || null,
+              srl_no: i + 1,
+              arrival_grade: d.arrival_grade || d.stock_grade_name || "",
+              stock_grade_code: d.stock_grade_code || "",
+              stock_grade_name: d.stock_grade_name || d.arrival_grade || "",
+              area: d.area || "",
+              agency: d.agency || "",
+              agency_code: d.agency_code || "",
+              marks: d.marks || "",
+              crop_year: d.crop_year || "2026-27",
+              lot: d.lot || "",
+              quantity: Number(d.quantity) || 0,
+              unit: d.unit || "BALES",
+              rate: Number(d.rate) || 0,
+              rate_qntl: Number(d.rate_qntl || d.rate || 0),
+              challan_gross_wt: Number(d.challan_gross_wt || netto),
+              receipt_gross_wt: netto,
+              gross_weight_batch: Number(d.gross_weight_batch || netto),
+              add_weight: Number(d.add_weight || 0),
+              less_weight: Number(d.less_weight || 0),
+              reduced_weight: Number(d.reduced_weight || netto),
+              lorry_read_min: Number(d.lorry_read_min || 0),
+              lorry_read_max: Number(d.lorry_read_max || 0),
+              lorry_read_avg: Number(d.lorry_read_avg || 0),
+              insp_read_min: Number(d.insp_read_min || 0),
+              insp_read_max: Number(d.insp_read_max || 0),
+              insp_read_avg: Number(d.insp_read_avg || d.moisture_act || Number(headerForm.actual_moisture) || 0),
+              moisture_act: Number(d.moisture_act !== undefined ? d.moisture_act : Number(headerForm.actual_moisture) || 0),
+              moisture_claim: Number(d.moisture_claim !== undefined ? d.moisture_claim : Number(headerForm.claim_moisture) || 0),
+              dust_act: Number(d.dust_act !== undefined ? d.dust_act : Number(headerForm.actual_dust) || 0),
+              dust_claim: Number(d.dust_claim !== undefined ? d.dust_claim : Number(headerForm.claim_dust) || 0),
+              ncv_act: Number(d.ncv_act !== undefined ? d.ncv_act : Number(headerForm.actual_ncv) || 0),
+              ncv_claim: Number(d.ncv_claim !== undefined ? d.ncv_claim : Number(headerForm.claim_ncv) || 0),
+              grade_down_act: Number(d.grade_down_act || 0),
+              grade_down_claim: Number(d.grade_down_claim || 0),
+              final_receipt_wt: Number(d.final_receipt_wt || netto),
+              settlement_moisture: Number(d.settlement_moisture !== undefined ? d.settlement_moisture : (d.moisture_act || Number(headerForm.actual_moisture) || 0)),
+              settlement_grade_down: Number(d.settlement_grade_down !== undefined ? d.settlement_grade_down : (d.grade_down_act || 0)),
+              settlement_dust: Number(d.settlement_dust !== undefined ? d.settlement_dust : (d.dust_act || Number(headerForm.actual_dust) || 0)),
+              settlement_ncv: Number(d.settlement_ncv !== undefined ? d.settlement_ncv : (d.ncv_act || Number(headerForm.actual_ncv) || 0)),
+              ropes_weight: Number(d.ropes_weight || 0),
+              ropes_tot_wt_grd: Number(d.ropes_tot_wt_grd || 0),
+              ropes_grade: d.ropes_grade || "",
+              chotta_weight: Number(d.chotta_weight || 0),
+              chotta_tot_wt_grd: Number(d.chotta_tot_wt_grd || 0),
+              chotta_grade: d.chotta_grade || "",
+              tolerable: d.tolerable || "Yes",
+              premium: d.premium || "",
+              is_premium: Boolean(d.is_premium),
+              amount: Number(d.amount || 0),
+              qty_in_mt: Number(d.qty_in_mt || 0),
+              row_remarks: d.row_remarks || "",
+              jci_remarks: d.jci_remarks || d.jqi_remarks || "",
+              created_at: new Date().toISOString()
+            };
+          });
+
+          await Promise.all([
+            Promise.resolve(supabase.from("material_inspection_details").insert(detailInserts)),
+            Promise.resolve(supabase.from("mill_inspection_detail").insert(detailInserts)).catch(() => ({}))
+          ]);
         }
 
-        // Save Deductions
+        // Save Deductions to BOTH tables
         const activeDeductions = deductionRows.filter(r => r.deduction_type && r.deduction_type.trim() !== "");
-        await supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo);
+        await Promise.all([
+          Promise.resolve(supabase.from("material_inspection_deductions").delete().eq("mr_no", cleanMrNo)),
+          Promise.resolve(supabase.from("mill_inspection_deduction").delete().eq("mr_no", cleanMrNo)).catch(() => ({}))
+        ]);
+
         if (activeDeductions.length > 0) {
           const dedInserts = activeDeductions.map(r => ({
             mr_no: cleanMrNo,
@@ -1163,7 +1400,11 @@ export function useInspectionLogic() {
             remarks: r.remarks || "",
             created_at: new Date().toISOString()
           }));
-          await supabase.from("material_inspection_deductions").insert(dedInserts);
+
+          await Promise.all([
+            Promise.resolve(supabase.from("material_inspection_deductions").insert(dedInserts)),
+            Promise.resolve(supabase.from("mill_inspection_deduction").insert(dedInserts)).catch(() => ({}))
+          ]);
         }
       }
 
