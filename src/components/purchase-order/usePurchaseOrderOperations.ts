@@ -6,6 +6,7 @@ import { getApiUrl, canDeleteData } from '../../lib/utils';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
 import { generatePoPdf, downloadPoPdfFile } from '../../utils/purchaseOrderPdfGenerator';
 import { generatePoHtmlEmail } from './PoPrintSlipHelper';
+import { EmailPreviewState } from './PoEmailPreviewModal';
 import { verifyAdminOrSuperPassword, checkIsAdvancePaymentDone, checkIsSettlementDone } from '../../services/purchaseOrderAuthService';
 
 interface UsePurchaseOrderOperationsProps {
@@ -52,6 +53,7 @@ export function usePurchaseOrderOperations({
     title: string;
     message: string;
   } | null>(null);
+  const [emailPreviewModalState, setEmailPreviewModalState] = useState<EmailPreviewState | null>(null);
 
   // Reopen Auth State
   const [closedNoticePo, setClosedNoticePo] = useState<any>(null);
@@ -90,33 +92,48 @@ export function usePurchaseOrderOperations({
     if (!poNo) return;
 
     const brokerName = String(poHeader.broker || '').trim();
+    const supplierName = String(poHeader.supplier || '').trim();
 
     let brokerEmail = '';
-    if (supabase && brokerName) {
+    let supplierEmail = '';
+
+    if (supabase) {
       try {
         const { data: custData } = await supabase
           .from('customer_master')
           .select('email, firm_name, proprietor_name');
 
         if (custData && custData.length > 0) {
-          const exactMatch = custData.find((c: any) => 
-            (c.firm_name && c.firm_name.trim().toUpperCase() === brokerName.toUpperCase()) ||
-            (c.proprietor_name && c.proprietor_name.trim().toUpperCase() === brokerName.toUpperCase())
-          );
-          if (exactMatch?.email && exactMatch.email.trim()) {
-            brokerEmail = exactMatch.email.trim();
-          } else {
-            const partialMatch = custData.find((c: any) => 
-              (c.firm_name && (c.firm_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.firm_name.toUpperCase()))) ||
-              (c.proprietor_name && (c.proprietor_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.proprietor_name.toUpperCase())))
+          if (brokerName) {
+            const exactBroker = custData.find((c: any) => 
+              (c.firm_name && c.firm_name.trim().toUpperCase() === brokerName.toUpperCase()) ||
+              (c.proprietor_name && c.proprietor_name.trim().toUpperCase() === brokerName.toUpperCase())
             );
-            if (partialMatch?.email && partialMatch.email.trim()) {
-              brokerEmail = partialMatch.email.trim();
+            if (exactBroker?.email && exactBroker.email.trim()) {
+              brokerEmail = exactBroker.email.trim();
+            } else {
+              const partialBroker = custData.find((c: any) => 
+                (c.firm_name && (c.firm_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.firm_name.toUpperCase()))) ||
+                (c.proprietor_name && (c.proprietor_name.toUpperCase().includes(brokerName.toUpperCase()) || brokerName.toUpperCase().includes(c.proprietor_name.toUpperCase())))
+              );
+              if (partialBroker?.email && partialBroker.email.trim()) {
+                brokerEmail = partialBroker.email.trim();
+              }
+            }
+          }
+
+          if (supplierName) {
+            const exactSupplier = custData.find((c: any) => 
+              (c.firm_name && c.firm_name.trim().toUpperCase() === supplierName.toUpperCase()) ||
+              (c.proprietor_name && c.proprietor_name.trim().toUpperCase() === supplierName.toUpperCase())
+            );
+            if (exactSupplier?.email && exactSupplier.email.trim()) {
+              supplierEmail = exactSupplier.email.trim();
             }
           }
         }
       } catch (err) {
-        console.warn("Failed to query customer_master for broker email:", err);
+        console.warn("Failed to query customer_master for email:", err);
       }
     }
 
@@ -129,23 +146,6 @@ export function usePurchaseOrderOperations({
         brokerEmail = bMatch.email.trim();
       }
     }
-
-    if (!brokerEmail) {
-      setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'error' }));
-      const msg = `Email address Not Found for Broker "${brokerName || 'N/A'}". Please add an email address in Customer Master.`;
-      setEmailNotification({
-        type: 'error',
-        title: 'Email address Not Found',
-        message: msg
-      });
-      alert(`Email address Not Found!\n\nNo email address found for Broker "${brokerName || 'N/A'}".\nPlease add an email address in Customer Master.`);
-      setTimeout(() => {
-        setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
-      }, 3000);
-      return;
-    }
-
-    setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'sending' }));
 
     try {
       const details = await dbModule.fetchAll(DETAIL_TABLE);
@@ -226,27 +226,55 @@ export function usePurchaseOrderOperations({
         console.error("Failed to generate PO PDF for email:", pdfErr);
       }
 
-      let recipientEmails = brokerEmail;
-      if (supabase && poHeader.supplier) {
-        const { data: custSupplier } = await supabase
-          .from('customer_master')
-          .select('email')
-          .eq('firm_name', poHeader.supplier)
-          .maybeSingle();
-        if (custSupplier?.email && custSupplier.email.trim() && !recipientEmails.includes(custSupplier.email.trim())) {
-          recipientEmails += `, ${custSupplier.email.trim()}`;
-        }
-      }
+      const emailRecipientsList: string[] = [];
+      if (brokerEmail) emailRecipientsList.push(brokerEmail);
+      if (supplierEmail && !emailRecipientsList.includes(supplierEmail)) emailRecipientsList.push(supplierEmail);
 
+      // Open Email Preview Modal with full content and live preview
+      setEmailPreviewModalState({
+        poHeader,
+        recipientTo: emailRecipientsList.join(', '),
+        recipientCc: '',
+        subject: `📋 SAUDA CHECK POINT / PURCHASE ORDER: #${poHeader.po_no} - [${poHeader.broker || 'N/A'}]`,
+        emailHtml,
+        pdfBase64: poPdfBase64 || undefined,
+        filename: `Purchase_Order_${poHeader.po_no || 'Document'}.pdf`,
+        brokerEmailSuggestion: brokerEmail || undefined,
+        supplierEmailSuggestion: supplierEmail || undefined
+      });
+    } catch (err: any) {
+      console.error("Failed to prepare email preview:", err);
+      setEmailNotification({
+        type: 'error',
+        title: 'Email Preparation Failed',
+        message: `Could not load details for PO #${poNo}: ${err.message || String(err)}`
+      });
+    }
+  };
+
+  const handleExecuteEmailSend = async (payload: {
+    to: string;
+    cc: string;
+    subject: string;
+    html: string;
+    pdfData?: string;
+    filename?: string;
+    poNo: string;
+  }): Promise<boolean> => {
+    const poNo = payload.poNo;
+    setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'sending' }));
+
+    try {
       const res = await fetch(getApiUrl("/api/send-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: `📋 PURCHASE ORDER SLIP: #${poHeader.po_no} - [${poHeader.broker || 'N/A'}]`,
-          to: recipientEmails.split(',').map(e => e.trim()).filter(Boolean).join(', ') || brokerEmail,
-          html: emailHtml,
-          filename: `Purchase_Order_${poHeader.po_no || 'Draft'}.pdf`,
-          pdfData: poPdfBase64 || undefined
+          subject: payload.subject,
+          to: payload.to,
+          cc: payload.cc || undefined,
+          html: payload.html,
+          filename: payload.filename || `Purchase_Order_${poNo || 'Draft'}.pdf`,
+          pdfData: payload.pdfData || undefined
         })
       });
 
@@ -257,18 +285,18 @@ export function usePurchaseOrderOperations({
       } catch (e) {
         throw new Error("Mail Dispatch Failed: " + (resText.substring(0, 100) || `Status ${res.status}`));
       }
-      
+
       if (res.ok && resData.success) {
         setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'success' }));
         setEmailNotification({
           type: 'success',
-          title: 'Email Send Successfully',
-          message: `Email Send Successfully to ${recipientEmails} for PO #${poHeader.po_no}`
+          title: 'Email Sent Successfully',
+          message: `Email successfully dispatched to ${payload.to} for Sauda Check Point #${poNo}`
         });
-        alert(`Email Send Successfully to ${recipientEmails}!`);
         setTimeout(() => {
           setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
         }, 3000);
+        return true;
       } else {
         throw new Error(resData.error || "Failed to send email");
       }
@@ -282,7 +310,8 @@ export function usePurchaseOrderOperations({
       });
       setTimeout(() => {
         setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'idle' }));
-      }, 3000);
+      }, 4000);
+      throw err;
     }
   };
 
@@ -1012,6 +1041,9 @@ export function usePurchaseOrderOperations({
     emailSendingStatus,
     emailNotification,
     setEmailNotification,
+    emailPreviewModalState,
+    setEmailPreviewModalState,
+    handleExecuteEmailSend,
     closedNoticePo,
     setClosedNoticePo,
     reopenAuthModalPo,

@@ -21,6 +21,7 @@ import {
 } from '../components/purchase-order/PurchaseOrderModals';
 import { PoConsignmentModal } from '../components/purchase-order/PoConsignmentModal';
 import { PoReopenModal } from '../components/purchase-order/PoReopenModal';
+import { PoEmailPreviewModal } from '../components/purchase-order/PoEmailPreviewModal';
 
 interface PurchaseOrderProps {
   onClose?: () => void;
@@ -187,6 +188,9 @@ export default function PurchaseOrder({
     emailSendingStatus,
     emailNotification,
     setEmailNotification,
+    emailPreviewModalState,
+    setEmailPreviewModalState,
+    handleExecuteEmailSend,
     closedNoticePo,
     setClosedNoticePo,
     reopenAuthModalPo,
@@ -399,6 +403,13 @@ export default function PurchaseOrder({
       <PoEmailToastNotification
         notification={emailNotification}
         onClose={() => setEmailNotification(null)}
+      />
+
+      {/* Mail Preview & Dispatch Popup Modal */}
+      <PoEmailPreviewModal
+        emailPreview={emailPreviewModalState}
+        onClose={() => setEmailPreviewModalState(null)}
+        onSend={handleExecuteEmailSend}
       />
 
       {/* Confirm popup */}
