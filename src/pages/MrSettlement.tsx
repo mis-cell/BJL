@@ -61,6 +61,50 @@ import SettlementSpecificationsGrid from "../components/settlement/SettlementSpe
 import SettlementPrintModal from "../components/settlement/SettlementPrintModal";
 import SettlementAuditOverwriteModal from "../components/settlement/SettlementAuditOverwriteModal";
 
+export function parseDateToObj(dateVal: any): Date | null {
+  if (!dateVal) return null;
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
+    const parts = str.split(/[-/]/);
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // YYYY-MM-DD
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+    const parts = str.split(/[-/]/);
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function calculateDeliveryDelayDays(deliveryToDateVal: any, arrivalDateVal: any): number {
+  const toDate = parseDateToObj(deliveryToDateVal);
+  const arrDate = parseDateToObj(arrivalDateVal);
+  if (!toDate || !arrDate) return 0;
+
+  toDate.setHours(0, 0, 0, 0);
+  arrDate.setHours(0, 0, 0, 0);
+
+  if (arrDate.getTime() <= toDate.getTime()) return 0;
+
+  const diffMs = arrDate.getTime() - toDate.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
 export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => void; onLogEvent?: (event: string, details: string) => void }) {
   // Page switching & Lists
   const [viewMode, setViewMode] = useState<'dashboard' | 'entry'>('dashboard');
@@ -1651,10 +1695,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     const calculatedRateWtClaim = avgFinalMoisturePct;
 
-    // Delivery Claim in Grade-wise summary panel must default to 0 (user-editable, not auto-penalized)
-    const deliveryClaimAmt = (Number(masterData.summary_delivery_claim) === 5550)
-      ? 0
-      : (Number(masterData.summary_delivery_claim) || 0);
+    // Calculate auto Delivery Claim (-) penalty if delivery is received after PO delivery_to date
+    const poDeliveryToDate = selectedPoData?.delivery_to || selectedPoData?.delivery_gt_to || selectedPoData?.shipment_date || selectedPoData?.delivery_to_date;
+    const poDeliveryPenaltyRate = Number(selectedPoData?.delivery_penalty || selectedPoData?.shipment_penalty || 0);
+    const arrivalVoucherDate = masterData.arrival_date || masterData.sett_date || (masterData as any).challan_date;
+    const deliveryDelayDays = calculateDeliveryDelayDays(poDeliveryToDate, arrivalVoucherDate);
+
+    const totalArrWeightMt = detailCols.reduce((sum, col) => sum + (Number(col.quantity) || 0), 0) || Number(masterData.electronic_scale_net) || 0;
+    const totalArrWeightQtl = totalArrWeightMt * 10;
+
+    const autoDeliveryClaimAmt = (deliveryDelayDays > 0 && poDeliveryPenaltyRate > 0 && totalArrWeightQtl > 0)
+      ? Number((totalArrWeightQtl * poDeliveryPenaltyRate * deliveryDelayDays).toFixed(2))
+      : 0;
+
+    // Delivery Claim in Grade-wise summary panel: auto-calculated penalty unless manually set
+    const deliveryClaimAmt = (masterData.summary_delivery_claim !== undefined && masterData.summary_delivery_claim !== null && masterData.summary_delivery_claim !== 0 && Number(masterData.summary_delivery_claim) !== 5550)
+      ? Number(masterData.summary_delivery_claim)
+      : autoDeliveryClaimAmt;
 
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
@@ -1703,7 +1760,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const nextActualApmcFees = prev.actual_apmc_fees || calculatedApmcFees;
       const targetRateAffCdCl = prev.summary_rate_aff_cd_cl > 0 ? prev.summary_rate_aff_cd_cl : nextRatePerMt;
 
-      const targetDeliveryClaim = (prev.summary_delivery_claim === 5550 || prev.summary_delivery_claim === undefined) ? 0 : (Number(prev.summary_delivery_claim) || 0);
+      const targetDeliveryClaim = (prev.summary_delivery_claim !== undefined && prev.summary_delivery_claim !== null && prev.summary_delivery_claim !== 0 && Number(prev.summary_delivery_claim) !== 5550)
+        ? Number(prev.summary_delivery_claim)
+        : autoDeliveryClaimAmt;
 
       if (
         prev.summary_material_value !== calculatedMaterialValue ||
@@ -2551,6 +2610,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   calculateWeightedRatePerMT={calculateWeightedRatePerMT}
                   saudaDeductionRecord={saudaDeductionRecord}
                   selectedPoNo={selectedPoNo}
+                  selectedPoData={selectedPoData}
                   errorMessage={errorMessage}
                   onExit={() => setViewMode("dashboard")}
                   onSave={() => handleSaveSettlement(false)}

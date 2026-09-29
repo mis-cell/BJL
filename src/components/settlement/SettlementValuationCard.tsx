@@ -3,6 +3,7 @@ import { Save } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { SettlementMaster, SettlementDetailColumn } from "../../types/settlement.types";
 import SettlementDeductionsTable from "./SettlementDeductionsTable";
+import { calculateDeliveryDelayDays } from "../../pages/MrSettlement";
 
 export interface SettlementValuationCardProps {
   masterData: SettlementMaster;
@@ -11,6 +12,7 @@ export interface SettlementValuationCardProps {
   calculateWeightedRatePerMT: (cols: SettlementDetailColumn[]) => number;
   saudaDeductionRecord: any;
   selectedPoNo: string;
+  selectedPoData?: any;
   errorMessage: string;
   onExit: () => void;
   onSave: () => void;
@@ -23,10 +25,21 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
   calculateWeightedRatePerMT,
   saudaDeductionRecord,
   selectedPoNo,
+  selectedPoData,
   errorMessage,
   onExit,
   onSave,
 }) => {
+  const poDeliveryToDate = selectedPoData?.delivery_to || selectedPoData?.delivery_gt_to || selectedPoData?.shipment_date || selectedPoData?.delivery_to_date;
+  const poDeliveryPenaltyRate = Number(selectedPoData?.delivery_penalty || selectedPoData?.shipment_penalty || 0);
+  const arrivalVoucherDate = masterData.arrival_date || masterData.sett_date || (masterData as any).challan_date;
+  const deliveryDelayDays = calculateDeliveryDelayDays(poDeliveryToDate, arrivalVoucherDate);
+
+  const totalArrWeightMt = detailCols.reduce((sum, col) => sum + (Number(col.quantity) || 0), 0) || Number(masterData.electronic_scale_net) || 0;
+  const totalArrWeightQtl = totalArrWeightMt * 10;
+  const autoDeliveryPenalty = deliveryDelayDays > 0 && poDeliveryPenaltyRate > 0 && totalArrWeightQtl > 0
+    ? Number((totalArrWeightQtl * poDeliveryPenaltyRate * deliveryDelayDays).toFixed(2))
+    : 0;
   return (
     <div className="space-y-2.5">
       {/* 1. Grade-Wise Summary Panel */}
@@ -74,7 +87,26 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
 
           {/* Row 2 */}
           <div className="flex flex-col">
-            <label htmlFor="delivery_claim_input" className="text-[9px] uppercase font-bold text-[#991b1b] mb-0.5">Delivery Claim (-)</label>
+            <div className="group relative flex items-center gap-1 mb-0.5">
+              <label htmlFor="delivery_claim_input" className="text-[9px] uppercase font-bold text-[#991b1b]">Delivery Claim (-)</label>
+              <span className="text-[7.5px] font-black bg-[#991b1b] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-60 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
+                <p className="text-yellow-300 font-bold">Delivery Delay Penalty Formula</p>
+                <p className="mt-0.5 text-slate-300">Penalty = Weight (Quintals) × Delay Days × Rate (₹/Qtl/Day)</p>
+                {poDeliveryToDate && arrivalVoucherDate && (
+                  <div className="mt-1 border-t border-slate-700 pt-1 font-mono text-[7.5px] space-y-0.5">
+                    <p>PO Delivery End: <span className="text-emerald-400 font-bold">{poDeliveryToDate}</span></p>
+                    <p>Arrival Date: <span className="text-emerald-400 font-bold">{arrivalVoucherDate}</span></p>
+                    <p>Delay Days: <span className={deliveryDelayDays > 0 ? "text-amber-400 font-extrabold" : "text-slate-300"}>{deliveryDelayDays} Days</span></p>
+                    <p>Penalty Rate: <span className="text-amber-300 font-bold">₹{poDeliveryPenaltyRate} / Qtl / Day</span></p>
+                    <p>Weight: <span className="text-sky-300 font-bold">{totalArrWeightQtl.toFixed(2)} Qtl ({totalArrWeightMt.toFixed(3)} MT)</span></p>
+                    {autoDeliveryPenalty > 0 && (
+                      <p className="text-yellow-300 font-extrabold mt-1 text-[8.5px] border-t border-slate-800 pt-0.5">Auto Claim Penalty: ₹{autoDeliveryPenalty.toLocaleString('en-IN')}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             <input
               id="delivery_claim_input"
               name="delivery_claim"
@@ -82,7 +114,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               type="number"
               step="0.01"
               className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
-              value={masterData.summary_delivery_claim || ""}
+              value={masterData.summary_delivery_claim !== undefined && masterData.summary_delivery_claim !== null ? masterData.summary_delivery_claim : (autoDeliveryPenalty || "")}
               onChange={(e) => handleMasterChange("summary_delivery_claim", parseFloat(e.target.value) || 0)}
             />
           </div>
