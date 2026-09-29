@@ -986,14 +986,23 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
       setSelectedDeductionTypes(dedArr);
 
       let { data, error } = await supabase
-        .from("inspection_checklist_details")
+        .from("material_inspection_details")
         .select("*")
         .eq("mr_no", insp.mr_no)
         .order("srl_no", { ascending: true });
 
       if (error || !data || data.length === 0) {
+        const fallback0 = await supabase
+          .from("mill_inspection_detail")
+          .select("*")
+          .eq("mr_no", insp.mr_no)
+          .order("srl_no", { ascending: true });
+        data = fallback0.data;
+      }
+
+      if (!data || data.length === 0) {
         const fallback1 = await supabase
-          .from("inspection_details")
+          .from("inspection_checklist_details")
           .select("*")
           .eq("mr_no", insp.mr_no)
           .order("srl_no", { ascending: true });
@@ -1001,12 +1010,21 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
       }
 
       if (!data || data.length === 0) {
-        const fallback = await supabase
-          .from("mill_inspection_detail")
+        const fallback2 = await supabase
+          .from("inspection_details")
           .select("*")
           .eq("mr_no", insp.mr_no)
           .order("srl_no", { ascending: true });
-        data = fallback.data;
+        data = fallback2.data;
+      }
+
+      if ((!data || data.length === 0) && (insp as any).grid_details) {
+        try {
+          const parsed = typeof (insp as any).grid_details === 'string' ? JSON.parse((insp as any).grid_details) : (insp as any).grid_details;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            data = parsed;
+          }
+        } catch (e) {}
       }
 
       if (data && data.length > 0) {
@@ -1033,23 +1051,23 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           enrichedData.slice(0, 4).forEach((row: any, i: number) => {
             const col = colKeys[i];
             loadedMatrix.grade_down[col] = {
-              dept: String(row.actual_grade_down ?? row.grade_down_act ?? (i === 0 ? insp.actual_grade_down : '') ?? ''),
-              claim: String(row.claim_grade_down ?? row.grade_down_claim ?? (i === 0 ? insp.claim_grade_down : '') ?? ''),
+              dept: String(row.actual_grade_down ?? row.grade_down_act ?? (insp.actual_grade_down || '') ?? ''),
+              claim: String(row.claim_grade_down ?? row.grade_down_claim ?? (insp.claim_grade_down || '') ?? ''),
               sett: String(row.settlement_grade_down ?? '')
             };
             loadedMatrix.moisture[col] = {
-              dept: String(row.actual_moisture ?? row.moisture_act ?? (i === 0 ? insp.actual_moisture : '') ?? ''),
-              claim: String(row.claim_moisture ?? row.moisture_claim ?? (i === 0 ? insp.claim_moisture : '') ?? ''),
+              dept: String(row.actual_moisture ?? row.moisture_act ?? (insp.actual_moisture || '') ?? ''),
+              claim: String(row.claim_moisture ?? row.moisture_claim ?? (insp.claim_moisture || '') ?? ''),
               sett: String(row.settlement_moisture ?? '')
             };
             loadedMatrix.dust[col] = {
-              dept: String(row.actual_dust ?? row.dust_act ?? (i === 0 ? insp.actual_dust : '') ?? ''),
-              claim: String(row.claim_dust ?? row.dust_claim ?? (i === 0 ? insp.claim_dust : '') ?? ''),
+              dept: String(row.actual_dust ?? row.dust_act ?? (insp.actual_dust || '') ?? ''),
+              claim: String(row.claim_dust ?? row.dust_claim ?? (insp.claim_dust || '') ?? ''),
               sett: String(row.settlement_dust ?? '')
             };
             loadedMatrix.moc[col] = {
-              dept: String(row.actual_ncv ?? row.ncv_act ?? (i === 0 ? insp.actual_ncv : '') ?? ''),
-              claim: String(row.claim_ncv ?? row.ncv_claim ?? (i === 0 ? insp.claim_ncv : '') ?? ''),
+              dept: String(row.actual_ncv ?? row.ncv_act ?? (insp.actual_ncv || '') ?? ''),
+              claim: String(row.claim_ncv ?? row.ncv_claim ?? (insp.claim_ncv || '') ?? ''),
               sett: String(row.settlement_ncv ?? '')
             };
             loadedMatrix.po_rate[col] = {

@@ -207,7 +207,7 @@ export default function ExecutiveBiDashboard({
   // 2. Inspection, Claim & Moisture Calculations (Month-Wise & Aggregates)
   const inspMetrics = useMemo(() => {
     return computeInspectionMetrics({
-      inspections: inspections.length > 0 ? inspections : arrivals,
+      inspections: inspections,
       inspectionDetails,
       materialInspections,
       millInspections,
