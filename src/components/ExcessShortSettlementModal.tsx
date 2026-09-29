@@ -538,8 +538,8 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     }
 
-    // 3. Direct PO contract rate fields (excluding B Rate)
-    const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || 0);
+    // 3. Direct PO contract rate fields
+    const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || po.p_o_rate || po.grade_rate || po.po_rate || po.sauda_base_rate || po.final_rate || 0);
     if (directContractRate > 0) return directContractRate;
 
     // 4. Fallback to B Rate / Base Rate or Satta Base Rate on Sauda Date
@@ -548,6 +548,11 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
     return getSattaBaseRateOnDate(saudaDate);
   }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade, allScpDetails, poNo, saudaNo]);
+
+  // Satta Base Rate on Sauda Date (01-08-2026)
+  const saudaSattaBaseRate = useMemo(() => {
+    return getSattaBaseRateOnDate(saudaDate);
+  }, [saudaDate, liveBaseRates, sattaBaseRates]);
 
   const arrivalBaseRate = useMemo(() => {
     // User policy: Temporary Arrival Date TD5 base rate
@@ -596,7 +601,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         rate = arrivalBaseRate;
         break;
       case 'sauda_satta':
-        rate = saudaBaseRate;
+        rate = saudaSattaBaseRate;
         break;
       case 'custom':
         rate = customRateInput;
@@ -607,14 +612,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         break;
     }
     return isNaN(rate) || rate < 0 ? 0 : Math.round(rate * 100) / 100;
-  }, [selectedRateMode, arrivalBaseRate, saudaBaseRate, rateDifference, customRateInput]);
+  }, [selectedRateMode, arrivalBaseRate, saudaSattaBaseRate, rateDifference, customRateInput]);
 
   const applicableRateLabel = useMemo(() => {
     switch (selectedRateMode) {
       case 'last_arrival_satta':
         return `Last Temporary Arrival Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'sauda_satta':
-        return `Sauda Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
+        return `Sauda Satta Base Rate on ${formatDisplayDate(saudaDate)} (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'custom':
         return `Custom Satta Rate (₹${applicableRate.toLocaleString()}/Qtl)`;
       case 'rate_difference':
@@ -1449,7 +1454,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                     3. Sauda Satta Base Rate
                   </span>
                   <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-sm font-black text-slate-900">₹{saudaBaseRate.toLocaleString()}</span>
+                    <span className="text-sm font-black text-slate-900">₹{saudaSattaBaseRate.toLocaleString()}</span>
                     <span className="text-[8.5px] text-slate-500">/ Qtl</span>
                   </div>
                   <p className="text-[8px] text-slate-600 mt-1 leading-tight">
