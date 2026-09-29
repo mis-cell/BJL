@@ -485,7 +485,33 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   }, [po, poNo, saudaNo, allScpDetails, matchedTempArrivals]);
 
   const saudaBaseRate = useMemo(() => {
-    // 1. First, check item / grade rates from grid_details or items matrix (e.g. TD6 Rate = 11,000)
+    const clean = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const targetPo = clean(poNo);
+    const targetSauda = clean(saudaNo);
+
+    // 1. Check allScpDetails (PO details table matrix, e.g. Grade TD6 Rate = 11,000)
+    if (allScpDetails && allScpDetails.length > 0) {
+      const scpMatches = allScpDetails.filter((d: any) => {
+        const dPo = clean(d.po_no || d.sauda_no || d.contract_po_no);
+        return dPo && (dPo === targetPo || dPo === targetSauda);
+      });
+      if (scpMatches.length > 0) {
+        const activeGradeName = String(po.selected_grade || po.grade || po.grade_name || resolvedGrade || '').trim().toUpperCase();
+        const matchedRow = scpMatches.find((d: any) => {
+          const gName = String(d.grade_name || d.quality || d.grade || d.item_grade || '').trim().toUpperCase();
+          return gName && activeGradeName && gName === activeGradeName && Number(d.rate_qntl || d.rate || d.rate_per_qtl || 0) > 0;
+        });
+        if (matchedRow) {
+          return Number(matchedRow.rate_qntl || matchedRow.rate || matchedRow.rate_per_qtl);
+        }
+        const firstWithRate = scpMatches.find((d: any) => Number(d.rate_qntl || d.rate || d.rate_per_qtl || 0) > 0);
+        if (firstWithRate) {
+          return Number(firstWithRate.rate_qntl || firstWithRate.rate || firstWithRate.rate_per_qtl);
+        }
+      }
+    }
+
+    // 2. Check item / grade rates from grid_details or items matrix
     let grid: any[] = [];
     if (Array.isArray(po.grid_details)) {
       grid = po.grid_details;
@@ -501,27 +527,27 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       const activeGradeName = String(po.selected_grade || po.grade || po.grade_name || resolvedGrade || '').trim().toUpperCase();
       const matchedRow = grid.find((item: any) => {
         const gName = String(item.grade_name || item.grade || item.name || '').trim().toUpperCase();
-        return gName && activeGradeName && gName === activeGradeName && Number(item.rate_qntl || item.rate || 0) > 0;
+        return gName && activeGradeName && gName === activeGradeName && Number(item.rate_qntl || item.rate || item.rate_per_qtl || 0) > 0;
       });
       if (matchedRow) {
-        return Number(matchedRow.rate_qntl || matchedRow.rate);
+        return Number(matchedRow.rate_qntl || matchedRow.rate || matchedRow.rate_per_qtl);
       }
-      const firstWithRate = grid.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
+      const firstWithRate = grid.find((item: any) => Number(item.rate_qntl || item.rate || item.rate_per_qtl || 0) > 0);
       if (firstWithRate) {
-        return Number(firstWithRate.rate_qntl || firstWithRate.rate);
+        return Number(firstWithRate.rate_qntl || firstWithRate.rate || firstWithRate.rate_per_qtl);
       }
     }
 
-    // 2. Direct PO contract rate fields (excluding B Rate)
+    // 3. Direct PO contract rate fields (excluding B Rate)
     const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || 0);
     if (directContractRate > 0) return directContractRate;
 
-    // 3. Fallback to B Rate / Base Rate or Satta Base Rate on Sauda Date
+    // 4. Fallback to B Rate / Base Rate or Satta Base Rate on Sauda Date
     const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
     if (fromBrate > 0) return fromBrate;
 
     return getSattaBaseRateOnDate(saudaDate);
-  }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade]);
+  }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade, allScpDetails, poNo, saudaNo]);
 
   const arrivalBaseRate = useMemo(() => {
     // User policy: Temporary Arrival Date TD5 base rate
