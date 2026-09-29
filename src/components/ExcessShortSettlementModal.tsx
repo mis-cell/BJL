@@ -380,20 +380,31 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     }
   }, [matchedTempArrivals, matchedFinalArrivals, po]);
 
-  // Compute Total Received MT safely from Temporary Arrivals
+  // Compute Total Received MT safely from Temporary Arrivals (Final Weight M.Ton)
   useEffect(() => {
     const rawRcvd = parseFloat(po.received_weight_mt || po.total_received_mt || 0);
     const sumTempMt = matchedTempArrivals.reduce((acc: number, ar: any) => {
-      const rawWt = Number(ar.weight_qtl || ar.electronic_net_weight || ar.weight || 0);
-      const wtMt = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt / 10 : rawWt);
+      let wtMt = 0;
+      if (ar.weight_reduced !== undefined && ar.weight_reduced !== null && Number(ar.weight_reduced) > 0) {
+        wtMt = Number(ar.weight_reduced);
+      } else if (ar.final_weight_mt !== undefined && ar.final_weight_mt !== null && Number(ar.final_weight_mt) > 0) {
+        wtMt = Number(ar.final_weight_mt);
+      } else if (ar.final_weight !== undefined && ar.final_weight !== null && Number(ar.final_weight) > 0) {
+        wtMt = Number(ar.final_weight);
+      } else if (ar.electronic_net_weight !== undefined && ar.electronic_net_weight !== null && Number(ar.electronic_net_weight) > 0) {
+        wtMt = Number(ar.electronic_net_weight);
+      } else {
+        const rawWt = Number(ar.supplier_net_weight || ar.challan_material_weight || ar.weight_qtl || ar.weight || 0);
+        wtMt = rawWt > 500 ? rawWt / 100 : (rawWt > 50 ? rawWt / 10 : rawWt);
+      }
       return acc + (isNaN(wtMt) ? 0 : wtMt);
     }, 0);
 
-    const effectiveMt = Math.max(rawRcvd, sumTempMt);
+    const effectiveMt = sumTempMt > 0 ? sumTempMt : (rawRcvd > 0 ? rawRcvd : contractMt);
     if (effectiveMt > 0) {
       setTotalReceivedMt(effectiveMt);
     }
-  }, [matchedTempArrivals, po]);
+  }, [matchedTempArrivals, po, contractMt]);
 
   // Satta Base Rates lookup
   const getSattaBaseRateOnDate = (dateStr: string): number => {
@@ -423,9 +434,29 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   };
 
   const saudaBaseRate = useMemo(() => {
-    // User policy: Sauda Date means P.O Date TD5 base rate
-    const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
-    return fromBrate > 0 ? fromBrate : getSattaBaseRateOnDate(saudaDate);
+    // 1. Resolve actual Sauda (P.O) contract rate from PO or PO items grid
+    let poRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.b_rate || po.base_rate || 0);
+    if (!poRate || poRate <= 0) {
+      let grid: any[] = [];
+      if (Array.isArray(po.grid_details)) {
+        grid = po.grid_details;
+      } else if (typeof po.grid_details === 'string') {
+        try { grid = JSON.parse(po.grid_details); } catch (e) {}
+      }
+      if (grid && grid.length > 0) {
+        const firstWithRate = grid.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
+        if (firstWithRate) poRate = Number(firstWithRate.rate_qntl || firstWithRate.rate);
+      }
+    }
+    if (!poRate || poRate <= 0) {
+      if (Array.isArray(po.items) && po.items.length > 0) {
+        const firstItem = po.items.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
+        if (firstItem) poRate = Number(firstItem.rate_qntl || firstItem.rate);
+      }
+    }
+
+    if (poRate > 0) return poRate;
+    return getSattaBaseRateOnDate(saudaDate);
   }, [saudaDate, liveBaseRates, sattaBaseRates, po]);
 
   const arrivalBaseRate = useMemo(() => {
@@ -1175,19 +1206,19 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="bg-white p-1.5 rounded border border-slate-200">
-                  <span className="text-[8px] text-slate-500 uppercase font-bold block">1. Sauda (P.O) Date TD5 Rate</span>
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">1. Sauda (P.O) Rate</span>
                   <span className="font-black text-slate-900 text-[11px]">₹{saudaBaseRate.toLocaleString()}</span>
-                  <span className="text-[8px] text-slate-500 block">on {formatDisplayDate(saudaDate)}</span>
+                  <span className="text-[8px] text-slate-500 block">Sauda Rate ({formatDisplayDate(saudaDate)})</span>
                 </div>
 
                 <div className="bg-white p-1.5 rounded border border-slate-200">
-                  <span className="text-[8px] text-slate-500 uppercase font-bold block">2. Temp Arrival Date TD5 Rate</span>
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">2. Temp Arrival Satta Base Rate</span>
                   <span className="font-black text-emerald-900 text-[11px]">₹{arrivalBaseRate.toLocaleString()}</span>
                   <span className="text-[8px] text-slate-500 block">on {formatDisplayDate(lastArrivalDate)}</span>
                 </div>
 
                 <div className="bg-white p-1.5 rounded border border-slate-200">
-                  <span className="text-[8px] text-slate-500 uppercase font-bold block">3. TD5 Rate Difference</span>
+                  <span className="text-[8px] text-slate-500 uppercase font-bold block">3. Rate Difference</span>
                   <span className="font-black text-amber-700 text-[11px]">|₹{arrivalBaseRate.toLocaleString()} − ₹{saudaBaseRate.toLocaleString()}| = ₹{rateDifference.toLocaleString()}/Qtl</span>
                   <span className="text-[8px] text-amber-600 block">per Quintal basis</span>
                 </div>
