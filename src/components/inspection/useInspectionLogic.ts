@@ -951,25 +951,42 @@ export function useInspectionLogic() {
     if (['actual_moisture', 'claim_moisture', 'actual_dust', 'claim_dust', 'actual_ncv', 'claim_ncv'].includes(field as string)) {
       setDetailRows(prev => prev.map(row => {
         const updated = { ...row };
+        const dateForRules = String(headerForm.mr_date || headerForm.arrival_date || new Date().toISOString().split('T')[0]);
         if (field === 'actual_moisture') {
           const num = Number(value) || 0;
           updated.moisture_act = num;
+          updated.actual_moisture = num;
           updated.insp_read_avg = num;
           updated.settlement_moisture = num;
+          updated.moisture_claim = calculateClaimMoisture(
+            num,
+            dateForRules,
+            updated.area || headerForm.arrival_area || headerForm.arrival_area_name || "",
+            moistureLogicRules
+          );
+          updated.claim_moisture = updated.moisture_claim;
         } else if (field === 'claim_moisture') {
-          updated.moisture_claim = Number(value) || 0;
+          const num = Number(value) || 0;
+          updated.moisture_claim = num;
+          updated.claim_moisture = num;
         } else if (field === 'actual_dust') {
           const num = Number(value) || 0;
           updated.dust_act = num;
+          updated.actual_dust = num;
           updated.settlement_dust = num;
         } else if (field === 'claim_dust') {
-          updated.dust_claim = Number(value) || 0;
+          const num = Number(value) || 0;
+          updated.dust_claim = num;
+          updated.claim_dust = num;
         } else if (field === 'actual_ncv') {
           const num = Number(value) || 0;
           updated.ncv_act = num;
+          updated.actual_ncv = num;
           updated.settlement_ncv = num;
         } else if (field === 'claim_ncv') {
-          updated.ncv_claim = Number(value) || 0;
+          const num = Number(value) || 0;
+          updated.ncv_claim = num;
+          updated.claim_ncv = num;
         }
         const computedWeights = computeDetailRowWeights(updated);
         Object.assign(updated, computedWeights);
@@ -989,42 +1006,64 @@ export function useInspectionLogic() {
       const updated = [...prev];
       const row = { ...updated[index], [field]: value };
       
-      // 1. Auto-calculate Lorry Read Avg if Min or Max present
+      // 1. Auto-calculate Lorry Read Avg if Min or Max present or modified
       const lorryMin = Number(row.lorry_read_min) || 0;
       const lorryMax = Number(row.lorry_read_max) || 0;
-      if (lorryMin > 0 && lorryMax > 0) {
-        //row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
-      } else if (lorryMin > 0 || lorryMax > 0) {
-        //row.lorry_read_avg = lorryMin || lorryMax;
+      if (['lorry_read_min', 'lorry_read_max'].includes(field as string)) {
+        if (lorryMin > 0 && lorryMax > 0) {
+          row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
+        } else if (lorryMin > 0 || lorryMax > 0) {
+          row.lorry_read_avg = lorryMin || lorryMax;
+        }
       }
 
-      // 2. Auto-calculate Inspection Read Avg if Min or Max present
-      /* const inspMin = Number(row.insp_read_min) || 0;
+      // 2. Auto-calculate Inspection Read Avg if Min or Max present or modified
+      const inspMin = Number(row.insp_read_min) || 0;
       const inspMax = Number(row.insp_read_max) || 0;
-      if (inspMin > 0 && inspMax > 0) {
-        row.insp_read_avg = Number(((inspMin + inspMax) / 2).toFixed(2));
-      } else if (inspMin > 0 || inspMax > 0) {
-        row.insp_read_avg = inspMin || inspMax;
-      } */
+      if (['insp_read_min', 'insp_read_max'].includes(field as string)) {
+        if (inspMin > 0 && inspMax > 0) {
+          row.insp_read_avg = Number(((inspMin + inspMax) / 2).toFixed(2));
+        } else if (inspMin > 0 || inspMax > 0) {
+          row.insp_read_avg = inspMin || inspMax;
+        }
+      }
 
-      // 3. Auto-calculate Moisture Actual %
+      // 3. Auto-calculate Moisture Actual % from Lorry and Inspection Readings
       const lAvg = Number(row.lorry_read_avg) || 0;
       const iAvg = Number(row.insp_read_avg) || 0;
-      if (lAvg > 0 && iAvg > 0) {
-        //row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
-      } else if (lAvg > 0 || iAvg > 0) {
-        //row.moisture_act = lAvg || iAvg;
+      if (['lorry_read_min', 'lorry_read_max', 'lorry_read_avg', 'insp_read_min', 'insp_read_max', 'insp_read_avg'].includes(field as string)) {
+        if (lAvg > 0 && iAvg > 0) {
+          row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
+        } else if (lAvg > 0 || iAvg > 0) {
+          row.moisture_act = lAvg || iAvg;
+        } else if (Number(headerForm.actual_moisture) > 0) {
+          row.moisture_act = Number(headerForm.actual_moisture);
+        }
+        row.actual_moisture = row.moisture_act;
+        row.settlement_moisture = row.moisture_act;
+      } else if (field === 'moisture_act' || field === 'actual_moisture') {
+        const valNum = Number(value) || 0;
+        row.moisture_act = valNum;
+        row.actual_moisture = valNum;
+        row.settlement_moisture = valNum;
       }
-      const moistureact = Number(row.lorry_read_avg) || 0;
 
       // 4. Auto-calculate Moisture Claim % based on Moisture Logic Rules
       const dateForRules = String(headerForm.mr_date || headerForm.arrival_date || new Date().toISOString().split('T')[0]);
-      row.moisture_claim = calculateClaimMoisture(
-        Number(moistureact) || 0,
-        dateForRules,
-        row.area || "",
-        moistureLogicRules
-      );
+      if (field !== 'moisture_claim' && field !== 'claim_moisture') {
+        const autoClaim = calculateClaimMoisture(
+          Number(row.moisture_act || row.actual_moisture || 0),
+          dateForRules,
+          row.area || headerForm.arrival_area || headerForm.arrival_area_name || "",
+          moistureLogicRules
+        );
+        row.moisture_claim = autoClaim;
+        row.claim_moisture = autoClaim;
+      } else {
+        const valNum = Number(value) || 0;
+        row.moisture_claim = valNum;
+        row.claim_moisture = valNum;
+      }
 
       // 5. Compute Reduced Weight & Final Receipt Weight (Claim)
       const computedWeights = computeDetailRowWeights(row);
@@ -1310,12 +1349,26 @@ export function useInspectionLogic() {
       const cleanMrNo = headerForm.mr_no.trim();
       const validDetails = detailRows.filter(r => r.arrival_grade || r.stock_grade_name || (Number(r.challan_gross_wt) > 0) || (Number(r.quantity) > 0));
 
+      if (validDetails.length === 0) {
+        alert("Cannot save inspection: Please fill in at least one inspection detail row with Grade/Quality, Quantity, and Moisture before saving.");
+        setIsSaving(false);
+        return;
+      }
+
       const totalReceiptGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || Number(r.challan_gross_wt) || 0), 0);
       const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
       const resolvedArrivalDate = sanitizeDate(headerForm.arrival_date || headerForm.mr_date);
       const resolvedMrDate = sanitizeDate(headerForm.mr_date || headerForm.arrival_date);
       const resolvedPoDate = sanitizeDate(headerForm.po_date);
+
+      const computedHeaderActualMoisture = Number(headerForm.actual_moisture) > 0
+        ? Number(headerForm.actual_moisture)
+        : (validDetails.length > 0 ? Number((validDetails.reduce((sum, r) => sum + Number(r.moisture_act || r.actual_moisture || r.lorry_read_avg || r.insp_read_avg || 0), 0) / validDetails.length).toFixed(2)) : 0);
+
+      const computedHeaderClaimMoisture = Number(headerForm.claim_moisture) > 0
+        ? Number(headerForm.claim_moisture)
+        : calculateClaimMoisture(computedHeaderActualMoisture, resolvedArrivalDate, headerForm.arrival_area || headerForm.arrival_area_name || "", moistureLogicRules);
 
       const masterPayload = {
         mr_no: cleanMrNo,
@@ -1328,8 +1381,8 @@ export function useInspectionLogic() {
         broker_name: headerForm.broker_name || "",
         supplier_name: headerForm.supplier_name || "",
         lorry_number: headerForm.lorry_number || "",
-        actual_moisture: Number(headerForm.actual_moisture) || 0,
-        claim_moisture: Number(headerForm.claim_moisture) || 0,
+        actual_moisture: computedHeaderActualMoisture,
+        claim_moisture: computedHeaderClaimMoisture,
         actual_dust: Number(headerForm.actual_dust) || 0,
         claim_dust: Number(headerForm.claim_dust) || 0,
         actual_ncv: Number(headerForm.actual_ncv) || 0,
@@ -1405,10 +1458,10 @@ export function useInspectionLogic() {
               insp_moisture_min: Number(d.insp_moisture_min ?? d.insp_read_min ?? 0),
               insp_moisture_max: Number(d.insp_moisture_max ?? d.insp_read_max ?? 0),
               insp_moisture_avg: Number(d.insp_moisture_avg ?? d.insp_read_avg ?? d.moisture_act ?? Number(headerForm.actual_moisture) ?? 0),
-              moisture_act: Number(d.moisture_act !== undefined ? d.moisture_act : (d.actual_moisture !== undefined ? d.actual_moisture : Number(headerForm.actual_moisture) || 0)),
-              actual_moisture: Number(d.actual_moisture !== undefined ? d.actual_moisture : (d.moisture_act !== undefined ? d.moisture_act : Number(headerForm.actual_moisture) || 0)),
-              moisture_claim: Number(d.moisture_claim !== undefined ? d.moisture_claim : (d.claim_moisture !== undefined ? d.claim_moisture : Number(headerForm.claim_moisture) || 0)),
-              claim_moisture: Number(d.claim_moisture !== undefined ? d.claim_moisture : (d.moisture_claim !== undefined ? d.moisture_claim : Number(headerForm.claim_moisture) || 0)),
+              moisture_act: Number(d.moisture_act !== undefined && Number(d.moisture_act) > 0 ? d.moisture_act : (d.actual_moisture !== undefined && Number(d.actual_moisture) > 0 ? d.actual_moisture : (d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0))),
+              actual_moisture: Number(d.actual_moisture !== undefined && Number(d.actual_moisture) > 0 ? d.actual_moisture : (d.moisture_act !== undefined && Number(d.moisture_act) > 0 ? d.moisture_act : (d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0))),
+              moisture_claim: Number(d.moisture_claim !== undefined && Number(d.moisture_claim) > 0 ? d.moisture_claim : (d.claim_moisture !== undefined && Number(d.claim_moisture) > 0 ? d.claim_moisture : (calculateClaimMoisture(Number(d.moisture_act || d.actual_moisture || d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0), resolvedArrivalDate, d.area || headerForm.arrival_area || "", moistureLogicRules) || computedHeaderClaimMoisture || 0))),
+              claim_moisture: Number(d.claim_moisture !== undefined && Number(d.claim_moisture) > 0 ? d.claim_moisture : (d.moisture_claim !== undefined && Number(d.moisture_claim) > 0 ? d.moisture_claim : (calculateClaimMoisture(Number(d.moisture_act || d.actual_moisture || d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0), resolvedArrivalDate, d.area || headerForm.arrival_area || "", moistureLogicRules) || computedHeaderClaimMoisture || 0))),
               dust_act: Number(d.dust_act !== undefined ? d.dust_act : (d.actual_dust !== undefined ? d.actual_dust : Number(headerForm.actual_dust) || 0)),
               actual_dust: Number(d.actual_dust !== undefined ? d.actual_dust : (d.dust_act !== undefined ? d.dust_act : Number(headerForm.actual_dust) || 0)),
               dust_claim: Number(d.dust_claim !== undefined ? d.dust_claim : (d.claim_dust !== undefined ? d.claim_dust : Number(headerForm.claim_dust) || 0)),

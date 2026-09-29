@@ -296,7 +296,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={isLorryReadMinBlocked}
           tabIndex={isLorryReadMinBlocked ? -1 : 0}
           title={isLorryReadMinBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.lorry_read_min !== undefined && row.lorry_read_min !== null ? row.lorry_read_min : (row.lorry_moisture_min !== undefined && row.lorry_moisture_min !== null ? row.lorry_moisture_min : 0)}
+          value={row.lorry_read_min !== undefined && row.lorry_read_min !== null && row.lorry_read_min !== "" ? row.lorry_read_min : (row.lorry_moisture_min !== undefined && row.lorry_moisture_min !== null ? row.lorry_moisture_min : 0)}
           onChange={(e) => !isLorryReadMinBlocked && onDetailChange(index, "lorry_read_min", Number(e.target.value))}
           className={getFieldInputStyle(isLorryReadMinBlocked)}
         />
@@ -308,7 +308,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={isLorryReadMaxBlocked}
           tabIndex={isLorryReadMaxBlocked ? -1 : 0}
           title={isLorryReadMaxBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.lorry_read_max !== undefined && row.lorry_read_max !== null ? row.lorry_read_max : (row.lorry_moisture_max !== undefined && row.lorry_moisture_max !== null ? row.lorry_moisture_max : 0)}
+          value={row.lorry_read_max !== undefined && row.lorry_read_max !== null && row.lorry_read_max !== "" ? row.lorry_read_max : (row.lorry_moisture_max !== undefined && row.lorry_moisture_max !== null ? row.lorry_moisture_max : 0)}
           onChange={(e) => !isLorryReadMaxBlocked && onDetailChange(index, "lorry_read_max", Number(e.target.value))}
           className={getFieldInputStyle(isLorryReadMaxBlocked)}
         />
@@ -320,7 +320,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={false}
           tabIndex={-1}
           title="Auto-calculated average (Locked)"
-          value={row.lorry_read_avg !== undefined && row.lorry_read_avg !== null && Number(row.lorry_read_avg) > 0 ? row.lorry_read_avg : (row.lorry_moisture_avg !== undefined && row.lorry_moisture_avg !== null && Number(row.lorry_moisture_avg) > 0 ? row.lorry_moisture_avg : ((Number(row.lorry_read_min) > 0 && Number(row.lorry_read_max) > 0) ? Number(((Number(row.lorry_read_min) + Number(row.lorry_read_max)) / 2).toFixed(2)) : (row.lorry_read_min || row.lorry_read_max || 0)))}
+          value={row.lorry_read_avg !== undefined && row.lorry_read_avg !== null && row.lorry_read_avg !== "" && Number(row.lorry_read_avg) > 0 ? row.lorry_read_avg : (row.lorry_moisture_avg !== undefined && row.lorry_moisture_avg !== null && Number(row.lorry_moisture_avg) > 0 ? row.lorry_moisture_avg : ((Number(row.lorry_read_min) > 0 && Number(row.lorry_read_max) > 0) ? Number(((Number(row.lorry_read_min) + Number(row.lorry_read_max)) / 2).toFixed(2)) : (row.lorry_read_min || row.lorry_read_max || 0)))}
           onChange={(e) => onDetailChange(index, "lorry_read_avg", Number(e.target.value))}
           className={getFieldInputStyle(false, "text-blue-900 font-black")}
         />
@@ -334,7 +334,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={isInspReadMinBlocked}
           tabIndex={isInspReadMinBlocked ? -1 : 0}
           title={isInspReadMinBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.insp_read_min !== undefined && row.insp_read_min !== null ? row.insp_read_min : (row.insp_moisture_min !== undefined && row.insp_moisture_min !== null ? row.insp_moisture_min : 0)}
+          value={row.insp_read_min !== undefined && row.insp_read_min !== null && row.insp_read_min !== "" ? row.insp_read_min : (row.insp_moisture_min !== undefined && row.insp_moisture_min !== null ? row.insp_moisture_min : 0)}
           onChange={(e) => !isInspReadMinBlocked && onDetailChange(index, "insp_read_min", Number(e.target.value))}
           className={getFieldInputStyle(isInspReadMinBlocked)}
         />
@@ -346,7 +346,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={isInspReadMaxBlocked}
           tabIndex={isInspReadMaxBlocked ? -1 : 0}
           title={isInspReadMaxBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.insp_read_max !== undefined && row.insp_read_max !== null ? row.insp_read_max : (row.insp_moisture_max !== undefined && row.insp_moisture_max !== null ? row.insp_moisture_max : 0)}
+          value={row.insp_read_max !== undefined && row.insp_read_max !== null && row.insp_read_max !== "" ? row.insp_read_max : (row.insp_moisture_max !== undefined && row.insp_moisture_max !== null ? row.insp_moisture_max : 0)}
           onChange={(e) => !isInspReadMaxBlocked && onDetailChange(index, "insp_read_max", Number(e.target.value))}
           className={getFieldInputStyle(isInspReadMaxBlocked)}
         />
@@ -358,53 +358,43 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={false}
           tabIndex={-1}
           title="Auto-calculated average (Locked)"
-          value={row.insp_read_avg !== undefined && row.insp_read_avg !== null && Number(row.insp_read_avg) > 0 ? row.insp_read_avg : (row.insp_moisture_avg !== undefined && row.insp_moisture_avg !== null && Number(row.insp_moisture_avg) > 0 ? row.insp_moisture_avg : ((Number(row.insp_read_min) > 0 && Number(row.insp_read_max) > 0) ? Number(((Number(row.insp_read_min) + Number(row.insp_read_max)) / 2).toFixed(2)) : (row.insp_read_min || row.insp_read_max || row.moisture_act || row.actual_moisture || (headerForm as any)?.actual_moisture || 0)))}
+          value={row.insp_read_avg !== undefined && row.insp_read_avg !== null && row.insp_read_avg !== "" && Number(row.insp_read_avg) > 0 ? row.insp_read_avg : (row.insp_moisture_avg !== undefined && row.insp_moisture_avg !== null && Number(row.insp_moisture_avg) > 0 ? row.insp_moisture_avg : ((Number(row.insp_read_min) > 0 && Number(row.insp_read_max) > 0) ? Number(((Number(row.insp_read_min) + Number(row.insp_read_max)) / 2).toFixed(2)) : (row.insp_read_min || row.insp_read_max || row.moisture_act || row.actual_moisture || (headerForm as any)?.actual_moisture || 0)))}
           onChange={(e) => onDetailChange(index, "insp_read_avg", Number(e.target.value))}
           className={getFieldInputStyle(false, "text-blue-900 font-black")}
         />
       </td>
 
       {/* Moisture Act / Claim */}
-      <td className="p-1.5 border-r border-blue-200 bg-blue-50/40">
+      <td className="p-1.5 border-r border-blue-200">
         <input
           type="number"
           step="0.01"
-          readOnly={isMoistureActBlocked}
-          tabIndex={isMoistureActBlocked ? -1 : 0}
-          title={isMoistureActBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Act. (Auto-calculated average of Lorry Read Avg & Insp. Read Avg)"}
+          placeholder="0.00"
           value={
-            row.moisture_act !== undefined && row.moisture_act !== null && row.moisture_act !== "" && Number(row.moisture_act) > 0
+            row.moisture_act !== undefined && row.moisture_act !== null && row.moisture_act !== ""
               ? row.moisture_act
-              : (row.actual_moisture !== undefined && row.actual_moisture !== null && row.actual_moisture !== "" && Number(row.actual_moisture) > 0
+              : (row.actual_moisture !== undefined && row.actual_moisture !== null && row.actual_moisture !== ""
                   ? row.actual_moisture
-                  : ((headerForm as any)?.actual_moisture !== undefined && Number((headerForm as any)?.actual_moisture) > 0
-                      ? (headerForm as any).actual_moisture
-                      : ((Number(row.lorry_read_avg) > 0 && Number(row.insp_read_avg) > 0)
-                          ? Number(((Number(row.lorry_read_avg) + Number(row.insp_read_avg)) / 2).toFixed(2))
-                          : (Number(row.lorry_read_avg) || Number(row.insp_read_avg) || Number(row.moisture_act) || Number(row.actual_moisture) || Number((headerForm as any)?.actual_moisture) || 0))))
+                  : "")
           }
-          onChange={(e) => !isMoistureActBlocked && onDetailChange(index, "moisture_act", Number(e.target.value))}
-          className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-blue-950 font-black text-center ${isMoistureActBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+          onChange={(e) => onDetailChange(index, "moisture_act", e.target.value === "" ? "" : Number(e.target.value))}
+          className="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-white text-blue-950 font-bold text-center"
         />
       </td>
-      <td className="p-1.5 border-r border-blue-200 bg-blue-50/40">
+      <td className="p-1.5 border-r border-blue-200">
         <input
           type="number"
           step="0.01"
-          readOnly={isMoistureClaimBlocked}
-          tabIndex={isMoistureClaimBlocked ? -1 : 0}
-          title={isMoistureClaimBlocked ? "Auto-populated (Manual edit blocked)" : "Moisture % Claim"}
+          placeholder="0.00"
           value={
-            row.moisture_claim !== undefined && row.moisture_claim !== null && row.moisture_claim !== "" && Number(row.moisture_claim) > 0
+            row.moisture_claim !== undefined && row.moisture_claim !== null && row.moisture_claim !== ""
               ? row.moisture_claim
-              : (row.claim_moisture !== undefined && row.claim_moisture !== null && row.claim_moisture !== "" && Number(row.claim_moisture) > 0
+              : (row.claim_moisture !== undefined && row.claim_moisture !== null && row.claim_moisture !== ""
                   ? row.claim_moisture
-                  : ((headerForm as any)?.claim_moisture !== undefined && Number((headerForm as any)?.claim_moisture) > 0
-                      ? (headerForm as any).claim_moisture
-                      : (Number(row.moisture_claim) || Number(row.claim_moisture) || Number((headerForm as any)?.claim_moisture) || 0)))
+                  : "")
           }
-          onChange={(e) => !isMoistureClaimBlocked && onDetailChange(index, "moisture_claim", Number(e.target.value))}
-          className={`w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-blue-50/70 text-indigo-950 font-black text-center ${isMoistureClaimBlocked ? "cursor-not-allowed opacity-80" : ""}`}
+          onChange={(e) => onDetailChange(index, "moisture_claim", e.target.value === "" ? "" : Number(e.target.value))}
+          className="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-white text-indigo-950 font-bold text-center"
         />
       </td>
 

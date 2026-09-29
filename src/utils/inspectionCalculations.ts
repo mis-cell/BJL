@@ -237,7 +237,7 @@ export const calculateClaimMoisture = (
 
 export const isAutoBlocked = (row: InspectionDetailRow, field: keyof InspectionDetailRow): boolean => {
   if (row.is_auto === false) return false;
-  if (field === "lorry_read_avg" || field === "insp_read_avg" || field === "moisture_claim") return true;
+  if (field === "lorry_read_avg" || field === "insp_read_avg") return true;
   if (row.auto_fields && Array.isArray(row.auto_fields) && row.auto_fields.includes(field as string)) {
     return true;
   }
