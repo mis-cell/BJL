@@ -412,22 +412,45 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     const baseList = liveBaseRates.length > 0 ? liveBaseRates : (sattaBaseRates || []);
 
     if (baseList && baseList.length > 0) {
+      // 1. Try exact date match first
+      const exact = baseList.find((b: any) => {
+        const bDateYmd = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
+        return bDateYmd && bDateYmd === targetYmd;
+      });
+      if (exact) {
+        const r = Number(exact.base_rate || exact.rate || exact.b_rate || exact.baseRate || 0);
+        if (r > 0) return r;
+      }
+
+      // 2. Try on-or-before target date (latest published rate up to target date)
       const matches = baseList.filter((b: any) => {
-        const bDateYmd = normalizeToYMD(b.start_date || b.start || b.date || '');
+        const bDateYmd = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
         return bDateYmd && bDateYmd <= targetYmd;
       }).sort((a: any, b: any) => {
-        const d1 = normalizeToYMD(a.start_date || a.start || a.date || '');
-        const d2 = normalizeToYMD(b.start_date || b.start || b.date || '');
+        const d1 = normalizeToYMD(a.start_date || a.effective_date || a.satta_date || a.date || a.base_date || a.start || '');
+        const d2 = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
         return d2.localeCompare(d1);
       });
 
       if (matches.length > 0) {
-        const r = Number(matches[0].base_rate || matches[0].rate || 0);
+        const r = Number(matches[0].base_rate || matches[0].rate || matches[0].b_rate || matches[0].baseRate || 0);
         if (r > 0) return r;
       }
 
-      const closestAvailable = Number(baseList[0].base_rate || baseList[0].rate || 0);
-      if (closestAvailable > 0) return closestAvailable;
+      // 3. Fallback: Closest rate in list (sorted by distance to target date)
+      const sortedByCloseness = [...baseList].sort((a: any, b: any) => {
+        const d1 = normalizeToYMD(a.start_date || a.effective_date || a.satta_date || a.date || a.base_date || a.start || '');
+        const d2 = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
+        if (!d1) return 1;
+        if (!d2) return -1;
+        return d1.localeCompare(d2);
+      });
+
+      if (sortedByCloseness.length > 0) {
+        // Return the rate from the first/earliest available base rate
+        const r = Number(sortedByCloseness[0].base_rate || sortedByCloseness[0].rate || sortedByCloseness[0].b_rate || sortedByCloseness[0].baseRate || 0);
+        if (r > 0) return r;
+      }
     }
 
     return 0;
