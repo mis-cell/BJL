@@ -1804,9 +1804,14 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           const rowGradeDownClaim = Number(qmGradeDownClaim ?? row.claim_grade_down ?? row.grade_down_claim ?? (idx === 0 ? masterData.claim_grade_down : 0)) || 0;
           const rowGradeDownSett = Number(qmGradeDownSett ?? row.settlement_grade_down ?? 0) || 0;
 
-          const rowMoistureAct = Number(qmMoistureDept ?? row.actual_moisture ?? row.moisture_act ?? (idx === 0 ? masterData.actual_moisture : 0)) || 0;
-          const rowMoistureClaim = Number(qmMoistureClaim ?? row.claim_moisture ?? row.moisture_claim ?? (idx === 0 ? masterData.claim_moisture : 0)) || 0;
-          const rowMoistureSett = Number(qmMoistureSett ?? row.settlement_moisture ?? 0) || 0;
+          const rawMoistActVal = qmMoistureDept ?? row.actual_moisture ?? row.moisture_act;
+          const rowMoistureAct = rawMoistActVal !== undefined && rawMoistActVal !== null && String(rawMoistActVal).trim() !== "" && !isNaN(Number(rawMoistActVal)) ? Number(rawMoistActVal) : null;
+
+          const rawMoistClaimVal = qmMoistureClaim ?? row.claim_moisture ?? row.moisture_claim;
+          const rowMoistureClaim = rawMoistClaimVal !== undefined && rawMoistClaimVal !== null && String(rawMoistClaimVal).trim() !== "" && !isNaN(Number(rawMoistClaimVal)) ? Number(rawMoistClaimVal) : null;
+
+          const rawMoistSettVal = qmMoistureSett ?? row.settlement_moisture;
+          const rowMoistureSett = rawMoistSettVal !== undefined && rawMoistSettVal !== null && String(rawMoistSettVal).trim() !== "" && !isNaN(Number(rawMoistSettVal)) ? Number(rawMoistSettVal) : null;
 
           const rowDustAct = Number(qmDustDept ?? row.actual_dust ?? row.dust_act ?? (idx === 0 ? masterData.actual_dust : 0)) || 0;
           const rowDustClaim = Number(qmDustClaim ?? row.claim_dust ?? row.dust_claim ?? (idx === 0 ? masterData.claim_dust : 0)) || 0;

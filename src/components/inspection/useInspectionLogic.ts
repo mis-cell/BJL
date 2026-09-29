@@ -1362,13 +1362,11 @@ export function useInspectionLogic() {
       const resolvedMrDate = sanitizeDate(headerForm.mr_date || headerForm.arrival_date);
       const resolvedPoDate = sanitizeDate(headerForm.po_date);
 
-      const computedHeaderActualMoisture = Number(headerForm.actual_moisture) > 0
-        ? Number(headerForm.actual_moisture)
-        : (validDetails.length > 0 ? Number((validDetails.reduce((sum, r) => sum + Number(r.moisture_act || r.actual_moisture || r.lorry_read_avg || r.insp_read_avg || 0), 0) / validDetails.length).toFixed(2)) : 0);
+      const hasHeaderActualMoisture = headerForm.actual_moisture !== undefined && headerForm.actual_moisture !== null && String(headerForm.actual_moisture).trim() !== "" && !isNaN(Number(headerForm.actual_moisture));
+      const savedHeaderActualMoisture = hasHeaderActualMoisture ? Number(headerForm.actual_moisture) : null;
 
-      const computedHeaderClaimMoisture = Number(headerForm.claim_moisture) > 0
-        ? Number(headerForm.claim_moisture)
-        : calculateClaimMoisture(computedHeaderActualMoisture, resolvedArrivalDate, headerForm.arrival_area || headerForm.arrival_area_name || "", moistureLogicRules);
+      const hasHeaderClaimMoisture = headerForm.claim_moisture !== undefined && headerForm.claim_moisture !== null && String(headerForm.claim_moisture).trim() !== "" && !isNaN(Number(headerForm.claim_moisture));
+      const savedHeaderClaimMoisture = hasHeaderClaimMoisture ? Number(headerForm.claim_moisture) : null;
 
       const masterPayload = {
         mr_no: cleanMrNo,
@@ -1381,8 +1379,8 @@ export function useInspectionLogic() {
         broker_name: headerForm.broker_name || "",
         supplier_name: headerForm.supplier_name || "",
         lorry_number: headerForm.lorry_number || "",
-        actual_moisture: computedHeaderActualMoisture,
-        claim_moisture: computedHeaderClaimMoisture,
+        actual_moisture: savedHeaderActualMoisture,
+        claim_moisture: savedHeaderClaimMoisture,
         actual_dust: Number(headerForm.actual_dust) || 0,
         claim_dust: Number(headerForm.claim_dust) || 0,
         actual_ncv: Number(headerForm.actual_ncv) || 0,
@@ -1423,6 +1421,13 @@ export function useInspectionLogic() {
         if (validDetails.length > 0) {
           const detailInserts = validDetails.map((d, i) => {
             const netto = Number(d.receipt_gross_wt || d.challan_gross_wt || 0);
+            
+            const hasUserMoistureAct = d.moisture_act !== undefined && d.moisture_act !== null && String(d.moisture_act).trim() !== "" && !isNaN(Number(d.moisture_act));
+            const savedMoistureAct = hasUserMoistureAct ? Number(d.moisture_act) : null;
+
+            const hasUserMoistureClaim = d.moisture_claim !== undefined && d.moisture_claim !== null && String(d.moisture_claim).trim() !== "" && !isNaN(Number(d.moisture_claim));
+            const savedMoistureClaim = hasUserMoistureClaim ? Number(d.moisture_claim) : null;
+
             return {
               mr_no: cleanMrNo,
               po_no: headerForm.po_no || null,
@@ -1446,22 +1451,22 @@ export function useInspectionLogic() {
               add_weight: Number(d.add_weight || 0),
               less_weight: Number(d.less_weight || 0),
               reduced_weight: Number(d.reduced_weight || netto),
-              lorry_read_min: Number(d.lorry_read_min ?? d.lorry_moisture_min ?? 0),
-              lorry_read_max: Number(d.lorry_read_max ?? d.lorry_moisture_max ?? 0),
-              lorry_read_avg: Number(d.lorry_read_avg ?? d.lorry_moisture_avg ?? 0),
-              lorry_moisture_min: Number(d.lorry_moisture_min ?? d.lorry_read_min ?? 0),
-              lorry_moisture_max: Number(d.lorry_moisture_max ?? d.lorry_read_max ?? 0),
-              lorry_moisture_avg: Number(d.lorry_moisture_avg ?? d.lorry_read_avg ?? 0),
-              insp_read_min: Number(d.insp_read_min ?? d.insp_moisture_min ?? 0),
-              insp_read_max: Number(d.insp_read_max ?? d.insp_moisture_max ?? 0),
-              insp_read_avg: Number(d.insp_read_avg ?? d.insp_moisture_avg ?? d.moisture_act ?? Number(headerForm.actual_moisture) ?? 0),
-              insp_moisture_min: Number(d.insp_moisture_min ?? d.insp_read_min ?? 0),
-              insp_moisture_max: Number(d.insp_moisture_max ?? d.insp_read_max ?? 0),
-              insp_moisture_avg: Number(d.insp_moisture_avg ?? d.insp_read_avg ?? d.moisture_act ?? Number(headerForm.actual_moisture) ?? 0),
-              moisture_act: Number(d.moisture_act !== undefined && Number(d.moisture_act) > 0 ? d.moisture_act : (d.actual_moisture !== undefined && Number(d.actual_moisture) > 0 ? d.actual_moisture : (d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0))),
-              actual_moisture: Number(d.actual_moisture !== undefined && Number(d.actual_moisture) > 0 ? d.actual_moisture : (d.moisture_act !== undefined && Number(d.moisture_act) > 0 ? d.moisture_act : (d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0))),
-              moisture_claim: Number(d.moisture_claim !== undefined && Number(d.moisture_claim) > 0 ? d.moisture_claim : (d.claim_moisture !== undefined && Number(d.claim_moisture) > 0 ? d.claim_moisture : (calculateClaimMoisture(Number(d.moisture_act || d.actual_moisture || d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0), resolvedArrivalDate, d.area || headerForm.arrival_area || "", moistureLogicRules) || computedHeaderClaimMoisture || 0))),
-              claim_moisture: Number(d.claim_moisture !== undefined && Number(d.claim_moisture) > 0 ? d.claim_moisture : (d.moisture_claim !== undefined && Number(d.moisture_claim) > 0 ? d.moisture_claim : (calculateClaimMoisture(Number(d.moisture_act || d.actual_moisture || d.lorry_read_avg || d.insp_read_avg || computedHeaderActualMoisture || 0), resolvedArrivalDate, d.area || headerForm.arrival_area || "", moistureLogicRules) || computedHeaderClaimMoisture || 0))),
+              lorry_read_min: d.lorry_read_min !== undefined && d.lorry_read_min !== null && String(d.lorry_read_min).trim() !== "" ? Number(d.lorry_read_min) : null,
+              lorry_read_max: d.lorry_read_max !== undefined && d.lorry_read_max !== null && String(d.lorry_read_max).trim() !== "" ? Number(d.lorry_read_max) : null,
+              lorry_read_avg: d.lorry_read_avg !== undefined && d.lorry_read_avg !== null && String(d.lorry_read_avg).trim() !== "" ? Number(d.lorry_read_avg) : null,
+              lorry_moisture_min: d.lorry_read_min !== undefined && d.lorry_read_min !== null && String(d.lorry_read_min).trim() !== "" ? Number(d.lorry_read_min) : null,
+              lorry_moisture_max: d.lorry_read_max !== undefined && d.lorry_read_max !== null && String(d.lorry_read_max).trim() !== "" ? Number(d.lorry_read_max) : null,
+              lorry_moisture_avg: d.lorry_read_avg !== undefined && d.lorry_read_avg !== null && String(d.lorry_read_avg).trim() !== "" ? Number(d.lorry_read_avg) : null,
+              insp_read_min: d.insp_read_min !== undefined && d.insp_read_min !== null && String(d.insp_read_min).trim() !== "" ? Number(d.insp_read_min) : null,
+              insp_read_max: d.insp_read_max !== undefined && d.insp_read_max !== null && String(d.insp_read_max).trim() !== "" ? Number(d.insp_read_max) : null,
+              insp_read_avg: d.insp_read_avg !== undefined && d.insp_read_avg !== null && String(d.insp_read_avg).trim() !== "" ? Number(d.insp_read_avg) : null,
+              insp_moisture_min: d.insp_read_min !== undefined && d.insp_read_min !== null && String(d.insp_read_min).trim() !== "" ? Number(d.insp_read_min) : null,
+              insp_moisture_max: d.insp_read_max !== undefined && d.insp_read_max !== null && String(d.insp_read_max).trim() !== "" ? Number(d.insp_read_max) : null,
+              insp_moisture_avg: d.insp_read_avg !== undefined && d.insp_read_avg !== null && String(d.insp_read_avg).trim() !== "" ? Number(d.insp_read_avg) : null,
+              moisture_act: savedMoistureAct,
+              actual_moisture: savedMoistureAct,
+              moisture_claim: savedMoistureClaim,
+              claim_moisture: savedMoistureClaim,
               dust_act: Number(d.dust_act !== undefined ? d.dust_act : (d.actual_dust !== undefined ? d.actual_dust : Number(headerForm.actual_dust) || 0)),
               actual_dust: Number(d.actual_dust !== undefined ? d.actual_dust : (d.dust_act !== undefined ? d.dust_act : Number(headerForm.actual_dust) || 0)),
               dust_claim: Number(d.dust_claim !== undefined ? d.dust_claim : (d.claim_dust !== undefined ? d.claim_dust : Number(headerForm.claim_dust) || 0)),
@@ -1475,7 +1480,7 @@ export function useInspectionLogic() {
               grade_down_claim: Number(d.grade_down_claim || d.claim_grade_down || 0),
               claim_grade_down: Number(d.claim_grade_down || d.grade_down_claim || 0),
               final_receipt_wt: Number(d.final_receipt_wt || netto),
-              settlement_moisture: Number(d.settlement_moisture !== undefined ? d.settlement_moisture : (d.moisture_act || Number(headerForm.actual_moisture) || 0)),
+              settlement_moisture: savedMoistureAct,
               settlement_grade_down: Number(d.settlement_grade_down !== undefined ? d.settlement_grade_down : (d.grade_down_act || 0)),
               settlement_dust: Number(d.settlement_dust !== undefined ? d.settlement_dust : (d.dust_act || Number(headerForm.actual_dust) || 0)),
               settlement_ncv: Number(d.settlement_ncv !== undefined ? d.settlement_ncv : (d.ncv_act || Number(headerForm.actual_ncv) || 0)),
