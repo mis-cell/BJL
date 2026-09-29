@@ -1701,11 +1701,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const arrivalVoucherDate = masterData.arrival_date || masterData.sett_date || (masterData as any).challan_date;
     const deliveryDelayDays = calculateDeliveryDelayDays(poDeliveryToDate, arrivalVoucherDate);
 
-    const totalArrWeightMt = detailCols.reduce((sum, col) => sum + (Number(col.quantity) || 0), 0) || Number(masterData.electronic_scale_net) || 0;
-    const totalArrWeightQtl = totalArrWeightMt * 10;
+    const totalArrWeightMt = Math.round((detailCols.reduce((sum, col) => sum + (Number(col.quantity) || 0), 0) || Number(masterData.electronic_scale_net) || 0) * 1000) / 1000;
+    const totalArrWeightQtl = Math.round(totalArrWeightMt * 10 * 100) / 100;
 
     const autoDeliveryClaimAmt = (deliveryDelayDays > 0 && poDeliveryPenaltyRate > 0 && totalArrWeightQtl > 0)
-      ? Number((totalArrWeightQtl * poDeliveryPenaltyRate * deliveryDelayDays).toFixed(2))
+      ? Math.round(totalArrWeightQtl * poDeliveryPenaltyRate * deliveryDelayDays)
       : 0;
 
     // Delivery Claim in Grade-wise summary panel: auto-calculated penalty unless manually set
