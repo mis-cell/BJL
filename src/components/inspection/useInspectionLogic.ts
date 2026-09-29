@@ -220,7 +220,9 @@ export function useInspectionLogic() {
     const totalItemQty = (detailRows || []).reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
     let defaultQty = 0;
-    if (isBaleRule && autoCalc.totalBales > 0) {
+    if (isBaleRule && totalGrossMt > 0) {
+      defaultQty = Number((totalGrossMt * 10).toFixed(2));
+    } else if (isBaleRule && autoCalc.totalBales > 0) {
       defaultQty = autoCalc.totalBales;
     } else if (found && found.rate_per_qntl != null && totalGrossMt > 0) {
       defaultQty = Number((totalGrossMt * 10).toFixed(2));

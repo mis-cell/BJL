@@ -365,17 +365,18 @@ export function calculateAllMatchingDeductions(
   // 1. Bale Weight Evaluation
   const baleAudit = calculateBaleWeightDeduction(detailRows, deductionMasterList);
   if (baleAudit.matchedRule && baleAudit.rate > 0) {
-    const totalBalesQty = baleAudit.totalBales > 0 ? baleAudit.totalBales : 1;
-    const amount = Number((baleAudit.rate * totalBalesQty).toFixed(2));
+    const totalQntl = Number((baleAudit.totalReceiptGrossWtMt * 10).toFixed(2));
+    const qty = totalQntl > 0 ? totalQntl : (baleAudit.totalBales > 0 ? baleAudit.totalBales : 1);
+    const amount = Number((baleAudit.rate * qty).toFixed(2));
     matchedDeductions.push({
       category: "bale_weight",
       ruleName: baleAudit.ruleName,
       matchedRule: baleAudit.matchedRule,
       rate: baleAudit.rate,
-      qty: totalBalesQty,
+      qty,
       amount,
       reason: `Avg Weight ${baleAudit.avgKgPerBale.toFixed(2)} KG/Bale under standard threshold`,
-      badge: `⚖️ Bale Weight Policy: ${baleAudit.totalBales} Bales (${baleAudit.avgKgPerBale.toFixed(2)} KG/Bale)`
+      badge: `⚖️ Bale Weight Policy: ${baleAudit.totalBales} Bales (${baleAudit.avgKgPerBale.toFixed(2)} KG/Bale) | ₹${baleAudit.rate.toFixed(2)} × ${qty.toFixed(2)} Qtl = -₹${amount.toFixed(2)}`
     });
   }
 

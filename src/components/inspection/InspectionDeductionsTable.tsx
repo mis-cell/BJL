@@ -30,6 +30,13 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
   onDeductionChange,
   onDeductionTypeChange,
 }) => {
+  const calculatedTotalAmount = deductionRows.reduce(
+    (sum, r) => sum + (Number(r.deduction_amount) || 0),
+    0
+  );
+  const effectiveTotalAmount = calculatedTotalAmount > 0 ? calculatedTotalAmount : (Number(totalDeductionAmount) || 0);
+  const calculatedTotalQty = deductionRows.reduce((sum, r) => sum + (Number(r.deduction_qty) || 0), 0);
+
   return (
     <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
@@ -46,11 +53,11 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
         </div>
 
         <div className="flex items-center gap-2">
-          {totalDeductionAmount > 0 && (
+          {effectiveTotalAmount > 0 && (
             <div className="bg-rose-50 text-rose-900 border border-rose-200 px-2.5 py-0.5 rounded-md text-xs font-black flex items-center gap-1">
               <span className="text-[10px] font-bold text-rose-700 uppercase">Total Claim:</span>
               <span className="font-mono text-xs text-rose-900">
-                -₹{Number(totalDeductionAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                -₹{Number(effectiveTotalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           )}
@@ -207,11 +214,11 @@ export const InspectionDeductionsTable: React.FC<InspectionDeductionsTableProps>
                 Total Deductions &amp; Penalties:
               </td>
               <td className="py-2 px-2.5 text-right font-mono font-black text-xs text-slate-900">
-                {deductionRows.reduce((sum, r) => sum + (Number(r.deduction_qty) || 0), 0)}
+                {calculatedTotalQty.toFixed(2)}
               </td>
               <td className="py-2 px-2.5 text-right">
                 <span className="inline-block w-full bg-rose-100 text-rose-900 border border-rose-300 rounded px-2 py-1 font-mono font-black text-xs text-right shadow-2xs">
-                  -₹{Number(totalDeductionAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  -₹{Number(effectiveTotalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </td>
               <td></td>
