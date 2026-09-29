@@ -1701,7 +1701,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const arrivalVoucherDate = masterData.arrival_date || masterData.sett_date || (masterData as any).challan_date;
     const deliveryDelayDays = calculateDeliveryDelayDays(poDeliveryToDate, arrivalVoucherDate);
 
-    const totalArrWeightMt = Math.round((detailCols.reduce((sum, col) => sum + (Number(col.quantity) || 0), 0) || Number(masterData.electronic_scale_net) || 0) * 1000) / 1000;
+    const totalArrWeightMt = Math.round((detailCols.reduce((sum, col) => {
+      const colWt = Number(col.arr_qty_wt) > 0 
+        ? Number(col.arr_qty_wt) 
+        : (Number(col.wt_quantity) > 0 ? Number(col.wt_quantity) : 0);
+      return sum + colWt;
+    }, 0) || Number(masterData.electronic_scale_net) || 0) * 1000) / 1000;
     const totalArrWeightQtl = Math.round(totalArrWeightMt * 10 * 100) / 100;
 
     const autoDeliveryClaimAmt = (deliveryDelayDays > 0 && poDeliveryPenaltyRate > 0 && totalArrWeightQtl > 0)
