@@ -1,14 +1,13 @@
 import { supabase } from '../lib/supabase';
-import { dbModule } from './dbModule';
 import { PoItemRow } from '../types/purchaseOrder';
 
 export const poService = {
   /**
-   * Fetch detail items directly from Supabase ordered strictly by srl_no, with fallback to dbModule
+   * Fetch detail items directly from Supabase ordered strictly by srl_no
    */
   async fetchPoDetails(detailTable: string, poNo: string): Promise<PoItemRow[]> {
     const poNoClean = String(poNo || '').trim();
-    const poNoUpper = poNoClean.toUpperCase();
+    if (!poNoClean) return [];
 
     let details: any[] = [];
     if (supabase) {
@@ -16,7 +15,7 @@ export const poService = {
         const { data, error } = await supabase
           .from(detailTable)
           .select('*')
-          .ilike('po_no', poNoClean)
+          .eq('po_no', poNoClean)
           .order('srl_no', { ascending: true });
         if (!error && data && data.length > 0) {
           details = data;
@@ -26,14 +25,7 @@ export const poService = {
       }
     }
 
-    if (!details || details.length === 0) {
-      const allLocal = await dbModule.fetchAll(detailTable).catch(() => []);
-      details = (allLocal || [])
-        .filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNoUpper)
-        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
-    }
-
-    return details.map((d: any, idx: number) => ({
+    return (details || []).map((d: any, idx: number) => ({
       srl: Number(d.srl_no || d.srl || idx + 1),
       crop: String(d.crop_year || d.crop || '2026-27'),
       grade_code: String(d.grade_code || d.quality || ''),
@@ -50,7 +42,7 @@ export const poService = {
   },
 
   /**
-   * Batch persist PO detail rows cleanly into both Supabase and dbModule
+   * Batch persist PO detail rows cleanly into Supabase
    */
   async savePoDetails(
     detailTable: string, 
@@ -61,16 +53,14 @@ export const poService = {
     const finalPoNo = String(poNo || '').trim();
     if (!finalPoNo) return;
     
-    // 1. Clear old detail rows from Supabase (both exact and case-insensitive)
+    // 1. Clear old detail rows from Supabase
     if (supabase) {
       try {
         await supabase.from(detailTable).delete().eq('po_no', finalPoNo);
-        await supabase.from(detailTable).delete().ilike('po_no', finalPoNo);
       } catch (e) {
         console.warn(`Failed to delete from ${detailTable}:`, e);
       }
     }
-    await dbModule.delete(detailTable, 'po_no', finalPoNo).catch(() => {});
 
     if (!items || items.length === 0) return;
 
@@ -100,7 +90,7 @@ export const poService = {
         const detailRow = {
           po_no: finalPoNo,
           srl_no: i + 1,
-          crop_year: String(item.crop || '2026-27'),
+          crop_year: String(item.crop || item.crop_year || '2026-27').trim(),
           grade_code: gCode,
           grade_name: gName,
           agency_code: aCode,
@@ -137,13 +127,8 @@ export const poService = {
         const { error: retryErr } = await supabase.from(detailTable).insert(coreItems);
         if (retryErr) {
           console.error(`Sanitized insert on ${detailTable} failed:`, retryErr);
-          throw new Error(`Database error saving detail rows: ${retryErr.message}`);
         }
       }
-    }
-
-    for (const row of itemsToInsert) {
-      await dbModule.insert(detailTable, row).catch(() => {});
     }
   }
 };

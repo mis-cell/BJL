@@ -149,19 +149,6 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
 
   useLiveAutoRefresh(fetchRecords, [isArchiveView], { tables: ['final_arrival', 'm.r_archive'] });
 
-  useEffect(() => {
-    fetchRecords();
-    const handleUpdate = () => {
-      fetchRecords();
-    };
-    window.addEventListener('app-data-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('app-data-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
-
   const runBackgroundStatusSync = async (silent = true) => {
     try {
       const { data: arrivals, error: arrivalsErr } = await supabase

@@ -452,13 +452,6 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
             .eq(pk, pkVal);
           if (error) throw error;
         }
-        try {
-          if (isNew) {
-            await dbModule.insert(selectedTable.name, editingRow);
-          } else {
-            await dbModule.update(selectedTable.name, pk, editingRow[pk], editingRow);
-          }
-        } catch (e) {}
       }
 
       if (selectedTable.name === "user_master") {
@@ -522,9 +515,6 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
           .delete()
           .eq(selectedTable.pk, pkValue);
         if (error) throw error;
-        try {
-          await dbModule.delete(selectedTable.name, selectedTable.pk, pkValue);
-        } catch (e) {}
       }
       if (selectedTable.name === "user_master") {
         broadcastPermissionsUpdated({});

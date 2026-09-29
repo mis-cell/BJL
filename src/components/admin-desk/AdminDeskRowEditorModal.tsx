@@ -33,16 +33,13 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
   onSave,
   onClose
 }) => {
-  if (!editingRow || !selectedTable) return null;
+  // Populate defaults when opening editor for new row without triggering render loops
+  React.useEffect(() => {
+    if (!editingRow || !selectedTable) return;
 
-  const renderEditField = (col: string) => {
-    const val = editingRow?.[col] ?? "";
-    const colType = currentColumns.find((c) => c.name === col)?.type || "text";
-
-    // Dynamic auto-generation for USER_ID in user_master
-    if (selectedTable?.name === "user_master" && col === "user_id") {
-      let currentVal = val;
-      if (!currentVal) {
+    let updates: any = null;
+    if (selectedTable.name === "user_master") {
+      if (!editingRow.user_id) {
         let nextNum = 1;
         if (data && data.length > 0) {
           const numericIds = data
@@ -56,25 +53,43 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
             nextNum = Math.max(...numericIds) + 1;
           }
         }
-        currentVal = String(nextNum).padStart(3, "0");
-        
-        setTimeout(() => {
-          setEditingRow((prev: any) => {
-            if (prev && !prev.user_id) {
-              return { ...prev, user_id: currentVal };
-            }
-            return prev;
-          });
-        }, 0);
+        updates = { ...(updates || {}), user_id: String(nextNum).padStart(3, "0") };
       }
+      if (!editingRow.created_at) {
+        updates = { ...(updates || {}), created_at: new Date().toISOString() };
+      }
+    } else if (selectedTable.name === "user_activity_logs") {
+      if (!editingRow.created_at) {
+        updates = { ...(updates || {}), created_at: new Date().toISOString() };
+      }
+      if (!editingRow.username) {
+        updates = { ...(updates || {}), username: getCurrentUserContext().username || 'ADMIN' };
+      }
+      if (!editingRow.ip_address) {
+        updates = { ...(updates || {}), ip_address: 'Local' };
+      }
+    }
 
+    if (updates) {
+      setEditingRow((prev: any) => ({ ...prev, ...updates }));
+    }
+  }, [selectedTable?.name]);
+
+  if (!editingRow || !selectedTable) return null;
+
+  const renderEditField = (col: string) => {
+    const val = editingRow?.[col] ?? "";
+    const colType = currentColumns.find((c) => c.name === col)?.type || "text";
+
+    // Dynamic auto-generation for USER_ID in user_master
+    if (selectedTable?.name === "user_master" && col === "user_id") {
       return (
         <input
           id="system_generated_serial_input"
           name="system_generated_serial"
           aria-label="System Generated Serial"
           type="text"
-          value={currentVal}
+          value={val || "001"}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none focus:border-indigo-500"
           placeholder="System Generated Serial"
@@ -84,26 +99,13 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
 
     // Dynamic auto-generation for CREATED_AT in user_master
     if (selectedTable?.name === "user_master" && col === "created_at") {
-      let currentVal = val;
-      if (!currentVal) {
-        currentVal = new Date().toISOString();
-        setTimeout(() => {
-          setEditingRow((prev: any) => {
-            if (prev && !prev.created_at) {
-              return { ...prev, created_at: currentVal };
-            }
-            return prev;
-          });
-        }, 0);
-      }
-
       return (
         <input
           id="creation_timestamp_input"
           name="creation_timestamp"
           aria-label="Creation Timestamp"
           type="text"
-          value={currentVal}
+          value={val || new Date().toISOString()}
           disabled
           className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80"
           placeholder="Creation Timestamp"
@@ -128,25 +130,13 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
         );
       }
       if (col === "created_at") {
-        let currentVal = val;
-        if (!currentVal) {
-          currentVal = new Date().toISOString();
-          setTimeout(() => {
-            setEditingRow((prev: any) => {
-              if (prev && !prev.created_at) {
-                return { ...prev, created_at: currentVal };
-              }
-              return prev;
-            });
-          }, 0);
-        }
         return (
           <input
             id="event_timestamp_input"
             name="event_timestamp"
             aria-label="Event Timestamp"
             type="text"
-            value={currentVal}
+            value={val || new Date().toISOString()}
             disabled
             className="w-full bg-slate-100 border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none cursor-not-allowed opacity-80"
             placeholder="Event Timestamp"
@@ -154,32 +144,24 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
         );
       }
       if (col === "username") {
-        let currentVal = val;
-        if (!currentVal) {
-          currentVal = getCurrentUserContext().username || 'ADMIN';
-          setTimeout(() => {
-            setEditingRow((prev: any) => {
-              if (prev && !prev.username) {
-                return { ...prev, username: currentVal };
-              }
-              return prev;
-            });
-          }, 0);
-        }
+        return (
+          <input
+            type="text"
+            value={val || getCurrentUserContext().username || 'ADMIN'}
+            onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
+            className="w-full bg-white border border-slate-300 p-2 text-xs font-mono rounded outline-none focus:border-indigo-500"
+          />
+        );
       }
       if (col === "ip_address") {
-        let currentVal = val;
-        if (!currentVal) {
-          currentVal = "Local";
-          setTimeout(() => {
-            setEditingRow((prev: any) => {
-              if (prev && !prev.ip_address) {
-                return { ...prev, ip_address: currentVal };
-              }
-              return prev;
-            });
-          }, 0);
-        }
+        return (
+          <input
+            type="text"
+            value={val || "Local"}
+            onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
+            className="w-full bg-white border border-slate-300 p-2 text-xs font-mono rounded outline-none focus:border-indigo-500"
+          />
+        );
       }
     }
 

@@ -7,7 +7,8 @@ import {
   FileCheck, 
   Search, 
   BookOpen, 
-  Download, 
+  Download,
+  FileSpreadsheet,
   RefreshCcw, 
   Trash2,
   Calendar,
@@ -201,6 +202,74 @@ export function PaymentDashboardView({
     ? `${MONTH_NAMES[selectedMonth]} ${activeYear}` 
     : `FY / Year ${activeYear} (All Months)`;
 
+  const handleExportCsv = () => {
+    if (finalFilteredPayments.length === 0) {
+      alert("No payment records available to export.");
+      return;
+    }
+
+    const headers = [
+      "Voucher No",
+      "Payment Date",
+      "Party / Supplier",
+      "MR No",
+      "PO No",
+      "Advance Done",
+      "Payable Amount",
+      "Paid Amount",
+      "Pending / Retention",
+      "Payment Mode",
+      "Bank Name",
+      "Reference No",
+      "Settlement Status",
+      "Remarks"
+    ];
+
+    const rows = finalFilteredPayments.map(p => {
+      const payable = Number(p.payable_amt || p.total_amount || 0);
+      const paid = Number(p.paid_amount || 0);
+      const pending = payable - paid;
+      const isAdvanceYes = (p.advance_payment_done || 'No').toLowerCase() === 'yes';
+      const dateStr = getPaymentDate(p);
+      const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString('en-IN') : '';
+
+      let statusText = 'Pending';
+      if (payable > 0 && paid >= payable - 0.01) {
+        statusText = 'Fully Settled';
+      } else if (paid > 0) {
+        statusText = 'Partially Settled';
+      }
+
+      return [
+        `"${p.voucher_no || ''}"`,
+        `"${formattedDate}"`,
+        `"${(p.party_name || p.supplier || '').replace(/"/g, '""')}"`,
+        `"${p.mr_no || ''}"`,
+        `"${p.po_no || ''}"`,
+        `"${isAdvanceYes ? 'YES' : 'NO'}"`,
+        payable.toFixed(2),
+        paid.toFixed(2),
+        (pending > 0 ? pending : 0).toFixed(2),
+        `"${p.payment_mode || ''}"`,
+        `"${(p.bank_name || '').replace(/"/g, '""')}"`,
+        `"${(p.reference_no || '').replace(/"/g, '""')}"`,
+        `"${statusText}"`,
+        `"${(p.remarks || '').replace(/"/g, '""')}"`
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    const dateSuffix = new Date().toISOString().split('T')[0];
+    const monthSuffix = selectedMonth !== null ? `_${MONTH_NAMES[selectedMonth]}` : '';
+    link.setAttribute('download', `Payment_Operations_${activeYear}${monthSuffix}_${dateSuffix}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4">
       {/* 1. TOP EXECUTIVE SUMMARY CARDS (DYNAMIC MONTH-WISE KPI METRICS) */}
@@ -321,6 +390,15 @@ export function PaymentDashboardView({
             Party Ledger View
           </button>
           
+          <button
+            onClick={handleExportCsv}
+            className="px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Export filtered records to CSV"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            Export CSV ({finalFilteredPayments.length})
+          </button>
+
           <button
             onClick={() => onExportPdf(finalFilteredPayments)}
             className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"

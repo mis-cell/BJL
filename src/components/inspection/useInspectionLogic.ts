@@ -307,7 +307,7 @@ export function useInspectionLogic() {
 
       if (supabase) {
         try {
-          const withTimeout = (promise: Promise<any>, ms: number = 12000) => {
+          const withTimeout = (promise: Promise<any>, ms: number = 4000) => {
             return Promise.race([
               promise,
               new Promise(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), ms))
@@ -317,16 +317,28 @@ export function useInspectionLogic() {
           const miCols = "*";
           const faCols = "*";
 
-          const [miRes, mimRes, faRes, tmrRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all([
+          const queries: Promise<any>[] = [
             withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false }))),
             withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("final_arrival").select(faCols).order("created_at", { ascending: false }))),
             withTimeout(Promise.resolve(supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
             withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))).catch(() => ({ data: null }))
-          ]);
+            withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null }))
+          ];
+
+          if (deductionMasterList.length === 0) {
+            queries.push(withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })));
+          } else {
+            queries.push(Promise.resolve({ data: deductionMasterList }));
+          }
+
+          if (moistureLogicRules.length === 0) {
+            queries.push(withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))).catch(() => ({ data: null })));
+          } else {
+            queries.push(Promise.resolve({ data: moistureLogicRules }));
+          }
+
+          const [miRes, mimRes, faRes, tmrRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all(queries);
 
           if (miRes.data && Array.isArray(miRes.data)) {
             inspectionList = [...miRes.data];

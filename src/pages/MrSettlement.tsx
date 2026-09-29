@@ -582,24 +582,30 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     ] 
   });
 
+  // In-memory master registers cache
+  const mastersCacheRef = useRef<{ gData?: any[]; agData?: any[]; mDataList?: any[]; aData?: any[]; dData?: any[] }>({});
+
   // Load dashboards & dropdowns
   async function initPage() {
     if (settledList.length === 0) setLoading(true);
     try {
       if (supabase) {
-        // Fetch master registers for lookup
-        const [gData, agData, mDataList, aData, dData] = await Promise.all([
-          supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
-          supabase.from('agency_master').select('*').then(r => r.data || [], () => []),
-          supabase.from('marka_master').select('*').then(r => r.data || [], () => []),
-          supabase.from('area_master').select('*').then(r => r.data || [], () => []),
-          supabase.from('deduction_master').select('*').then(r => r.data || [], () => [])
-        ]);
-        setGradeMasterList(gData);
-        setAgencyMasterList(agData);
-        setMarkaMasterList(mDataList);
-        setAreaMasterList(aData);
-        setDeductionMasterList(dData);
+        // Fetch master registers for lookup (cached in-memory)
+        if (!mastersCacheRef.current.gData) {
+          const [gData, agData, mDataList, aData, dData] = await Promise.all([
+            supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
+            supabase.from('agency_master').select('*').then(r => r.data || [], () => []),
+            supabase.from('marka_master').select('*').then(r => r.data || [], () => []),
+            supabase.from('area_master').select('*').then(r => r.data || [], () => []),
+            supabase.from('deduction_master').select('*').then(r => r.data || [], () => [])
+          ]);
+          mastersCacheRef.current = { gData, agData, mDataList, aData, dData };
+          setGradeMasterList(gData);
+          setAgencyMasterList(agData);
+          setMarkaMasterList(mDataList);
+          setAreaMasterList(aData);
+          setDeductionMasterList(dData);
+        }
 
         // 1. Fetch saved settlements & payments
         const [mDataRes, payRes] = await Promise.all([

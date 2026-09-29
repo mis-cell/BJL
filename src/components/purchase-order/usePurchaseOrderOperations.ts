@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { dbModule } from '../../services/dbModule';
+import { poService } from '../../services/poService';
 import { supabase } from '../../lib/supabase';
 import { getApiUrl, canDeleteData } from '../../lib/utils';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
@@ -302,24 +303,28 @@ export function usePurchaseOrderOperations({
 
     try {
       if (supabase) {
-        await supabase.from(DETAIL_TABLE).delete().eq('po_no', poNo);
-        await supabase.from(MASTER_TABLE).delete().eq('po_no', poNo);
-        await supabase.from('sauda_check_point_details').delete().eq('po_no', poNo);
-        await supabase.from('sauda_check_point').delete().eq('po_no', poNo);
-        await supabase.from('purchase_detail_master').delete().eq('po_no', poNo);
-        await supabase.from('purchase_master').delete().eq('po_no', poNo);
-        await supabase.from('material_mismatch').delete().eq('po_no', poNo);
-        await supabase.from('satta_mismatch').delete().eq('po_no', poNo);
-        await supabase.from('sauda_check_point_deductions').delete().eq('po_no', poNo);
+        await Promise.all([
+          supabase.from(DETAIL_TABLE).delete().eq('po_no', poNo),
+          supabase.from(MASTER_TABLE).delete().eq('po_no', poNo),
+          supabase.from('sauda_check_point_details').delete().eq('po_no', poNo),
+          supabase.from('sauda_check_point').delete().eq('po_no', poNo),
+          supabase.from('purchase_detail_master').delete().eq('po_no', poNo),
+          supabase.from('purchase_master').delete().eq('po_no', poNo),
+          supabase.from('material_mismatch').delete().eq('po_no', poNo),
+          supabase.from('satta_mismatch').delete().eq('po_no', poNo),
+          supabase.from('sauda_check_point_deductions').delete().eq('po_no', poNo)
+        ]);
+      } else {
+        await Promise.all([
+          dbModule.delete(DETAIL_TABLE, 'po_no', poNo).catch(() => {}),
+          dbModule.delete(MASTER_TABLE, 'po_no', poNo).catch(() => {}),
+          dbModule.delete('sauda_check_point_details', 'po_no', poNo).catch(() => {}),
+          dbModule.delete('sauda_check_point', 'po_no', poNo).catch(() => {}),
+          dbModule.delete('purchase_detail_master', 'po_no', poNo).catch(() => {}),
+          dbModule.delete('purchase_master', 'po_no', poNo).catch(() => {}),
+          dbModule.delete('p.o_archive', 'po_no', poNo).catch(() => {})
+        ]);
       }
-
-      await dbModule.delete(DETAIL_TABLE, 'po_no', poNo).catch(() => {});
-      await dbModule.delete(MASTER_TABLE, 'po_no', poNo).catch(() => {});
-      await dbModule.delete('sauda_check_point_details', 'po_no', poNo).catch(() => {});
-      await dbModule.delete('sauda_check_point', 'po_no', poNo).catch(() => {});
-      await dbModule.delete('purchase_detail_master', 'po_no', poNo).catch(() => {});
-      await dbModule.delete('purchase_master', 'po_no', poNo).catch(() => {});
-      await dbModule.delete('p.o_archive', 'po_no', poNo).catch(() => {});
 
       const tokens = [poNo, poNo.split('/').pop() || ''].filter(Boolean);
       tokens.forEach(t => {
@@ -834,29 +839,26 @@ export function usePurchaseOrderOperations({
 
   const handlePrintPo = async (poHeader: any) => {
     try {
-      const details = await dbModule.fetchAll(DETAIL_TABLE);
-      const filtered = details
-        .filter((d: any) => d.po_no === poHeader.po_no)
-        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
+      const filtered = await poService.fetchPoDetails(DETAIL_TABLE, poHeader.po_no);
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
       const mappedItems = filtered.map((d: any, idx: number) => {
-        const qtyVal = d.quantity || 0;
+        const qtyVal = d.qty || d.quantity || 0;
         const weightVal = isBales 
           ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight_mt || 0);
+          : (d.weight || d.weight_mt || 0);
         return {
           srl: idx + 1,
-          crop: d.crop_year || '2025-26',
+          crop: d.crop || d.crop_year || '2025-26',
           grade_code: d.grade_code || '',
-          grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_code || 'STANDARD GRADE',
+          grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_name || d.grade_code || 'STANDARD GRADE',
           agency_code: d.agency_code || '',
-          agency_name: agencyList.find(a => a.agency_code === d.agency_code)?.agency_name || d.agency_code || 'MAIN AGENCY',
+          agency_name: agencyList.find(a => a.agency_code === d.agency_code)?.agency_name || d.agency_name || d.agency_code || 'MAIN AGENCY',
           marka_code: d.marka_code || '',
-          marka_name: markaList.find(m => m.marka_code === d.marka_code)?.marka_name || d.marka_code || 'NORMAL GRADE',
+          marka_name: markaList.find(m => m.marka_code === d.marka_code)?.marka_name || d.marka_name || d.marka_code || 'NORMAL GRADE',
           qty: qtyVal,
           weight: weightVal,
-          rate: d.rate_qntl || 0
+          rate: d.rate || d.rate_qntl || 0
         };
       });
 

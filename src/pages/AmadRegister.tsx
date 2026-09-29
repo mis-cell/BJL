@@ -855,7 +855,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Unit</th>
                   <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Qty</th>
                   <th className="py-3 px-3 font-semibold text-right border-r border-[#1E4D2B]/30">Final Weight (M.Ton)</th>
-                  <th className="py-3 px-3 font-semibold text-center border-r border-[#1E4D2B]/30">Inspection Status</th>
                   <th className="py-3 px-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
@@ -895,16 +894,6 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                       </td>
                       <td className="py-2 px-3 text-right font-bold text-blue-900">{bales}</td>
                       <td className="py-2 px-3 text-right font-bold text-rose-700">{weightMt.toFixed(3)}</td>
-                      <td className="py-2 px-3 text-center">
-                        <span className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border tracking-wider",
-                          isInspected
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                            : "bg-amber-50 text-amber-800 border-amber-300"
-                        )}>
-                          {isInspected ? '✓ DONE' : '⏳ PENDING'}
-                        </span>
-                      </td>
                       <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1.5">
                           {onCreateFinalMr && (
@@ -949,7 +938,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
                 {filteredAmads.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-400 font-sans italic text-xs">
+                    <td colSpan={10} className="py-12 text-center text-slate-400 font-sans italic text-xs">
                       No matching Temporary M.R records found.
                     </td>
                   </tr>

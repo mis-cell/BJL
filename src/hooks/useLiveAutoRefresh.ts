@@ -1,22 +1,69 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
+let notifyTimeout: any = null;
+const pendingChangedTables = new Set<string>();
+
+/**
+ * Batched data change notification to prevent event-burst storms
+ */
 export function notifyDataChanged(tableName?: string) {
-  if (typeof window !== 'undefined') {
-    const detail = tableName ? { table: tableName } : {};
+  if (typeof window === 'undefined') return;
+  if (tableName) pendingChangedTables.add(tableName.toLowerCase());
+
+  if (notifyTimeout) clearTimeout(notifyTimeout);
+  notifyTimeout = setTimeout(() => {
+    const tablesList = Array.from(pendingChangedTables);
+    pendingChangedTables.clear();
+    const detail = tablesList.length === 1 ? { table: tablesList[0], tables: tablesList } : { tables: tablesList };
     window.dispatchEvent(new CustomEvent('app-data-updated', { detail }));
     window.dispatchEvent(new CustomEvent('app:data-updated', { detail }));
+  }, 250);
+}
+
+// Global Singleton Realtime Channel to prevent hundreds of duplicate websocket connections
+let globalRealtimeChannel: any = null;
+let globalSubscriptionActive = false;
+
+function initGlobalRealtimeMultiplexer() {
+  if (globalSubscriptionActive || !supabase || typeof window === 'undefined') return;
+  globalSubscriptionActive = true;
+
+  try {
+    globalRealtimeChannel = supabase
+      .channel('app_global_realtime_events')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload: any) => {
+          const changedTable = payload?.table;
+          if (changedTable) {
+            notifyDataChanged(changedTable);
+          } else {
+            notifyDataChanged();
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'TIMED_OUT' || status === 'CLOSED') {
+          globalSubscriptionActive = false;
+        }
+      });
+  } catch (err) {
+    console.warn('[Realtime Multiplexer] Global channel setup failed:', err);
+    globalSubscriptionActive = false;
   }
 }
 
 export interface UseLiveAutoRefreshOptions {
   tables?: string[];   // Specific Supabase tables to listen for
   enabled?: boolean;   // Conditionally enable/disable (default true)
+  debounceMs?: number; // Custom debounce in ms (default 350)
 }
 
 /**
- * Table-specific Supabase Realtime auto-refresh hook.
- * Replaces global 5s polling with event-driven Supabase Realtime subscriptions.
+ * High-performance, debounced Supabase Realtime auto-refresh hook.
+ * Eliminates lag, thread congestion, and cascading parallel query bursts on every save/edit/delete.
  */
 export function useLiveAutoRefresh(
   refreshCallback: (payload?: any) => void | Promise<void>,
@@ -28,8 +75,11 @@ export function useLiveAutoRefresh(
     ? { tables: options }
     : options;
 
-  const { tables = [], enabled = true } = normalizedOptions;
+  const { tables = [], enabled = true, debounceMs = 350 } = normalizedOptions;
   const callbackRef = useRef(refreshCallback);
+  const debounceTimerRef = useRef<any>(null);
+  const isExecutingRef = useRef<boolean>(false);
+  const hasPendingExecutionRef = useRef<boolean>(false);
 
   useEffect(() => {
     callbackRef.current = refreshCallback;
@@ -38,92 +88,77 @@ export function useLiveAutoRefresh(
   useEffect(() => {
     if (!enabled) return;
 
+    // Initialize global realtime multiplexer once
+    initGlobalRealtimeMultiplexer();
+
     let isSubscribed = true;
 
-    const safeExecute = async (payload?: any) => {
+    const executeCallback = async (payload?: any) => {
       if (!isSubscribed) return;
+      if (isExecutingRef.current) {
+        hasPendingExecutionRef.current = true;
+        return;
+      }
+
+      isExecutingRef.current = true;
+      hasPendingExecutionRef.current = false;
       try {
         await callbackRef.current(payload);
       } catch (e) {
         console.warn('[Realtime Auto Refresh] Error executing callback:', e);
+      } finally {
+        isExecutingRef.current = false;
+        if (isSubscribed && hasPendingExecutionRef.current) {
+          hasPendingExecutionRef.current = false;
+          executeCallback();
+        }
       }
     };
 
-    // 1. Initial execution on component mount
-    safeExecute();
+    const triggerDebounced = (payload?: any) => {
+      if (!isSubscribed) return;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        executeCallback(payload);
+      }, debounceMs);
+    };
 
-    // 2. Custom Event Listener for local table updates
+    // 1. Initial execution on component mount (immediate)
+    executeCallback();
+
+    // 2. Custom Event Listener for local table updates & broadcasted realtime events
+    const normalizedTables = tables.map(t => t.toLowerCase());
+
     const handleCustomEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      const changedTable = customEvent.detail?.table;
+      const changedTable = customEvent.detail?.table ? String(customEvent.detail.table).toLowerCase() : null;
+      const changedTables: string[] = (customEvent.detail?.tables || (changedTable ? [changedTable] : [])).map((t: string) => String(t).toLowerCase());
 
-      if (changedTable && tables.length > 0) {
-        // Only refresh if this hook listens to the specific table that changed
-        if (tables.includes(changedTable)) {
-          safeExecute();
+      if (changedTables.length > 0 && normalizedTables.length > 0) {
+        // Only refresh if this hook listens to one of the tables that changed
+        const hasMatch = changedTables.some(t => normalizedTables.includes(t));
+        if (hasMatch) {
+          triggerDebounced();
         }
       } else {
         // If no specific table was provided in the event or hook has no table filter
-        safeExecute();
+        triggerDebounced();
       }
     };
 
     window.addEventListener('app-data-updated', handleCustomEvent);
     window.addEventListener('app:data-updated', handleCustomEvent);
 
-    // 3. Supabase Realtime Postgres Changes Listener (NO setInterval POLLING)
-    let channel: any = null;
-    if (supabase) {
-      try {
-        const uniqueId = Math.random().toString(36).substring(2, 7);
-        const channelName = tables.length > 0
-          ? `rt-${tables.slice().sort().join('_')}-${uniqueId}`
-          : `rt-all-${uniqueId}`;
-
-        channel = supabase.channel(channelName);
-
-        if (tables.length > 0) {
-          // Listen ONLY to changes on the specified tables
-          tables.forEach((t) => {
-            channel = channel.on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: t },
-              (payload: any) => {
-                safeExecute(payload);
-              }
-            );
-          });
-        } else {
-          // Fallback if no tables provided: listen to public schema changes
-          channel = channel.on(
-            'postgres_changes',
-            { event: '*', schema: 'public' },
-            (payload: any) => {
-              safeExecute(payload);
-            }
-          );
-        }
-
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            // Channel subscribed successfully
-          } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
-            // Re-sync on connection recovery
-            safeExecute();
-          }
-        });
-      } catch (err) {
-        console.warn('[Realtime Auto Refresh] Channel setup failed:', err);
-      }
-    }
-
     return () => {
       isSubscribed = false;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
       window.removeEventListener('app-data-updated', handleCustomEvent);
       window.removeEventListener('app:data-updated', handleCustomEvent);
-      if (channel && supabase) {
-        supabase.removeChannel(channel).catch(() => {});
-      }
     };
-  }, [enabled, JSON.stringify(tables), ...deps]);
+  }, [enabled, JSON.stringify(tables), debounceMs, ...deps]);
 }
+

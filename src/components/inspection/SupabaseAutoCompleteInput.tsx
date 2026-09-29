@@ -17,6 +17,10 @@ export interface SupabaseAutoCompleteInputProps {
   savedInspections?: any[];
 }
 
+// Module-level cached autocomplete records to prevent repeated network spam across fields
+let cachedCombinedRecords: any[] | null = null;
+let lastFetchTime = 0;
+
 export const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps> = ({
   label,
   name,
@@ -30,7 +34,7 @@ export const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps>
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [dbRecords, setDbRecords] = useState<any[]>([]);
+  const [dbRecords, setDbRecords] = useState<any[]>(() => cachedCombinedRecords || []);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -50,18 +54,22 @@ export const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps>
     };
   }, []);
 
-  useLiveAutoRefresh(fetchLiveData, [], { tables: ['material_inspection', 'final_arrival'] });
+  // Fetch data directly from Supabase & LocalStorage (cached for 10 seconds across inputs)
+  async function fetchLiveData(force = false) {
+    const now = Date.now();
+    if (!force && cachedCombinedRecords && now - lastFetchTime < 10000) {
+      setDbRecords(cachedCombinedRecords);
+      return;
+    }
 
-  // Fetch data directly from Supabase & LocalStorage
-  async function fetchLiveData() {
     if (dbRecords.length === 0) setLoading(true);
     setFetchError(null);
     try {
       let data: any[] = [];
       if (supabase) {
         const [matInspRes, finalArrRes] = await Promise.all([
-          supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).then(r => r, () => ({ data: [] })),
-          supabase.from("final_arrival").select("*").order("date", { ascending: false }).then(r => r, () => ({ data: [] })),
+          supabase.from("material_inspection").select("id, mr_no, po_no, mill_po_no, temporary_arrival_no, arrival_no, supplier, broker, created_at").order("created_at", { ascending: false }).limit(200).then(r => r, () => ({ data: [] })),
+          supabase.from("final_arrival").select("final_arrival_id, final_arrival_no, temporary_arrival_no, arrival_no, mr_no, po_no, supplier, broker, date").order("date", { ascending: false }).limit(200).then(r => r, () => ({ data: [] })),
         ]);
 
         const combined = [
@@ -77,8 +85,8 @@ export const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps>
         });
         data = Array.from(uniqueMap.values());
       } else {
-        const matInspRes = await dbModule.fetchAll("material_inspection").catch(() => []);
-        const finalArrRes = await dbModule.fetchAll("final_arrival").catch(() => []);
+        const matInspRes = await dbModule.fetchAll("material_inspection", undefined, false, 200).catch(() => []);
+        const finalArrRes = await dbModule.fetchAll("final_arrival", undefined, false, 200).catch(() => []);
         const combined = [...(matInspRes || []), ...(finalArrRes || [])];
         const uniqueMap = new Map();
         combined.forEach((item: any) => {
@@ -90,22 +98,8 @@ export const SupabaseAutoCompleteInput: React.FC<SupabaseAutoCompleteInputProps>
         data = Array.from(uniqueMap.values());
       }
 
-      // Merge cached inspection_master_records from localStorage if present
-      try {
-        const cached = localStorage.getItem("inspection_master_records");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((item: any) => {
-              const key = item.mr_no || item.id || item.mill_po_no || item.po_no;
-              if (key && !data.some(d => d.mr_no === key || d.mill_po_no === key)) {
-                data.unshift(item);
-              }
-            });
-          }
-        }
-      } catch (e) {}
-
+      cachedCombinedRecords = data;
+      lastFetchTime = Date.now();
       setDbRecords(data);
     } catch (err: any) {
       console.error(`Error fetching inspection records for ${name}:`, err);

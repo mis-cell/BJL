@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { notifyDataChanged } from "../hooks/useLiveAutoRefresh";
 
 export type EntityType = 
   | 'user_master' 
@@ -42,21 +43,22 @@ function extractMissingColumn(msg?: string): string | null {
 }
 
 export const dbModule = {
-  async fetchAll(table: string, orderCol?: string, ascending: boolean = true): Promise<any[]> {
+  async fetchAll(table: string, orderCol?: string, ascending: boolean = true, limit?: number): Promise<any[]> {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
     let query = supabase.from(table).select("*");
     if (orderCol) query = query.order(orderCol, { ascending });
+    if (limit) query = query.limit(limit);
     
     const { data, error } = await query;
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   async insert(table: string, data: any) {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'insert', table, data });
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return data;
     }
     let payload = { ...data };
@@ -68,7 +70,7 @@ export const dbModule = {
         .maybeSingle();
       
       if (error) {
-        // 1. Check if an empty string caused a type mismatch error (e.g. invalid input syntax for type integer: "")
+        // 1. Check if an empty string caused a type mismatch error
         if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
           let converted = false;
           Object.keys(payload).forEach(k => {
@@ -78,20 +80,18 @@ export const dbModule = {
             }
           });
           if (converted) {
-            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
             continue;
           }
         }
 
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
-          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying insert...`);
           delete payload[col];
           continue;
         }
         throw error;
       }
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return result || payload;
     }
   },
@@ -100,7 +100,7 @@ export const dbModule = {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'insert', table, data });
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return data;
     }
     let payload = { ...data };
@@ -121,20 +121,18 @@ export const dbModule = {
             }
           });
           if (converted) {
-            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
             continue;
           }
         }
 
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
-          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying upsert...`);
           delete payload[col];
           continue;
         }
         throw error;
       }
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return result || payload;
     }
   },
@@ -143,7 +141,7 @@ export const dbModule = {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'update', table, idCol, idVal, data });
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return data;
     }
     let payload = { ...data };
@@ -165,20 +163,18 @@ export const dbModule = {
             }
           });
           if (converted) {
-            console.warn(`[dbModule] Converted empty string fields to null for ${table} and retrying...`);
             continue;
           }
         }
 
         const col = extractMissingColumn(error.message);
         if (col && col in payload) {
-          console.warn(`[dbModule] Column '${col}' not in ${table} schema. Stripping and retrying update...`);
           delete payload[col];
           continue;
         }
         throw error;
       }
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return result || payload;
     }
   },
@@ -187,7 +183,7 @@ export const dbModule = {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'delete', table, idCol, idVal });
-      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+      notifyDataChanged(table);
       return true;
     }
     const { error } = await supabase
@@ -196,7 +192,7 @@ export const dbModule = {
       .eq(idCol, idVal);
     
     if (error) throw error;
-    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('app-data-updated'));
+    notifyDataChanged(table);
     return true;
   }
 };
@@ -213,20 +209,14 @@ interface OfflineAction {
 
 let inMemoryOfflineQueue: OfflineAction[] = [];
 
-function getOfflineQueue(): OfflineAction[] {
-  return inMemoryOfflineQueue;
-}
-
 function queueOfflineAction(action: OfflineAction) {
   inMemoryOfflineQueue.push({ ...action, timestamp: Date.now() });
-  console.warn(`[SYNC] Network offline. Queued action in memory: ${action.action} on ${action.table}`);
 }
 
 export async function flushOfflineQueue() {
   const queue = [...inMemoryOfflineQueue];
   if (queue.length === 0) return;
 
-  console.log(`[SYNC] Network online. Flushing ${queue.length} queued actions...`);
   const failedQueue: OfflineAction[] = [];
 
   for (const item of queue) {
@@ -245,12 +235,11 @@ export async function flushOfflineQueue() {
   }
 
   inMemoryOfflineQueue = failedQueue;
-  if (failedQueue.length === 0) {
-    console.log('[SYNC] All in-memory offline actions synced successfully.');
-  }
 }
 
 // Auto-flush when online
-window.addEventListener('online', () => {
-  flushOfflineQueue();
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    flushOfflineQueue();
+  });
+}
