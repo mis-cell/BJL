@@ -287,17 +287,33 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                    </div>
                    <div className="flex items-center gap-2">
                       <label htmlFor="weight_unit_kgs_3530" className="whitespace-nowrap font-bold">Weight/Unit (Kgs.)</label>
-                      <input  id="weight_unit_kgs_3530" name="weight_unit_kgs" aria-label="Weight/Unit (Kgs.)"className="w-16 bg-slate-100 border border-slate-400 p-0.5 outline-none text-right font-bold text-black" value={formData.weight_unit_kgs} readOnly />
-                      <button onClick={(e) => { 
+                      <input 
+                        id="weight_unit_kgs_3530" 
+                        name="weight_unit_kgs" 
+                        aria-label="Weight/Unit (Kgs.)"
+                        className="w-16 bg-white border border-slate-400 p-0.5 outline-none text-right font-bold text-black" 
+                        value={formData.weight_unit_kgs} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData(prev => ({ ...prev, weight_unit_kgs: val }));
+                        }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={(e) => { 
                           e.preventDefault(); 
                           setCalcData({
                               total_lorries: formData.total_no_of_lorries || '1',
-                              units_per_lorry: formData.units_per_lorry || '200',
-                              total_units: formData.total_units || '200',
-                              weight_per_lorry: formData.total_contract_mt || formData.weight_per_lorry || '29.500'
+                              units_per_lorry: formData.units_per_lorry || '',
+                              total_units: formData.total_units || '',
+                              weight_per_lorry: formData.weight_per_lorry || '13500'
                            } as any);
                           setIsCalcOpen(true); 
-                      }} className="bg-slate-200 border border-slate-400 px-3.5 py-0.5 hover:bg-slate-300 ml-2 shadow-sm font-bold text-black">Calculate Helper</button>
+                        }} 
+                        className="bg-slate-200 border border-slate-400 px-3 py-0.5 hover:bg-slate-300 ml-2 shadow-xs font-bold text-black cursor-pointer active:bg-slate-400"
+                      >
+                        Calculate Helper
+                      </button>
                    </div>
                 </div>
 
@@ -314,13 +330,29 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         onChange={(e) => {
                           const lorriesVal = e.target.value;
                           const lorries = parseFloat(lorriesVal) || 0;
+                          const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+                          const isLoose = cleanName === 'LOOSE' || cleanName === 'LOS';
+                          const isPBales = cleanName === 'PBALES' || cleanName === 'PBALE' || cleanName === 'PB';
+                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB';
+                          const isNonUnit = isLoose || isPBales || isHBales;
+
+                          if (isNonUnit) {
+                            setFormData(prev => ({
+                              ...prev,
+                              total_no_of_lorries: lorriesVal,
+                              units_per_lorry: '',
+                              total_units: ''
+                            }));
+                            return;
+                          }
+
                           const totUnits = parseFloat(formData.total_units) || 0;
-                          const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                          const unitWt = isDrums ? 50 : 147.5;
+                          const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
+                          const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
 
                           if (lorries > 0 && totUnits > 0) {
                             const unitsPerLorry = totUnits / lorries;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
+                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
                             const totContractMt = ((totUnits * unitWt) / 1000).toFixed(3);
                             const wtPerLorry = (parseFloat(totContractMt) / lorries).toFixed(3);
                             setFormData(prev => ({
@@ -351,8 +383,9 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                           const unitsVal = e.target.value;
                           const unitsPerLorry = parseFloat(unitsVal) || 0;
                           const lorries = parseFloat(formData.total_no_of_lorries) || 0;
-                          const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                          const unitWt = isDrums ? 50 : 147.5;
+                          const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+                          const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
+                          const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
 
                           if (lorries > 0 && unitsPerLorry > 0) {
                             const totUnits = Math.round(lorries * unitsPerLorry);
@@ -386,12 +419,13 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                           const totUnitsVal = e.target.value;
                           const totUnits = parseFloat(totUnitsVal) || 0;
                           const lorries = parseFloat(formData.total_no_of_lorries) || 0;
-                          const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                          const unitWt = isDrums ? 50 : 147.5;
+                          const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+                          const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
+                          const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
 
                           if (totUnits > 0) {
                             const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
+                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
                             const totContract = ((totUnits * unitWt) / 1000).toFixed(3);
                             const wtPerLorry = lorries > 0 ? (parseFloat(totContract) / lorries).toFixed(3) : totContract;
                             setFormData(prev => ({
@@ -421,15 +455,33 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         onChange={(e) => {
                           const val = e.target.value;
                           const wtVal = parseFloat(val) || 0;
-                          const isDrums = (formData.purchase_unit_name || '').toUpperCase() === 'DRUMS';
-                          const unitWt = isDrums ? 50 : 147.5;
+                          const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+                          const isLoose = cleanName === 'LOOSE' || cleanName === 'LOS';
+                          const isPBales = cleanName === 'PBALES' || cleanName === 'PBALE' || cleanName === 'PB';
+                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB';
+                          const isNonUnit = isLoose || isPBales || isHBales;
+
+                          if (isNonUnit) {
+                            setFormData(prev => ({
+                              ...prev,
+                              weight_per_lorry: val,
+                              total_units: '',
+                              units_per_lorry: '',
+                              total_contract_mt: wtVal > 0 ? (wtVal >= 100 ? (wtVal / 1000).toFixed(3) : wtVal.toFixed(3)) : prev.total_contract_mt
+                            }));
+                            return;
+                          }
+
+                          const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
+                          const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
                           const lorries = parseFloat(formData.total_no_of_lorries) || 1;
 
                           if (wtVal > 0) {
-                            const totUnits = Math.round((wtVal * 1000) / unitWt);
+                            const wtKg = wtVal >= 100 ? wtVal : wtVal * 1000;
+                            const totUnits = Math.round(wtKg / unitWt);
                             const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : unitsPerLorry.toFixed(2);
-                            const totContract = wtVal.toFixed(3);
+                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
+                            const totContract = (wtKg / 1000).toFixed(3);
                             setFormData(prev => ({
                               ...prev,
                               weight_per_lorry: val,

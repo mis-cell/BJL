@@ -160,6 +160,9 @@ export const PurchaseOrderFormView: React.FC<PurchaseOrderFormViewProps> = ({
             setCalcData={setCalcData}
             isPtf={formData.is_ptf}
             purchaseUnitName={formData.purchase_unit_name}
+            weightUnitKgs={formData.weight_unit_kgs}
+            unitList={unitList}
+            onUnitTypeChange={(name, code) => handlePurchaseUnitChange(name, code)}
           />
 
           <PurchaseOrderFormHeader
