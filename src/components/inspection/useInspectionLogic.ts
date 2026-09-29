@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLiveAutoRefresh } from "../../hooks/useLiveAutoRefresh";
 import { supabase } from "../../lib/supabase";
 import { dbModule } from "../../services/dbModule";
+import { getCurrentUserContext } from "../../lib/permissions";
+import { logChange } from "../../services/auditLogService";
 import {
   DeductionRow,
   InspectionMasterRecord,
@@ -1163,6 +1165,22 @@ export function useInspectionLogic() {
         }
       }
 
+      // Record in Universal Change Log
+      const currentUser = getCurrentUserContext();
+      const userName = currentUser.username || currentUser.userName || currentUser.userId || "Operator";
+      await logChange({
+        module: 'Mill Inspection',
+        entity_name: 'Inspection Record',
+        record_id: cleanMrNo,
+        action: 'UPDATE',
+        field_name: 'deduction_amount',
+        field_label: `Inspection Deductions (${cleanMrNo})`,
+        old_value: 'Draft',
+        new_value: `₹${Number(headerForm.deduction_amount || 0).toLocaleString('en-IN')}`,
+        user_name: userName,
+        remarks: `Mill Inspection for PO ${headerForm.po_no || 'N/A'}, Supplier: ${headerForm.supplier_name || 'N/A'}, Total Bales: ${totalBalesCount}, Gross: ${totalReceiptGrossMt.toFixed(3)} MT`
+      });
+
       alert("Data Saved Successfully.");
       showToast("Data Saved Successfully.");
       setViewMode("dashboard");
@@ -1177,6 +1195,9 @@ export function useInspectionLogic() {
   const handleDeleteRecord = async (mr_no: string) => {
     if (!confirm(`Are you sure you want to delete inspection record ${mr_no}?`)) return;
     try {
+      const currentUser = getCurrentUserContext();
+      const userName = currentUser.username || currentUser.userName || currentUser.userId || "Operator";
+
       if (supabase) {
         await Promise.all([
           supabase.from("material_inspection_details").delete().eq("mr_no", mr_no).then(() => {}, () => {}),
@@ -1185,6 +1206,19 @@ export function useInspectionLogic() {
         ]);
         await supabase.from("material_inspection").delete().eq("mr_no", mr_no);
       }
+
+      await logChange({
+        module: 'Mill Inspection',
+        entity_name: 'Inspection Record',
+        record_id: mr_no,
+        action: 'DELETE',
+        field_name: 'inspection_record',
+        field_label: `Deleted Inspection (${mr_no})`,
+        old_value: `Record ${mr_no}`,
+        new_value: 'DELETED',
+        user_name: userName,
+        remarks: `Deleted Inspection record ${mr_no}`
+      });
       setRecords(prev => prev.filter(r => r.mr_no !== mr_no));
       showToast(`Record ${mr_no} deleted.`);
     } catch (err: any) {

@@ -37,11 +37,13 @@ import {
   TrendingUp,
   Warehouse,
   Users,
-  Settings
+  Settings,
+  History
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
 import NotificationCenter from './NotificationCenter';
+import { UniversalAuditLogModal } from './UniversalAuditLogModal';
 import { 
   getCurrentUserContext, 
   hasModulePermission, 
@@ -246,6 +248,13 @@ export default function LegacyLayout({
   }, []);
 
   const [isMaximized, setIsMaximized] = React.useState(false);
+  const [isAuditLogOpen, setIsAuditLogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpenAudit = () => setIsAuditLogOpen(true);
+    window.addEventListener('open-system-change-logs', handleOpenAudit);
+    return () => window.removeEventListener('open-system-change-logs', handleOpenAudit);
+  }, []);
 
   React.useEffect(() => {
     const onFsChange = () => {
@@ -306,6 +315,10 @@ export default function LegacyLayout({
 
   const handleNavNavigation = (pageId: string) => {
     setActiveMenuDropdown(null);
+    if (pageId === 'system_change_logs') {
+      setIsAuditLogOpen(true);
+      return;
+    }
     if (onNavClick) {
       onNavClick(pageId);
     } else {
@@ -381,6 +394,7 @@ export default function LegacyLayout({
       icon: BarChart3,
       subItems: [
         { id: 'reports', label: 'System Reports', icon: BarChart3, pageId: 'reports' },
+        { id: 'system_change_logs', label: 'System Change Log', icon: History, pageId: 'system_change_logs' },
         { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
         { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
         { id: 'settings', label: 'Config Center', icon: Settings, pageId: 'settings' },
@@ -428,6 +442,15 @@ export default function LegacyLayout({
           </div>
 
           <div className="flex gap-1 sm:gap-1.5 shrink-0 z-10 items-center">
+             <button
+               type="button"
+               onClick={() => setIsAuditLogOpen(true)}
+               title="Universal System Audit & Change Log"
+               className="h-5 px-2 bg-[#174C2C] hover:bg-[#235E39] text-[#D4AF37] border border-[#D4AF37]/50 rounded flex items-center gap-1 text-[10px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+             >
+               <History className="h-3 w-3 text-[#D4AF37]" />
+               <span className="hidden sm:inline">Change Logs</span>
+             </button>
              <button 
                onClick={handleMaximizeClick}
                title="Maximize / Restore"
@@ -728,6 +751,10 @@ export default function LegacyLayout({
             onClose={() => setIsNotifOpen(false)}
             unreadCount={unreadCount}
             setUnreadCount={setUnreadCount}
+          />
+          <UniversalAuditLogModal
+            isOpen={isAuditLogOpen}
+            onClose={() => setIsAuditLogOpen(false)}
           />
         </div>
       </div>

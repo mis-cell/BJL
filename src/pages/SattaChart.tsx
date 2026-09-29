@@ -42,6 +42,8 @@ import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/per
 import LegacyLayout, { LegacyButton } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
 import { refreshSattaCache } from '../services/sattaRateService';
+import { logChange } from '../services/auditLogService';
+import { UniversalAuditLogModal } from '../components/UniversalAuditLogModal';
 
 // Complete grades list in order from the official Satta chart specification
 const ALL_GRADES = [
@@ -115,11 +117,13 @@ export default function SattaChart({
   
   // Database States
   const [dbDifferentials, setDbDifferentials] = useState<Record<string, Record<string, number>>>({});
+  const [dbDiffUsers, setDbDiffUsers] = useState<Record<string, Record<string, { user: string; time?: string }>>>({});
   const [rateHistory, setRateHistory] = useState<any[]>([]);
   const [latestRateRecord, setLatestRateRecord] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{message: string, success: boolean} | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+  const [showUniversalAuditModal, setShowUniversalAuditModal] = useState<boolean>(false);
 
   // Differential History Audit State
   const [diffHistoryLogs, setDiffHistoryLogs] = useState<any[]>([]);
@@ -169,7 +173,7 @@ export default function SattaChart({
     loadChartConfig();
     fetchRateHistory();
     fetchDiffHistory();
-  }, [], { tables: ['satta_base_rates', 'satta_differentials', 'satta_calculated_rates', 'satta_differential_audit_logs'] });
+  }, [], { tables: ['satta_base_rates', 'satta_differentials', 'satta_calculated_rates', 'satta_differential_audit_logs', 'app_audit_logs'] });
 
   // Auto-select latest instance when entering range_list mode
   useEffect(() => {
@@ -179,11 +183,27 @@ export default function SattaChart({
   }, [historySubTab, rateHistory]);
 
   // Fast rate lookup map by date key (YYYY-MM-DD)
+  // Preserves latest update on that date as the active rate
   const rateLookup = useMemo(() => {
     const map = new Map<string, number>();
     rateHistory.forEach(r => {
       if (r.start_date && r.base_rate !== undefined && r.base_rate !== null) {
-        map.set(r.start_date, Number(r.base_rate));
+        if (!map.has(r.start_date)) {
+          map.set(r.start_date, Number(r.base_rate));
+        }
+      }
+    });
+    return map;
+  }, [rateHistory]);
+
+  // Intraday multiple updates tracker per date
+  const intradayUpdatesMap = useMemo(() => {
+    const map = new Map<string, any[]>();
+    rateHistory.forEach(r => {
+      if (r.start_date && r.base_rate !== undefined && r.base_rate !== null) {
+        const list = map.get(r.start_date) || [];
+        list.push(r);
+        map.set(r.start_date, list);
       }
     });
     return map;
@@ -331,6 +351,7 @@ export default function SattaChart({
       if (diffs && diffs.length > 0) {
         // Map to structured cache and auto-sanitize extreme typos if any (> 5000)
         const cache: Record<string, Record<string, number>> = {};
+        const userMap: Record<string, Record<string, { user: string; time?: string }>> = {};
         diffs.forEach(item => {
           let area = String(item.area || '').trim().toUpperCase();
           // LOWER ASSAM & BILASIPARA & L/A TARABARI are the exact same: treat all as L/A TARABARI
@@ -339,7 +360,7 @@ export default function SattaChart({
             area === 'BILASIPARA' || 
             area.includes('TARABARI') || 
             area === 'L/A' ||
-            area === 'BELLOW ASSAM' ||
+            area === 'BELLOW ASSAM' || 
             area === 'BELOW ASSAM' ||
             area.includes('BELLOW') ||
             area.includes('BELOW')
@@ -347,6 +368,7 @@ export default function SattaChart({
             area = 'L/A TARABARI';
           }
           if (!cache[area]) cache[area] = {};
+          if (!userMap[area]) userMap[area] = {};
           let val = Number(item.differential);
           if (Math.abs(val) > 5000) {
             val = Math.round(val / 10);
@@ -355,6 +377,10 @@ export default function SattaChart({
             }
           }
           cache[area][item.grade] = val;
+          userMap[area][item.grade] = {
+            user: item.updated_by || 'ADMIN',
+            time: item.updated_at || item.created_at
+          };
         });
 
         // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows from database
@@ -364,8 +390,10 @@ export default function SattaChart({
         }
 
         setDbDifferentials(cache);
+        setDbDiffUsers(userMap);
       } else {
         setDbDifferentials({});
+        setDbDiffUsers({});
       }
       setLastSyncedAt(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
@@ -466,16 +494,21 @@ export default function SattaChart({
     const diffChange = oldDiff !== null ? numericDiff - oldDiff : null;
     const changedDate = new Date().toISOString().split('T')[0];
     const userCtx = getCurrentUserContext();
-    const changedBy = userCtx?.username || userCtx?.userName || 'ADMIN';
+    const changedBy = userCtx?.username || userCtx?.userName || userCtx?.userId || 'ADMIN';
+    const nowIso = new Date().toISOString();
 
     try {
       setIsLoading(true);
+      // 1. Upsert into live satta_differentials table with updated_by and timestamp
       const { error } = await supabase
         .from('satta_differentials')
         .upsert({
           area: canonicalArea,
           grade,
-          differential: numericDiff
+          differential: numericDiff,
+          updated_by: changedBy,
+          updated_at: nowIso,
+          start_date: changedDate
         }, {
           onConflict: 'area,grade'
         })
@@ -483,7 +516,22 @@ export default function SattaChart({
 
       if (error) throw error;
 
-      // Record audit history in Supabase satta_differential_audit_logs
+      // 2. Auto-save per-day differential calculated rate snapshot in database
+      await supabase
+        .from('satta_calculated_rates')
+        .upsert({
+          start_date: changedDate,
+          area: canonicalArea,
+          grade,
+          differential: numericDiff,
+          base_rate: baseRate,
+          final_rate: baseRate + numericDiff,
+          updated_by: changedBy,
+          created_at: nowIso
+        })
+        .then();
+
+      // 3. Record audit history in Supabase satta_differential_audit_logs
       await supabase
         .from('satta_differential_audit_logs')
         .insert({
@@ -495,8 +543,22 @@ export default function SattaChart({
           differential_change: diffChange,
           changed_by: changedBy,
           remarks: `Live Pivot Matrix edit: ${oldDiff !== null ? (oldDiff >= 0 ? '+' : '') + oldDiff : 'New'} → ${(numericDiff >= 0 ? '+' : '') + numericDiff}`,
-          created_at: new Date().toISOString()
+          created_at: nowIso
         });
+
+      // 4. Record in Universal App Audit Log
+      await logChange({
+        module: 'Satta Desk / Rate Chart',
+        entity_name: 'Satta Differential',
+        record_id: `${canonicalArea} • ${grade}`,
+        action: 'UPDATE',
+        field_name: 'differential',
+        field_label: `${canonicalArea} [${grade}] Differential`,
+        old_value: oldDiff !== null ? (oldDiff >= 0 ? `+${oldDiff}` : `${oldDiff}`) : '0',
+        new_value: numericDiff >= 0 ? `+${numericDiff}` : `${numericDiff}`,
+        user_name: changedBy,
+        remarks: `Live Pivot Matrix differential updated from ${oldDiff !== null ? oldDiff : 0} to ${numericDiff} on ${changedDate}`
+      });
 
       // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows
       if (canonicalArea === 'L/A TARABARI') {
@@ -509,6 +571,14 @@ export default function SattaChart({
         [canonicalArea]: {
           ...(prev[canonicalArea] || {}),
           [grade]: numericDiff
+        }
+      }));
+
+      setDbDiffUsers(prev => ({
+        ...prev,
+        [canonicalArea]: {
+          ...(prev[canonicalArea] || {}),
+          [grade]: { user: changedBy, time: nowIso }
         }
       }));
 
@@ -593,22 +663,13 @@ export default function SattaChart({
     setIsLoading(true);
     setSaveStatus(null);
 
+    const userCtx = getCurrentUserContext();
+    const currentUserName = userCtx?.username || userCtx?.userName || userCtx?.userId || 'ADMIN';
+    const nowIso = new Date().toISOString();
+
     try {
-      await supabase
-        .from('satta_calculated_rates')
-        .delete()
-        .eq('start_date', startDate);
-
-      await supabase
-        .from('satta_base_rates')
-        .delete()
-        .eq('start_date', startDate);
-
-      await supabase
-        .from('satta_base_rate_audit_logs')
-        .delete()
-        .eq('changed_date', startDate);
-
+      // Do NOT delete previous base rate records on the same date!
+      // Multiple intraday updates are preserved in satta_base_rates and history.
       const oldRateValue = latestRateRecord ? Number(latestRateRecord.base_rate) : null;
 
       const { data: rRecord, error: rErr } = await supabase
@@ -616,7 +677,9 @@ export default function SattaChart({
         .insert({
           base_rate: baseRate,
           start_date: startDate,
-          remarks: remarks || `Base rate changed to ₹${baseRate}`
+          updated_by: currentUserName,
+          remarks: remarks || `Base rate changed to ₹${baseRate.toLocaleString('en-IN')}`,
+          created_at: nowIso
         })
         .select()
         .single();
@@ -629,8 +692,24 @@ export default function SattaChart({
           old_rate: oldRateValue,
           new_rate: baseRate,
           changed_date: startDate,
-          remarks: remarks || `Base rate changed from ₹${oldRateValue?.toLocaleString() || '0'} to ₹${baseRate.toLocaleString()}`
+          changed_by: currentUserName,
+          remarks: remarks || `Base rate changed from ₹${oldRateValue?.toLocaleString('en-IN') || '0'} to ₹${baseRate.toLocaleString('en-IN')} by ${currentUserName}`,
+          created_at: nowIso
         });
+
+      // Log into Universal System Audit Log
+      await logChange({
+        module: 'Satta Desk / Rate Chart',
+        entity_name: 'Satta Base Rate',
+        record_id: startDate,
+        action: 'UPDATE',
+        field_name: 'base_rate',
+        field_label: 'Satta Base Rate (₹/Qtl)',
+        old_value: oldRateValue !== null ? `₹${oldRateValue.toLocaleString('en-IN')}` : 'None',
+        new_value: `₹${baseRate.toLocaleString('en-IN')}`,
+        user_name: currentUserName,
+        remarks: remarks || `Base rate updated to ₹${baseRate.toLocaleString('en-IN')}`
+      });
 
       const calcRows: any[] = [];
       
@@ -645,19 +724,29 @@ export default function SattaChart({
             area: area,
             grade: grade,
             differential: diffVal,
-            final_rate: baseRate + diffVal
+            final_rate: baseRate + diffVal,
+            updated_by: currentUserName,
+            created_at: nowIso
           });
         });
       });
 
-      const { error: batchErr } = await supabase
-        .from('satta_calculated_rates')
-        .insert(calcRows);
+      if (calcRows.length > 0) {
+        // Refresh calculated rates snapshot for this date
+        await supabase
+          .from('satta_calculated_rates')
+          .delete()
+          .eq('start_date', startDate);
 
-      if (batchErr) throw batchErr;
+        const { error: batchErr } = await supabase
+          .from('satta_calculated_rates')
+          .insert(calcRows);
+
+        if (batchErr) throw batchErr;
+      }
 
       setSaveStatus({
-        message: `Base Rate ₹${baseRate.toLocaleString()} published successfully. ${calcRows.length} area-grade items calculated for ${startDate}!`,
+        message: `Base Rate ₹${baseRate.toLocaleString()} published successfully by ${currentUserName}. ${calcRows.length} area-grade items calculated for ${startDate}!`,
         success: true
       });
 
@@ -1327,6 +1416,15 @@ export default function SattaChart({
 
               <button
                 type="button"
+                onClick={() => setShowUniversalAuditModal(true)}
+                className="bg-[#103A20] hover:bg-[#174C2C] text-[#D4AF37] border border-[#D4AF37]/50 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                <History className="h-4 w-4" />
+                <span>System Change Log</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   try {
                     if (typeof window !== 'undefined' && window.localStorage) {
@@ -1393,12 +1491,39 @@ export default function SattaChart({
                           const hasDay = day <= m.days;
                           const rateVal = hasDay ? rateLookup.get(dateKey) : null;
 
+                          const dayUpdates = hasDay ? intradayUpdatesMap.get(dateKey) || [] : [];
+                          const hasMultiple = dayUpdates.length > 1;
+                          const latestUser = dayUpdates[0]?.updated_by;
+                          const tooltipText = dayUpdates.map((u, i) => 
+                            `#${dayUpdates.length - i}: ₹${Number(u.base_rate).toLocaleString('en-IN')} by ${u.updated_by || 'Admin'} (${u.created_at ? new Date(u.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Logged'})`
+                          ).join('\n');
+
                           return (
-                            <td key={m.name} className="py-2 px-2 border-r border-slate-100 text-slate-800">
+                            <td key={m.name} className="py-1.5 px-1 border-r border-slate-100 text-slate-800">
                               {rateVal && rateVal > 0 ? (
-                                <span className="font-bold text-[#1E331B] bg-emerald-50 text-emerald-950 px-2 py-0.5 rounded border border-emerald-200 inline-block min-w-[58px]">
-                                  {rateVal.toLocaleString('en-IN')}
-                                </span>
+                                <div className="flex flex-col items-center justify-center gap-0.5">
+                                  <span 
+                                    title={tooltipText || `Base Rate: ₹${rateVal.toLocaleString('en-IN')} (Updated by ${latestUser || 'Admin'})`}
+                                    className="font-bold text-[#1E331B] bg-emerald-50 text-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 inline-block min-w-[56px] text-center"
+                                  >
+                                    {rateVal.toLocaleString('en-IN')}
+                                  </span>
+                                  {hasMultiple ? (
+                                    <span 
+                                      title={tooltipText}
+                                      className="text-[7.5px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1 rounded cursor-help shadow-2xs"
+                                    >
+                                      {dayUpdates.length} updates
+                                    </span>
+                                  ) : latestUser ? (
+                                    <span 
+                                      className="text-[7.5px] text-slate-500 font-sans truncate max-w-[55px] font-semibold"
+                                      title={`Updated by: ${latestUser}`}
+                                    >
+                                      {latestUser}
+                                    </span>
+                                  ) : null}
+                                </div>
                               ) : (
                                 <span className="text-slate-300 font-normal">—</span>
                               )}
@@ -1514,14 +1639,28 @@ export default function SattaChart({
                   <Sliders className="h-4 w-4 text-[#D4AF37]" />
                   <h3 className="text-xs font-black uppercase tracking-wider">Configure Base Rate</h3>
                 </div>
-                <span className="text-[9px] bg-[#D4AF37] text-[#1E331B] px-2 py-0.5 rounded-full font-bold">Active Schedule</span>
+                <div className="flex items-center gap-1.5">
+                  {latestRateRecord?.updated_by && (
+                    <span className="text-[9px] bg-[#174C2C] text-amber-300 border border-[#2D7344] px-2 py-0.5 rounded-full font-bold">
+                      By: {latestRateRecord.updated_by}
+                    </span>
+                  )}
+                  <span className="text-[9px] bg-[#D4AF37] text-[#1E331B] px-2 py-0.5 rounded-full font-bold">Active Schedule</span>
+                </div>
               </div>
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label htmlFor="current_base_rate_1323" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1">
-                    Current Base Rate (₹)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="current_base_rate_1323" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                      Current Base Rate (₹)
+                    </label>
+                    {latestRateRecord?.updated_by && (
+                      <span className="text-[9.5px] font-bold text-emerald-800">
+                        Updated By: <strong className="text-[#1E331B] underline">{latestRateRecord.updated_by}</strong>
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-500">₹</span>
                     <input
@@ -1532,6 +1671,14 @@ export default function SattaChart({
                       required
                     />
                   </div>
+                  {latestRateRecord && (
+                    <div className="text-[9.5px] text-slate-500 font-medium flex items-center justify-between mt-1 px-0.5">
+                      <span>Database Rate: <strong className="font-mono text-slate-800 font-bold">₹{Number(latestRateRecord.base_rate).toLocaleString('en-IN')}</strong></span>
+                      <span className="text-[9px] font-bold text-slate-600">
+                        {latestRateRecord.created_at ? new Date(latestRateRecord.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1778,6 +1925,11 @@ export default function SattaChart({
                     <span className={cn("font-bold text-xs", hoveredCell.diff >= 0 ? "text-emerald-400" : "text-rose-400")}>
                       {hoveredCell.diff >= 0 ? `+₹${hoveredCell.diff}` : `-₹${Math.abs(hoveredCell.diff)}`}
                     </span>
+                    {dbDiffUsers[hoveredCell.area]?.[hoveredCell.grade]?.user && (
+                      <span className="text-[9px] text-amber-300 block font-sans font-bold mt-0.5">
+                        Updated by: {dbDiffUsers[hoveredCell.area][hoveredCell.grade].user}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -1853,15 +2005,25 @@ export default function SattaChart({
                                 {hasDiff ? (
                                   <div className="flex flex-col justify-center items-center">
                                     <span className="text-[10.5px] font-mono font-black">₹{finalComputedRate?.toLocaleString()}</span>
-                                    <span className={cn(
-                                      "text-[8.5px] font-extrabold font-mono",
-                                      isVeryHigh ? "text-[#D4AF37]" :
-                                      isHigh ? "text-emerald-700" :
-                                      isBase ? "text-amber-800" :
-                                      isLow ? "text-orange-700" : "text-rose-700"
-                                    )}>
-                                      {diffVal >= 0 ? `+${diffVal}` : diffVal}
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <span className={cn(
+                                        "text-[8.5px] font-extrabold font-mono",
+                                        isVeryHigh ? "text-[#D4AF37]" :
+                                        isHigh ? "text-emerald-700" :
+                                        isBase ? "text-amber-800" :
+                                        isLow ? "text-orange-700" : "text-rose-700"
+                                      )}>
+                                        {diffVal >= 0 ? `+${diffVal}` : diffVal}
+                                      </span>
+                                      {dbDiffUsers[areaName]?.[grade]?.user && (
+                                        <span 
+                                          className="text-[7px] text-slate-500 font-sans truncate max-w-[45px] font-medium"
+                                          title={`Updated by: ${dbDiffUsers[areaName][grade].user}`}
+                                        >
+                                          • {dbDiffUsers[areaName][grade].user}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="text-[9px] text-slate-300 group-hover:text-slate-600">--</span>
@@ -2477,6 +2639,13 @@ export default function SattaChart({
           </div>
         </div>
       )}
+
+      {/* Universal Change Log Modal */}
+      <UniversalAuditLogModal
+        isOpen={showUniversalAuditModal}
+        onClose={() => setShowUniversalAuditModal(false)}
+        initialModule="Satta Desk / Rate Chart"
+      />
 
     </div>
   );

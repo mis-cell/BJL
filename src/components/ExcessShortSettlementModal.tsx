@@ -23,6 +23,7 @@ import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
 import { cn, safeNum } from '../lib/utils';
+import { logChange } from '../services/auditLogService';
 
 interface ExcessShortSettlementModalProps {
   po: any;
@@ -987,6 +988,20 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
             .single();
           if (data?.id) setExistingRecordId(data.id);
         }
+
+        // Record in Universal Change Log
+        await logChange({
+          module: 'Sauda Check Point / Settlement',
+          entity_name: 'Excess/Short Weight Settlement',
+          record_id: poNo,
+          action: 'UPDATE',
+          field_name: 'deduction_amount',
+          field_label: `${isExcess ? 'Excess Addition' : 'Short Deduction'} (PO ${poNo})`,
+          old_value: existingRecordId ? 'Previous Settlement' : 'None',
+          new_value: `₹${Number(totalCalculatedAmount).toLocaleString('en-IN')}`,
+          user_name: settledBy || 'Operator',
+          remarks: `${payload.variation_type.toUpperCase()}: ${deductibleQtyQtl.toFixed(2)} Qtl @ ₹${applicableRate}/Qtl for Supplier ${supplierName}`
+        });
 
         // Update purchase_master, sauda_check_point, and sauda_master
         await supabase

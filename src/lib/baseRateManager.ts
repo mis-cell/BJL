@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { isUserAdmin, getCurrentUserContext, UserContext } from './permissions';
+import { logChange } from '../services/auditLogService';
 
 export interface BaseRateInfo {
   rate: number;
@@ -167,19 +168,17 @@ export async function updateCentralBaseRateByAdmin(params: {
 
     const oldRate = previousRates && previousRates[0] ? Number(previousRates[0].base_rate) : null;
 
-    // Delete existing records for same date to ensure clean single-source schedule
-    await Promise.all([
-      supabase.from('satta_calculated_rates').delete().eq('start_date', effectiveDate),
-      supabase.from('satta_base_rates').delete().eq('start_date', effectiveDate),
-      supabase.from('satta_base_rate_audit_logs').delete().eq('changed_date', effectiveDate)
-    ]);
+    // Do NOT delete previous base rate records on the same date!
+    // Per user requirement: Base rate can be updated multiple times in a single day,
+    // and all historical updates must be preserved in the database.
 
-    // Insert new Base Rate record
+    // Insert new Base Rate record with timestamp and updated_by user
     const { data: newBaseRateRecord, error: insertError } = await supabase
       .from('satta_base_rates')
       .insert({
         base_rate: rate,
         start_date: effectiveDate,
+        updated_by: adminIdentity,
         remarks: remarks || `Daily Base Rate updated to ₹${rate.toLocaleString('en-IN')}`,
         created_at: nowIso
       })
@@ -197,9 +196,24 @@ export async function updateCentralBaseRateByAdmin(params: {
         old_rate: oldRate,
         new_rate: rate,
         changed_date: effectiveDate,
+        changed_by: adminIdentity,
         remarks: remarks || `Base Rate changed from ₹${oldRate?.toLocaleString('en-IN') || '0'} to ₹${rate.toLocaleString('en-IN')} by ${adminIdentity}`,
         created_at: nowIso
       });
+
+    // Record in Universal Change Log
+    await logChange({
+      module: 'Satta Desk / Rate Chart',
+      entity_name: 'Satta Base Rate',
+      record_id: effectiveDate,
+      action: 'UPDATE',
+      field_name: 'base_rate',
+      field_label: 'Satta Base Rate (₹/Qtl)',
+      old_value: oldRate !== null ? `₹${oldRate.toLocaleString('en-IN')}` : 'None',
+      new_value: `₹${rate.toLocaleString('en-IN')}`,
+      user_name: adminIdentity,
+      remarks: remarks || `Base Rate updated to ₹${rate.toLocaleString('en-IN')}`
+    });
 
     // Update differentials and pre-calculate rates
     const { data: diffsData } = await supabase.from('satta_differentials').select('*');

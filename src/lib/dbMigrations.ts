@@ -4,15 +4,41 @@ export async function runDatabaseMigrations() {
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v5') || sessionStorage.getItem('bjl_app_db_patched_v5');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v6') || sessionStorage.getItem('bjl_app_db_patched_v6');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v5', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v5', '1');
+      localStorage.setItem('bjl_app_db_patched_v6', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v6', '1');
     }
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 
         BEGIN 
+          -- Universal App Audit Logs table
+          CREATE TABLE IF NOT EXISTS app_audit_logs (
+            id TEXT PRIMARY KEY,
+            timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            module TEXT NOT NULL,
+            entity_name TEXT,
+            record_id TEXT,
+            action TEXT NOT NULL DEFAULT 'UPDATE',
+            field_name TEXT,
+            field_label TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            user_name TEXT NOT NULL,
+            user_role TEXT,
+            remarks TEXT
+          );
+          ALTER TABLE IF EXISTS app_audit_logs DISABLE ROW LEVEL SECURITY;
+
+          -- Satta user tracking columns
+          ALTER TABLE IF EXISTS satta_base_rates ADD COLUMN IF NOT EXISTS updated_by TEXT;
+          ALTER TABLE IF EXISTS satta_differentials ADD COLUMN IF NOT EXISTS updated_by TEXT;
+          ALTER TABLE IF EXISTS satta_differentials ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+          ALTER TABLE IF EXISTS satta_differentials ADD COLUMN IF NOT EXISTS start_date DATE;
+          ALTER TABLE IF EXISTS satta_calculated_rates ADD COLUMN IF NOT EXISTS updated_by TEXT;
+
           ALTER TABLE IF EXISTS user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
