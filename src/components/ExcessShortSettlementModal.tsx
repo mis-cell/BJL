@@ -561,15 +561,20 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       }
     }
 
-    // 3. Direct PO contract rate fields
+    // 3. Check Satta Base Rate on Sauda Date (e.g. 13-08-2026 -> 12,500)
+    const sattaOnSaudaDate = getSattaBaseRateOnDate(saudaDate);
+    if (sattaOnSaudaDate > 0) {
+      return sattaOnSaudaDate;
+    }
+
+    // 4. Fallback to direct PO contract rate fields
     const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || po.p_o_rate || po.grade_rate || po.po_rate || po.sauda_base_rate || po.final_rate || 0);
     if (directContractRate > 0) return directContractRate;
 
-    // 4. Fallback to B Rate / Base Rate or Satta Base Rate on Sauda Date
     const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
     if (fromBrate > 0) return fromBrate;
 
-    return getSattaBaseRateOnDate(saudaDate);
+    return 0;
   }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade, allScpDetails, poNo, saudaNo]);
 
   // Satta Base Rate on Sauda Date (01-08-2026)
