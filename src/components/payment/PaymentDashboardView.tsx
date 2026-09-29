@@ -168,9 +168,9 @@ export function PaymentDashboardView({
     });
   }, [paymentList, verifiedArrivals, activeYear]);
 
-  // Only show month cards that HAVE DATA
+  // Only show month cards that HAVE ACTUAL PAYMENT DATA (vouchers > 0 or paid > 0 or payable > 0)
   const activeMonthSummaries = useMemo(() => {
-    return monthSummaries.filter(m => m.vouchersCount > 0 || m.verifiedArrivalsCount > 0 || m.totalPaid > 0 || m.totalPayable > 0);
+    return monthSummaries.filter(m => m.vouchersCount > 0 || m.totalPaid > 0 || m.totalPayable > 0);
   }, [monthSummaries]);
 
   // Filter records based on selected Year & Month

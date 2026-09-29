@@ -863,10 +863,10 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
       const isLastBalesRow = index === balesIndices[balesIndices.length - 1];
       let calculatedNetto = 0;
       if (isLastBalesRow) {
-        calculatedNetto = Number((finalWeight - allocatedNetto).toFixed(3));
+        calculatedNetto = Math.round((finalWeight - allocatedNetto) * 1000) / 1000;
         calculatedNetto = Math.max(0, calculatedNetto);
       } else {
-        calculatedNetto = Number(((rcpt / sumRcpt) * finalWeight).toFixed(3));
+        calculatedNetto = Math.round(((rcpt / sumRcpt) * finalWeight) * 1000) / 1000;
         allocatedNetto += calculatedNetto;
       }
 

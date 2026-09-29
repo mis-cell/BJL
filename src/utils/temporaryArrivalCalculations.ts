@@ -65,10 +65,11 @@ export const calculateProportionalNetto = (
     return rows; // Pro-rata calculation is NOT applicable for "LOOSE"
   }
 
+  const roundedFinalWeight = Math.round(finalWeightVal * 1000) / 1000;
   const getRowQuantity = (r: ArrivalDetailRow) => Number(r.quantity_rcpt) || Number(r.quantity_chln) || 0;
 
   const sumRcpt = rows.reduce((sum, d) => sum + getRowQuantity(d), 0);
-  if (sumRcpt <= 0 || finalWeightVal <= 0) {
+  if (sumRcpt <= 0 || roundedFinalWeight <= 0) {
     return rows; // Do NOT zero out when sumRcpt is 0
   }
 
@@ -84,10 +85,10 @@ export const calculateProportionalNetto = (
     const q = getRowQuantity(updated[idx]);
     if (k === nonZeroIndices.length - 1) {
       // Last non-zero item absorbs any remaining rounding difference to match exact Final Weight
-      const lastVal = Number((finalWeightVal - allocated).toFixed(3));
+      const lastVal = Math.round((roundedFinalWeight - allocated) * 1000) / 1000;
       updated[idx] = { ...updated[idx], netto_pnto: Math.max(0, lastVal) };
     } else {
-      const val = Number(((finalWeightVal / sumRcpt) * q).toFixed(3));
+      const val = Math.round(((roundedFinalWeight / sumRcpt) * q) * 1000) / 1000;
       updated[idx] = { ...updated[idx], netto_pnto: val };
       allocated += val;
     }

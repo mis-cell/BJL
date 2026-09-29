@@ -36,10 +36,10 @@ export const computeDetailRowWeights = (
   
   let redWt = row.reduced_weight !== undefined && row.reduced_weight !== null && Number(row.reduced_weight) > 0
     ? Number(row.reduced_weight)
-    : (gross > 0 ? Number((gross + addW - lessW).toFixed(3)) : 0);
+    : (gross > 0 ? Math.round((gross + addW - lessW) * 1000) / 1000 : 0);
 
   if (gross > 0 && (redWt === 0 || (addW > 0 || lessW > 0))) {
-    redWt = Number((gross + addW - lessW).toFixed(3));
+    redWt = Math.round((gross + addW - lessW) * 1000) / 1000;
   }
   
   const mClaim = Number(row.moisture_claim) || 0;
@@ -49,45 +49,45 @@ export const computeDetailRowWeights = (
   const moistDeduct = (baseWt * mClaim) / 100;
   const dustDeduct = (baseWt * dClaim) / 100;
   
-  const finalWt = baseWt - moistDeduct - dustDeduct;
+  const finalWt = Math.max(0, baseWt - moistDeduct - dustDeduct);
   return {
-    reduced_weight: Number(redWt.toFixed(3)),
-    final_receipt_wt: Number(Math.max(0, finalWt).toFixed(3))
+    reduced_weight: Math.round(redWt * 1000) / 1000,
+    final_receipt_wt: Math.round(finalWt * 1000) / 1000
   };
 };
 
 // Calculate Quantity in Metric Tons (MT)
 export const calculateQtyInMt = (row: InspectionDetailRow): number => {
   if (row.final_receipt_wt && Number(row.final_receipt_wt) > 0) {
-    return Number(Number(row.final_receipt_wt).toFixed(3));
+    return Math.round(Number(row.final_receipt_wt) * 1000) / 1000;
   }
   if (row.reduced_weight && Number(row.reduced_weight) > 0) {
-    return Number(Number(row.reduced_weight).toFixed(3));
+    return Math.round(Number(row.reduced_weight) * 1000) / 1000;
   }
   if (row.receipt_gross_wt && Number(row.receipt_gross_wt) > 0) {
-    return Number(Number(row.receipt_gross_wt).toFixed(3));
+    return Math.round(Number(row.receipt_gross_wt) * 1000) / 1000;
   }
   if (row.challan_gross_wt && Number(row.challan_gross_wt) > 0) {
-    return Number(Number(row.challan_gross_wt).toFixed(3));
+    return Math.round(Number(row.challan_gross_wt) * 1000) / 1000;
   }
   const qty = Number(row.quantity) || 0;
   const unit = (row.unit || "BALES").toUpperCase();
   if (unit.includes("BALE") || unit.includes("BALES")) {
-    return Number((qty * 0.18).toFixed(3)); // 1 Standard Jute Bale = ~180 kg = 0.180 MT
+    return Math.round((qty * 0.18) * 1000) / 1000; // 1 Standard Jute Bale = ~180 kg = 0.180 MT
   }
   if (unit.includes("KG")) {
-    return Number((qty * 0.001).toFixed(3));
+    return Math.round((qty * 0.001) * 1000) / 1000;
   }
   if (unit.includes("QTL") || unit.includes("QUINTAL")) {
-    return Number((qty * 0.10).toFixed(3));
+    return Math.round((qty * 0.10) * 1000) / 1000;
   }
   if (unit.includes("DRUM")) {
-    return Number((qty * 0.20).toFixed(3));
+    return Math.round((qty * 0.20) * 1000) / 1000;
   }
   if (unit.includes("BAG")) {
-    return Number((qty * 0.05).toFixed(3));
+    return Math.round((qty * 0.05) * 1000) / 1000;
   }
-  return Number(qty.toFixed(3));
+  return Math.round(qty * 1000) / 1000;
 };
 
 // Calculate Row Amount in ₹

@@ -157,7 +157,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
 
   // Only show month cards that HAVE DATA
   const activeMonthSummaries = useMemo(() => {
-    return monthSummaries.filter(m => m.settlementsCount > 0 || m.totalPayable > 0 || m.monthInspectionsCount > 0);
+    return monthSummaries.filter(m => m.settlementsCount > 0 || m.totalPayable > 0);
   }, [monthSummaries]);
 
   // Filter records based on selected Year & Month

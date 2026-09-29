@@ -594,9 +594,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       const grossElec = Number(prev.electronic_gross_weight) || 0;
       const tareElec = Number(prev.electronic_tare_weight) || 0;
 
-      const calculatedChallanNet = grossChln > 0 ? Number(Math.max(0, grossChln - tareChln).toFixed(3)) : (Number(prev.challan_material_weight) || 0);
-      const calculatedSupplierNet = grossMill > 0 ? Number(Math.max(0, grossMill - tareMill).toFixed(3)) : (Number(prev.supplier_net_weight) || 0);
-      const calculatedElectronicNet = grossElec > 0 ? Number(Math.max(0, grossElec - tareElec).toFixed(3)) : (Number(prev.electronic_net_weight) || 0);
+      const calculatedChallanNet = grossChln > 0 ? Math.round(Math.max(0, grossChln - tareChln) * 1000) / 1000 : (Number(prev.challan_material_weight) || 0);
+      const calculatedSupplierNet = grossMill > 0 ? Math.round(Math.max(0, grossMill - tareMill) * 1000) / 1000 : (Number(prev.supplier_net_weight) || 0);
+      const calculatedElectronicNet = grossElec > 0 ? Math.round(Math.max(0, grossElec - tareElec) * 1000) / 1000 : (Number(prev.electronic_net_weight) || 0);
 
       // Final Weight is lowest value among the Net Weight section (CHALLAN WT, MILL NET, ELECTRONIC NET)
       const validNetWeights = [
@@ -605,7 +605,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         calculatedElectronicNet
       ].filter(v => v > 0);
 
-      const minNetWeight = validNetWeights.length > 0 ? Number(Math.min(...validNetWeights).toFixed(3)) : (Number(prev.weight_reduced) || 0);
+      const minNetWeight = validNetWeights.length > 0 ? Math.round(Math.min(...validNetWeights) * 1000) / 1000 : (Number(prev.weight_reduced) || 0);
 
       if (
         calculatedChallanNet === prev.challan_material_weight &&

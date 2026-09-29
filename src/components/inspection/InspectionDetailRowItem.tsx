@@ -487,12 +487,14 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
                 Math.abs(Number(row.final_receipt_wt) - baseWt) < 0.001 ||
                 Number(row.final_receipt_wt) <= 0
               ) {
-                return Number((baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100)).toFixed(3));
+                return Math.round((baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100)) * 1000) / 1000;
               }
             }
-            return row.final_receipt_wt !== undefined && row.final_receipt_wt !== null ? row.final_receipt_wt : (baseWt || 0);
+            return row.final_receipt_wt !== undefined && row.final_receipt_wt !== null 
+              ? (Math.round(Number(row.final_receipt_wt) * 1000) / 1000) 
+              : (Math.round(baseWt * 1000) / 1000 || 0);
           })()}
-          onChange={(e) => !isFinalReceiptWtBlocked && onDetailChange(index, "final_receipt_wt", Number(e.target.value))}
+          onChange={(e) => !isFinalReceiptWtBlocked && onDetailChange(index, "final_receipt_wt", Math.round(Number(e.target.value) * 1000) / 1000)}
           className={getFieldInputStyle(isFinalReceiptWtBlocked, "font-mono font-black text-indigo-950 bg-indigo-50/60 text-center")}
         />
       </td>
