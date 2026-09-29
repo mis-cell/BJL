@@ -979,7 +979,7 @@ export default function ExecutiveBiDashboard({
                 <span className="text-[11px] text-blue-800 font-medium mt-0.5 block truncate">
                   {inspMetrics.totalPendingInspectionsCount > 0 
                     ? `${inspMetrics.totalPendingInspectionsCount} Pending • ${inspMetrics.totalYearInspectionsCount} Done` 
-                    : '100% Inspected'}
+                    : (inspMetrics.totalYearInspectionsCount > 0 ? '100% Inspected' : 'No Inspections')}
                 </span>
               </div>
 
@@ -1098,9 +1098,13 @@ export default function ExecutiveBiDashboard({
                             <span className="text-[9.5px] font-sans font-bold text-amber-700 block" title={`${m.pendingInspectionCount} MRs pending inspection`}>
                               ({m.pendingInspectionCount} Pending)
                             </span>
-                          ) : (
+                          ) : m.inspectionCount > 0 ? (
                             <span className="text-[9px] font-sans text-emerald-700 font-semibold block">
                               (✓ Done)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-sans text-slate-400 block">
+                              (—)
                             </span>
                           )}
                         </div>
