@@ -433,31 +433,95 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return 0;
   };
 
-  const saudaBaseRate = useMemo(() => {
-    // 1. Resolve actual Sauda (P.O) contract rate from PO or PO items grid
-    let poRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.b_rate || po.base_rate || 0);
-    if (!poRate || poRate <= 0) {
-      let grid: any[] = [];
-      if (Array.isArray(po.grid_details)) {
-        grid = po.grid_details;
-      } else if (typeof po.grid_details === 'string') {
-        try { grid = JSON.parse(po.grid_details); } catch (e) {}
-      }
-      if (grid && grid.length > 0) {
-        const firstWithRate = grid.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
-        if (firstWithRate) poRate = Number(firstWithRate.rate_qntl || firstWithRate.rate);
-      }
+  // PO / Header Grade Resolution
+  const resolvedGrade = useMemo(() => {
+    // 1. Check direct fields on po
+    const directPoGrade = String(
+      po.selected_grade || 
+      po.grade_name || 
+      po.grade || 
+      po.quality_name || 
+      po.quality || 
+      po.item_grade || 
+      po.item_name || 
+      po.grading || 
+      po.variety || 
+      ''
+    ).trim();
+
+    if (directPoGrade && directPoGrade.toUpperCase() !== 'TD10' && directPoGrade.toUpperCase() !== 'UNDEFINED' && directPoGrade !== '') {
+      return directPoGrade;
     }
-    if (!poRate || poRate <= 0) {
-      if (Array.isArray(po.items) && po.items.length > 0) {
-        const firstItem = po.items.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
-        if (firstItem) poRate = Number(firstItem.rate_qntl || firstItem.rate);
+
+    // 2. Check allScpDetails for this PO
+    if (allScpDetails && allScpDetails.length > 0) {
+      const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const targetPo = cleanPo(poNo);
+      const targetSauda = cleanPo(saudaNo);
+      const detailMatch = allScpDetails.find((d: any) => {
+        const dPo = cleanPo(d.po_no || d.sauda_no || d.contract_po_no);
+        return dPo && (dPo === targetPo || dPo === targetSauda);
+      });
+      if (detailMatch && (detailMatch.grade_name || detailMatch.quality || detailMatch.grade)) {
+        const g = String(detailMatch.grade_name || detailMatch.quality || detailMatch.grade).trim();
+        if (g && g.toUpperCase() !== 'TD10') return g;
       }
     }
 
-    if (poRate > 0) return poRate;
+    // 3. Extract from matched temporary arrival records (the actual received arrival e.g. TD6)
+    if (matchedTempArrivals && matchedTempArrivals.length > 0) {
+      for (const ar of matchedTempArrivals) {
+        const g = extractGradeFromArrival(ar);
+        if (g && g.toUpperCase() !== 'TD10') return g;
+      }
+      for (const ar of matchedTempArrivals) {
+        const g = extractGradeFromArrival(ar);
+        if (g) return g;
+      }
+    }
+
+    // 4. Fallback to directPoGrade if non-empty, or 'TD6'
+    return directPoGrade || 'TD6';
+  }, [po, poNo, saudaNo, allScpDetails, matchedTempArrivals]);
+
+  const saudaBaseRate = useMemo(() => {
+    // 1. First, check item / grade rates from grid_details or items matrix (e.g. TD6 Rate = 11,000)
+    let grid: any[] = [];
+    if (Array.isArray(po.grid_details)) {
+      grid = po.grid_details;
+    } else if (typeof po.grid_details === 'string') {
+      try { grid = JSON.parse(po.grid_details); } catch (e) {}
+    } else if (Array.isArray(po.items)) {
+      grid = po.items;
+    } else if (typeof po.items === 'string') {
+      try { grid = JSON.parse(po.items); } catch (e) {}
+    }
+
+    if (grid && grid.length > 0) {
+      const activeGradeName = String(po.selected_grade || po.grade || po.grade_name || resolvedGrade || '').trim().toUpperCase();
+      const matchedRow = grid.find((item: any) => {
+        const gName = String(item.grade_name || item.grade || item.name || '').trim().toUpperCase();
+        return gName && activeGradeName && gName === activeGradeName && Number(item.rate_qntl || item.rate || 0) > 0;
+      });
+      if (matchedRow) {
+        return Number(matchedRow.rate_qntl || matchedRow.rate);
+      }
+      const firstWithRate = grid.find((item: any) => Number(item.rate_qntl || item.rate || 0) > 0);
+      if (firstWithRate) {
+        return Number(firstWithRate.rate_qntl || firstWithRate.rate);
+      }
+    }
+
+    // 2. Direct PO contract rate fields (excluding B Rate)
+    const directContractRate = parseFloat(po.rate || po.purchase_rate || po.rate_per_qtl || po.sauda_rate || po.contract_rate || po.rate_qntl || 0);
+    if (directContractRate > 0) return directContractRate;
+
+    // 3. Fallback to B Rate / Base Rate or Satta Base Rate on Sauda Date
+    const fromBrate = parseFloat(po.b_rate || po.base_rate || 0);
+    if (fromBrate > 0) return fromBrate;
+
     return getSattaBaseRateOnDate(saudaDate);
-  }, [saudaDate, liveBaseRates, sattaBaseRates, po]);
+  }, [saudaDate, liveBaseRates, sattaBaseRates, po, resolvedGrade]);
 
   const arrivalBaseRate = useMemo(() => {
     // User policy: Temporary Arrival Date TD5 base rate
@@ -550,57 +614,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     }
     return Math.max(0, Math.round((saudaAmt - totalCalculatedAmount) * 100) / 100);
   }, [isExcess, existingSaudaAmount, totalCalculatedAmount]);
-
-  // PO / Header Grade Resolution
-  const resolvedGrade = useMemo(() => {
-    // 1. Check direct fields on po
-    const directPoGrade = String(
-      po.selected_grade || 
-      po.grade_name || 
-      po.grade || 
-      po.quality_name || 
-      po.quality || 
-      po.item_grade || 
-      po.item_name || 
-      po.grading || 
-      po.variety || 
-      ''
-    ).trim();
-
-    if (directPoGrade && directPoGrade.toUpperCase() !== 'TD10' && directPoGrade.toUpperCase() !== 'UNDEFINED' && directPoGrade !== '') {
-      return directPoGrade;
-    }
-
-    // 2. Check allScpDetails for this PO
-    if (allScpDetails && allScpDetails.length > 0) {
-      const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      const targetPo = cleanPo(poNo);
-      const targetSauda = cleanPo(saudaNo);
-      const detailMatch = allScpDetails.find((d: any) => {
-        const dPo = cleanPo(d.po_no || d.sauda_no || d.contract_po_no);
-        return dPo && (dPo === targetPo || dPo === targetSauda);
-      });
-      if (detailMatch && (detailMatch.grade_name || detailMatch.quality || detailMatch.grade)) {
-        const g = String(detailMatch.grade_name || detailMatch.quality || detailMatch.grade).trim();
-        if (g && g.toUpperCase() !== 'TD10') return g;
-      }
-    }
-
-    // 3. Extract from matched temporary arrival records (the actual received arrival e.g. TD6)
-    if (matchedTempArrivals && matchedTempArrivals.length > 0) {
-      for (const ar of matchedTempArrivals) {
-        const g = extractGradeFromArrival(ar);
-        if (g && g.toUpperCase() !== 'TD10') return g;
-      }
-      for (const ar of matchedTempArrivals) {
-        const g = extractGradeFromArrival(ar);
-        if (g) return g;
-      }
-    }
-
-    // 4. Fallback to directPoGrade if non-empty, or 'TD6'
-    return directPoGrade || 'TD6';
-  }, [po, poNo, saudaNo, allScpDetails, matchedTempArrivals]);
 
   // Extract Temporary Arrival Numbers List (e.g. MR00410 or MR00391)
   const arrivalNumbersList = useMemo<string[]>(() => {
