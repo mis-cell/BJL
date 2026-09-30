@@ -22,6 +22,7 @@ import UserProfileModal from '../components/dashboard/UserProfileModal';
 import DashboardProcessModules from '../components/dashboard/DashboardProcessModules';
 import AnalyticalInsightsConsole from '../components/dashboard/AnalyticalInsightsConsole';
 import { DashboardProps } from '../components/dashboard/types';
+import { dbModule } from '../services/dbModule';
 
 export default function Dashboard({ 
   onNavigate, 

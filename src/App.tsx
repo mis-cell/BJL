@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { dbModule } from "./services/dbModule";
 import {
   LayoutDashboard,
   PlusCircle,
