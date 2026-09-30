@@ -64,18 +64,6 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
         try {
           await supabase.rpc("exec_sql", {
             query: `
-              DO $$
-              BEGIN
-                IF EXISTS (
-                  SELECT 1 
-                  FROM information_schema.columns 
-                  WHERE table_name = 'user_master' 
-                    AND (column_name = 'is_active' OR (column_name = 'user_id' AND data_type = 'uuid'))
-                ) THEN
-                  DROP TABLE IF EXISTS user_master CASCADE;
-                END IF;
-              END $$;
-
               CREATE TABLE IF NOT EXISTS user_master (
                 user_id TEXT PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
@@ -83,12 +71,13 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
                 role TEXT DEFAULT 'USER',
                 status TEXT DEFAULT 'Active',
                 allowed_modules TEXT DEFAULT '*',
-                level TEXT DEFAULT 'L1', last_login TIMESTAMP WITH TIME ZONE,
+                level TEXT DEFAULT 'L1',
+                last_login TIMESTAMP WITH TIME ZONE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
               );
 
               INSERT INTO user_master (user_id, username, password, role, status, allowed_modules, level)
-              VALUES ('001', 'ADMIN', 'ADMIN', 'ADMIN', 'Active', '*', 'L1')
+              VALUES ('001', 'ADMIN', 'Admin@1234', 'ADMIN', 'Active', '*', 'L5')
               ON CONFLICT (username) DO NOTHING;
             `
           });
@@ -402,23 +391,46 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
       const isNew = isNewRow;
 
       if (selectedTable.name === "user_master") {
-        if (editingRow.user_id && !isNaN(Number(editingRow.user_id))) {
+        if (!editingRow.username || !String(editingRow.username).trim()) {
+          alert("Error: Username is required for User Master.");
+          setLoading(false);
+          return;
+        }
+        if (!editingRow.password || !String(editingRow.password).trim()) {
+          alert("Error: Password is required for User Master.");
+          setLoading(false);
+          return;
+        }
+
+        // Generate unique user_id if missing or duplicate
+        if (!editingRow.user_id || String(editingRow.user_id).trim() === "") {
+          let maxNum = 1;
+          if (data && data.length > 0) {
+            const numericIds = data
+              .map((r) => {
+                const matched = String(r.user_id || "").match(/\d+/);
+                return matched ? parseInt(matched[0], 10) : NaN;
+              })
+              .filter((n) => !isNaN(n));
+            if (numericIds.length > 0) {
+              maxNum = Math.max(...numericIds) + 1;
+            }
+          }
+          editingRow.user_id = String(maxNum).padStart(3, "0");
+        } else if (!isNaN(Number(editingRow.user_id))) {
           editingRow.user_id = String(Number(editingRow.user_id)).padStart(3, "0");
         }
-        if (editingRow.username) {
-          editingRow.username = editingRow.username.toUpperCase();
-        }
-        if (editingRow.role) {
-          editingRow.role = editingRow.role.toUpperCase();
-        }
-        if (editingRow.level) {
-          editingRow.level = editingRow.level.toUpperCase();
-        }
-        if (editingRow.status) {
-          editingRow.status = editingRow.status.charAt(0).toUpperCase() + editingRow.status.slice(1).toLowerCase();
-        }
-        if (editingRow.allowed_modules === undefined) {
+
+        editingRow.username = String(editingRow.username).trim().toUpperCase();
+        editingRow.password = String(editingRow.password).trim();
+        editingRow.role = String(editingRow.role || "USER").trim().toUpperCase();
+        editingRow.level = String(editingRow.level || "L1").trim().toUpperCase();
+        editingRow.status = editingRow.status ? (editingRow.status.charAt(0).toUpperCase() + editingRow.status.slice(1).toLowerCase()) : "Active";
+        if (editingRow.allowed_modules === undefined || editingRow.allowed_modules === null || editingRow.allowed_modules === "") {
           editingRow.allowed_modules = "*";
+        }
+        if (!editingRow.created_at) {
+          editingRow.created_at = new Date().toISOString();
         }
       }
 
@@ -434,7 +446,21 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
           );
         }
       } else {
-        if (isNew) {
+        if (selectedTable.name === "user_master") {
+          // Use upsert for user_master to handle insert/update cleanly
+          const { error } = await supabase
+            .from("user_master")
+            .upsert(editingRow, { onConflict: "user_id" });
+          if (error) {
+            // If conflict on username, try upserting with username conflict
+            const { error: err2 } = await supabase
+              .from("user_master")
+              .upsert(editingRow, { onConflict: "username" });
+            if (err2) throw err2;
+          }
+          // Also save into client local store as backup
+          await dbModule.insert("user_master", editingRow).catch(() => dbModule.update("user_master", "user_id", editingRow.user_id, editingRow).catch(() => {}));
+        } else if (isNew) {
           const insertPayload = { ...editingRow };
           if (insertPayload.id === "" || insertPayload.id === null) {
             delete insertPayload.id;

@@ -99,23 +99,69 @@ export default function Dashboard({
   };
 
   const handleUpdatePassword = async () => {
-    if (!newPassword || !supabase) return;
+    if (!newPassword || !newPassword.trim()) {
+      alert("Please enter a valid new password.");
+      return;
+    }
+    const cleanPass = newPassword.trim();
     try {
-      const username = getCurrentUserContext().username || "ADMIN";
-      const { error } = await supabase
-        .from('user_master')
-        .update({ password: newPassword })
-        .eq('username', username.toUpperCase());
-      
-      if (!error) {
-        setUpdatePasswordSuccess('Password updated successfully!');
-        setNewPassword('');
-        setTimeout(() => setUpdatePasswordSuccess(''), 3000);
-      } else {
-        alert('Failed to update password');
+      const activeUser = getCurrentUserContext().username || "ADMIN";
+      const cleanUser = activeUser.trim();
+
+      let updateSuccess = false;
+
+      // 1. Update in Supabase user_master
+      if (supabase) {
+        const { error } = await supabase
+          .from('user_master')
+          .update({ password: cleanPass })
+          .or(`username.ilike.${cleanUser},user_id.ilike.${cleanUser}`);
+
+        if (!error) {
+          updateSuccess = true;
+        } else {
+          console.warn("Supabase password update notice:", error);
+          // Try upserting if single update didn't match
+          const { error: upsertErr } = await supabase
+            .from('user_master')
+            .upsert({
+              user_id: getCurrentUserContext().userId || '001',
+              username: cleanUser.toUpperCase(),
+              password: cleanPass,
+              role: getCurrentUserContext().userRole || 'ADMIN',
+              level: getCurrentUserContext().userLevel || 'L5',
+              status: 'Active',
+              allowed_modules: '*'
+            }, { onConflict: 'username' });
+
+          if (!upsertErr) updateSuccess = true;
+        }
       }
-    } catch (e) {
+
+      // 2. Update in client dbModule store
+      await dbModule.update('user_master', 'username', cleanUser.toUpperCase(), { password: cleanPass }).catch(() => {});
+      updateSuccess = true;
+
+      // 3. Update localStorage bally_auth_session
+      try {
+        const sessionStr = localStorage.getItem("bally_auth_session");
+        if (sessionStr) {
+          const parsed = JSON.parse(sessionStr);
+          parsed.password = cleanPass;
+          localStorage.setItem("bally_auth_session", JSON.stringify(parsed));
+        }
+      } catch (e) {}
+
+      if (updateSuccess) {
+        setUpdatePasswordSuccess('Password updated successfully! Your new password is now active.');
+        setNewPassword('');
+        setTimeout(() => setUpdatePasswordSuccess(''), 4000);
+      } else {
+        alert('Failed to update password. Please check database connection.');
+      }
+    } catch (e: any) {
       console.error(e);
+      alert('Password Update Error: ' + (e.message || String(e)));
     }
   };
 

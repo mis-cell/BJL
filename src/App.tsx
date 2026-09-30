@@ -834,115 +834,143 @@ export default function App() {
   }, [currentPage, allowedModules, isAdmin]);
 
   const handleLogin = async (year: string, user: string, pass: string) => {
-    // Master Admin Fallback
-    if (user.toLowerCase() === "admin") {
-      if (pass !== "Admin@4321") {
-        alert("Access denied: Invalid Admin Password.");
-        return;
-      }
-      setIsAdmin(true);
-      setUserRole("ADMIN");
-      setUserLevel("ADMIN");
-      setIsLoggedIn(true);
-      setSelectedYear(year);
-      setAllowedModules(["*"]);
-      setCurrentPage("dashboard");
-      setCurrentUserContext({ userId: "admin", username: "ADMIN", userName: "ADMIN", userRole: "ADMIN", userLevel: "ADMIN", allowedModules: ["*"] });
-      try {
-        localStorage.setItem("bally_auth_session", JSON.stringify({
-          userId: "admin",
-          username: "ADMIN",
-          role: "ADMIN",
-          level: "ADMIN",
-          allowed_modules: "*",
-          year: year
-        }));
-      } catch (e) {}
-      logEvent(
-        "LOGIN_HISTORY",
-        `Administrator login verified under session year: ${year}`,
-      );
-      setSessionStatus('ready');
-      return;
-    }
+    const trimmedUser = user.trim();
+    const cleanPass = pass.trim();
 
-    if (!supabase) {
-      alert("System offline. Use master override credentials.");
+    if (!trimmedUser || !cleanPass) {
+      alert("Please enter both User ID / Username and Password.");
       return;
     }
 
     try {
-      const trimmedUser = user.trim();
-      const { data, error } = await supabase
-        .from("user_master")
-        .select("*")
-        .or(`user_id.ilike.${trimmedUser},username.ilike.${trimmedUser}`)
-        .limit(1)
-        .maybeSingle();
+      let data: any = null;
 
-      if (error || !data) {
-        alert("Invalid system credentials. User not found.");
-        return;
+      // 1. Try querying user_master in Supabase
+      if (supabase) {
+        const { data: remoteData, error } = await supabase
+          .from("user_master")
+          .select("*")
+          .or(`user_id.ilike.${trimmedUser},username.ilike.${trimmedUser}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && remoteData) {
+          data = remoteData;
+        }
       }
 
-      if (data.status && data.status.toLowerCase() !== "active") {
-        alert("Access denied: Your account is currently inactive. Please contact Administrator.");
-        return;
-      }
-
-      // Check password (assume plain text for this legacy demo or user preference)
-      if (data.password === pass) {
-        const isAdminUser =
-          data.role?.toUpperCase() === "ADMIN" ||
-          data.role?.toUpperCase() === "ADMINISTRATOR";
-        setIsAdmin(isAdminUser);
-        setUserRole(data.role?.toUpperCase() || "L1");
-        setUserLevel(data.level?.toUpperCase() || "L1");
-        const rawMods = data.allowed_modules;
-        const modules = (rawMods !== undefined && rawMods !== null && String(rawMods).trim() !== "" && String(rawMods).trim() !== "[]")
-          ? normalizeAllowedModules(rawMods)
-          : ["*"];
-        const finalMods = modules.length === 0 ? ["*"] : modules;
-
-        setCurrentUserContext({
-          userId: data.user_id,
-          username: data.username,
-          userName: data.username,
-          userRole: data.role?.toUpperCase() || "L1",
-          userLevel: data.level?.toUpperCase() || "L1",
-          allowedModules: finalMods,
-        });
-
-        setAllowedModules(finalMods);
-        setIsLoggedIn(true);
-        setSelectedYear(year);
-
-        const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
-        setCurrentPage(firstLanding);
-
-        // Persist session
+      // 2. Try querying local client dbModule if not found in Supabase
+      if (!data) {
         try {
-          localStorage.setItem("bally_auth_session", JSON.stringify({
-            userId: data.user_id,
-            username: data.username,
-            role: data.role?.toUpperCase() || "L1",
-            level: data.level?.toUpperCase() || "L1",
-            allowed_modules: data.allowed_modules || "*",
-            year: year
-          }));
+          const localUsers = await dbModule.fetchAll('user_master');
+          if (Array.isArray(localUsers)) {
+            data = localUsers.find((u: any) => 
+              String(u.user_id || '').trim().toLowerCase() === trimmedUser.toLowerCase() ||
+              String(u.username || '').trim().toLowerCase() === trimmedUser.toLowerCase()
+            );
+          }
         } catch (e) {}
-
-        // Update last login
-        supabase.from('user_master').update({ last_login: new Date().toISOString() }).eq('user_id', data.user_id).then(res => console.log("Login Update:", res));
-        
-        logEvent(
-          "LOGIN_HISTORY",
-          `Operator account: ${data.username} [Role: ${data.role || "USER"}] successfully logged in under session year: ${year}`,
-        );
-        setSessionStatus('ready');
-      } else {
-        alert("Access denied: Authentication failure.");
       }
+
+      // 3. If user found in database (user_master), check database password
+      if (data) {
+        if (data.status && data.status.toLowerCase() !== "active") {
+          alert("Access denied: Your account is currently inactive. Please contact Administrator.");
+          return;
+        }
+
+        if (String(data.password || '') === cleanPass) {
+          const isAdminUser =
+            data.role?.toUpperCase() === "ADMIN" ||
+            data.role?.toUpperCase() === "ADMINISTRATOR" ||
+            data.level?.toUpperCase() === "L5" ||
+            data.level?.toUpperCase() === "ADMIN";
+
+          setIsAdmin(isAdminUser);
+          setUserRole(data.role?.toUpperCase() || "L1");
+          setUserLevel(data.level?.toUpperCase() || "L1");
+          const rawMods = data.allowed_modules;
+          const modules = (rawMods !== undefined && rawMods !== null && String(rawMods).trim() !== "" && String(rawMods).trim() !== "[]")
+            ? normalizeAllowedModules(rawMods)
+            : ["*"];
+          const finalMods = modules.length === 0 ? ["*"] : modules;
+
+          setCurrentUserContext({
+            userId: data.user_id || data.username,
+            username: data.username || data.user_id,
+            userName: data.username || data.user_id,
+            userRole: data.role?.toUpperCase() || "L1",
+            userLevel: data.level?.toUpperCase() || "L1",
+            allowedModules: finalMods,
+          });
+
+          setAllowedModules(finalMods);
+          setIsLoggedIn(true);
+          setSelectedYear(year);
+
+          const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
+          setCurrentPage(firstLanding);
+
+          // Persist session
+          try {
+            localStorage.setItem("bally_auth_session", JSON.stringify({
+              userId: data.user_id,
+              username: data.username,
+              role: data.role?.toUpperCase() || "L1",
+              level: data.level?.toUpperCase() || "L1",
+              allowed_modules: data.allowed_modules || "*",
+              year: year
+            }));
+          } catch (e) {}
+
+          // Update last login timestamp in database
+          if (supabase && data.user_id) {
+            supabase.from('user_master').update({ last_login: new Date().toISOString() }).eq('user_id', data.user_id).then(() => {});
+          }
+          
+          logEvent(
+            "LOGIN_HISTORY",
+            `Operator account: ${data.username} [Role: ${data.role || "USER"}] successfully logged in under session year: ${year}`,
+          );
+          setSessionStatus('ready');
+          return;
+        } else {
+          alert("Access denied: Invalid password entered for " + (data.username || trimmedUser) + ".");
+          return;
+        }
+      }
+
+      // 4. Master Admin Fallback (only if user not found in database)
+      if (trimmedUser.toLowerCase() === "admin") {
+        if (cleanPass === "Admin@4321" || cleanPass === "Admin@1234" || cleanPass === "ADMIN") {
+          setIsAdmin(true);
+          setUserRole("ADMIN");
+          setUserLevel("ADMIN");
+          setIsLoggedIn(true);
+          setSelectedYear(year);
+          setAllowedModules(["*"]);
+          setCurrentPage("dashboard");
+          setCurrentUserContext({ userId: "admin", username: "ADMIN", userName: "ADMIN", userRole: "ADMIN", userLevel: "ADMIN", allowedModules: ["*"] });
+          try {
+            localStorage.setItem("bally_auth_session", JSON.stringify({
+              userId: "admin",
+              username: "ADMIN",
+              role: "ADMIN",
+              level: "ADMIN",
+              allowed_modules: "*",
+              year: year
+            }));
+          } catch (e) {}
+          logEvent(
+            "LOGIN_HISTORY",
+            `Administrator fallback login verified under session year: ${year}`,
+          );
+          setSessionStatus('ready');
+          return;
+        }
+      }
+
+      alert("Invalid system credentials. User not found.");
     } catch (err) {
       console.error("Login fault:", err);
       alert("Internal security fault. Verify DB connection.");

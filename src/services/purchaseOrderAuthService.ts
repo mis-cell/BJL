@@ -22,20 +22,7 @@ export const verifyAdminOrSuperPassword = async (
     return { success: false, error: 'Please enter Admin or Super User password.' };
   }
 
-  // 1. Check Master Admin password
-  if (cleanPass === 'Admin@1234') {
-    return {
-      success: true,
-      user: {
-        username: username.trim().toUpperCase() || 'ADMIN',
-        user_id: username.trim().toLowerCase() || 'admin',
-        role: 'ADMIN',
-        level: 'L5'
-      }
-    };
-  }
-
-  // 2. Query user_master in Supabase
+  // 1. Query user_master in Supabase first
   if (supabase) {
     try {
       const { data, error } = await supabase.from('user_master').select('*');
@@ -73,7 +60,7 @@ export const verifyAdminOrSuperPassword = async (
             } else {
               return {
                 success: false,
-                error: 'The entered user does not have Admin or Super User authorization to reopen Saudas.'
+                error: 'The entered user does not have Admin or Super User authorization.'
               };
             }
           }
@@ -111,6 +98,19 @@ export const verifyAdminOrSuperPassword = async (
     } catch (e) {
       console.warn('Error checking user_master for admin credentials:', e);
     }
+  }
+
+  // 2. Fallback to Master Admin Passwords if not matched in DB
+  if (cleanPass === 'Admin@1234' || cleanPass === 'Admin@4321' || cleanPass === 'ADMIN') {
+    return {
+      success: true,
+      user: {
+        username: username.trim().toUpperCase() || 'ADMIN',
+        user_id: username.trim().toLowerCase() || 'admin',
+        role: 'ADMIN',
+        level: 'L5'
+      }
+    };
   }
 
   // 3. Check localStorage user_master

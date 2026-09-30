@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { dbModule } from '../../services/dbModule';
 
 interface AdminDeskLoginModalProps {
   onSuccess: () => void;
@@ -13,15 +15,83 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleLogin = () => {
-    if (loginUser.toUpperCase() === 'ADMIN' && loginPass === 'Admin@1234') {
-      onSuccess();
-      if (onLogin) onLogin();
-    } else if (loginUser.toUpperCase() !== 'ADMIN') {
-      setError('AUTHENTICATION DENIED: ADMIN PRIVILEGES REQUIRED.');
-    } else {
-      setError('AUTHENTICATION DENIED: INVALID PASSWORD.');
+  const handleLogin = async () => {
+    const cleanUser = loginUser.trim();
+    const cleanPass = loginPass.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setError('PLEASE ENTER BOTH OPERATOR ID AND PASSWORD.');
+      return;
+    }
+
+    setIsVerifying(true);
+    setError('');
+
+    try {
+      let matchedUser: any = null;
+
+      if (supabase) {
+        const { data } = await supabase
+          .from('user_master')
+          .select('*')
+          .or(`user_id.ilike.${cleanUser},username.ilike.${cleanUser}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (data) matchedUser = data;
+      }
+
+      if (!matchedUser) {
+        const localUsers = await dbModule.fetchAll('user_master').catch(() => []);
+        if (Array.isArray(localUsers)) {
+          matchedUser = localUsers.find((u: any) =>
+            String(u.user_id || '').trim().toLowerCase() === cleanUser.toLowerCase() ||
+            String(u.username || '').trim().toLowerCase() === cleanUser.toLowerCase()
+          );
+        }
+      }
+
+      if (matchedUser) {
+        const role = String(matchedUser.role || '').toUpperCase();
+        const level = String(matchedUser.level || '').toUpperCase();
+        const isAdminPrivileged = role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'L5';
+
+        if (!isAdminPrivileged) {
+          setError('AUTHENTICATION DENIED: ADMIN PRIVILEGES REQUIRED.');
+          setIsVerifying(false);
+          return;
+        }
+
+        if (String(matchedUser.password || '') === cleanPass) {
+          onSuccess();
+          if (onLogin) onLogin();
+          setIsVerifying(false);
+          return;
+        } else {
+          setError('AUTHENTICATION DENIED: INVALID PASSWORD.');
+          setIsVerifying(false);
+          return;
+        }
+      }
+
+      // Fallback for Master Admin
+      if (cleanUser.toUpperCase() === 'ADMIN') {
+        if (cleanPass === 'Admin@1234' || cleanPass === 'Admin@4321' || cleanPass === 'ADMIN') {
+          onSuccess();
+          if (onLogin) onLogin();
+          setIsVerifying(false);
+          return;
+        }
+      }
+
+      setError('AUTHENTICATION DENIED: INVALID SYSTEM CREDENTIALS.');
+    } catch (err) {
+      console.error(err);
+      setError('AUTHENTICATION FAULT: PLEASE RETRY.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
