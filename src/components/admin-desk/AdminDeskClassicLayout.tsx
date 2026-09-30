@@ -33,6 +33,7 @@ interface AdminDeskClassicLayoutProps {
   currentColumns: Array<{ name: string; type: string }>;
   editorColumns: string[];
   setEditingRow: (row: any) => void;
+  setIsNewRow?: (val: boolean) => void;
   handleDelete: (pkValue: any) => void;
   handleDeleteColumn: (columnName: string) => void;
   handleAddField: () => void;
@@ -92,6 +93,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
   currentColumns,
   editorColumns,
   setEditingRow,
+  setIsNewRow,
   handleDelete,
   handleDeleteColumn,
   handleAddField,
@@ -231,6 +233,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
                       if (!selectedTable) return;
                       const emptyRow: any = {};
                       editorColumns.forEach((c) => (emptyRow[c] = ""));
+                      if (setIsNewRow) setIsNewRow(true);
                       setEditingRow(emptyRow);
                     }}
                     className="px-3 py-1 bg-[#000080] text-white font-black text-xs border-t-blue-400 border-l-blue-400 border-b-blue-950 border-r-blue-950 border cursor-pointer hover:bg-blue-900"
@@ -287,7 +290,10 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
                           <tr key={pkVal || idx} className="hover:bg-blue-50/50 transition-colors">
                             <td className="p-1.5 text-center whitespace-nowrap border-r border-slate-200 font-sans">
                               <button
-                                onClick={() => setEditingRow(row)}
+                                onClick={() => {
+                                  if (setIsNewRow) setIsNewRow(false);
+                                  setEditingRow(row);
+                                }}
                                 className="px-1.5 py-0.5 bg-[#c0c0c0] hover:bg-slate-300 text-slate-900 text-[10px] font-bold border border-slate-600 mr-1 cursor-pointer"
                               >
                                 Edit

@@ -65,6 +65,7 @@ export default function AdminDesk({
     editingRow,
     setEditingRow,
     isNewRow,
+    setIsNewRow,
     newFieldName,
     setNewFieldName,
     newFieldType,
@@ -165,6 +166,7 @@ export default function AdminDesk({
           editorColumns={editorColumns}
           purchaseOrders={purchaseOrders}
           setEditingRow={setEditingRow}
+          setIsNewRow={setIsNewRow}
           handleDelete={handleDelete}
           handleDeleteColumn={handleDeleteColumn}
           handleAddField={handleAddField}
@@ -220,6 +222,7 @@ export default function AdminDesk({
           currentColumns={currentColumns}
           editorColumns={editorColumns}
           setEditingRow={setEditingRow}
+          setIsNewRow={setIsNewRow}
           handleDelete={handleDelete}
           handleDeleteColumn={handleDeleteColumn}
           handleAddField={handleAddField}

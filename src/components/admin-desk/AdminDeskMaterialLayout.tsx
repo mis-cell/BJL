@@ -41,6 +41,7 @@ interface AdminDeskMaterialLayoutProps {
   editorColumns: string[];
   purchaseOrders: any[];
   setEditingRow: (row: any) => void;
+  setIsNewRow?: (val: boolean) => void;
   handleDelete: (pkValue: any) => void;
   handleDeleteColumn: (columnName: string) => void;
   handleAddField: () => void;
@@ -97,6 +98,7 @@ export const AdminDeskMaterialLayout: React.FC<AdminDeskMaterialLayoutProps> = (
   editorColumns,
   purchaseOrders,
   setEditingRow,
+  setIsNewRow,
   handleDelete,
   handleDeleteColumn,
   handleAddField,
@@ -372,6 +374,7 @@ export const AdminDeskMaterialLayout: React.FC<AdminDeskMaterialLayoutProps> = (
                       if (!selectedTable) return;
                       const emptyRow: any = {};
                       editorColumns.forEach((c) => (emptyRow[c] = ""));
+                      if (setIsNewRow) setIsNewRow(true);
                       setEditingRow(emptyRow);
                     }}
                     className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer"
@@ -448,7 +451,10 @@ export const AdminDeskMaterialLayout: React.FC<AdminDeskMaterialLayoutProps> = (
                               <td className="p-2 text-center whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-1">
                                   <button
-                                    onClick={() => setEditingRow(row)}
+                                    onClick={() => {
+                                      if (setIsNewRow) setIsNewRow(false);
+                                      setEditingRow(row);
+                                    }}
                                     className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition cursor-pointer"
                                     title="Edit Row"
                                   >

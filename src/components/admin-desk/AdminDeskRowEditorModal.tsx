@@ -39,7 +39,7 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
 
     let updates: any = null;
     if (selectedTable.name === "user_master") {
-      if (!editingRow.user_id) {
+      if ((!editingRow.user_id || editingRow.user_id === "") && isNewRow) {
         let nextNum = 1;
         if (data && data.length > 0) {
           const numericIds = data
@@ -89,7 +89,7 @@ export const AdminDeskRowEditorModal: React.FC<AdminDeskRowEditorModalProps> = (
           name="system_generated_serial"
           aria-label="System Generated Serial"
           type="text"
-          value={val || "001"}
+          value={val}
           onChange={(e) => setEditingRow((prev: any) => ({ ...prev, [col]: e.target.value }))}
           className="w-full bg-white border border-slate-300 p-2 text-xs font-black font-mono rounded outline-none focus:border-indigo-500"
           placeholder="System Generated Serial"
