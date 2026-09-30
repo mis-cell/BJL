@@ -136,13 +136,76 @@ export interface SystemReportDataset {
   };
 }
 
+// Helper to normalize any date string format to standard YYYY-MM-DD
+export function normalizeToISODate(dateStr?: string | null): string {
+  if (!dateStr) return new Date().toISOString().split('T')[0];
+  const clean = String(dateStr).trim();
+  if (!clean) return new Date().toISOString().split('T')[0];
+
+  if (clean.includes('T')) {
+    const part = clean.split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(part)) return part;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return clean;
+  }
+
+  const dmyMatch = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  const ymdSlash = clean.match(/^(\d{4})[\/](\d{1,2})[\/](\d{1,2})$/);
+  if (ymdSlash) {
+    const year = ymdSlash[1];
+    const month = ymdSlash[2].padStart(2, '0');
+    const day = ymdSlash[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return new Date().toISOString().split('T')[0];
+}
+
+export function getTodayISODate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function parseJsonItems(itemsField: any): any[] {
+  if (!itemsField) return [];
+  if (Array.isArray(itemsField)) return itemsField;
+  if (typeof itemsField === 'string') {
+    try {
+      const parsed = JSON.parse(itemsField);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
 // Helper to determine financial year
 function getFinancialYear(dateStr: string): string {
-  if (!dateStr) return '2026-2027';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '2026-2027';
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1; // 1-12
+  const iso = normalizeToISODate(dateStr);
+  const parts = iso.split('-');
+  const year = parseInt(parts[0], 10) || 2026;
+  const month = parseInt(parts[1], 10) || 9;
   if (month >= 4) {
     return `${year}-${year + 1}`;
   } else {
@@ -151,12 +214,8 @@ function getFinancialYear(dateStr: string): string {
 }
 
 function getYearMonth(dateStr: string): string {
-  if (!dateStr) return '2026-09';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '2026-09';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
+  const iso = normalizeToISODate(dateStr);
+  return iso.substring(0, 7) || '2026-09';
 }
 
 export async function loadAndProcessSystemReportData(): Promise<{
@@ -170,6 +229,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       saudaDetails,
       poDetails,
       scps,
+      scpDetails,
       amad,
       finals,
       inspections,
@@ -186,6 +246,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('sauda_quality_details').catch(() => []),
       dbModule.fetchAll('purchase_detail_master').catch(() => []),
       dbModule.fetchAll('sauda_check_point').catch(() => []),
+      dbModule.fetchAll('sauda_check_point_details').catch(() => []),
       dbModule.fetchAll('temporary_material_received').catch(() => []),
       dbModule.fetchAll('final_arrival').catch(() => []),
       dbModule.fetchAll('material_inspection').catch(() => []),

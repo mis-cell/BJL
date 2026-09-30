@@ -23,7 +23,7 @@ import {
   Users,
   PieChart
 } from 'lucide-react';
-import { SystemReportDataset, ReportTransactionLine } from '../../services/systemReportEngine';
+import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate } from '../../services/systemReportEngine';
 import { SimpleDealSlipModal } from './SimpleDealSlipModal';
 import { formatIndianCurrency } from '../../lib/utils';
 
@@ -81,12 +81,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     }
 
     // Date filter
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayISODate();
     const curYearMonth = todayStr.substring(0, 7);
     if (dateFilter === 'TODAY') {
-      list = list.filter(t => t.date === todayStr);
+      list = list.filter(t => t.date && (t.date === todayStr || normalizeToISODate(t.date) === todayStr));
     } else if (dateFilter === 'THIS_MONTH') {
-      list = list.filter(t => t.date && t.date.startsWith(curYearMonth));
+      list = list.filter(t => t.date && (t.date.startsWith(curYearMonth) || normalizeToISODate(t.date).startsWith(curYearMonth)));
     }
 
     // Search query
