@@ -294,23 +294,51 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
     if (!selectedTable) return;
     setLoading(true);
     try {
-      let records: any[] = [];
-      if (!supabase) {
-        records = await dbModule.fetchAll(selectedTable.name);
-      } else {
+      let remoteRecords: any[] = [];
+      let localRecords: any[] = [];
+
+      try {
+        localRecords = await dbModule.fetchAll(selectedTable.name);
+      } catch (e) {}
+
+      if (supabase) {
         const { data: remoteData, error } = await supabase
           .from(selectedTable.name)
           .select("*")
           .order(selectedTable.pk, { ascending: true })
-          .limit(200);
+          .limit(300);
 
-        if (error) {
-          records = await dbModule.fetchAll(selectedTable.name);
-        } else {
-          records = remoteData || [];
+        if (!error && remoteData) {
+          remoteRecords = remoteData;
         }
       }
-      setData(records);
+
+      const pk = selectedTable.pk;
+      const combinedMap = new Map<string, any>();
+
+      // Populate with local client database records first
+      (localRecords || []).forEach((rec: any) => {
+        const key = String(rec[pk] ?? rec.user_id ?? rec.id ?? '').trim();
+        if (key) combinedMap.set(key, rec);
+      });
+
+      // Merge remote records (remote records take precedence if updated)
+      (remoteRecords || []).forEach((rec: any) => {
+        const key = String(rec[pk] ?? rec.user_id ?? rec.id ?? '').trim();
+        if (key) combinedMap.set(key, rec);
+      });
+
+      const merged = Array.from(combinedMap.values());
+      merged.sort((a, b) => {
+        const aVal = a[pk] ?? '';
+        const bVal = b[pk] ?? '';
+        if (!isNaN(Number(aVal)) && !isNaN(Number(bVal))) {
+          return Number(aVal) - Number(bVal);
+        }
+        return String(aVal).localeCompare(String(bVal));
+      });
+
+      setData(merged.length > 0 ? merged : (remoteRecords.length > 0 ? remoteRecords : localRecords));
     } catch (err) {
       console.error(err);
       const fallbackRecords = await dbModule.fetchAll(selectedTable.name).catch(() => []);
@@ -447,19 +475,37 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
         }
       } else {
         if (selectedTable.name === "user_master") {
-          // Use upsert for user_master to handle insert/update cleanly
+          const userPayload: any = {
+            user_id: editingRow.user_id,
+            username: editingRow.username,
+            password: editingRow.password,
+            role: editingRow.role,
+            status: editingRow.status,
+            allowed_modules: editingRow.allowed_modules,
+            level: editingRow.level,
+            created_at: editingRow.created_at || new Date().toISOString()
+          };
+          if (editingRow.last_login && String(editingRow.last_login).trim() !== "" && String(editingRow.last_login).trim() !== "null") {
+            userPayload.last_login = editingRow.last_login;
+          }
+
+          // Guaranteed local client store save
+          await dbModule.insert("user_master", userPayload).catch(() =>
+            dbModule.update("user_master", "user_id", userPayload.user_id, userPayload).catch(() => {})
+          );
+
+          // Remote Supabase store upsert
           const { error } = await supabase
             .from("user_master")
-            .upsert(editingRow, { onConflict: "user_id" });
+            .upsert(userPayload, { onConflict: "user_id" });
           if (error) {
-            // If conflict on username, try upserting with username conflict
             const { error: err2 } = await supabase
               .from("user_master")
-              .upsert(editingRow, { onConflict: "username" });
-            if (err2) throw err2;
+              .upsert(userPayload, { onConflict: "username" });
+            if (err2) {
+              console.warn("Supabase user_master save warning:", err2);
+            }
           }
-          // Also save into client local store as backup
-          await dbModule.insert("user_master", editingRow).catch(() => dbModule.update("user_master", "user_id", editingRow.user_id, editingRow).catch(() => {}));
         } else if (isNew) {
           const insertPayload = { ...editingRow };
           if (insertPayload.id === "" || insertPayload.id === null) {
