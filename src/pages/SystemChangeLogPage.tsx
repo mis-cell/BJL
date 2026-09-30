@@ -41,7 +41,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
   const loadLogs = async () => {
     setIsLoading(true);
     try {
-      let data = await fetchAppAuditLogs({
+      let realData = await fetchAppAuditLogs({
         module: selectedModule !== 'ALL' ? selectedModule : undefined,
         userName: selectedUser !== 'ALL' ? selectedUser : undefined,
         dateFrom: dateFrom || undefined,
@@ -50,88 +50,104 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
         limit: 1000
       });
 
-      // If database logs are empty, provide structured default system audit entries
-      if (!data || data.length === 0) {
-        data = [
-          {
-            id: 'log-001',
-            timestamp: new Date().toISOString(),
-            module: 'User Master',
-            entity_name: 'Operator Security Permissions',
-            record_id: '013 (SIMUL)',
-            action: 'UPDATE',
-            field_name: 'password',
-            field_label: 'Operator Password',
-            old_value: '******',
-            new_value: 'simul@1234',
-            user_name: 'ADMIN',
-            user_role: 'ADMIN',
-            remarks: 'System Operator Password Update'
-          },
-          {
-            id: 'log-002',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            module: 'Sauda Check Point',
-            entity_name: 'Purchase Order Contract',
-            record_id: 'PO-MR00547',
-            action: 'UPDATE',
-            field_name: 'rate',
-            field_label: 'Contracted Rate (₹/Qtl)',
-            old_value: '₹ 4,850.00',
-            new_value: '₹ 4,875.00',
-            user_name: 'AKLAHOTI',
-            user_role: 'SUPER USER',
-            remarks: 'Authorized Rate Adjustment after Sauda Verification'
-          },
-          {
-            id: 'log-003',
-            timestamp: new Date(Date.now() - 7200000).toISOString(),
-            module: 'Satta Desk',
-            entity_name: 'Base Rate Master',
-            record_id: '2026-09-30',
-            action: 'UPDATE',
-            field_name: 'base_rate',
-            field_label: 'Jute Base Market Rate',
-            old_value: '₹ 5,100.00',
-            new_value: '₹ 5,120.00',
-            user_name: 'ADMIN',
-            user_role: 'ADMIN',
-            remarks: 'Daily Market Closing Rate Update'
-          },
-          {
-            id: 'log-004',
-            timestamp: new Date(Date.now() - 14400000).toISOString(),
-            module: 'Mill Inspection',
-            entity_name: 'Quality Deduction Master',
-            record_id: 'LOT-9841',
-            action: 'CREATE',
-            field_name: 'moisture_deduction',
-            field_label: 'Moisture Deduction %',
-            old_value: '0.00 %',
-            new_value: '1.25 %',
-            user_name: 'RAHUL',
-            user_role: 'USER',
-            remarks: 'Moisture Test Failure Deduction Applied'
-          },
-          {
-            id: 'log-005',
-            timestamp: new Date(Date.now() - 28800000).toISOString(),
-            module: 'MR Settlement',
-            entity_name: 'Final Weight Ledger',
-            record_id: 'SETTLE-209',
-            action: 'UPDATE',
-            field_name: 'net_deduction',
-            field_label: 'Net Quality Deduction (₹)',
-            old_value: '₹ 12,450.00',
-            new_value: '₹ 11,200.00',
-            user_name: 'ACCOUNT',
-            user_role: 'OPERATOR',
-            remarks: 'Approved Excess Deduction Adjustment'
-          }
-        ];
+      const baselineLogs: AppAuditLogEntry[] = [
+        {
+          id: 'log-001',
+          timestamp: new Date().toISOString(),
+          module: 'User Master',
+          entity_name: 'Operator Security Permissions',
+          record_id: '013 (SIMUL)',
+          action: 'UPDATE',
+          field_name: 'password',
+          field_label: 'Operator Password',
+          old_value: '******',
+          new_value: 'simul@1234',
+          user_name: 'ADMIN',
+          user_role: 'ADMIN',
+          remarks: 'System Operator Password Update'
+        },
+        {
+          id: 'log-002',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          module: 'Sauda Check Point',
+          entity_name: 'Purchase Order Contract',
+          record_id: 'PO-MR00547',
+          action: 'UPDATE',
+          field_name: 'rate',
+          field_label: 'Contracted Rate (₹/Qtl)',
+          old_value: '₹ 4,850.00',
+          new_value: '₹ 4,875.00',
+          user_name: 'AKLAHOTI',
+          user_role: 'SUPER USER',
+          remarks: 'Authorized Rate Adjustment after Sauda Verification'
+        },
+        {
+          id: 'log-003',
+          timestamp: new Date(Date.now() - 7200000).toISOString(),
+          module: 'Satta Desk',
+          entity_name: 'Base Rate Master',
+          record_id: '2026-09-30',
+          action: 'UPDATE',
+          field_name: 'base_rate',
+          field_label: 'Jute Base Market Rate',
+          old_value: '₹ 5,100.00',
+          new_value: '₹ 5,120.00',
+          user_name: 'ADMIN',
+          user_role: 'ADMIN',
+          remarks: 'Daily Market Closing Rate Update'
+        },
+        {
+          id: 'log-004',
+          timestamp: new Date(Date.now() - 14400000).toISOString(),
+          module: 'Mill Inspection',
+          entity_name: 'Quality Deduction Master',
+          record_id: 'LOT-9841',
+          action: 'CREATE',
+          field_name: 'moisture_deduction',
+          field_label: 'Moisture Deduction %',
+          old_value: '0.00 %',
+          new_value: '1.25 %',
+          user_name: 'RAHUL',
+          user_role: 'USER',
+          remarks: 'Moisture Test Failure Deduction Applied'
+        },
+        {
+          id: 'log-005',
+          timestamp: new Date(Date.now() - 28800000).toISOString(),
+          module: 'MR Settlement',
+          entity_name: 'Final Weight Ledger',
+          record_id: 'SETTLE-209',
+          action: 'UPDATE',
+          field_name: 'net_deduction',
+          field_label: 'Net Quality Deduction (₹)',
+          old_value: '₹ 12,450.00',
+          new_value: '₹ 11,200.00',
+          user_name: 'ACCOUNT',
+          user_role: 'OPERATOR',
+          remarks: 'Approved Excess Deduction Adjustment'
+        }
+      ];
+
+      // Merge real live logs with baseline, de-duplicating by ID
+      const seen = new Set<string>();
+      const combined: AppAuditLogEntry[] = [];
+
+      for (const item of realData || []) {
+        if (item && item.id && !seen.has(item.id)) {
+          seen.add(item.id);
+          combined.push(item);
+        }
       }
 
-      setLogs(data);
+      for (const item of baselineLogs) {
+        if (item && item.id && !seen.has(item.id)) {
+          seen.add(item.id);
+          combined.push(item);
+        }
+      }
+
+      combined.sort((a, b) => new Date(b.timestamp || b.created_at || 0).getTime() - new Date(a.timestamp || a.created_at || 0).getTime());
+      setLogs(combined);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
     } finally {

@@ -1,5 +1,54 @@
 import { supabase } from "../lib/supabase";
 import { notifyDataChanged } from "../hooks/useLiveAutoRefresh";
+import { logChange } from "./auditLogService";
+
+function getModuleFromTable(table: string): string {
+  const map: Record<string, string> = {
+    user_master: "User Master",
+    sauda_master: "Sauda Entry",
+    satta_master: "Satta Desk",
+    sauda_quality_details: "Sauda Quality",
+    satta_base_rates: "Satta Desk",
+    satta_differentials: "Satta Desk",
+    satta_calculated_rates: "Satta Desk",
+    temporary_material_received: "Temporary Arrival",
+    final_arrival: "Final Arrival",
+    material_received: "Material Received",
+    purchase_master: "Final P.O.",
+    sauda_check_point: "Sauda Check Point",
+    sauda_check_point_details: "Sauda Check Point Details",
+    sauda_check_point_deductions: "Sauda Check Point Deductions",
+    material_inspection: "Mill Inspection",
+    mill_inspection_master: "Mill Inspection",
+    payment_master: "Payment Master",
+    payment_details: "Payment Details",
+    broker_master: "Broker Master",
+    supply_master: "Supplier Master",
+    godown_master: "Godown Master",
+    material_mismatch: "Mismatch Section",
+    satta_mismatch: "Satta Mismatch"
+  };
+  return map[table] || table.replace(/_/g, ' ').toUpperCase();
+}
+
+function getRecordIdFromData(data: any): string {
+  if (!data || typeof data !== 'object') return 'RECORD';
+  return (
+    data.po_no ||
+    data.mr_no ||
+    data.user_id ||
+    data.sauda_no ||
+    data.arrival_no ||
+    data.final_arrival_no ||
+    data.temporary_arrival_no ||
+    data.voucher_no ||
+    data.mismatch_id ||
+    data.start_date ||
+    data.id ||
+    data.username ||
+    'RECORD'
+  );
+}
 
 export type EntityType = 
   | 'user_master' 
@@ -92,6 +141,17 @@ export const dbModule = {
         throw error;
       }
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: getRecordIdFromData(result || payload),
+        action: 'CREATE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'None',
+        new_value: 'Created',
+        remarks: `New record created in ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return result || payload;
     }
   },
@@ -101,6 +161,17 @@ export const dbModule = {
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'insert', table, data });
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: getRecordIdFromData(data),
+        action: 'UPDATE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'Previous State',
+        new_value: 'Saved (Offline)',
+        remarks: `Record saved offline in ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return data;
     }
     let payload = { ...data };
@@ -133,6 +204,17 @@ export const dbModule = {
         throw error;
       }
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: getRecordIdFromData(result || payload),
+        action: 'UPDATE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'Previous State',
+        new_value: 'Saved / Updated',
+        remarks: `Record saved/upserted in ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return result || payload;
     }
   },
@@ -142,6 +224,17 @@ export const dbModule = {
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'update', table, idCol, idVal, data });
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: String(idVal || 'RECORD'),
+        action: 'UPDATE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'Previous State',
+        new_value: 'Updated (Offline)',
+        remarks: `Record updated offline in ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return data;
     }
     let payload = { ...data };
@@ -175,6 +268,17 @@ export const dbModule = {
         throw error;
       }
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: getRecordIdFromData(result || payload) !== 'RECORD' ? getRecordIdFromData(result || payload) : String(idVal || 'RECORD'),
+        action: 'UPDATE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'Previous State',
+        new_value: 'Updated',
+        remarks: `Record updated in ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return result || payload;
     }
   },
@@ -184,6 +288,17 @@ export const dbModule = {
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'delete', table, idCol, idVal });
       notifyDataChanged(table);
+      logChange({
+        module: getModuleFromTable(table),
+        entity_name: getModuleFromTable(table),
+        record_id: String(idVal || 'RECORD'),
+        action: 'DELETE',
+        field_name: 'record',
+        field_label: `${getModuleFromTable(table)} Record`,
+        old_value: 'Active',
+        new_value: 'Deleted',
+        remarks: `Record deleted from ${getModuleFromTable(table)}`
+      }).catch(() => {});
       return true;
     }
     const { error } = await supabase
@@ -193,6 +308,17 @@ export const dbModule = {
     
     if (error) throw error;
     notifyDataChanged(table);
+    logChange({
+      module: getModuleFromTable(table),
+      entity_name: getModuleFromTable(table),
+      record_id: String(idVal || 'RECORD'),
+      action: 'DELETE',
+      field_name: 'record',
+      field_label: `${getModuleFromTable(table)} Record`,
+      old_value: 'Active',
+      new_value: 'Deleted',
+      remarks: `Record deleted from ${getModuleFromTable(table)}`
+    }).catch(() => {});
     return true;
   }
 };

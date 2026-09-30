@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
 import { canDeleteData } from '../../lib/utils';
 import { broadcastPermissionsUpdated } from '../../lib/permissions';
+import { logChange } from '../../services/auditLogService';
 import { TableDef, TABLES } from './adminDeskTypes';
 import { Database } from 'lucide-react';
 
