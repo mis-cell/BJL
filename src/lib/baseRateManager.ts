@@ -173,20 +173,32 @@ export async function updateCentralBaseRateByAdmin(params: {
     // and all historical updates must be preserved in the database.
 
     // Insert new Base Rate record with timestamp and updated_by user
-    const { data: newBaseRateRecord, error: insertError } = await supabase
+    const basePayload: any = {
+      base_rate: rate,
+      start_date: effectiveDate,
+      updated_by: adminIdentity,
+      remarks: remarks || `Daily Base Rate updated to ₹${rate.toLocaleString('en-IN')}`,
+      created_at: nowIso
+    };
+
+    const { data: d1, error: e1 } = await supabase
       .from('satta_base_rates')
-      .insert({
-        base_rate: rate,
-        start_date: effectiveDate,
-        updated_by: adminIdentity,
-        remarks: remarks || `Daily Base Rate updated to ₹${rate.toLocaleString('en-IN')}`,
-        created_at: nowIso
-      })
+      .insert(basePayload)
       .select()
       .single();
 
-    if (insertError) {
-      throw insertError;
+    if (e1) {
+      if (e1.message?.includes('updated_by') || String(e1.message).includes('schema cache')) {
+        delete basePayload.updated_by;
+        const { error: e2 } = await supabase
+          .from('satta_base_rates')
+          .insert(basePayload)
+          .select()
+          .single();
+        if (e2) throw e2;
+      } else {
+        throw e1;
+      }
     }
 
     // Insert immutable Audit Log

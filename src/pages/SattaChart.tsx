@@ -672,19 +672,37 @@ export default function SattaChart({
       // Multiple intraday updates are preserved in satta_base_rates and history.
       const oldRateValue = latestRateRecord ? Number(latestRateRecord.base_rate) : null;
 
-      const { data: rRecord, error: rErr } = await supabase
+      let rRecord: any = null;
+      const basePayload: any = {
+        base_rate: baseRate,
+        start_date: startDate,
+        updated_by: currentUserName,
+        remarks: remarks || `Base rate changed to ₹${baseRate.toLocaleString('en-IN')}`,
+        created_at: nowIso
+      };
+
+      const { data: d1, error: e1 } = await supabase
         .from('satta_base_rates')
-        .insert({
-          base_rate: baseRate,
-          start_date: startDate,
-          updated_by: currentUserName,
-          remarks: remarks || `Base rate changed to ₹${baseRate.toLocaleString('en-IN')}`,
-          created_at: nowIso
-        })
+        .insert(basePayload)
         .select()
         .single();
 
-      if (rErr) throw rErr;
+      if (e1) {
+        if (e1.message?.includes('updated_by') || String(e1.message).includes('schema cache')) {
+          delete basePayload.updated_by;
+          const { data: d2, error: e2 } = await supabase
+            .from('satta_base_rates')
+            .insert(basePayload)
+            .select()
+            .single();
+          if (e2) throw e2;
+          rRecord = d2;
+        } else {
+          throw e1;
+        }
+      } else {
+        rRecord = d1;
+      }
 
       await supabase
         .from('satta_base_rate_audit_logs')

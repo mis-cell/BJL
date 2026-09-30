@@ -18,6 +18,27 @@ export default defineConfig(({mode}) => {
       },
       extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
     },
+    build: {
+      chunkSizeWarningLimit: 1600,
+      target: 'esnext',
+      minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('lucide-react')) return 'vendor-icons';
+              if (id.includes('motion')) return 'vendor-[#1E331B]-motion';
+              if (id.includes('@supabase') || id.includes('supabase')) return 'vendor-supabase';
+              if (id.includes('recharts') || id.includes('d3')) return 'vendor-charts';
+              if (id.includes('xlsx') || id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-[#1E331B]-export';
+              return 'vendor-core';
+            }
+            if (id.includes('bjlBackgroundDataUri')) return 'asset-bg-data';
+            if (id.includes('services/reportCalculations') || id.includes('services/dashboardCalculationService')) return 'engine-calculations';
+          }
+        }
+      }
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {
