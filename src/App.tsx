@@ -84,6 +84,7 @@ const RequisitionDesk = React.lazy(() => import("./pages/RequisitionDesk"));
 const PaymentModule = React.lazy(() => import("./pages/PaymentModule"));
 const TredeReport = React.lazy(() => import("./pages/TredeReport"));
 const LorryDispatchSystem = React.lazy(() => import("./pages/LorryDispatchSystem"));
+const SystemChangeLogPage = React.lazy(() => import("./pages/SystemChangeLogPage"));
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
 
@@ -1277,6 +1278,14 @@ export default function App() {
               >
                 <ConfigGuide
                   onClose={() => closePage("settings", "dashboard")}
+                />
+              </div>
+              <div
+                className={(currentPage === "system_change_logs" || (currentPage as string) === "system_change_log" || (currentPage as string) === "change_log") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
+              >
+                <SystemChangeLogPage
+                  onClose={() => closePage(currentPage, "dashboard")}
+                  onNavigate={(p) => globalNavigate(p as Page)}
                 />
               </div>
               <div

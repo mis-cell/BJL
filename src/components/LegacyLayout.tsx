@@ -315,10 +315,6 @@ export default function LegacyLayout({
 
   const handleNavNavigation = (pageId: string) => {
     setActiveMenuDropdown(null);
-    if (pageId === 'system_change_logs') {
-      setIsAuditLogOpen(true);
-      return;
-    }
     if (onNavClick) {
       onNavClick(pageId);
     } else {
@@ -397,7 +393,6 @@ export default function LegacyLayout({
         { id: 'system_change_logs', label: 'System Change Log', icon: History, pageId: 'system_change_logs' },
         { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
         { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
-        { id: 'settings', label: 'Config Center', icon: Settings, pageId: 'settings' },
         { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' },
       ]
     }

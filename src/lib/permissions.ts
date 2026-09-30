@@ -212,6 +212,13 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     aliases: ['admindesk', 'admin_desk', 'admin desk', 'admin_vault', 'admin']
   },
   {
+    id: 'system_change_logs',
+    label: 'System Change Log',
+    category: 'Reports & Administration',
+    pageId: 'system_change_logs',
+    aliases: ['system_change_logs', 'system_change_log', 'change_log', 'system change log', 'change logs']
+  },
+  {
     id: 'settings',
     label: 'Config Center / Settings',
     category: 'Reports & Administration',
@@ -436,6 +443,11 @@ const EXACT_CANONICAL_MAP: Record<string, string> = {
   'trade directory': 'vyapari',
   'trade (traders directory)': 'vyapari',
   'trade / traders directory': 'vyapari',
+  'system_change_logs': 'system_change_logs',
+  'system_change_log': 'system_change_logs',
+  'system change log': 'system_change_logs',
+  'change_logs': 'system_change_logs',
+  'change_log': 'system_change_logs',
   'admindesk': 'admindesk',
   'admin': 'admindesk',
   'settings': 'settings',
