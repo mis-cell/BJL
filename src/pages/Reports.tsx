@@ -31,6 +31,7 @@ import { Priority4Detailed } from '../components/system-reports/Priority4Detaile
 import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditView';
 import { ContributionView } from '../components/system-reports/ContributionView';
 import { DrillDownModal } from '../components/system-reports/DrillDownModal';
+import { SimpleReportView } from '../components/system-reports/SimpleReportView';
 
 export type ReportNavSection = 
   | 'dashboard'
@@ -50,6 +51,7 @@ interface ReportsProps {
 }
 
 export default function Reports({ onClose }: ReportsProps) {
+  const [viewMode, setViewMode] = useState<'simple' | 'management'>('simple');
   const [activeSection, setActiveSection] = useState<ReportNavSection>('dashboard');
   const [loading, setLoading] = useState<boolean>(true);
   
@@ -186,21 +188,47 @@ export default function Reports({ onClose }: ReportsProps) {
         {/* ================= HEADER BAR ================= */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-green-950 text-white p-4 rounded-2xl shadow-md border border-emerald-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
               <h2 className="text-lg font-black uppercase tracking-wider text-yellow-300">
-                System Reports & Operational Audit
+                {viewMode === 'simple' ? 'सौदा एवं खरीद रिपोर्ट (Sauda & Procurement Report)' : 'System Reports & Operational Audit'}
               </h2>
               <span className="bg-emerald-800/80 text-emerald-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-700 font-mono uppercase">
-                4-Priority Executive Framework
+                100% LIVE REAL DATA
               </span>
             </div>
             <p className="text-xs text-emerald-100/90 mt-1">
-              Standardized grain calculations: Management Dashboard → Business Analysis → Checkpoints → Transaction Drill-Down.
+              {viewMode === 'simple'
+                ? 'सरल और स्पष्ट रिपोर्ट — कुल सौदे, माल की आमद, और भुगतान की पूरी जानकारी (Zero Dummy Data)'
+                : 'Standardized 4-Priority Executive Framework: Management Dashboard → Business Analysis → Checkpoints → Drill-Down.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            {/* Mode Switcher Toggle */}
+            <div className="flex items-center bg-black/40 p-1 rounded-xl border border-white/10 text-xs font-black">
+              <button
+                onClick={() => setViewMode('simple')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'simple'
+                    ? 'bg-yellow-400 text-slate-950 shadow-md font-black'
+                    : 'text-emerald-100 hover:text-white'
+                }`}
+              >
+                <span>🟢 सरल रिपोर्ट (Simple)</span>
+              </button>
+              <button
+                onClick={() => setViewMode('management')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                  viewMode === 'management'
+                    ? 'bg-yellow-400 text-slate-950 shadow-md font-black'
+                    : 'text-emerald-100 hover:text-white'
+                }`}
+              >
+                <span>📊 मैनेजमेंट (P1-P4)</span>
+              </button>
+            </div>
+
             <button
               onClick={loadData}
               disabled={loading}
@@ -213,10 +241,10 @@ export default function Reports({ onClose }: ReportsProps) {
 
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-yellow-400 hover:bg-yellow-300 text-emerald-950 text-xs font-black rounded-xl border border-yellow-200 transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-emerald-950 text-xs font-black rounded-xl border border-yellow-200 transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
+              <span>CSV</span>
             </button>
 
             <button
@@ -229,65 +257,88 @@ export default function Reports({ onClose }: ReportsProps) {
           </div>
         </div>
 
-        {/* ================= SECTION 18: REPORT NAVIGATION STRUCTURE ================= */}
-        <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
-          {[
-            { id: 'dashboard' as const, label: '1. Dashboard', icon: LayoutDashboard, badge: 'Priority 1' },
-            { id: 'business_analysis' as const, label: '2. Business Analysis', icon: BarChart3, badge: 'P2' },
-            { id: 'profitability_analysis' as const, label: '3. Profitability Analysis', icon: TrendingUp, badge: 'P2' },
-            { id: 'premium_analysis' as const, label: '4. Premium Analysis', icon: Percent, badge: 'P2' },
-            { id: 'deduction_claim' as const, label: '5. Deduction & Claim', icon: Scissors, badge: 'P3' },
-            { id: 'sauda_checkpoints' as const, label: '6. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
-            { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
-            { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-            { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
-            { id: 'detailed_reports' as const, label: '10. Detailed Registers', icon: FileSpreadsheet, badge: 'G0 Grain' },
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeSection === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSection(tab.id)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
-                  isActive
-                    ? 'bg-yellow-400 text-slate-950 font-black shadow-md scale-[1.02]'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
-                <span>{tab.label}</span>
-                <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
-                  isActive ? 'bg-slate-950 text-yellow-300' : 'bg-slate-800 text-slate-400'
-                }`}>
-                  {tab.badge}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ================= SECTION 19: STANDARD FILTER BAR ================= */}
-        <ReportFilterBar
-          filters={filters}
-          masterLists={masterLists}
-          onFilterChange={setFilters}
-          onReset={() => setFilters({})}
-          filteredCount={filteredTransactions.length}
-          totalCount={allTransactions.length}
-        />
-
-        {/* ================= REPORT CONTENT AREA ================= */}
+        {/* ================= VIEW MODE CONDITIONAL RENDERING ================= */}
         {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 space-y-2">
-            <RefreshCcw className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
-            <span className="text-xs font-bold uppercase font-mono block">
-              Executing Transaction-Grain Metric Engine...
+          <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center text-slate-400 space-y-3 shadow-xs">
+            <RefreshCcw className="w-9 h-9 animate-spin text-emerald-600 mx-auto" />
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+              डेटा लोड हो रहा है (Loading Real Database Data)...
+            </h3>
+            <span className="text-xs text-slate-500 block">
+              sauda_master, purchase_master, final_arrival, material_inspection, payment_master
             </span>
           </div>
+        ) : viewMode === 'simple' ? (
+          /* SIMPLE VIEW FOR UNDER-LEVEL USER */
+          <SimpleReportView
+            dataset={dataset}
+            onOpenManagementView={() => setViewMode('management')}
+          />
         ) : (
+          /* MANAGEMENT ANALYSIS (PRIORITY 1 TO 4) */
           <div className="space-y-4">
             
+            {/* Switch back banner */}
+            <div className="p-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
+              <span>
+                <strong>मैनेजमेंट मोड सक्रिय:</strong> 10 विस्तृत रिपोर्ट अनुभाग और प्राथमिक विश्लेषण (P1 से P4).
+              </span>
+              <button
+                onClick={() => setViewMode('simple')}
+                className="text-emerald-800 hover:text-emerald-950 font-black underline cursor-pointer"
+              >
+                ⬅️ वापस सरल रिपोर्ट पर जाएं (Switch to Simple View)
+              </button>
+            </div>
+
+            {/* SECTION 18: REPORT NAVIGATION STRUCTURE */}
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
+              {[
+                { id: 'dashboard' as const, label: '1. Dashboard', icon: LayoutDashboard, badge: 'Priority 1' },
+                { id: 'business_analysis' as const, label: '2. Business Analysis', icon: BarChart3, badge: 'P2' },
+                { id: 'profitability_analysis' as const, label: '3. Profitability Analysis', icon: TrendingUp, badge: 'P2' },
+                { id: 'premium_analysis' as const, label: '4. Premium Analysis', icon: Percent, badge: 'P2' },
+                { id: 'deduction_claim' as const, label: '5. Deduction & Claim', icon: Scissors, badge: 'P3' },
+                { id: 'sauda_checkpoints' as const, label: '6. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
+                { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'detailed_reports' as const, label: '10. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeSection === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSection(tab.id)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
+                      isActive
+                        ? 'bg-yellow-400 text-slate-950 font-black shadow-md scale-[1.02]'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                    <span>{tab.label}</span>
+                    <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
+                      isActive ? 'bg-slate-950 text-yellow-300' : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* SECTION 19: STANDARD FILTER BAR */}
+            <ReportFilterBar
+              filters={filters}
+              masterLists={masterLists}
+              onFilterChange={setFilters}
+              onReset={() => setFilters({})}
+              filteredCount={filteredTransactions.length}
+              totalCount={allTransactions.length}
+            />
+
             {/* 1. Dashboard (Priority 1) */}
             {activeSection === 'dashboard' && (
               <Priority1Dashboard dataset={dataset} onDrillDown={handleOpenDrillDown} />
@@ -338,23 +389,22 @@ export default function Reports({ onClose }: ReportsProps) {
               <Priority4Detailed dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
+            {/* FOOTER / DATA INTEGRITY AUDIT RIBBON */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>REAL DATABASE AUDIT (ZERO DUMMY DATA)</span>
+              </div>
+
+              <div className="flex items-center gap-4 text-[10.5px]">
+                <span>Evaluated Records: <strong className="text-white">{dataset.transactions.length}</strong></span>
+                <span>Valid Transaction Lines: <strong className="text-emerald-400">{dataset.filtered.length}</strong></span>
+                <span>Flagged Exceptions: <strong className="text-rose-400">{dataset.metrics.abnormalCount}</strong></span>
+              </div>
+            </div>
+
           </div>
         )}
-
-        {/* ================= FOOTER / DATA INTEGRITY AUDIT RIBBON ================= */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>DATA AUDIT GUARANTEE (RULES 86 & 87)</span>
-          </div>
-
-          <div className="flex items-center gap-4 text-[10.5px]">
-            <span>Evaluated Records: <strong className="text-white">{dataset.transactions.length}</strong></span>
-            <span>Valid Transaction Lines: <strong className="text-emerald-400">{dataset.filtered.length}</strong></span>
-            <span>Flagged Exceptions: <strong className="text-rose-400">{dataset.metrics.abnormalCount}</strong></span>
-            <span>Grain: <strong className="text-yellow-400">G0 (TRANSACTION_LINE)</strong></span>
-          </div>
-        </div>
 
         {/* ================= DRILL-DOWN MODAL ================= */}
         {drillDownInfo.isOpen && (
