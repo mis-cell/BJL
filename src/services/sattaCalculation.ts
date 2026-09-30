@@ -71,32 +71,34 @@ export function getSattaDiff(
   };
 }
 
+let activePoItemsGlobal: any[] = [];
+export const setActivePoItemsGlobal = (items: any[]) => {
+  activePoItemsGlobal = Array.isArray(items) ? items : [];
+};
+export const getActivePoItemsGlobal = () => activePoItemsGlobal;
+
 export interface SattaDeductionResult {
   deduction: number;         // Calculated Deduction (₹/Qtl) = GradeDiff * (Sett% / 100)
-  gradeDiff: number;         // Absolute Satta differential difference between current and lower grade
-  currentGrade: string;      // Contracted / original grade (e.g. 'TD6')
-  lowerGrade: string | null; // Next grade down or stock grade (e.g. 'TD7')
-  currentDiff: number;       // Satta differential of current grade (e.g. 900)
-  lowerDiff: number;         // Satta differential of lower grade (e.g. 500)
-  settPct: number;           // Settlement % (Claim %) (e.g. 30%)
-  origRate: number;          // Original Rate (₹/Qtl)
+  gradeDiff: number;         // Absolute difference between current and lower grade
+  currentGrade: string;      // Contracted / original grade (e.g. 'TD5')
+  lowerGrade: string | null; // Next grade down or stock grade (e.g. 'TD6')
+  currentDiff: number;       // Rate or differential of current grade
+  lowerDiff: number;         // Rate or differential of lower grade
+  settPct: number;           // Settlement % (Claim %) (e.g. 40%)
+  origRate: number;          // Original Rate (₹/Qtl) (e.g. 13500)
   settRate: number;          // Settled Rate = origRate - deduction (₹/Qtl)
   explanation: string;       // Formatted explanation for tooltips & verification
-  rateNotFound?: boolean;    // Flag indicating rate was not found in Supabase table
-  error?: string;            // Clear error description if missing from database
+  rateNotFound?: boolean;    // Flag indicating rate was not found
+  error?: string;            // Clear error description if missing
 }
 
 /**
- * Calculates Deduction (₹/Qtl) for Payment Section using the Satta Chart.
- * 
- * Formula:
- * Grade Difference = |SattaDiff(ContractedGrade) - SattaDiff(NextLowerGrade)|
- * Deduction (₹/Qtl) = Grade Difference * (Settlement % / 100)
- * Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) - Deduction (₹/Qtl)
- * 
- * Rates and differentials are retrieved strictly from Supabase `satta_differentials`.
- * If any required rate is missing in Supabase, returns a clear error message.
- * NEVER silently uses hardcoded or default rates.
+ * Calculates Deduction (₹/Qtl) for Payment Section using:
+ * 1. Sauda Check Point / Purchase Order Details (Items Table Matrix) - HIGHEST PRIORITY
+ *    Example: TD5 (13500) down to TD6 (13300) = ₹200 Diff × 40% Sett = ₹80.00/Qtl Deduction
+ *    Example: TD6 (13300) down to TD7 (13000) = ₹300 Diff × 50% Sett = ₹150.00/Qtl Deduction
+ * 2. Material Grade Details table lines (if adjacent grade is present in other rows)
+ * 3. Satta Differentials Chart (fallback if contract rates are unavailable)
  */
 export function calculateSattaDeduction(
   col: {
@@ -109,12 +111,18 @@ export function calculateSattaDeduction(
     gd_sett?: number | string | null;
     stock_grade_name?: string | null;
     stock_grade_code?: string | null;
+    lower_grade?: string | null;
+    target_lower_grade?: string | null;
+    lower_grade_rate?: number | string | null;
+    po_items?: any[] | null;
+    all_cols?: any[] | null;
   },
   dbDiffsList?: SattaDifferential[],
-  customSettPct?: number
+  customSettPct?: number,
+  explicitPoItems?: any[]
 ): SattaDeductionResult {
-  const currentGrade = normalizeGrade(col.grade) || 'TD6';
-  const origRate = Number(col.rate_value) || 0;
+  const currentGrade = normalizeGrade(col.grade) || 'TD5';
+  let origRate = Number(col.rate_value) || 0;
 
   // Determine Settlement / Claim %
   let settPct = 0;
@@ -130,13 +138,44 @@ export function calculateSattaDeduction(
     settPct = Number(col.sett_pct);
   }
 
-  // Determine target downgraded grade
+  // Determine target downgraded grade (e.g. TD5 down to TD6, TD6 down to TD7)
   let lowerGrade: string | null = null;
+  const explicitLower = normalizeGrade(col.target_lower_grade || col.lower_grade);
   const stockGrade = normalizeGrade(col.stock_grade_name || col.stock_grade_code);
-  if (stockGrade && stockGrade !== currentGrade) {
+  
+  if (explicitLower && explicitLower !== currentGrade) {
+    lowerGrade = explicitLower;
+  } else if (stockGrade && stockGrade !== currentGrade) {
     lowerGrade = stockGrade;
   } else {
     lowerGrade = getNextLowerGrade(currentGrade);
+  }
+
+  // 1. Candidate PO Items from all potential sources
+  const candidatePoItems: any[] = [
+    ...(Array.isArray(explicitPoItems) ? explicitPoItems : []),
+    ...(Array.isArray(col.po_items) ? col.po_items : []),
+    ...(Array.isArray(activePoItemsGlobal) ? activePoItemsGlobal : [])
+  ];
+
+  // Helper to extract rate from item safely
+  const extractItemRate = (it: any): number => {
+    if (!it) return 0;
+    return Number(it.rate_qntl || it.rate || it.rate_per_mt || it.rate_mt || it.rs || it.b_rate || it.rate_value || 0);
+  };
+
+  // Helper to extract normalized grade from item safely
+  const extractItemGrade = (it: any): string => {
+    if (!it) return '';
+    return normalizeGrade(it.grade || it.grade_name || it.grade_code || it.quality || it.item_name || it.challan_grade || it.receipt_grade_name || it.receipt_grade_code);
+  };
+
+  // If origRate is 0, auto-resolve currentGrade rate from candidatePoItems
+  if (origRate <= 0 && candidatePoItems.length > 0) {
+    const curMatch = candidatePoItems.find(it => extractItemGrade(it) === currentGrade && extractItemRate(it) > 0);
+    if (curMatch) {
+      origRate = extractItemRate(curMatch);
+    }
   }
 
   if (settPct <= 0 || !lowerGrade) {
@@ -145,79 +184,136 @@ export function calculateSattaDeduction(
       gradeDiff: 0,
       currentGrade,
       lowerGrade,
-      currentDiff: 0,
-      lowerDiff: 0,
+      currentDiff: origRate,
+      lowerDiff: origRate,
       settPct,
       origRate,
       settRate: origRate,
-      explanation: settPct <= 0 ? 'No settlement / claim % applied' : 'No lower grade in hierarchy'
+      explanation: settPct <= 0 ? 'No settlement / claim % applied (0%)' : 'No lower grade in hierarchy'
     };
   }
 
-  // Look up differentials strictly from Supabase table
+  let lowerGradeRate: number | null = null;
+  let rateSource: string = '';
+
+  // Check if explicit lower grade rate was passed
+  if (col.lower_grade_rate !== undefined && col.lower_grade_rate !== null && Number(col.lower_grade_rate) > 0) {
+    lowerGradeRate = Number(col.lower_grade_rate);
+    rateSource = 'User Specified';
+  }
+
+  // 1. FIRST PRIORITY: Look up the lower grade rate in Sauda Check Point / PO Items Table Matrix
+  if (lowerGradeRate === null && candidatePoItems.length > 0) {
+    const colAgencyNorm = col.agency ? String(col.agency).trim().toUpperCase() : '';
+    
+    // First try: matching both lower grade AND agency
+    let matchedItem = candidatePoItems.find(it => {
+      const itGrade = extractItemGrade(it);
+      if (itGrade !== lowerGrade) return false;
+      const itRate = extractItemRate(it);
+      if (itRate <= 0) return false;
+      if (colAgencyNorm) {
+        const itAgency = String(it.agency || it.agency_name || it.agency_code || '').trim().toUpperCase();
+        return itAgency === colAgencyNorm || colAgencyNorm.includes(itAgency) || itAgency.includes(colAgencyNorm);
+      }
+      return true;
+    });
+
+    // Second try: match lower grade anywhere in PO items matrix
+    if (!matchedItem) {
+      matchedItem = candidatePoItems.find(it => {
+        const itGrade = extractItemGrade(it);
+        const itRate = extractItemRate(it);
+        return itGrade === lowerGrade && itRate > 0;
+      });
+    }
+
+    if (matchedItem) {
+      const r = extractItemRate(matchedItem);
+      if (r > 0) {
+        lowerGradeRate = r;
+        rateSource = 'Sauda Check Point (PO Matrix)';
+      }
+    }
+  }
+
+  // 2. SECOND PRIORITY: Check other columns in the Material Grade Details table (all_cols)
+  if (lowerGradeRate === null && Array.isArray(col.all_cols) && col.all_cols.length > 0) {
+    const otherColMatch = col.all_cols.find(c => {
+      if (!c || c === col) return false;
+      const cGrade = normalizeGrade(c.grade);
+      return cGrade === lowerGrade && Number(c.rate_value) > 0;
+    });
+
+    if (otherColMatch && Number(otherColMatch.rate_value) > 0) {
+      lowerGradeRate = Number(otherColMatch.rate_value);
+      rateSource = 'Material Grade Details Table';
+    }
+  }
+
+  // If lower grade rate was found directly from Sauda Check Point / PO matrix or table:
+  if (lowerGradeRate !== null && lowerGradeRate > 0) {
+    const gradeDiff = Math.abs(origRate - lowerGradeRate);
+    const deduction = Number(((gradeDiff * settPct) / 100).toFixed(2));
+    const settRate = Math.max(0, Number((origRate - deduction).toFixed(2)));
+    const explanation = `${rateSource}: ${currentGrade} (₹${origRate.toFixed(2)}) down to ${lowerGrade} (₹${lowerGradeRate.toFixed(2)}) = ₹${gradeDiff.toFixed(2)} Diff × ${settPct}% Sett = ₹${deduction.toFixed(2)}/Qtl`;
+
+    return {
+      deduction,
+      gradeDiff,
+      currentGrade,
+      lowerGrade,
+      currentDiff: origRate,
+      lowerDiff: lowerGradeRate,
+      settPct,
+      origRate,
+      settRate,
+      explanation
+    };
+  }
+
+  // 3. THIRD PRIORITY: Fallback to Satta Chart Differentials
   const currDiffRes = getSattaDiff(col.area, currentGrade, col.agency, dbDiffsList);
   const lowerDiffRes = getSattaDiff(col.area, lowerGrade, col.agency, dbDiffsList);
 
-  // If rate is not found in the Supabase table, show clear error without using hardcoded rate
-  if (!currDiffRes.found || currDiffRes.differential === null) {
-    const errorMsg = `Satta Rate not found in Supabase table for ${col.area || col.agency || 'Area'} - Grade ${currentGrade}`;
+  if (currDiffRes.found && currDiffRes.differential !== null && lowerDiffRes.found && lowerDiffRes.differential !== null) {
+    const currentDiff = currDiffRes.differential;
+    const lowerDiff = lowerDiffRes.differential;
+    const gradeDiff = Math.abs(currentDiff - lowerDiff);
+    const deduction = Number(((gradeDiff * settPct) / 100).toFixed(2));
+    const settRate = Math.max(0, Number((origRate - deduction).toFixed(2)));
+    const matchedAreaName = currDiffRes.matchedArea || lowerDiffRes.matchedArea || col.area || 'Satta Differentials';
+
+    const explanation = `Satta Differentials (${matchedAreaName}): ${currentGrade} (₹${currentDiff}) vs ${lowerGrade} (₹${lowerDiff}) = ₹${gradeDiff} Diff × ${settPct}% Sett = ₹${deduction.toFixed(2)}/Qtl`;
+
     return {
-      deduction: 0,
-      gradeDiff: 0,
+      deduction,
+      gradeDiff,
       currentGrade,
       lowerGrade,
-      currentDiff: 0,
-      lowerDiff: 0,
+      currentDiff,
+      lowerDiff,
       settPct,
       origRate,
-      settRate: origRate,
-      rateNotFound: true,
-      error: errorMsg,
-      explanation: `Error: ${errorMsg}`
+      settRate,
+      explanation
     };
   }
 
-  if (!lowerDiffRes.found || lowerDiffRes.differential === null) {
-    const errorMsg = `Satta Rate not found in Supabase table for ${col.area || col.agency || 'Area'} - Downgraded Grade ${lowerGrade}`;
-    return {
-      deduction: 0,
-      gradeDiff: 0,
-      currentGrade,
-      lowerGrade,
-      currentDiff: currDiffRes.differential,
-      lowerDiff: 0,
-      settPct,
-      origRate,
-      settRate: origRate,
-      rateNotFound: true,
-      error: errorMsg,
-      explanation: `Error: ${errorMsg}`
-    };
-  }
-
-  const currentDiff = currDiffRes.differential;
-  const lowerDiff = lowerDiffRes.differential;
-
-  // Grade Difference = |currentDiff - lowerDiff| (computed directly from Supabase values)
-  const gradeDiff = Math.abs(currentDiff - lowerDiff);
-
-  // Deduction = Grade Difference * (Settlement % / 100)
-  const deduction = Number(((gradeDiff * settPct) / 100).toFixed(2));
-  const settRate = Math.max(0, Number((origRate - deduction).toFixed(2)));
-  const matchedAreaName = currDiffRes.matchedArea || lowerDiffRes.matchedArea || col.area || 'Supabase Satta Table';
-
-  const explanation = `Satta Table (${matchedAreaName}): ${currentGrade} (₹${currentDiff}) vs ${lowerGrade} (₹${lowerDiff}) = ₹${gradeDiff} Diff × ${settPct}% Claim = ₹${deduction.toFixed(2)}/Qtl`;
-
+  // If rate not found in any source:
+  const errorMsg = `Lower grade rate for '${lowerGrade}' not found in Sauda Check Point or Satta Chart`;
   return {
-    deduction,
-    gradeDiff,
+    deduction: 0,
+    gradeDiff: 0,
     currentGrade,
     lowerGrade,
-    currentDiff,
-    lowerDiff,
+    currentDiff: origRate,
+    lowerDiff: 0,
     settPct,
     origRate,
-    settRate,
-    explanation
+    settRate: origRate,
+    rateNotFound: true,
+    error: errorMsg,
+    explanation: errorMsg
   };
 }

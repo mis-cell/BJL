@@ -90,6 +90,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     setMasterData,
     detailCols,
     setDetailCols,
+    activePoItems,
+    sattaDiffsList,
     gradeMasterList,
     agencyMasterList,
     markaMasterList,
@@ -276,6 +278,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           gradeMasterList={gradeMasterList}
           areaMasterList={areaMasterList}
           agencyMasterList={agencyMasterList}
+          activePoItems={activePoItems}
+          sattaDiffsList={sattaDiffsList}
           isPoEligibleForPayment={isPoEligibleForPaymentLocal}
           handlePoSelection={handlePoSelection}
           handleMrSelection={handleMrSelection}

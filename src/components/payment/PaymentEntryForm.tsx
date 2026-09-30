@@ -36,6 +36,8 @@ export interface PaymentEntryFormProps {
   gradeMasterList: any[];
   areaMasterList: any[];
   agencyMasterList: any[];
+  activePoItems?: any[];
+  sattaDiffsList?: any[];
   isPoEligibleForPayment: (po: any) => boolean;
   handlePoSelection: (poNo: string) => void;
   handleMrSelection: (mrNo: string, overridePo?: any) => void;
@@ -67,6 +69,8 @@ export function PaymentEntryForm({
   gradeMasterList,
   areaMasterList,
   agencyMasterList,
+  activePoItems,
+  sattaDiffsList,
   isPoEligibleForPayment,
   handlePoSelection,
   handleMrSelection,
@@ -607,6 +611,8 @@ export function PaymentEntryForm({
           gradeMasterList={gradeMasterList}
           areaMasterList={areaMasterList}
           agencyMasterList={agencyMasterList}
+          activePoItems={activePoItems}
+          sattaDiffsList={sattaDiffsList}
         />
 
         {/* Inline Error Message */}

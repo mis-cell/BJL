@@ -37,37 +37,58 @@ export const getColSettPct = (col?: PaymentDetailColumn): number => {
   return 0;
 };
 
-// Deduction (₹/Qtl) - Calculated from Satta Chart grade differentials:
-// Formula: Deduction (₹/Qtl) = |SattaDiff(Contracted Grade) - SattaDiff(Next Lower Grade)| * (Sett % / 100)
-export const getColDeduction = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
+// Deduction (₹/Qtl) - Calculated from Sauda Check Point / PO Items Table Matrix (Grade Down calculation):
+// Formula: Deduction (₹/Qtl) = (Rate of Contracted Grade − Rate of Lower Grade) * (Sett % / 100)
+// Example: TD5 (13500) down to TD6 (13300) = (13500 - 13300) * 40% = ₹80.00/Qtl
+// Example: TD6 (13300) down to TD7 (13000) = (13300 - 13000) * 50% = ₹150.00/Qtl
+export const getColDeductionResult = (col?: PaymentDetailColumn, dbDiffs?: any[], poItemsList?: any[]) => {
+  if (!col) {
+    return {
+      deduction: 0,
+      gradeDiff: 0,
+      currentGrade: '',
+      lowerGrade: null,
+      currentDiff: 0,
+      lowerDiff: 0,
+      settPct: 0,
+      origRate: 0,
+      settRate: 0,
+      explanation: ''
+    };
+  }
+  return calculateSattaDeduction(col, dbDiffs, undefined, poItemsList || col.po_items);
+};
+
+export const getColDeduction = (col?: PaymentDetailColumn, dbDiffs?: any[], poItemsList?: any[]): number => {
   if (!col) return 0;
   const settPct = getColSettPct(col);
-  if (settPct <= 0) return 0;
-  const res = calculateSattaDeduction(col, dbDiffs);
+  if (settPct <= 0 && (!col.deduction_rate || col.deduction_rate <= 0)) return 0;
+  if (settPct <= 0 && col.deduction_rate && col.deduction_rate > 0) return Number(col.deduction_rate);
+  const res = calculateSattaDeduction(col, dbDiffs, undefined, poItemsList || col.po_items);
   return res.deduction;
 };
 
-// Formatted explanation for Satta-based deduction tooltips
-export const getColDeductionExplanation = (col?: PaymentDetailColumn, dbDiffs?: any[]): string => {
+// Formatted explanation for Grade Down deduction tooltips
+export const getColDeductionExplanation = (col?: PaymentDetailColumn, dbDiffs?: any[], poItemsList?: any[]): string => {
   if (!col) return '';
-  const res = calculateSattaDeduction(col, dbDiffs);
+  const res = calculateSattaDeduction(col, dbDiffs, undefined, poItemsList || col.po_items);
   return res.explanation;
 };
 
 // Sett Rate (₹/Qtl) = Original Rate (₹/Qtl) + Premium (₹/Qtl) − Deduction (₹/Qtl)
-export const getColSettRate = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
+export const getColSettRate = (col?: PaymentDetailColumn, dbDiffs?: any[], poItemsList?: any[]): number => {
   if (!col) return 0;
   const origRate = Number(col.rate_value) || 0;
   const premium = Number(col.premium) || 0;
-  const deduction = getColDeduction(col, dbDiffs);
+  const deduction = getColDeduction(col, dbDiffs, poItemsList);
   return Math.max(0, Number((origRate + premium - deduction).toFixed(2)));
 };
 
 // Amount (₹) = Quantity (Qtl) * Sett Rate (₹/Qtl)
-export const getColAmount = (col?: PaymentDetailColumn, dbDiffs?: any[]): number => {
+export const getColAmount = (col?: PaymentDetailColumn, dbDiffs?: any[], poItemsList?: any[]): number => {
   if (!col) return 0;
   const qtyQtl = getColQtyQtl(col);
-  const settRate = getColSettRate(col, dbDiffs);
+  const settRate = getColSettRate(col, dbDiffs, poItemsList);
   if (qtyQtl <= 0 || settRate <= 0) return 0;
   return Number((qtyQtl * settRate).toFixed(2));
 };
@@ -447,6 +468,23 @@ export const mapItemsToDetailCols = (
         po_grade_claim: Number(item.po_grade_claim ?? item.delivery_claim ?? 0),
         po_grade_sett: Number(item.po_grade_sett ?? 0),
       };
+    }
+  });
+
+  // Attach po_items and all_cols to all columns and accurately compute Grade Down deductions
+  const activePoMatrix = poHeader?.items || poHeader?.po_items || (Array.isArray(rawItems) ? rawItems : []);
+  newCols.forEach((col) => {
+    col.all_cols = newCols;
+    col.po_items = activePoMatrix;
+    if (col.grade || col.arr_qty_wt > 0 || col.quantity > 0) {
+      const ded = getColDeduction(col, undefined, activePoMatrix);
+      col.deduction_rate = ded;
+      const origRate = Number(col.rate_value) || 0;
+      const prem = Number(col.premium) || 0;
+      col.sett_rate = Math.max(0, Number((origRate + prem - ded).toFixed(2)));
+      const qQtl = Number(((col.arr_qty_wt || 0) * 10).toFixed(3));
+      col.quantity_qtl = qQtl;
+      col.amount = Number((qQtl * col.sett_rate).toFixed(2));
     }
   });
 

@@ -139,6 +139,14 @@ export interface PaymentDetailColumn {
   adjust_type: string;
   remark: string;
   claim_settlement: number;
+
+  // Grade Down from Sauda Check Point / PO Items Table Matrix
+  lower_grade?: string;
+  target_lower_grade?: string;
+  lower_grade_rate?: number;
+  grade_diff?: number;
+  po_items?: any[];
+  all_cols?: PaymentDetailColumn[];
 }
 
 export const emptyDetailColumn = (index: number): PaymentDetailColumn => ({

@@ -67,21 +67,31 @@ let cachedCalculatedRates: SattaCalculatedRate[] = [];
 let isCacheLoaded = false;
 let cachePromise: Promise<void> | null = null;
 
-// Normalize grade string (e.g. 'TD-6' -> 'TD6', 'TD 6' -> 'TD6')
+// Normalize grade string (e.g. 'TD-6' -> 'TD6', 'TD 6' -> 'TD6', 'TD5 - SUPERIOR' -> 'TD5')
 export function normalizeGrade(grade?: string | null): string {
   if (!grade) return '';
   const clean = String(grade).trim().toUpperCase();
-  const tdMatch = clean.match(/^TD[\s\-_]*([0-9]+)$/i);
+  
+  // Extract TD grades even with suffixes (e.g., 'TD-5', 'TD5 DAISEE', 'TD 5')
+  const tdMatch = clean.match(/\bTD[\s\-_]*([0-9]+)/i) || clean.match(/^TD[\s\-_]*([0-9]+)/i);
   if (tdMatch) return `TD${tdMatch[1]}`;
-  const wMatch = clean.match(/^W[\s\-_]*([0-9]+)$/i);
+  
+  // Extract W grades (White Jute, e.g., 'W-5', 'W5', 'W 6')
+  const wMatch = clean.match(/\bW[\s\-_]*([0-9]+)/i) || clean.match(/^W[\s\-_]*([0-9]+)/i);
   if (wMatch) return `W${wMatch[1]}`;
-  return clean.replace(/\./g, '');
+
+  // Extract Mesta grades (e.g. 'M-1', 'M2')
+  const mMatch = clean.match(/\bM[\s\-_]*([0-9]+)/i) || clean.match(/^M[\s\-_]*([0-9]+)/i);
+  if (mMatch) return `M${mMatch[1]}`;
+
+  return clean.replace(/\./g, '').trim();
 }
 
 // Ordered standard jute grade hierarchies for grade downgrade progression
 export const GRADE_SEQUENCES: string[][] = [
-  ['TD3', 'TD4', 'TD5', 'TD6', 'TD7', 'TD8', 'TD9', 'TD10'],
-  ['W5', 'W6', 'W7', 'LOOSE'],
+  ['TD1', 'TD2', 'TD3', 'TD4', 'TD5', 'TD6', 'TD7', 'TD8', 'TD9', 'TD10'],
+  ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'LOOSE'],
+  ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'],
   ['BTR HD KS', 'BTR HD CS', 'BTR HD BS', 'BTR NB KS', 'BTR NB FFS', 'BTR NB (SMR)'],
   ['M.S.MID', 'M.MID', 'M.BOT', 'M.B.BOT', 'M.X.BOT'],
   ['BOT', 'B.BOT', 'X.BOT', 'X.X.BOT']
@@ -108,6 +118,12 @@ export function getNextLowerGrade(currentGrade?: string | null): string | null {
   if (wNumMatch) {
     const nextNum = parseInt(wNumMatch[1], 10) + 1;
     return `W${nextNum}`;
+  }
+
+  const mNumMatch = norm.match(/^M([0-9]+)$/);
+  if (mNumMatch) {
+    const nextNum = parseInt(mNumMatch[1], 10) + 1;
+    return `M${nextNum}`;
   }
 
   return null;

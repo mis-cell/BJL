@@ -4,7 +4,7 @@ import { dbModule } from '../../services/dbModule';
 import { useLiveAutoRefresh } from '../../hooks/useLiveAutoRefresh';
 import { enforceEditOrDeletePermission } from '../../lib/permissions';
 import { formatIndianCurrency, calculate93PctPaidAmount } from '../../lib/utils';
-import { setCachedSattaDiffs } from '../../services/sattaCalculation';
+import { setCachedSattaDiffs, setActivePoItemsGlobal } from '../../services/sattaCalculation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { 
@@ -39,6 +39,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
   
   const [selectedPoNo, setSelectedPoNo] = useState<string>('');
   const [selectedPoData, setSelectedPoData] = useState<any>(null);
+  const [activePoItems, setActivePoItems] = useState<any[]>([]);
   const [selectedMrNo, setSelectedMrNo] = useState<string>('');
   const [isEdit, setIsEdit] = useState(false);
 
@@ -474,41 +475,68 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       }
     }
 
-    if (itemsToEnrich.length === 0 && po.po_no) {
+    if (itemsToEnrich.length === 0 && (po.po_no || po.contract_po_no || po.sauda_no)) {
       const cleanPo = String(po.po_no || '').trim().replace(/^#/, '');
-      const withHash = `#${cleanPo}`;
+      const cleanContract = String(po.contract_po_no || '').trim().replace(/^#/, '');
+      const cleanSauda = String(po.sauda_no || '').trim().replace(/^#/, '');
+      const candidateKeys = Array.from(new Set([cleanPo, `#${cleanPo}`, po.po_no, cleanContract, cleanSauda].filter(Boolean)));
+
       try {
         if (supabase) {
-          const { data: pdm } = await supabase
-            .from('purchase_detail_master')
-            .select('*')
-            .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
-          if (pdm && pdm.length > 0) {
-            itemsToEnrich = pdm;
-          } else {
-            const { data: pdmIlike } = await supabase
+          // 1. Check purchase_detail_master
+          for (const key of candidateKeys) {
+            const { data: pdm } = await supabase
               .from('purchase_detail_master')
               .select('*')
-              .ilike('po_no', cleanPo);
-            if (pdmIlike && pdmIlike.length > 0) {
-              itemsToEnrich = pdmIlike;
+              .eq('po_no', key)
+              .order('srl_no', { ascending: true });
+            if (pdm && pdm.length > 0) {
+              itemsToEnrich = pdm;
+              break;
             }
           }
 
+          // 2. Check sauda_check_point_details
           if (itemsToEnrich.length === 0) {
-            const { data: scp } = await supabase
-              .from('sauda_check_point_details')
-              .select('*')
-              .or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${po.po_no}"`);
-            if (scp && scp.length > 0) {
-              itemsToEnrich = scp;
-            } else {
-              const { data: scpIlike } = await supabase
+            for (const key of candidateKeys) {
+              const { data: scp } = await supabase
                 .from('sauda_check_point_details')
                 .select('*')
-                .ilike('po_no', cleanPo);
-              if (scpIlike && scpIlike.length > 0) {
-                itemsToEnrich = scpIlike;
+                .eq('po_no', key)
+                .order('srl_no', { ascending: true });
+              if (scp && scp.length > 0) {
+                itemsToEnrich = scp;
+                break;
+              }
+            }
+          }
+
+          // 3. Check sauda_quality_details via sauda_master
+          if (itemsToEnrich.length === 0 && (cleanSauda || cleanPo || cleanContract)) {
+            const saudaSearchKeys = [cleanSauda, cleanContract, cleanPo].filter(Boolean);
+            for (const sKey of saudaSearchKeys) {
+              const { data: sMaster } = await supabase
+                .from('sauda_master')
+                .select('sauda_id')
+                .or(`sauda_no.eq."${sKey}",session.eq."${sKey}"`)
+                .limit(1)
+                .maybeSingle();
+              if (sMaster?.sauda_id) {
+                const { data: sqd } = await supabase
+                  .from('sauda_quality_details')
+                  .select('*')
+                  .eq('sauda_id', sMaster.sauda_id);
+                if (sqd && sqd.length > 0) {
+                  itemsToEnrich = sqd.map((it: any, idx: number) => ({
+                    ...it,
+                    srl_no: it.srl_no || idx + 1,
+                    grade_code: it.quality || it.grade_code,
+                    grade_name: it.quality || it.grade_name,
+                    rate_qntl: Number(it.rs || it.rate || 0),
+                    rate: Number(it.rs || it.rate || 0)
+                  }));
+                  break;
+                }
               }
             }
           }
@@ -518,7 +546,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           const allPdm = await dbModule.fetchAll('purchase_detail_master').catch(() => []);
           const filteredPdm = allPdm.filter((d: any) => {
             const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
-            return pNo === cleanPo.toUpperCase();
+            return candidateKeys.some(k => k.toUpperCase() === pNo);
           });
           if (filteredPdm.length > 0) itemsToEnrich = filteredPdm;
         }
@@ -527,7 +555,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           const allScp = await dbModule.fetchAll('sauda_check_point_details').catch(() => []);
           const filteredScp = allScp.filter((d: any) => {
             const pNo = String(d.po_no || '').trim().toUpperCase().replace(/^#/, '');
-            return pNo === cleanPo.toUpperCase();
+            return candidateKeys.some(k => k.toUpperCase() === pNo);
           });
           if (filteredScp.length > 0) itemsToEnrich = filteredScp;
         }
@@ -613,14 +641,23 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       }
 
       const poItems = await getPoItemDetails(po);
-      const cols = mapItemsToDetailCols(poItems, Number(po.b_rate || po.rate_qntl || 0), po, {
+      setActivePoItems(poItems);
+      setActivePoItemsGlobal(poItems);
+
+      let cols = mapItemsToDetailCols(poItems, Number(po.b_rate || po.rate_qntl || 0), po, {
         gradeMasters: gList,
         agencyMasters: agList,
         areaMasters: aList,
         markaMasters: mList
       });
 
-      const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
+      cols = cols.map(c => ({
+        ...c,
+        po_items: poItems,
+        all_cols: cols
+      }));
+
+      const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, poItems), 0);
       const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
       const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
 
@@ -765,6 +802,8 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       }
 
       const poItems = po ? await getPoItemDetails(po) : [];
+      setActivePoItems(poItems);
+      setActivePoItemsGlobal(poItems);
 
       if (rawArrItems.length === 0 && poItems.length > 0) {
         rawArrItems = poItems;
@@ -811,8 +850,8 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           }
 
           const settPct = getColSettPct(col);
-          const colWithRate = { ...col, rate_value: lineRate, premium: linePremium, sett_pct: settPct };
-          const ded = getColDeduction(colWithRate);
+          const colWithRate = { ...col, rate_value: lineRate, premium: linePremium, sett_pct: settPct, po_items: poItems, all_cols: cols };
+          const ded = getColDeduction(colWithRate, sattaDiffsList, poItems);
           const sRate = Math.max(0, Number((lineRate + linePremium - ded).toFixed(2)));
           const qQtl = getColQtyQtl(col);
           const amt = Number((qQtl * sRate).toFixed(2));
@@ -825,9 +864,13 @@ export function usePaymentData(onSaveSuccess?: () => void) {
             deduction_rate: ded,
             sett_rate: sRate,
             quantity_qtl: qQtl,
-            amount: amt
+            amount: amt,
+            po_items: poItems,
+            all_cols: cols
           };
         });
+      } else {
+        cols = cols.map(c => ({ ...c, po_items: poItems, all_cols: cols }));
       }
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
@@ -1321,6 +1364,8 @@ export function usePaymentData(onSaveSuccess?: () => void) {
     setMasterData,
     detailCols,
     setDetailCols,
+    activePoItems,
+    setActivePoItems,
     gradeMasterList,
     agencyMasterList,
     markaMasterList,
