@@ -191,7 +191,7 @@ export default function Reports({ onClose }: ReportsProps) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
               <h2 className="text-lg font-black uppercase tracking-wider text-yellow-300">
-                {viewMode === 'simple' ? 'सौदा एवं खरीद रिपोर्ट (Sauda & Procurement Report)' : 'System Reports & Operational Audit'}
+                {viewMode === 'simple' ? 'Sauda & Procurement Executive Report' : 'System Reports & Operational Audit'}
               </h2>
               <span className="bg-emerald-800/80 text-emerald-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-700 font-mono uppercase">
                 100% LIVE REAL DATA
@@ -199,7 +199,7 @@ export default function Reports({ onClose }: ReportsProps) {
             </div>
             <p className="text-xs text-emerald-100/90 mt-1">
               {viewMode === 'simple'
-                ? 'सरल और स्पष्ट रिपोर्ट — कुल सौदे, माल की आमद, और भुगतान की पूरी जानकारी (Zero Dummy Data)'
+                ? 'Executive Procurement Summary — Total Deals, Arrival Progress, and Payment Status'
                 : 'Standardized 4-Priority Executive Framework: Management Dashboard → Business Analysis → Checkpoints → Drill-Down.'}
             </p>
           </div>
@@ -215,7 +215,7 @@ export default function Reports({ onClose }: ReportsProps) {
                     : 'text-emerald-100 hover:text-white'
                 }`}
               >
-                <span>🟢 सरल रिपोर्ट (Simple)</span>
+                <span>🟢 Executive Summary</span>
               </button>
               <button
                 onClick={() => setViewMode('management')}
@@ -225,7 +225,7 @@ export default function Reports({ onClose }: ReportsProps) {
                     : 'text-emerald-100 hover:text-white'
                 }`}
               >
-                <span>📊 मैनेजमेंट (P1-P4)</span>
+                <span>📊 Management Analysis (P1-P4)</span>
               </button>
             </div>
 
@@ -262,7 +262,7 @@ export default function Reports({ onClose }: ReportsProps) {
           <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center text-slate-400 space-y-3 shadow-xs">
             <RefreshCcw className="w-9 h-9 animate-spin text-emerald-600 mx-auto" />
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-              डेटा लोड हो रहा है (Loading Real Database Data)...
+              Loading Real Database Records...
             </h3>
             <span className="text-xs text-slate-500 block">
               sauda_master, purchase_master, final_arrival, material_inspection, payment_master
@@ -281,13 +281,13 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* Switch back banner */}
             <div className="p-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
               <span>
-                <strong>मैनेजमेंट मोड सक्रिय:</strong> 10 विस्तृत रिपोर्ट अनुभाग और प्राथमिक विश्लेषण (P1 से P4).
+                <strong>Management Mode Active:</strong> 10 Detailed Report Sections & Executive Analysis Framework (Priority 1 to 4).
               </span>
               <button
                 onClick={() => setViewMode('simple')}
                 className="text-emerald-800 hover:text-emerald-950 font-black underline cursor-pointer"
               >
-                ⬅️ वापस सरल रिपोर्ट पर जाएं (Switch to Simple View)
+                ⬅️ Switch to Executive Summary View
               </button>
             </div>
 
