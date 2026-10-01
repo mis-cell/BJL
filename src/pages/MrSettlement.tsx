@@ -1771,13 +1771,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const finalLessAmount = 0;
     const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
 
-    // 2. Material Value = Grand Total - Delivery Claim (-) - Deduction Amount (-) - Ex/Short (-)
-    const calculatedMaterialValue = Number(Math.max(0, (
-      grandTotal 
-      - deliveryClaimAmt 
-      - calculatedDeductionAmount 
-      - finalExShort
-    )).toFixed(2));
+    // 2. Material Value = Direct data from Grand Total
+    const calculatedMaterialValue = Number(grandTotal.toFixed(2));
 
     // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
     const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
