@@ -20,7 +20,6 @@ import {
   InspectionProps,
 } from "../types/inspection.types";
 import {
-  DEFAULT_DEDUCTION_TYPES,
   calculateBaleWeightDeduction,
   calculateAllMatchingDeductions,
   computeDetailRowWeights,
@@ -43,7 +42,6 @@ export type {
   InspectionProps,
 };
 export {
-  DEFAULT_DEDUCTION_TYPES,
   calculateBaleWeightDeduction,
   calculateAllMatchingDeductions,
   computeDetailRowWeights,

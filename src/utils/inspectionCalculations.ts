@@ -5,24 +5,8 @@ import {
   MatchedAutoDeduction
 } from "../types/inspection.types";
 
-export const DEFAULT_DEDUCTION_TYPES = [
-  { deduction: "GODOWN DAMAGE FOR BALES", rate_per_unit: 400, rate_per_qntl: null },
-  { deduction: "RAIN WET FOR BALES", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "RTCH DAMAGE FOR BALES", rate_per_unit: 400, rate_per_qntl: null },
-  { deduction: "CT FOR HABIJABI / CHATTA / ROPE", rate_per_unit: null, rate_per_qntl: 1500 },
-  { deduction: "RAIN WET FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "GODOWN DAMAGE FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "GODOWN DAMAGE FOR HALF BALES", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "PITCH DAMAGE FOR DRUMS", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "PITCH DAMAGE FOR HALF BALES", rate_per_unit: 200, rate_per_qntl: null },
-  { deduction: "GODOWN DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
-  { deduction: "PITCH DAMAGE FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
-  { deduction: "RAIN WET FOR LOOSE", rate_per_unit: null, rate_per_qntl: 400 },
-  { deduction: "IN CASE OF BALE IF WEIGHT IS LESS THAN 144", rate_per_unit: 20, rate_per_qntl: null },
-  { deduction: "IN CASE OF BALE IF WEIGHT IS LESS THAN 142", rate_per_unit: 30, rate_per_qntl: null },
-  { deduction: "IN CASE OF BALES IF WEIGHT IS LESS THAN 139", rate_per_unit: 40, rate_per_qntl: null },
-  { deduction: "DELIVERY CLAIM PER QUINTAL (RS. PER DAY)", rate_per_unit: 5, rate_per_qntl: null }
-];
+// Empty fallback - deduction types are loaded strictly from the database table (deduction_master)
+export const DEFAULT_DEDUCTION_TYPES: any[] = [];
 
 // Calculate Reduced Weight and Final Receipt Wt. (Claim)
 export const computeDetailRowWeights = (
@@ -308,7 +292,7 @@ export function calculateBaleWeightDeduction(
     return { totalBales, totalReceiptGrossWtMt, totalWeightKg, avgKgPerBale, matchedRule: null, ruleName: "", rate: 0 };
   }
 
-  const masterList = deductionMasterList && deductionMasterList.length > 0 ? deductionMasterList : DEFAULT_DEDUCTION_TYPES;
+  const masterList = Array.isArray(deductionMasterList) ? deductionMasterList : [];
   const candidates: { rule: any; threshold: number; rate: number }[] = [];
 
   for (const d of masterList) {
@@ -359,7 +343,7 @@ export function calculateAllMatchingDeductions(
     avgKgPerBale: number;
   };
 } {
-  const masterList = deductionMasterList && deductionMasterList.length > 0 ? deductionMasterList : DEFAULT_DEDUCTION_TYPES;
+  const masterList = Array.isArray(deductionMasterList) ? deductionMasterList : [];
   const matchedDeductions: MatchedAutoDeduction[] = [];
 
   // 1. Bale Weight Evaluation

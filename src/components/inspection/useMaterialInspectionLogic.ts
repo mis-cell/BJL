@@ -495,26 +495,13 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           setMoistureLogicRules(mL);
         }
 
-        const defaultDeductions = [
-          { deduction: "Shortage", rate_per_qntl: 0 },
-          { deduction: "Moisture Excess", rate_per_qntl: 0 },
-          { deduction: "Tare Loss", rate_per_qntl: 0 },
-          { deduction: "Quality Rebate", rate_per_qntl: 0 },
-          { deduction: "Freight Penalty", rate_per_qntl: 0 },
-          { deduction: "Insurance Claim", rate_per_qntl: 0 },
-          { deduction: "Late Delivery", rate_per_qntl: 0 },
-          { deduction: "Grade Down Claim", rate_per_qntl: 0 },
-          { deduction: "Dust Claim", rate_per_qntl: 0 },
-          { deduction: "NCV Claim", rate_per_qntl: 0 },
-          { deduction: "Miscellaneous", rate_per_qntl: 0 },
-        ];
-        if (dData && dData.length > 0) {
+        if (dData && Array.isArray(dData)) {
           setDeductionMasterList(dData);
         } else {
-          setDeductionMasterList(defaultDeductions);
+          setDeductionMasterList([]);
         }
       } else {
-        const [b, s, g, ar, ag, m, av] = await Promise.all([
+        const [b, s, g, ar, ag, m, av, dedList] = await Promise.all([
           dbModule.fetchAll('broker_master').catch(() => []),
           dbModule.fetchAll('supply_master').catch(() => []),
           dbModule.fetchAll('grade_master').catch(() => []),
@@ -522,6 +509,7 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           dbModule.fetchAll('agency_master').catch(() => []),
           dbModule.fetchAll('marka_master').catch(() => []),
           dbModule.fetchAll('mill_inspection_master', 'created_at', false).catch(() => []),
+          dbModule.fetchAll('deduction_master').catch(() => []),
         ]);
         if (b) setBrokers(b.map((x: any) => ({ name: x.brok_name })));
         if (s) setSuppliers(s.map((x: any) => ({ name: x.supp_name })));
@@ -529,6 +517,7 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
         if (ar) setAreas(ar.map((x: any) => ({ name: x.area_name })));
         if (ag) setAgencies(ag.map((x: any) => ({ name: x.agency_name })));
         if (m) setMarkas(m.map((x: any) => ({ name: x.marka_name })));
+        if (dedList && Array.isArray(dedList)) setDeductionMasterList(dedList);
         if (av) {
           const mapped = av.map((v: any) => ({
             ...v,

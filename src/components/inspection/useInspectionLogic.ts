@@ -10,7 +10,6 @@ import {
   InspectionDetailRow,
 } from "../../types/inspection.types";
 import {
-  DEFAULT_DEDUCTION_TYPES,
   calculateBaleWeightDeduction,
   calculateAllMatchingDeductions,
   computeDetailRowWeights,
@@ -91,7 +90,7 @@ export function useInspectionLogic() {
   const [deductionRows, setDeductionRows] = useState<DeductionRow[]>([
     { id: "1", deduction_type: "", deduction_rate: 0, deduction_qty: 0, deduction_amount: 0 }
   ]);
-  const [deductionMasterList, setDeductionMasterList] = useState<any[]>(DEFAULT_DEDUCTION_TYPES);
+  const [deductionMasterList, setDeductionMasterList] = useState<any[]>([]);
   const [moistureLogicRules, setMoistureLogicRules] = useState<any[]>([]);
 
   const showToast = (msg: string) => {
@@ -326,17 +325,8 @@ export function useInspectionLogic() {
             withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null }))
           ];
 
-          if (deductionMasterList.length === 0) {
-            queries.push(withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).catch(() => ({ data: null })));
-          } else {
-            queries.push(Promise.resolve({ data: deductionMasterList }));
-          }
-
-          if (moistureLogicRules.length === 0) {
+            queries.push(withTimeout(Promise.resolve(supabase.from("deduction_master").select("*").order("deduction", { ascending: true }))).catch(() => ({ data: null })));
             queries.push(withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))).catch(() => ({ data: null })));
-          } else {
-            queries.push(Promise.resolve({ data: moistureLogicRules }));
-          }
 
           const [miRes, mimRes, faRes, tmrRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all(queries);
 
@@ -371,8 +361,13 @@ export function useInspectionLogic() {
               }
             });
           }
-          if (dMasterRes && dMasterRes.data && Array.isArray(dMasterRes.data) && dMasterRes.data.length > 0) {
+          if (dMasterRes && dMasterRes.data && Array.isArray(dMasterRes.data)) {
             setDeductionMasterList(dMasterRes.data);
+          } else {
+            const fallbackDeds = await dbModule.fetchAll('deduction_master').catch(() => []);
+            if (Array.isArray(fallbackDeds)) {
+              setDeductionMasterList(fallbackDeds);
+            }
           }
           if (moistRes && moistRes.data && Array.isArray(moistRes.data) && moistRes.data.length > 0) {
             setMoistureLogicRules(moistRes.data);
