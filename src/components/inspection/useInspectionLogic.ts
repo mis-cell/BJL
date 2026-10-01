@@ -1009,16 +1009,16 @@ export function useInspectionLogic() {
       // 1. Auto-calculate Lorry Read Avg if Min or Max present or modified
       const lorryMin = Number(row.lorry_read_min) || 0;
       const lorryMax = Number(row.lorry_read_max) || 0;
-      if (['lorry_read_min', 'lorry_read_max'].includes(field as string)) {
+      /* if (['lorry_read_min', 'lorry_read_max'].includes(field as string)) {
         if (lorryMin > 0 && lorryMax > 0) {
           row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
         } else if (lorryMin > 0 || lorryMax > 0) {
           row.lorry_read_avg = lorryMin || lorryMax;
         }
-      }
+      } */
 
       // 2. Auto-calculate Inspection Read Avg if Min or Max present or modified
-      const inspMin = Number(row.insp_read_min) || 0;
+      /* const inspMin = Number(row.insp_read_min) || 0;
       const inspMax = Number(row.insp_read_max) || 0;
       if (['insp_read_min', 'insp_read_max'].includes(field as string)) {
         if (inspMin > 0 && inspMax > 0) {
@@ -1026,24 +1026,24 @@ export function useInspectionLogic() {
         } else if (inspMin > 0 || inspMax > 0) {
           row.insp_read_avg = inspMin || inspMax;
         }
-      }
+      } */
 
       // 3. Auto-calculate Moisture Actual % from Lorry and Inspection Readings
       const lAvg = Number(row.lorry_read_avg) || 0;
       const iAvg = Number(row.insp_read_avg) || 0;
       if (['lorry_read_min', 'lorry_read_max', 'lorry_read_avg', 'insp_read_min', 'insp_read_max', 'insp_read_avg'].includes(field as string)) {
         if (lAvg > 0 && iAvg > 0) {
-          row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
+          //row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
         } else if (lAvg > 0 || iAvg > 0) {
-          row.moisture_act = lAvg || iAvg;
+          //row.moisture_act = lAvg || iAvg;
         } else if (Number(headerForm.actual_moisture) > 0) {
-          row.moisture_act = Number(headerForm.actual_moisture);
+          //row.moisture_act = Number(headerForm.actual_moisture);
         }
         row.actual_moisture = row.moisture_act;
         row.settlement_moisture = row.moisture_act;
       } else if (field === 'moisture_act' || field === 'actual_moisture') {
         const valNum = Number(value) || 0;
-        row.moisture_act = valNum;
+        //row.moisture_act = valNum;
         row.actual_moisture = valNum;
         row.settlement_moisture = valNum;
       }
