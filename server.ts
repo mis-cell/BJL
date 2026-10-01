@@ -170,12 +170,28 @@ async function runImapSync() {
     }
     return emails;
   } catch (err: any) {
-    if (err.message?.includes('timed out') || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+    const msg = String(err?.message || '');
+    if (
+      msg.toLowerCase().includes('timed out') ||
+      msg.toLowerCase().includes('timeout') ||
+      err.code === 'ETIMEDOUT' ||
+      err.code === 'ENOTFOUND' ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'EAI_AGAIN'
+    ) {
       console.warn("[Sync] Background IMAP email sync paused (connection timed out / offline).");
     } else {
-      console.error("[Sync] Error in live Gmail email sync:", err.message);
+      console.warn("[Sync] Background IMAP email sync paused:", msg);
     }
-    throw err;
+    try {
+      const filePath = path.join(process.cwd(), "emails.json");
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const parsed = JSON.parse(raw);
+        if (parsed?.emails) return parsed.emails;
+      }
+    } catch (e) {}
+    return [];
   } finally {
     if (connection) {
       try { connection.end(); } catch (e) {}
@@ -374,11 +390,9 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
 
   app.use((req, res, next) => {
-    const logLine = `[${new Date().toISOString()}] ${req.method} ${req.url} ${req.originalUrl}\n`;
-    try {
-      fs.appendFileSync(path.join(process.cwd(), "requests.log"), logLine);
-    } catch (e) {}
-    console.log("Incoming request:", req.method, req.url, req.originalUrl);
+    if (req.url.startsWith('/api') || req.url.includes('/api/')) {
+      console.log(`[API] ${req.method} ${req.url}`);
+    }
     next();
   });
  // Support large pdf payloads

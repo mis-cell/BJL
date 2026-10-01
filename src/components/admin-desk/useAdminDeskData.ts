@@ -175,6 +175,26 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
               ALTER TABLE IF EXISTS deduction_master DISABLE ROW LEVEL SECURITY;
               ALTER TABLE IF EXISTS deduction_master ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 
+              CREATE TABLE IF NOT EXISTS tolerance_policy (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                status TEXT DEFAULT 'ACTIVE',
+                is_active BOOLEAN DEFAULT true,
+                policy_name TEXT NOT NULL,
+                description TEXT,
+                tolerance_pct NUMERIC(5,2) DEFAULT 5.00,
+                max_limit_kg NUMERIC(10,2) DEFAULT 1500.00,
+                max_limit_mt NUMERIC(10,3) DEFAULT 1.500,
+                unit TEXT DEFAULT 'BALES',
+                rule_formula TEXT DEFAULT 'Min(5% of Sauda MT, 1.500 MT)',
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS tolerance_policy DISABLE ROW LEVEL SECURITY;
+
+              INSERT INTO tolerance_policy (status, is_active, policy_name, description, tolerance_pct, max_limit_kg, max_limit_mt, unit, rule_formula)
+              VALUES ('ACTIVE', true, 'Raw Jute Bales Standard Policy (5% or 1500 KG)', 'Lower of 5% of Sauda contract quantity or 1,500 KG (15.00 Qtl / 1.500 MT).', 5.00, 1500.00, 1.500, 'BALES', 'Min(5% of Sauda MT, 1.500 MT)')
+              ON CONFLICT DO NOTHING;
+
               CREATE TABLE IF NOT EXISTS tolerance_policy_master (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 policy_name TEXT NOT NULL,
@@ -359,7 +379,24 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
         return String(aVal).localeCompare(String(bVal));
       });
 
-      setData(merged.length > 0 ? merged : (remoteRecords.length > 0 ? remoteRecords : localRecords));
+      let finalData = merged.length > 0 ? merged : (remoteRecords.length > 0 ? remoteRecords : localRecords);
+      if (selectedTable.name === 'tolerance_policy' && finalData.length === 0) {
+        finalData = [{
+          id: '01',
+          status: 'ACTIVE',
+          policy_name: 'Raw Jute Bales Standard Policy (5% or 1500 KG)',
+          description: 'Lower of 5% of Sauda contract quantity or 1,500 KG (15.00 Qtl / 1.500 MT).',
+          tolerance_pct: 5,
+          max_limit_kg: 1500,
+          max_limit_mt: 1.500,
+          unit: 'BALES',
+          rule_formula: 'Min(5% of Sauda MT, 1.500 MT)',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }];
+      }
+      setData(finalData);
     } catch (err) {
       console.error(err);
       const fallbackRecords = await dbModule.fetchAll(selectedTable.name).catch(() => []);
@@ -396,6 +433,22 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
           { name: "created_at", type: "timestamp" },
         ];
       }
+      if (selectedTable?.name === "tolerance_policy") {
+        return [
+          { name: "id", type: "text" },
+          { name: "status", type: "text" },
+          { name: "policy_name", type: "text" },
+          { name: "description", type: "text" },
+          { name: "tolerance_pct", type: "number" },
+          { name: "max_limit_kg", type: "number" },
+          { name: "max_limit_mt", type: "number" },
+          { name: "unit", type: "text" },
+          { name: "rule_formula", type: "text" },
+          { name: "is_active", type: "text" },
+          { name: "created_at", type: "timestamp" },
+          { name: "updated_at", type: "timestamp" }
+        ];
+      }
       if (selectedTable?.name === "user_activity_logs") {
         return [
           { name: "log_id", type: "text" },
@@ -421,6 +474,20 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
       standardOrder.forEach(sc => {
         if (!cols.includes(sc)) cols.push(sc);
       });
+    }
+    if (selectedTable?.name === "tolerance_policy") {
+      const standardOrder = ["id", "status", "policy_name", "description", "tolerance_pct", "max_limit_kg", "max_limit_mt", "unit", "rule_formula", "is_active", "created_at", "updated_at"];
+      const reordered: string[] = [];
+      standardOrder.forEach(sc => {
+        if (cols.includes(sc)) reordered.push(sc);
+      });
+      cols.forEach(c => {
+        if (!reordered.includes(c)) reordered.push(c);
+      });
+      return reordered.map((key) => ({
+        name: key,
+        type: typeof data[0][key] === "number" ? "number" : "text",
+      }));
     }
     return cols.map((key) => ({
       name: key,

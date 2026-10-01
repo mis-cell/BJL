@@ -341,9 +341,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
                 Actual APMC Fees (1%)
               </label>
               <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
-              <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-52 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
-                <p className="text-yellow-300 font-bold">Actual APMC Fees Formula</p>
-                <p className="mt-0.5 text-slate-300">Charged at 1% of Material Value: (Material Value × 0.01)</p>
+              <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded border border-slate-700 shadow-xl leading-normal font-normal normal-case">
+                <p className="text-yellow-300 font-bold">Actual APMC Fees (1%) Formula</p>
+                <p className="mt-0.5 text-slate-200 font-mono text-[8px]">1% × (Material Value − Delivery Claim − Deduction Amount − Ded Claim Total − Excess/Short)</p>
+                <p className="mt-1 text-slate-400 text-[8px]">Calculated as 1% of the adjusted Material Value after all applicable claims, quality deductions, and weight adjustments.</p>
               </div>
             </div>
             <input

@@ -1792,8 +1792,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     ).toFixed(2));
 
     // APMC Fees = Arrival APMC Fees - Actual APMC Fees
-    // Actual APMC Fees charge is strictly 1% of Material Value
-    const calculatedApmcFees = Number((calculatedMaterialValue * 0.01).toFixed(2));
+    // Actual APMC Fees (1%) = 1% × (Material Value − Delivery Claim − Deduction Amount − Deduction Claim Total − Excess/Short Amount)
+    const deductionClaimTotal = Number(masterData.val_qty_claim) || 0;
+    const adjustedMaterialValue = Math.max(
+      0,
+      calculatedMaterialValue 
+      - deliveryClaimAmt 
+      - calculatedDeductionAmount 
+      - deductionClaimTotal 
+      - finalExShort
+    );
+    const calculatedApmcFees = Number((adjustedMaterialValue * 0.01).toFixed(2));
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
     const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
