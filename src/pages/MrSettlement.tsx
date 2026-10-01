@@ -1683,28 +1683,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     if (viewMode !== 'entry') return;
 
     // Calculators
-    let calculatedMaterialValue = 0;
     let totalQtyWeightClaims = 0;
-
-    detailCols.forEach(col => {
-      // Amount for column = WT(KG) * Rate(KG) = WT(MT)*1000 * (Recon Rate / 100)
-      const calculatedValueCol = getColAmount(col);
-      calculatedMaterialValue += calculatedValueCol;
-
-      // Total Claim calculation for column: Grade Down (%) + Moisture (%) + Dust (%) + NCV (%)
-      const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
-      const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
-      const dVal = Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0);
-      const nVal = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
-      col.claim_settlement = Number((gdVal + mVal + dVal + nVal).toFixed(2));
-
-      // Grade Claim calculation logic: Claim - Sett
-      const claimTotal = (Number(col.gd_claim) + Number(col.moist_claim) + Number(col.dust_claim) + Number(col.ncv_claim));
-      const settTotal = (Number(col.gd_sett) + Number(col.moist_sett) + Number(col.dust_sett) + Number(col.ncv_sett));
-      
-      const colClaimValue = Math.max(0, claimTotal - settTotal) * Number(col.quantity);
-      totalQtyWeightClaims += colClaimValue;
-    });
 
     // Calculate Rate / m.T (Weighted Average Rate per Metric Ton across all 4 columns)
     const calculatedRatePerMt = calculateWeightedRatePerMT(detailCols);
@@ -1762,9 +1741,43 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       ? Number(masterData.summary_delivery_claim)
       : autoDeliveryClaimAmt;
 
+    // 1. Grand Total = Sum of Gross Column Values (WT in MT * Recon Rate)
+    let grandTotal = 0;
+    detailCols.forEach(col => {
+      const calculatedValueCol = getColAmount(col, nextRatePerMt);
+      grandTotal += calculatedValueCol;
+
+      // Total Claim calculation for column: Grade Down (%) + Moisture (%) + Dust (%) + NCV (%)
+      const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
+      const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+      const dVal = Number(col.dust_sett) > 0 ? Number(col.dust_sett) : Number(col.dust_claim || 0);
+      const nVal = Number(col.ncv_sett) > 0 ? Number(col.ncv_sett) : Number(col.ncv_claim || 0);
+      col.claim_settlement = Number((gdVal + mVal + dVal + nVal).toFixed(2));
+
+      // Grade Claim calculation logic: Claim - Sett
+      const claimTotal = (Number(col.gd_claim) + Number(col.moist_claim) + Number(col.dust_claim) + Number(col.ncv_claim));
+      const settTotal = (Number(col.gd_sett) + Number(col.moist_sett) + Number(col.dust_sett) + Number(col.ncv_sett));
+      
+      const colClaimValue = Math.max(0, claimTotal - settTotal) * Number(col.quantity);
+      totalQtyWeightClaims += colClaimValue;
+    });
+
+    if (grandTotal <= 0 && totalArrWeightMt > 0 && nextRatePerMt > 0) {
+      grandTotal = Number((totalArrWeightMt * nextRatePerMt).toFixed(2));
+    }
+
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
     const finalLessAmount = 0;
+    const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
+
+    // 2. Material Value = Grand Total - Delivery Claim (-) - Deduction Amount (-) - Ex/Short (-)
+    const calculatedMaterialValue = Number(Math.max(0, (
+      grandTotal 
+      - deliveryClaimAmt 
+      - calculatedDeductionAmount 
+      - finalExShort
+    )).toFixed(2));
 
     // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
     const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
@@ -1772,26 +1785,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       ? Number(masterData.summary_premium_wt)
       : Number(masterData.summary_less_amount || 0);
     const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
-    const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
 
-    // Valuation calculation = Material Value + Add Amt + Premium Amt - Deduction Amount - Ded Claim Total - Qty Claim - Val Less Amt - Ex/Short - Delivery Claim(-)
+    // Valuation calculation = Material Value + Add Amt + Premium Amt - Val Less Amt - Qty Claim
     const calculatedValuationVal = Number((
       calculatedMaterialValue 
       + Number(masterData.val_add_amt || 0) 
       + calculatedPremiumAmount 
-      - calculatedDeductionAmount 
       - finalLessAmount 
       - Number(masterData.val_qty_claim || 0) 
-      - Number(masterData.val_less_amt || 0) 
-      - finalExShort
-      - deliveryClaimAmt
+      - Number(masterData.val_less_amt || 0)
     ).toFixed(2));
 
     // APMC Fees = Arrival APMC Fees - Actual APMC Fees
-    // Negative APMC Fees (e.g. 0 - 1132.50 = -1132.50) is deducted from RESOLVED PAYABLE ACCOUNT
+    // Actual APMC Fees charge is strictly 1% of Material Value
     const calculatedApmcFees = Number((calculatedMaterialValue * 0.01).toFixed(2));
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
-    const actualApmcFees = Number(masterData.actual_apmc_fees) || (calculatedApmcFees > 0 ? calculatedApmcFees : 0);
+    const actualApmcFees = calculatedApmcFees;
     const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
     const cstAmt = (calculatedValuationVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
 
@@ -1806,7 +1815,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     // Only update if changes to prevent cycling
     setMasterData(prev => {
-      const nextActualApmcFees = prev.actual_apmc_fees || calculatedApmcFees;
+      const nextActualApmcFees = calculatedApmcFees;
       const targetRateAffCdCl = prev.summary_rate_aff_cd_cl > 0 ? prev.summary_rate_aff_cd_cl : nextRatePerMt;
 
       const targetDeliveryClaim = (prev.summary_delivery_claim !== undefined && prev.summary_delivery_claim !== null && prev.summary_delivery_claim !== 0 && Number(prev.summary_delivery_claim) !== 5550)
@@ -1823,7 +1832,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         prev.summary_rate_aff_cd_cl !== targetRateAffCdCl ||
         prev.val_premium_amt !== calculatedPremiumAmount ||
         prev.summary_delivery_claim !== targetDeliveryClaim ||
-        (!prev.actual_apmc_fees && calculatedApmcFees > 0 && prev.actual_apmc_fees !== nextActualApmcFees) ||
+        prev.actual_apmc_fees !== nextActualApmcFees ||
         (calculatedRatePerMt > 0 && (prev.summary_rate_qtel !== nextRatePerMt || prev.rate_qntl !== nextRatePerMt))
       ) {
         return {
@@ -2607,15 +2616,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               calculateWeightedRatePerMT={calculateWeightedRatePerMT}
             />
 
-            {/* Dynamic P.O Quantities Reduction Panel & 1-to-N Consignment Meter */}
-            <SettlementMetricsRibbon
-              poStats={poStats}
-              selectedPoNo={selectedPoNo}
-              lastSyncTime={lastSyncTime}
-              inspections={inspections}
-              customSettlementRecords={customSettlementRecords}
-            />
-
             {/* Error & Success indicators */}
             {errorMessage && (
               <div className="bg-amber-50 border-2 border-amber-400 p-2 text-amber-900 font-bold flex flex-wrap items-center justify-between gap-2 rounded-sm shadow-2xs">
@@ -2666,8 +2666,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 />
               </div>
 
-              {/* RIGHT SIDE PANEL: Detailed 4-Column Core Specification Grids */}
-              <div className="col-span-12 lg:col-span-8">
+              {/* RIGHT SIDE PANEL: Detailed 4-Column Core Specification Grids & Consignment Meter */}
+              <div className="col-span-12 lg:col-span-8 space-y-3">
                 <SettlementSpecificationsGrid
                   detailCols={detailCols}
                   handleColChange={handleColChange}
@@ -2680,6 +2680,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   masterData={masterData}
                   selectedPoData={selectedPoData}
                   calculateWeightedRatePerMT={calculateWeightedRatePerMT}
+                />
+
+                {/* Dynamic P.O Quantities Reduction Panel & 1-to-N Consignment Meter placed cleanly in the gap */}
+                <SettlementMetricsRibbon
+                  poStats={poStats}
+                  selectedPoNo={selectedPoNo}
+                  lastSyncTime={lastSyncTime}
+                  inspections={inspections}
+                  customSettlementRecords={customSettlementRecords}
                 />
               </div>
             </div>

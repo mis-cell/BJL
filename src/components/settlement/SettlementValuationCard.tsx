@@ -180,7 +180,14 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
 
           {/* Row 4 */}
           <div className="flex flex-col col-span-2">
-            <label htmlFor="summary_mat_val_input" className="text-[9px] uppercase font-bold text-slate-600 mb-0.5">Mat. Value</label>
+            <div className="group relative flex items-center gap-1 mb-0.5">
+              <label htmlFor="summary_mat_val_input" className="text-[9px] uppercase font-bold text-slate-600">Mat. Value</label>
+              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
+                <p className="text-yellow-300 font-bold">Material Value Formula</p>
+                <p className="mt-0.5 text-slate-300">Grand Total - Delivery Claim (-) - Deduction Amount (-) - Ex/Short (-)</p>
+              </div>
+            </div>
             <input
               id="summary_mat_val_input"
               name="material_value"

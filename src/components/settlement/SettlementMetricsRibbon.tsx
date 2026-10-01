@@ -1,5 +1,5 @@
 import React from "react";
-import { Truck } from "lucide-react";
+import { Truck, CheckCircle2, RefreshCw, Layers } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export interface SettlementMetricsRibbonProps {
@@ -25,127 +25,130 @@ export const SettlementMetricsRibbon: React.FC<SettlementMetricsRibbonProps> = (
   inspections,
   customSettlementRecords,
 }) => {
-  if (!poStats) return null;
+  if (!poStats && !selectedPoNo) return null;
 
-  const fulfillmentPercent = Math.min(
-    100,
-    Math.max(
-      0,
-      ((poStats.customReceivedQty + poStats.receivedQty) /
-        (poStats.contractQty || 1)) *
-        100
-    )
-  );
+  const totalDelivered = (poStats?.customReceivedQty || 0) + (poStats?.receivedQty || 0);
+  const contractQty = poStats?.contractQty || 0;
+  const pendingQty = poStats?.pendingReceivedQty ?? 0;
+  const linkedCount = (inspections || []).filter((i) => i.po_no === selectedPoNo).length;
+
+  const fulfillmentPercent = contractQty > 0
+    ? Math.min(100, Math.max(0, (totalDelivered / contractQty) * 100))
+    : 0;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 font-sans border border-slate-700 bg-slate-950 rounded-lg p-3 text-white shadow-md">
       {/* 1-to-N Fulfillment Progress Bar */}
-      <div className="bg-slate-900 border-2 border-indigo-900 p-2.5 rounded-sm text-white space-y-1.5 shadow-md">
-        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider">
           <span className="text-indigo-300 flex items-center gap-1.5">
-            <Truck className="w-3.5 h-3.5 text-cyan-400 inline" />
-            <span>1-to-N P.O Consignment Fulfillment Progress (PO #{selectedPoNo})</span>
+            <Truck className="w-4 h-4 text-cyan-400 inline shrink-0" />
+            <span>1-to-N P.O Consignment Fulfillment Progress {selectedPoNo ? `(PO #${selectedPoNo})` : ""}</span>
           </span>
-          <span className="text-emerald-400 font-mono text-xs font-bold">
+          <span className="text-emerald-400 font-mono text-xs font-black">
             {fulfillmentPercent.toFixed(1)}% Fulfilled
           </span>
         </div>
 
-        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/80">
           <div
             className="bg-gradient-to-r from-cyan-500 via-indigo-500 to-emerald-400 h-full transition-all duration-500"
             style={{ width: `${fulfillmentPercent}%` }}
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between text-[9px] text-slate-300 font-mono pt-0.5">
+        <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-300 font-mono pt-0.5">
           <span>
-            Contract: <strong className="text-white">{poStats.contractQty.toFixed(3)} MT</strong>
+            Contract: <strong className="text-white font-bold">{contractQty.toFixed(3)} MT</strong>
           </span>
           <span>
             Delivered (Inspection):{" "}
-            <strong className="text-emerald-300">
-              {(poStats.customReceivedQty + poStats.receivedQty).toFixed(3)} MT
+            <strong className="text-emerald-400 font-bold">
+              {totalDelivered.toFixed(3)} MT
             </strong>
           </span>
           <span>
             Pending Balance:{" "}
-            <strong className="text-amber-300">{poStats.pendingReceivedQty.toFixed(3)} MT</strong>
+            <strong className="text-amber-300 font-bold">{pendingQty.toFixed(3)} MT</strong>
           </span>
           <span className="text-cyan-300 font-bold">
-            Linked Consignments: {inspections.filter((i) => i.po_no === selectedPoNo).length} Truckloads
+            Linked Consignments: {linkedCount} Truckload{linkedCount !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-white p-3 border-2 border-slate-700 shadow-inner rounded-sm">
-        <div className="border-r border-slate-700/50 pr-2">
-          <p className="text-[8px] font-extrabold uppercase text-indigo-200 tracking-wider">Total PO Contract</p>
-          <p className="text-xs font-mono font-black text-white">{poStats.contractQty.toFixed(3)} MT</p>
+      {/* Grid of Key Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-900/90 border border-slate-800 rounded-md p-2.5 text-white">
+        <div className="border-r border-slate-800 pr-2">
+          <p className="text-[8.5px] font-extrabold uppercase text-indigo-300 tracking-wider">Total PO Contract</p>
+          <p className="text-xs font-mono font-black text-white mt-0.5">{contractQty.toFixed(3)} MT</p>
         </div>
-        <div className="border-r border-slate-700/50 px-2">
-          <p className="text-[8px] font-extrabold uppercase text-emerald-300 tracking-wider">Inspected Received</p>
-          <p className="text-xs font-mono font-black text-emerald-400">{poStats.receivedQty.toFixed(3)} MT</p>
+        <div className="border-r border-slate-800 px-2">
+          <p className="text-[8.5px] font-extrabold uppercase text-emerald-300 tracking-wider">Inspected Received</p>
+          <p className="text-xs font-mono font-black text-emerald-400 mt-0.5">{(poStats?.receivedQty || 0).toFixed(3)} MT</p>
         </div>
-        <div className="border-r border-slate-700/50 px-2">
-          <p className="text-[8px] font-extrabold uppercase text-amber-300 tracking-wider">Settles Sum (Classic)</p>
-          <p className="text-xs font-mono font-black text-amber-400">{poStats.settledQty.toFixed(3)} MT</p>
+        <div className="border-r border-slate-800 px-2">
+          <p className="text-[8.5px] font-extrabold uppercase text-amber-300 tracking-wider">Settles Sum (Classic)</p>
+          <p className="text-xs font-mono font-black text-amber-400 mt-0.5">{(poStats?.settledQty || 0).toFixed(3)} MT</p>
         </div>
-        <div className="border-r border-slate-700/50 px-2 bg-slate-900/40 rounded-xs p-1">
-          <p className="text-[8px] font-extrabold uppercase text-cyan-300 tracking-wider">M.R. Settlements Sum</p>
-          <p className="text-xs font-mono font-black text-cyan-400">{poStats.customReceivedQty.toFixed(3)} MT</p>
+        <div className="border-r border-slate-800 px-2 bg-slate-950/40 rounded p-1">
+          <p className="text-[8.5px] font-extrabold uppercase text-cyan-300 tracking-wider">M.R. Settlements Sum</p>
+          <p className="text-xs font-mono font-black text-cyan-400 mt-0.5">{(poStats?.customReceivedQty || 0).toFixed(3)} MT</p>
         </div>
-        <div className="pl-2 bg-indigo-900/40 rounded-xs p-1">
-          <p className="text-[8px] font-extrabold uppercase text-pink-300 tracking-wider">Pending Received (Custom)</p>
-          <p className="text-xs font-mono font-black text-pink-400 animate-pulse">{poStats.pendingReceivedQty.toFixed(3)} MT</p>
+        <div className="pl-2 bg-indigo-950/40 rounded p-1">
+          <p className="text-[8.5px] font-extrabold uppercase text-pink-300 tracking-wider">Pending Received</p>
+          <p className="text-xs font-mono font-black text-pink-400 animate-pulse mt-0.5">{pendingQty.toFixed(3)} MT</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between text-[9px] bg-slate-950 border-x-2 border-b-2 border-slate-700/70 px-3 py-1.5 -mt-2 text-slate-350 font-mono italic rounded-b-xs">
-        <div className="flex items-center gap-1.5">
+      {/* DB Sync Verification Footer */}
+      <div className="flex flex-wrap items-center justify-between text-[9.5px] bg-slate-900 border border-slate-800/80 px-2.5 py-1.5 text-slate-300 font-mono rounded">
+        <div className="flex items-center gap-2">
           <span
             className={cn(
-              "font-extrabold tracking-tight flex items-center gap-1",
-              Math.abs((poStats.dbPendingReceived || 0) - poStats.pendingReceivedQty) < 0.001
-                ? "text-emerald-400 font-bold"
+              "font-extrabold flex items-center gap-1",
+              Math.abs((poStats?.dbPendingReceived || 0) - pendingQty) < 0.001
+                ? "text-emerald-400"
                 : "text-amber-400"
             )}
           >
             ● DB-SYNC:{" "}
-            {Math.abs((poStats.dbPendingReceived || 0) - poStats.pendingReceivedQty) < 0.001
-              ? `VERIFIED (purchase_master.pending_received = ${poStats.dbPendingReceived.toFixed(3)} MT)`
-              : `ACTIVE (Pending validation)`}
+            {Math.abs((poStats?.dbPendingReceived || 0) - pendingQty) < 0.001
+              ? `VERIFIED (purchase_master.pending_received = ${(poStats?.dbPendingReceived || 0).toFixed(3)} MT)`
+              : `ACTIVE (Pending sync)`}
           </span>
           <span className="text-slate-600">|</span>
           <span>
-            Last DB Sync: <strong className="text-white font-bold font-sans not-italic">{lastSyncTime || "Pending Selection"}</strong>
+            Last DB Sync: <strong className="text-white font-sans">{lastSyncTime || "Real-time"}</strong>
           </span>
         </div>
         <div>
           <span>
-            Cumulative Received Weight Summary:{" "}
-            <strong className="text-cyan-400 font-bold not-italic font-sans text-xs">
-              {(poStats.customReceivedQty + poStats.receivedQty).toFixed(3)} MT
+            Cumulative Received Weight:{" "}
+            <strong className="text-cyan-400 font-sans font-bold">
+              {totalDelivered.toFixed(3)} MT
             </strong>
           </span>
         </div>
       </div>
 
-      {customSettlementRecords.length > 0 && (
-        <div className="bg-[#f0ede6] p-2 border border-yellow-800/20 text-[10px] space-y-1">
-          <p className="font-extrabold text-slate-800 uppercase text-[9px] tracking-wider text-rose-900 underline">
-            Active P.O Settlements Log (m_r_settlement Table):
-          </p>
-          <div className="max-h-24 overflow-y-auto space-y-1 font-mono text-[9px]">
+      {/* Active P.O Settlements Log if present */}
+      {customSettlementRecords && customSettlementRecords.length > 0 && (
+        <div className="bg-slate-900/90 p-2 border border-slate-800 text-[9.5px] rounded space-y-1">
+          <div className="flex items-center gap-1 text-slate-300 font-bold uppercase text-[9px]">
+            <Layers className="w-3 h-3 text-cyan-400" />
+            <span>Active P.O Settlements Log ({customSettlementRecords.length} Records in m_r_settlement Table):</span>
+          </div>
+          <div className="max-h-24 overflow-y-auto space-y-1 font-mono text-[9px] divide-y divide-slate-800">
             {customSettlementRecords.map((r, i) => (
-              <div key={r.id || i} className="flex justify-between border-b border-black/5 pb-1">
+              <div key={r.id || i} className="flex items-center justify-between pt-1">
                 <span>
-                  Settle-Dt: {r.settlement_date ? r.settlement_date.split("T")[0] : "N/A"} - Quant:{" "}
-                  <b className="text-indigo-900">{Number(r.quantity).toFixed(3)} MT</b>
+                  Settle Date: {r.settlement_date ? r.settlement_date.split("T")[0] : "N/A"} — Qty:{" "}
+                  <strong className="text-cyan-400">{Number(r.quantity || 0).toFixed(3)} MT</strong>
                 </span>
-                <span className="text-gray-600 font-sans text-[8px]">
+                <span className="text-slate-400 text-[8.5px]">
                   Scale Net: {Number(r.electronic_scale_net || 0).toFixed(3)} MT | Status:{" "}
-                  <b className="uppercase font-sans font-black text-[8px]">{r.payment_status}</b>
+                  <span className="uppercase font-bold text-emerald-400">{r.payment_status || "Settled"}</span>
                 </span>
               </div>
             ))}

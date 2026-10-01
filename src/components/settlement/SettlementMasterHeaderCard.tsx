@@ -336,16 +336,23 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="actual_apmc_fees_header_card" className="text-slate-500 text-[8px] uppercase">
-              Actual APMC Fees
-            </label>
+            <div className="group relative flex items-center gap-1">
+              <label htmlFor="actual_apmc_fees_header_card" className="text-slate-500 text-[8px] uppercase font-bold">
+                Actual APMC Fees (1%)
+              </label>
+              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-52 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
+                <p className="text-yellow-300 font-bold">Actual APMC Fees Formula</p>
+                <p className="mt-0.5 text-slate-300">Charged at 1% of Material Value: (Material Value × 0.01)</p>
+              </div>
+            </div>
             <input
               id="actual_apmc_fees_header_card"
               name="actual_apmc_fees"
-              aria-label="Actual APMC Fees"
+              aria-label="Actual APMC Fees (1%)"
               type="number"
               className="bg-white border border-gray-400 p-1 text-right font-mono"
-              value={masterData.actual_apmc_fees || ""}
+              value={masterData.actual_apmc_fees !== undefined && masterData.actual_apmc_fees !== null ? masterData.actual_apmc_fees : ""}
               onChange={(e) => handleMasterChange("actual_apmc_fees", parseFloat(e.target.value) || 0)}
             />
           </div>

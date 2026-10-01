@@ -441,7 +441,9 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                     .map((row) => (
                       <tr
                         key={row.settlement_id || row.mr_no}
-                        className="hover:bg-emerald-50/60 text-[11px] font-sans transition-colors duration-150"
+                        onDoubleClick={() => onEdit(row.mr_no)}
+                        className="hover:bg-emerald-50/70 text-[11px] font-sans transition-colors duration-150 cursor-pointer select-none"
+                        title="Double-click to open in Edit mode"
                       >
                         <td className="px-3 py-2.5 border-r border-slate-100 font-bold text-rose-700 whitespace-nowrap">
                           {row.mr_no}
@@ -488,7 +490,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => onOpenView(row.mr_no)}
                               type="button"
@@ -500,35 +502,13 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                             </button>
 
                             {canEditOrDelete() && (
-                              <>
-                                <button
-                                  onClick={() => onEdit(row.mr_no)}
-                                  type="button"
-                                  className="bg-slate-50 hover:bg-[#3f51b5] hover:text-white border border-slate-300 text-slate-700 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer"
-                                  title="Edit Settlement entry"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => onDelete(row.mr_no)}
-                                  type="button"
-                                  className="bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-300 text-rose-600 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer"
-                                  title="Delete Settlement record"
-                                >
-                                  Delete
-                                </button>
-                              </>
-                            )}
-
-                            {isL5OrAdmin() && (
                               <button
-                                onClick={() => onRevert(row.mr_no, row.po_no)}
+                                onClick={() => onDelete(row.mr_no)}
                                 type="button"
-                                className="bg-amber-50 hover:bg-amber-600 hover:text-white border border-amber-300 text-amber-800 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer flex items-center gap-1"
-                                title="Revert Settlement: Cancels settlement and moves P.O & Final M.R data back to Final P.O & Final M.R registers (Admin/L5 Only)"
+                                className="bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-300 text-rose-600 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer"
+                                title="Delete Settlement record"
                               >
-                                <span>↺</span>
-                                Revert
+                                Delete
                               </button>
                             )}
                           </div>
