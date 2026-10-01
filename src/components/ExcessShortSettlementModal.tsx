@@ -22,6 +22,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
+import { getActiveTolerancePolicy, getCachedTolerancePolicy, TolerancePolicy, DEFAULT_TOLERANCE_POLICY } from '../services/tolerancePolicyService';
 import { cn, safeNum } from '../lib/utils';
 import { logChange } from '../services/auditLogService';
 
@@ -202,6 +203,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [activePolicy, setActivePolicy] = useState<TolerancePolicy>(getCachedTolerancePolicy());
+
+  // Fetch live active policy from Tolerance Policy Master
+  useEffect(() => {
+    getActiveTolerancePolicy().then(p => {
+      if (p) setActivePolicy(p);
+    });
+  }, []);
 
   // Close modal safely on Escape key
   useEffect(() => {
@@ -591,10 +600,10 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
   const rateDifference = Math.abs(arrivalBaseRate - saudaBaseRate);
 
-  // Core Tolerance Calculation (5% of Sauda Quantity or 15 Quintal, whichever is lower)
+  // Core Tolerance Calculation based on live active Tolerance Policy
   const tolerance: WeightToleranceResult = useMemo(() => {
-    return calculateWeightTolerance(contractMt, totalReceivedMt, unit);
-  }, [contractMt, totalReceivedMt, unit]);
+    return calculateWeightTolerance(contractMt, totalReceivedMt, unit, activePolicy);
+  }, [contractMt, totalReceivedMt, unit, activePolicy]);
 
   // Quantities in consistent Quintal unit
   const totalReceivedQtl = totalReceivedMt * 10;
@@ -821,7 +830,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           contract_weight_mt: Number(contractMt.toFixed(3)),
           tolerance_pct: Number(tolerance.tolerancePct.toFixed(2)),
           tolerance_mt: Number(tolerance.toleranceMt.toFixed(3)),
-          tolerance_type: 'Lower of 5% or 1,500 kg (15 Quintal)',
+          tolerance_type: activePolicy.policy_name || `Lower of ${activePolicy.tolerance_pct}% or ${activePolicy.max_weight_limit_kg} kg`,
           min_acceptable_mt: Number(tolerance.minAcceptableMt.toFixed(3)),
           max_acceptable_mt: Number(tolerance.maxAcceptableMt.toFixed(3)),
           total_received_mt: Number(totalReceivedMt.toFixed(3)),
@@ -947,7 +956,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       contract_weight_mt: Number(contractMt.toFixed(3)),
       tolerance_pct: Number(tolerance.tolerancePct.toFixed(2)),
       tolerance_mt: Number(tolerance.toleranceMt.toFixed(3)),
-      tolerance_type: 'Lower of 5% or 1,500 kg (15 Quintal)',
+      tolerance_type: activePolicy.policy_name || `Lower of ${activePolicy.tolerance_pct}% or ${activePolicy.max_weight_limit_kg} kg`,
       min_acceptable_mt: Number(tolerance.minAcceptableMt.toFixed(3)),
       max_acceptable_mt: Number(tolerance.maxAcceptableMt.toFixed(3)),
       total_received_mt: Number(totalReceivedMt.toFixed(3)),
@@ -1231,7 +1240,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 </span>
               </div>
               <span className="text-[9px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
-                Policy: Lower of 5% or 1.5 MT (15.00 Qtl)
+                Policy: Lower of {activePolicy.tolerance_pct}% or {activePolicy.max_weight_limit_mt} MT ({(activePolicy.max_weight_limit_kg / 100).toFixed(2)} Qtl)
               </span>
             </div>
 
@@ -1288,7 +1297,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <span>⚖️</span> TOLERANCE &amp; TD5 PENALTY POLICY APPLIED:
                 </span>
                 <span className="text-[8.5px] font-bold bg-white text-indigo-900 px-2 py-0.5 rounded border border-indigo-200">
-                  Tolerance: Min(5% of {contractMt.toFixed(3)} MT, 1.500 MT) = ±{tolerance.toleranceMt.toFixed(3)} MT
+                  Tolerance: Min({activePolicy.tolerance_pct}% of {contractMt.toFixed(3)} MT, {Number(activePolicy.max_weight_limit_mt).toFixed(3)} MT) = ±{tolerance.toleranceMt.toFixed(3)} MT
                 </span>
               </div>
 

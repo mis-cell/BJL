@@ -142,6 +142,7 @@ export const TABLES: TableDef[] = [
   { name: "batch_master", label: "Batch Master", icon: Layers, pk: "code" },
   { name: "unit_master", label: "Unit Master", icon: Layers, pk: "id" },
   { name: "lorry_weighments", label: "Lorry Weighments", icon: Scale, pk: "id" },
+  { name: "tolerance_policy_master", label: "Tolerance Policy Master", icon: Scale, pk: "id" },
   { name: "deduction_master", label: "Deduction Master", icon: DollarSign, pk: "id" },
   { name: "moisture_logic", label: "Moisture Logic", icon: ClipboardList, pk: "id" },
   { name: "sms_sauda", label: "SMS Sauda", icon: MessageSquare, pk: "id" },

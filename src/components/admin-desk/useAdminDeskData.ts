@@ -166,13 +166,33 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
 
               CREATE TABLE IF NOT EXISTS deduction_master (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                category TEXT,
-                deduction_type TEXT,
-                rate_per_unit NUMERIC DEFAULT 0,
-                remarks TEXT,
+                deduction TEXT UNIQUE,
+                rate_per_qntl NUMERIC(15,2),
+                rate_per_unit NUMERIC(15,2),
+                is_active BOOLEAN DEFAULT true,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
               );
               ALTER TABLE IF EXISTS deduction_master DISABLE ROW LEVEL SECURITY;
+              ALTER TABLE IF EXISTS deduction_master ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+              CREATE TABLE IF NOT EXISTS tolerance_policy_master (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                policy_name TEXT NOT NULL,
+                tolerance_pct NUMERIC(5,2) DEFAULT 5.00,
+                max_weight_limit_kg NUMERIC(10,2) DEFAULT 1500.00,
+                max_weight_limit_mt NUMERIC(10,3) DEFAULT 1.500,
+                applicable_unit TEXT DEFAULT 'BALES',
+                is_active BOOLEAN DEFAULT true,
+                is_default BOOLEAN DEFAULT false,
+                description TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              );
+              ALTER TABLE IF EXISTS tolerance_policy_master DISABLE ROW LEVEL SECURITY;
+
+              INSERT INTO tolerance_policy_master (policy_name, tolerance_pct, max_weight_limit_kg, max_weight_limit_mt, applicable_unit, is_active, is_default, description)
+              VALUES ('Raw Jute Bales Standard Policy (5% or 1500 KG)', 5.00, 1500.00, 1.500, 'BALES', true, true, 'Lower of 5% of Sauda contract quantity or 1,500 KG (15.00 Qtl / 1.500 MT).')
+              ON CONFLICT DO NOTHING;
 
               CREATE TABLE IF NOT EXISTS lorry_weighments (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

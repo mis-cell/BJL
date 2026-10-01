@@ -332,6 +332,27 @@ export async function runDatabaseMigrations() {
           ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS settled_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
           ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS settled_by TEXT;
 
+          ALTER TABLE IF EXISTS deduction_master ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+          CREATE TABLE IF NOT EXISTS tolerance_policy_master (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            policy_name TEXT NOT NULL,
+            tolerance_pct NUMERIC(5,2) DEFAULT 5.00,
+            max_weight_limit_kg NUMERIC(10,2) DEFAULT 1500.00,
+            max_weight_limit_mt NUMERIC(10,3) DEFAULT 1.500,
+            applicable_unit TEXT DEFAULT 'BALES',
+            is_active BOOLEAN DEFAULT true,
+            is_default BOOLEAN DEFAULT false,
+            description TEXT,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          ALTER TABLE IF EXISTS tolerance_policy_master DISABLE ROW LEVEL SECURITY;
+
+          INSERT INTO tolerance_policy_master (policy_name, tolerance_pct, max_weight_limit_kg, max_weight_limit_mt, applicable_unit, is_active, is_default, description)
+          VALUES ('Raw Jute Bales Standard Policy (5% or 1500 KG)', 5.00, 1500.00, 1.500, 'BALES', true, true, 'Lower of 5% of Sauda contract quantity or 1,500 KG (15.00 Qtl / 1.500 MT).')
+          ON CONFLICT DO NOTHING;
+
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS payment_id UUID;
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS voucher_no TEXT;
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS mr_no TEXT;
