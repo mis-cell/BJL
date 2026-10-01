@@ -66,6 +66,14 @@ export default function Inspection({ onNavigate, onClose }: InspectionProps) {
     setSelectedMonthFilter,
     statusFilter,
     setStatusFilter,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    datePreset,
+    setDatePreset,
+    handleDatePresetChange,
+    clearDateFilter,
     viewMode,
     setViewMode,
     toastMessage,
@@ -150,6 +158,13 @@ export default function Inspection({ onNavigate, onClose }: InspectionProps) {
             totalDeductions={totalDeductions}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            datePreset={datePreset}
+            onDatePresetChange={handleDatePresetChange}
+            onClearDateFilter={clearDateFilter}
             sortField={sortField}
             sortOrder={sortOrder}
             onToggleSort={(field) => {

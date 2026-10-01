@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle, Clock } from "lucide-react";
+import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle, Clock, Calendar, X, Filter } from "lucide-react";
 import { PaginationControls } from "../PaginationControls";
 import { InspectionMasterRecord } from "../../types/inspection.types";
 import { formatIndianCurrency } from "../../lib/utils";
@@ -15,6 +15,13 @@ export interface InspectionRegisterViewProps {
   totalDeductions: number;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  startDate?: string;
+  setStartDate?: (d: string) => void;
+  endDate?: string;
+  setEndDate?: (d: string) => void;
+  datePreset?: string;
+  onDatePresetChange?: (preset: string) => void;
+  onClearDateFilter?: () => void;
   sortField: "arrival_date" | "arrival_no" | "status";
   sortOrder: "asc" | "desc";
   onToggleSort: (field: string) => void;
@@ -41,6 +48,13 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
   totalDeductions,
   searchQuery,
   setSearchQuery,
+  startDate = "",
+  setStartDate,
+  endDate = "",
+  setEndDate,
+  datePreset = "all",
+  onDatePresetChange,
+  onClearDateFilter,
   sortField,
   sortOrder,
   onToggleSort,
@@ -56,6 +70,7 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
   onDeleteRecord,
 }) => {
   const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const isDateFiltered = Boolean(startDate || endDate || (datePreset && datePreset !== "all"));
 
   return (
     <div className="space-y-4">
@@ -63,21 +78,42 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase">Total Inspections</div>
+            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+              <span>Total Inspections</span>
+              {isDateFiltered && (
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                  filtered
+                </span>
+              )}
+            </div>
             <div className="text-2xl font-black text-blue-900 mt-1">{totalInspections}</div>
           </div>
           <CheckCircle className="w-8 h-8 text-blue-500/30" />
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase">Avg Actual Moisture</div>
+            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+              <span>Avg Actual Moisture</span>
+              {isDateFiltered && (
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                  filtered
+                </span>
+              )}
+            </div>
             <div className="text-2xl font-black text-emerald-800 mt-1">{avgMoisture}%</div>
           </div>
           <Clock className="w-8 h-8 text-emerald-500/30" />
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase">Total Deductions (₹)</div>
+            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+              <span>Total Deductions (₹)</span>
+              {isDateFiltered && (
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                  filtered
+                </span>
+              )}
+            </div>
             <div className="text-2xl font-black text-amber-800 mt-1">{formatIndianCurrency(totalDeductions)}</div>
           </div>
           <Printer className="w-8 h-8 text-amber-500/30" />
@@ -85,9 +121,10 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
       </div>
 
       {/* Filter and Control Bar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
-          <div className="relative flex-1">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[240px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
@@ -97,6 +134,65 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none"
             />
           </div>
+
+          {/* Date Filter Quick Presets */}
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200 text-xs">
+            <div className="flex items-center gap-1 text-slate-500 pl-1.5 pr-1 font-semibold text-[11px]">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Date:</span>
+            </div>
+            <select
+              value={datePreset}
+              onChange={(e) => onDatePresetChange && onDatePresetChange(e.target.value)}
+              className="text-xs py-1 px-2 rounded-md border-0 bg-white shadow-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+
+          {/* Date Range Inputs */}
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs">
+            <span className="text-[10px] text-slate-400 font-bold uppercase">From</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                if (setStartDate) setStartDate(e.target.value);
+                if (onDatePresetChange && datePreset !== "custom") onDatePresetChange("custom");
+              }}
+              className="text-xs py-0.5 px-1.5 rounded border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none"
+              title="Arrival Start Date"
+            />
+            <span className="text-[10px] text-slate-400 font-bold uppercase">To</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                if (setEndDate) setEndDate(e.target.value);
+                if (onDatePresetChange && datePreset !== "custom") onDatePresetChange("custom");
+              }}
+              className="text-xs py-0.5 px-1.5 rounded border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none"
+              title="Arrival End Date"
+            />
+            {isDateFiltered && onClearDateFilter && (
+              <button
+                type="button"
+                onClick={onClearDateFilter}
+                className="p-1 hover:bg-rose-100 text-rose-600 rounded transition-colors cursor-pointer"
+                title="Clear date filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status Dropdown */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -107,15 +203,43 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
             <option value="Pending">Pending</option>
             <option value="Draft">Draft</option>
           </select>
+
+          {/* Export Button */}
+          <button
+            onClick={onExportCsv}
+            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
         </div>
 
-        <button
-          onClick={onExportCsv}
-          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Export CSV</span>
-        </button>
+        {/* Active Filter Chips Bar if filtered */}
+        {isDateFiltered && (
+          <div className="flex items-center justify-between bg-emerald-50/80 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs text-emerald-900 font-medium">
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-emerald-700" />
+              <span>
+                Filtering by date:{" "}
+                <strong className="text-emerald-800">
+                  {startDate ? startDate : "Start"} {endDate ? `to ${endDate}` : ""}
+                  {datePreset && datePreset !== "all" && datePreset !== "custom" && ` (${datePreset.replace('_', ' ')})`}
+                </strong>
+                {" — "}
+                <span className="font-bold">{filteredRecords.length}</span> record{filteredRecords.length !== 1 ? 's' : ''} matched
+              </span>
+            </div>
+            {onClearDateFilter && (
+              <button
+                onClick={onClearDateFilter}
+                className="text-[11px] font-bold text-emerald-700 hover:text-rose-700 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                <span>Reset Date Filter</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}

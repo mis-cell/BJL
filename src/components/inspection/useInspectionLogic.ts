@@ -29,6 +29,9 @@ export function useInspectionLogic() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [datePreset, setDatePreset] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"dashboard" | "form">("dashboard");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -48,7 +51,65 @@ export function useInspectionLogic() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, selectedMonthFilter]);
+  }, [searchQuery, statusFilter, selectedMonthFilter, startDate, endDate, datePreset]);
+
+  const getLocalISODate = (d: Date = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const now = new Date();
+    if (preset === 'all') {
+      setStartDate('');
+      setEndDate('');
+      setSelectedMonthFilter(null);
+    } else if (preset === 'today') {
+      const todayStr = getLocalISODate(now);
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+      setSelectedMonthFilter(null);
+    } else if (preset === 'yesterday') {
+      const yest = new Date(now);
+      yest.setDate(yest.getDate() - 1);
+      const yestStr = getLocalISODate(yest);
+      setStartDate(yestStr);
+      setEndDate(yestStr);
+      setSelectedMonthFilter(null);
+    } else if (preset === 'this_week') {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      setStartDate(getLocalISODate(monday));
+      setEndDate(getLocalISODate(sunday));
+      setSelectedMonthFilter(null);
+    } else if (preset === 'this_month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setStartDate(getLocalISODate(firstDay));
+      setEndDate(getLocalISODate(lastDay));
+      setSelectedMonthFilter(null);
+    } else if (preset === 'last_month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+      setStartDate(getLocalISODate(firstDay));
+      setEndDate(getLocalISODate(lastDay));
+      setSelectedMonthFilter(null);
+    }
+  };
+
+  const clearDateFilter = () => {
+    setDatePreset('all');
+    setStartDate('');
+    setEndDate('');
+    setSelectedMonthFilter(null);
+  };
 
   // Form State
   const [headerForm, setHeaderForm] = useState<InspectionMasterRecord>({
@@ -1627,6 +1688,15 @@ export function useInspectionLogic() {
       statusFilter === "all" ||
       (r.status || "Completed").toLowerCase() === statusFilter.toLowerCase();
 
+    // Date Range Filter (Arrival Date / MR Date / Inspection Date)
+    if (startDate || endDate) {
+      const rowDateRaw = r.arrival_date || r.mr_date || (r as any).inspection_date || (r as any).created_at;
+      const sanitized = sanitizeDate(rowDateRaw);
+      if (!sanitized) return false;
+      if (startDate && sanitized < startDate) return false;
+      if (endDate && sanitized > endDate) return false;
+    }
+
     if (selectedMonthFilter) {
       const rowDate = r.arrival_date || r.mr_date || (r as any).inspection_date || (r as any).created_at;
       const parsed = parseMonthKey(rowDate);
@@ -1662,9 +1732,11 @@ export function useInspectionLogic() {
     return defaultTimeB - defaultTimeA;
   });
 
-  const totalInspections = records.length;
-  const avgMoisture = records.length > 0 ? (records.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / records.length).toFixed(1) : "0.0";
-  const totalDeductions = records.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
+  const isDateOrQueryActive = Boolean(startDate || endDate || selectedMonthFilter || searchQuery.trim() !== "" || statusFilter !== "all");
+  const activeDataset = isDateOrQueryActive ? filteredRecords : records;
+  const totalInspections = isDateOrQueryActive ? filteredRecords.length : records.length;
+  const avgMoisture = activeDataset.length > 0 ? (activeDataset.reduce((acc, r) => acc + (Number(r.actual_moisture) || 0), 0) / activeDataset.length).toFixed(1) : "0.0";
+  const totalDeductions = activeDataset.reduce((acc, r) => acc + (Number(r.deduction_amount) || 0), 0);
 
   const pendingArrivalList = useMemo(() => {
     return finalArrivalList.filter(fa => {
@@ -1709,6 +1781,14 @@ export function useInspectionLogic() {
     setSelectedMonthFilter,
     statusFilter,
     setStatusFilter,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    datePreset,
+    setDatePreset,
+    handleDatePresetChange,
+    clearDateFilter,
     viewMode,
     setViewMode,
     toastMessage,

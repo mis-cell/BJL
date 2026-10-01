@@ -1728,7 +1728,10 @@ export default function LorryDispatchSystem({
                     Inactivity Auto-Logout Timeout (Minutes)
                   </label>
                   <input
- id="inactivity_auto_logout_ti_1703" name="inactivity_auto_logout_ti" aria-label="Inactivity Auto-Logout Timeout (Minutes)"                    type="number"
+                    id="inactivity_auto_logout_ti_1703"
+                    name="inactivity_auto_logout_ti"
+                    aria-label="Inactivity Auto-Logout Timeout (Minutes)"
+                    type="number"
                     min="1"
                     max="60"
                     value={settings.inactivityTimeoutMinutes}
@@ -1736,21 +1739,6 @@ export default function LorryDispatchSystem({
                       setSettings({ ...settings, inactivityTimeoutMinutes: Number(e.target.value) })
                     }
                     className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg px-3 py-1.5 text-[#1E331B] font-mono text-xs w-32 outline-none focus:border-[#1E331B]"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-[#C5BA9E]">
-                  <div>
-                    <h3 className="font-bold text-[#1E331B] uppercase">Allow Screen Capture & Screenshots</h3>
-                    <p className="text-[11px] text-[#5A6E54]">When OFF, blurs screen upon focus loss to protect sensitive data</p>
-                  </div>
-                  <input
- id="checkbox_1720" name="checkbox" aria-label="checkbox"                    type="checkbox"
-                    checked={settings.allowScreenCapture}
-                    onChange={(e) =>
-                      setSettings({ ...settings, allowScreenCapture: e.target.checked })
-                    }
-                    className="w-5 h-5 accent-[#1E331B] cursor-pointer"
                   />
                 </div>
               </div>
