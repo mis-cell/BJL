@@ -611,7 +611,7 @@ export function usePurchaseOrderSummaryData(refreshTrigger?: number) {
         'SUPPLIER / PARTY',
         'CONTRACT MT (QTL)',
         'RECEIVED MT (QTL)',
-        'TOLERANCE (3% / 1500KG)',
+        'TOLERANCE (5% / 1500KG)',
         'TOLERABLE RANGE',
         'AUDIT STATUS',
         'NET EXCESS / SHORT',

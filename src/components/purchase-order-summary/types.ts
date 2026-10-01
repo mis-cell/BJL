@@ -83,7 +83,7 @@ export const PO_REPORTS = [
   { key: 'r8', name: '8. Agency-wide Sourcing Audit', description: 'Sourcing performances and actual transaction lines registered at each localized Agency station.' },
   { key: 'r9', name: '9. Pending Execution Status Log', description: 'Active open order commitments vs warehouse-dispatched fully compiled purchase contracts.' },
   { key: 'r10', name: '10. Base Rate (B-Rate) price Variance GAP', description: 'Granular comparison between theoretical base reference rates and final settled invoice rates.' },
-  { key: 'r11', name: '11. Weight Tolerance & Excess/Short Penalty Audit', description: 'Tolerance policy (3% or 1500 kg lower limit), net excess/short calculations, Sauda P.O date to Temp Arrival date TD5 rate difference, and excess penalties.' }
+  { key: 'r11', name: '11. Weight Tolerance & Excess/Short Penalty Audit', description: 'Tolerance policy (5% or 1500 kg lower limit), net excess/short calculations, Sauda P.O date to Temp Arrival date TD5 rate difference, and excess penalties.' }
 ];
 
 export const BAR_COLORS = [

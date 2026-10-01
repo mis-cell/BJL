@@ -515,7 +515,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   <th 
                     onClick={() => handleSort('excess_short')}
                     className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[95px]"
-                    title="Sort by WT Status. Policy: Lower of 3% or 1500 kg is Tolerable; Penalty = TD5 Difference × Excess Qtl"
+                    title="Sort by WT Status. Policy: Lower of 5% or 1500 kg is Tolerable; Penalty = TD5 Difference × Excess Qtl"
                   >
                     <div className="flex items-center justify-center gap-1">
                       <span>WT STATUS</span>
@@ -695,7 +695,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             const receivedLorries = item.received_lorries || 0;
                             const isClosed = Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
 
-                            const allowedTolMt = Math.min(contract * 0.03, 1.500);
+                            const allowedTolMt = Math.min(contract * 0.05, 1.500);
                             const shortageOrExcessMt = Math.abs(contract - rcvd);
                             const canShowReopen = isAdminOrL4 && isClosed && shortageOrExcessMt > allowedTolMt;
 
@@ -797,13 +797,13 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               );
                             }
 
-                            // 1. Within tolerance (Lower of 3% or 1500 kg / 1.500 MT) => Tolerable
+                            // 1. Within tolerance (Lower of 5% or 1500 kg / 1.500 MT) => Tolerable
                             if (tol.isWithinTolerance) {
                               return (
                                 <div 
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Weight within allowed tolerance (Lower of 3% or 1500 kg = ±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
+                                  title={`Weight within allowed tolerance (Lower of 5% or 1500 kg = ±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
                                 >
                                   <span className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs group-hover:bg-emerald-100 transition-colors">
                                     ✓ TOLERABLE (±{tol.toleranceMt.toFixed(2)} MT)

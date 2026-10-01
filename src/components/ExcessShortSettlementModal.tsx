@@ -591,7 +591,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
   const rateDifference = Math.abs(arrivalBaseRate - saudaBaseRate);
 
-  // Core Tolerance Calculation (3% of Sauda Quantity or 15 Quintal, whichever is lower)
+  // Core Tolerance Calculation (5% of Sauda Quantity or 15 Quintal, whichever is lower)
   const tolerance: WeightToleranceResult = useMemo(() => {
     return calculateWeightTolerance(contractMt, totalReceivedMt, unit);
   }, [contractMt, totalReceivedMt, unit]);
@@ -609,7 +609,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const isWithinTolerance = absDiffQtl <= (tolerance.toleranceQtl + 0.001);
 
   // Policy-compliant Deductible Quantity
-  // Standard policy: Deduct only the quantity exceeding the allowed tolerance (Lower of 3% or 15 Quintal / 1,500 kg).
+  // Standard policy: Deduct only the quantity exceeding the allowed tolerance (Lower of 5% or 15 Quintal / 1,500 kg).
   // Operator can also switch to 'full_variance' if full deduction is required.
   const beyondToleranceQtyQtl = isWithinTolerance ? 0 : Math.max(0, absDiffQtl - tolerance.toleranceQtl);
   const deductibleQtyQtl = deductionQtyMode === 'full_variance' ? absDiffQtl : beyondToleranceQtyQtl;
@@ -821,7 +821,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           contract_weight_mt: Number(contractMt.toFixed(3)),
           tolerance_pct: Number(tolerance.tolerancePct.toFixed(2)),
           tolerance_mt: Number(tolerance.toleranceMt.toFixed(3)),
-          tolerance_type: 'Lower of 3% or 1,500 kg (15 Quintal)',
+          tolerance_type: 'Lower of 5% or 1,500 kg (15 Quintal)',
           min_acceptable_mt: Number(tolerance.minAcceptableMt.toFixed(3)),
           max_acceptable_mt: Number(tolerance.maxAcceptableMt.toFixed(3)),
           total_received_mt: Number(totalReceivedMt.toFixed(3)),
@@ -947,7 +947,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       contract_weight_mt: Number(contractMt.toFixed(3)),
       tolerance_pct: Number(tolerance.tolerancePct.toFixed(2)),
       tolerance_mt: Number(tolerance.toleranceMt.toFixed(3)),
-      tolerance_type: 'Lower of 3% or 1,500 kg (15 Quintal)',
+      tolerance_type: 'Lower of 5% or 1,500 kg (15 Quintal)',
       min_acceptable_mt: Number(tolerance.minAcceptableMt.toFixed(3)),
       max_acceptable_mt: Number(tolerance.maxAcceptableMt.toFixed(3)),
       total_received_mt: Number(totalReceivedMt.toFixed(3)),
@@ -1081,7 +1081,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         <div className="border-b-2 border-black pb-3 mb-4 text-center">
           <h1 className="text-xl font-black uppercase tracking-wider">BIRLA JUTE MILLS - RAW JUTE DIVISION</h1>
           <h2 className="text-sm font-bold uppercase mt-1">EXCESS / SHORT WEIGHT &amp; RATE SETTLEMENT VOUCHER</h2>
-          <p className="text-xs text-gray-600">Table: sauda_check_point_deductions | Policy: Lower of 3% or 15 Quintal (1,500 kg)</p>
+          <p className="text-xs text-gray-600">Table: sauda_check_point_deductions | Policy: Lower of 5% or 15 Quintal (1,500 kg)</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-xs border border-gray-300 p-3 rounded mb-4">
@@ -1121,7 +1121,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         </div>
 
         <div className="text-xs text-gray-700 mb-6">
-          <p><strong>Remarks:</strong> {remarks || `${policyStatusText} recorded under 3% / 15 Quintal tolerance policy.`}</p>
+          <p><strong>Remarks:</strong> {remarks || `${policyStatusText} recorded under 5% / 15 Quintal tolerance policy.`}</p>
           <p><strong>Approved By:</strong> {settledBy || 'Operator'} | <strong>Approval Level:</strong> {approvalLevel}</p>
         </div>
 
@@ -1231,7 +1231,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                 </span>
               </div>
               <span className="text-[9px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
-                Policy: Lower of 3% or 1.5 MT (15.00 Qtl)
+                Policy: Lower of 5% or 1.5 MT (15.00 Qtl)
               </span>
             </div>
 
@@ -1288,7 +1288,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
                   <span>⚖️</span> TOLERANCE &amp; TD5 PENALTY POLICY APPLIED:
                 </span>
                 <span className="text-[8.5px] font-bold bg-white text-indigo-900 px-2 py-0.5 rounded border border-indigo-200">
-                  Tolerance: Min(3% of {contractMt.toFixed(3)} MT, 1.500 MT) = ±{tolerance.toleranceMt.toFixed(3)} MT
+                  Tolerance: Min(5% of {contractMt.toFixed(3)} MT, 1.500 MT) = ±{tolerance.toleranceMt.toFixed(3)} MT
                 </span>
               </div>
 

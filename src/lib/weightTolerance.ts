@@ -3,15 +3,15 @@
  * 
  * Business Rules:
  * 1. BALE-SPECIFIC TOLERANCE (Unit / Lorry = 'BALES' - case-insensitive):
- *    - 3% of Sauda Quantity (in MT) OR 1500 KG (1.500 MT), whichever tolerance is LOWER.
- *      Allowed Tolerance = MIN(3% of Sauda Quantity, 1.500 MT)
+ *    - 5% of Sauda Quantity (in MT) OR 1500 KG (1.500 MT), whichever tolerance is LOWER.
+ *      Allowed Tolerance = MIN(5% of Sauda Quantity, 1.500 MT)
  *    - Minimum Acceptable Weight = Sauda Quantity - Allowed Tolerance
  *    - Maximum Acceptable Weight = Sauda Quantity + Allowed Tolerance
  *    - Within range [Minimum Acceptable, Maximum Acceptable] => Status = 'completed' (COMPLETED)
  *    - Outside range => Status = 'mismatch' (WEIGHT MISMATCH / NOT ACCEPTABLE) or 'partial' (PARTIAL)
  * 
  * 2. NON-BALE UNITS (Unit / Lorry ≠ 'BALES', e.g. KG, MT, TON, LORRY, DRUMS):
- *    - Do NOT apply the 3% / 1500 KG rule.
+ *    - Do NOT apply the 5% / 1500 KG rule.
  *    - Follow existing standard validation logic (completed when received weight meets contract weight).
  */
 
@@ -28,8 +28,10 @@ export interface WeightToleranceResult {
   absDiffQtl: number;
   unit: string;
   isBales: boolean;
-  pct3Mt: number;
-  pct3Qtl: number;
+  pct5Mt: number;
+  pct5Qtl: number;
+  pct3Mt?: number;
+  pct3Qtl?: number;
   fixedToleranceMt: number;
   fixedToleranceQtl: number;
   toleranceMt: number;
@@ -37,7 +39,7 @@ export interface WeightToleranceResult {
   tolerableLimitMt: number;
   tolerableLimitQtl: number;
   tolerancePct: number;
-  toleranceBasis: '3% (Lower)' | '1500 KG (Lower)' | 'Standard';
+  toleranceBasis: '5% (Lower)' | '3% (Lower)' | '1500 KG (Lower)' | 'Standard';
   minAcceptableMt: number;
   maxAcceptableMt: number;
   minAcceptableQtl: number;
@@ -90,18 +92,18 @@ export function calculateWeightTolerance(
   const absDiffMt = Math.abs(diffMt);
   const absDiffQtl = Math.abs(diffQtl);
 
-  // 3% of contract quantity in MT & Qtl
-  const pct3Mt = contractMt * 0.03;
-  const pct3Qtl = contractQtl * 0.03;
+  // 5% of contract quantity in MT & Qtl (Policy: Lower of 5% or 1,500 KG / 1.500 MT / 15 Quintal)
+  const pct5Mt = contractMt * 0.05;
+  const pct5Qtl = contractQtl * 0.05;
   const fixedToleranceMt = 1.5; // 1500 KG = 15 Quintal = 1.500 MT
   const fixedToleranceQtl = 15.0; // 1500 KG = 15 Quintal
 
-  // Allowed Tolerance = Lower of (3% of Sauda Quantity) or 1,500 kg (15 Quintal / 1.500 MT)
-  const toleranceMt = contractMt > 0 ? Math.min(pct3Mt, fixedToleranceMt) : 0;
-  const toleranceQtl = contractQtl > 0 ? Math.min(pct3Qtl, fixedToleranceQtl) : 0;
+  // Allowed Tolerance = Lower of (5% of Sauda Quantity) or 1,500 kg (15 Quintal / 1.500 MT)
+  const toleranceMt = contractMt > 0 ? Math.min(pct5Mt, fixedToleranceMt) : 0;
+  const toleranceQtl = contractQtl > 0 ? Math.min(pct5Qtl, fixedToleranceQtl) : 0;
   const tolerancePct = contractMt > 0 ? (toleranceMt / contractMt) * 100 : 0;
   const toleranceBasis = contractMt > 0 
-    ? (pct3Mt <= fixedToleranceMt ? '3% (Lower)' : '1500 KG (Lower)')
+    ? (pct5Mt <= fixedToleranceMt ? '5% (Lower)' : '1500 KG (Lower)')
     : 'Standard';
 
   const minAcceptableMt = Math.max(0, contractMt - toleranceMt);
@@ -181,8 +183,10 @@ export function calculateWeightTolerance(
     absDiffQtl,
     unit: unitStr,
     isBales,
-    pct3Mt,
-    pct3Qtl,
+    pct5Mt,
+    pct5Qtl,
+    pct3Mt: pct5Mt,
+    pct3Qtl: pct5Qtl,
     fixedToleranceMt,
     fixedToleranceQtl,
     toleranceMt,
