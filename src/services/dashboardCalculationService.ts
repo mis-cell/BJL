@@ -918,9 +918,26 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   finalArrivals.forEach((fa, idx) => {
     const rawNo = fa.final_arrival_no || fa.arrival_no || fa.temporary_arrival_no || fa.mr_no || fa.amad_no || `FA-${idx}`;
     const cleanNo = normalizePoRef(rawNo);
-    if (cleanNo) finalArrivalsSet.add(cleanNo);
-    if (fa.temporary_arrival_no) finalArrivalsSet.add(normalizePoRef(fa.temporary_arrival_no));
-    if (fa.mr_no) finalArrivalsSet.add(normalizePoRef(fa.mr_no));
+    if (cleanNo) {
+      finalArrivalsSet.add(cleanNo);
+      finalArrivalsSet.add(cleanNo.replace(/[\s\-_]/g, ''));
+    }
+    if (fa.temporary_arrival_no) {
+      finalArrivalsSet.add(normalizePoRef(fa.temporary_arrival_no));
+      finalArrivalsSet.add(String(fa.temporary_arrival_no).toUpperCase().replace(/[\s\-_]/g, ''));
+    }
+    if (fa.mr_no) {
+      finalArrivalsSet.add(normalizePoRef(fa.mr_no));
+      finalArrivalsSet.add(String(fa.mr_no).toUpperCase().replace(/[\s\-_]/g, ''));
+    }
+    if (fa.arrival_no) {
+      finalArrivalsSet.add(normalizePoRef(fa.arrival_no));
+      finalArrivalsSet.add(String(fa.arrival_no).toUpperCase().replace(/[\s\-_]/g, ''));
+    }
+    if (fa.final_arrival_no) {
+      finalArrivalsSet.add(normalizePoRef(fa.final_arrival_no));
+      finalArrivalsSet.add(String(fa.final_arrival_no).toUpperCase().replace(/[\s\-_]/g, ''));
+    }
 
     const rawDate = fa.final_arrival_date || fa.date || fa.arrival_date || fa.created_at;
     const { year: fYear, month: fMonth, isValid } = parseRecordDate(rawDate);
@@ -1052,8 +1069,11 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     // 1. Pipeline: MR -> Final MR (Pending FMR)
     const pendingFmrList: PendingStageRecord[] = monthArrivals.filter(a => {
-      const k = normalizePoRef(a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id);
-      return !k || !finalArrivalsSet.has(k);
+      const rawMr = a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id;
+      const k1 = normalizePoRef(rawMr);
+      const k2 = String(rawMr || '').toUpperCase().replace(/[\s\-_]/g, '');
+      const isCompleted = (k1 && finalArrivalsSet.has(k1)) || (k2 && finalArrivalsSet.has(k2)) || (a.final_arrival_no && String(a.final_arrival_no).trim() !== '') || Boolean(a.is_final_arrival_done);
+      return !isCompleted;
     }).map((a, idx) => {
       const rawMr = a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id || `ARR-${idx}`;
       const rawPo = a.po_no || a.mill_po_no || a.contract_no || a.sauda_no || '';
