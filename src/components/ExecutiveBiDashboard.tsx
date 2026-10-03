@@ -36,7 +36,8 @@ import {
   Wallet,
   Check,
   ChevronRight,
-  Filter
+  Filter,
+  Eye
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -65,10 +66,12 @@ import {
   UnifiedContractRecord, 
   MonthSummary,
   InspectionRecord,
-  MonthInspectionSummary
+  MonthInspectionSummary,
+  PendingStageRecord,
+  exportPendingPoListCsv
 } from '../services/dashboardCalculationService';
 import DashboardDrilldownModal from './DashboardDrilldownModal';
-import InspectionDrilldownModal from './InspectionDrilldownModal';
+import InspectionDrilldownModal, { DrilldownTabType } from './InspectionDrilldownModal';
 
 function safeStr(val: any, fallback = 'N/A'): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -154,13 +157,19 @@ export default function ExecutiveBiDashboard({
   const [modalContracts, setModalContracts] = useState<UnifiedContractRecord[]>([]);
   const [modalInitialFilter, setModalInitialFilter] = useState('');
 
-  // Drilldown Modal State (Inspections, Moisture & Claims)
+  // Drilldown Modal State (Inspections, Moisture, Claims & Pending Pipelines)
   const [inspModalOpen, setInspModalOpen] = useState(false);
   const [inspModalTitle, setInspModalTitle] = useState('');
   const [inspModalSubtitle, setInspModalSubtitle] = useState('');
   const [inspModalRecords, setInspModalRecords] = useState<InspectionRecord[]>([]);
   const [inspModalPayments, setInspModalPayments] = useState<any[]>([]);
   const [inspModalSettlements, setInspModalSettlements] = useState<any[]>([]);
+  const [inspModalPendingFmr, setInspModalPendingFmr] = useState<PendingStageRecord[]>([]);
+  const [inspModalPendingInsp, setInspModalPendingInsp] = useState<PendingStageRecord[]>([]);
+  const [inspModalPendingPaym, setInspModalPendingPaym] = useState<PendingStageRecord[]>([]);
+  const [inspModalPendingSett, setInspModalPendingSett] = useState<PendingStageRecord[]>([]);
+  const [inspModalAllPending, setInspModalAllPending] = useState<PendingStageRecord[]>([]);
+  const [inspModalInitialTab, setInspModalInitialTab] = useState<DrilldownTabType>('pipeline');
 
   // View Controls
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -237,19 +246,31 @@ export default function ExecutiveBiDashboard({
     setModalOpen(true);
   };
 
-  // Handler to open inspection drilldown modal
+  // Handler to open inspection & pending pipeline drilldown modal
   const handleOpenInspectionModal = (params: {
     title: string;
     subtitle?: string;
-    inspections: InspectionRecord[];
+    inspections?: InspectionRecord[];
     payments?: any[];
     settlements?: any[];
+    pendingFmrList?: PendingStageRecord[];
+    pendingInspectionList?: PendingStageRecord[];
+    pendingPaymentList?: PendingStageRecord[];
+    pendingSettlementList?: PendingStageRecord[];
+    allPendingPipelineList?: PendingStageRecord[];
+    initialTab?: DrilldownTabType;
   }) => {
     setInspModalTitle(params.title);
     setInspModalSubtitle(params.subtitle || '');
-    setInspModalRecords(params.inspections);
-    setInspModalPayments(params.payments || []);
-    setInspModalSettlements(params.settlements || []);
+    setInspModalRecords(params.inspections || inspMetrics.allInspections || []);
+    setInspModalPayments(params.payments || paymentRecords || []);
+    setInspModalSettlements(params.settlements || settlements || []);
+    setInspModalPendingFmr(params.pendingFmrList || inspMetrics.allYearPendingFmrList || []);
+    setInspModalPendingInsp(params.pendingInspectionList || inspMetrics.allYearPendingInspectionList || []);
+    setInspModalPendingPaym(params.pendingPaymentList || inspMetrics.allYearPendingPaymentList || []);
+    setInspModalPendingSett(params.pendingSettlementList || inspMetrics.allYearPendingSettlementList || []);
+    setInspModalAllPending(params.allPendingPipelineList || inspMetrics.allYearPendingPipelineList || []);
+    setInspModalInitialTab(params.initialTab || 'pipeline');
     setInspModalOpen(true);
   };
 
@@ -920,7 +941,9 @@ export default function ExecutiveBiDashboard({
                 onClick={() => handleOpenInspectionModal({
                   title: `All Temporary MRs & Gate Deliveries (${activeYear})`,
                   subtitle: `Total ${inspMetrics.totalYearTemporaryArrivalsCount} MRs with ${inspMetrics.totalYearBales.toLocaleString()} Bales/Drums and ${inspMetrics.totalYearArrivalWeightMt.toFixed(1)} MT arrival weight`,
-                  inspections: inspMetrics.allInspections
+                  inspections: inspMetrics.allInspections,
+                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                  initialTab: 'inspections'
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-[#1E331B] shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view all Temporary Arrival MR records"
@@ -941,8 +964,11 @@ export default function ExecutiveBiDashboard({
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Final Arrival (FMR) Breakdown (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearFinalArrivalsCount} Final MRs created • ${inspMetrics.totalYearPendingFmrCount} Pending Below FMR`,
-                  inspections: inspMetrics.allInspections
+                  subtitle: `Total ${inspMetrics.totalYearFinalArrivalsCount} Final MRs created • ${inspMetrics.yearPendingFmrPoCount} Pending P.O.s (${inspMetrics.totalYearPendingFmrCount} Below FMR)`,
+                  inspections: inspMetrics.allInspections,
+                  pendingFmrList: inspMetrics.allYearPendingFmrList,
+                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                  initialTab: 'pending_fmr'
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-teal-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view Final Arrival breakdown"
@@ -955,7 +981,7 @@ export default function ExecutiveBiDashboard({
                   {inspMetrics.totalYearFinalArrivalsCount} FMR
                 </span>
                 <span className="text-[11px] text-teal-800 font-medium mt-0.5 block truncate">
-                  {inspMetrics.totalYearPendingFmrCount > 0 ? `${inspMetrics.totalYearPendingFmrCount} Below FMR` : 'All FMR Completed'}
+                  {inspMetrics.totalYearPendingFmrCount > 0 ? `${inspMetrics.yearPendingFmrPoCount} POs (${inspMetrics.totalYearPendingFmrCount} Below FMR)` : 'All FMR Completed'}
                 </span>
               </div>
 
@@ -963,8 +989,11 @@ export default function ExecutiveBiDashboard({
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Inspections Breakdown (${activeYear})`,
-                  subtitle: `Completed Inspections: ${inspMetrics.totalYearInspectionsCount} • Pending Inspection: ${inspMetrics.totalPendingInspectionsCount}`,
-                  inspections: inspMetrics.allInspections
+                  subtitle: `Completed Inspections: ${inspMetrics.totalYearInspectionsCount} • Pending Inspection: ${inspMetrics.yearPendingInspectionPoCount} P.O.s (${inspMetrics.allYearPendingInspectionList.length} MRs)`,
+                  inspections: inspMetrics.allInspections,
+                  pendingInspectionList: inspMetrics.allYearPendingInspectionList,
+                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                  initialTab: 'pending_insp'
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-blue-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view inspection breakdown"
@@ -977,8 +1006,8 @@ export default function ExecutiveBiDashboard({
                   {inspMetrics.totalYearInspectionsCount} Insp
                 </span>
                 <span className="text-[11px] text-blue-800 font-medium mt-0.5 block truncate">
-                  {inspMetrics.totalPendingInspectionsCount > 0 
-                    ? `${inspMetrics.totalPendingInspectionsCount} Pending • ${inspMetrics.totalYearInspectionsCount} Done` 
+                  {inspMetrics.allYearPendingInspectionList.length > 0 
+                    ? `${inspMetrics.yearPendingInspectionPoCount} POs Pending • ${inspMetrics.totalYearInspectionsCount} Done` 
                     : (inspMetrics.totalYearInspectionsCount > 0 ? '100% Inspected' : 'No Inspections')}
                 </span>
               </div>
@@ -987,9 +1016,12 @@ export default function ExecutiveBiDashboard({
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Payments Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records with ₹${formatIndianCurrency(inspMetrics.totalYearPaidAmount)} paid`,
+                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records with ₹${formatIndianCurrency(inspMetrics.totalYearPaidAmount)} paid • ${inspMetrics.yearPendingPaymentPoCount} P.O.s Pending Payment`,
                   inspections: inspMetrics.allInspections,
-                  payments: paymentRecords
+                  payments: paymentRecords,
+                  pendingPaymentList: inspMetrics.allYearPendingPaymentList,
+                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                  initialTab: 'pending_paym'
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-emerald-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view payment voucher records"
@@ -1002,7 +1034,7 @@ export default function ExecutiveBiDashboard({
                   {inspMetrics.totalYearPaymentsCount} Vouchers
                 </span>
                 <span className="text-[11px] font-mono font-bold text-emerald-800 mt-0.5 block truncate">
-                  ₹{formatIndianCurrency(inspMetrics.totalYearPaidAmount)} Paid
+                  ₹{formatIndianCurrency(inspMetrics.totalYearPaidAmount)} Paid {inspMetrics.yearPendingPaymentPoCount > 0 && `(${inspMetrics.yearPendingPaymentPoCount} POs Pending)`}
                 </span>
               </div>
 
@@ -1010,9 +1042,12 @@ export default function ExecutiveBiDashboard({
               <div 
                 onClick={() => handleOpenInspectionModal({
                   title: `Total Settlements Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records with ₹${formatIndianCurrency(inspMetrics.totalYearSettledAmount)} settled`,
+                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records with ₹${formatIndianCurrency(inspMetrics.totalYearSettledAmount)} settled • ${inspMetrics.yearPendingSettlementPoCount} P.O.s Pending Settlement`,
                   inspections: inspMetrics.allInspections,
-                  settlements: settlements
+                  settlements: settlements,
+                  pendingSettlementList: inspMetrics.allYearPendingSettlementList,
+                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                  initialTab: 'pending_sett'
                 })}
                 className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-purple-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
                 title="Click to view settlement records"
@@ -1025,46 +1060,116 @@ export default function ExecutiveBiDashboard({
                   {inspMetrics.totalYearSettlementsCount} Settled
                 </span>
                 <span className="text-[11px] font-mono font-bold text-purple-800 mt-0.5 block truncate">
-                  ₹{formatIndianCurrency(inspMetrics.totalYearSettledAmount)}
+                  ₹{formatIndianCurrency(inspMetrics.totalYearSettledAmount)} {inspMetrics.yearPendingSettlementPoCount > 0 && `(${inspMetrics.yearPendingSettlementPoCount} POs Pending)`}
                 </span>
+              </div>
+            </div>
+
+            {/* Pipeline Workflow & Pending P.O. Tracker Banner ({activeYear}) */}
+            <div className="bg-gradient-to-r from-[#FAF7F0] via-[#F3ECE0] to-[#FAF7F0] border-2 border-[#D6CAA8] rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-[#1E331B] text-emerald-300 rounded-lg shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-serif font-black text-[#1E331B] text-xs sm:text-sm flex items-center gap-1.5">
+                    <span>Year {activeYear} Pipeline & Pending P.O. Tracker</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-200/90 text-amber-950 font-extrabold rounded-full border border-amber-400/60 shadow-2xs">
+                      {inspMetrics.yearTotalPendingPoCount} Total Pending P.O.s
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-[#5A6E54] font-medium mt-0.5">
+                    Stage transitions: MR ➔ Final MR ({inspMetrics.yearPendingFmrPoCount} POs) • Final MR ➔ Insp ({inspMetrics.yearPendingInspectionPoCount} POs) • Insp ➔ Paym ({inspMetrics.yearPendingPaymentPoCount} POs) • Paym ➔ Sett ({inspMetrics.yearPendingSettlementPoCount} POs)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => handleOpenInspectionModal({
+                    title: `All Pending Pipeline P.O.s (${activeYear})`,
+                    subtitle: `Total ${inspMetrics.allYearPendingPipelineList.length} pending items across ${inspMetrics.yearTotalPendingPoCount} unique P.O. numbers for year ${activeYear}`,
+                    allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
+                    pendingFmrList: inspMetrics.allYearPendingFmrList,
+                    pendingInspectionList: inspMetrics.allYearPendingInspectionList,
+                    pendingPaymentList: inspMetrics.allYearPendingPaymentList,
+                    pendingSettlementList: inspMetrics.allYearPendingSettlementList,
+                    initialTab: 'pipeline'
+                  })}
+                  className="px-3 py-1.5 bg-[#1E331B] hover:bg-[#2A4426] text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                  title="View complete list of pending P.O. numbers with stages and actions"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>View Pending P.O. List ({inspMetrics.yearTotalPendingPoCount})</span>
+                </button>
+
+                <button
+                  onClick={() => exportPendingPoListCsv(inspMetrics.allYearPendingPipelineList, `All_Pending_POs_Pipeline_${activeYear}_${new Date().toISOString().slice(0, 10)}.csv`)}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Download All Pending P.O.s across all stages for the year in CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Pending P.O. CSV</span>
+                </button>
               </div>
             </div>
 
             {/* Month Cards Grid (Dynamic auto-fit responsive grid filling 100% available space) */}
             {inspMetrics.monthInspectionSummaries.length > 0 ? (
-              <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(195px,1fr))]">
+              <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fit,minmax(215px,1fr))]">
                 {inspMetrics.monthInspectionSummaries.map((m) => (
                   <div
                     key={`insp-${m.year}-${m.monthIndex}`}
                     onClick={() => handleOpenInspectionModal({
-                      title: `Operational Summary: ${m.monthName} ${m.year}`,
-                      subtitle: `${m.temporaryArrivalsCount} MRs Inward • ${m.finalArrivalsCount} FMR • ${m.inspectionCount} Inspections (${m.pendingInspectionCount} Pending) • ${m.paymentCount} Payments • ${m.settlementCount} Settlements`,
+                      title: `Operational & Pending P.O. Summary: ${m.monthName} ${m.year}`,
+                      subtitle: `${m.temporaryArrivalsCount} MRs Inward • ${m.finalArrivalsCount} FMR (${m.pendingFmrPoCount} POs Pending FMR) • ${m.inspectionCount} Insp (${m.pendingInspectionPoCount} POs Pending Insp) • ${m.paymentCount} Payments (${m.pendingPaymentPoCount} POs Pending Paym) • ${m.settlementCount} Settlements (${m.pendingSettlementPoCount} POs Pending Sett)`,
                       inspections: m.inspections,
                       payments: m.payments,
-                      settlements: m.settlements
+                      settlements: m.settlements,
+                      pendingFmrList: m.pendingFmrList,
+                      pendingInspectionList: m.pendingInspectionList,
+                      pendingPaymentList: m.pendingPaymentList,
+                      pendingSettlementList: m.pendingSettlementList,
+                      allPendingPipelineList: m.allPendingPipelineList,
+                      initialTab: m.totalPendingPoCount > 0 ? 'pipeline' : 'inspections'
                     })}
-                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
+                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-3 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group select-none text-xs h-full relative"
                     title={`Click to view ${m.monthName} ${m.year} Temporary Arrival, Final MR, Inspection, Payment, and Settlement details`}
                   >
                     <div>
-                      {/* Card Header: Month Name + Year */}
-                      <div className="flex items-center justify-between gap-1 mb-1.5 pb-1 border-b border-[#F2EDE0]">
+                      {/* Card Header: Month Name + Year + Pending POs Badge */}
+                      <div className="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-[#F2EDE0]">
                         <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0"></span>
                           <span>{m.monthName}</span>
                           <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
                         </h3>
-                        <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 bg-emerald-50 text-emerald-900 border border-emerald-200 rounded">
-                          {m.temporaryArrivalsCount} MR
-                        </span>
+                        
+                        <div className="flex items-center gap-1 shrink-0">
+                          {m.totalPendingPoCount > 0 ? (
+                            <span 
+                              className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-md shadow-2xs animate-pulse"
+                              title={`${m.totalPendingPoCount} unique P.O.s currently pending at different pipeline stages in ${m.monthName} ${m.year}`}
+                            >
+                              ⏳ {m.totalPendingPoCount} Pending POs
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 bg-emerald-50 text-emerald-900 border border-emerald-200 rounded">
+                              ✓ All Done
+                            </span>
+                          )}
+                          <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-800 border border-slate-200 rounded">
+                            {m.temporaryArrivalsCount} MR
+                          </span>
+                        </div>
                       </div>
 
                       {/* 1. MR (Temporary Arrival - Authoritative source from temporary_material_received) */}
                       <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">MR:</span>
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">1. MR (Inward):</span>
                         <div className="text-right">
                           <span className="font-mono font-extrabold text-[#1E331B] text-xs">
-                            {m.temporaryArrivalsCount}
+                            {m.temporaryArrivalsCount} MR
                           </span>
                           <span className="text-[9.5px] font-mono text-slate-500 block">
                             {m.temporaryArrivalsBales.toLocaleString()} Bales • {m.temporaryArrivalsWeightMt} MT
@@ -1072,35 +1177,65 @@ export default function ExecutiveBiDashboard({
                         </div>
                       </div>
 
-                      {/* 2. FMR (Final Arrival & Below-FMR count) */}
+                      {/* 2. MR ➔ FMR (Final Arrival & Below-FMR count & Pending POs) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">FMR:</span>
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">2. MR ➔ FMR:</span>
                         <div className="text-right font-mono text-xs">
                           <span className="font-extrabold text-teal-900">
-                            {m.finalArrivalsCount}
+                            {m.finalArrivalsCount} FMR
                           </span>
-                          {m.pendingFmrCount > 0 && (
-                            <span className="text-[9.5px] font-sans font-bold text-amber-800 block" title={`${m.pendingFmrCount} Temporary MRs awaiting Final MR`}>
-                              ({m.pendingFmrCount} Below FMR)
+                          {m.pendingFmrCount > 0 ? (
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInspectionModal({
+                                  title: `Pending Final MR (Below FMR) - ${m.monthName} ${m.year}`,
+                                  subtitle: `${m.pendingFmrPoCount} P.O. numbers (${m.pendingFmrCount} Temporary MRs) awaiting Final MR entry`,
+                                  pendingFmrList: m.pendingFmrList,
+                                  allPendingPipelineList: m.allPendingPipelineList,
+                                  initialTab: 'pending_fmr'
+                                });
+                              }}
+                              className="text-[9.5px] font-sans font-bold text-amber-900 bg-amber-100 px-1 py-0.2 rounded border border-amber-300 block hover:bg-amber-200 cursor-pointer mt-0.5" 
+                              title={`Click to view ${m.pendingFmrPoCount} P.O.s (${m.pendingFmrCount} MRs) awaiting Final MR`}
+                            >
+                              ⏳ {m.pendingFmrPoCount} POs ({m.pendingFmrCount} Below FMR)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-sans text-emerald-700 font-semibold block">
+                              (✓ 100% FMR)
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* 3. INSP (Mill Inspection - Completed vs Pending) */}
+                      {/* 3. FMR ➔ INSP (Mill Inspection - Completed vs Pending POs) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">INSP:</span>
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">3. FMR ➔ INSP:</span>
                         <div className="text-right font-mono text-xs">
                           <span className="font-extrabold text-blue-900">
-                            {m.inspectionCount}
+                            {m.inspectionCount} Insp
                           </span>
-                          {m.pendingInspectionCount > 0 ? (
-                            <span className="text-[9.5px] font-sans font-bold text-amber-700 block" title={`${m.pendingInspectionCount} MRs pending inspection`}>
-                              ({m.pendingInspectionCount} Pending)
+                          {m.pendingInspectionCount > 0 || m.pendingInspectionList.length > 0 ? (
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInspectionModal({
+                                  title: `Pending Mill Inspection - ${m.monthName} ${m.year}`,
+                                  subtitle: `${m.pendingInspectionPoCount} P.O. numbers (${m.pendingInspectionList.length} MRs) awaiting lab test / inspection`,
+                                  pendingInspectionList: m.pendingInspectionList,
+                                  allPendingPipelineList: m.allPendingPipelineList,
+                                  initialTab: 'pending_insp'
+                                });
+                              }}
+                              className="text-[9.5px] font-sans font-bold text-blue-900 bg-blue-50 px-1 py-0.2 rounded border border-blue-200 block hover:bg-blue-100 cursor-pointer mt-0.5" 
+                              title={`Click to view ${m.pendingInspectionPoCount} P.O.s (${m.pendingInspectionList.length} MRs) pending inspection`}
+                            >
+                              ⏳ {m.pendingInspectionPoCount} POs ({m.pendingInspectionList.length} Pending)
                             </span>
                           ) : m.inspectionCount > 0 ? (
                             <span className="text-[9px] font-sans text-emerald-700 font-semibold block">
-                              (✓ Done)
+                              (✓ Inspected)
                             </span>
                           ) : (
                             <span className="text-[9px] font-sans text-slate-400 block">
@@ -1110,98 +1245,124 @@ export default function ExecutiveBiDashboard({
                         </div>
                       </div>
 
-                      {/* 4. Paym (Payment Operations) */}
+                      {/* 4. INSP ➔ Paym (Payment Operations & Pending POs) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">Paym:</span>
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">4. INSP ➔ Paym:</span>
                         <div className="text-right font-mono text-xs">
                           <span className="font-extrabold text-emerald-800">
-                            {m.paymentCount}
+                            {m.paymentCount} Vouchers
                           </span>
-                          {m.paymentPaidAmount > 0 && (
+                          {m.pendingPaymentList.length > 0 ? (
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInspectionModal({
+                                  title: `Pending Payment Vouchers - ${m.monthName} ${m.year}`,
+                                  subtitle: `${m.pendingPaymentPoCount} P.O. numbers (${m.pendingPaymentList.length} MRs) inspected but awaiting payment voucher`,
+                                  pendingPaymentList: m.pendingPaymentList,
+                                  allPendingPipelineList: m.allPendingPipelineList,
+                                  initialTab: 'pending_paym'
+                                });
+                              }}
+                              className="text-[9.5px] font-sans font-bold text-emerald-950 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300 block hover:bg-emerald-200 cursor-pointer mt-0.5" 
+                              title={`Click to view ${m.pendingPaymentPoCount} P.O.s (${m.pendingPaymentList.length} MRs) pending payment`}
+                            >
+                              ⏳ {m.pendingPaymentPoCount} POs Pending
+                            </span>
+                          ) : m.paymentPaidAmount > 0 ? (
                             <span className="text-[9.5px] font-bold text-emerald-700 block">
                               ₹{formatIndianCurrency(m.paymentPaidAmount)}
                             </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 5. Sett (Settlement) */}
-                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">Sett:</span>
-                        <div className="text-right font-mono text-xs">
-                          <span className="font-extrabold text-purple-800">
-                            {m.settlementCount}
-                          </span>
-                          {m.settlementAmount > 0 && (
-                            <span className="text-[9.5px] font-bold text-purple-700 block">
-                              ₹{formatIndianCurrency(m.settlementAmount)}
+                          ) : (
+                            <span className="text-[9px] font-sans text-slate-400 block">
+                              (—)
                             </span>
                           )}
                         </div>
                       </div>
 
-                      {/* 6. Moisture */}
+                      {/* 5. Paym ➔ Sett (Settlement & Pending POs) */}
                       <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">Moisture:</span>
-                        <div className="flex items-center gap-1 font-mono text-xs">
+                        <span className="text-[11px] text-[#5A6E54] font-semibold">5. Paym ➔ Sett:</span>
+                        <div className="text-right font-mono text-xs">
+                          <span className="font-extrabold text-purple-800">
+                            {m.settlementCount} Settled
+                          </span>
+                          {m.pendingSettlementList.length > 0 ? (
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInspectionModal({
+                                  title: `Pending Final Settlement - ${m.monthName} ${m.year}`,
+                                  subtitle: `${m.pendingSettlementPoCount} P.O. numbers (${m.pendingSettlementList.length} MRs) awaiting final audit & settlement`,
+                                  pendingSettlementList: m.pendingSettlementList,
+                                  allPendingPipelineList: m.allPendingPipelineList,
+                                  initialTab: 'pending_sett'
+                                });
+                              }}
+                              className="text-[9.5px] font-sans font-bold text-purple-950 bg-purple-100 px-1 py-0.2 rounded border border-purple-300 block hover:bg-purple-200 cursor-pointer mt-0.5" 
+                              title={`Click to view ${m.pendingSettlementPoCount} P.O.s (${m.pendingSettlementList.length} MRs) pending settlement`}
+                            >
+                              ⏳ {m.pendingSettlementPoCount} POs Pending
+                            </span>
+                          ) : m.settlementAmount > 0 ? (
+                            <span className="text-[9.5px] font-bold text-purple-700 block">
+                              ₹{formatIndianCurrency(m.settlementAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-sans text-slate-400 block">
+                              (—)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 6. Moisture & Grade Down Summary */}
+                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0] bg-slate-50/50 -mx-1 px-1 rounded">
+                        <span className="text-[10.5px] text-[#5A6E54] font-semibold">Moist / Grd:</span>
+                        <div className="flex items-center gap-1 font-mono text-xs text-right">
                           <span className={cn(
-                            "font-extrabold",
+                            "font-bold",
                             m.avgMoisture <= 15 ? "text-emerald-800" : "text-amber-800"
                           )}>
                             {m.avgMoisture}%
                           </span>
-                          {m.avgClaimMoisture > 0 && (
-                            <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Moisture: ${m.avgClaimMoisture}%`}>
-                              (Clm {m.avgClaimMoisture}%)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 7. Grade Down */}
-                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold">Grade Down:</span>
-                        <div className="flex items-center gap-1 font-mono text-xs">
-                          <span className="font-extrabold text-[#1E331B]">
+                          <span className="text-slate-300">•</span>
+                          <span className="font-bold text-[#1E331B]">
                             {m.avgGradeDown}%
                           </span>
-                          {m.avgClaimGradeDown > 0 && (
-                            <span className="text-rose-700 font-bold text-[9.5px]" title={`Claim Grade Down: ${m.avgClaimGradeDown}%`}>
-                              (Clm {m.avgClaimGradeDown}%)
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 8. Premium */}
-                      <div className="flex items-center justify-between py-1 border-t border-dashed border-[#F2EDE0]">
-                        <span className="text-[11px] text-[#5A6E54] font-semibold flex items-center gap-0.5">
-                          <span>⚡</span> Premium:
-                        </span>
-                        <div className="flex items-center gap-1 font-mono text-xs">
-                          {m.premiumLotsCount > 0 ? (
-                            <div className="text-right">
-                              <span className="font-extrabold text-amber-900">{m.premiumLotsCount} MR</span>
-                              {m.premiumTotalSum > 0 ? (
-                                <span className="text-[9.5px] text-amber-800 font-bold block">
-                                  ₹{formatIndianCurrency(m.premiumTotalSum)}
-                                </span>
-                              ) : (m.avgPremiumRate > 0 ? (
-                                <span className="text-[9px] text-amber-700 font-normal block">
-                                  @{m.avgPremiumRate}/Q
-                                </span>
-                              ) : null)}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 font-normal">-</span>
+                          {m.premiumLotsCount > 0 && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-amber-800 font-extrabold" title={`⚡ ${m.premiumLotsCount} Premium MRs`}>⚡{m.premiumLotsCount}</span>
+                            </>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-2 pt-1 border-t border-dashed border-[#EAE2D2] text-[9px] font-bold text-[#1E331B] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
-                      <span>View Details</span>
-                      <span className="text-[10px]">→</span>
+                    {/* Month Card Bottom Actions (1-Click CSV Download & Pipeline Drilldown) */}
+                    <div className="mt-2.5 pt-1.5 border-t border-[#EAE2D2] flex items-center justify-between gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (m.allPendingPipelineList.length > 0) {
+                            exportPendingPoListCsv(m.allPendingPipelineList, `Pending_POs_${m.monthName}_${m.year}_${new Date().toISOString().slice(0, 10)}.csv`);
+                          } else {
+                            exportPendingPoListCsv(m.pendingFmrList, `Pending_POs_${m.monthName}_${m.year}_${new Date().toISOString().slice(0, 10)}.csv`);
+                          }
+                        }}
+                        className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-md text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-2xs shrink-0"
+                        title={`Download CSV of all pending P.O. numbers for ${m.monthName} ${m.year}`}
+                      >
+                        <Download className="w-3 h-3 text-emerald-700" />
+                        <span>CSV</span>
+                      </button>
+
+                      <div className="text-[10px] font-black text-[#1E331B] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-right truncate">
+                        <span>View Details</span>
+                        <span className="text-[11px]">→</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1227,7 +1388,7 @@ export default function ExecutiveBiDashboard({
         initialFilter={modalInitialFilter}
       />
 
-      {/* 6. DRILLDOWN MODAL (INSPECTION, MOISTURE & CLAIMS) */}
+      {/* 6. DRILLDOWN MODAL (INSPECTION, MOISTURE, CLAIMS & PENDING PIPELINE POS) */}
       <InspectionDrilldownModal
         isOpen={inspModalOpen}
         onClose={() => setInspModalOpen(false)}
@@ -1236,6 +1397,12 @@ export default function ExecutiveBiDashboard({
         inspections={inspModalRecords}
         payments={inspModalPayments}
         settlements={inspModalSettlements}
+        pendingFmrList={inspModalPendingFmr}
+        pendingInspectionList={inspModalPendingInsp}
+        pendingPaymentList={inspModalPendingPaym}
+        pendingSettlementList={inspModalPendingSett}
+        allPendingPipelineList={inspModalAllPending}
+        initialTab={inspModalInitialTab}
       />
 
     </div>

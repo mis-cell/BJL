@@ -5,10 +5,33 @@ import {
   Download, 
   Printer, 
   Droplets, 
-  Zap
+  FileSpreadsheet,
+  Layers,
+  ArrowRight,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  DollarSign,
+  Scale,
+  Copy,
+  Check
 } from 'lucide-react';
 import { cn, formatIndianCurrency } from '../lib/utils';
-import { InspectionRecord } from '../services/dashboardCalculationService';
+import { 
+  InspectionRecord, 
+  PendingStageRecord, 
+  exportPendingPoListCsv 
+} from '../services/dashboardCalculationService';
+
+export type DrilldownTabType = 
+  | 'pipeline' 
+  | 'pending_fmr' 
+  | 'pending_insp' 
+  | 'pending_paym' 
+  | 'pending_sett' 
+  | 'inspections' 
+  | 'payments' 
+  | 'settlements';
 
 interface InspectionDrilldownModalProps {
   isOpen: boolean;
@@ -18,6 +41,12 @@ interface InspectionDrilldownModalProps {
   inspections: InspectionRecord[];
   payments?: any[];
   settlements?: any[];
+  pendingFmrList?: PendingStageRecord[];
+  pendingInspectionList?: PendingStageRecord[];
+  pendingPaymentList?: PendingStageRecord[];
+  pendingSettlementList?: PendingStageRecord[];
+  allPendingPipelineList?: PendingStageRecord[];
+  initialTab?: DrilldownTabType;
 }
 
 export default function InspectionDrilldownModal({
@@ -27,21 +56,109 @@ export default function InspectionDrilldownModal({
   subtitle,
   inspections = [],
   payments = [],
-  settlements = []
+  settlements = [],
+  pendingFmrList = [],
+  pendingInspectionList = [],
+  pendingPaymentList = [],
+  pendingSettlementList = [],
+  allPendingPipelineList = [],
+  initialTab = 'pipeline'
 }: InspectionDrilldownModalProps) {
-  const [activeTab, setActiveTab] = useState<'inspections' | 'payments' | 'settlements'>('inspections');
+  const [activeTab, setActiveTab] = useState<DrilldownTabType>(initialTab || 'pipeline');
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('ALL');
+  const [stageFilter, setStageFilter] = useState('ALL');
   const [moistureFilter, setMoistureFilter] = useState<'ALL' | 'NORMAL' | 'HIGH'>('ALL');
   const [claimFilter, setClaimFilter] = useState<'ALL' | 'WITH_CLAIM' | 'NO_CLAIM'>('ALL');
   const [premiumFilter, setPremiumFilter] = useState<'ALL' | 'PREMIUM_ONLY' | 'NON_PREMIUM'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
+  const [copiedPo, setCopiedPo] = useState<string | null>(null);
 
-  // Filtered dataset
-  const filteredRecords = useMemo(() => {
+  // Sync initial tab when opened
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+      setCurrentPage(1);
+      setSearchTerm('');
+    }
+  }, [isOpen, initialTab]);
+
+  const handleCopyPo = (po: string) => {
+    if (!po || po === 'N/A') return;
+    navigator.clipboard.writeText(po);
+    setCopiedPo(po);
+    setTimeout(() => setCopiedPo(null), 2000);
+  };
+
+  // Compile combined pending records if not provided
+  const combinedPending = useMemo(() => {
+    if (allPendingPipelineList && allPendingPipelineList.length > 0) return allPendingPipelineList;
+    return [
+      ...pendingFmrList,
+      ...pendingInspectionList,
+      ...pendingPaymentList,
+      ...pendingSettlementList
+    ];
+  }, [allPendingPipelineList, pendingFmrList, pendingInspectionList, pendingPaymentList, pendingSettlementList]);
+
+  // Current active pending list based on tab
+  const currentPendingDataset = useMemo(() => {
+    switch (activeTab) {
+      case 'pending_fmr':
+        return pendingFmrList;
+      case 'pending_insp':
+        return pendingInspectionList;
+      case 'pending_paym':
+        return pendingPaymentList;
+      case 'pending_sett':
+        return pendingSettlementList;
+      case 'pipeline':
+      default:
+        return combinedPending;
+    }
+  }, [activeTab, pendingFmrList, pendingInspectionList, pendingPaymentList, pendingSettlementList, combinedPending]);
+
+  // Filtered Pending records
+  const filteredPendingRecords = useMemo(() => {
+    return currentPendingDataset.filter(r => {
+      if (stageFilter !== 'ALL' && r.stage !== stageFilter) {
+        return false;
+      }
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const match = 
+          (r.poNo && r.poNo.toLowerCase().includes(q)) ||
+          (r.mrNo && r.mrNo.toLowerCase().includes(q)) ||
+          (r.supplier && r.supplier.toLowerCase().includes(q)) ||
+          (r.broker && r.broker.toLowerCase().includes(q)) ||
+          (r.vehicleNo && r.vehicleNo.toLowerCase().includes(q)) ||
+          (r.status && r.status.toLowerCase().includes(q)) ||
+          (r.pendingAction && r.pendingAction.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [currentPendingDataset, stageFilter, searchTerm]);
+
+  // Pending Stats
+  const pendingStats = useMemo(() => {
+    const uniquePos = new Set(filteredPendingRecords.map(r => r.cleanPoNo).filter(Boolean));
+    const totalBales = filteredPendingRecords.reduce((sum, r) => sum + (r.bales || 0), 0);
+    const totalWeightMt = filteredPendingRecords.reduce((sum, r) => sum + (r.weightMt || 0), 0);
+    const totalAmount = filteredPendingRecords.reduce((sum, r) => sum + (r.amount || 0), 0);
+    return {
+      totalRecords: filteredPendingRecords.length,
+      uniquePoCount: uniquePos.size,
+      totalBales,
+      totalWeightMt,
+      totalAmount
+    };
+  }, [filteredPendingRecords]);
+
+  // Filtered Inspections dataset
+  const filteredInspections = useMemo(() => {
     return inspections.filter(r => {
-      // Search
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         const match = 
@@ -55,79 +172,16 @@ export default function InspectionDrilldownModal({
           r.remarks.toLowerCase().includes(q);
         if (!match) return false;
       }
-
-      // Grade Filter
-      if (gradeFilter !== 'ALL' && r.juteGrade.toUpperCase() !== gradeFilter.toUpperCase()) {
-        return false;
-      }
-
-      // Moisture Filter (>15% is High Moisture)
+      if (gradeFilter !== 'ALL' && r.juteGrade.toUpperCase() !== gradeFilter.toUpperCase()) return false;
       if (moistureFilter === 'NORMAL' && r.actualMoisture > 15) return false;
       if (moistureFilter === 'HIGH' && r.actualMoisture <= 15) return false;
-
-      // Claim Filter
       if (claimFilter === 'WITH_CLAIM' && r.totalClaimAmount <= 0 && r.claimMoisture <= 0 && r.claimDust <= 0 && r.claimGradeDown <= 0) return false;
       if (claimFilter === 'NO_CLAIM' && (r.totalClaimAmount > 0 || r.claimMoisture > 0 || r.claimDust > 0 || r.claimGradeDown > 0)) return false;
-
-      // Premium Filter
       if (premiumFilter === 'PREMIUM_ONLY' && !r.isPremium) return false;
       if (premiumFilter === 'NON_PREMIUM' && r.isPremium) return false;
-
       return true;
     });
   }, [inspections, searchTerm, gradeFilter, moistureFilter, claimFilter, premiumFilter]);
-
-  // Aggregate stats of filtered set
-  const filteredStats = useMemo(() => {
-    let totalWt = 0;
-    let totalClaim = 0;
-    let moistureSum = 0;
-    let claimMoistSum = 0;
-    let dustSum = 0;
-    let claimDustSum = 0;
-    let gradeDownSum = 0;
-    let claimGradeDownSum = 0;
-    let totalChottaHbKg = 0;
-    let premiumLotsCount = 0;
-    let moistureClaimLots = 0;
-
-    filteredRecords.forEach(r => {
-      totalWt += r.weightMt;
-      totalClaim += r.totalClaimAmount;
-      moistureSum += r.actualMoisture;
-      claimMoistSum += r.claimMoisture;
-      dustSum += r.actualDust;
-      claimDustSum += r.claimDust;
-      gradeDownSum += r.actualGradeDown;
-      claimGradeDownSum += r.claimGradeDown;
-      totalChottaHbKg += r.totalChottaHabijabiKg;
-      if (r.isPremium) premiumLotsCount += 1;
-      if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistureClaimLots += 1;
-    });
-
-    const count = filteredRecords.length;
-    const avgMoist = count > 0 ? (moistureSum / count) : 0;
-    const avgClaimMoist = count > 0 ? (claimMoistSum / count) : 0;
-    const avgDust = count > 0 ? (dustSum / count) : 0;
-    const avgClaimDust = count > 0 ? (claimDustSum / count) : 0;
-    const avgGradeDown = count > 0 ? (gradeDownSum / count) : 0;
-    const avgClaimGradeDown = count > 0 ? (claimGradeDownSum / count) : 0;
-
-    return {
-      count,
-      totalWt,
-      totalClaim,
-      avgMoist,
-      avgClaimMoist,
-      avgDust,
-      avgClaimDust,
-      avgGradeDown,
-      avgClaimGradeDown,
-      totalChottaHbKg,
-      premiumLotsCount,
-      moistureClaimLots
-    };
-  }, [filteredRecords]);
 
   // Filtered Payments
   const filteredPayments = useMemo(() => {
@@ -159,16 +213,30 @@ export default function InspectionDrilldownModal({
   }, [settlements, searchTerm]);
 
   // Active dataset size and pagination
-  const activeCount = activeTab === 'inspections' ? filteredRecords.length : (activeTab === 'payments' ? filteredPayments.length : filteredSettlements.length);
+  const activeCount = useMemo(() => {
+    if (['pipeline', 'pending_fmr', 'pending_insp', 'pending_paym', 'pending_sett'].includes(activeTab)) {
+      return filteredPendingRecords.length;
+    }
+    if (activeTab === 'inspections') return filteredInspections.length;
+    if (activeTab === 'payments') return filteredPayments.length;
+    return filteredSettlements.length;
+  }, [activeTab, filteredPendingRecords, filteredInspections, filteredPayments, filteredSettlements]);
+
   const totalPages = Math.max(1, Math.ceil(activeCount / pageSize));
   const safePage = Math.min(currentPage, totalPages);
 
-  const paginatedInspections = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paginatedPending = filteredPendingRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paginatedInspections = filteredInspections.slice((safePage - 1) * pageSize, safePage * pageSize);
   const paginatedPayments = filteredPayments.slice((safePage - 1) * pageSize, safePage * pageSize);
   const paginatedSettlements = filteredSettlements.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  // Export CSV
-  const handleExportCsv = () => {
+  // Export Pending CSV
+  const handleExportPendingCsv = (dataset: PendingStageRecord[], defaultName?: string) => {
+    exportPendingPoListCsv(dataset, defaultName || `Pending_PO_Pipeline_${activeTab}_${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
+  // Export Inspection CSV
+  const handleExportInspectionCsv = () => {
     const headers = [
       "MR No",
       "Date",
@@ -187,14 +255,12 @@ export default function InspectionDrilldownModal({
       "Chotta & Habi Jabi (Kg)",
       "Premium (Sauda Check Point)",
       "Moisture Claim (INR)",
-      "Dust Claim (INR)",
-      "Grade Down Claim (INR)",
       "Total Deductions (INR)",
       "Status",
       "Remarks"
     ];
 
-    const rows = filteredRecords.map(r => [
+    const rows = filteredInspections.map(r => [
       `"${r.mrNo}"`,
       `"${r.date}"`,
       `"${r.poNo || ''}"`,
@@ -212,14 +278,12 @@ export default function InspectionDrilldownModal({
       r.totalChottaHabijabiKg.toFixed(1),
       `"${r.premium || (r.isPremium ? 'Yes' : 'No')}"`,
       r.moistureDeductionAmount.toFixed(2),
-      r.dustDeductionAmount.toFixed(2),
-      r.gradeDownDeductionAmount.toFixed(2),
       r.totalClaimAmount.toFixed(2),
       `"${r.status}"`,
       `"${(r.remarks || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -235,19 +299,21 @@ export default function InspectionDrilldownModal({
 
   if (!isOpen) return null;
 
+  const isPendingTab = ['pipeline', 'pending_fmr', 'pending_insp', 'pending_paym', 'pending_sett'].includes(activeTab);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-[#FAF7F0] border-2 border-[#1E331B] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto font-sans">
+      <div className="bg-[#FAF7F0] border-2 border-[#1E331B] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Modal Header */}
-        <div className="bg-[#1E331B] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#D6CAA8] shrink-0">
+        {/* Modal Top Header */}
+        <div className="bg-[#1E331B] text-white p-3.5 sm:p-4 flex items-center justify-between border-b border-[#D6CAA8] shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white/10 text-emerald-300">
-              <Droplets className="w-5 h-5" />
+              <Layers className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-black tracking-wide flex items-center gap-2">
-                <span>{title || "Inspection Summary Details"}</span>
+                <span>{title || "Monthly Operational & Pending P.O. Tracking"}</span>
               </h2>
               {subtitle && (
                 <p className="text-xs text-emerald-200/90 font-sans mt-0.5">
@@ -258,24 +324,46 @@ export default function InspectionDrilldownModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {activeTab === 'inspections' && (
+            {isPendingTab ? (
+              <>
+                <button
+                  onClick={() => handleExportPendingCsv(filteredPendingRecords, `Pending_PO_${activeTab}_${new Date().toISOString().slice(0, 10)}.csv`)}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 border border-emerald-400/30 rounded-xl text-xs font-black text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                  title="Download Current Filtered Pending P.O.s CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Pending P.O. CSV</span>
+                </button>
+
+                <button
+                  onClick={() => handleExportPendingCsv(combinedPending, `All_Pending_Pipeline_POs_${new Date().toISOString().slice(0, 10)}.csv`)}
+                  className="hidden md:flex px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Download All 4 Pipeline Stages Combined CSV"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-300" />
+                  <span>All Stages CSV</span>
+                </button>
+              </>
+            ) : activeTab === 'inspections' ? (
               <button
-                onClick={handleExportCsv}
+                onClick={handleExportInspectionCsv}
                 className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                 title="Download filtered records as CSV"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <span>Export CSV</span>
               </button>
-            )}
+            ) : null}
+
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
               title="Print Report"
             >
               <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Print</span>
             </button>
+
             <button
               onClick={onClose}
               className="p-1.5 rounded-xl bg-white/10 hover:bg-rose-900/80 text-white transition-colors cursor-pointer border border-white/20"
@@ -286,12 +374,115 @@ export default function InspectionDrilldownModal({
           </div>
         </div>
 
-        {/* Section Navigation Tabs: Inspections, Payments, Settlements */}
-        <div className="bg-[#1E331B] px-4 pt-1 pb-0 flex items-center gap-2 border-b border-emerald-900/60 shrink-0">
+        {/* Section Navigation Tabs: Pipeline, Pending Stages, Completed */}
+        <div className="bg-[#1E331B] px-3 pt-1 pb-0 flex items-center gap-1.5 border-b border-emerald-900/60 shrink-0 overflow-x-auto select-none scrollbar-none">
+          
+          {/* Tab 1: Combined Pipeline */}
+          <button
+            onClick={() => { setActiveTab('pipeline'); setCurrentPage(1); }}
+            className={cn(
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
+              activeTab === 'pipeline'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span>📊 All Pending Pipeline</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+              activeTab === 'pipeline' ? "bg-amber-100 text-amber-900 font-black" : "bg-white/20 text-white"
+            )}>
+              {combinedPending.length}
+            </span>
+          </button>
+
+          {/* Tab 2: MR -> FMR */}
+          <button
+            onClick={() => { setActiveTab('pending_fmr'); setCurrentPage(1); }}
+            className={cn(
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
+              activeTab === 'pending_fmr'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>1. MR ➔ Final MR</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+              activeTab === 'pending_fmr' ? "bg-amber-100 text-amber-950 font-black" : "bg-amber-400/20 text-amber-200"
+            )}>
+              {pendingFmrList.length}
+            </span>
+          </button>
+
+          {/* Tab 3: Final MR -> Insp */}
+          <button
+            onClick={() => { setActiveTab('pending_insp'); setCurrentPage(1); }}
+            className={cn(
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
+              activeTab === 'pending_insp'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+            <span>2. Final MR ➔ INSP</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+              activeTab === 'pending_insp' ? "bg-orange-100 text-orange-950 font-black" : "bg-orange-400/20 text-orange-200"
+            )}>
+              {pendingInspectionList.length}
+            </span>
+          </button>
+
+          {/* Tab 4: Insp -> Paym */}
+          <button
+            onClick={() => { setActiveTab('pending_paym'); setCurrentPage(1); }}
+            className={cn(
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
+              activeTab === 'pending_paym'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+            <span>3. INSP ➔ Payment</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+              activeTab === 'pending_paym' ? "bg-yellow-100 text-yellow-950 font-black" : "bg-yellow-400/20 text-yellow-200"
+            )}>
+              {pendingPaymentList.length}
+            </span>
+          </button>
+
+          {/* Tab 5: Paym -> Sett */}
+          <button
+            onClick={() => { setActiveTab('pending_sett'); setCurrentPage(1); }}
+            className={cn(
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
+              activeTab === 'pending_sett'
+                ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
+                : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
+            )}
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span>4. Paym ➔ Sett</span>
+            <span className={cn(
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+              activeTab === 'pending_sett' ? "bg-purple-100 text-purple-950 font-black" : "bg-purple-400/20 text-purple-200"
+            )}>
+              {pendingSettlementList.length}
+            </span>
+          </button>
+
+          {/* Completed History Tabs */}
+          <div className="h-5 w-px bg-white/20 mx-1 shrink-0"></div>
+
           <button
             onClick={() => { setActiveTab('inspections'); setCurrentPage(1); }}
             className={cn(
-              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'inspections'
                 ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
@@ -299,7 +490,7 @@ export default function InspectionDrilldownModal({
           >
             <span>Inspections</span>
             <span className={cn(
-              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
               activeTab === 'inspections' ? "bg-blue-100 text-blue-900 font-bold" : "bg-white/20 text-white"
             )}>
               {inspections.length}
@@ -309,7 +500,7 @@ export default function InspectionDrilldownModal({
           <button
             onClick={() => { setActiveTab('payments'); setCurrentPage(1); }}
             className={cn(
-              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'payments'
                 ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
@@ -317,7 +508,7 @@ export default function InspectionDrilldownModal({
           >
             <span>Payments</span>
             <span className={cn(
-              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
               activeTab === 'payments' ? "bg-emerald-100 text-emerald-900 font-bold" : "bg-white/20 text-white"
             )}>
               {payments.length}
@@ -327,7 +518,7 @@ export default function InspectionDrilldownModal({
           <button
             onClick={() => { setActiveTab('settlements'); setCurrentPage(1); }}
             className={cn(
-              "px-4 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border-t border-x",
+              "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'settlements'
                 ? "bg-[#FAF7F0] text-[#1E331B] border-[#FAF7F0] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
@@ -335,7 +526,7 @@ export default function InspectionDrilldownModal({
           >
             <span>Settlements</span>
             <span className={cn(
-              "px-1.5 py-0.2 rounded-full text-[10.5px] font-mono",
+              "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
               activeTab === 'settlements' ? "bg-purple-100 text-purple-900 font-bold" : "bg-white/20 text-white"
             )}>
               {settlements.length}
@@ -343,443 +534,372 @@ export default function InspectionDrilldownModal({
           </button>
         </div>
 
-        {/* Aggregate KPI Ribbon - INSPECTIONS */}
-        {activeTab === 'inspections' && (
-          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 shrink-0 text-xs font-sans">
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">MR Inspected</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">{filteredStats.count} MR</span>
+        {/* PENDING STAGE BANNER & STATS */}
+        {isPendingTab && (
+          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans shadow-2xs">
+            <div className="bg-amber-50/60 border border-amber-200/80 p-2.5 rounded-xl">
+              <span className="text-[9.5px] text-amber-900 font-bold block uppercase tracking-wider">Pending P.O. Numbers</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="font-mono font-black text-amber-950 text-base">{pendingStats.uniquePoCount}</span>
+                <span className="text-[10px] font-bold text-amber-800">Unique P.O.(s)</span>
+              </div>
             </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Weight</span>
-              <span className="font-mono font-extrabold text-emerald-900 text-xs sm:text-sm">
-                {filteredStats.totalWt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
-              </span>
+
+            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Pending Gate / MR Lots</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="font-mono font-black text-[#1E331B] text-base">{pendingStats.totalRecords}</span>
+                <span className="text-[10px] font-semibold text-slate-600">MR Records</span>
+              </div>
             </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Moisture % & Claim</span>
-              <span className={cn(
-                "font-mono font-bold text-[11px] block truncate",
-                filteredStats.avgMoist <= 15 ? "text-emerald-800" : "text-amber-800"
-              )}>
-                {filteredStats.avgMoist.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimMoist.toFixed(1)}%)</span>
-              </span>
+
+            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Pending Volume</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="font-mono font-black text-emerald-900 text-base">{pendingStats.totalBales.toLocaleString()}</span>
+                <span className="text-[10px] font-semibold text-slate-600">Bales • {pendingStats.totalWeightMt.toFixed(2)} MT</span>
+              </div>
             </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Dust % & Claim</span>
-              <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
-                {filteredStats.avgDust.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimDust.toFixed(1)}%)</span>
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Grade Down %</span>
-              <span className="font-mono font-bold text-[11px] text-[#1E331B] block truncate">
-                {filteredStats.avgGradeDown.toFixed(1)}% <span className="text-rose-700 font-semibold">(Clm: {filteredStats.avgClaimGradeDown.toFixed(1)}%)</span>
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Chotta & HB</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-xs sm:text-sm">
-                {filteredStats.totalChottaHbKg.toLocaleString('en-IN', { minimumFractionDigits: 0 })} Kg
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Claims</span>
-              <span className="font-mono font-extrabold text-rose-800 text-xs sm:text-sm">
-                ₹{formatIndianCurrency(filteredStats.totalClaim)}
-              </span>
+
+            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Estimated Value</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="font-mono font-black text-indigo-950 text-base">
+                  {pendingStats.totalAmount > 0 ? `₹${formatIndianCurrency(pendingStats.totalAmount)}` : 'On Contract Basis'}
+                </span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Aggregate KPI Ribbon - PAYMENTS */}
-        {activeTab === 'payments' && (
-          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans">
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Payments</span>
-              <span className="font-mono font-extrabold text-emerald-900 text-base">{filteredPayments.length}</span>
+        {/* Toolbar: Search and Filters */}
+        <div className="bg-[#FAF7F0] p-3 border-b border-[#EAE2D2] flex flex-wrap items-center justify-between gap-2.5 shrink-0 text-xs">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md">
+            <div className="relative w-full">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                placeholder={isPendingTab ? "Search by P.O. No, MR No, Supplier, Broker, Lorry..." : "Search records..."}
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#D6CAA8] rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#1E331B] shadow-2xs font-medium"
+              />
             </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Paid Value</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-base">
-                ₹{formatIndianCurrency(filteredPayments.reduce((acc, p) => acc + (Number(p.net_payable_amount || p.amount || p.total_amount || 0)), 0))}
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct Suppliers</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-base">
-                {new Set(filteredPayments.map(p => p.supplier_name || p.supplier).filter(Boolean)).size}
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct Brokers</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-base">
-                {new Set(filteredPayments.map(p => p.broker_name || p.broker).filter(Boolean)).size}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Aggregate KPI Ribbon - SETTLEMENTS */}
-        {activeTab === 'settlements' && (
-          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans">
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settlements</span>
-              <span className="font-mono font-extrabold text-purple-900 text-base">{filteredSettlements.length}</span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settled Weight</span>
-              <span className="font-mono font-extrabold text-emerald-900 text-base">
-                {filteredSettlements.reduce((acc, s) => acc + (Number(s.electronic_scale_net || s.quantity || s.weight || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Total Settled Value</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-base">
-                ₹{formatIndianCurrency(filteredSettlements.reduce((acc, s) => acc + (Number(s.net_payable_amount || s.amount || s.total_value || 0)), 0))}
-              </span>
-            </div>
-            <div className="bg-[#FAF7F0] p-2.5 rounded-xl border border-[#EAE2D2]">
-              <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Distinct MRs</span>
-              <span className="font-mono font-extrabold text-[#1E331B] text-base">
-                {new Set(filteredSettlements.map(s => s.mr_no || s.arrival_no).filter(Boolean)).size}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Filter Controls Bar */}
-        <div className="p-3 bg-[#FAF7F0] border-b border-[#D6CAA8] flex flex-wrap items-center justify-between gap-2.5 shrink-0">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
-            <input
-              type="text"
-              placeholder={activeTab === 'inspections' ? "Search MR No, PO, supplier, broker, vehicle, grade, premium..." : (activeTab === 'payments' ? "Search Voucher No, MR No, PO, supplier, broker..." : "Search MR No, PO, supplier, broker...")}
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="h-8 pl-8 pr-3 bg-white border border-[#D6CAA8] rounded-xl text-xs text-[#1E331B] focus:outline-none focus:ring-1 focus:ring-[#1E331B] w-full shadow-2xs"
-            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline font-semibold cursor-pointer shrink-0"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
-          {/* Quick Filter Buttons - only for Inspections */}
-          {activeTab === 'inspections' && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Moisture Filter */}
-              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-                <button
-                  onClick={() => { setMoistureFilter('ALL'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-                >
-                  All Moist.
-                </button>
-                <button
-                  onClick={() => { setMoistureFilter('NORMAL'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'NORMAL' ? "bg-emerald-700 text-white" : "text-slate-600 hover:text-emerald-800")}
-                >
-                  ≤ 15%
-                </button>
-                <button
-                  onClick={() => { setMoistureFilter('HIGH'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", moistureFilter === 'HIGH' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
-                >
-                  &gt; 15% High
-                </button>
-              </div>
+          {/* Quick Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeTab === 'pipeline' && (
+              <select
+                value={stageFilter}
+                onChange={(e) => { setStageFilter(e.target.value); setCurrentPage(1); }}
+                className="px-2.5 py-1.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-bold text-slate-800 shadow-2xs cursor-pointer focus:outline-none"
+              >
+                <option value="ALL">All 4 Pending Stages</option>
+                <option value="MR_TO_FMR">1. MR ➔ Final MR (Below FMR)</option>
+                <option value="FMR_TO_INSP">2. Final MR ➔ Mill Inspection</option>
+                <option value="INSP_TO_PAYM">3. Inspection ➔ Payment</option>
+                <option value="PAYM_TO_SETT">4. Payment ➔ Settlement</option>
+              </select>
+            )}
 
-              {/* Claim Filter */}
-              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-                <button
-                  onClick={() => { setClaimFilter('ALL'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-                >
-                  All Claims
-                </button>
-                <button
-                  onClick={() => { setClaimFilter('WITH_CLAIM'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", claimFilter === 'WITH_CLAIM' ? "bg-rose-700 text-white" : "text-slate-600 hover:text-rose-800")}
-                >
-                  With Claims
-                </button>
-              </div>
+            {isPendingTab && (
+              <button
+                onClick={() => handleExportPendingCsv(filteredPendingRecords, `Pending_PO_${activeTab}_${new Date().toISOString().slice(0, 10)}.csv`)}
+                className="px-3 py-1.5 bg-[#1E331B] hover:bg-[#2c4728] text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Download CSV for Current View"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Export CSV ({filteredPendingRecords.length})</span>
+              </button>
+            )}
+          </div>
+        </div>
 
-              {/* Premium Filter (Sauda Check Point) */}
-              <div className="flex items-center bg-white border border-[#D6CAA8] rounded-xl p-0.5 shadow-2xs text-[11px]">
-                <button
-                  onClick={() => { setPremiumFilter('ALL'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer", premiumFilter === 'ALL' ? "bg-[#1E331B] text-white" : "text-slate-600 hover:text-[#1E331B]")}
-                >
-                  All MR
-                </button>
-                <button
-                  onClick={() => { setPremiumFilter('PREMIUM_ONLY'); setCurrentPage(1); }}
-                  className={cn("px-2 py-1 rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1", premiumFilter === 'PREMIUM_ONLY' ? "bg-amber-700 text-white" : "text-slate-600 hover:text-amber-800")}
-                >
-                  <Zap className="w-2.5 h-2.5" />
-                  <span>Premium Only (SCP)</span>
-                </button>
+        {/* Content Table Area */}
+        <div className="flex-1 overflow-auto bg-white p-3">
+          
+          {/* 1. PENDING STAGES TABLE (P.O. Centric) */}
+          {isPendingTab ? (
+            paginatedPending.length > 0 ? (
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead className="bg-[#1E331B] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                  <tr>
+                    <th className="p-2.5 border-r border-emerald-900/60">P.O. Number</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Stage & Pipeline Gap</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">MR / Arrival No</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Date</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Supplier</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Broker</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Vehicle / Lorry</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Bales</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Weight (MT)</th>
+                    <th className="p-2.5">Action Required</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-[11px]">
+                  {paginatedPending.map((r, idx) => {
+                    const isCopied = copiedPo === r.poNo;
+                    return (
+                      <tr key={r.id || idx} className="hover:bg-amber-50/40 transition-colors">
+                        {/* P.O. Number */}
+                        <td className="p-2.5 font-mono font-black text-indigo-950 whitespace-nowrap border-r border-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            <span className="bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded text-[11px]">
+                              {r.poNo || 'N/A'}
+                            </span>
+                            {r.poNo && r.poNo !== 'N/A' && (
+                              <button
+                                onClick={() => handleCopyPo(r.poNo)}
+                                className="p-1 hover:bg-indigo-100 rounded text-slate-500 hover:text-indigo-900 transition-colors cursor-pointer"
+                                title="Copy P.O. Number"
+                              >
+                                {isCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Stage Badge */}
+                        <td className="p-2.5 whitespace-nowrap border-r border-slate-200">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase border inline-flex items-center gap-1",
+                            r.stage === 'MR_TO_FMR' ? "bg-amber-100 text-amber-900 border-amber-300" :
+                            r.stage === 'FMR_TO_INSP' ? "bg-orange-100 text-orange-900 border-orange-300" :
+                            r.stage === 'INSP_TO_PAYM' ? "bg-yellow-100 text-yellow-900 border-yellow-300" :
+                            "bg-purple-100 text-purple-900 border-purple-300"
+                          )}>
+                            <span>{r.stageLabel}</span>
+                          </span>
+                        </td>
+
+                        {/* MR No */}
+                        <td className="p-2.5 font-mono font-bold text-slate-800 whitespace-nowrap border-r border-slate-200">
+                          {r.mrNo || '—'}
+                        </td>
+
+                        {/* Date */}
+                        <td className="p-2.5 font-mono text-slate-600 whitespace-nowrap border-r border-slate-200">
+                          {r.date || '—'}
+                        </td>
+
+                        {/* Supplier */}
+                        <td className="p-2.5 font-bold text-slate-900 max-w-xs truncate border-r border-slate-200">
+                          {r.supplier}
+                        </td>
+
+                        {/* Broker */}
+                        <td className="p-2.5 text-slate-700 max-w-[120px] truncate border-r border-slate-200">
+                          {r.broker}
+                        </td>
+
+                        {/* Vehicle */}
+                        <td className="p-2.5 font-mono text-slate-700 whitespace-nowrap border-r border-slate-200">
+                          {r.vehicleNo || '—'}
+                        </td>
+
+                        {/* Bales */}
+                        <td className="p-2.5 font-mono font-bold text-right text-slate-900 whitespace-nowrap border-r border-slate-200">
+                          {r.bales > 0 ? r.bales.toLocaleString() : '—'}
+                        </td>
+
+                        {/* Weight MT */}
+                        <td className="p-2.5 font-mono font-black text-right text-emerald-900 whitespace-nowrap border-r border-slate-200">
+                          {r.weightMt > 0 ? r.weightMt.toFixed(3) : '—'}
+                        </td>
+
+                        {/* Action Required */}
+                        <td className="p-2.5 text-slate-700 font-semibold text-[10.5px]">
+                          <span className="text-amber-900 font-bold bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                            {r.pendingAction}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-16 text-center text-slate-500 font-sans">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2 opacity-80" />
+                <p className="text-sm font-bold text-slate-800">No Pending P.O.s in this Stage</p>
+                <p className="text-xs text-slate-500 mt-1">All records have smoothly progressed to subsequent workflow stages.</p>
               </div>
-            </div>
+            )
+          ) : activeTab === 'inspections' ? (
+            /* 2. COMPLETED INSPECTIONS TABLE */
+            paginatedInspections.length > 0 ? (
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead className="bg-[#1E331B] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                  <tr>
+                    <th className="p-2.5 border-r border-emerald-900/60">MR No</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Date</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">P.O. Reference</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Supplier</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Broker</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Grade</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Net Wt (MT)</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-center">Moisture %</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-center">Dust %</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-center">Grade Down %</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Total Claims (₹)</th>
+                    <th className="p-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-[11px]">
+                  {paginatedInspections.map((r, idx) => (
+                    <tr key={r.id || idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-2.5 font-mono font-bold text-slate-900 whitespace-nowrap border-r border-slate-200">{r.mrNo}</td>
+                      <td className="p-2.5 font-mono text-slate-600 whitespace-nowrap border-r border-slate-200">{r.date}</td>
+                      <td className="p-2.5 font-mono text-indigo-950 font-bold whitespace-nowrap border-r border-slate-200">{r.poNo || '—'}</td>
+                      <td className="p-2.5 font-bold text-slate-900 max-w-xs truncate border-r border-slate-200">{r.supplier}</td>
+                      <td className="p-2.5 text-slate-700 max-w-[120px] truncate border-r border-slate-200">{r.broker}</td>
+                      <td className="p-2.5 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200">{r.juteGrade}</td>
+                      <td className="p-2.5 font-mono font-black text-right text-emerald-900 whitespace-nowrap border-r border-slate-200">{r.weightMt.toFixed(3)}</td>
+                      <td className="p-2.5 font-mono text-center whitespace-nowrap border-r border-slate-200">
+                        {r.actualMoisture.toFixed(1)}% {r.claimMoisture > 0 && <span className="text-rose-700 font-bold">({r.claimMoisture.toFixed(1)}%)</span>}
+                      </td>
+                      <td className="p-2.5 font-mono text-center whitespace-nowrap border-r border-slate-200">{r.actualDust.toFixed(1)}%</td>
+                      <td className="p-2.5 font-mono text-center whitespace-nowrap border-r border-slate-200">{r.actualGradeDown.toFixed(1)}%</td>
+                      <td className="p-2.5 font-mono font-bold text-right text-rose-800 whitespace-nowrap border-r border-slate-200">₹{formatIndianCurrency(r.totalClaimAmount)}</td>
+                      <td className="p-2.5 text-center whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          {r.status || 'Inspected'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-16 text-center text-slate-400">No inspection records found.</div>
+            )
+          ) : activeTab === 'payments' ? (
+            /* 3. PAYMENTS TABLE */
+            paginatedPayments.length > 0 ? (
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead className="bg-[#1E331B] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                  <tr>
+                    <th className="p-2.5 border-r border-emerald-900/60">Voucher No</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Date</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">P.O. Reference</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">MR / Arrival No</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Supplier</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Broker</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Paid Amount (₹)</th>
+                    <th className="p-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-[11px]">
+                  {paginatedPayments.map((p, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-2.5 font-mono font-bold text-slate-900 border-r border-slate-200">{p.voucher_no || p.payment_no || '—'}</td>
+                      <td className="p-2.5 font-mono text-slate-600 border-r border-slate-200">{p.date || p.payment_date || '—'}</td>
+                      <td className="p-2.5 font-mono font-bold text-indigo-950 border-r border-slate-200">{p.po_no || '—'}</td>
+                      <td className="p-2.5 font-mono text-slate-800 border-r border-slate-200">{p.mr_no || p.arrival_no || '—'}</td>
+                      <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">{p.supplier_name || p.supplier || '—'}</td>
+                      <td className="p-2.5 text-slate-700 border-r border-slate-200">{p.broker_name || p.broker || '—'}</td>
+                      <td className="p-2.5 font-mono font-black text-right text-emerald-900 border-r border-slate-200">
+                        ₹{formatIndianCurrency(p.paid_amount || p.net_payable_amount || p.amount || 0)}
+                      </td>
+                      <td className="p-2.5 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          {p.status || 'Paid'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-16 text-center text-slate-400">No payment records found.</div>
+            )
+          ) : (
+            /* 4. SETTLEMENTS TABLE */
+            paginatedSettlements.length > 0 ? (
+              <table className="w-full text-left text-xs border-collapse font-sans">
+                <thead className="bg-[#1E331B] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                  <tr>
+                    <th className="p-2.5 border-r border-emerald-900/60">MR No</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Audit / Sett Date</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">P.O. Reference</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Supplier</th>
+                    <th className="p-2.5 border-r border-emerald-900/60">Broker</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Settled Wt (MT)</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Net Value (₹)</th>
+                    <th className="p-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-[11px]">
+                  {paginatedSettlements.map((s, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-2.5 font-mono font-bold text-slate-900 border-r border-slate-200">{s.mr_no || s.arrival_no || '—'}</td>
+                      <td className="p-2.5 font-mono text-slate-600 border-r border-slate-200">{s.audit_date || s.sett_date || s.date || '—'}</td>
+                      <td className="p-2.5 font-mono font-bold text-indigo-950 border-r border-slate-200">{s.po_no || '—'}</td>
+                      <td className="p-2.5 font-bold text-slate-900 border-r border-slate-200">{s.supplier_name || s.supplier || '—'}</td>
+                      <td className="p-2.5 text-slate-700 border-r border-slate-200">{s.broker_name || s.broker || '—'}</td>
+                      <td className="p-2.5 font-mono font-black text-right text-emerald-900 border-r border-slate-200">
+                        {Number(s.electronic_scale_net || s.quantity || s.weight || 0).toFixed(3)}
+                      </td>
+                      <td className="p-2.5 font-mono font-black text-right text-purple-900 border-r border-slate-200">
+                        ₹{formatIndianCurrency(s.net_payable_amount || s.amount || s.total_value || 0)}
+                      </td>
+                      <td className="p-2.5 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300">
+                          {s.status || 'Settled'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-16 text-center text-slate-400">No settlement records found.</div>
+            )
           )}
         </div>
 
-        {/* Table Content */}
-        <div className="flex-1 overflow-auto p-3 sm:p-4">
-          {activeTab === 'inspections' && (
-            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
-                <thead>
-                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
-                    <th className="p-2.5 font-bold">MR No</th>
-                    <th className="p-2.5 font-bold">Date</th>
-                    <th className="p-2.5 font-bold">Sauda / PO</th>
-                    <th className="p-2.5 font-bold">Supplier & Broker</th>
-                    <th className="p-2.5 font-bold">Grade & Wt (MT)</th>
-                    <th className="p-2.5 font-bold text-center">Moisture % (Act/Clm)</th>
-                    <th className="p-2.5 font-bold text-center">Dust % (Act/Clm)</th>
-                    <th className="p-2.5 font-bold text-center">Grade Down %</th>
-                    <th className="p-2.5 font-bold text-center">Chotta & Habi Jabi</th>
-                    <th className="p-2.5 font-bold text-center bg-amber-50/70 border-x border-amber-200">
-                      Premium <span className="text-[8.5px] font-normal text-amber-900 block">(Sauda Check Point)</span>
-                    </th>
-                    <th className="p-2.5 font-bold text-right">Total Claims (₹)</th>
-                    <th className="p-2.5 font-bold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F2EDE0] font-sans">
-                  {paginatedInspections.length > 0 ? (
-                    paginatedInspections.map((r, idx) => (
-                      <tr key={r.id || `insp-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                        <td className="p-2.5 font-mono font-bold text-[#1E331B]">{r.mrNo}</td>
-                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">{r.date}</td>
-                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">{r.poNo || '---'}</td>
-                        <td className="p-2.5">
-                          <div className="font-bold text-[#1E331B] text-[11.5px]">{r.supplier}</div>
-                          <div className="text-[10px] text-slate-500 font-sans">{r.broker}</div>
-                        </td>
-                        <td className="p-2.5">
-                          <span className="font-bold text-emerald-900 font-mono text-[11px] block">{r.juteGrade}</span>
-                          <span className="font-mono font-extrabold text-[#1E331B] text-[11px]">{r.weightMt.toFixed(3)} MT</span>
-                        </td>
-                        <td className="p-2.5 text-center font-mono">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded font-bold text-[10px]",
-                              r.actualMoisture <= 15 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900 border border-amber-300"
-                            )}>
-                              {r.actualMoisture.toFixed(1)}%
-                            </span>
-                            {r.claimMoisture > 0 && (
-                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                                Clm: {r.claimMoisture.toFixed(1)}%
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2.5 text-center font-mono">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
-                              {r.actualDust.toFixed(1)}%
-                            </span>
-                            {r.claimDust > 0 && (
-                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                                Clm: {r.claimDust.toFixed(1)}%
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2.5 text-center font-mono">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
-                              {r.actualGradeDown.toFixed(1)}%
-                            </span>
-                            {r.claimGradeDown > 0 && (
-                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
-                                Clm: {r.claimGradeDown.toFixed(1)}%
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2.5 text-center font-mono text-[11px]">
-                          {r.totalChottaHabijabiKg > 0 ? (
-                            <span className="px-1.5 py-0.5 rounded font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                              {r.totalChottaHabijabiKg} Kg
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">0 Kg</span>
-                          )}
-                        </td>
-                        <td className="p-2.5 text-center font-mono bg-amber-50/40 border-x border-amber-200">
-                          {r.isPremium || (r.premium && r.premium !== "No" && r.premium !== "-") ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[10.5px] bg-amber-100 text-amber-950 border border-amber-400 shadow-2xs">
-                              <Zap className="w-2.5 h-2.5 text-amber-700" />
-                              <span>{r.premium || 'Yes'}</span>
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">No Premium</span>
-                          )}
-                        </td>
-                        <td className="p-2.5 text-right font-mono font-extrabold text-rose-800">
-                          {r.totalClaimAmount > 0 ? `₹${formatIndianCurrency(r.totalClaimAmount)}` : '₹0'}
-                        </td>
-                        <td className="p-2.5 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
-                            {r.status || 'Audited'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={12} className="p-8 text-center text-slate-500 italic">
-                        No matching Inspection records found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {/* Pagination & Footer */}
+        <div className="bg-[#FAF7F0] p-3 border-t border-[#D6CAA8] flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
+          <div className="text-slate-600 font-semibold text-xs">
+            Showing <span className="font-bold text-slate-900">{Math.min(activeCount, (safePage - 1) * pageSize + 1)}</span> to <span className="font-bold text-slate-900">{Math.min(activeCount, safePage * pageSize)}</span> of <span className="font-bold text-slate-900">{activeCount}</span> records
+          </div>
 
-          {activeTab === 'payments' && (
-            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-                <thead>
-                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
-                    <th className="p-2.5 font-bold">Voucher No</th>
-                    <th className="p-2.5 font-bold">Date</th>
-                    <th className="p-2.5 font-bold">MR / Arrival</th>
-                    <th className="p-2.5 font-bold">PO No</th>
-                    <th className="p-2.5 font-bold">Supplier</th>
-                    <th className="p-2.5 font-bold">Broker</th>
-                    <th className="p-2.5 font-bold text-right">Amount (₹)</th>
-                    <th className="p-2.5 font-bold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F2EDE0] font-sans">
-                  {paginatedPayments.length > 0 ? (
-                    paginatedPayments.map((p, idx) => (
-                      <tr key={p.id || `pay-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                        <td className="p-2.5 font-mono font-bold text-emerald-900">
-                          {p.voucher_no || p.payment_no || `VCH-${idx + 1}`}
-                        </td>
-                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">
-                          {p.payment_date || p.date || (p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '---')}
-                        </td>
-                        <td className="p-2.5 font-mono text-[11px] text-[#1E331B] font-bold">
-                          {p.mr_no || p.arrival_no || '---'}
-                        </td>
-                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">
-                          {p.po_no || '---'}
-                        </td>
-                        <td className="p-2.5 font-bold text-[#1E331B] text-[11.5px]">
-                          {p.supplier_name || p.supplier || 'DIRECT'}
-                        </td>
-                        <td className="p-2.5 text-slate-600 text-[11px]">
-                          {p.broker_name || p.broker || 'DIRECT'}
-                        </td>
-                        <td className="p-2.5 text-right font-mono font-extrabold text-emerald-800">
-                          ₹{formatIndianCurrency(Number(p.net_payable_amount || p.amount || p.total_amount || 0))}
-                        </td>
-                        <td className="p-2.5 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-900">
-                            {p.status || p.payment_status || 'Paid'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500 italic">
-                        No payment records found for this period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeTab === 'settlements' && (
-            <div className="bg-white rounded-xl border border-[#D6CAA8] overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-                <thead>
-                  <tr className="bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#1E331B] font-mono text-[10px] uppercase tracking-wider">
-                    <th className="p-2.5 font-bold">MR No</th>
-                    <th className="p-2.5 font-bold">Audit Date</th>
-                    <th className="p-2.5 font-bold">PO No</th>
-                    <th className="p-2.5 font-bold">Supplier</th>
-                    <th className="p-2.5 font-bold">Broker</th>
-                    <th className="p-2.5 font-bold text-center">Weight (MT)</th>
-                    <th className="p-2.5 font-bold text-right">Settled Amount (₹)</th>
-                    <th className="p-2.5 font-bold text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F2EDE0] font-sans">
-                  {paginatedSettlements.length > 0 ? (
-                    paginatedSettlements.map((s, idx) => (
-                      <tr key={s.id || `sett-${idx}`} className="hover:bg-[#FAF7F0]/60 transition-colors">
-                        <td className="p-2.5 font-mono font-bold text-purple-900">
-                          {s.mr_no || s.arrival_no || `SETT-${idx + 1}`}
-                        </td>
-                        <td className="p-2.5 text-slate-600 text-[11px] whitespace-nowrap">
-                          {s.audit_date || s.sett_date || s.date || (s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN') : '---')}
-                        </td>
-                        <td className="p-2.5 font-mono text-[11px] text-[#2E6B3E] font-bold">
-                          {s.po_no || '---'}
-                        </td>
-                        <td className="p-2.5 font-bold text-[#1E331B] text-[11.5px]">
-                          {s.supplier_name || s.supplier || 'DIRECT'}
-                        </td>
-                        <td className="p-2.5 text-slate-600 text-[11px]">
-                          {s.broker_name || s.broker || 'DIRECT'}
-                        </td>
-                        <td className="p-2.5 text-center font-mono font-bold text-[#1E331B]">
-                          {Number(s.electronic_scale_net || s.quantity || s.weight || 0).toFixed(2)} MT
-                        </td>
-                        <td className="p-2.5 text-right font-mono font-extrabold text-[#1E331B]">
-                          ₹{formatIndianCurrency(Number(s.net_payable_amount || s.amount || s.total_value || 0))}
-                        </td>
-                        <td className="p-2.5 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider bg-purple-100 border border-purple-300 text-purple-900">
-                            {s.status || s.payment_status || 'Settled'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500 italic">
-                        No settlement records found for this period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Modal Footer / Pagination */}
-        <div className="p-3 bg-[#FAF7F0] border-t border-[#D6CAA8] flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0 text-xs text-slate-600 font-mono">
-          <span>
-            Showing page {safePage} of {totalPages} ({activeCount} records found)
-          </span>
           <div className="flex items-center gap-2">
+            <span className="text-slate-500 font-semibold text-xs">Page Size:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="bg-white border border-[#D6CAA8] rounded-lg px-2 py-1 text-xs font-bold text-slate-800"
+            >
+              <option value={15}>15</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+
             <button
-              disabled={safePage === 1}
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-3 py-1 bg-white border border-[#D6CAA8] rounded-lg disabled:opacity-50 font-bold hover:bg-[#EAE2D2] cursor-pointer shadow-2xs"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={safePage <= 1}
+              className="px-2.5 py-1 bg-white border border-[#D6CAA8] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
             >
               Previous
             </button>
-            <span className="px-2 py-1 bg-[#1E331B] text-white rounded-lg font-bold">
+            <span className="font-mono font-bold text-xs text-[#1E331B]">
               {safePage} / {totalPages}
             </span>
             <button
-              disabled={safePage === totalPages}
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 bg-white border border-[#D6CAA8] rounded-lg disabled:opacity-50 font-bold hover:bg-[#EAE2D2] cursor-pointer shadow-2xs"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={safePage >= totalPages}
+              className="px-2.5 py-1 bg-white border border-[#D6CAA8] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
             >
               Next
             </button>

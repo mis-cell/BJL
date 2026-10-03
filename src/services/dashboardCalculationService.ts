@@ -218,6 +218,28 @@ export function getRecordNetWeightMt(item: any): number {
   return gross > 100 ? gross / 1000 : (gross > 50 ? gross / 10 : gross);
 }
 
+export interface PendingStageRecord {
+  id: string;
+  stage: 'MR_TO_FMR' | 'FMR_TO_INSP' | 'INSP_TO_PAYM' | 'PAYM_TO_SETT';
+  stageLabel: string;
+  stageCode: 'MR ➔ FMR' | 'FMR ➔ INSP' | 'INSP ➔ Paym' | 'Paym ➔ Sett';
+  poNo: string;
+  cleanPoNo: string;
+  mrNo: string;
+  arrivalNo?: string;
+  date: string;
+  supplier: string;
+  broker: string;
+  vehicleNo: string;
+  bales: number;
+  weightMt: number;
+  weightQtl: number;
+  amount: number;
+  status: string;
+  pendingAction: string;
+  rawRecord?: any;
+}
+
 export interface MonthInspectionSummary {
   monthIndex: number;
   monthName: string;
@@ -251,6 +273,18 @@ export interface MonthInspectionSummary {
   settlementCount: number;
   settlementAmount: number;
   
+  // 6. Pipeline Pending Lists & P.O. Number Tracking
+  pendingFmrList: PendingStageRecord[];
+  pendingInspectionList: PendingStageRecord[];
+  pendingPaymentList: PendingStageRecord[];
+  pendingSettlementList: PendingStageRecord[];
+  allPendingPipelineList: PendingStageRecord[];
+  pendingFmrPoCount: number;
+  pendingInspectionPoCount: number;
+  pendingPaymentPoCount: number;
+  pendingSettlementPoCount: number;
+  totalPendingPoCount: number;
+  
   // Averages & Totals (Quality & Claims)
   avgMoisture: number;
   avgClaimMoisture: number;
@@ -273,6 +307,8 @@ export interface MonthInspectionSummary {
   inspections: InspectionRecord[];
   payments: any[];
   settlements: any[];
+  temporaryArrivals: any[];
+  finalArrivals: any[];
 }
 
 export interface ComputeInspectionMetricsParams {
@@ -311,6 +347,16 @@ export interface InspectionMetricsResult {
   totalYearPaidAmount: number;
   totalYearSettlementsCount: number;
   totalYearSettledAmount: number;
+  allYearPendingFmrList: PendingStageRecord[];
+  allYearPendingInspectionList: PendingStageRecord[];
+  allYearPendingPaymentList: PendingStageRecord[];
+  allYearPendingSettlementList: PendingStageRecord[];
+  allYearPendingPipelineList: PendingStageRecord[];
+  yearPendingFmrPoCount: number;
+  yearPendingInspectionPoCount: number;
+  yearPendingPaymentPoCount: number;
+  yearPendingSettlementPoCount: number;
+  yearTotalPendingPoCount: number;
   overallAvgMoisture: number;
   overallAvgClaimMoisture: number;
   overallAvgDust: number;
@@ -1004,6 +1050,147 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const paymentPayableAmount = monthPayments.reduce((sum, p) => sum + Number(p.payable_amt || p.total_amount || 0), 0);
     const settlementAmount = monthSettlements.reduce((sum, s) => sum + Number(s.net_payable_amount || s.amount || s.total_value || 0), 0);
 
+    // 1. Pipeline: MR -> Final MR (Pending FMR)
+    const pendingFmrList: PendingStageRecord[] = monthArrivals.filter(a => {
+      const k = normalizePoRef(a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id);
+      return !k || !finalArrivalsSet.has(k);
+    }).map((a, idx) => {
+      const rawMr = a.temporary_arrival_no || a.amad_no || a.mr_no || a.arrival_no || a.amad_id || `ARR-${idx}`;
+      const rawPo = a.po_no || a.mill_po_no || a.contract_no || a.sauda_no || '';
+      const wtMt = getRecordNetWeightMt(a);
+      const bales = getRecordBales(a);
+      return {
+        id: a.id || `pending-fmr-${mIdx}-${idx}-${rawMr}`,
+        stage: 'MR_TO_FMR',
+        stageLabel: 'MR ➔ Final MR (Below FMR)',
+        stageCode: 'MR ➔ FMR',
+        poNo: rawPo || 'N/A',
+        cleanPoNo: normalizePoRef(rawPo),
+        mrNo: rawMr,
+        arrivalNo: a.arrival_no || a.temporary_arrival_no || rawMr,
+        date: a.date || a.temporary_arrival_date || a.amad_date || a.created_at || '',
+        supplier: a.supplier_name || a.supplier || a.challan_supplier || a.party_name || 'N/A',
+        broker: a.broker_name || a.broker || 'DIRECT',
+        vehicleNo: a.lorry_number || a.vehicle_no || a.truck_no || 'N/A',
+        bales,
+        weightMt: Number(wtMt.toFixed(3)),
+        weightQtl: Number((wtMt * 10).toFixed(2)),
+        amount: Number(a.challan_value || a.amount || 0),
+        status: 'Pending Final MR Entry',
+        pendingAction: 'Complete Gate Inward Final M.R. (FMR)',
+        rawRecord: a
+      };
+    });
+
+    // 2. Pipeline: Final MR -> Mill Inspection (Pending Inspection)
+    const inspectedMrSet = new Set(completedInspections.map(r => r.cleanMrNo).filter(Boolean));
+    const pendingInspectionList: PendingStageRecord[] = monthFinalArrivals.filter(fa => {
+      const rawNo = fa.final_arrival_no || fa.arrival_no || fa.temporary_arrival_no || fa.mr_no;
+      const cleanNo = normalizePoRef(rawNo);
+      return !cleanNo || !inspectedMrSet.has(cleanNo);
+    }).map((fa, idx) => {
+      const rawMr = fa.final_arrival_no || fa.arrival_no || fa.temporary_arrival_no || fa.mr_no || `FA-${idx}`;
+      const rawPo = fa.po_no || fa.mill_po_no || fa.contract_no || '';
+      const wtMt = getRecordNetWeightMt(fa);
+      const bales = getRecordBales(fa);
+      return {
+        id: fa.id || `pending-insp-${mIdx}-${idx}-${rawMr}`,
+        stage: 'FMR_TO_INSP',
+        stageLabel: 'Final MR ➔ Mill Inspection',
+        stageCode: 'FMR ➔ INSP',
+        poNo: rawPo || 'N/A',
+        cleanPoNo: normalizePoRef(rawPo),
+        mrNo: rawMr,
+        arrivalNo: fa.final_arrival_no || fa.arrival_no || rawMr,
+        date: fa.final_arrival_date || fa.date || fa.arrival_date || fa.created_at || '',
+        supplier: fa.supplier_name || fa.supplier || fa.challan_supplier || 'N/A',
+        broker: fa.broker_name || fa.broker || 'DIRECT',
+        vehicleNo: fa.lorry_number || fa.vehicle_no || 'N/A',
+        bales,
+        weightMt: Number(wtMt.toFixed(3)),
+        weightQtl: Number((wtMt * 10).toFixed(2)),
+        amount: Number(fa.challan_value || fa.value || 0),
+        status: 'Pending Quality Lab Test',
+        pendingAction: 'Complete Mill Quality Inspection Entry',
+        rawRecord: fa
+      };
+    });
+
+    // 3. Pipeline: Mill Inspection -> Payment (Pending Payment)
+    const paymentMrSet = new Set(monthPayments.map(p => normalizePoRef(p.mr_no || p.arrival_no || p.final_arrival_no)).filter(Boolean));
+    const paymentPoSet = new Set(monthPayments.map(p => normalizePoRef(p.po_no)).filter(Boolean));
+    const pendingPaymentList: PendingStageRecord[] = completedInspections.filter(r => {
+      const hasMrPay = r.cleanMrNo && paymentMrSet.has(r.cleanMrNo);
+      const hasPoPay = r.cleanPoNo && paymentPoSet.has(r.cleanPoNo);
+      return !hasMrPay && !hasPoPay;
+    }).map((r, idx) => {
+      return {
+        id: r.id || `pending-paym-${mIdx}-${idx}-${r.mrNo}`,
+        stage: 'INSP_TO_PAYM',
+        stageLabel: 'Mill Inspection ➔ Payment',
+        stageCode: 'INSP ➔ Paym',
+        poNo: r.poNo || 'N/A',
+        cleanPoNo: r.cleanPoNo,
+        mrNo: r.mrNo,
+        arrivalNo: r.mrNo,
+        date: r.date,
+        supplier: r.supplier || 'N/A',
+        broker: r.broker || 'DIRECT',
+        vehicleNo: r.vehicleNo || 'N/A',
+        bales: getRecordBales(r.rawRecord),
+        weightMt: Number(r.weightMt.toFixed(3)),
+        weightQtl: Number(r.weightQtl.toFixed(2)),
+        amount: Number(r.rawRecord?.payable_amt || r.rawRecord?.total_amount || 0),
+        status: 'Pending Payment Voucher',
+        pendingAction: 'Process On/Ac or Final Payment Voucher',
+        rawRecord: r.rawRecord
+      };
+    });
+
+    // 4. Pipeline: Payment -> Settlement (Pending Settlement)
+    const settlementMrSet = new Set(monthSettlements.map(s => normalizePoRef(s.mr_no || s.arrival_no || s.final_arrival_no)).filter(Boolean));
+    const settlementPoSet = new Set(monthSettlements.map(s => normalizePoRef(s.po_no)).filter(Boolean));
+    const pendingSettlementList: PendingStageRecord[] = completedInspections.filter(r => {
+      const hasMrSett = r.cleanMrNo && settlementMrSet.has(r.cleanMrNo);
+      const hasPoSett = r.cleanPoNo && settlementPoSet.has(r.cleanPoNo);
+      return !hasMrSett && !hasPoSett;
+    }).map((r, idx) => {
+      return {
+        id: r.id || `pending-sett-${mIdx}-${idx}-${r.mrNo}`,
+        stage: 'PAYM_TO_SETT',
+        stageLabel: 'Payment ➔ Settlement',
+        stageCode: 'Paym ➔ Sett',
+        poNo: r.poNo || 'N/A',
+        cleanPoNo: r.cleanPoNo,
+        mrNo: r.mrNo,
+        arrivalNo: r.mrNo,
+        date: r.date,
+        supplier: r.supplier || 'N/A',
+        broker: r.broker || 'DIRECT',
+        vehicleNo: r.vehicleNo || 'N/A',
+        bales: getRecordBales(r.rawRecord),
+        weightMt: Number(r.weightMt.toFixed(3)),
+        weightQtl: Number(r.weightQtl.toFixed(2)),
+        amount: Number(r.rawRecord?.payable_amt || r.rawRecord?.settlement_amount || 0),
+        status: 'Pending Final MR Settlement',
+        pendingAction: 'Complete Valuation & Final M.R. Settlement',
+        rawRecord: r.rawRecord
+      };
+    });
+
+    const allPendingPipelineList = [
+      ...pendingFmrList,
+      ...pendingInspectionList,
+      ...pendingPaymentList,
+      ...pendingSettlementList
+    ];
+
+    const pendingFmrPoCount = new Set(pendingFmrList.map(r => r.cleanPoNo).filter(Boolean)).size;
+    const pendingInspectionPoCount = new Set(pendingInspectionList.map(r => r.cleanPoNo).filter(Boolean)).size;
+    const pendingPaymentPoCount = new Set(pendingPaymentList.map(r => r.cleanPoNo).filter(Boolean)).size;
+    const pendingSettlementPoCount = new Set(pendingSettlementList.map(r => r.cleanPoNo).filter(Boolean)).size;
+    const totalPendingPoCount = new Set(allPendingPipelineList.map(r => r.cleanPoNo).filter(Boolean)).size;
+
     return {
       monthIndex: mIdx,
       monthName: MONTH_NAMES[mIdx] || `Month ${mIdx + 1}`,
@@ -1026,6 +1213,16 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       paymentPayableAmount,
       settlementCount: monthSettlements.length,
       settlementAmount,
+      pendingFmrList,
+      pendingInspectionList,
+      pendingPaymentList,
+      pendingSettlementList,
+      allPendingPipelineList,
+      pendingFmrPoCount,
+      pendingInspectionPoCount,
+      pendingPaymentPoCount,
+      pendingSettlementPoCount,
+      totalPendingPoCount,
       avgMoisture,
       avgClaimMoisture,
       avgDust,
@@ -1042,7 +1239,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       lotsWithQualityClaim: qualClaimLots,
       inspections: list,
       payments: monthPayments,
-      settlements: monthSettlements
+      settlements: monthSettlements,
+      temporaryArrivals: monthArrivals,
+      finalArrivals: monthFinalArrivals
     };
   }).filter((m): m is MonthInspectionSummary => m !== null);
 
@@ -1104,6 +1303,23 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   }).length;
   const totalPendingInspectionsCount = yearInspections.filter(r => r.status === 'Pending').length;
 
+  const allYearPendingFmrList = monthInspectionSummaries.flatMap(m => m.pendingFmrList);
+  const allYearPendingInspectionList = monthInspectionSummaries.flatMap(m => m.pendingInspectionList);
+  const allYearPendingPaymentList = monthInspectionSummaries.flatMap(m => m.pendingPaymentList);
+  const allYearPendingSettlementList = monthInspectionSummaries.flatMap(m => m.pendingSettlementList);
+  const allYearPendingPipelineList = [
+    ...allYearPendingFmrList,
+    ...allYearPendingInspectionList,
+    ...allYearPendingPaymentList,
+    ...allYearPendingSettlementList
+  ];
+
+  const yearPendingFmrPoCount = new Set(allYearPendingFmrList.map(r => r.cleanPoNo).filter(Boolean)).size;
+  const yearPendingInspectionPoCount = new Set(allYearPendingInspectionList.map(r => r.cleanPoNo).filter(Boolean)).size;
+  const yearPendingPaymentPoCount = new Set(allYearPendingPaymentList.map(r => r.cleanPoNo).filter(Boolean)).size;
+  const yearPendingSettlementPoCount = new Set(allYearPendingSettlementList.map(r => r.cleanPoNo).filter(Boolean)).size;
+  const yearTotalPendingPoCount = new Set(allYearPendingPipelineList.map(r => r.cleanPoNo).filter(Boolean)).size;
+
   return {
     monthInspectionSummaries,
     allInspections: yearInspections,
@@ -1124,6 +1340,16 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalYearPaidAmount,
     totalYearSettlementsCount: totalYearSettlements,
     totalYearSettledAmount,
+    allYearPendingFmrList,
+    allYearPendingInspectionList,
+    allYearPendingPaymentList,
+    allYearPendingSettlementList,
+    allYearPendingPipelineList,
+    yearPendingFmrPoCount,
+    yearPendingInspectionPoCount,
+    yearPendingPaymentPoCount,
+    yearPendingSettlementPoCount,
+    yearTotalPendingPoCount,
     overallAvgMoisture,
     overallAvgClaimMoisture,
     overallAvgDust,
@@ -1833,3 +2059,55 @@ export function computeDashboardMetrics(params: {
     allPayments: paymentRecords
   };
 }
+
+/**
+ * Generates and downloads a CSV of Pending P.O. Numbers across stages
+ */
+export function exportPendingPoListCsv(records: PendingStageRecord[], fileName?: string) {
+  if (!records || records.length === 0) {
+    alert("No pending records to export for this stage.");
+    return;
+  }
+
+  const headers = [
+    "Stage & Pipeline Gap",
+    "P.O. Number",
+    "M.R. No / Arrival No",
+    "Date",
+    "Supplier Name",
+    "Broker Name",
+    "Vehicle / Lorry No",
+    "Bales Count",
+    "Weight (MT)",
+    "Weight (Qtl)",
+    "Value / Amount (INR)",
+    "Current Pipeline Status",
+    "Action Required"
+  ];
+
+  const rows = records.map(r => [
+    `"${(r.stageLabel || r.stageCode || r.stage).replace(/"/g, '""')}"`,
+    `"${(r.poNo || 'N/A').replace(/"/g, '""')}"`,
+    `"${(r.mrNo || r.arrivalNo || '').replace(/"/g, '""')}"`,
+    `"${r.date || ''}"`,
+    `"${(r.supplier || 'N/A').replace(/"/g, '""')}"`,
+    `"${(r.broker || 'DIRECT').replace(/"/g, '""')}"`,
+    `"${(r.vehicleNo || 'N/A').replace(/"/g, '""')}"`,
+    r.bales || 0,
+    r.weightMt ? r.weightMt.toFixed(3) : "0.000",
+    r.weightQtl ? r.weightQtl.toFixed(2) : "0.00",
+    r.amount ? r.amount.toFixed(2) : "0.00",
+    `"${(r.status || '').replace(/"/g, '""')}"`,
+    `"${(r.pendingAction || '').replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", fileName || `Pending_PO_Pipeline_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
