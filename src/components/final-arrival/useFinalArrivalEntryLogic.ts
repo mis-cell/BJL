@@ -34,45 +34,51 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
 
   const getPaddedDetails = (initialFA?: any) => {
-    let pDetails: ArrivalDetailRow[] = [];
-    if (initialFA && initialFA.grid_details) {
-      if (typeof initialFA.grid_details === 'string') {
+    let pDetails: any[] = [];
+    const rawGrid = initialFA?.grid_details || initialFA?.details || initialFA?.items || initialFA?.raw_item?.grid_details || initialFA?.raw_item?.details;
+    if (rawGrid) {
+      if (typeof rawGrid === 'string') {
         try {
-          const parsed = initialFA.grid_details === 'undefined' || initialFA.grid_details === 'null' ? [] : JSON.parse(initialFA.grid_details === "undefined" ? "null" : initialFA.grid_details);
+          const parsed = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid === "undefined" ? "null" : rawGrid);
           if (Array.isArray(parsed)) {
             pDetails = parsed;
           }
         } catch (e) {
           console.error("Error parsing grid_details JSON:", e);
         }
-      } else if (Array.isArray(initialFA.grid_details)) {
-        pDetails = initialFA.grid_details;
+      } else if (Array.isArray(rawGrid)) {
+        pDetails = rawGrid;
       }
     }
     
-    // Backfill quantity_chln and quantity_rcpt from netto_pnto if missing
-    pDetails = pDetails.map(d => {
-      const u = (d.unit || initialFA?.unit_name || '').toString().trim().toUpperCase();
+    // Map and sanitize all columns properly
+    const mapped: ArrivalDetailRow[] = pDetails.map((d: any, idx: number) => {
+      const u = (d.unit || initialFA?.unit_name || 'BALES').toString().trim().toUpperCase();
       const isLoose = u.includes('LOOSE') || u === 'LOOSE';
-      if (isLoose) {
-        return {
-          ...d,
-          quantity_chln: 0,
-          quantity_rcpt: 0
-        };
-      }
-      if (Number(d.netto_pnto) > 0 && (!d.quantity_chln || !d.quantity_rcpt)) {
-        const roundedNetto = Math.round(Number(d.netto_pnto));
-        return {
-          ...d,
-          quantity_chln: d.quantity_chln || roundedNetto,
-          quantity_rcpt: d.quantity_rcpt || roundedNetto
-        };
-      }
-      return d;
+      const rawNetto = Number(d.netto_pnto) || Number(d.quantity_mt) || Number(d.challan_gross_wt) || Number(d.net_weight) || Number(d.weight) || 0;
+      const qChln = isLoose ? 0 : (d.quantity_chln !== undefined && d.quantity_chln !== null && d.quantity_chln !== '' ? Number(d.quantity_chln) : (Number(d.quantity) || Math.round(rawNetto)));
+      const qRcpt = isLoose ? 0 : (d.quantity_rcpt !== undefined && d.quantity_rcpt !== null && d.quantity_rcpt !== '' ? Number(d.quantity_rcpt) : (qChln || Number(d.quantity) || Math.round(rawNetto)));
+
+      return {
+        srl_no: Number(d.srl_no) || idx + 1,
+        receipt_grade_code: d.receipt_grade_code || d.grade_code || '',
+        receipt_grade_name: d.receipt_grade_name || d.grade_name || d.challan_grade_name || d.receipt_grade_code || '',
+        crop_year: d.crop_year || '2026-27',
+        challan_grade_name: d.challan_grade_name || d.receipt_grade_name || d.grade_name || '',
+        agency_code: d.agency_code || '',
+        agency_name: d.agency_name || d.agency || '',
+        challan_marka_code: d.challan_marka_code || d.marka_code || '01',
+        challan_marka_name: d.challan_marka_name || d.marka_name || d.marka || 'NO MARK',
+        netto_pnto: rawNetto,
+        quantity_chln: qChln,
+        quantity_rcpt: qRcpt,
+        unit: d.unit || u,
+        remarks: d.remarks || '',
+        marks_phota: d.marks_phota || ''
+      };
     });
 
-    const padded = [...pDetails];
+    const padded = [...mapped];
     if (padded.length === 0) {
       padded.push({
         srl_no: 1,
@@ -87,7 +93,7 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         netto_pnto: 0,
         quantity_chln: 0,
         quantity_rcpt: 0,
-        unit: 'BALES',
+        unit: initialFA?.unit_name || 'BALES',
         remarks: '',
         marks_phota: ''
       });
@@ -304,6 +310,18 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     loadMastersAndIncrement();
   }, [initialData]);
 
+  // Sync initialData changes when opening with prefilled record
+  useEffect(() => {
+    if (!initialData) return;
+    const tempMr = initialData.temporary_arrival_no || initialData.amad_no || initialData.arrival_no || initialData.mr_no || '';
+    const padded = getPaddedDetails(initialData);
+    if (padded && padded.some(r => r.receipt_grade_name || r.challan_grade_name || Number(r.netto_pnto) > 0 || Number(r.quantity_chln) > 0)) {
+      setDetails(padded);
+    } else if (tempMr) {
+      loadDetailsFromAmad(tempMr);
+    }
+  }, [initialData]);
+
   const loadDetailsFromAmad = async (tempMrNo: string) => {
     if (!tempMrNo) {
       alert("Please select or enter a Temporary M.R. Number.");
@@ -311,122 +329,196 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     }
     try {
       const searchVal = tempMrNo.trim().toUpperCase();
+      const numOnly = searchVal.replace(/[^0-9]/g, '');
 
-      let matchedInsp = inspectionsList.find(ins => {
-        const arrNo = String(ins.arrival_no || ins.ref_arrival_no || '').trim().toUpperCase();
-        const mrNo = String(ins.mr_no || '').trim().toUpperCase();
-        return arrNo === searchVal || mrNo === searchVal || mrNo.endsWith(`/${searchVal}`) || mrNo.includes(`/${searchVal}`);
+      // 1. Fetch from temporary_material_received
+      let matchedAmad = temporaryArrivalList.find(a => {
+        const aNo = String(a.temporary_arrival_no || a.amad_no || a.arrival_no || a.amad_id || '').trim().toUpperCase();
+        const aNum = aNo.replace(/[^0-9]/g, '');
+        return aNo === searchVal || (numOnly && aNum === numOnly);
       });
-
-      if (!matchedInsp && supabase) {
-        const { data: dbInsp } = await supabase
-          .from('mill_inspection_master')
-          .select('*')
-          .or(`arrival_no.eq.${searchVal},ref_arrival_no.eq.${searchVal},mr_no.ilike.%${searchVal}%`);
-        if (dbInsp && dbInsp.length > 0) {
-          matchedInsp = dbInsp[0];
-        }
-      }
-
-      if (matchedInsp) {
-        await loadDetailsFromInspection(matchedInsp.mr_no);
-        return;
-      }
-
-      let matchedAmad = temporaryArrivalList.find(a => 
-        String(a.temporary_arrival_no || a.amad_no || a.arrival_no || a.amad_id || '').trim().toUpperCase() === searchVal
-      );
 
       if (!matchedAmad && supabase) {
         const { data } = await supabase
           .from('temporary_material_received')
           .select('*')
-          .or(`temporary_arrival_no.eq.${searchVal},amad_no.eq.${searchVal}`);
+          .or(`temporary_arrival_no.ilike.%${searchVal}%,amad_no.ilike.%${searchVal}%${numOnly ? `,temporary_arrival_no.ilike.%${numOnly}%` : ''}`);
         if (data && data.length > 0) matchedAmad = data[0];
       }
 
-      if (matchedAmad) {
-        const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(matchedAmad.po_no || '').trim().toUpperCase());
-
-        setFormData(prev => ({
-          ...prev,
-          temporary_arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
-          arrival_no: matchedAmad.temporary_arrival_no || matchedAmad.amad_no || matchedAmad.arrival_no || prev.temporary_arrival_no,
-          temporary_arrival_date: matchedAmad.date || matchedAmad.temporary_arrival_date || prev.temporary_arrival_date,
-          po_no: matchedAmad.po_no || prev.po_no,
-          po_date: matchedPo?.po_date || matchedPo?.s_date || matchedAmad.po_date || matchedAmad.date || prev.po_date,
-          jci: matchedAmad.jci || prev.jci,
-          supplier: (matchedAmad.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
-          challan_supplier: (matchedAmad.challan_supplier || matchedAmad.supplier || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
-          broker: (matchedAmad.broker || matchedPo?.broker || prev.broker || '').toUpperCase(),
-          date: matchedAmad.date || prev.date,
-          lorry_number: matchedAmad.lorry_number || matchedAmad.lorry_no || matchedAmad.vehicle_no || prev.lorry_number,
-          transporter_name: matchedAmad.transporter_name || prev.transporter_name,
-          challan_rr_no: matchedAmad.challan_rr_no || matchedAmad.challan_railway_receipt_no || prev.challan_rr_no,
-          challan_railway_receipt_no: matchedAmad.challan_railway_receipt_no || matchedAmad.challan_rr_no || prev.challan_railway_receipt_no,
-          challan_rr_date: matchedAmad.challan_rr_date || matchedAmad.date || prev.challan_rr_date,
-          pan_no: matchedAmad.pan_no || prev.pan_no,
-          consignment_note: matchedAmad.consignment_note || matchedAmad.consignment_note_no || prev.consignment_note,
-          consignment_note_no: matchedAmad.consignment_note || matchedAmad.consignment_note_no || prev.consignment_note_no,
-          consignment_note_date: matchedAmad.consignment_note_date || prev.consignment_note_date,
-          di_no: matchedAmad.di_no || prev.di_no,
-          di_date: matchedAmad.di_date || prev.di_date,
-          part_date: matchedAmad.di_date || prev.part_date,
-          invoice_no: matchedAmad.invoice_no || prev.invoice_no,
-          invoice_date: matchedAmad.invoice_date || prev.invoice_date,
-          ptf: matchedAmad.ptf || prev.ptf,
-          lorry_returned: matchedAmad.lorry_returned || prev.lorry_returned,
-          lorry_returned_other_mill: matchedAmad.lorry_returned_other_mill || prev.lorry_returned_other_mill,
-          arrival_area_code: matchedAmad.arrival_area_code || prev.arrival_area_code,
-          arrival_area_name: (matchedAmad.arrival_area_name || prev.arrival_area_name || '').toUpperCase(),
-          unit_code: matchedAmad.unit_code || prev.unit_code,
-          unit_name: (matchedAmad.unit_name || prev.unit_name || '').toUpperCase(),
-          way_bill_no: matchedAmad.way_bill_no || prev.way_bill_no,
-          way_bill_date: matchedAmad.way_bill_date || prev.way_bill_date,
-          apmc_fees: matchedAmad.apmc_fees || prev.apmc_fees,
-          remarks: matchedAmad.remarks || prev.remarks,
-          challan_material_weight: Number(matchedAmad.challan_material_weight) || Number(prev.challan_material_weight),
-          actual_gross_weight: Number(matchedAmad.actual_gross_weight) || Number(prev.actual_gross_weight),
-          supplier_challan_gross: Number(matchedAmad.supplier_challan_gross) || Number(prev.supplier_challan_gross),
-          electronic_gross_weight: Number(matchedAmad.electronic_gross_weight) || Number(prev.electronic_gross_weight),
-          actual_tare_weight: Number(matchedAmad.actual_tare_weight) || Number(prev.actual_tare_weight),
-          supplier_tare_weight: Number(matchedAmad.supplier_tare_weight) || Number(prev.supplier_tare_weight),
-          electronic_tare_weight: Number(matchedAmad.electronic_tare_weight) || Number(prev.electronic_tare_weight),
-          supplier_net_weight: Number(matchedAmad.supplier_net_weight) || Number(prev.supplier_net_weight),
-          electronic_net_weight: Number(matchedAmad.electronic_net_weight) || Number(prev.electronic_net_weight),
-          weight_reduced: Number(matchedAmad.weight_reduced) || Number(prev.weight_reduced),
-        }));
-
-        const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
-        const amadUnit = (matchedAmad.unit_name || matchedAmad.unit || formData.unit_name || 'BALES').toUpperCase();
-        if (rawGrid) {
-          let parsedGrid: any[] = [];
-          if (typeof rawGrid === 'string') {
-            try { parsedGrid = JSON.parse(rawGrid); } catch (e) {}
-          } else if (Array.isArray(rawGrid)) {
-            parsedGrid = rawGrid;
-          }
-          if (parsedGrid && parsedGrid.length > 0) {
-            setDetails(parsedGrid.map((row: any, idx: number) => {
-              const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
-              const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
-              const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || Number(matchedAmad.supplier_net_weight) || 0;
-              return { 
-                ...row, 
-                srl_no: idx + 1,
-                unit: row.unit || amadUnit,
-                quantity_chln: isLoose ? 0 : (row.quantity_chln !== undefined ? Number(row.quantity_chln) : Number(row.quantity) || 0),
-                quantity_rcpt: isLoose ? 0 : (row.quantity_rcpt !== undefined ? Number(row.quantity_rcpt) : Number(row.quantity) || 0),
-                netto_pnto: rawNetto
-              };
-            }));
+      // 2. Also check mill_inspection_master / detail
+      let matchedInsp: any = null;
+      let matchedInspDetails: any[] = [];
+      if (supabase) {
+        const { data: dbInsp } = await supabase
+          .from('mill_inspection_master')
+          .select('*')
+          .or(`arrival_no.ilike.%${searchVal}%,ref_arrival_no.ilike.%${searchVal}%,mr_no.ilike.%${searchVal}%`);
+        if (dbInsp && dbInsp.length > 0) {
+          matchedInsp = dbInsp[0];
+          const { data: mDetails } = await supabase
+            .from('mill_inspection_detail')
+            .select('*')
+            .eq('mr_no', matchedInsp.mr_no)
+            .order('srl_no', { ascending: true });
+          if (mDetails && mDetails.length > 0) {
+            matchedInspDetails = mDetails;
           }
         }
-      } else {
-        alert(`No Temporary M.R record found matching "${tempMrNo}".`);
       }
-    } catch (e) {
+
+      if (!matchedAmad && !matchedInsp) {
+        alert(`No Temporary M.R or Inspection record found matching "${tempMrNo}".`);
+        return;
+      }
+
+      const finalPoNo = matchedAmad?.po_no || matchedInsp?.po_no || '';
+      const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(finalPoNo).trim().toUpperCase());
+
+      // Update Form Data
+      setFormData(prev => ({
+        ...prev,
+        temporary_arrival_no: matchedAmad?.temporary_arrival_no || matchedAmad?.amad_no || matchedInsp?.arrival_no || searchVal,
+        arrival_no: matchedAmad?.temporary_arrival_no || matchedAmad?.amad_no || matchedInsp?.arrival_no || prev.arrival_no,
+        mr_no: matchedInsp?.mr_no || matchedAmad?.temporary_arrival_no || prev.mr_no,
+        temporary_arrival_date: matchedAmad?.date || matchedAmad?.temporary_arrival_date || matchedInsp?.arrival_date || prev.temporary_arrival_date,
+        po_no: finalPoNo || prev.po_no,
+        po_date: matchedPo?.po_date || matchedPo?.s_date || matchedAmad?.po_date || matchedAmad?.date || matchedInsp?.po_date || prev.po_date,
+        jci: matchedAmad?.jci || matchedInsp?.jci || prev.jci,
+        supplier: (matchedAmad?.supplier || matchedInsp?.supplier_name || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
+        challan_supplier: (matchedAmad?.challan_supplier || matchedAmad?.supplier || matchedInsp?.challan_supplier || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
+        broker: (matchedAmad?.broker || matchedInsp?.broker_name || matchedPo?.broker || prev.broker || '').toUpperCase(),
+        date: matchedAmad?.date || matchedInsp?.arrival_date || prev.date,
+        lorry_number: matchedAmad?.lorry_number || matchedAmad?.lorry_no || matchedAmad?.vehicle_no || matchedInsp?.lorry_number || prev.lorry_number,
+        transporter_name: matchedAmad?.transporter_name || matchedInsp?.transporter_name || prev.transporter_name,
+        challan_rr_no: matchedAmad?.challan_rr_no || matchedAmad?.challan_railway_receipt_no || matchedInsp?.challan_rr_no || prev.challan_rr_no,
+        challan_railway_receipt_no: matchedAmad?.challan_railway_receipt_no || matchedAmad?.challan_rr_no || matchedInsp?.challan_rr_no || prev.challan_railway_receipt_no,
+        challan_rr_date: matchedAmad?.challan_rr_date || matchedAmad?.date || matchedInsp?.challan_rr_date || prev.challan_rr_date,
+        pan_no: matchedAmad?.pan_no || matchedInsp?.pan_no || prev.pan_no,
+        consignment_note: matchedAmad?.consignment_note || matchedAmad?.consignment_note_no || matchedInsp?.consignment_note || prev.consignment_note,
+        consignment_note_no: matchedAmad?.consignment_note || matchedAmad?.consignment_note_no || matchedInsp?.consignment_note || prev.consignment_note_no,
+        consignment_note_date: matchedAmad?.consignment_note_date || matchedInsp?.consignment_note_date || prev.consignment_note_date,
+        di_no: matchedAmad?.di_no || matchedInsp?.di_no || prev.di_no,
+        di_date: matchedAmad?.di_date || matchedInsp?.di_date || prev.di_date,
+        part_date: matchedAmad?.di_date || matchedInsp?.part_date || prev.part_date,
+        invoice_no: matchedAmad?.invoice_no || matchedInsp?.invoice_no || prev.invoice_no,
+        invoice_date: matchedAmad?.invoice_date || matchedInsp?.invoice_date || prev.invoice_date,
+        ptf: matchedAmad?.ptf || matchedInsp?.ptf || prev.ptf,
+        lorry_returned: matchedAmad?.lorry_returned || matchedInsp?.lorry_returned || prev.lorry_returned,
+        lorry_returned_other_mill: matchedAmad?.lorry_returned_other_mill || matchedInsp?.lorry_returned_other_mill || prev.lorry_returned_other_mill,
+        arrival_area_code: matchedAmad?.arrival_area_code || matchedInsp?.arrival_area_code || prev.arrival_area_code,
+        arrival_area_name: (matchedAmad?.arrival_area_name || matchedInsp?.arrival_area_name || prev.arrival_area_name || '').toUpperCase(),
+        unit_code: matchedAmad?.unit_code || matchedInsp?.unit_code || prev.unit_code,
+        unit_name: (matchedAmad?.unit_name || matchedInsp?.unit_name || prev.unit_name || 'BALES').toUpperCase(),
+        way_bill_no: matchedAmad?.way_bill_no || matchedInsp?.way_bill_no || prev.way_bill_no,
+        way_bill_date: matchedAmad?.way_bill_date || matchedInsp?.way_bill_date || prev.way_bill_date,
+        apmc_fees: matchedAmad?.apmc_fees || matchedInsp?.apmc_fees || prev.apmc_fees,
+        remarks: matchedAmad?.remarks || matchedInsp?.remarks || prev.remarks,
+        challan_material_weight: Number(matchedAmad?.challan_material_weight) || Number(matchedInsp?.challan_material_weight) || Number(prev.challan_material_weight),
+        actual_gross_weight: Number(matchedAmad?.actual_gross_weight) || Number(matchedInsp?.actual_gross_weight) || Number(prev.actual_gross_weight),
+        supplier_challan_gross: Number(matchedAmad?.supplier_challan_gross) || Number(matchedInsp?.supplier_challan_gross) || Number(prev.supplier_challan_gross),
+        electronic_gross_weight: Number(matchedAmad?.electronic_gross_weight) || Number(matchedInsp?.electronic_gross_weight) || Number(prev.electronic_gross_weight),
+        actual_tare_weight: Number(matchedAmad?.actual_tare_weight) || Number(matchedInsp?.actual_tare_weight) || Number(prev.actual_tare_weight),
+        supplier_tare_weight: Number(matchedAmad?.supplier_tare_weight) || Number(matchedInsp?.supplier_tare_weight) || Number(prev.supplier_tare_weight),
+        electronic_tare_weight: Number(matchedAmad?.electronic_tare_weight) || Number(matchedInsp?.electronic_tare_weight) || Number(prev.electronic_tare_weight),
+        supplier_net_weight: Number(matchedAmad?.supplier_net_weight) || Number(matchedInsp?.supplier_net_weight) || Number(prev.supplier_net_weight),
+        electronic_net_weight: Number(matchedAmad?.electronic_net_weight) || Number(matchedInsp?.electronic_net_weight) || Number(prev.electronic_net_weight),
+        weight_reduced: Number(matchedAmad?.weight_reduced) || Number(matchedInsp?.weight_reduced) || Number(prev.weight_reduced),
+      }));
+
+      // Grid Rows Loading:
+      // Priority 1: If Inspection Detail rows exist with items, map them
+      if (matchedInspDetails && matchedInspDetails.length > 0) {
+        const newDetails = matchedInspDetails.map((md: any, index: number) => {
+          const matchingGrade = grades.find(g => 
+            String(g.grade_code).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() || 
+            String(g.grade_name).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() ||
+            String(g.grade_name).trim().toUpperCase() === String(md.arrival_grade).trim().toUpperCase()
+          );
+          const gradeName = matchingGrade ? matchingGrade.grade_name : (md.stock_grade_name || md.arrival_grade || '');
+          const gradeCode = matchingGrade ? matchingGrade.grade_code : (md.stock_grade_code || '');
+
+          const matchingMarka = markas.find(m => 
+            String(m.marka_code).trim().toUpperCase() === String(md.marka).trim().toUpperCase() || 
+            String(m.marka_name).trim().toUpperCase() === String(md.marka).trim().toUpperCase()
+          );
+          const markaName = matchingMarka ? matchingMarka.marka_name : (md.marka || 'NO MARK');
+          const markaCode = matchingMarka ? matchingMarka.marka_code : (md.marka || '01');
+
+          const rowUnit = (md.unit || matchedInsp?.unit_name || matchedAmad?.unit_name || 'BALES').toString().trim().toUpperCase();
+          const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+          const rawNetto = Number(md.challan_gross_wt) || Number(md.netto_pnto) || 0;
+          const qChln = isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto));
+          const qRcpt = isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto));
+
+          return {
+            srl_no: index + 1,
+            receipt_grade_code: gradeCode,
+            receipt_grade_name: gradeName,
+            crop_year: md.crop_year || '2026-27',
+            challan_grade_name: gradeName,
+            agency_code: '',
+            agency_name: md.agency || '',
+            challan_marka_code: markaCode,
+            challan_marka_name: markaName,
+            netto_pnto: rawNetto,
+            quantity_chln: qChln,
+            quantity_rcpt: qRcpt,
+            unit: md.unit || rowUnit,
+            remarks: md.remarks || '',
+            marks_phota: md.marks_phota || ''
+          };
+        });
+        setDetails(newDetails);
+        return;
+      }
+
+      // Priority 2: Load directly from matchedAmad grid_details
+      if (matchedAmad) {
+        const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
+        const amadUnit = (matchedAmad.unit_name || matchedAmad.unit || 'BALES').toUpperCase();
+        let parsedGrid: any[] = [];
+        if (typeof rawGrid === 'string') {
+          try { 
+            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
+            if (Array.isArray(p)) parsedGrid = p;
+          } catch (e) {}
+        } else if (Array.isArray(rawGrid)) {
+          parsedGrid = rawGrid;
+        }
+
+        if (parsedGrid && parsedGrid.length > 0) {
+          const mappedGrid = parsedGrid.map((row: any, idx: number) => {
+            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
+            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
+            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
+            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
+
+            return {
+              srl_no: Number(row.srl_no) || idx + 1,
+              receipt_grade_code: row.receipt_grade_code || row.grade_code || '',
+              receipt_grade_name: row.receipt_grade_name || row.grade_name || row.challan_grade_name || '',
+              crop_year: row.crop_year || '2026-27',
+              challan_grade_name: row.challan_grade_name || row.receipt_grade_name || row.grade_name || '',
+              agency_code: row.agency_code || '',
+              agency_name: row.agency_name || row.agency || '',
+              challan_marka_code: row.challan_marka_code || row.marka_code || '01',
+              challan_marka_name: row.challan_marka_name || row.marka_name || row.marka || 'NO MARK',
+              netto_pnto: rawNetto,
+              quantity_chln: qChln,
+              quantity_rcpt: qRcpt,
+              unit: row.unit || amadUnit,
+              remarks: row.remarks || '',
+              marks_phota: row.marks_phota || ''
+            };
+          });
+          setDetails(mappedGrid);
+        }
+      }
+    } catch (e: any) {
       console.error("Error loading Temporary M.R details:", e);
+      alert("Error loading Temporary M.R details: " + (e.message || e));
     }
   };
 
@@ -437,128 +529,178 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     }
     try {
       const mrNoUpper = mrNo.trim().toUpperCase();
-      const matchedInspection = inspectionsList.find(ins => String(ins.mr_no).trim().toUpperCase() === mrNoUpper);
+      let matchedInspection = inspectionsList.find(ins => String(ins.mr_no).trim().toUpperCase() === mrNoUpper);
 
-      if (matchedInspection) {
-        let matchedDetails: any[] = [];
-        let amadData: any = null;
+      if (!matchedInspection && supabase) {
+        const { data } = await supabase
+          .from('mill_inspection_master')
+          .select('*')
+          .or(`mr_no.eq.${mrNoUpper},arrival_no.eq.${mrNoUpper}`);
+        if (data && data.length > 0) matchedInspection = data[0];
+      }
 
-        if (supabase) {
-          const { data } = await supabase
-            .from('mill_inspection_detail')
-            .select('*')
-            .eq('mr_no', mrNoUpper)
-            .order('srl_no', { ascending: true });
-          if (data) matchedDetails = data;
+      let matchedDetails: any[] = [];
+      let amadData: any = null;
 
-          if (matchedInspection.arrival_no || matchedInspection.ref_arrival_no) {
-            const arrNo = (matchedInspection.arrival_no || matchedInspection.ref_arrival_no).trim();
-            const { data: tDataList, error: tErr } = await supabase
-              .from('temporary_material_received')
-              .select('*')
-              .eq('temporary_arrival_no', arrNo);
+      if (supabase) {
+        const { data } = await supabase
+          .from('mill_inspection_detail')
+          .select('*')
+          .eq('mr_no', mrNoUpper)
+          .order('srl_no', { ascending: true });
+        if (data && data.length > 0) matchedDetails = data;
 
-            if (tErr) console.warn("Could not fetch temporary_arrival mapping:", tErr);
-            
-            if (tDataList && tDataList.length > 0) {
-              amadData = tDataList[0];
-            }
-          }
+        const arrNo = (matchedInspection?.arrival_no || matchedInspection?.ref_arrival_no || mrNoUpper).trim();
+        const { data: tDataList } = await supabase
+          .from('temporary_material_received')
+          .select('*')
+          .or(`temporary_arrival_no.eq.${arrNo},amad_no.eq.${arrNo},temporary_arrival_no.eq.${mrNoUpper}`);
+        
+        if (tDataList && tDataList.length > 0) {
+          amadData = tDataList[0];
+        }
+      }
+
+      if (!matchedInspection && !amadData) {
+        await loadDetailsFromAmad(mrNoUpper);
+        return;
+      }
+
+      const finalPoNo = matchedInspection?.po_no || amadData?.po_no || '';
+      const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(finalPoNo).trim().toUpperCase());
+
+      setFormData(prev => ({
+        ...prev,
+        mr_no: matchedInspection?.mr_no || amadData?.temporary_arrival_no || mrNoUpper,
+        po_no: finalPoNo || prev.po_no || '',
+        po_date: matchedPo?.po_date || matchedPo?.s_date || matchedInspection?.po_date || amadData?.date || amadData?.lorry_date || prev.po_date || '',
+        jci: matchedInspection?.jci || amadData?.jci || prev.jci || 'No',
+        supplier: (matchedInspection?.supplier_name || amadData?.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
+        challan_supplier: (matchedInspection?.challan_supplier || amadData?.challan_supplier || matchedInspection?.supplier_name || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
+        broker: (matchedInspection?.broker_name || amadData?.broker || matchedPo?.broker || prev.broker || '').toUpperCase(),
+        date: matchedInspection?.arrival_date || amadData?.date || prev.date,
+        lorry_number: (matchedInspection as any)?.lorry_number || (matchedInspection as any)?.lorry_no || (matchedInspection as any)?.vehicle_no || (amadData as any)?.lorry_number || (amadData as any)?.lorry_no || (amadData as any)?.vehicle_no || prev.lorry_number,
+        transporter_name: matchedInspection?.transporter_name || amadData?.transporter_name || prev.transporter_name,
+        challan_rr_no: matchedInspection?.challan_rr_no || (matchedInspection as any)?.challan_railway_receipt_no || amadData?.challan_rr_no || amadData?.challan_railway_receipt_no || prev.challan_rr_no,
+        challan_railway_receipt_no: (matchedInspection as any)?.challan_railway_receipt_no || matchedInspection?.challan_rr_no || amadData?.challan_railway_receipt_no || amadData?.challan_rr_no || prev.challan_railway_receipt_no,
+        challan_rr_date: matchedInspection?.challan_rr_date || amadData?.lorry_date || prev.challan_rr_date,
+        pan_no: matchedInspection?.pan_no || amadData?.pan_no || prev.pan_no,
+        consignment_note: (matchedInspection as any)?.consignment_note || matchedInspection?.consignment_note_no || (matchedInspection as any)?.consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note,
+        consignment_note_no: (matchedInspection as any)?.consignment_note || matchedInspection?.consignment_note_no || (matchedInspection as any)?.consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note_no,
+        consignment_note_date: (matchedInspection as any)?.consignment_note_date || (matchedInspection as any)?.consignment_date || amadData?.consignment_note_date || prev.consignment_note_date,
+        di_no: matchedInspection?.di_no || amadData?.di_no || prev.di_no,
+        di_date: matchedInspection?.di_date || amadData?.di_date || prev.di_date,
+        part_date: matchedInspection?.part_date || amadData?.part_date || prev.part_date,
+        invoice_no: matchedInspection?.invoice_no || amadData?.invoice_no || prev.invoice_no,
+        invoice_date: matchedInspection?.invoice_date || amadData?.invoice_date || prev.invoice_date,
+        ptf: matchedInspection?.ptf || amadData?.ptf || prev.ptf,
+        lorry_returned: matchedInspection?.lorry_returned || amadData?.lorry_returned || prev.lorry_returned,
+        lorry_returned_other_mill: matchedInspection?.lorry_returned_other_mill || amadData?.lorry_returned_other_mill || prev.lorry_returned_other_mill,
+        arrival_area_code: matchedInspection?.arrival_area_code || amadData?.arrival_area_code || prev.arrival_area_code,
+        arrival_area_name: matchedInspection?.arrival_area_name || amadData?.arrival_area_name || prev.arrival_area_name,
+        unit_code: matchedInspection?.unit_code || amadData?.unit_code || prev.unit_code,
+        unit_name: matchedInspection?.unit_name || amadData?.unit_name || prev.unit_name,
+        way_bill_no: matchedInspection?.way_bill_no || amadData?.way_bill_no || prev.way_bill_no,
+        way_bill_date: matchedInspection?.way_bill_date || amadData?.way_bill_date || prev.way_bill_date,
+        apmc_fees: matchedInspection?.apmc_fees || amadData?.apmc_fees || prev.apmc_fees,
+        remarks: matchedInspection?.remarks || amadData?.remarks || prev.remarks,
+        temporary_arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
+        arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
+        temporary_arrival_date: matchedInspection?.arrival_date || amadData?.date || prev.temporary_arrival_date,
+        challan_material_weight: Number(matchedInspection?.challan_material_weight) || Number(amadData?.challan_material_weight) || Number(prev.challan_material_weight),
+        actual_gross_weight: Number(matchedInspection?.actual_gross_weight) || Number(amadData?.actual_gross_weight) || Number(prev.actual_gross_weight),
+        actual_tare_weight: Number(matchedInspection?.actual_tare_weight) || Number(amadData?.actual_tare_weight) || Number(prev.actual_tare_weight),
+        supplier_net_weight: Number(matchedInspection?.supplier_net_weight) || Number(amadData?.supplier_net_weight) || Number(prev.supplier_net_weight),
+        supplier_challan_gross: Number(matchedInspection?.supplier_challan_gross) || Number(amadData?.supplier_challan_gross) || Number(prev.supplier_challan_gross),
+        supplier_tare_weight: Number(matchedInspection?.supplier_tare_weight) || Number(amadData?.supplier_tare_weight) || Number(prev.supplier_tare_weight),
+        electronic_net_weight: Number(matchedInspection?.electronic_net_weight) || Number(amadData?.electronic_net_weight) || Number(prev.electronic_net_weight),
+        electronic_gross_weight: Number(matchedInspection?.electronic_gross_weight) || Number(amadData?.electronic_gross_weight) || Number(prev.electronic_gross_weight),
+        electronic_tare_weight: Number(matchedInspection?.electronic_tare_weight) || Number(amadData?.electronic_tare_weight) || Number(prev.electronic_tare_weight),
+        weight_reduced: Number(matchedInspection?.weight_reduced) || Number(amadData?.weight_reduced) || Number(prev.weight_reduced)
+      }));
+
+      // Priority 1: Map from Inspection Details
+      if (matchedDetails && matchedDetails.length > 0) {
+        const newDetails = matchedDetails.map((md: any, index: number) => {
+          const matchingGrade = grades.find(g => 
+            String(g.grade_code).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() || 
+            String(g.grade_name).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() ||
+            String(g.grade_name).trim().toUpperCase() === String(md.arrival_grade).trim().toUpperCase()
+          );
+          const gradeName = matchingGrade ? matchingGrade.grade_name : (md.stock_grade_name || md.arrival_grade || '');
+          const gradeCode = matchingGrade ? matchingGrade.grade_code : (md.stock_grade_code || '');
+
+          const matchingMarka = markas.find(m => 
+            String(m.marka_code).trim().toUpperCase() === String(md.marka).trim().toUpperCase() || 
+            String(m.marka_name).trim().toUpperCase() === String(md.marka).trim().toUpperCase()
+          );
+          const markaName = matchingMarka ? matchingMarka.marka_name : (md.marka || 'NO MARK');
+          const markaCode = matchingMarka ? matchingMarka.marka_code : (md.marka || '01');
+
+          const rowUnit = (md.unit || matchedInspection?.unit_name || amadData?.unit_name || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+          const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+          const rawNetto = Number(md.challan_gross_wt) || Number(md.netto_pnto) || 0;
+
+          return {
+            srl_no: index + 1,
+            receipt_grade_code: gradeCode,
+            receipt_grade_name: gradeName,
+            crop_year: md.crop_year || '2026-27',
+            challan_grade_name: gradeName,
+            agency_code: '',
+            agency_name: md.agency || '',
+            challan_marka_code: markaCode,
+            challan_marka_name: markaName,
+            netto_pnto: rawNetto,
+            quantity_chln: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
+            quantity_rcpt: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
+            unit: md.unit || rowUnit,
+            remarks: '',
+            marks_phota: md.marks_phota || ''
+          };
+        });
+        setDetails(newDetails);
+      } else if (amadData) {
+        // Priority 2: Fallback to amadData grid_details if inspection details has 0 rows
+        const rawGrid = amadData.grid_details || amadData.details || amadData.items;
+        const amadUnit = (amadData.unit_name || amadData.unit || 'BALES').toUpperCase();
+        let parsedGrid: any[] = [];
+        if (typeof rawGrid === 'string') {
+          try { 
+            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
+            if (Array.isArray(p)) parsedGrid = p;
+          } catch (e) {}
+        } else if (Array.isArray(rawGrid)) {
+          parsedGrid = rawGrid;
         }
 
-        const finalPoNo = matchedInspection.po_no || amadData?.po_no || '';
-        const matchedPo = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === String(finalPoNo).trim().toUpperCase());
-
-        setFormData(prev => ({
-          ...prev,
-          mr_no: matchedInspection.mr_no,
-          po_no: finalPoNo || prev.po_no || '',
-          po_date: matchedPo?.po_date || matchedPo?.s_date || matchedInspection.po_date || amadData?.date || amadData?.lorry_date || prev.po_date || '',
-          jci: matchedInspection.jci || amadData?.jci || prev.jci || 'No',
-          supplier: (matchedInspection.supplier_name || amadData?.supplier || matchedPo?.supplier || prev.supplier || '').toUpperCase(),
-          challan_supplier: (matchedInspection.challan_supplier || amadData?.challan_supplier || matchedInspection.supplier_name || matchedPo?.challan_supplier || matchedPo?.supplier || prev.challan_supplier || '').toUpperCase(),
-          broker: (matchedInspection.broker_name || amadData?.broker || matchedPo?.broker || prev.broker || '').toUpperCase(),
-          date: matchedInspection.arrival_date || amadData?.date || prev.date,
-          lorry_number: (matchedInspection as any).lorry_number || (matchedInspection as any).lorry_no || (matchedInspection as any).vehicle_no || (amadData as any)?.lorry_number || (amadData as any)?.lorry_no || (amadData as any)?.vehicle_no || prev.lorry_number,
-          transporter_name: matchedInspection.transporter_name || amadData?.transporter_name || prev.transporter_name,
-          challan_rr_no: matchedInspection.challan_rr_no || (matchedInspection as any).challan_railway_receipt_no || amadData?.challan_rr_no || amadData?.challan_railway_receipt_no || prev.challan_rr_no,
-          challan_railway_receipt_no: (matchedInspection as any).challan_railway_receipt_no || matchedInspection.challan_rr_no || amadData?.challan_railway_receipt_no || amadData?.challan_rr_no || prev.challan_railway_receipt_no,
-          challan_rr_date: matchedInspection.challan_rr_date || amadData?.lorry_date || prev.challan_rr_date,
-          pan_no: matchedInspection.pan_no || amadData?.pan_no || prev.pan_no,
-          consignment_note: (matchedInspection as any).consignment_note || matchedInspection.consignment_note_no || (matchedInspection as any).consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note,
-          consignment_note_no: (matchedInspection as any).consignment_note || matchedInspection.consignment_note_no || (matchedInspection as any).consignment_no || amadData?.consignment_note || amadData?.consignment_note_no || prev.consignment_note_no,
-          consignment_note_date: (matchedInspection as any).consignment_note_date || (matchedInspection as any).consignment_date || amadData?.consignment_note_date || prev.consignment_note_date,
-          di_no: matchedInspection.di_no || amadData?.di_no || prev.di_no,
-          di_date: matchedInspection.di_date || amadData?.di_date || prev.di_date,
-          part_date: matchedInspection.part_date || amadData?.part_date || prev.part_date,
-          invoice_no: matchedInspection.invoice_no || amadData?.invoice_no || prev.invoice_no,
-          invoice_date: matchedInspection.invoice_date || amadData?.invoice_date || prev.invoice_date,
-          ptf: matchedInspection.ptf || amadData?.ptf || prev.ptf,
-          lorry_returned: matchedInspection.lorry_returned || amadData?.lorry_returned || prev.lorry_returned,
-          lorry_returned_other_mill: matchedInspection.lorry_returned_other_mill || amadData?.lorry_returned_other_mill || prev.lorry_returned_other_mill,
-          arrival_area_code: matchedInspection.arrival_area_code || amadData?.arrival_area_code || prev.arrival_area_code,
-          arrival_area_name: matchedInspection.arrival_area_name || amadData?.arrival_area_name || prev.arrival_area_name,
-          unit_code: matchedInspection.unit_code || amadData?.unit_code || prev.unit_code,
-          unit_name: matchedInspection.unit_name || amadData?.unit_name || prev.unit_name,
-          way_bill_no: matchedInspection.way_bill_no || amadData?.way_bill_no || prev.way_bill_no,
-          way_bill_date: matchedInspection.way_bill_date || amadData?.way_bill_date || prev.way_bill_date,
-          apmc_fees: matchedInspection.apmc_fees || amadData?.apmc_fees || prev.apmc_fees,
-          remarks: matchedInspection.remarks || amadData?.remarks || prev.remarks,
-          temporary_arrival_no: matchedInspection.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
-          arrival_no: matchedInspection.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
-          temporary_arrival_date: matchedInspection.arrival_date || amadData?.date || prev.temporary_arrival_date,
-          challan_material_weight: Number(matchedInspection.challan_material_weight) || Number(amadData?.challan_material_weight) || Number(prev.challan_material_weight),
-          actual_gross_weight: Number(matchedInspection.actual_gross_weight) || Number(amadData?.actual_gross_weight) || Number(prev.actual_gross_weight),
-          actual_tare_weight: Number(matchedInspection.actual_tare_weight) || Number(amadData?.actual_tare_weight) || Number(prev.actual_tare_weight),
-          supplier_net_weight: Number(matchedInspection.supplier_net_weight) || Number(amadData?.supplier_net_weight) || Number(prev.supplier_net_weight),
-          supplier_challan_gross: Number(matchedInspection.supplier_challan_gross) || Number(amadData?.supplier_challan_gross) || Number(prev.supplier_challan_gross),
-          supplier_tare_weight: Number(matchedInspection.supplier_tare_weight) || Number(amadData?.supplier_tare_weight) || Number(prev.supplier_tare_weight),
-          electronic_net_weight: Number(matchedInspection.electronic_net_weight) || Number(amadData?.electronic_net_weight) || Number(prev.electronic_net_weight),
-          electronic_gross_weight: Number(matchedInspection.electronic_gross_weight) || Number(amadData?.electronic_gross_weight) || Number(prev.electronic_gross_weight),
-          electronic_tare_weight: Number(matchedInspection.electronic_tare_weight) || Number(amadData?.electronic_tare_weight) || Number(prev.electronic_tare_weight),
-          weight_reduced: Number(matchedInspection.weight_reduced) || Number(amadData?.weight_reduced) || Number(prev.weight_reduced)
-        }));
-
-        if (matchedDetails && matchedDetails.length > 0) {
-          const newDetails = matchedDetails.map((md: any, index: number) => {
-            const matchingGrade = grades.find(g => 
-              String(g.grade_code).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() || 
-              String(g.grade_name).trim().toUpperCase() === String(md.stock_grade_code).trim().toUpperCase() ||
-              String(g.grade_name).trim().toUpperCase() === String(md.arrival_grade).trim().toUpperCase()
-            );
-            const gradeName = matchingGrade ? matchingGrade.grade_name : (md.stock_grade_name || md.arrival_grade || '');
-            const gradeCode = matchingGrade ? matchingGrade.grade_code : (md.stock_grade_code || '');
-
-            const matchingMarka = markas.find(m => 
-              String(m.marka_code).trim().toUpperCase() === String(md.marka).trim().toUpperCase() || 
-              String(m.marka_name).trim().toUpperCase() === String(md.marka).trim().toUpperCase()
-            );
-            const markaName = matchingMarka ? matchingMarka.marka_name : (md.marka || 'NO MARK');
-            const markaCode = matchingMarka ? matchingMarka.marka_code : (md.marka || '01');
-
-            const rowUnit = (md.unit || matchedInspection.unit_name || amadData?.unit_name || formData.unit_name || 'BALES').toString().trim().toUpperCase();
+        if (parsedGrid && parsedGrid.length > 0) {
+          const mappedGrid = parsedGrid.map((row: any, idx: number) => {
+            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
             const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
-            const rawNetto = Number(md.challan_gross_wt) || Number(md.netto_pnto) || 0;
+            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
+            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
+            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
 
             return {
-              srl_no: index + 1,
-              receipt_grade_code: gradeCode,
-              receipt_grade_name: gradeName,
-              crop_year: md.crop_year || '2026-27',
-              challan_grade_name: gradeName,
-              agency_code: '',
-              agency_name: md.agency || '',
-              challan_marka_code: markaCode,
-              challan_marka_name: markaName,
+              srl_no: Number(row.srl_no) || idx + 1,
+              receipt_grade_code: row.receipt_grade_code || row.grade_code || '',
+              receipt_grade_name: row.receipt_grade_name || row.grade_name || row.challan_grade_name || '',
+              crop_year: row.crop_year || '2026-27',
+              challan_grade_name: row.challan_grade_name || row.receipt_grade_name || row.grade_name || '',
+              agency_code: row.agency_code || '',
+              agency_name: row.agency_name || row.agency || '',
+              challan_marka_code: row.challan_marka_code || row.marka_code || '01',
+              challan_marka_name: row.challan_marka_name || row.marka_name || row.marka || 'NO MARK',
               netto_pnto: rawNetto,
-              quantity_chln: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
-              quantity_rcpt: isLoose ? 0 : (Number(md.quantity) || Math.round(rawNetto)),
-              unit: md.unit || rowUnit,
-              remarks: '',
-              marks_phota: md.marks_phota || ''
+              quantity_chln: qChln,
+              quantity_rcpt: qRcpt,
+              unit: row.unit || amadUnit,
+              remarks: row.remarks || '',
+              marks_phota: row.marks_phota || ''
             };
           });
-          setDetails(newDetails);
+          setDetails(mappedGrid);
         }
       }
     } catch (e: any) {
