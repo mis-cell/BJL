@@ -256,12 +256,12 @@ export default function SaudaEntry({
   };
 
   const getUnitWeightKg = (unitType?: string): number | null => {
-    const clean = String(unitType || '').trim().toUpperCase();
-    if (clean.includes('DRUM')) {
+    const clean = String(unitType || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
+    if (clean.includes('DRUM') || clean === 'DR') {
       return 50; // 50 KG per unit for Drums
     }
-    if (clean === 'BALES' || clean === 'BALE') {
-      return 147.5; // 147.5 KG per unit for standard Bales
+    if (clean === 'BALES' || clean === 'BALE' || clean === 'BAL' || clean === 'BELL' || clean === 'BELLS' || clean === 'BEL') {
+      return 147.5; // 147.5 KG per unit for standard Bales / Bell
     }
     // LOOSE, P.BALES, H.BALES, etc. are blank manual inputs
     return null;

@@ -25,16 +25,16 @@ export interface PoCalculationModalProps {
 /**
  * Normalizes Unit Types according to standard Jute Mill classifications:
  * - DRUMS: Calculated using custom/50kg weight per unit
- * - BALES: Calculated using fixed 147.5 kg per bale
+ * - BALES / BELL: Calculated using fixed 147.5 kg per bale
  * - LOOSE, P. BALES, H. BALES: Non-calculated (blank unit counts)
  */
 export function normalizeUnitType(name: string): 'DRUMS' | 'BALES' | 'LOOSE' | 'P. BALES' | 'H. BALES' | 'OTHER' {
-  if (!name) return 'DRUMS';
+  if (!name) return 'BALES';
   const clean = name.trim().toUpperCase().replace(/[\s_.-]/g, '');
   if (clean === 'DRUMS' || clean === 'DRUM' || clean === 'DR') return 'DRUMS';
   if (clean === 'PBALES' || clean === 'PBALE' || clean === 'PB') return 'P. BALES';
-  if (clean === 'HBALES' || clean === 'HBALE' || clean === 'HB') return 'H. BALES';
-  if (clean === 'BALES' || clean === 'BALE' || clean === 'BAL') return 'BALES';
+  if (clean === 'HBALES' || clean === 'HBALE' || clean === 'HB' || clean === 'HALFBALES' || clean === 'HALFBALE') return 'H. BALES';
+  if (clean === 'BALES' || clean === 'BALE' || clean === 'BAL' || clean === 'BELL' || clean === 'BELLS' || clean === 'BEL') return 'BALES';
   if (clean === 'LOOSE' || clean === 'LOS') return 'LOOSE';
   return 'OTHER';
 }
@@ -47,30 +47,30 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   setCalcData,
   isPtf,
   purchaseUnitName,
-  unitList = ['DRUMS', 'BALES', 'LOOSE', 'P. BALES', 'H. BALES'],
-  weightUnitKgs = '50',
+  unitList = ['BALES', 'DRUMS', 'LOOSE', 'P. BALES', 'H. BALES'],
+  weightUnitKgs = '147.5',
   onUnitTypeChange
 }) => {
   if (!isOpen) return null;
 
   // Local state for interactive, responsive calculations
-  const [localUnitType, setLocalUnitType] = useState<string>(purchaseUnitName || 'DRUMS');
-  const [localWeightUnitKgs, setLocalWeightUnitKgs] = useState<string>(weightUnitKgs || '50');
+  const [localUnitType, setLocalUnitType] = useState<string>(purchaseUnitName || 'BALES');
+  const [localWeightUnitKgs, setLocalWeightUnitKgs] = useState<string>(weightUnitKgs || '147.5');
   const [localLorries, setLocalLorries] = useState<string>(calcData.total_lorries || '1');
-  const [localWeight, setLocalWeight] = useState<string>(calcData.weight_per_lorry || '13500');
+  const [localWeight, setLocalWeight] = useState<string>(calcData.weight_per_lorry || '29.500');
   const [localTotalUnits, setLocalTotalUnits] = useState<string>(calcData.total_units || '');
   const [localUnitsPerLorry, setLocalUnitsPerLorry] = useState<string>(calcData.units_per_lorry || '');
 
   // Keep local state in sync when modal opens
   useEffect(() => {
     if (isOpen) {
-      const uType = purchaseUnitName || 'DRUMS';
+      const uType = purchaseUnitName || 'BALES';
       const norm = normalizeUnitType(uType);
       setLocalUnitType(uType);
 
-      let initialWtUnit = weightUnitKgs;
+      let initialWtUnit = '';
       if (norm === 'DRUMS') {
-        initialWtUnit = weightUnitKgs && parseFloat(weightUnitKgs) > 0 ? weightUnitKgs : '50';
+        initialWtUnit = (weightUnitKgs && parseFloat(weightUnitKgs) > 0 && parseFloat(weightUnitKgs) !== 147.5) ? weightUnitKgs : '50';
       } else if (norm === 'BALES') {
         initialWtUnit = '147.5';
       } else {
@@ -81,7 +81,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       const lorriesStr = calcData.total_lorries || '1';
       setLocalLorries(lorriesStr);
       
-      const wtStr = calcData.weight_per_lorry || '13500';
+      const wtStr = calcData.weight_per_lorry || '29.500';
       setLocalWeight(wtStr);
 
       recomputeUnits(lorriesStr, wtStr, uType, initialWtUnit, calcData.total_units, calcData.units_per_lorry);
@@ -94,7 +94,11 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   };
 
   /**
-   * Centralized dynamic recomputation engine
+   * Centralized dynamic recomputation engine:
+   * Weight / Lorry is in Metric Tons (e.g. 29.500 MT -> 29,500 Kg, or 15 MT -> 15,000 Kg).
+   * Weight/Unit is in Kg (e.g. 50 Kg for DRUMS, 147.5 Kg for BALES / BELL).
+   * Units / Lorry = (Weight/Lorry in MT * 1000) ÷ Weight/Unit (Kg)
+   * Total Units = Units / Lorry * Lorries
    */
   const recomputeUnits = (
     lorriesVal: string,
@@ -105,8 +109,8 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
     existingUnitsPerLorry?: string
   ) => {
     const norm = normalizeUnitType(unitTypeVal);
-    const lorries = parseFloat(lorriesVal) || 0;
-    const weight = parseFloat(weightVal) || 0;
+    const lorries = Math.max(1, parseFloat(lorriesVal) || 1);
+    const rawWeight = parseFloat(weightVal) || 0;
 
     // LOOSE, P. BALES, H. BALES: Always keep units blank
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') {
@@ -122,7 +126,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       return;
     }
 
-    // Determine weight per unit
+    // Determine weight per unit (Kg)
     let unitWeight = 0;
     if (norm === 'DRUMS') {
       unitWeight = parseFloat(weightUnitKgsVal) || 50;
@@ -130,7 +134,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       unitWeight = 147.5;
     }
 
-    if (unitWeight <= 0 || weight <= 0) {
+    if (unitWeight <= 0 || rawWeight <= 0) {
       if (existingTotalUnits && parseFloat(existingTotalUnits) > 0) {
         const tot = parseFloat(existingTotalUnits);
         const perLorry = lorries > 0 ? tot / lorries : tot;
@@ -143,11 +147,14 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       return;
     }
 
-    // Standard formula:
-    // Total Units = Weight ÷ Weight/Unit
-    // Units/Lorry = Weight ÷ Weight/Unit ÷ Lorries = Total Units ÷ Lorries
-    const totalUnits = weight / unitWeight;
-    const unitsPerLorry = lorries > 0 ? totalUnits / lorries : totalUnits;
+    // Convert raw weight per lorry to KG:
+    // If rawWeight < 100 (e.g. 29.500 or 15.000 MT), weight per lorry in KG = rawWeight * 1000
+    // If rawWeight >= 100 (e.g. 29500 KG), weight in KG = rawWeight
+    const wtPerLorryMt = rawWeight >= 100 ? rawWeight / 1000 : rawWeight;
+    const wtPerLorryKg = wtPerLorryMt * 1000;
+
+    const unitsPerLorry = Math.round(wtPerLorryKg / unitWeight);
+    const totalUnits = unitsPerLorry * lorries;
 
     const totUnitsStr = formatNumber(totalUnits);
     const unitsPerLorryStr = formatNumber(unitsPerLorry);
@@ -166,7 +173,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
   const handleLorriesChange = (val: string) => {
     setLocalLorries(val);
-    const lorries = parseFloat(val) || 0;
+    const lorries = Math.max(1, parseFloat(val) || 1);
     const norm = normalizeUnitType(localUnitType);
 
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') {
@@ -175,16 +182,16 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       return;
     }
 
-    // When lorries change, Total Units remains constant (for full weight), Units/Lorry changes
-    const totUnits = parseFloat(localTotalUnits) || 0;
-    if (totUnits > 0 && lorries > 0) {
-      const unitsPerLorry = totUnits / lorries;
-      const unitsPerLorryStr = formatNumber(unitsPerLorry);
-      setLocalUnitsPerLorry(unitsPerLorryStr);
+    // When lorries change, Units/Lorry remains constant, Total Units = Units/Lorry * Lorries
+    const unitsPerLorry = parseFloat(localUnitsPerLorry) || 0;
+    if (unitsPerLorry > 0 && lorries > 0) {
+      const totUnits = Math.round(unitsPerLorry * lorries);
+      const totUnitsStr = formatNumber(totUnits);
+      setLocalTotalUnits(totUnitsStr);
       setCalcData(prev => ({
         ...prev,
         total_lorries: val,
-        units_per_lorry: unitsPerLorryStr
+        total_units: totUnitsStr
       }));
     } else {
       recomputeUnits(val, localWeight, localUnitType, localWeightUnitKgs);
@@ -197,7 +204,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
     let newWeightUnit = '';
     if (norm === 'DRUMS') {
-      newWeightUnit = localWeightUnitKgs && parseFloat(localWeightUnitKgs) > 0 ? localWeightUnitKgs : '50';
+      newWeightUnit = '50';
     } else if (norm === 'BALES') {
       newWeightUnit = '147.5';
     } else {
@@ -228,22 +235,22 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') return;
 
     const unitsPerLorry = parseFloat(val) || 0;
-    const lorries = parseFloat(localLorries) || 1;
+    const lorries = Math.max(1, parseFloat(localLorries) || 1);
     const unitWt = norm === 'DRUMS' ? (parseFloat(localWeightUnitKgs) || 50) : 147.5;
 
     if (unitsPerLorry > 0 && lorries > 0 && unitWt > 0) {
-      const totUnits = unitsPerLorry * lorries;
-      const calcWeight = totUnits * unitWt;
+      const totUnits = Math.round(unitsPerLorry * lorries);
+      const wtPerLorryKg = unitsPerLorry * unitWt;
+      const wtPerLorryMt = (wtPerLorryKg / 1000).toFixed(3);
       const totUnitsStr = formatNumber(totUnits);
-      const wtStr = formatNumber(calcWeight);
 
       setLocalTotalUnits(totUnitsStr);
-      setLocalWeight(wtStr);
+      setLocalWeight(wtPerLorryMt);
       setCalcData(prev => ({
         ...prev,
         units_per_lorry: val,
         total_units: totUnitsStr,
-        weight_per_lorry: wtStr
+        weight_per_lorry: wtPerLorryMt
       }));
     }
   };
@@ -254,22 +261,22 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') return;
 
     const totUnits = parseFloat(val) || 0;
-    const lorries = parseFloat(localLorries) || 1;
+    const lorries = Math.max(1, parseFloat(localLorries) || 1);
     const unitWt = norm === 'DRUMS' ? (parseFloat(localWeightUnitKgs) || 50) : 147.5;
 
     if (totUnits > 0 && unitWt > 0) {
-      const unitsPerLorry = lorries > 0 ? totUnits / lorries : totUnits;
-      const calcWeight = totUnits * unitWt;
+      const unitsPerLorry = Math.round(totUnits / lorries);
+      const wtPerLorryKg = unitsPerLorry * unitWt;
+      const wtPerLorryMt = (wtPerLorryKg / 1000).toFixed(3);
       const unitsPerLorryStr = formatNumber(unitsPerLorry);
-      const wtStr = formatNumber(calcWeight);
 
       setLocalUnitsPerLorry(unitsPerLorryStr);
-      setLocalWeight(wtStr);
+      setLocalWeight(wtPerLorryMt);
       setCalcData(prev => ({
         ...prev,
         total_units: val,
         units_per_lorry: unitsPerLorryStr,
-        weight_per_lorry: wtStr
+        weight_per_lorry: wtPerLorryMt
       }));
     }
   };
@@ -277,12 +284,14 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   const handleApplyClick = () => {
     const norm = normalizeUnitType(localUnitType);
     const isNonUnit = norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES';
+    const rawWeight = parseFloat(localWeight) || 0;
+    const wtPerLorryFormatted = rawWeight >= 100 ? (rawWeight / 1000).toFixed(3) : rawWeight.toFixed(3);
 
     const appliedPayload = {
       total_lorries: localLorries || '1',
       units_per_lorry: isNonUnit ? '' : localUnitsPerLorry,
       total_units: isNonUnit ? '' : localTotalUnits,
-      weight_per_lorry: localWeight,
+      weight_per_lorry: wtPerLorryFormatted,
       purchase_unit_name: localUnitType,
       weight_unit_kgs: norm === 'BALES' ? '147.5' : (norm === 'DRUMS' ? (localWeightUnitKgs || '50') : '')
     };
@@ -300,17 +309,20 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   const norm = normalizeUnitType(localUnitType);
   const isNonUnit = norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES';
   const unitWeightForFormula = norm === 'DRUMS' ? (parseFloat(localWeightUnitKgs) || 50) : 147.5;
+  const rawNumWeight = parseFloat(localWeight) || 0;
+  const displayKgWeight = rawNumWeight < 100 ? rawNumWeight * 1000 : rawNumWeight;
+  const lorriesNum = Math.max(1, parseFloat(localLorries) || 1);
 
   return (
     <div className="fixed inset-0 z-[1200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
       <div 
-        className="bg-[#D1D5DB] border-2 border-t-white border-l-white border-r-gray-700 border-b-gray-700 shadow-2xl w-full max-w-[420px] p-2 text-xs font-sans text-black select-none rounded-none"
+        className="bg-[#D1D5DB] border-2 border-t-white border-l-white border-r-gray-700 border-b-gray-700 shadow-2xl w-full max-w-[440px] p-2 text-xs font-sans text-black select-none rounded-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="calc-helper-title"
       >
         {/* Compact Title Bar */}
-        <div className="flex items-center justify-between bg-gradient-to-r from-[#1E3A8A] to-[#1E40AF] text-white px-2 py-1 font-bold mb-2 shadow-xs">
+        <div className="flex items-center justify-between bg-gradient-to-r from-[#1E3A8A] to-[#1E40AF] text-white px-2.5 py-1 font-bold mb-2 shadow-xs">
           <div className="flex items-center gap-1.5 truncate">
             <Calculator className="w-3.5 h-3.5 text-amber-300 shrink-0" />
             <span id="calc-helper-title" className="tracking-wide text-xs">Calculate Contract Units & MT helper</span>
@@ -326,7 +338,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
         </div>
 
         {/* Form Body: Compact Layout */}
-        <div className="space-y-1.5 px-1 py-0.5 bg-gray-100/90 border border-gray-400 p-2 text-black">
+        <div className="space-y-1.5 px-1 py-0.5 bg-gray-100/90 border border-gray-400 p-2.5 text-black">
           
           {/* Row 1: Total No. of Lorries */}
           <div className="flex items-center justify-between gap-2">
@@ -354,9 +366,9 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
                 id="modal_unit_type"
                 value={localUnitType}
                 onChange={(e) => handleUnitTypeChange(e.target.value)}
-                className="w-24 bg-white border border-gray-500 px-1 py-0.5 font-bold text-black cursor-pointer text-[11px] outline-none"
+                className="w-28 bg-white border border-gray-500 px-1.5 py-0.5 font-bold text-black cursor-pointer text-[11px] outline-none"
               >
-                {Array.from(new Set([...unitList, 'DRUMS', 'BALES', 'LOOSE', 'P. BALES', 'H. BALES'])).map((u) => (
+                {Array.from(new Set([...unitList, 'BALES', 'DRUMS', 'LOOSE', 'P. BALES', 'H. BALES'])).map((u) => (
                   <option key={u} value={u}>{u}</option>
                 ))}
               </select>
@@ -369,11 +381,12 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
                     step="any"
                     value={localWeightUnitKgs}
                     onChange={(e) => handleWeightUnitKgsChange(e.target.value)}
-                    className="w-12 bg-white border border-gray-500 px-1 py-0.5 font-mono font-bold text-right text-black text-[11px] outline-none"
+                    className="w-14 bg-white border border-gray-500 px-1 py-0.5 font-mono font-bold text-right text-black text-[11px] outline-none"
                   />
+                  <span className="text-[10px] font-bold text-gray-600">Kg</span>
                 </div>
               ) : norm === 'BALES' ? (
-                <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1 py-0.5 rounded-none whitespace-nowrap">
+                <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 whitespace-nowrap">
                   147.5 Kg
                 </span>
               ) : (
@@ -426,9 +439,12 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
           {/* Row 5: Weight / Lorry (M.Ton) */}
           <div className="flex items-center justify-between gap-2">
-            <label htmlFor="modal_weight_per_lorry" className="font-bold text-gray-900 whitespace-nowrap">
-              Weight / Lorry (M.Ton):
-            </label>
+            <div>
+              <label htmlFor="modal_weight_per_lorry" className="font-bold text-gray-900 whitespace-nowrap">
+                Weight / Lorry (M.Ton):
+              </label>
+              <div className="text-[10px] text-indigo-700 font-medium">1 M.Ton = 1,000 Kg</div>
+            </div>
             <input 
               id="modal_weight_per_lorry"
               type="number"
@@ -440,28 +456,28 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
           </div>
 
           {/* Calculation Live Formula Preview */}
-          <div className="bg-blue-50/80 border border-blue-200 p-1.5 rounded-none text-[10px] text-blue-950 font-mono">
+          <div className="bg-blue-50/90 border border-blue-200 p-2 rounded-none text-[10.5px] text-blue-950 font-mono">
             {isNonUnit ? (
               <span className="font-sans text-gray-600 italic">
-                Unit Type <strong>{localUnitType}</strong> does not calculate unit quantities (remains blank).
+                Unit Type <strong>{localUnitType}</strong> does not calculate unit quantities (remains blank). Total Contract = {((rawNumWeight >= 100 ? rawNumWeight / 1000 : rawNumWeight) * lorriesNum).toFixed(3)} MT.
               </span>
-            ) : parseFloat(localWeight) > 0 ? (
-              <div className="space-y-0.5">
+            ) : rawNumWeight > 0 ? (
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Total Units:</span>
+                  <span className="text-gray-600 font-sans font-medium">Units / Lorry:</span>
                   <span className="font-bold text-blue-900">
-                    {localWeight} ÷ {unitWeightForFormula} = <strong>{localTotalUnits || '0'} {localUnitType}</strong>
+                    {localWeight} MT ({displayKgWeight.toLocaleString()} Kg) ÷ {unitWeightForFormula} Kg = <strong>{localUnitsPerLorry || '0'} {localUnitType} / lorry</strong>
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-t border-blue-200/60 pt-0.5">
-                  <span className="text-gray-600">Units / Lorry:</span>
+                  <span className="text-gray-600 font-sans font-medium">Total Units:</span>
                   <span className="font-bold text-emerald-900">
-                    {localTotalUnits || '0'} ÷ {localLorries || '1'} = <strong>{localUnitsPerLorry || '0'} / lorry</strong>
+                    {localUnitsPerLorry || '0'} × {lorriesNum} {lorriesNum === 1 ? 'lorry' : 'lorries'} = <strong>{localTotalUnits || '0'} {localUnitType}</strong> (Total {((rawNumWeight >= 100 ? rawNumWeight / 1000 : rawNumWeight) * lorriesNum).toFixed(3)} MT)
                   </span>
                 </div>
               </div>
             ) : (
-              <span className="text-gray-500">Enter Weight & Lorries to calculate contract units.</span>
+              <span className="text-gray-500 font-sans">Enter Weight in Metric Ton (M.Ton) to calculate contract units.</span>
             )}
           </div>
         </div>
@@ -470,7 +486,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
         <div className="flex items-center justify-end gap-2 mt-2 pt-1.5 border-t border-gray-400">
           <button 
             type="button"
-            onClick={onClose}
+            onClick={onClose} 
             className="px-3 py-1 bg-gray-200 hover:bg-gray-300 border border-gray-500 active:border-gray-700 font-bold text-black shadow-xs cursor-pointer text-xs"
           >
             Cancel

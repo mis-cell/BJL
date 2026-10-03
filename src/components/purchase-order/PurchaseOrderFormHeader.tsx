@@ -295,8 +295,26 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         value={formData.weight_unit_kgs} 
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData(prev => ({ ...prev, weight_unit_kgs: val }));
-                        }}
+                          const unitWt = parseFloat(val) || 0;
+                          const currentWeight = parseFloat(formData.weight_per_lorry) || parseFloat(formData.total_contract_mt) || 0;
+                          const lorries = Math.max(1, parseFloat(formData.total_no_of_lorries) || 1);
+                          
+                          let totalUnits = formData.total_units;
+                          let unitsPerLorry = formData.units_per_lorry;
+                          if (unitWt > 0 && currentWeight > 0) {
+                            const wtKg = currentWeight < 100 ? currentWeight * 1000 : currentWeight;
+                            const calcTot = Math.round(wtKg / unitWt);
+                            const calcPerLorry = lorries > 0 ? (calcTot / lorries) : calcTot;
+                            totalUnits = calcTot.toString();
+                            unitsPerLorry = Number.isInteger(calcPerLorry) ? calcPerLorry.toString() : Number(calcPerLorry.toFixed(2)).toString();
+                          }
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            weight_unit_kgs: val,
+                            total_units: totalUnits,
+                            units_per_lorry: unitsPerLorry
+                          }));
+                        }} 
                       />
                       <button 
                         type="button"
@@ -306,7 +324,7 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                               total_lorries: formData.total_no_of_lorries || '1',
                               units_per_lorry: formData.units_per_lorry || '',
                               total_units: formData.total_units || '',
-                              weight_per_lorry: formData.weight_per_lorry || '13500'
+                              weight_per_lorry: formData.weight_per_lorry || '29.500'
                            } as any);
                           setIsCalcOpen(true); 
                         }} 
@@ -333,33 +351,44 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                           const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
                           const isLoose = cleanName === 'LOOSE' || cleanName === 'LOS';
                           const isPBales = cleanName === 'PBALES' || cleanName === 'PBALE' || cleanName === 'PB';
-                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB';
+                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB' || cleanName === 'HALFBALES' || cleanName === 'HALFBALE';
                           const isNonUnit = isLoose || isPBales || isHBales;
 
                           if (isNonUnit) {
+                            const wtPerLorry = parseFloat(formData.weight_per_lorry) || 0;
                             setFormData(prev => ({
                               ...prev,
                               total_no_of_lorries: lorriesVal,
                               units_per_lorry: '',
-                              total_units: ''
+                              total_units: '',
+                              total_contract_mt: (wtPerLorry * (lorries || 1)).toFixed(3)
                             }));
                             return;
                           }
 
-                          const totUnits = parseFloat(formData.total_units) || 0;
                           const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
                           const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
+                          const wtPerLorryMt = parseFloat(formData.weight_per_lorry) || 0;
 
-                          if (lorries > 0 && totUnits > 0) {
-                            const unitsPerLorry = totUnits / lorries;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
-                            const totContractMt = ((totUnits * unitWt) / 1000).toFixed(3);
-                            const wtPerLorry = (parseFloat(totContractMt) / lorries).toFixed(3);
+                          if (lorries > 0 && wtPerLorryMt > 0) {
+                            const unitsPerLorry = Math.round((wtPerLorryMt * 1000) / unitWt);
+                            const totUnits = unitsPerLorry * lorries;
+                            const totContractMt = (wtPerLorryMt * lorries).toFixed(3);
                             setFormData(prev => ({
                               ...prev,
                               total_no_of_lorries: lorriesVal,
-                              units_per_lorry: unitsPerLorryStr,
-                              weight_per_lorry: wtPerLorry,
+                              units_per_lorry: unitsPerLorry.toString(),
+                              total_units: totUnits.toString(),
+                              total_contract_mt: totContractMt
+                            }));
+                          } else if (lorries > 0 && parseFloat(formData.units_per_lorry) > 0) {
+                            const unitsPerLorry = parseFloat(formData.units_per_lorry);
+                            const totUnits = Math.round(unitsPerLorry * lorries);
+                            const totContractMt = ((totUnits * unitWt) / 1000).toFixed(3);
+                            setFormData(prev => ({
+                              ...prev,
+                              total_no_of_lorries: lorriesVal,
+                              total_units: totUnits.toString(),
                               total_contract_mt: totContractMt
                             }));
                           } else {
@@ -382,21 +411,21 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         onChange={(e) => {
                           const unitsVal = e.target.value;
                           const unitsPerLorry = parseFloat(unitsVal) || 0;
-                          const lorries = parseFloat(formData.total_no_of_lorries) || 0;
+                          const lorries = Math.max(1, parseFloat(formData.total_no_of_lorries) || 1);
                           const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
                           const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
                           const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
 
-                          if (lorries > 0 && unitsPerLorry > 0) {
+                          if (unitsPerLorry > 0) {
                             const totUnits = Math.round(lorries * unitsPerLorry);
-                            const wtPerLorry = ((unitsPerLorry * unitWt) / 1000).toFixed(3);
-                            const totContract = ((totUnits * unitWt) / 1000).toFixed(3);
+                            const wtPerLorryMt = ((unitsPerLorry * unitWt) / 1000).toFixed(3);
+                            const totContractMt = ((totUnits * unitWt) / 1000).toFixed(3);
                             setFormData(prev => ({
                               ...prev,
                               units_per_lorry: unitsVal,
                               total_units: totUnits.toString(),
-                              weight_per_lorry: wtPerLorry,
-                              total_contract_mt: totContract
+                              weight_per_lorry: wtPerLorryMt,
+                              total_contract_mt: totContractMt
                             }));
                           } else {
                             setFormData(prev => ({
@@ -418,22 +447,21 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         onChange={(e) => {
                           const totUnitsVal = e.target.value;
                           const totUnits = parseFloat(totUnitsVal) || 0;
-                          const lorries = parseFloat(formData.total_no_of_lorries) || 0;
+                          const lorries = Math.max(1, parseFloat(formData.total_no_of_lorries) || 1);
                           const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
                           const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
                           const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
 
                           if (totUnits > 0) {
-                            const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
-                            const totContract = ((totUnits * unitWt) / 1000).toFixed(3);
-                            const wtPerLorry = lorries > 0 ? (parseFloat(totContract) / lorries).toFixed(3) : totContract;
+                            const unitsPerLorry = Math.round(totUnits / lorries);
+                            const totContractMt = ((totUnits * unitWt) / 1000).toFixed(3);
+                            const wtPerLorryMt = ((unitsPerLorry * unitWt) / 1000).toFixed(3);
                             setFormData(prev => ({
                               ...prev,
                               total_units: totUnitsVal,
-                              units_per_lorry: unitsPerLorryStr,
-                              weight_per_lorry: wtPerLorry,
-                              total_contract_mt: totContract
+                              units_per_lorry: unitsPerLorry.toString(),
+                              weight_per_lorry: wtPerLorryMt,
+                              total_contract_mt: totContractMt
                             }));
                           } else {
                             setFormData(prev => ({
@@ -458,8 +486,10 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                           const cleanName = (formData.purchase_unit_name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
                           const isLoose = cleanName === 'LOOSE' || cleanName === 'LOS';
                           const isPBales = cleanName === 'PBALES' || cleanName === 'PBALE' || cleanName === 'PB';
-                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB';
+                          const isHBales = cleanName === 'HBALES' || cleanName === 'HBALE' || cleanName === 'HB' || cleanName === 'HALFBALES' || cleanName === 'HALFBALE';
                           const isNonUnit = isLoose || isPBales || isHBales;
+
+                          const lorries = Math.max(1, parseFloat(formData.total_no_of_lorries) || 1);
 
                           if (isNonUnit) {
                             setFormData(prev => ({
@@ -467,27 +497,27 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                               weight_per_lorry: val,
                               total_units: '',
                               units_per_lorry: '',
-                              total_contract_mt: wtVal > 0 ? (wtVal >= 100 ? (wtVal / 1000).toFixed(3) : wtVal.toFixed(3)) : prev.total_contract_mt
+                              total_contract_mt: wtVal > 0 ? (wtVal >= 100 ? ((wtVal / 1000) * lorries).toFixed(3) : (wtVal * lorries).toFixed(3)) : prev.total_contract_mt
                             }));
                             return;
                           }
 
                           const isDrums = cleanName === 'DRUMS' || cleanName === 'DRUM' || cleanName === 'DR';
                           const unitWt = isDrums ? (parseFloat(formData.weight_unit_kgs) || 50) : 147.5;
-                          const lorries = parseFloat(formData.total_no_of_lorries) || 1;
 
                           if (wtVal > 0) {
-                            const wtKg = wtVal >= 100 ? wtVal : wtVal * 1000;
-                            const totUnits = Math.round(wtKg / unitWt);
-                            const unitsPerLorry = lorries > 0 ? (totUnits / lorries) : totUnits;
-                            const unitsPerLorryStr = Number.isInteger(unitsPerLorry) ? unitsPerLorry.toString() : Number(unitsPerLorry.toFixed(2)).toString();
-                            const totContract = (wtKg / 1000).toFixed(3);
+                            // Weight / Lorry is in Metric Ton (e.g. 29.5 MT or 15 MT)
+                            const wtPerLorryMt = wtVal >= 100 ? wtVal / 1000 : wtVal;
+                            const wtPerLorryKg = wtPerLorryMt * 1000;
+                            const unitsPerLorry = Math.round(wtPerLorryKg / unitWt);
+                            const totUnits = unitsPerLorry * lorries;
+                            const totContractMt = (wtPerLorryMt * lorries).toFixed(3);
                             setFormData(prev => ({
                               ...prev,
                               weight_per_lorry: val,
                               total_units: totUnits.toString(),
-                              units_per_lorry: unitsPerLorryStr,
-                              total_contract_mt: totContract
+                              units_per_lorry: unitsPerLorry.toString(),
+                              total_contract_mt: totContractMt
                             }));
                           } else {
                             setFormData(prev => ({
@@ -498,9 +528,10 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                         }} 
                         onBlur={() => {
                           if (formData.weight_per_lorry && !isNaN(Number(formData.weight_per_lorry))) {
+                            const num = Number(formData.weight_per_lorry);
                             setFormData(prev => ({
                               ...prev,
-                              weight_per_lorry: Number(prev.weight_per_lorry).toFixed(3)
+                              weight_per_lorry: num >= 100 ? (num / 1000).toFixed(3) : num.toFixed(3)
                             }));
                           }
                         }}

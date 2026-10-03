@@ -222,9 +222,9 @@ export function usePurchaseOrderFormLogic({
     const clean = (name || '').trim().toUpperCase().replace(/[\s_.-]/g, '');
     const isLoose = clean === 'LOOSE' || clean === 'LOS';
     const isPBales = clean === 'PBALES' || clean === 'PBALE' || clean === 'PB';
-    const isHBales = clean === 'HBALES' || clean === 'HBALE' || clean === 'HB';
+    const isHBales = clean === 'HBALES' || clean === 'HBALE' || clean === 'HB' || clean === 'HALFBALES' || clean === 'HALFBALE';
     const isDrums = clean === 'DRUMS' || clean === 'DRUM' || clean === 'DR';
-    const isBales = !isPBales && !isHBales && (clean === 'BALES' || clean === 'BALE' || clean === 'BAL');
+    const isBales = !isPBales && !isHBales && (clean === 'BALES' || clean === 'BALE' || clean === 'BAL' || clean === 'BELL' || clean === 'BELLS' || clean === 'BEL');
     const isNonUnit = isLoose || isPBales || isHBales;
 
     if (isNonUnit) {
@@ -240,39 +240,45 @@ export function usePurchaseOrderFormLogic({
           qty: 0
         }))
       }));
-      return;
-    }
-
-    const weightUnitKgs = isDrums 
-      ? (formData.weight_unit_kgs && parseFloat(formData.weight_unit_kgs) > 0 ? formData.weight_unit_kgs : '50') 
-      : '147.5';
-    const unitWtVal = parseFloat(weightUnitKgs) || (isDrums ? 50 : 147.5);
-
-    if (formData.is_ptf) {
-      setFormData(prev => ({
+      setCalcData(prev => ({
         ...prev,
-        purchase_unit_name: name,
-        purchase_unit_code: code,
-        weight_unit_kgs: weightUnitKgs
+        units_per_lorry: '',
+        total_units: ''
       }));
       return;
     }
 
-    const lorries = parseFloat(formData.total_no_of_lorries) || 1;
-    const currentWeight = parseFloat(formData.weight_per_lorry) || parseFloat(formData.total_contract_mt) || 0;
+    // Default 50 KG for DRUMS, 147.5 KG for BALES / BELL
+    const weightUnitKgs = isDrums ? '50' : '147.5';
+    const unitWtVal = isDrums ? 50 : 147.5;
 
-    let totalUnits = formData.total_units;
-    let unitsPerLorry = formData.units_per_lorry;
+    const lorries = Math.max(1, parseFloat(formData.total_no_of_lorries) || 1);
+    const currentWeightMt = parseFloat(formData.weight_per_lorry) || (parseFloat(formData.total_contract_mt) ? parseFloat(formData.total_contract_mt) / lorries : 0);
 
-    if (currentWeight > 0) {
-      const wtKg = currentWeight >= 100 ? currentWeight : currentWeight * 1000;
-      const calcTot = wtKg / unitWtVal;
-      const calcPerLorry = lorries > 0 ? calcTot / lorries : calcTot;
-      totalUnits = Number.isInteger(calcTot) ? calcTot.toString() : Number(calcTot.toFixed(2)).toString();
-      unitsPerLorry = Number.isInteger(calcPerLorry) ? calcPerLorry.toString() : Number(calcPerLorry.toFixed(2)).toString();
+    let totalUnits = '';
+    let unitsPerLorry = '';
+
+    if (currentWeightMt > 0) {
+      const wtPerLorryKg = currentWeightMt < 100 ? currentWeightMt * 1000 : currentWeightMt;
+      const calcPerLorry = Math.round(wtPerLorryKg / unitWtVal);
+      const calcTot = calcPerLorry * lorries;
+      totalUnits = calcTot.toString();
+      unitsPerLorry = calcPerLorry.toString();
+    } else if (formData.total_units && parseFloat(formData.total_units) > 0) {
+      totalUnits = formData.total_units;
+      const totNum = parseFloat(totalUnits);
+      const perLorry = lorries > 0 ? Math.round(totNum / lorries) : totNum;
+      unitsPerLorry = perLorry.toString();
     }
 
-    const updatedItems = recalculateItemWeights(formData.items, unitWtVal);
+    let updatedItems = recalculateItemWeights(formData.items, unitWtVal);
+    if (updatedItems.length === 1 && totalUnits) {
+      updatedItems[0] = {
+        ...updatedItems[0],
+        qty: parseFloat(totalUnits) || updatedItems[0].qty || 0,
+        weight: currentWeightMt > 0 ? (currentWeightMt < 100 ? currentWeightMt * lorries : (currentWeightMt * lorries) / 1000) : updatedItems[0].weight
+      };
+    }
 
     setFormData(prev => ({
       ...prev,
@@ -282,6 +288,14 @@ export function usePurchaseOrderFormLogic({
       units_per_lorry: unitsPerLorry,
       total_units: totalUnits,
       items: updatedItems
+    }));
+
+    setCalcData(prev => ({
+      ...prev,
+      total_lorries: lorries.toString(),
+      units_per_lorry: unitsPerLorry,
+      total_units: totalUnits,
+      weight_per_lorry: currentWeightMt > 0 ? (currentWeightMt < 100 ? currentWeightMt.toFixed(3) : (currentWeightMt / 1000).toFixed(3)) : prev.weight_per_lorry
     }));
   };
 
@@ -954,55 +968,24 @@ export function usePurchaseOrderFormLogic({
     const unitsPerLorryStr = appliedData?.units_per_lorry !== undefined ? appliedData.units_per_lorry : calcData.units_per_lorry;
     const totalUnitsStr = appliedData?.total_units !== undefined ? appliedData.total_units : calcData.total_units;
     const weightPerLorryStr = appliedData?.weight_per_lorry || calcData.weight_per_lorry || '0';
-    const unitName = appliedData?.purchase_unit_name || formData.purchase_unit_name || 'DRUMS';
-    const unitWtKgsStr = appliedData?.weight_unit_kgs || formData.weight_unit_kgs || '50';
+    const unitName = appliedData?.purchase_unit_name || formData.purchase_unit_name || 'BALES';
+    const unitWtKgsStr = appliedData?.weight_unit_kgs || formData.weight_unit_kgs || '147.5';
 
     const clean = unitName.trim().toUpperCase().replace(/[\s_.-]/g, '');
     const isLoose = clean === 'LOOSE' || clean === 'LOS';
     const isPBales = clean === 'PBALES' || clean === 'PBALE' || clean === 'PB';
-    const isHBales = clean === 'HBALES' || clean === 'HBALE' || clean === 'HB';
+    const isHBales = clean === 'HBALES' || clean === 'HBALE' || clean === 'HB' || clean === 'HALFBALES' || clean === 'HALFBALE';
     const isDrums = clean === 'DRUMS' || clean === 'DRUM' || clean === 'DR';
-    const isBales = !isPBales && !isHBales && (clean === 'BALES' || clean === 'BALE' || clean === 'BAL');
+    const isBales = !isPBales && !isHBales && (clean === 'BALES' || clean === 'BALE' || clean === 'BAL' || clean === 'BELL' || clean === 'BELLS' || clean === 'BEL');
     const isNonUnit = isLoose || isPBales || isHBales;
 
-    if (formData.is_ptf) {
-      const lorriesNum = parseFloat(totalLorries) || 1;
-      const wtLorryNum = parseFloat(weightPerLorryStr) || 0;
-      const manualTotalContractMt = lorriesNum > 1
-        ? (lorriesNum * wtLorryNum).toFixed(3)
-        : (weightPerLorryStr || (formData.total_contract_mt || '0.000'));
-
-      let updatedItems = [...formData.items];
-      if (updatedItems.length === 1) {
-        updatedItems[0] = {
-          ...updatedItems[0],
-          qty: isNonUnit ? 0 : (parseFloat(totalUnitsStr) || updatedItems[0].qty || 0),
-          weight: parseFloat(manualTotalContractMt) || parseFloat(weightPerLorryStr) || updatedItems[0].weight || 0
-        };
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        total_no_of_lorries: totalLorries,
-        units_per_lorry: isNonUnit ? '' : unitsPerLorryStr,
-        total_units: isNonUnit ? '' : totalUnitsStr,
-        weight_per_lorry: weightPerLorryStr,
-        total_contract_mt: manualTotalContractMt,
-        purchase_unit_name: unitName,
-        weight_unit_kgs: isNonUnit ? '' : (isBales ? '147.5' : unitWtKgsStr),
-        items: updatedItems
-      }));
-      setIsCalcOpen(false);
-      return;
-    }
-
-    const lorries = parseFloat(totalLorries) || 1;
+    const lorries = Math.max(1, parseFloat(totalLorries) || 1);
     const rawWeight = parseFloat(weightPerLorryStr) || 0;
-    const unitWtVal = isNonUnit ? 0 : (isDrums ? (parseFloat(unitWtKgsStr) || 50) : 147.5);
+    const wtPerLorryMt = rawWeight >= 100 ? rawWeight / 1000 : rawWeight;
+    const totalContractMt = (wtPerLorryMt * lorries).toFixed(3);
+    const wtPerLorryFormatted = wtPerLorryMt.toFixed(3);
 
-    // If rawWeight > 50 (e.g. 13500 kg), total MT is rawWeight / 1000 = 13.500 MT. If < 50, it is already MT.
-    const totalContractMt = rawWeight >= 100 ? (rawWeight / 1000).toFixed(3) : rawWeight.toFixed(3);
-    const wtPerLorryFormatted = lorries > 0 ? (parseFloat(totalContractMt) / lorries).toFixed(3) : totalContractMt;
+    const unitWtVal = isNonUnit ? 0 : (isDrums ? (parseFloat(unitWtKgsStr) || 50) : 147.5);
 
     let updatedItems = isNonUnit ? [...formData.items] : recalculateItemWeights(formData.items, unitWtVal);
     
@@ -1016,10 +999,10 @@ export function usePurchaseOrderFormLogic({
       total_no_of_lorries: totalLorries,
       units_per_lorry: isNonUnit ? '' : unitsPerLorryStr,
       total_units: isNonUnit ? '' : totalUnitsStr,
-      weight_per_lorry: weightPerLorryStr,
+      weight_per_lorry: wtPerLorryFormatted,
       total_contract_mt: totalContractMt,
       purchase_unit_name: unitName,
-      weight_unit_kgs: isNonUnit ? '' : (isBales ? '147.5' : unitWtKgsStr),
+      weight_unit_kgs: isNonUnit ? '' : (isDrums ? (unitWtKgsStr || '50') : '147.5'),
       items: updatedItems
     }));
     setIsCalcOpen(false);
