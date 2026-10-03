@@ -55,14 +55,18 @@ export const SearchableMrSelect: React.FC<SearchableMrSelectProps> = ({
   });
 
   const masterListToFind = allArrivals || verifiedArrivals;
-  const selectedArr = masterListToFind.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo || a.arrival_no === selectedMrNo));
+  const selectedArr = masterListToFind.find(a => {
+    const arrMr = String(a.mr_no || a.final_arrival_no || a.arrival_no || a.temporary_arrival_no || a.amad_no || '').trim().toUpperCase();
+    const target = String(selectedMrNo).trim().toUpperCase();
+    return Boolean(target && (arrMr === target || arrMr.replace(/^MR0*/, '') === target.replace(/^MR0*/, '')));
+  });
 
   const getLabel = () => {
     if (selectedArr) {
-      const mr = selectedArr.mr_no || selectedArr.final_arrival_no || selectedArr.arrival_no;
-      const supp = selectedArr.supplier || selectedArr.supplier_name || 'N/A';
+      const mr = selectedArr.mr_no || selectedArr.final_arrival_no || selectedArr.arrival_no || selectedArr.temporary_arrival_no || selectedMrNo;
+      const supp = selectedArr.supplier || selectedArr.supplier_name || selectedArr.party_name || 'N/A';
       const po = selectedArr.po_no || selectedArr.mill_po_no || 'N/A';
-      const lorry = selectedArr.lorry_number ? ` | Lorry: ${selectedArr.lorry_number}` : '';
+      const lorry = (selectedArr.lorry_number || selectedArr.lorry_no) ? ` | Lorry: ${selectedArr.lorry_number || selectedArr.lorry_no}` : '';
       return `M.R: ${mr} | Supplier: ${supp} | P.O: ${po}${lorry}`;
     }
     if (selectedMrNo) {

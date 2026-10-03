@@ -106,9 +106,11 @@ export function PaymentEntryForm({
     }
   };
 
-  const selectedArrival = verifiedArrivals.find(
-    a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo)
-  );
+  const selectedArrival = verifiedArrivals.find(a => {
+    const arrMr = String(a.mr_no || a.final_arrival_no || a.arrival_no || a.temporary_arrival_no || a.amad_no || '').trim().toUpperCase();
+    const target = String(selectedMrNo).trim().toUpperCase();
+    return Boolean(target && (arrMr === target || arrMr.replace(/^MR0*/, '') === target.replace(/^MR0*/, '')));
+  });
   const inspectionPoNo = selectedArrival?.po_no || selectedArrival?.mill_po_no || '';
   const matchedFinalPo = inspectionPoNo ? findMatchingPo(inspectionPoNo, purchaseOrders) : null;
   const matchedScpPo = (!matchedFinalPo && inspectionPoNo) ? findMatchingPo(inspectionPoNo, saudaCheckPoints) : null;

@@ -21,7 +21,8 @@ import {
   parseGridOrItems, 
   mapItemsToDetailCols, 
   isMrAlreadyProcessed, 
-  isPoEligibleForPayment 
+  isPoEligibleForPayment,
+  getLinkedMrsForPo
 } from '../utils/paymentCalculations';
 import { 
   exportPaymentReportCsv, 
@@ -357,22 +358,32 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
           poList = await dbModule.fetchAll('purchase_master').catch(() => []);
         }
 
-        const [localArr, localInsp, localMillInsp] = await Promise.all([
+        const [localArr, localInsp, localMillInsp, localTempArr] = await Promise.all([
           dbModule.fetchAll('final_arrival').catch(() => []),
-          dbModule.fetchAll('inspection_master').catch(() => []),
-          dbModule.fetchAll('mill_inspection_master').catch(() => [])
+          dbModule.fetchAll('material_inspection').catch(() => []),
+          dbModule.fetchAll('mill_inspection_master').catch(() => []),
+          dbModule.fetchAll('temporary_material_received').catch(() => [])
         ]);
 
         const mergedMap = new Map<string, any>();
-        (arrList || []).forEach((a: any) => {
-          const k = a.mr_no || a.final_arrival_no || a.arrival_no;
-          if (k) mergedMap.set(k, a);
+        
+        // 1. Temporary Material Received
+        (localTempArr || []).forEach((t: any) => {
+          const k = t.temporary_arrival_no || t.amad_no || t.arrival_no;
+          if (k) mergedMap.set(k, { ...t, mr_no: k, arrival_no: k, source_module: 'temporary_material_received' });
         });
+
+        // 2. Final Arrival
         (localArr || []).forEach((a: any) => {
           const k = a.mr_no || a.final_arrival_no || a.arrival_no;
-          if (k && !mergedMap.has(k)) mergedMap.set(k, a);
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, { ...existing, ...a, mr_no: k, source_module: 'final_arrival' });
+          }
         });
-        (localInsp || []).forEach((a: any) => {
+
+        // 3. Mill Inspection Master
+        (localMillInsp || []).forEach((a: any) => {
           const k = a.mr_no || a.arrival_no;
           if (k) {
             const existing = mergedMap.get(k) || {};
@@ -386,8 +397,27 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
             });
           }
         });
-        (localMillInsp || []).forEach((a: any) => {
+
+        // 4. Material Inspection
+        (localInsp || []).forEach((a: any) => {
           const k = a.mr_no || a.arrival_no;
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, {
+              ...existing,
+              ...a,
+              mr_no: k,
+              supplier: a.supplier_name || a.supplier || existing.supplier,
+              broker: a.broker_name || a.broker || existing.broker,
+              po_no: a.po_no || a.mill_po_no || existing.po_no,
+              source_module: 'material_inspection'
+            });
+          }
+        });
+
+        // 5. Supabase Real-Time Overrides
+        (arrList || []).forEach((a: any) => {
+          const k = a.mr_no || a.final_arrival_no || a.arrival_no;
           if (k) {
             const existing = mergedMap.get(k) || {};
             mergedMap.set(k, {
@@ -562,9 +592,16 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
 
       setDetailCols(cols);
 
-      const matchingArrival = verifiedArrivals.find(a => a.po_no === poNo);
+      const linkedMrs = getLinkedMrsForPo(poNo, verifiedArrivals);
+      const matchingArrival = linkedMrs.find(a => {
+        const { isPaid } = isMrAlreadyProcessed(a, paymentList, isEdit ? masterData.voucher_no : undefined, poNo);
+        return !isPaid;
+      }) || linkedMrs[0];
+
       if (matchingArrival && !selectedMrNo) {
-        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no, po);
+        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no || matchingArrival.arrival_no, po);
+      } else if (matchingArrival) {
+        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no || matchingArrival.arrival_no, po);
       }
     }
   };

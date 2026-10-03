@@ -499,23 +499,34 @@ export function getLinkedMrsForPo(poOrPoNo: any, arrivalsList: any[] = []): any[
     ? poOrPoNo
     : (poOrPoNo.po_no || poOrPoNo.ptf_no || poOrPoNo.sauda_no || poOrPoNo.contract_po_no || '');
 
-  const cleanTarget = String(targetPoNo).trim().toUpperCase();
+  const cleanTarget = String(targetPoNo).trim().toUpperCase().replace(/^#+/, '').trim();
   if (!cleanTarget || cleanTarget === 'N/A') return [];
 
-  const targetSuffix = cleanTarget.split('/').pop() || '';
+  const cleanTargetNoPtf = cleanTarget.replace(/\(PTF\)/gi, '').trim();
+  const targetSuffix = cleanTarget.split('/').pop()?.replace(/^#+/, '').replace(/\(PTF\)/gi, '').trim() || '';
+  const targetDigits = cleanTarget.replace(/[^0-9]/g, '');
 
   return arrivalsList.filter(arr => {
-    const arrPo1 = String(arr.po_no || '').trim().toUpperCase();
-    const arrPo2 = String(arr.mill_po_no || '').trim().toUpperCase();
-    const arrPo3 = String(arr.contract_po_no || arr.sauda_no || arr.po_contract || '').trim().toUpperCase();
+    const arrPo1 = String(arr.po_no || '').trim().toUpperCase().replace(/^#+/, '').trim();
+    const arrPo2 = String(arr.mill_po_no || '').trim().toUpperCase().replace(/^#+/, '').trim();
+    const arrPo3 = String(arr.contract_po_no || arr.sauda_no || arr.po_contract || '').trim().toUpperCase().replace(/^#+/, '').trim();
     
     const candidates = [arrPo1, arrPo2, arrPo3].filter(Boolean);
     for (const cand of candidates) {
-      if (cand === cleanTarget) return true;
+      const candNoPtf = cand.replace(/\(PTF\)/gi, '').trim();
+      if (cand === cleanTarget || candNoPtf === cleanTargetNoPtf) return true;
       if (cand.includes(cleanTarget) || cleanTarget.includes(cand)) return true;
-      const candSuffix = cand.split('/').pop() || '';
-      if (targetSuffix.length >= 3 && (candSuffix === targetSuffix || cand.includes(targetSuffix))) {
+      if (candNoPtf.includes(cleanTargetNoPtf) || cleanTargetNoPtf.includes(candNoPtf)) return true;
+
+      const candSuffix = cand.split('/').pop()?.replace(/^#+/, '').replace(/\(PTF\)/gi, '').trim() || '';
+      if (targetSuffix.length >= 3 && (candSuffix === targetSuffix || candSuffix.includes(targetSuffix) || targetSuffix.includes(candSuffix))) {
         return true;
+      }
+      if (targetDigits.length >= 3) {
+        const candDigits = cand.replace(/[^0-9]/g, '');
+        if (candDigits === targetDigits || (candDigits.length >= 3 && (candDigits.endsWith(targetDigits) || targetDigits.endsWith(candDigits)))) {
+          return true;
+        }
       }
     }
     return false;
@@ -535,7 +546,7 @@ export function isMrAlreadyProcessed(
 
   const mrStr = typeof mrNoOrArrival === 'string'
     ? mrNoOrArrival
-    : (mrNoOrArrival.mr_no || mrNoOrArrival.final_arrival_no || mrNoOrArrival.arrival_no || '');
+    : (mrNoOrArrival.mr_no || mrNoOrArrival.final_arrival_no || mrNoOrArrival.arrival_no || mrNoOrArrival.temporary_arrival_no || '');
   
   const cleanMr = String(mrStr).trim().toUpperCase();
   if (!cleanMr || cleanMr === 'N/A') {
@@ -568,8 +579,8 @@ export function isMrAlreadyProcessed(
       if (cleanPo) {
         const pPo = String(p.po_no || '').trim().toUpperCase();
         if (pPo) {
-          const pPoSuffix = pPo.split('/').pop() || '';
-          const cleanPoSuffix = cleanPo.split('/').pop() || '';
+          const pPoSuffix = pPo.split('/').pop()?.replace(/\(PTF\)/gi, '').trim() || '';
+          const cleanPoSuffix = cleanPo.split('/').pop()?.replace(/\(PTF\)/gi, '').trim() || '';
           if (pPo === cleanPo || pPo.includes(cleanPo) || cleanPo.includes(pPo) || (cleanPoSuffix.length >= 3 && pPoSuffix === cleanPoSuffix)) {
             return true;
           }

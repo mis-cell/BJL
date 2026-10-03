@@ -23,7 +23,8 @@ import {
   findMatchedPoItem, 
   mapItemsToDetailCols, 
   isMrAlreadyProcessed, 
-  isPoEligibleForPayment 
+  isPoEligibleForPayment,
+  getLinkedMrsForPo
 } from '../../utils/paymentCalculations';
 
 export function usePaymentData(onSaveSuccess?: () => void) {
@@ -284,16 +285,62 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         }
 
         try {
-          const [aRes, miRes] = await Promise.all([
+          const [aRes, miRes, mimRes, tmrRes] = await Promise.all([
             supabase.from('final_arrival').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
             supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
+            supabase.from('temporary_material_received').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => [])
           ]);
 
           const combinedMap = new Map<string, any>();
 
+          (tmrRes || []).forEach((t: any) => {
+            const key = t.temporary_arrival_no || t.amad_no || t.arrival_no || t.mr_no;
+            if (key) {
+              combinedMap.set(key, {
+                ...t,
+                mr_no: key,
+                arrival_no: key,
+                supplier: t.supplier || t.supplier_name || t.party_name,
+                broker: t.broker || t.broker_name,
+                po_no: t.po_no || t.mill_po_no,
+                source_module: 'temporary_material_received'
+              });
+            }
+          });
+
           (aRes || []).forEach((item: any) => {
-            const key = item.mr_no || item.final_arrival_no || item.arrival_no;
-            if (key) combinedMap.set(key, { ...item, source_module: 'final_arrival' });
+            const key = item.mr_no || item.final_arrival_no || item.arrival_no || item.temporary_arrival_no;
+            if (key) {
+              const existing = combinedMap.get(key) || {};
+              combinedMap.set(key, {
+                ...existing,
+                ...item,
+                mr_no: key,
+                arrival_no: key,
+                supplier: item.supplier || item.supplier_name || item.party_name || existing.supplier,
+                broker: item.broker || item.broker_name || existing.broker,
+                po_no: item.po_no || item.mill_po_no || existing.po_no,
+                source_module: 'final_arrival'
+              });
+            }
+          });
+
+          (mimRes || []).forEach((item: any) => {
+            const key = item.mr_no || item.arrival_no;
+            if (key) {
+              const existing = combinedMap.get(key) || {};
+              combinedMap.set(key, {
+                ...existing,
+                ...item,
+                mr_no: key,
+                arrival_no: key,
+                supplier: item.supplier_name || item.supplier || existing.supplier,
+                broker: item.broker_name || item.broker || existing.broker,
+                po_no: item.po_no || item.mill_po_no || existing.po_no,
+                source_module: 'mill_inspection_master'
+              });
+            }
           });
 
           (miRes || []).forEach((item: any) => {
@@ -304,6 +351,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
                 ...existing,
                 ...item,
                 mr_no: key,
+                arrival_no: key,
                 supplier: item.supplier_name || item.supplier || existing.supplier,
                 broker: item.broker_name || item.broker || existing.broker,
                 po_no: item.po_no || item.mill_po_no || existing.po_no,
@@ -331,35 +379,43 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           poList = await dbModule.fetchAll('purchase_master').catch(() => []);
         }
 
-        const [localArr, localInsp, localMillInsp] = await Promise.all([
+        const [localArr, localInsp, localMillInsp, localTempArr] = await Promise.all([
           dbModule.fetchAll('final_arrival').catch(() => []),
-          dbModule.fetchAll('inspection_master').catch(() => []),
-          dbModule.fetchAll('mill_inspection_master').catch(() => [])
+          dbModule.fetchAll('material_inspection').catch(() => []),
+          dbModule.fetchAll('mill_inspection_master').catch(() => []),
+          dbModule.fetchAll('temporary_material_received').catch(() => [])
         ]);
 
         const mergedMap = new Map<string, any>();
-        (arrList || []).forEach((a: any) => {
-          const k = a.mr_no || a.final_arrival_no || a.arrival_no;
-          if (k) mergedMap.set(k, a);
+        
+        // 1. Temporary Material Received (Base baseline)
+        (localTempArr || []).forEach((t: any) => {
+          const k = t.temporary_arrival_no || t.amad_no || t.arrival_no;
+          if (k) {
+            mergedMap.set(k, {
+              ...t,
+              mr_no: k,
+              arrival_no: k,
+              source_module: 'temporary_material_received'
+            });
+          }
         });
+
+        // 2. Final Arrival (Higher priority)
         (localArr || []).forEach((a: any) => {
           const k = a.mr_no || a.final_arrival_no || a.arrival_no;
-          if (k && !mergedMap.has(k)) mergedMap.set(k, a);
-        });
-        (localInsp || []).forEach((a: any) => {
-          const k = a.mr_no || a.arrival_no;
           if (k) {
             const existing = mergedMap.get(k) || {};
             mergedMap.set(k, {
               ...existing,
               ...a,
               mr_no: k,
-              supplier: a.supplier_name || a.supplier || existing.supplier,
-              broker: a.broker_name || a.broker || existing.broker,
-              po_no: a.po_no || a.mill_po_no || existing.po_no
+              source_module: 'final_arrival'
             });
           }
         });
+
+        // 3. Mill Inspection Master
         (localMillInsp || []).forEach((a: any) => {
           const k = a.mr_no || a.arrival_no;
           if (k) {
@@ -375,30 +431,39 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           }
         });
 
-        try {
-          const cachedInsp = localStorage.getItem('inspection_master_records');
-          if (cachedInsp) {
-            const parsedInsp = JSON.parse(cachedInsp);
-            if (Array.isArray(parsedInsp)) {
-              parsedInsp.forEach((ci: any) => {
-                const k = ci.mr_no || ci.arrival_no;
-                if (k) {
-                  const existing = mergedMap.get(k) || {};
-                  mergedMap.set(k, {
-                    ...existing,
-                    ...ci,
-                    mr_no: k,
-                    supplier: ci.supplier_name || ci.supplier || existing.supplier,
-                    broker: ci.broker_name || ci.broker || existing.broker,
-                    po_no: ci.po_no || ci.mill_po_no || existing.po_no
-                  });
-                }
-              });
-            }
+        // 4. Material Inspection (Highest priority for live inspection records)
+        (localInsp || []).forEach((a: any) => {
+          const k = a.mr_no || a.arrival_no;
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, {
+              ...existing,
+              ...a,
+              mr_no: k,
+              supplier: a.supplier_name || a.supplier || existing.supplier,
+              broker: a.broker_name || a.broker || existing.broker,
+              po_no: a.po_no || a.mill_po_no || existing.po_no,
+              source_module: 'material_inspection'
+            });
           }
-        } catch (e) {
-          console.warn("Cached inspection merge notice:", e);
-        }
+        });
+
+        // 5. Supabase Real-Time Overrides (Highest priority)
+        (arrList || []).forEach((a: any) => {
+          const k = a.mr_no || a.final_arrival_no || a.arrival_no || a.temporary_arrival_no;
+          if (k) {
+            const existing = mergedMap.get(k) || {};
+            mergedMap.set(k, {
+              ...existing,
+              ...a,
+              mr_no: k,
+              arrival_no: k,
+              supplier: a.supplier || a.supplier_name || a.party_name || existing.supplier,
+              broker: a.broker || a.broker_name || existing.broker,
+              po_no: a.po_no || a.mill_po_no || existing.po_no
+            });
+          }
+        });
 
         arrList = Array.from(mergedMap.values());
       } catch (err) {
@@ -451,10 +516,14 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       'payment_details',
       'm_r_settlement',
       'final_arrival',
-      'inspection_master',
-      'mill_inspection_master',
-      'inspection_checklist',
+      'material_inspection',
       'material_inspection_details',
+      'mill_inspection_master',
+      'mill_inspection_detail',
+      'temporary_material_received',
+      'sauda_check_point',
+      'purchase_master',
+      'purchase_detail_master',
       'satta_differentials'
     ]
   });
@@ -616,7 +685,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       return;
     }
 
-    const po = purchaseOrders.find(p => p.po_no === poNo);
+    const po = purchaseOrders.find(p => p.po_no === poNo || p.ptf_no === poNo || p.sauda_no === poNo || p.contract_po_no === poNo) || findMatchingPo(poNo, purchaseOrders);
     if (po) {
       setSelectedPoData(po);
 
@@ -663,7 +732,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
       setMasterData(prev => ({
         ...prev,
-        po_no: po.po_no,
+        po_no: po.po_no || poNo,
         po_date: po.po_date || po.s_date || po.created_at || prev.po_date,
         po_type: po.po_type || 'Standard',
         supplier: po.supplier || po.party_name || prev.supplier,
@@ -677,21 +746,32 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
       setDetailCols(cols);
 
-      const matchingArrival = availableArrivals.find(a => (a.po_no === poNo || a.mill_po_no === poNo));
+      // Automatically find matching M.R from linked arrivals
+      const linkedMrs = getLinkedMrsForPo(poNo, verifiedArrivals);
+      const matchingArrival = linkedMrs.find(a => {
+        const { isPaid } = isMrAlreadyProcessed(a, paymentList, isEdit ? masterData.voucher_no : undefined, poNo);
+        return !isPaid;
+      }) || linkedMrs[0];
+
       if (matchingArrival && !selectedMrNo) {
-        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no, po);
+        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no || matchingArrival.arrival_no || matchingArrival.temporary_arrival_no, po);
       } else if (selectedMrNo) {
         const isCurrentPaid = isMrAlreadyProcessed(selectedMrNo, paymentList, isEdit ? masterData.voucher_no : undefined, poNo).isPaid;
-        const currentArr = verifiedArrivals.find(a => (a.mr_no === selectedMrNo || a.final_arrival_no === selectedMrNo));
-        const currentArrPo = currentArr?.po_no || currentArr?.mill_po_no;
-        if (isCurrentPaid || (currentArrPo && currentArrPo !== poNo)) {
+        const isCurrentLinked = linkedMrs.some(a => {
+          const arrMr = String(a.mr_no || a.final_arrival_no || a.arrival_no || a.temporary_arrival_no || '').trim().toUpperCase();
+          const target = String(selectedMrNo).trim().toUpperCase();
+          return arrMr === target || arrMr.replace(/^MR0*/, '') === target.replace(/^MR0*/, '');
+        });
+        if (isCurrentPaid || !isCurrentLinked) {
           if (matchingArrival) {
-            handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no, po);
+            handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no || matchingArrival.arrival_no || matchingArrival.temporary_arrival_no, po);
           } else {
             setSelectedMrNo('');
             setMasterData(prev => ({ ...prev, mr_no: '', arrival_no: '' }));
           }
         }
+      } else if (matchingArrival) {
+        handleMrSelection(matchingArrival.mr_no || matchingArrival.final_arrival_no || matchingArrival.arrival_no || matchingArrival.temporary_arrival_no, po);
       }
     }
   };
@@ -709,19 +789,61 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       return;
     }
 
-    const arrival = verifiedArrivals.find(a => (a.mr_no === mrNo || a.final_arrival_no === mrNo));
+    let arrival = verifiedArrivals.find(a => {
+      const arrMr = String(a.mr_no || a.final_arrival_no || a.arrival_no || a.temporary_arrival_no || a.amad_no || '').trim().toUpperCase();
+      const target = String(mrNo).trim().toUpperCase();
+      return arrMr === target || arrMr.replace(/^MR0*/, '') === target.replace(/^MR0*/, '');
+    });
+
+    // Fallback if not found in verifiedArrivals
+    if (!arrival && supabase) {
+      try {
+        const cleanMr = mrNo.trim().toUpperCase();
+        const candidateKeys = Array.from(new Set([
+          cleanMr,
+          cleanMr.replace(/^MR[-_ ]?/i, ''),
+          `MR${cleanMr.replace(/^MR[-_ ]?/i, '')}`,
+          `MR0${cleanMr.replace(/^MR[-_ ]?/i, '')}`,
+          `MR00${cleanMr.replace(/^MR[-_ ]?/i, '')}`
+        ]));
+        for (const k of candidateKeys) {
+          const { data: miLive } = await supabase
+            .from('material_inspection')
+            .select('*')
+            .or(`mr_no.eq.${k},arrival_no.eq.${k}`)
+            .limit(1)
+            .maybeSingle();
+          if (miLive) {
+            arrival = {
+              ...miLive,
+              mr_no: miLive.mr_no || miLive.arrival_no || k,
+              arrival_no: miLive.arrival_no || miLive.mr_no || k,
+              supplier: miLive.supplier_name || miLive.supplier,
+              broker: miLive.broker_name || miLive.broker,
+              po_no: miLive.po_no || miLive.mill_po_no,
+              source_module: 'material_inspection'
+            };
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn("Live inspection lookup fallback error:", err);
+      }
+    }
+
     if (arrival) {
       const rawPoNo = arrival.po_no || arrival.mill_po_no || masterData.po_no;
       const matchedPo = overridePo || findMatchingPo(rawPoNo, purchaseOrders);
       if (matchedPo) {
-        setSelectedPoNo(matchedPo.po_no);
+        setSelectedPoNo(matchedPo.po_no || matchedPo.ptf_no || rawPoNo);
         setSelectedPoData(matchedPo);
       } else {
-        setSelectedPoNo('');
-        setSelectedPoData(null);
+        if (rawPoNo) {
+          setSelectedPoNo(rawPoNo);
+        }
       }
       const po = matchedPo;
-      const poNo = matchedPo ? matchedPo.po_no : rawPoNo;
+      const poNo = matchedPo ? (matchedPo.po_no || matchedPo.ptf_no) : rawPoNo;
 
       let gList = gradeMasterList;
       let agList = agencyMasterList;
