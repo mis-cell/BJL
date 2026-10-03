@@ -3,7 +3,7 @@ import { dbModule } from '../../services/dbModule';
 import { supabase } from '../../lib/supabase';
 import { poService } from '../../services/poService';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
-import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
+import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDelete } from '../../lib/permissions';
 import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
 import { PoFormData, PoCalcData, PoItemRow } from '../../types/purchaseOrder';
 
@@ -1010,12 +1010,14 @@ export function usePurchaseOrderFormLogic({
 
   const handleSave = async () => {
     const userCtx = getCurrentUserContext();
-    const currentUserRole = (userCtx.userRole || (userCtx as any).role || "USER").toUpperCase();
-    const currentUserLevel = (userCtx.userLevel || (userCtx as any).level || "L1").toUpperCase();
-    const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any).isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();
+    const currentUserRole = (userCtx?.userRole || (userCtx as any)?.role || "USER").toUpperCase();
+    const currentUserLevel = (userCtx?.userLevel || (userCtx as any)?.level || "L1").toUpperCase();
+    const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any)?.isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();
+    const targetModule = isArchiveView ? 'final_po' : (isTempPo ? 'po' : 'sauda');
+    const hasModuleAuth = isAdminUser || canAccess(targetModule) || canAccess('po') || canAccess('sauda') || canAccess('final_po') || canEditOrDelete();
 
-    if (!isAdminUser) {
-      alert(`🔒 Access Denied: Only Admin users are authorized to edit or save Sauda records.`);
+    if (!hasModuleAuth) {
+      alert(`🔒 Access Denied: Your account does not have permission to edit or save records in ${isArchiveView ? 'Final P.O' : (isTempPo ? 'Sauda Check Point' : 'Purchase Order')}.`);
       return;
     }
 
