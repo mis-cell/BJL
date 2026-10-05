@@ -1078,9 +1078,6 @@ export default function ExecutiveBiDashboard({
                       {inspMetrics.yearTotalPendingPoCount} Total Pending P.O.s
                     </span>
                   </h4>
-                  <p className="text-[11px] text-[#5A6E54] font-medium mt-0.5">
-                    Stage transitions: MR ➔ Final MR ({inspMetrics.yearPendingFmrPoCount} POs) • Final MR ➔ Insp ({inspMetrics.yearPendingInspectionPoCount} POs) • Insp ➔ Paym ({inspMetrics.yearPendingPaymentPoCount} POs) • Paym ➔ Sett ({inspMetrics.yearPendingSettlementPoCount} POs)
-                  </p>
                 </div>
               </div>
 
