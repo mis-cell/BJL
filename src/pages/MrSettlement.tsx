@@ -1808,9 +1808,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
     const cstAmt = (calculatedValuationVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
 
-    // RESOLVED PAYABLE ACCOUNT = Valuation - Less Adv - On/Ac Adv + finalApmcFees (which deducts when negative e.g. -1132.50) + CST
+    // RESOLVED PAYABLE ACCOUNT = Valuation - Deduction Amount (-) - Ex/Short (-) - Less Adv - On/Ac Adv + finalApmcFees (which deducts when negative e.g. -1132.50) + CST
     const calculatedPayable = Number((
       calculatedValuationVal 
+      - calculatedDeductionAmount
+      - finalExShort
       - Number(masterData.final_less_adv || 0) 
       - Number(masterData.final_on_ac_adv || 0) 
       + finalApmcFees 

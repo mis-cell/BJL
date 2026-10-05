@@ -59,16 +59,44 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
       const qChln = isLoose ? 0 : (d.quantity_chln !== undefined && d.quantity_chln !== null && d.quantity_chln !== '' ? Number(d.quantity_chln) : (Number(d.quantity) || Math.round(rawNetto)));
       const qRcpt = isLoose ? 0 : (d.quantity_rcpt !== undefined && d.quantity_rcpt !== null && d.quantity_rcpt !== '' ? Number(d.quantity_rcpt) : (qChln || Number(d.quantity) || Math.round(rawNetto)));
 
+      const rGradeCode = d.receipt_grade_code || d.grade_code || d.stock_grade_code || '';
+      let rGradeName = d.receipt_grade_name || d.grade_name || d.stock_grade_name || d.arrival_grade || d.receipt_grade || '';
+      if (!rGradeName && rGradeCode && grades.length > 0) {
+        const matchG = grades.find(g => String(g.grade_code).trim().toUpperCase() === String(rGradeCode).trim().toUpperCase());
+        if (matchG) rGradeName = matchG.grade_name;
+      }
+      let finalGradeCode = rGradeCode;
+      if (!finalGradeCode && rGradeName && grades.length > 0) {
+        const matchG = grades.find(g => String(g.grade_name).trim().toUpperCase() === String(rGradeName).trim().toUpperCase());
+        if (matchG) finalGradeCode = matchG.grade_code;
+      }
+
+      let agencyName = d.agency_name || d.agency || '';
+      const agencyCode = d.agency_code || '';
+      if (!agencyName && agencyCode && agencies.length > 0) {
+        const matchA = agencies.find(a => String(a.agency_code).trim().toUpperCase() === String(agencyCode).trim().toUpperCase());
+        if (matchA) agencyName = matchA.agency_name;
+      }
+
+      let markaName = d.challan_marka_name || d.marka_name || d.marka || '';
+      const markaCode = d.challan_marka_code || d.marka_code || '';
+      if (!markaName && markaCode && markas.length > 0) {
+        const matchM = markas.find(m => String(m.marka_code).trim().toUpperCase() === String(markaCode).trim().toUpperCase());
+        if (matchM) markaName = matchM.marka_name;
+      }
+
+      const cGradeName = d.challan_grade_name || rGradeName || d.grade_name || '';
+
       return {
         srl_no: Number(d.srl_no) || idx + 1,
-        receipt_grade_code: d.receipt_grade_code || d.grade_code || '',
-        receipt_grade_name: d.receipt_grade_name || d.grade_name || d.challan_grade_name || d.receipt_grade_code || '',
+        receipt_grade_code: finalGradeCode,
+        receipt_grade_name: rGradeName,
         crop_year: d.crop_year || '2026-27',
-        challan_grade_name: d.challan_grade_name || d.receipt_grade_name || d.grade_name || '',
-        agency_code: d.agency_code || '',
-        agency_name: d.agency_name || d.agency || '',
-        challan_marka_code: d.challan_marka_code || d.marka_code || '01',
-        challan_marka_name: d.challan_marka_name || d.marka_name || d.marka || 'NO MARK',
+        challan_grade_name: cGradeName,
+        agency_code: agencyCode,
+        agency_name: agencyName,
+        challan_marka_code: markaCode || '01',
+        challan_marka_name: markaName || 'NO MARK',
         netto_pnto: rawNetto,
         quantity_chln: qChln,
         quantity_rcpt: qRcpt,
@@ -427,7 +455,103 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
       }));
 
       // Grid Rows Loading:
-      // Priority 1: If Inspection Detail rows exist with items, map them
+      // Priority 1: Load directly from Temporary Arrival (matchedAmad) grid_details / Arrival Item Details Grid
+      if (matchedAmad) {
+        const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
+        const amadUnit = (matchedAmad.unit_name || matchedAmad.unit || 'BALES').toUpperCase();
+        let parsedGrid: any[] = [];
+        if (typeof rawGrid === 'string') {
+          try { 
+            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
+            if (Array.isArray(p)) parsedGrid = p;
+          } catch (e) {}
+        } else if (Array.isArray(rawGrid)) {
+          parsedGrid = rawGrid;
+        }
+
+        if (parsedGrid && parsedGrid.length > 0) {
+          const mappedGrid = parsedGrid.map((row: any, idx: number) => {
+            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
+            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
+            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
+            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
+
+            // Receipt Grade Name from Temporary Arrival's Arrival Item Details Grid table
+            const rGradeCode = row.receipt_grade_code || row.grade_code || row.stock_grade_code || '';
+            let rGradeName = row.receipt_grade_name || row.receipt_grade || row.grade_name || row.stock_grade_name || row.arrival_grade || '';
+            
+            if (!rGradeName && rGradeCode && grades.length > 0) {
+              const matchG = grades.find(g => String(g.grade_code).trim().toUpperCase() === String(rGradeCode).trim().toUpperCase());
+              if (matchG) rGradeName = matchG.grade_name;
+            }
+            let finalGradeCode = rGradeCode;
+            if (!finalGradeCode && rGradeName && grades.length > 0) {
+              const matchG = grades.find(g => String(g.grade_name).trim().toUpperCase() === String(rGradeName).trim().toUpperCase());
+              if (matchG) finalGradeCode = matchG.grade_code;
+            }
+
+            let agencyName = row.agency_name || row.agency || '';
+            const agencyCode = row.agency_code || '';
+            if (!agencyName && agencyCode && agencies.length > 0) {
+              const matchA = agencies.find(a => String(a.agency_code).trim().toUpperCase() === String(agencyCode).trim().toUpperCase());
+              if (matchA) agencyName = matchA.agency_name;
+            }
+
+            let markaName = row.challan_marka_name || row.marka_name || row.marka || '';
+            const markaCode = row.challan_marka_code || row.marka_code || '';
+            if (!markaName && markaCode && markas.length > 0) {
+              const matchM = markas.find(m => String(m.marka_code).trim().toUpperCase() === String(markaCode).trim().toUpperCase());
+              if (matchM) markaName = matchM.marka_name;
+            }
+
+            const cGradeName = row.challan_grade_name || rGradeName || row.grade_name || '';
+
+            return {
+              srl_no: Number(row.srl_no) || idx + 1,
+              receipt_grade_code: finalGradeCode,
+              receipt_grade_name: rGradeName,
+              crop_year: row.crop_year || '2026-27',
+              challan_grade_name: cGradeName,
+              agency_code: agencyCode,
+              agency_name: agencyName,
+              challan_marka_code: markaCode || '01',
+              challan_marka_name: markaName || 'NO MARK',
+              netto_pnto: rawNetto,
+              quantity_chln: qChln,
+              quantity_rcpt: qRcpt,
+              unit: row.unit || amadUnit,
+              remarks: row.remarks || '',
+              marks_phota: row.marks_phota || ''
+            };
+          });
+          setDetails(mappedGrid);
+          return;
+        } else if (matchedAmad.variety || matchedAmad.grading || matchedAmad.receipt_grade) {
+          const singleGrade = matchedAmad.variety || matchedAmad.grading || matchedAmad.receipt_grade || '';
+          const matchG = grades.find(g => String(g.grade_name).trim().toUpperCase() === String(singleGrade).trim().toUpperCase() || String(g.grade_code).trim().toUpperCase() === String(singleGrade).trim().toUpperCase());
+          setDetails([{
+            srl_no: 1,
+            receipt_grade_code: matchG ? matchG.grade_code : '',
+            receipt_grade_name: matchG ? matchG.grade_name : singleGrade,
+            crop_year: matchedAmad.crop_year || '2026-27',
+            challan_grade_name: matchG ? matchG.grade_name : singleGrade,
+            agency_code: matchedAmad.agency_code || '',
+            agency_name: matchedAmad.agency_name || '',
+            challan_marka_code: matchedAmad.marka_code || '01',
+            challan_marka_name: matchedAmad.marka_name || matchedAmad.marka || 'NO MARK',
+            netto_pnto: Number(matchedAmad.weight_qtl ? matchedAmad.weight_qtl / 10 : matchedAmad.net_weight || 0),
+            quantity_chln: Number(matchedAmad.total_packets || matchedAmad.packets || 0),
+            quantity_rcpt: Number(matchedAmad.total_packets || matchedAmad.packets || 0),
+            unit: amadUnit,
+            remarks: matchedAmad.remarks || '',
+            marks_phota: ''
+          }]);
+          return;
+        }
+      }
+
+      // Priority 2: If Inspection Detail rows exist with items, map them as fallback
       if (matchedInspDetails && matchedInspDetails.length > 0) {
         const newDetails = matchedInspDetails.map((md: any, index: number) => {
           const matchingGrade = grades.find(g => 
@@ -471,50 +595,6 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         });
         setDetails(newDetails);
         return;
-      }
-
-      // Priority 2: Load directly from matchedAmad grid_details
-      if (matchedAmad) {
-        const rawGrid = matchedAmad.grid_details || matchedAmad.details || matchedAmad.items;
-        const amadUnit = (matchedAmad.unit_name || matchedAmad.unit || 'BALES').toUpperCase();
-        let parsedGrid: any[] = [];
-        if (typeof rawGrid === 'string') {
-          try { 
-            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
-            if (Array.isArray(p)) parsedGrid = p;
-          } catch (e) {}
-        } else if (Array.isArray(rawGrid)) {
-          parsedGrid = rawGrid;
-        }
-
-        if (parsedGrid && parsedGrid.length > 0) {
-          const mappedGrid = parsedGrid.map((row: any, idx: number) => {
-            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
-            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
-            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
-            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
-            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
-
-            return {
-              srl_no: Number(row.srl_no) || idx + 1,
-              receipt_grade_code: row.receipt_grade_code || row.grade_code || '',
-              receipt_grade_name: row.receipt_grade_name || row.grade_name || row.challan_grade_name || '',
-              crop_year: row.crop_year || '2026-27',
-              challan_grade_name: row.challan_grade_name || row.receipt_grade_name || row.grade_name || '',
-              agency_code: row.agency_code || '',
-              agency_name: row.agency_name || row.agency || '',
-              challan_marka_code: row.challan_marka_code || row.marka_code || '01',
-              challan_marka_name: row.challan_marka_name || row.marka_name || row.marka || 'NO MARK',
-              netto_pnto: rawNetto,
-              quantity_chln: qChln,
-              quantity_rcpt: qRcpt,
-              unit: row.unit || amadUnit,
-              remarks: row.remarks || '',
-              marks_phota: row.marks_phota || ''
-            };
-          });
-          setDetails(mappedGrid);
-        }
       }
     } catch (e: any) {
       console.error("Error loading Temporary M.R details:", e);
@@ -619,7 +699,85 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         weight_reduced: Number(matchedInspection?.weight_reduced) || Number(amadData?.weight_reduced) || Number(prev.weight_reduced)
       }));
 
-      // Priority 1: Map from Inspection Details
+      // Priority 1: Map from Temporary Arrival (amadData) Arrival Item Details Grid if exists
+      let amadMappedGrid: any[] = [];
+      if (amadData) {
+        const rawGrid = amadData.grid_details || amadData.details || amadData.items;
+        const amadUnit = (amadData.unit_name || amadData.unit || 'BALES').toUpperCase();
+        let parsedGrid: any[] = [];
+        if (typeof rawGrid === 'string') {
+          try { 
+            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
+            if (Array.isArray(p)) parsedGrid = p;
+          } catch (e) {}
+        } else if (Array.isArray(rawGrid)) {
+          parsedGrid = rawGrid;
+        }
+
+        if (parsedGrid && parsedGrid.length > 0) {
+          amadMappedGrid = parsedGrid.map((row: any, idx: number) => {
+            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
+            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
+            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
+            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
+            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
+
+            const rGradeCode = row.receipt_grade_code || row.grade_code || row.stock_grade_code || '';
+            let rGradeName = row.receipt_grade_name || row.receipt_grade || row.grade_name || row.stock_grade_name || row.arrival_grade || '';
+            
+            if (!rGradeName && rGradeCode && grades.length > 0) {
+              const matchG = grades.find(g => String(g.grade_code).trim().toUpperCase() === String(rGradeCode).trim().toUpperCase());
+              if (matchG) rGradeName = matchG.grade_name;
+            }
+            let finalGradeCode = rGradeCode;
+            if (!finalGradeCode && rGradeName && grades.length > 0) {
+              const matchG = grades.find(g => String(g.grade_name).trim().toUpperCase() === String(rGradeName).trim().toUpperCase());
+              if (matchG) finalGradeCode = matchG.grade_code;
+            }
+
+            let agencyName = row.agency_name || row.agency || '';
+            const agencyCode = row.agency_code || '';
+            if (!agencyName && agencyCode && agencies.length > 0) {
+              const matchA = agencies.find(a => String(a.agency_code).trim().toUpperCase() === String(agencyCode).trim().toUpperCase());
+              if (matchA) agencyName = matchA.agency_name;
+            }
+
+            let markaName = row.challan_marka_name || row.marka_name || row.marka || '';
+            const markaCode = row.challan_marka_code || row.marka_code || '';
+            if (!markaName && markaCode && markas.length > 0) {
+              const matchM = markas.find(m => String(m.marka_code).trim().toUpperCase() === String(markaCode).trim().toUpperCase());
+              if (matchM) markaName = matchM.marka_name;
+            }
+
+            const cGradeName = row.challan_grade_name || rGradeName || row.grade_name || '';
+
+            return {
+              srl_no: Number(row.srl_no) || idx + 1,
+              receipt_grade_code: finalGradeCode,
+              receipt_grade_name: rGradeName,
+              crop_year: row.crop_year || '2026-27',
+              challan_grade_name: cGradeName,
+              agency_code: agencyCode,
+              agency_name: agencyName,
+              challan_marka_code: markaCode || '01',
+              challan_marka_name: markaName || 'NO MARK',
+              netto_pnto: rawNetto,
+              quantity_chln: qChln,
+              quantity_rcpt: qRcpt,
+              unit: row.unit || amadUnit,
+              remarks: row.remarks || '',
+              marks_phota: row.marks_phota || ''
+            };
+          });
+        }
+      }
+
+      if (amadMappedGrid.length > 0) {
+        setDetails(amadMappedGrid);
+        return;
+      }
+
+      // Priority 2: Map from Inspection Details
       if (matchedDetails && matchedDetails.length > 0) {
         const newDetails = matchedDetails.map((md: any, index: number) => {
           const matchingGrade = grades.find(g => 
@@ -660,48 +818,6 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
           };
         });
         setDetails(newDetails);
-      } else if (amadData) {
-        // Priority 2: Fallback to amadData grid_details if inspection details has 0 rows
-        const rawGrid = amadData.grid_details || amadData.details || amadData.items;
-        const amadUnit = (amadData.unit_name || amadData.unit || 'BALES').toUpperCase();
-        let parsedGrid: any[] = [];
-        if (typeof rawGrid === 'string') {
-          try { 
-            const p = rawGrid === 'undefined' || rawGrid === 'null' ? [] : JSON.parse(rawGrid);
-            if (Array.isArray(p)) parsedGrid = p;
-          } catch (e) {}
-        } else if (Array.isArray(rawGrid)) {
-          parsedGrid = rawGrid;
-        }
-
-        if (parsedGrid && parsedGrid.length > 0) {
-          const mappedGrid = parsedGrid.map((row: any, idx: number) => {
-            const rowUnit = (row.unit || amadUnit || 'BALES').toString().trim().toUpperCase();
-            const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
-            const rawNetto = Number(row.netto_pnto) || Number(row.quantity_mt) || Number(row.challan_gross_wt) || Number(row.net_weight) || 0;
-            const qChln = isLoose ? 0 : (row.quantity_chln !== undefined && row.quantity_chln !== null && row.quantity_chln !== '' ? Number(row.quantity_chln) : (Number(row.quantity) || Math.round(rawNetto)));
-            const qRcpt = isLoose ? 0 : (row.quantity_rcpt !== undefined && row.quantity_rcpt !== null && row.quantity_rcpt !== '' ? Number(row.quantity_rcpt) : (qChln || Number(row.quantity) || Math.round(rawNetto)));
-
-            return {
-              srl_no: Number(row.srl_no) || idx + 1,
-              receipt_grade_code: row.receipt_grade_code || row.grade_code || '',
-              receipt_grade_name: row.receipt_grade_name || row.grade_name || row.challan_grade_name || '',
-              crop_year: row.crop_year || '2026-27',
-              challan_grade_name: row.challan_grade_name || row.receipt_grade_name || row.grade_name || '',
-              agency_code: row.agency_code || '',
-              agency_name: row.agency_name || row.agency || '',
-              challan_marka_code: row.challan_marka_code || row.marka_code || '01',
-              challan_marka_name: row.challan_marka_name || row.marka_name || row.marka || 'NO MARK',
-              netto_pnto: rawNetto,
-              quantity_chln: qChln,
-              quantity_rcpt: qRcpt,
-              unit: row.unit || amadUnit,
-              remarks: row.remarks || '',
-              marks_phota: row.marks_phota || ''
-            };
-          });
-          setDetails(mappedGrid);
-        }
       }
     } catch (e: any) {
       alert("Error loading inspection records: " + e.message);
@@ -758,12 +874,25 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
 
       if (filteredDetails && filteredDetails.length > 0) {
         const newDetails: ArrivalDetailRow[] = filteredDetails.map((fd: any, index: number) => {
-          const gradeName = fd.grade_name || fd.variety || fd.item_name || '';
+          let gradeName = fd.grade_name || fd.variety || fd.item_name || '';
           const gradeCode = fd.grade_code || fd.item_code || '';
-          const markaName = fd.marka_name || fd.marka || '';
+          if (!gradeName && gradeCode && grades.length > 0) {
+            const matchG = grades.find(g => String(g.grade_code).trim().toUpperCase() === String(gradeCode).trim().toUpperCase());
+            if (matchG) gradeName = matchG.grade_name;
+          }
+          let markaName = fd.marka_name || fd.marka || '';
           const markaCode = fd.marka_code || '';
-          const agencyName = fd.agency_name || fd.agency || '';
+          if (!markaName && markaCode && markas.length > 0) {
+            const matchM = markas.find(m => String(m.marka_code).trim().toUpperCase() === String(markaCode).trim().toUpperCase());
+            if (matchM) markaName = matchM.marka_name;
+          }
+          let agencyName = fd.agency_name || fd.agency || '';
           const agencyCode = fd.agency_code || '';
+          if (!agencyName && agencyCode && agencies.length > 0) {
+            const matchA = agencies.find(a => String(a.agency_code).trim().toUpperCase() === String(agencyCode).trim().toUpperCase());
+            if (matchA) agencyName = matchA.agency_name;
+          }
+
           const nettoVal = Number(fd.quantity_mt || fd.quantity || fd.netto_pnto || 0);
           const rowUnit = (fd.unit || formData.unit_name || 'BALES').toString().trim().toUpperCase();
           const isLoose = rowUnit.includes('LOOSE') || rowUnit === 'LOOSE';
@@ -776,8 +905,8 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
             challan_grade_name: gradeName,
             agency_code: agencyCode,
             agency_name: agencyName,
-            challan_marka_code: markaCode,
-            challan_marka_name: markaName,
+            challan_marka_code: markaCode || '01',
+            challan_marka_name: markaName || 'NO MARK',
             netto_pnto: nettoVal,
             quantity_chln: isLoose ? 0 : Math.round(nettoVal),
             quantity_rcpt: isLoose ? 0 : Math.round(nettoVal),
@@ -831,7 +960,9 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
             next.arrival_area_code = matchedArea.area_code;
           }
         }
-        loadDetailsFromPo(valUpper);
+        if (!next.temporary_arrival_no && (!details || details.length === 0 || !details.some(d => d.receipt_grade_name || d.netto_pnto > 0))) {
+          loadDetailsFromPo(valUpper);
+        }
       }
       return next;
     });
@@ -848,7 +979,7 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     if (item.temp_mr_no) {
       handleInputChange('temporary_arrival_no', item.temp_mr_no);
       loadDetailsFromAmad(item.temp_mr_no);
-    } else if (item.po_no) {
+    } else if (item.po_no && !formData.temporary_arrival_no) {
       loadDetailsFromPo(item.po_no);
     }
     setShowPoDropdown(false);
@@ -908,13 +1039,41 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         unit: uUpper,
         ...(isLoose ? { quantity_chln: 0, quantity_rcpt: 0 } : {})
       };
-    } else if (field === 'receipt_grade_code') {
-      const g = grades.find(g => String(g.grade_code) === String(val));
+    } else if (field === 'receipt_grade_name' || field === 'receipt_grade_code') {
+      const valStr = String(val || '').trim();
+      const matchG = grades.find(g => 
+        String(g.grade_code).trim().toUpperCase() === valStr.toUpperCase() || 
+        String(g.grade_name).trim().toUpperCase() === valStr.toUpperCase()
+      );
+      const finalCode = matchG ? matchG.grade_code : (field === 'receipt_grade_code' ? valStr : (updatedDetails[index].receipt_grade_code || ''));
+      const finalName = matchG ? matchG.grade_name : valStr;
       updatedDetails[index] = {
         ...updatedDetails[index],
-        receipt_grade_code: val,
-        receipt_grade_name: g ? g.grade_name : updatedDetails[index].receipt_grade_name,
-        challan_grade_name: g ? g.grade_name : updatedDetails[index].challan_grade_name
+        receipt_grade_code: finalCode,
+        receipt_grade_name: finalName,
+        challan_grade_name: updatedDetails[index].challan_grade_name || finalName
+      };
+    } else if (field === 'agency_name' || field === 'agency_code') {
+      const valStr = String(val || '').trim();
+      const matchA = agencies.find(a => 
+        String(a.agency_code).trim().toUpperCase() === valStr.toUpperCase() || 
+        String(a.agency_name).trim().toUpperCase() === valStr.toUpperCase()
+      );
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        agency_code: matchA ? matchA.agency_code : (field === 'agency_code' ? valStr : (updatedDetails[index].agency_code || '')),
+        agency_name: matchA ? matchA.agency_name : valStr
+      };
+    } else if (field === 'challan_marka_name' || field === 'challan_marka_code') {
+      const valStr = String(val || '').trim();
+      const matchM = markas.find(m => 
+        String(m.marka_code).trim().toUpperCase() === valStr.toUpperCase() || 
+        String(m.marka_name).trim().toUpperCase() === valStr.toUpperCase()
+      );
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        challan_marka_code: matchM ? matchM.marka_code : (field === 'challan_marka_code' ? valStr : (updatedDetails[index].challan_marka_code || '')),
+        challan_marka_name: matchM ? matchM.marka_name : valStr
       };
     } else {
       updatedDetails[index] = {
