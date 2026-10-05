@@ -1465,9 +1465,6 @@ export default function SattaChart({
                 <h2 className="text-base md:text-lg font-black text-[#1E331B] tracking-tight font-serif">
                   Satta Chart Base Rate
                 </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Full-Year Daily Base Rate Matrix dynamically loaded from Supabase database
-                </p>
               </div>
             </div>
 
