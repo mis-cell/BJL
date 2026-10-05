@@ -45,22 +45,6 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
   const autoDeliveryPenalty = deliveryDelayDays > 0 && poDeliveryPenaltyRate > 0 && totalArrWeightQtl > 0
     ? Math.round(totalArrWeightQtl * poDeliveryPenaltyRate * deliveryDelayDays)
     : 0;
-  const grandTotalVal = Number(masterData.summary_material_value || masterData.val_material_value || 0);
-  const onAcAdvVal = Number(masterData.final_on_ac_adv || 0);
-  const deliveryClaimVal = Number(masterData.summary_delivery_claim !== undefined && masterData.summary_delivery_claim !== null ? masterData.summary_delivery_claim : (autoDeliveryPenalty || 0));
-  const miscLessVal = Number(masterData.summary_misc_less || 0);
-  const deductionAmtVal = Number(masterData.summary_deduction_amount || 0);
-  const valLessAmtVal = Number(masterData.val_less_amt || 0) + Number(masterData.final_less_adv || 0);
-  const dedClaimTotalVal = Number(masterData.val_qty_claim || 0);
-  const exShortVal = Number(masterData.val_ex_short || 0);
-  const totalDeductionsVal = Number((onAcAdvVal + deliveryClaimVal + miscLessVal + deductionAmtVal + valLessAmtVal + dedClaimTotalVal + exShortVal).toFixed(2));
-
-  const apmcFeesVal = Number(((Number(masterData.arival_apmc_fees) || 0) - (Number(masterData.actual_apmc_fees) || 0)).toFixed(2));
-  const premiumAmtVal = Number(masterData.val_premium_amt || 0);
-  const addAmtVal = Number(masterData.val_add_amt || 0);
-  const miscAddVal = Number(masterData.summary_misc_add || 0);
-  const cstAmtVal = Number(((grandTotalVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100).toFixed(2));
-  const totalAdditionsVal = Number((apmcFeesVal + premiumAmtVal + addAmtVal + miscAddVal + cstAmtVal).toFixed(2));
 
   return (
     <div className="space-y-2.5">
@@ -521,100 +505,6 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
             </div>
             <div className="text-xl font-black font-mono text-[#00e676] tracking-wide">
               ₹ {Number(masterData.payable_amt || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-
-          {/* Transparent Settlement Calculation Breakdown */}
-          <div className="bg-slate-50 border border-slate-200 rounded-md p-2 text-[10px] space-y-1">
-            <div className="flex items-center justify-between text-slate-700 font-bold border-b border-slate-200 pb-1">
-              <span>Grand Total (Mat. Value)</span>
-              <span className="font-mono text-slate-900">₹ {grandTotalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-
-            <div className="flex items-center justify-between text-rose-700 font-bold pt-0.5">
-              <span>Total Less / Deductions (-)</span>
-              <span className="font-mono">− ₹ {totalDeductionsVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="pl-2 space-y-0.5 text-[9px] text-slate-500 font-medium">
-              {onAcAdvVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• On/Account Advance</span>
-                  <span className="font-mono text-rose-600">₹ {onAcAdvVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {deliveryClaimVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Delivery Claim</span>
-                  <span className="font-mono text-rose-600">₹ {deliveryClaimVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {miscLessVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Misc Less</span>
-                  <span className="font-mono text-rose-600">₹ {miscLessVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {deductionAmtVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Deduction Amount</span>
-                  <span className="font-mono text-rose-600">₹ {deductionAmtVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {valLessAmtVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Valuation Less Amount</span>
-                  <span className="font-mono text-rose-600">₹ {valLessAmtVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {dedClaimTotalVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Deduction Claim Total</span>
-                  <span className="font-mono text-rose-600">₹ {dedClaimTotalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {exShortVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Excess/Short Amount</span>
-                  <span className="font-mono text-rose-600">₹ {exShortVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between text-emerald-700 font-bold border-t border-slate-200 pt-1">
-              <span>Total Additions (+)</span>
-              <span className="font-mono">+ ₹ {totalAdditionsVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="pl-2 space-y-0.5 text-[9px] text-slate-500 font-medium">
-              {apmcFeesVal !== 0 && (
-                <div className="flex justify-between">
-                  <span>• APMC Fees</span>
-                  <span className="font-mono text-emerald-600">₹ {apmcFeesVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {premiumAmtVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Premium Amount</span>
-                  <span className="font-mono text-emerald-600">₹ {premiumAmtVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {addAmtVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Additional Amount</span>
-                  <span className="font-mono text-emerald-600">₹ {addAmtVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {miscAddVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• Misc Add</span>
-                  <span className="font-mono text-emerald-600">₹ {miscAddVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
-              {cstAmtVal > 0 && (
-                <div className="flex justify-between">
-                  <span>• C.S.T. (Tax)</span>
-                  <span className="font-mono text-emerald-600">₹ {cstAmtVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              )}
             </div>
           </div>
 
