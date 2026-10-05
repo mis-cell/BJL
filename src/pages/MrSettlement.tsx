@@ -1771,7 +1771,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const finalLessAmount = 0;
     const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
 
-    // 2. Material Value = Direct data from Grand Total
+    // 2. Material Value / Grand Total
     const calculatedMaterialValue = Number(grandTotal.toFixed(2));
 
     // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
@@ -1780,16 +1780,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       ? Number(masterData.summary_premium_wt)
       : Number(masterData.summary_less_amount || 0);
     const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
-
-    // Valuation calculation = Material Value + Add Amt + Premium Amt - Val Less Amt - Qty Claim
-    const calculatedValuationVal = Number((
-      calculatedMaterialValue 
-      + Number(masterData.val_add_amt || 0) 
-      + calculatedPremiumAmount 
-      - finalLessAmount 
-      - Number(masterData.val_qty_claim || 0) 
-      - Number(masterData.val_less_amt || 0)
-    ).toFixed(2));
+    const finalPremiumAmount = Number(masterData.val_premium_amt !== undefined && masterData.val_premium_amt !== null && masterData.val_premium_amt !== 0 ? masterData.val_premium_amt : calculatedPremiumAmount);
 
     // APMC Fees = Arrival APMC Fees - Actual APMC Fees
     // Actual APMC Fees (1%) = 1% × (Material Value − Delivery Claim − Deduction Amount − Deduction Claim Total − Excess/Short Amount)
@@ -1806,17 +1797,50 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
     const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
-    const cstAmt = (calculatedValuationVal * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
 
-    // RESOLVED PAYABLE ACCOUNT = Valuation - Deduction Amount (-) - Ex/Short (-) - Less Adv - On/Ac Adv + finalApmcFees (which deducts when negative e.g. -1132.50) + CST
+    // Valuation calculation = Material Value + Add Amt + Premium Amt - Val Less Amt - Qty Claim
+    const calculatedValuationVal = Number((
+      calculatedMaterialValue 
+      + Number(masterData.val_add_amt || 0) 
+      + finalPremiumAmount 
+      - finalLessAmount 
+      - deductionClaimTotal 
+      - Number(masterData.val_less_amt || 0)
+    ).toFixed(2));
+
+    const cstAmt = (calculatedMaterialValue * (Number(masterData.final_cst_pct_amt) || 0)) / 100;
+
+    // TOTAL LESS / DEDUCTIONS =
+    // On/Account Advance + Delivery Claim + Misc Less + Deduction Amount + Valuation Less Amount + Deduction Claim Total + Ex/Short
+    const onAcAdvVal = Number(masterData.final_on_ac_adv || 0);
+    const deliveryClaimVal = Number(deliveryClaimAmt || 0);
+    const miscLessVal = Number(masterData.summary_misc_less || 0);
+    const valLessAmtVal = Number(masterData.val_less_amt || 0) + Number(masterData.final_less_adv || 0);
+    const totalLessDeductions = Number((
+      onAcAdvVal +
+      deliveryClaimVal +
+      miscLessVal +
+      calculatedDeductionAmount +
+      valLessAmtVal +
+      deductionClaimTotal +
+      finalExShort
+    ).toFixed(2));
+
+    // TOTAL ADDITIONS =
+    // APMC Fees + Premium Amount + Add Amount + Misc Add (+ CST)
+    const addAmtVal = Number(masterData.val_add_amt || 0);
+    const miscAddVal = Number(masterData.summary_misc_add || 0);
+    const totalAdditions = Number((
+      finalApmcFees +
+      finalPremiumAmount +
+      addAmtVal +
+      miscAddVal +
+      cstAmt
+    ).toFixed(2));
+
+    // RESOLVED PAYABLE ACCOUNT = GRAND TOTAL − TOTAL LESS/Deductions + TOTAL ADDITIONS
     const calculatedPayable = Number((
-      calculatedValuationVal 
-      - calculatedDeductionAmount
-      - finalExShort
-      - Number(masterData.final_less_adv || 0) 
-      - Number(masterData.final_on_ac_adv || 0) 
-      + finalApmcFees 
-      + cstAmt
+      calculatedMaterialValue - totalLessDeductions + totalAdditions
     ).toFixed(2));
 
     // Only update if changes to prevent cycling
