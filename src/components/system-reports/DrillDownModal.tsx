@@ -151,7 +151,9 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
     }>();
 
     transactions.forEach(t => {
-      const name = t.grade && t.grade !== '-' ? t.grade : 'Standard';
+      const g = (t.grade || '').trim();
+      if (!g || g === '-' || g.toUpperCase() === 'NORMAL' || g.toUpperCase() === 'STANDARD GRADE' || g.toUpperCase() === 'NORMAL GRADE' || g.toUpperCase() === 'UNASSIGNED') return;
+      const name = g;
       if (!map.has(name)) {
         map.set(name, {
           grade: name,
@@ -817,15 +819,8 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </tbody>
               <tfoot>
                 <tr className="bg-rose-50 text-rose-950 font-black text-xs border-t-2 border-rose-300 font-mono">
-                  <td className="p-3 text-center">Totals</td>
-                  <td className="p-3">
-                    {filteredGrades.length} Unique Quality Grades
-                  </td>
-                  <td className="p-3 text-center">
-                    {filteredGrades.reduce((acc, g) => acc + g.poSet.size, 0)} POs
-                  </td>
-                  <td className="p-3 text-center">
-                    {filteredGrades.reduce((acc, g) => acc + g.saudaSet.size, 0)} Saudas
+                  <td colSpan={4} className="p-3 text-right uppercase tracking-wider">
+                    Total Volume Across Grades:
                   </td>
                   <td className="p-3 text-right font-black text-rose-950 text-sm">
                     {filteredGrades.reduce((acc, g) => acc + g.totalQuantityMT, 0).toFixed(2)} MT

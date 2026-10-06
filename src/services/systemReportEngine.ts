@@ -237,7 +237,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
       suppliers,
       agencies,
       areas,
-      grades
+      grades,
+      saudas,
+      saudaQualityList
     ] = await Promise.all([
       dbModule.fetchAll('purchase_master').catch(() => []),
       dbModule.fetchAll('purchase_detail_master').catch(() => []),
@@ -252,7 +254,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('supply_master').catch(() => []),
       dbModule.fetchAll('agency_master').catch(() => []),
       dbModule.fetchAll('area_master').catch(() => []),
-      dbModule.fetchAll('grade_master').catch(() => [])
+      dbModule.fetchAll('grade_master').catch(() => []),
+      dbModule.fetchAll('sauda_master').catch(() => []),
+      dbModule.fetchAll('sauda_quality_details').catch(() => [])
     ]);
 
     // Build Master Lookup Maps
@@ -267,6 +271,73 @@ export async function loadAndProcessSystemReportData(): Promise<{
         gradeMap.set(gName, gName);
       }
     });
+
+    const INVALID_GRADE_SET = new Set(['NORMAL', 'NORMAL GRADE', 'STANDARD', 'STANDARD GRADE', 'PO_TYPE', 'UNASSIGNED', 'DIRECT', 'N/A', '-', '']);
+
+    // Build Sauda Master & Sauda Quality Maps for reliable grade resolution
+    const saudaMasterMap = new Map<string, any>();
+    (saudas || []).forEach((s: any) => {
+      const sNo = String(s.sauda_no || '').trim().toUpperCase();
+      if (sNo) saudaMasterMap.set(sNo, s);
+      if (s.id) saudaMasterMap.set(String(s.id), s);
+      if (s.sauda_id) saudaMasterMap.set(String(s.sauda_id), s);
+    });
+
+    const saudaQualityMap = new Map<string, any[]>();
+    (saudaQualityList || []).forEach((sq: any) => {
+      const sId = String(sq.sauda_id || sq.sauda_no || '').trim().toUpperCase();
+      if (sId) {
+        const list = saudaQualityMap.get(sId) || [];
+        list.push(sq);
+        saudaQualityMap.set(sId, list);
+      }
+    });
+
+    const resolveGradeName = (rawName: string, rawCode: string, saudaNo: string, poNo: string): string => {
+      const cleanName = (rawName || '').trim();
+      const cleanCode = (rawCode || '').trim();
+
+      if (cleanName && !INVALID_GRADE_SET.has(cleanName.toUpperCase())) {
+        const mapped = gradeMap.get(cleanName.toUpperCase());
+        if (mapped && !INVALID_GRADE_SET.has(mapped.toUpperCase())) return mapped;
+        return cleanName;
+      }
+      if (cleanCode && !INVALID_GRADE_SET.has(cleanCode.toUpperCase())) {
+        const mapped = gradeMap.get(cleanCode.toUpperCase());
+        if (mapped && !INVALID_GRADE_SET.has(mapped.toUpperCase())) return mapped;
+        return cleanCode;
+      }
+
+      // Check sauda quality details
+      const qList = saudaQualityMap.get(saudaNo.toUpperCase()) || saudaQualityMap.get(poNo.toUpperCase());
+      if (qList && qList.length > 0) {
+        for (const q of qList) {
+          const qVal = String(q.quality || q.grade_name || q.grade_code || q.grade || '').trim();
+          if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase())) {
+            return gradeMap.get(qVal.toUpperCase()) || qVal;
+          }
+        }
+      }
+
+      // Check sauda master
+      const saudaRow = saudaMasterMap.get(saudaNo.toUpperCase()) || saudaMasterMap.get(poNo.toUpperCase());
+      if (saudaRow) {
+        const sVal = String(saudaRow.quality || saudaRow.grade || saudaRow.marks || '').trim();
+        if (sVal && !INVALID_GRADE_SET.has(sVal.toUpperCase())) {
+          return gradeMap.get(sVal.toUpperCase()) || sVal;
+        }
+        if (Array.isArray(saudaRow.quality_details)) {
+          for (const q of saudaRow.quality_details) {
+            const qVal = String(q.quality || q.grade || '').trim();
+            if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase())) {
+              return gradeMap.get(qVal.toUpperCase()) || qVal;
+            }
+          }
+        }
+      }
+
+      return 'TD5';
+    };
 
     const agencyMap = new Map<string, string>();
     (agencies || []).forEach((a: any) => {
@@ -421,9 +492,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
       if (details.length > 0) {
         details.forEach((line: any) => {
-          const rawGName = String(line.grade_name || '').trim();
-          const rawGCode = String(line.grade_code || line.grade || '').trim();
-          const grade = gradeMap.get(rawGName.toUpperCase()) || rawGName || gradeMap.get(rawGCode.toUpperCase()) || rawGCode || 'TD5';
+          const rawGName = String(line.grade_name || line.grade || '').trim();
+          const rawGCode = String(line.grade_code || line.quality || '').trim();
+          const grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
 
           const rawItemAgency = String(line.agency_name || line.agency || '').trim();
           const rawItemAgencyCode = String(line.agency_code || '').trim();
@@ -528,9 +599,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
           });
         });
       } else {
-        const rawGName = String(po.grade_name || '').trim();
-        const rawGCode = String(po.grade || po.po_type || po.marks || '').trim();
-        const grade = gradeMap.get(rawGName.toUpperCase()) || rawGName || gradeMap.get(rawGCode.toUpperCase()) || rawGCode || 'TD5';
+        const rawGName = String(po.grade_name || po.grade || po.quality || '').trim();
+        const rawGCode = String(po.grade_code || (po.quality_details && po.quality_details[0]?.quality) || '').trim();
+        const grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
 
         const quantityMT = Number(po.total_contract_mt || po.quantity || 0);
         const purchaseRate = Number(po.b_rate || 0);
@@ -752,7 +823,7 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
     if (t.broker && t.broker !== 'Direct' && t.broker !== '-') brokerSet.add(t.broker);
     if (t.agency && t.agency !== '-') agencySet.add(t.agency);
     if (t.area && t.area !== '-') areaSet.add(t.area);
-    if (t.grade && t.grade !== '-') gradeSet.add(t.grade);
+    if (t.grade && t.grade !== '-' && t.grade.toUpperCase() !== 'NORMAL' && t.grade.toUpperCase() !== 'STANDARD GRADE' && t.grade.toUpperCase() !== 'NORMAL GRADE') gradeSet.add(t.grade);
 
     if (t.grossProfit < 0) {
       totalLoss += Math.abs(t.grossProfit);
