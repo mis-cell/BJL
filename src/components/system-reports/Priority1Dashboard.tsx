@@ -5,10 +5,11 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from 'recharts';
 import { SystemReportDataset, ReportTransactionLine, groupTransactionsByDimension } from '../../services/systemReportEngine';
+import { DrillDownViewMode } from './DrillDownModal';
 
 interface Priority1DashboardProps {
   dataset: SystemReportDataset;
-  onDrillDown: (title: string, txns: ReportTransactionLine[]) => void;
+  onDrillDown: (title: string, txns: ReportTransactionLine[], viewMode?: DrillDownViewMode) => void;
 }
 
 export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
@@ -42,113 +43,113 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
     <div className="space-y-6 font-sans">
       
       {/* ================= SECTION A: SOURCING FOOTPRINT ================= */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+            <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
               Sourcing Footprint
             </h3>
           </div>
           <span className="text-[10px] text-slate-400 font-mono">SAUDA CHECK POINT // PRIORITY 1</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {/* 1. Total Quantity */}
           <div 
-            onClick={() => onDrillDown('All Sauda Quantities (Sauda Check Point)', filtered)}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Total Sauda Contract Quantity (Sauda Check Point)', filtered, 'sauda_quantity')}
+            className="p-3.5 bg-emerald-50/60 hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Quantity</span>
-            <div className="text-sm font-black text-slate-900 mt-1 font-mono truncate">
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Quantity</span>
+            <div className="text-base font-black text-slate-900 mt-1 font-mono truncate">
               {metrics.totalQuantityMT.toFixed(2)} MT
             </div>
-            <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-emerald-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-emerald-100">
+              View All Sauda <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 2. Total PO */}
           <div 
-            onClick={() => onDrillDown('All Purchase Orders (Sauda Check Point)', filtered.filter(t => t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Total Generated Purchase Orders (Sauda Check Point)', filtered.filter(t => t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-'), 'pos')}
+            className="p-3.5 bg-blue-50/60 hover:bg-blue-50 border border-blue-200 hover:border-blue-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total PO</span>
-            <div className="text-sm font-black text-emerald-950 mt-1 font-mono">
-              {metrics.totalPOCount} POs
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total PO</span>
+            <div className="text-base font-black text-blue-950 mt-1 font-mono">
+              {metrics.totalPOCount}
             </div>
-            <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-blue-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-blue-100">
+              View All POs <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 3. Total Supplier */}
           <div 
-            onClick={() => onDrillDown('All Suppliers (Sauda Check Point)', filtered.filter(t => t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Unique Sourcing Suppliers (Sauda Check Point)', filtered.filter(t => t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== '-'), 'suppliers')}
+            className="p-3.5 bg-indigo-50/60 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Supplier</span>
-            <div className="text-sm font-black text-indigo-950 mt-1 font-mono">
-              {metrics.totalSupplierCount} Active
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Supplier</span>
+            <div className="text-base font-black text-indigo-950 mt-1 font-mono">
+              {metrics.totalSupplierCount}
             </div>
-            <span className="text-[9px] text-indigo-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-indigo-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-indigo-100">
+              View All Suppliers <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 4. Total Broker */}
           <div 
-            onClick={() => onDrillDown('All Brokers (Sauda Check Point)', filtered.filter(t => t.broker && t.broker !== 'Direct' && t.broker !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Unique Sourcing Brokers (Sauda Check Point)', filtered.filter(t => t.broker && t.broker !== 'Direct' && t.broker !== '-'), 'brokers')}
+            className="p-3.5 bg-purple-50/60 hover:bg-purple-50 border border-purple-200 hover:border-purple-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Broker</span>
-            <div className="text-sm font-black text-indigo-950 mt-1 font-mono">
-              {metrics.totalBrokerCount} Brokers
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Broker</span>
+            <div className="text-base font-black text-purple-950 mt-1 font-mono">
+              {metrics.totalBrokerCount}
             </div>
-            <span className="text-[9px] text-indigo-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-purple-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-purple-100">
+              View All Brokers <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 5. Total Agency */}
           <div 
-            onClick={() => onDrillDown('All Agencies (Sauda Check Point)', filtered.filter(t => t.agency && t.agency !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Unique Purchasing Agencies (Sauda Check Point)', filtered.filter(t => t.agency && t.agency !== '-'), 'agencies')}
+            className="p-3.5 bg-amber-50/60 hover:bg-amber-50 border border-amber-200 hover:border-amber-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Agency</span>
-            <div className="text-sm font-black text-slate-800 mt-1 font-mono">
-              {metrics.totalAgencyCount} Agencies
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Agency</span>
+            <div className="text-base font-black text-amber-950 mt-1 font-mono">
+              {metrics.totalAgencyCount}
             </div>
-            <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-amber-100">
+              View All Agencies <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 6. Total Area */}
           <div 
-            onClick={() => onDrillDown('All Sourcing Areas / Belts (Sauda Check Point)', filtered.filter(t => t.area && t.area !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Unique Sourcing Areas / Belts (Sauda Check Point)', filtered.filter(t => t.area && t.area !== '-'), 'areas')}
+            className="p-3.5 bg-teal-50/60 hover:bg-teal-50 border border-teal-200 hover:border-teal-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Area</span>
-            <div className="text-sm font-black text-slate-800 mt-1 font-mono">
-              {metrics.totalAreaCount} Belts
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Area</span>
+            <div className="text-base font-black text-teal-950 mt-1 font-mono">
+              {metrics.totalAreaCount}
             </div>
-            <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-teal-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-teal-100">
+              View All Areas <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
 
           {/* 7. Total Grade */}
           <div 
-            onClick={() => onDrillDown('All Quality Grades (Sauda Check Point)', filtered.filter(t => t.grade && t.grade !== '-'))}
-            className="p-3 bg-white border border-slate-200 hover:border-emerald-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group"
+            onClick={() => onDrillDown('Unique Quality Grades (Sauda Check Point)', filtered.filter(t => t.grade && t.grade !== '-'), 'grades')}
+            className="p-3.5 bg-rose-50/60 hover:bg-rose-50 border border-rose-200 hover:border-rose-500 rounded-xl shadow-xs transition hover:shadow-sm cursor-pointer group flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase block">Total Grade</span>
-            <div className="text-sm font-black text-slate-800 mt-1 font-mono">
-              {metrics.totalGradeCount} Grades
+            <span className="text-[10px] font-bold text-slate-600 uppercase block">Total Grade</span>
+            <div className="text-base font-black text-rose-950 mt-1 font-mono">
+              {metrics.totalGradeCount}
             </div>
-            <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
-              View All <ChevronRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+            <span className="text-[9px] text-rose-700 font-bold flex items-center gap-0.5 mt-2 pt-1 border-t border-rose-100">
+              View All Grades <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </span>
           </div>
         </div>

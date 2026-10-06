@@ -1,11 +1,22 @@
-import React from 'react';
-import { X, Download, ExternalLink, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Download, Search, FileSpreadsheet, Building2, UserCheck, MapPin, Tag, Package, FileText } from 'lucide-react';
 import { ReportTransactionLine } from '../../services/systemReportEngine';
+
+export type DrillDownViewMode = 
+  | 'transactions' 
+  | 'sauda_quantity' 
+  | 'pos' 
+  | 'suppliers' 
+  | 'brokers' 
+  | 'agencies' 
+  | 'areas' 
+  | 'grades';
 
 interface DrillDownModalProps {
   title: string;
   subtitle?: string;
   transactions: ReportTransactionLine[];
+  viewMode?: DrillDownViewMode;
   onClose: () => void;
 }
 
@@ -13,69 +24,381 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
   title,
   subtitle,
   transactions,
+  viewMode = 'transactions',
   onClose
 }) => {
-  const exportDrillDownCSV = () => {
-    if (!transactions.length) return;
-    const headers = [
-      'Txn ID', 'Date', 'Sauda No', 'PO No', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade',
-      'Qty (MT)', 'Purchase Rate (₹/Qtl)', 'Base Rate (₹/Qtl)', 'Variance (₹)', 'Gross Value (₹)',
-      'Premium (₹)', 'Deductions (₹)', 'Effective Cost (₹)', 'Realization (₹)', 'Gross Profit (₹)',
-      'Profit %', 'Status', 'Arrived MT', 'Pending MT', 'Paid (₹)', 'Pending (₹)'
-    ];
+  const [searchTerm, setSearchTerm] = useState('');
 
-    const rows = transactions.map(t => [
-      t.txnId,
-      t.date,
-      t.saudaNo,
-      t.poNo,
-      `"${t.supplier}"`,
-      `"${t.broker}"`,
-      `"${t.agency}"`,
-      `"${t.area}"`,
-      t.grade,
-      t.quantityMT.toFixed(3),
-      t.purchaseRate.toFixed(2),
-      t.baseRate.toFixed(2),
-      t.rateVariance.toFixed(2),
-      t.grossPurchaseValue.toFixed(2),
-      t.premiumAmount.toFixed(2),
-      t.deductionAmount.toFixed(2),
-      t.effectiveCost.toFixed(2),
-      t.realizationValue.toFixed(2),
-      t.grossProfit.toFixed(2),
-      t.profitPct.toFixed(2),
-      t.profitStatus,
-      t.arrivedWeightMT.toFixed(3),
-      t.pendingWeightMT.toFixed(3),
-      t.paidAmount.toFixed(2),
-      t.pendingPayable.toFixed(2)
-    ]);
+  // 1. Grouped Suppliers
+  const supplierGroups = useMemo(() => {
+    const map = new Map<string, {
+      supplier: string;
+      poSet: Set<string>;
+      saudaSet: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const name = t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== '-' ? t.supplier : 'Unassigned';
+      if (!map.has(name)) {
+        map.set(name, {
+          supplier: name,
+          poSet: new Set<string>(),
+          saudaSet: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(name)!;
+      if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') entry.poSet.add(t.poNo);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaSet.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalQuantityMT - a.totalQuantityMT);
+  }, [transactions]);
+
+  // 2. Grouped Brokers
+  const brokerGroups = useMemo(() => {
+    const map = new Map<string, {
+      broker: string;
+      poSet: Set<string>;
+      saudaSet: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const name = t.broker && t.broker !== 'Direct' && t.broker !== '-' ? t.broker : 'Direct / Unassigned';
+      if (!map.has(name)) {
+        map.set(name, {
+          broker: name,
+          poSet: new Set<string>(),
+          saudaSet: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(name)!;
+      if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') entry.poSet.add(t.poNo);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaSet.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalQuantityMT - a.totalQuantityMT);
+  }, [transactions]);
+
+  // 3. Grouped Agencies
+  const agencyGroups = useMemo(() => {
+    const map = new Map<string, {
+      agency: string;
+      poSet: Set<string>;
+      saudaSet: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const name = t.agency && t.agency !== '-' ? t.agency : 'Unassigned Agency';
+      if (!map.has(name)) {
+        map.set(name, {
+          agency: name,
+          poSet: new Set<string>(),
+          saudaSet: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(name)!;
+      if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') entry.poSet.add(t.poNo);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaSet.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalQuantityMT - a.totalQuantityMT);
+  }, [transactions]);
+
+  // 4. Grouped Areas
+  const areaGroups = useMemo(() => {
+    const map = new Map<string, {
+      area: string;
+      poSet: Set<string>;
+      saudaSet: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const name = t.area && t.area !== '-' ? t.area : 'Unassigned Area';
+      if (!map.has(name)) {
+        map.set(name, {
+          area: name,
+          poSet: new Set<string>(),
+          saudaSet: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(name)!;
+      if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') entry.poSet.add(t.poNo);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaSet.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalQuantityMT - a.totalQuantityMT);
+  }, [transactions]);
+
+  // 5. Grouped Grades
+  const gradeGroups = useMemo(() => {
+    const map = new Map<string, {
+      grade: string;
+      poSet: Set<string>;
+      saudaSet: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const name = t.grade && t.grade !== '-' ? t.grade : 'Standard';
+      if (!map.has(name)) {
+        map.set(name, {
+          grade: name,
+          poSet: new Set<string>(),
+          saudaSet: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(name)!;
+      if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') entry.poSet.add(t.poNo);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaSet.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalQuantityMT - a.totalQuantityMT);
+  }, [transactions]);
+
+  // 6. Distinct Purchase Orders
+  const distinctPOs = useMemo(() => {
+    const map = new Map<string, {
+      poNo: string;
+      date: string;
+      supplier: string;
+      broker: string;
+      agency: string;
+      area: string;
+      grades: Set<string>;
+      saudaNos: Set<string>;
+      totalQuantityMT: number;
+    }>();
+
+    transactions.forEach(t => {
+      const pNo = t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-' ? t.poNo : '';
+      if (!pNo) return;
+      if (!map.has(pNo)) {
+        map.set(pNo, {
+          poNo: pNo,
+          date: t.date,
+          supplier: t.supplier,
+          broker: t.broker,
+          agency: t.agency,
+          area: t.area,
+          grades: new Set<string>(),
+          saudaNos: new Set<string>(),
+          totalQuantityMT: 0
+        });
+      }
+      const entry = map.get(pNo)!;
+      if (t.grade && t.grade !== '-') entry.grades.add(t.grade);
+      if (t.saudaNo && t.saudaNo !== '-') entry.saudaNos.add(t.saudaNo);
+      entry.totalQuantityMT += t.quantityMT;
+    });
+
+    return Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [transactions]);
+
+  // Filtered lists based on search
+  const filteredTransactions = useMemo(() => {
+    if (!searchTerm) return transactions;
+    const term = searchTerm.toLowerCase();
+    return transactions.filter(t => 
+      (t.saudaNo && t.saudaNo.toLowerCase().includes(term)) ||
+      (t.poNo && t.poNo.toLowerCase().includes(term)) ||
+      (t.supplier && t.supplier.toLowerCase().includes(term)) ||
+      (t.broker && t.broker.toLowerCase().includes(term)) ||
+      (t.agency && t.agency.toLowerCase().includes(term)) ||
+      (t.area && t.area.toLowerCase().includes(term)) ||
+      (t.grade && t.grade.toLowerCase().includes(term)) ||
+      (t.date && t.date.toLowerCase().includes(term))
+    );
+  }, [transactions, searchTerm]);
+
+  const filteredPOs = useMemo(() => {
+    if (!searchTerm) return distinctPOs;
+    const term = searchTerm.toLowerCase();
+    return distinctPOs.filter(p =>
+      p.poNo.toLowerCase().includes(term) ||
+      p.supplier.toLowerCase().includes(term) ||
+      p.broker.toLowerCase().includes(term) ||
+      p.agency.toLowerCase().includes(term) ||
+      p.area.toLowerCase().includes(term) ||
+      Array.from(p.grades).join(' ').toLowerCase().includes(term) ||
+      Array.from(p.saudaNos).join(' ').toLowerCase().includes(term)
+    );
+  }, [distinctPOs, searchTerm]);
+
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm) return supplierGroups;
+    const term = searchTerm.toLowerCase();
+    return supplierGroups.filter(s => s.supplier.toLowerCase().includes(term));
+  }, [supplierGroups, searchTerm]);
+
+  const filteredBrokers = useMemo(() => {
+    if (!searchTerm) return brokerGroups;
+    const term = searchTerm.toLowerCase();
+    return brokerGroups.filter(b => b.broker.toLowerCase().includes(term));
+  }, [brokerGroups, searchTerm]);
+
+  const filteredAgencies = useMemo(() => {
+    if (!searchTerm) return agencyGroups;
+    const term = searchTerm.toLowerCase();
+    return agencyGroups.filter(a => a.agency.toLowerCase().includes(term));
+  }, [agencyGroups, searchTerm]);
+
+  const filteredAreas = useMemo(() => {
+    if (!searchTerm) return areaGroups;
+    const term = searchTerm.toLowerCase();
+    return areaGroups.filter(a => a.area.toLowerCase().includes(term));
+  }, [areaGroups, searchTerm]);
+
+  const filteredGrades = useMemo(() => {
+    if (!searchTerm) return gradeGroups;
+    const term = searchTerm.toLowerCase();
+    return gradeGroups.filter(g => g.grade.toLowerCase().includes(term));
+  }, [gradeGroups, searchTerm]);
+
+  // CSV Exporter based on active view mode
+  const exportCSV = () => {
+    let headers: string[] = [];
+    let rows: (string | number)[][] = [];
+
+    if (viewMode === 'sauda_quantity') {
+      headers = ['#', 'Sauda Number', 'Sauda Date', 'PO Number', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade', 'Sauda Quantity (MT)'];
+      rows = filteredTransactions.map((t, idx) => [
+        idx + 1,
+        t.saudaNo,
+        t.date,
+        t.poNo,
+        `"${t.supplier}"`,
+        `"${t.broker}"`,
+        `"${t.agency}"`,
+        `"${t.area}"`,
+        t.grade,
+        t.quantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'pos') {
+      headers = ['#', 'PO Number', 'PO Date', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade', 'Sauda Number', 'Contract Quantity (MT)'];
+      rows = filteredPOs.map((p, idx) => [
+        idx + 1,
+        p.poNo,
+        p.date,
+        `"${p.supplier}"`,
+        `"${p.broker}"`,
+        `"${p.agency}"`,
+        `"${p.area}"`,
+        `"${Array.from(p.grades).join(', ')}"`,
+        `"${Array.from(p.saudaNos).join(', ')}"`,
+        p.totalQuantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'suppliers') {
+      headers = ['#', 'Supplier Name', 'Total PO Count', 'Total Sauda Count', 'Total Contract Quantity (MT)'];
+      rows = filteredSuppliers.map((s, idx) => [
+        idx + 1,
+        `"${s.supplier}"`,
+        s.poSet.size,
+        s.saudaSet.size,
+        s.totalQuantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'brokers') {
+      headers = ['#', 'Broker Name', 'Total PO Count', 'Total Sauda Count', 'Total Contract Quantity (MT)'];
+      rows = filteredBrokers.map((b, idx) => [
+        idx + 1,
+        `"${b.broker}"`,
+        b.poSet.size,
+        b.saudaSet.size,
+        b.totalQuantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'agencies') {
+      headers = ['#', 'Agency Name', 'Total PO Count', 'Total Sauda Count', 'Total Contract Quantity (MT)'];
+      rows = filteredAgencies.map((a, idx) => [
+        idx + 1,
+        `"${a.agency}"`,
+        a.poSet.size,
+        a.saudaSet.size,
+        a.totalQuantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'areas') {
+      headers = ['#', 'Sourcing Area', 'Total PO Count', 'Total Sauda Count', 'Total Contract Quantity (MT)'];
+      rows = filteredAreas.map((a, idx) => [
+        idx + 1,
+        `"${a.area}"`,
+        a.poSet.size,
+        a.saudaSet.size,
+        a.totalQuantityMT.toFixed(2)
+      ]);
+    } else if (viewMode === 'grades') {
+      headers = ['#', 'Quality Grade', 'Total PO Count', 'Total Sauda Count', 'Total Contract Quantity (MT)'];
+      rows = filteredGrades.map((g, idx) => [
+        idx + 1,
+        `"${g.grade}"`,
+        g.poSet.size,
+        g.saudaSet.size,
+        g.totalQuantityMT.toFixed(2)
+      ]);
+    } else {
+      // Standard comprehensive transaction lines
+      headers = [
+        'Txn ID', 'Date', 'Sauda No', 'PO No', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade',
+        'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Variance', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost', 'Gross Profit', 'Status'
+      ];
+      rows = filteredTransactions.map(t => [
+        t.txnId,
+        t.date,
+        t.saudaNo,
+        t.poNo,
+        `"${t.supplier}"`,
+        `"${t.broker}"`,
+        `"${t.agency}"`,
+        `"${t.area}"`,
+        t.grade,
+        t.quantityMT.toFixed(2),
+        t.purchaseRate.toFixed(2),
+        t.baseRate.toFixed(2),
+        t.rateVariance.toFixed(2),
+        t.grossPurchaseValue.toFixed(2),
+        t.premiumAmount.toFixed(2),
+        t.deductionAmount.toFixed(2),
+        t.effectiveCost.toFixed(2),
+        t.grossProfit.toFixed(2),
+        t.profitStatus
+      ]);
+    }
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encoded = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encoded);
-    link.setAttribute('download', `drilldown_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv`);
+    link.setAttribute('download', `sourcing_footprint_${viewMode}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Aggregated totals
   const totalQty = transactions.reduce((acc, t) => acc + t.quantityMT, 0);
-  const totalVal = transactions.reduce((acc, t) => acc + t.grossPurchaseValue, 0);
-  const totalProfit = transactions.reduce((acc, t) => acc + t.grossProfit, 0);
+  const totalPoCount = distinctPOs.length;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
       <div className="bg-white border-2 border-emerald-900 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col overflow-hidden font-sans">
         
         {/* Header */}
-        <div className="bg-emerald-950 text-white px-5 py-4 flex items-center justify-between border-b border-emerald-800">
+        <div className="bg-gradient-to-r from-emerald-950 to-green-950 text-white px-5 py-3.5 flex items-center justify-between border-b border-emerald-800">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-yellow-400 text-emerald-950">
-                Transaction Line Grain
+                Sauda Check Point Drill-Down
               </span>
               <h3 className="text-base sm:text-lg font-black uppercase tracking-wide text-yellow-300">
                 {title}
@@ -90,8 +413,8 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={exportDrillDownCSV}
-              className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold border border-emerald-600 transition flex items-center gap-1.5 shadow-sm"
+              onClick={exportCSV}
+              className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold border border-emerald-600 transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -99,102 +422,495 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 text-emerald-200 hover:text-white hover:bg-emerald-800/80 rounded-lg transition"
+              className="p-1.5 text-emerald-200 hover:text-white hover:bg-emerald-800/80 rounded-lg transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Quick KPI Strip */}
-        <div className="bg-emerald-50/60 px-5 py-2.5 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-          <div className="flex items-center gap-4">
-            <span>Records: <strong className="text-emerald-900">{transactions.length}</strong></span>
-            <span>Total Weight: <strong className="text-emerald-900">{totalQty.toFixed(3)} MT</strong></span>
-            <span>Gross Value: <strong className="text-emerald-900">₹{totalVal.toLocaleString()}</strong></span>
-            <span>Gross Margin: <strong className={totalProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
-              ₹{totalProfit.toLocaleString()}
-            </strong></span>
+        {/* Quick Search & Summary Ribbon */}
+        <div className="bg-slate-50 px-5 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Filter list records..."
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+            />
           </div>
-          <span className="text-[10px] text-slate-500 uppercase">
-            Click any row to inspect line details
-          </span>
+
+          <div className="flex items-center gap-4 text-xs font-mono">
+            {viewMode === 'sauda_quantity' && (
+              <>
+                <span className="text-slate-600">Total Records: <strong className="text-emerald-950 font-black">{filteredTransactions.length}</strong></span>
+                <span className="text-slate-600">Total Quantity: <strong className="text-emerald-800 font-black">{filteredTransactions.reduce((a, b) => a + b.quantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'pos' && (
+              <>
+                <span className="text-slate-600">Total Purchase Orders: <strong className="text-blue-950 font-black">{filteredPOs.length} POs</strong></span>
+                <span className="text-slate-600">Total Contract Weight: <strong className="text-emerald-800 font-black">{filteredPOs.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'suppliers' && (
+              <>
+                <span className="text-slate-600">Unique Suppliers: <strong className="text-indigo-950 font-black">{filteredSuppliers.length}</strong></span>
+                <span className="text-slate-600">Total Sourced: <strong className="text-emerald-800 font-black">{filteredSuppliers.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'brokers' && (
+              <>
+                <span className="text-slate-600">Unique Brokers: <strong className="text-purple-950 font-black">{filteredBrokers.length}</strong></span>
+                <span className="text-slate-600">Total Mediated: <strong className="text-emerald-800 font-black">{filteredBrokers.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'agencies' && (
+              <>
+                <span className="text-slate-600">Unique Agencies: <strong className="text-amber-950 font-black">{filteredAgencies.length}</strong></span>
+                <span className="text-slate-600">Total Handled: <strong className="text-emerald-800 font-black">{filteredAgencies.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'areas' && (
+              <>
+                <span className="text-slate-600">Unique Sourcing Belts: <strong className="text-teal-950 font-black">{filteredAreas.length}</strong></span>
+                <span className="text-slate-600">Total Sourced: <strong className="text-emerald-800 font-black">{filteredAreas.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'grades' && (
+              <>
+                <span className="text-slate-600">Unique Grades: <strong className="text-rose-950 font-black">{filteredGrades.length}</strong></span>
+                <span className="text-slate-600">Total Volume: <strong className="text-emerald-800 font-black">{filteredGrades.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+            {viewMode === 'transactions' && (
+              <>
+                <span className="text-slate-600">Lines: <strong className="text-emerald-950 font-black">{filteredTransactions.length}</strong></span>
+                <span className="text-slate-600">Weight: <strong className="text-emerald-800 font-black">{filteredTransactions.reduce((a, b) => a + b.quantityMT, 0).toFixed(2)} MT</strong></span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Data Table */}
         <div className="overflow-auto flex-1 p-4">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
-                <th className="p-2.5 text-center">#</th>
-                <th className="p-2.5">Date</th>
-                <th className="p-2.5">Sauda / PO</th>
-                <th className="p-2.5">Supplier</th>
-                <th className="p-2.5">Broker</th>
-                <th className="p-2.5">Area & Grade</th>
-                <th className="p-2.5 text-right">Qty (MT)</th>
-                <th className="p-2.5 text-right">Purchase Rate</th>
-                <th className="p-2.5 text-right">Base Rate</th>
-                <th className="p-2.5 text-right">Variance</th>
-                <th className="p-2.5 text-right">Gross Value</th>
-                <th className="p-2.5 text-right">Eff. Cost</th>
-                <th className="p-2.5 text-right">Profit</th>
-                <th className="p-2.5 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-              {transactions.map((t, idx) => (
-                <tr key={t.txnId || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
-                  <td className="p-2 text-center text-slate-400">{idx + 1}</td>
-                  <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
-                  <td className="p-2 font-bold text-emerald-950">
-                    <div>{t.poNo}</div>
-                    <div className="text-[10px] text-slate-400 font-normal">{t.saudaNo}</div>
+
+          {/* ================= 1. SAUDA QUANTITY VIEW ================= */}
+          {viewMode === 'sauda_quantity' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Sauda Number</th>
+                  <th className="p-2.5">Sauda Date</th>
+                  <th className="p-2.5">PO Number</th>
+                  <th className="p-2.5">Supplier</th>
+                  <th className="p-2.5">Broker</th>
+                  <th className="p-2.5">Agency</th>
+                  <th className="p-2.5">Area</th>
+                  <th className="p-2.5">Grade</th>
+                  <th className="p-2.5 text-right font-black text-emerald-900">Sauda Qty (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredTransactions.map((t, idx) => (
+                  <tr key={t.txnId || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
+                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2 font-bold text-emerald-950">{t.saudaNo}</td>
+                    <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
+                    <td className="p-2 text-slate-800 font-bold">{t.poNo || 'Pending'}</td>
+                    <td className="p-2 font-sans font-semibold text-slate-900" title={t.supplier}>{t.supplier}</td>
+                    <td className="p-2 font-sans text-slate-700" title={t.broker}>{t.broker}</td>
+                    <td className="p-2 font-sans text-slate-600">{t.agency}</td>
+                    <td className="p-2 font-sans text-slate-600">{t.area}</td>
+                    <td className="p-2">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-800 text-[10px]">
+                        {t.grade}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right font-black text-emerald-900 text-xs">
+                      {t.quantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-emerald-50 text-emerald-950 font-black text-xs border-t-2 border-emerald-300 font-mono">
+                  <td colSpan={9} className="p-3 text-right uppercase tracking-wider">
+                    Total Sauda Contract Quantity:
                   </td>
-                  <td className="p-2 max-w-[140px] truncate" title={t.supplier}>{t.supplier}</td>
-                  <td className="p-2 max-w-[120px] truncate" title={t.broker}>{t.broker}</td>
-                  <td className="p-2">
-                    <span className="font-bold text-slate-800">{t.grade}</span>
-                    <span className="text-[10px] text-slate-500 block">{t.area}</span>
-                  </td>
-                  <td className="p-2 text-right font-bold">{t.quantityMT.toFixed(3)}</td>
-                  <td className="p-2 text-right">₹{t.purchaseRate.toLocaleString()}</td>
-                  <td className="p-2 text-right text-slate-500">₹{t.baseRate.toLocaleString()}</td>
-                  <td className="p-2 text-right">
-                    <span className={t.rateVariance > 0 ? 'text-amber-700 font-bold' : (t.rateVariance < 0 ? 'text-emerald-700 font-bold' : 'text-slate-400')}>
-                      {t.rateVariance > 0 ? `+₹${t.rateVariance.toFixed(0)}` : (t.rateVariance < 0 ? `-₹${Math.abs(t.rateVariance).toFixed(0)}` : '₹0')}
-                    </span>
-                  </td>
-                  <td className="p-2 text-right">₹{t.grossPurchaseValue.toLocaleString()}</td>
-                  <td className="p-2 text-right text-slate-900 font-bold">₹{t.effectiveCost.toLocaleString()}</td>
-                  <td className="p-2 text-right">
-                    <span className={t.grossProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
-                      {t.grossProfit >= 0 ? `+₹${t.grossProfit.toLocaleString()}` : `-₹${Math.abs(t.grossProfit).toLocaleString()}`}
-                    </span>
-                  </td>
-                  <td className="p-2 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                      t.profitStatus === 'PROFITABLE' ? 'bg-emerald-100 text-emerald-800' :
-                      t.profitStatus === 'LOSS' ? 'bg-rose-100 text-rose-800' :
-                      t.profitStatus === 'BREAK-EVEN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                    }`}>
-                      {t.profitStatus}
-                    </span>
+                  <td className="p-3 text-right font-black text-emerald-950 text-sm">
+                    {filteredTransactions.reduce((acc, t) => acc + t.quantityMT, 0).toFixed(2)} MT
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 2. PURCHASE ORDERS (POS) VIEW ================= */}
+          {viewMode === 'pos' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">PO Number</th>
+                  <th className="p-2.5">PO Date</th>
+                  <th className="p-2.5">Supplier</th>
+                  <th className="p-2.5">Broker</th>
+                  <th className="p-2.5">Agency</th>
+                  <th className="p-2.5">Area</th>
+                  <th className="p-2.5">Grade</th>
+                  <th className="p-2.5">Sauda Number</th>
+                  <th className="p-2.5 text-right font-black text-blue-900">Contract Qty (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredPOs.map((p, idx) => (
+                  <tr key={p.poNo || idx} className="hover:bg-blue-50/40 transition font-mono text-[11px]">
+                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2 font-black text-blue-950">{p.poNo}</td>
+                    <td className="p-2 text-slate-600 whitespace-nowrap">{p.date}</td>
+                    <td className="p-2 font-sans font-semibold text-slate-900" title={p.supplier}>{p.supplier}</td>
+                    <td className="p-2 font-sans text-slate-700" title={p.broker}>{p.broker}</td>
+                    <td className="p-2 font-sans text-slate-600">{p.agency}</td>
+                    <td className="p-2 font-sans text-slate-600">{p.area}</td>
+                    <td className="p-2">
+                      <span className="px-2 py-0.5 rounded bg-blue-100 font-bold text-blue-800 text-[10px]">
+                        {Array.from(p.grades).join(', ') || 'Standard'}
+                      </span>
+                    </td>
+                    <td className="p-2 text-slate-600 font-bold">
+                      {Array.from(p.saudaNos).join(', ') || '-'}
+                    </td>
+                    <td className="p-2 text-right font-black text-blue-950 text-xs">
+                      {p.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-blue-50 text-blue-950 font-black text-xs border-t-2 border-blue-300 font-mono">
+                  <td colSpan={2} className="p-3 text-left">
+                    Total POs: <strong>{filteredPOs.length}</strong>
+                  </td>
+                  <td colSpan={7} className="p-3 text-right uppercase tracking-wider">
+                    Total Purchase Order Contract Weight:
+                  </td>
+                  <td className="p-3 text-right font-black text-blue-950 text-sm">
+                    {filteredPOs.reduce((acc, p) => acc + p.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 3. SUPPLIERS VIEW ================= */}
+          {viewMode === 'suppliers' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Supplier Name</th>
+                  <th className="p-2.5 text-center">Total PO Count</th>
+                  <th className="p-2.5 text-center">Total Sauda Count</th>
+                  <th className="p-2.5 text-right font-black text-indigo-950">Total Contract Quantity (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredSuppliers.map((s, idx) => (
+                  <tr key={s.supplier || idx} className="hover:bg-indigo-50/40 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{s.supplier}</td>
+                    <td className="p-2.5 text-center font-bold text-blue-900">{s.poSet.size} POs</td>
+                    <td className="p-2.5 text-center font-bold text-emerald-900">{s.saudaSet.size} Saudas</td>
+                    <td className="p-2.5 text-right font-black text-indigo-950 text-xs">
+                      {s.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-indigo-50 text-indigo-950 font-black text-xs border-t-2 border-indigo-300 font-mono">
+                  <td className="p-3 text-center">Totals</td>
+                  <td className="p-3">
+                    {filteredSuppliers.length} Unique Suppliers
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredSuppliers.reduce((acc, s) => acc + s.poSet.size, 0)} POs
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredSuppliers.reduce((acc, s) => acc + s.saudaSet.size, 0)} Saudas
+                  </td>
+                  <td className="p-3 text-right font-black text-indigo-950 text-sm">
+                    {filteredSuppliers.reduce((acc, s) => acc + s.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 4. BROKERS VIEW ================= */}
+          {viewMode === 'brokers' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Broker Name</th>
+                  <th className="p-2.5 text-center">PO Count</th>
+                  <th className="p-2.5 text-center">Sauda Count</th>
+                  <th className="p-2.5 text-right font-black text-purple-950">Contract Quantity (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredBrokers.map((b, idx) => (
+                  <tr key={b.broker || idx} className="hover:bg-purple-50/40 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{b.broker}</td>
+                    <td className="p-2.5 text-center font-bold text-blue-900">{b.poSet.size} POs</td>
+                    <td className="p-2.5 text-center font-bold text-emerald-900">{b.saudaSet.size} Saudas</td>
+                    <td className="p-2.5 text-right font-black text-purple-950 text-xs">
+                      {b.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-purple-50 text-purple-950 font-black text-xs border-t-2 border-purple-300 font-mono">
+                  <td className="p-3 text-center">Totals</td>
+                  <td className="p-3">
+                    {filteredBrokers.length} Unique Brokers
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredBrokers.reduce((acc, b) => acc + b.poSet.size, 0)} POs
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredBrokers.reduce((acc, b) => acc + b.saudaSet.size, 0)} Saudas
+                  </td>
+                  <td className="p-3 text-right font-black text-purple-950 text-sm">
+                    {filteredBrokers.reduce((acc, b) => acc + b.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 5. AGENCIES VIEW ================= */}
+          {viewMode === 'agencies' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Agency Name</th>
+                  <th className="p-2.5 text-center">PO Count</th>
+                  <th className="p-2.5 text-center">Sauda Count</th>
+                  <th className="p-2.5 text-right font-black text-amber-950">Contract Quantity (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredAgencies.map((a, idx) => (
+                  <tr key={a.agency || idx} className="hover:bg-amber-50/40 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{a.agency}</td>
+                    <td className="p-2.5 text-center font-bold text-blue-900">{a.poSet.size} POs</td>
+                    <td className="p-2.5 text-center font-bold text-emerald-900">{a.saudaSet.size} Saudas</td>
+                    <td className="p-2.5 text-right font-black text-amber-950 text-xs">
+                      {a.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-amber-50 text-amber-950 font-black text-xs border-t-2 border-amber-300 font-mono">
+                  <td className="p-3 text-center">Totals</td>
+                  <td className="p-3">
+                    {filteredAgencies.length} Unique Agencies
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredAgencies.reduce((acc, a) => acc + a.poSet.size, 0)} POs
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredAgencies.reduce((acc, a) => acc + a.saudaSet.size, 0)} Saudas
+                  </td>
+                  <td className="p-3 text-right font-black text-amber-950 text-sm">
+                    {filteredAgencies.reduce((acc, a) => acc + a.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 6. AREAS VIEW ================= */}
+          {viewMode === 'areas' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Sourcing Area / Belt</th>
+                  <th className="p-2.5 text-center">PO Count</th>
+                  <th className="p-2.5 text-center">Sauda Count</th>
+                  <th className="p-2.5 text-right font-black text-teal-950">Contract Quantity (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredAreas.map((ar, idx) => (
+                  <tr key={ar.area || idx} className="hover:bg-teal-50/40 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{ar.area}</td>
+                    <td className="p-2.5 text-center font-bold text-blue-900">{ar.poSet.size} POs</td>
+                    <td className="p-2.5 text-center font-bold text-emerald-900">{ar.saudaSet.size} Saudas</td>
+                    <td className="p-2.5 text-right font-black text-teal-950 text-xs">
+                      {ar.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-teal-50 text-teal-950 font-black text-xs border-t-2 border-teal-300 font-mono">
+                  <td className="p-3 text-center">Totals</td>
+                  <td className="p-3">
+                    {filteredAreas.length} Unique Sourcing Belts
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredAreas.reduce((acc, ar) => acc + ar.poSet.size, 0)} POs
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredAreas.reduce((acc, ar) => acc + ar.saudaSet.size, 0)} Saudas
+                  </td>
+                  <td className="p-3 text-right font-black text-teal-950 text-sm">
+                    {filteredAreas.reduce((acc, ar) => acc + ar.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 7. GRADES VIEW ================= */}
+          {viewMode === 'grades' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Quality Grade</th>
+                  <th className="p-2.5 text-center">PO Count</th>
+                  <th className="p-2.5 text-center">Sauda Count</th>
+                  <th className="p-2.5 text-right font-black text-rose-950">Contract Quantity (MT)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredGrades.map((g, idx) => (
+                  <tr key={g.grade || idx} className="hover:bg-rose-50/40 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
+                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-black">
+                        {g.grade}
+                      </span>
+                    </td>
+                    <td className="p-2.5 text-center font-bold text-blue-900">{g.poSet.size} POs</td>
+                    <td className="p-2.5 text-center font-bold text-emerald-900">{g.saudaSet.size} Saudas</td>
+                    <td className="p-2.5 text-right font-black text-rose-950 text-xs">
+                      {g.totalQuantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-rose-50 text-rose-950 font-black text-xs border-t-2 border-rose-300 font-mono">
+                  <td className="p-3 text-center">Totals</td>
+                  <td className="p-3">
+                    {filteredGrades.length} Unique Quality Grades
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredGrades.reduce((acc, g) => acc + g.poSet.size, 0)} POs
+                  </td>
+                  <td className="p-3 text-center">
+                    {filteredGrades.reduce((acc, g) => acc + g.saudaSet.size, 0)} Saudas
+                  </td>
+                  <td className="p-3 text-right font-black text-rose-950 text-sm">
+                    {filteredGrades.reduce((acc, g) => acc + g.totalQuantityMT, 0).toFixed(2)} MT
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 8. COMPREHENSIVE TRANSACTIONS VIEW ================= */}
+          {viewMode === 'transactions' && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Date</th>
+                  <th className="p-2.5">Sauda / PO</th>
+                  <th className="p-2.5">Supplier</th>
+                  <th className="p-2.5">Broker</th>
+                  <th className="p-2.5">Area & Grade</th>
+                  <th className="p-2.5 text-right">Qty (MT)</th>
+                  <th className="p-2.5 text-right">Purchase Rate</th>
+                  <th className="p-2.5 text-right">Base Rate</th>
+                  <th className="p-2.5 text-right">Variance</th>
+                  <th className="p-2.5 text-right">Gross Value</th>
+                  <th className="p-2.5 text-right">Eff. Cost</th>
+                  <th className="p-2.5 text-right">Profit</th>
+                  <th className="p-2.5 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredTransactions.map((t, idx) => (
+                  <tr key={t.txnId || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
+                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
+                    <td className="p-2 font-bold text-emerald-950">
+                      <div>{t.poNo}</div>
+                      <div className="text-[10px] text-slate-400 font-normal">{t.saudaNo}</div>
+                    </td>
+                    <td className="p-2 max-w-[140px] truncate font-sans" title={t.supplier}>{t.supplier}</td>
+                    <td className="p-2 max-w-[120px] truncate font-sans" title={t.broker}>{t.broker}</td>
+                    <td className="p-2 font-sans">
+                      <span className="font-bold text-slate-800">{t.grade}</span>
+                      <span className="text-[10px] text-slate-500 block">{t.area}</span>
+                    </td>
+                    <td className="p-2 text-right font-bold text-emerald-900">{t.quantityMT.toFixed(2)}</td>
+                    <td className="p-2 text-right">₹{t.purchaseRate.toLocaleString()}</td>
+                    <td className="p-2 text-right text-slate-500">₹{t.baseRate.toLocaleString()}</td>
+                    <td className="p-2 text-right">
+                      <span className={t.rateVariance > 0 ? 'text-amber-700 font-bold' : (t.rateVariance < 0 ? 'text-emerald-700 font-bold' : 'text-slate-400')}>
+                        {t.rateVariance > 0 ? `+₹${t.rateVariance.toFixed(0)}` : (t.rateVariance < 0 ? `-₹${Math.abs(t.rateVariance).toFixed(0)}` : '₹0')}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right">₹{t.grossPurchaseValue.toLocaleString()}</td>
+                    <td className="p-2 text-right text-slate-900 font-bold">₹{t.effectiveCost.toLocaleString()}</td>
+                    <td className="p-2 text-right">
+                      <span className={t.grossProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
+                        {t.grossProfit >= 0 ? `+₹${t.grossProfit.toLocaleString()}` : `-₹${Math.abs(t.grossProfit).toLocaleString()}`}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                        t.profitStatus === 'PROFITABLE' ? 'bg-emerald-100 text-emerald-800' :
+                        t.profitStatus === 'LOSS' ? 'bg-rose-100 text-rose-800' :
+                        t.profitStatus === 'BREAK-EVEN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {t.profitStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
         </div>
 
         {/* Footer */}
         <div className="bg-slate-100 px-5 py-3 border-t border-slate-200 flex items-center justify-between">
           <span className="text-xs text-slate-500 font-mono">
-            Granular Line Item Audit: {transactions.length} rows evaluated
+            Sauda Check Point Live Audit: {filteredTransactions.length} records evaluated
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition"
+            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition cursor-pointer"
           >
             Close Drill-Down
           </button>
@@ -204,3 +920,4 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
     </div>
   );
 };
+

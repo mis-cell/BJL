@@ -30,7 +30,7 @@ import { Priority3Operations } from '../components/system-reports/Priority3Opera
 import { Priority4Detailed } from '../components/system-reports/Priority4Detailed';
 import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditView';
 import { ContributionView } from '../components/system-reports/ContributionView';
-import { DrillDownModal } from '../components/system-reports/DrillDownModal';
+import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/DrillDownModal';
 import { SimpleReportView } from '../components/system-reports/SimpleReportView';
 
 export type ReportNavSection = 
@@ -77,10 +77,12 @@ export default function Reports({ onClose }: ReportsProps) {
     title: string;
     subtitle?: string;
     transactions: ReportTransactionLine[];
+    viewMode?: DrillDownViewMode;
   }>({
     isOpen: false,
     title: '',
-    transactions: []
+    transactions: [],
+    viewMode: 'transactions'
   });
 
   // Load Data
@@ -148,12 +150,13 @@ export default function Reports({ onClose }: ReportsProps) {
     metrics
   };
 
-  const handleOpenDrillDown = (title: string, txns: ReportTransactionLine[]) => {
+  const handleOpenDrillDown = (title: string, txns: ReportTransactionLine[], viewMode?: DrillDownViewMode) => {
     setDrillDownInfo({
       isOpen: true,
       title,
-      subtitle: `Viewing ${txns.length} underlying transaction line records`,
-      transactions: txns
+      subtitle: `Viewing underlying records (Filtered)`,
+      transactions: txns,
+      viewMode: viewMode || 'transactions'
     });
   };
 
@@ -412,6 +415,7 @@ export default function Reports({ onClose }: ReportsProps) {
             title={drillDownInfo.title}
             subtitle={drillDownInfo.subtitle}
             transactions={drillDownInfo.transactions}
+            viewMode={drillDownInfo.viewMode}
             onClose={() => setDrillDownInfo(prev => ({ ...prev, isOpen: false }))}
           />
         )}
