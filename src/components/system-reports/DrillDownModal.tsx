@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Download, Search, FileSpreadsheet, Building2, UserCheck, MapPin, Tag, Package, FileText } from 'lucide-react';
+import { X, Download, Search, FileSpreadsheet, Building2, UserCheck, MapPin, Tag, Package, FileText, ArrowLeft, ChevronRight } from 'lucide-react';
 import { ReportTransactionLine } from '../../services/systemReportEngine';
 
 export type DrillDownViewMode = 
@@ -28,6 +28,10 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
   onClose
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSubFilter, setSelectedSubFilter] = useState<{
+    type: 'grade' | 'supplier' | 'broker' | 'agency' | 'area';
+    value: string;
+  } | null>(null);
 
   // 1. Grouped Suppliers
   const supplierGroups = useMemo(() => {
@@ -270,12 +274,58 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
     return gradeGroups.filter(g => g.grade.toLowerCase().includes(term));
   }, [gradeGroups, searchTerm]);
 
+  // Sub-filtered transactions when clicking on a Grade, Supplier, Broker, Agency, or Area
+  const subFilteredTransactions = useMemo(() => {
+    if (!selectedSubFilter) return [];
+    const val = selectedSubFilter.value.toLowerCase().trim();
+    return transactions.filter(t => {
+      if (selectedSubFilter.type === 'grade') return (t.grade || '').toLowerCase().trim() === val;
+      if (selectedSubFilter.type === 'supplier') return (t.supplier || '').toLowerCase().trim() === val;
+      if (selectedSubFilter.type === 'broker') return (t.broker || '').toLowerCase().trim() === val;
+      if (selectedSubFilter.type === 'agency') return (t.agency || '').toLowerCase().trim() === val;
+      if (selectedSubFilter.type === 'area') return (t.area || '').toLowerCase().trim() === val;
+      return true;
+    });
+  }, [transactions, selectedSubFilter]);
+
+  const displaySubTransactions = useMemo(() => {
+    if (!searchTerm) return subFilteredTransactions;
+    const term = searchTerm.toLowerCase();
+    return subFilteredTransactions.filter(t => 
+      (t.saudaNo && t.saudaNo.toLowerCase().includes(term)) ||
+      (t.poNo && t.poNo.toLowerCase().includes(term)) ||
+      (t.supplier && t.supplier.toLowerCase().includes(term)) ||
+      (t.broker && t.broker.toLowerCase().includes(term)) ||
+      (t.agency && t.agency.toLowerCase().includes(term)) ||
+      (t.area && t.area.toLowerCase().includes(term)) ||
+      (t.grade && t.grade.toLowerCase().includes(term)) ||
+      (t.date && t.date.toLowerCase().includes(term))
+    );
+  }, [subFilteredTransactions, searchTerm]);
+
   // CSV Exporter based on active view mode
   const exportCSV = () => {
     let headers: string[] = [];
     let rows: (string | number)[][] = [];
 
-    if (viewMode === 'sauda_quantity') {
+    if (selectedSubFilter) {
+      headers = ['#', 'Sauda Number', 'Sauda Date', 'PO / PTF Number', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade', 'Contract Quantity (MT)', 'Purchase Rate (Rs)', 'Base Rate (Rs)', 'Status'];
+      rows = displaySubTransactions.map((t, idx) => [
+        idx + 1,
+        t.saudaNo,
+        t.date,
+        t.poNo,
+        `"${t.supplier}"`,
+        `"${t.broker}"`,
+        `"${t.agency}"`,
+        `"${t.area}"`,
+        t.grade,
+        t.quantityMT.toFixed(2),
+        t.purchaseRate.toFixed(2),
+        t.baseRate.toFixed(2),
+        t.saudaStatus
+      ]);
+    } else if (viewMode === 'sauda_quantity') {
       headers = ['#', 'Sauda Number', 'Sauda Date', 'PO Number', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade', 'Sauda Quantity (MT)'];
       rows = filteredTransactions.map((t, idx) => [
         idx + 1,
@@ -499,6 +549,107 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
         {/* Data Table */}
         <div className="overflow-auto flex-1 p-4">
 
+          {/* ================= DEDICATED SUB-FILTER VIEW (e.g. CLICKED ON A GRADE / SUPPLIER / BROKER) ================= */}
+          {selectedSubFilter ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl p-3 shadow-sm border border-slate-700">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedSubFilter(null)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition border border-white/20 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to All {selectedSubFilter.type === 'grade' ? 'Quality Grades' : selectedSubFilter.type === 'supplier' ? 'Suppliers' : selectedSubFilter.type === 'broker' ? 'Brokers' : selectedSubFilter.type === 'agency' ? 'Agencies' : 'Areas'}</span>
+                  </button>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 block">
+                      Filtered by {selectedSubFilter.type.toUpperCase()}
+                    </span>
+                    <h4 className="text-sm font-black text-yellow-300 flex items-center gap-2">
+                      <span>{selectedSubFilter.value}</span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-800 text-emerald-100 text-[10px] font-bold">
+                        {displaySubTransactions.length} Contracts
+                      </span>
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-300 uppercase font-bold block">Total Contract Quantity</span>
+                  <span className="text-sm font-black text-emerald-300 font-mono">
+                    {displaySubTransactions.reduce((acc, t) => acc + t.quantityMT, 0).toFixed(2)} MT
+                  </span>
+                </div>
+              </div>
+
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                    <th className="p-2.5 text-center">#</th>
+                    <th className="p-2.5">Sauda Number</th>
+                    <th className="p-2.5">Sauda Date</th>
+                    <th className="p-2.5">PO / PTF Number</th>
+                    <th className="p-2.5">Supplier</th>
+                    <th className="p-2.5">Broker</th>
+                    <th className="p-2.5">Agency</th>
+                    <th className="p-2.5">Area</th>
+                    <th className="p-2.5">Grade</th>
+                    <th className="p-2.5 text-right font-black text-emerald-900">Contract Qty (MT)</th>
+                    <th className="p-2.5 text-right">Purchase Rate</th>
+                    <th className="p-2.5 text-right">Base Rate</th>
+                    <th className="p-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {displaySubTransactions.map((t, idx) => (
+                    <tr key={t.txnId || idx} className="hover:bg-yellow-50/50 transition font-mono text-[11px]">
+                      <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                      <td className="p-2 font-bold text-emerald-950">{t.saudaNo}</td>
+                      <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
+                      <td className="p-2 text-blue-900 font-bold">{t.poNo || 'Pending'}</td>
+                      <td className="p-2 font-sans font-semibold text-slate-900" title={t.supplier}>{t.supplier}</td>
+                      <td className="p-2 font-sans text-slate-700" title={t.broker}>{t.broker}</td>
+                      <td className="p-2 font-sans text-slate-600">{t.agency}</td>
+                      <td className="p-2 font-sans text-slate-600">{t.area}</td>
+                      <td className="p-2">
+                        <span className="px-2 py-0.5 rounded bg-rose-100 font-black text-rose-900 text-[10px]">
+                          {t.grade}
+                        </span>
+                      </td>
+                      <td className="p-2 text-right font-black text-emerald-900 text-xs">
+                        {t.quantityMT.toFixed(2)} MT
+                      </td>
+                      <td className="p-2 text-right text-slate-800 font-bold">
+                        ₹{t.purchaseRate.toLocaleString()}
+                      </td>
+                      <td className="p-2 text-right text-slate-600">
+                        ₹{t.baseRate.toLocaleString()}
+                      </td>
+                      <td className="p-2 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          t.saudaStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {t.saudaStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-emerald-50 text-emerald-950 font-black text-xs border-t-2 border-emerald-300 font-mono">
+                    <td colSpan={9} className="p-3 text-right uppercase tracking-wider">
+                      Total Contract Quantity for {selectedSubFilter.value}:
+                    </td>
+                    <td className="p-3 text-right font-black text-emerald-950 text-sm">
+                      {displaySubTransactions.reduce((acc, t) => acc + t.quantityMT, 0).toFixed(2)} MT
+                    </td>
+                    <td colSpan={3}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <>
           {/* ================= 1. SAUDA QUANTITY VIEW ================= */}
           {viewMode === 'sauda_quantity' && (
             <table className="w-full text-left text-xs border-collapse">
@@ -622,9 +773,21 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {filteredSuppliers.map((s, idx) => (
-                  <tr key={s.supplier || idx} className="hover:bg-indigo-50/40 transition font-mono text-[11px]">
+                  <tr 
+                    key={s.supplier || idx} 
+                    onClick={() => setSelectedSubFilter({ type: 'supplier', value: s.supplier })}
+                    className="hover:bg-indigo-50 transition font-mono text-[11px] cursor-pointer group"
+                    title={`Click to view all Sauda & PO records for ${s.supplier}`}
+                  >
                     <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{s.supplier}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{s.supplier}</span>
+                        <span className="text-[10px] text-indigo-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          View Saudas & POs →
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-2.5 text-center font-bold text-blue-900">{s.poSet.size} POs</td>
                     <td className="p-2.5 text-center font-bold text-emerald-900">{s.saudaSet.size} Saudas</td>
                     <td className="p-2.5 text-right font-black text-indigo-950 text-xs">
@@ -667,9 +830,21 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {filteredBrokers.map((b, idx) => (
-                  <tr key={b.broker || idx} className="hover:bg-purple-50/40 transition font-mono text-[11px]">
+                  <tr 
+                    key={b.broker || idx} 
+                    onClick={() => setSelectedSubFilter({ type: 'broker', value: b.broker })}
+                    className="hover:bg-purple-50 transition font-mono text-[11px] cursor-pointer group"
+                    title={`Click to view all Sauda & PO records for ${b.broker}`}
+                  >
                     <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{b.broker}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{b.broker}</span>
+                        <span className="text-[10px] text-purple-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          View Saudas & POs →
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-2.5 text-center font-bold text-blue-900">{b.poSet.size} POs</td>
                     <td className="p-2.5 text-center font-bold text-emerald-900">{b.saudaSet.size} Saudas</td>
                     <td className="p-2.5 text-right font-black text-purple-950 text-xs">
@@ -712,9 +887,21 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {filteredAgencies.map((a, idx) => (
-                  <tr key={a.agency || idx} className="hover:bg-amber-50/40 transition font-mono text-[11px]">
+                  <tr 
+                    key={a.agency || idx} 
+                    onClick={() => setSelectedSubFilter({ type: 'agency', value: a.agency })}
+                    className="hover:bg-amber-50 transition font-mono text-[11px] cursor-pointer group"
+                    title={`Click to view all Sauda & PO records for ${a.agency}`}
+                  >
                     <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{a.agency}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{a.agency}</span>
+                        <span className="text-[10px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          View Saudas & POs →
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-2.5 text-center font-bold text-blue-900">{a.poSet.size} POs</td>
                     <td className="p-2.5 text-center font-bold text-emerald-900">{a.saudaSet.size} Saudas</td>
                     <td className="p-2.5 text-right font-black text-amber-950 text-xs">
@@ -757,9 +944,21 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {filteredAreas.map((ar, idx) => (
-                  <tr key={ar.area || idx} className="hover:bg-teal-50/40 transition font-mono text-[11px]">
+                  <tr 
+                    key={ar.area || idx} 
+                    onClick={() => setSelectedSubFilter({ type: 'area', value: ar.area })}
+                    className="hover:bg-teal-50 transition font-mono text-[11px] cursor-pointer group"
+                    title={`Click to view all Sauda & PO records for ${ar.area}`}
+                  >
                     <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">{ar.area}</td>
+                    <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{ar.area}</span>
+                        <span className="text-[10px] text-teal-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          View Saudas & POs →
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-2.5 text-center font-bold text-blue-900">{ar.poSet.size} POs</td>
                     <td className="p-2.5 text-center font-bold text-emerald-900">{ar.saudaSet.size} Saudas</td>
                     <td className="p-2.5 text-right font-black text-teal-950 text-xs">
@@ -802,12 +1001,22 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {filteredGrades.map((g, idx) => (
-                  <tr key={g.grade || idx} className="hover:bg-rose-50/40 transition font-mono text-[11px]">
+                  <tr 
+                    key={g.grade || idx} 
+                    onClick={() => setSelectedSubFilter({ type: 'grade', value: g.grade })}
+                    className="hover:bg-rose-100/70 transition font-mono text-[11px] cursor-pointer group"
+                    title={`Click to view all Sauda & PO records for grade ${g.grade}`}
+                  >
                     <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
                     <td className="p-2.5 font-sans font-bold text-slate-900 text-xs">
-                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-black">
-                        {g.grade}
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-900 font-black group-hover:bg-rose-200 transition">
+                          {g.grade}
+                        </span>
+                        <span className="text-[10px] text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                          View Saudas & POs →
+                        </span>
+                      </div>
                     </td>
                     <td className="p-2.5 text-center font-bold text-blue-900">{g.poSet.size} POs</td>
                     <td className="p-2.5 text-center font-bold text-emerald-900">{g.saudaSet.size} Saudas</td>
@@ -894,6 +1103,8 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
                 ))}
               </tbody>
             </table>
+          )}
+          </>
           )}
 
         </div>
