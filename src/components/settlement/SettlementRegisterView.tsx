@@ -87,6 +87,8 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
   onClose,
 }) => {
   // Extract all available years from settled records and inspections
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     const currentYr = new Date().getFullYear();
@@ -163,7 +165,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
   }, [scopedInspections, yearMonthFilteredSettles]);
 
   // Combined with text search
-  const finalFilteredSettles = useMemo(() => {
+  /* const finalFilteredSettles = useMemo(() => {
     if (!searchFilter.trim()) return yearMonthFilteredSettles;
     const term = searchFilter.toLowerCase().trim();
     return yearMonthFilteredSettles.filter(s => {
@@ -176,7 +178,54 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
         (s.payable_bill_no && String(s.payable_bill_no).toLowerCase().includes(term))
       );
     });
-  }, [yearMonthFilteredSettles, searchFilter]);
+  }, [yearMonthFilteredSettles, searchFilter]); */
+  const finalFilteredSettles = useMemo(() => {
+    let filtered = yearMonthFilteredSettles;
+
+    // Date filter
+    if (startDateFilter || endDateFilter) {
+      filtered = filtered.filter((s) => {
+        if (!s.sett_date) return false;
+
+        const settleDate = String(s.sett_date).slice(0, 10);
+
+        if (startDateFilter && settleDate < startDateFilter) {
+          return false;
+        }
+
+        if (endDateFilter && settleDate > endDateFilter) {
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    // Search filter
+    if (searchFilter.trim()) {
+      const term = searchFilter.toLowerCase().trim();
+
+      filtered = filtered.filter((s) => {
+        return (
+          (s.mr_no && String(s.mr_no).toLowerCase().includes(term)) ||
+          (s.po_no && String(s.po_no).toLowerCase().includes(term)) ||
+          (s.supplier && String(s.supplier).toLowerCase().includes(term)) ||
+          (s.broker && String(s.broker).toLowerCase().includes(term)) ||
+          (s.lorry_number &&
+            String(s.lorry_number).toLowerCase().includes(term)) ||
+          (s.payable_bill_no &&
+            String(s.payable_bill_no).toLowerCase().includes(term))
+        );
+      });
+    }
+
+    return filtered;
+  }, [
+    yearMonthFilteredSettles,
+    searchFilter,
+    startDateFilter,
+    endDateFilter
+  ]);
 
   const activeScopeLabel = selectedMonth !== null
     ? `${MONTH_NAMES[selectedMonth]} ${activeYear}`
@@ -313,6 +362,39 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
             <button className="bg-[#103A20] px-3 border-l border-[#174C2C] hover:bg-[#0b2b18] transition-colors cursor-pointer" type="button">
               <Search className="h-4 w-4 text-white" />
             </button>
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
+              
+              <span className="text-[10px] font-bold text-slate-500 uppercase">
+                From:
+              </span>
+
+              <input
+                id="startdatefilter_register"
+                name="startdatefilter"
+                aria-label="Start date filter"
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+              />
+
+              <span className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+                To:
+              </span>
+
+              <input
+                id="enddatefilter_register"
+                name="enddatefilter"
+                aria-label="End date filter"
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+              />
+
+            </div>
           </div>
 
           {/* ACTION BUTTONS */}

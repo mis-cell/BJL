@@ -100,7 +100,8 @@ export function PaymentDashboardView({
 
     return Array.from(years).sort((a, b) => b - a);
   }, [paymentList, verifiedArrivals]);
-
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   // Year and Month selection state
   const [selectedYear, setSelectedYear] = useState<number>(() => {
     return availableYears.length > 0 ? availableYears[0] : new Date().getFullYear();
@@ -180,7 +181,8 @@ export function PaymentDashboardView({
   }, [yearMonthFilteredPayments]);
 
   // Combined with text search for the data table
-  const finalFilteredPayments = useMemo(() => {
+  /* const finalFilteredPayments = useMemo(() => {
+    alert('1')
     if (!searchFilter.trim()) return yearMonthFilteredPayments;
     const term = searchFilter.toLowerCase().trim();
     return yearMonthFilteredPayments.filter(p => {
@@ -195,7 +197,55 @@ export function PaymentDashboardView({
         (p.payment_mode && p.payment_mode.toLowerCase().includes(term))
       );
     });
-  }, [yearMonthFilteredPayments, searchFilter]);
+  }, [yearMonthFilteredPayments, searchFilter]); */
+  const finalFilteredPayments = useMemo(() => {
+    let filtered = yearMonthFilteredPayments;
+
+    // Date filter
+    if (startDateFilter || endDateFilter) {
+      filtered = filtered.filter((p) => {
+        if (!getPaymentDate(p)) return false;
+
+        // Keep only YYYY-MM-DD
+        const paymentDate = String(getPaymentDate(p)).slice(0, 10);
+
+        if (startDateFilter && paymentDate < startDateFilter) {
+          return false;
+        }
+
+        if (endDateFilter && paymentDate > endDateFilter) {
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    // Search filter
+    if (searchFilter.trim()) {
+      const term = searchFilter.toLowerCase().trim();
+
+      filtered = filtered.filter((p) => {
+        return (
+          (p.voucher_no && p.voucher_no.toLowerCase().includes(term)) ||
+          (p.party_name && p.party_name.toLowerCase().includes(term)) ||
+          (p.supplier && p.supplier.toLowerCase().includes(term)) ||
+          (p.mr_no && p.mr_no.toLowerCase().includes(term)) ||
+          (p.po_no && p.po_no.toLowerCase().includes(term)) ||
+          (p.reference_no && p.reference_no.toLowerCase().includes(term)) ||
+          (p.bank_name && p.bank_name.toLowerCase().includes(term)) ||
+          (p.payment_mode && p.payment_mode.toLowerCase().includes(term))
+        );
+      });
+    }
+
+    return filtered;
+  }, [
+    yearMonthFilteredPayments,
+    searchFilter,
+    startDateFilter,
+    endDateFilter
+  ]);
 
   // Scope label for UI badges
   const activeScopeLabel = selectedMonth !== null 
@@ -380,6 +430,39 @@ export function PaymentDashboardView({
             className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
+            
+            <span className="text-[10px] font-bold text-slate-500 uppercase">
+              From:
+            </span>
+
+            <input
+              id="startdatefilter_register"
+              name="startdatefilter"
+              aria-label="Start date filter"
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+            />
+
+            <span className="text-[10px] font-bold text-slate-500 uppercase ml-1">
+              To:
+            </span>
+
+            <input
+              id="enddatefilter_register"
+              name="enddatefilter"
+              aria-label="End date filter"
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 outline-none"
+            />
+
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -405,6 +488,18 @@ export function PaymentDashboardView({
           >
             <Download className="w-3.5 h-3.5" />
             Export PDF ({finalFilteredPayments.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStartDateFilter("");
+              setEndDateFilter("");
+              setSearchFilter("");
+            }}
+            className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+          >
+            Clear
           </button>
 
           <button
