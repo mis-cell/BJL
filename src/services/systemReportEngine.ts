@@ -879,13 +879,13 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
     sumQtyRate += t.quantityMT * t.purchaseRate;
     sumQtyBase += t.quantityMT * t.baseRate;
 
-    poSet.add(t.poNo);
-    saudaSet.add(t.saudaNo);
-    supplierSet.add(t.supplier);
-    brokerSet.add(t.broker);
-    agencySet.add(t.agency);
-    areaSet.add(t.area);
-    gradeSet.add(t.grade);
+    if (t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-') poSet.add(t.poNo);
+    if (t.saudaNo && t.saudaNo !== '-') saudaSet.add(t.saudaNo);
+    if (t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== '-') supplierSet.add(t.supplier);
+    if (t.broker && t.broker !== 'Direct' && t.broker !== '-') brokerSet.add(t.broker);
+    if (t.agency && t.agency !== '-') agencySet.add(t.agency);
+    if (t.area && t.area !== '-') areaSet.add(t.area);
+    if (t.grade && t.grade !== '-') gradeSet.add(t.grade);
 
     if (t.grossProfit < 0) {
       totalLoss += Math.abs(t.grossProfit);
