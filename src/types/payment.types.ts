@@ -82,6 +82,7 @@ export interface PaymentMaster {
   payment_status: string;
   advance_payment_done?: string;
   advance_payment_from?: string;
+  advance_payment_financier?: string;
   payment_settlementdate?: string;
   tenor?: string;
   repayment_date?: string;
@@ -245,6 +246,7 @@ export const initialMaster = (): PaymentMaster => ({
   payment_status: 'Paid',
   advance_payment_done: 'No',
   advance_payment_from: '1',
+  advance_payment_financier:'',
   payment_settlementdate: '',
   tenor: '',
   repayment_date: ''

@@ -419,6 +419,65 @@ export function PaymentEntryForm({
           {masterData.advance_payment_from !== '1' && (
             <>
               <div>
+                <label className="block text-[10px] font-black uppercase text-purple-900 mb-1 flex items-center justify-between">
+                  <span>Financier Name</span>
+                </label>
+                <select 
+                  id="advance_payment_financier_entry" 
+                  name="advance_payment_financier_entry" 
+                  aria-label="Payment from"
+                  value={masterData.advance_payment_financier || ''}
+                  className="w-full border rounded-lg px-3 py-2"
+                  onChange={e => setMasterData({ ...masterData, advance_payment_financier: e.target.value })}
+                >
+                  <option value="">Select Bank</option>
+                  <option value="State Bank of India">State Bank of India</option>
+                  <option value="Punjab National Bank">Punjab National Bank</option>
+                  <option value="Bank of Baroda">Bank of Baroda</option>
+                  <option value="Canara Bank">Canara Bank</option>
+                  <option value="Union Bank of India">Union Bank of India</option>
+                  <option value="Bank of India">Bank of India</option>
+                  <option value="Indian Bank">Indian Bank</option>
+                  <option value="Central Bank of India">Central Bank of India</option>
+                  <option value="Indian Overseas Bank">Indian Overseas Bank</option>
+                  <option value="UCO Bank">UCO Bank</option>
+                  <option value="Bank of Maharashtra">Bank of Maharashtra</option>
+                  <option value="Punjab & Sind Bank">Punjab & Sind Bank</option>
+
+                  <option value="HDFC Bank">HDFC Bank</option>
+                  <option value="ICICI Bank">ICICI Bank</option>
+                  <option value="Axis Bank">Axis Bank</option>
+                  <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                  <option value="IndusInd Bank">IndusInd Bank</option>
+                  <option value="Yes Bank">Yes Bank</option>
+                  <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
+                  <option value="Federal Bank">Federal Bank</option>
+                  <option value="South Indian Bank">South Indian Bank</option>
+                  <option value="Bandhan Bank">Bandhan Bank</option>
+                  <option value="RBL Bank">RBL Bank</option>
+                  <option value="Karnataka Bank">Karnataka Bank</option>
+                  <option value="City Union Bank">City Union Bank</option>
+                  <option value="DCB Bank">DCB Bank</option>
+                  <option value="Tamilnad Mercantile Bank">Tamilnad Mercantile Bank</option>
+                  <option value="Dhanlaxmi Bank">Dhanlaxmi Bank</option>
+
+                  <option value="AU Small Finance Bank">AU Small Finance Bank</option>
+                  <option value="Equitas Small Finance Bank">Equitas Small Finance Bank</option>
+                  <option value="Ujjivan Small Finance Bank">Ujjivan Small Finance Bank</option>
+                  <option value="Jana Small Finance Bank">Jana Small Finance Bank</option>
+                  <option value="ESAF Small Finance Bank">ESAF Small Finance Bank</option>
+                  <option value="Suryoday Small Finance Bank">Suryoday Small Finance Bank</option>
+                  <option value="North East Small Finance Bank">North East Small Finance Bank</option>
+                  <option value="Shivalik Small Finance Bank">Shivalik Small Finance Bank</option>
+                  <option value="Unity Small Finance Bank">Unity Small Finance Bank</option>
+
+                  <option value="Airtel Payments Bank">Airtel Payments Bank</option>
+                  <option value="India Post Payments Bank">India Post Payments Bank</option>
+                  <option value="Fino Payments Bank">Fino Payments Bank</option>
+                  <option value="Paytm Payments Bank">Paytm Payments Bank</option>
+                </select>
+              </div>
+              <div>
                 <label htmlFor="payment_settlementdate_entry" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Payment Settlement Date *</label>
                 <input 
                   id="payment_settlementdate_entry" 

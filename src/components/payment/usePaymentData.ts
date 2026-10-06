@@ -138,6 +138,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
             payment_status TEXT DEFAULT 'Paid',
             advance_payment_done TEXT DEFAULT 'No',
             advance_payment_from TEXT Default '1',
+            advance_payment_financier TEXT Default '',
             payment_settlementdate DATE,
             tenor TEXT DEFAULT 0,
             repayment_date DATE,
@@ -146,6 +147,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           ALTER TABLE IF EXISTS payment_master DISABLE ROW LEVEL SECURITY;
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_done TEXT DEFAULT 'No';
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_from TEXT DEFAULT '1';
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_financier TEXT DEFAULT '1';
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS payment_settlementdate DATE DEFAULT '';
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS tenor TEXT DEFAULT '';
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS repayment_date DATE DEFAULT '';
@@ -1160,6 +1162,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         payment_status: calcPaymentStatus,
         advance_payment_done: masterData.advance_payment_done || 'No',
         advance_payment_from: masterData.advance_payment_from || '1',
+        advance_payment_financier : masterData.advance_payment_financier || '',
         payment_settlementdate: masterData.payment_settlementdate || '',
         tenor: masterData.tenor || '',
         repayment_date: masterData.repayment_date || ''
