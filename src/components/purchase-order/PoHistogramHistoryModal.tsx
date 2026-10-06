@@ -401,7 +401,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     const totalArrivalUnits = dbArrivals.reduce((sum, a) => sum + (parseInt(a.received_units || a.quantity_chln || a.units || a.quantity || 0, 10) || 0), 0);
     const firstArrival = dbArrivals[0] || {};
     const arrivalLorryNos = dbArrivals.map(a => a.lorry_number || a.lorry_no || a.truck_no || a.vehicle_no).filter(Boolean).join(', ');
-
+    const challanweight = dbArrivals.map(a => a.challan_material_weight || a.challan_material_weight || a.challan_material_weight || a.challan_material_weight).filter(Boolean).join(', ');
     // Tolerance Calculation
     const weightTol = calculateWeightTolerance(poContractMt, totalArrivalWeight);
 
@@ -569,6 +569,12 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         name: 'Lorry Number(s)',
         referenceValue: `${poLorries} Expected`,
         actualValue: arrivalLorryNos || (dbArrivals.length > 0 ? `${dbArrivals.length} Recorded` : 'Pending Arrival'),
+        status: dbArrivals.length === 0 ? 'not_available' : 'match'
+      },
+      {
+        name: 'Gross weight',
+        referenceValue: `${poLorries} Expected`,
+        actualValue: challanweight || (dbArrivals.length > 0 ? `${dbArrivals.length} Recorded` : 'Pending Arrival'),
         status: dbArrivals.length === 0 ? 'not_available' : 'match'
       },
       {
