@@ -238,6 +238,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       agencies,
       areas,
       grades,
+      markas,
       saudas,
       saudaQualityList
     ] = await Promise.all([
@@ -255,6 +256,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('agency_master').catch(() => []),
       dbModule.fetchAll('area_master').catch(() => []),
       dbModule.fetchAll('grade_master').catch(() => []),
+      dbModule.fetchAll('marka_master').catch(() => []),
       dbModule.fetchAll('sauda_master').catch(() => []),
       dbModule.fetchAll('sauda_quality_details').catch(() => [])
     ]);
@@ -272,7 +274,19 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    const INVALID_GRADE_SET = new Set(['NORMAL', 'NORMAL GRADE', 'STANDARD', 'STANDARD GRADE', 'PO_TYPE', 'UNASSIGNED', 'DIRECT', 'N/A', '-', '']);
+    const markaSet = new Set<string>();
+    (markas || []).forEach((m: any) => {
+      if (m.marka_code) markaSet.add(String(m.marka_code).trim().toUpperCase());
+      if (m.marka_name) markaSet.add(String(m.marka_name).trim().toUpperCase());
+      if (m.name) markaSet.add(String(m.name).trim().toUpperCase());
+    });
+    // Common trade markas that might not be in db
+    ['AJAY', 'BALAJI', 'TULSI/H', 'TULSI', 'AA', 'NO MARK', 'BTR', 'SUPERIOR', 'NORMAL'].forEach(m => markaSet.add(m));
+
+    const INVALID_GRADE_SET = new Set([
+      'NORMAL', 'NORMAL GRADE', 'STANDARD', 'STANDARD GRADE', 'PO_TYPE', 'UNASSIGNED', 'DIRECT', 'N/A', '-', '', 'BALES',
+      ...Array.from(markaSet)
+    ]);
 
     // Build Sauda Master & Sauda Quality Maps for reliable grade resolution
     const saudaMasterMap = new Map<string, any>();
@@ -297,40 +311,53 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const cleanName = (rawName || '').trim();
       const cleanCode = (rawCode || '').trim();
 
-      if (cleanName && !INVALID_GRADE_SET.has(cleanName.toUpperCase())) {
-        const mapped = gradeMap.get(cleanName.toUpperCase());
-        if (mapped && !INVALID_GRADE_SET.has(mapped.toUpperCase())) return mapped;
+      // Check grade_master match by name or code
+      if (cleanName && gradeMap.has(cleanName.toUpperCase())) {
+        return gradeMap.get(cleanName.toUpperCase())!;
+      }
+      if (cleanCode && gradeMap.has(cleanCode.toUpperCase())) {
+        return gradeMap.get(cleanCode.toUpperCase())!;
+      }
+
+      if (cleanName && !INVALID_GRADE_SET.has(cleanName.toUpperCase()) && !markaSet.has(cleanName.toUpperCase())) {
         return cleanName;
       }
-      if (cleanCode && !INVALID_GRADE_SET.has(cleanCode.toUpperCase())) {
-        const mapped = gradeMap.get(cleanCode.toUpperCase());
-        if (mapped && !INVALID_GRADE_SET.has(mapped.toUpperCase())) return mapped;
+      if (cleanCode && !INVALID_GRADE_SET.has(cleanCode.toUpperCase()) && !markaSet.has(cleanCode.toUpperCase())) {
         return cleanCode;
       }
 
-      // Check sauda quality details
+      // Check sauda quality details (quality/grade)
       const qList = saudaQualityMap.get(saudaNo.toUpperCase()) || saudaQualityMap.get(poNo.toUpperCase());
       if (qList && qList.length > 0) {
         for (const q of qList) {
           const qVal = String(q.quality || q.grade_name || q.grade_code || q.grade || '').trim();
-          if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase())) {
-            return gradeMap.get(qVal.toUpperCase()) || qVal;
+          if (qVal && gradeMap.has(qVal.toUpperCase())) {
+            return gradeMap.get(qVal.toUpperCase())!;
+          }
+          if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase()) && !markaSet.has(qVal.toUpperCase())) {
+            return qVal;
           }
         }
       }
 
-      // Check sauda master
+      // Check sauda master quality
       const saudaRow = saudaMasterMap.get(saudaNo.toUpperCase()) || saudaMasterMap.get(poNo.toUpperCase());
       if (saudaRow) {
-        const sVal = String(saudaRow.quality || saudaRow.grade || saudaRow.marks || '').trim();
-        if (sVal && !INVALID_GRADE_SET.has(sVal.toUpperCase())) {
-          return gradeMap.get(sVal.toUpperCase()) || sVal;
+        const sVal = String(saudaRow.quality || saudaRow.grade || '').trim();
+        if (sVal && gradeMap.has(sVal.toUpperCase())) {
+          return gradeMap.get(sVal.toUpperCase())!;
+        }
+        if (sVal && !INVALID_GRADE_SET.has(sVal.toUpperCase()) && !markaSet.has(sVal.toUpperCase())) {
+          return sVal;
         }
         if (Array.isArray(saudaRow.quality_details)) {
           for (const q of saudaRow.quality_details) {
             const qVal = String(q.quality || q.grade || '').trim();
-            if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase())) {
-              return gradeMap.get(qVal.toUpperCase()) || qVal;
+            if (qVal && gradeMap.has(qVal.toUpperCase())) {
+              return gradeMap.get(qVal.toUpperCase())!;
+            }
+            if (qVal && !INVALID_GRADE_SET.has(qVal.toUpperCase()) && !markaSet.has(qVal.toUpperCase())) {
+              return qVal;
             }
           }
         }
@@ -444,16 +471,61 @@ export async function loadAndProcessSystemReportData(): Promise<{
       if (p.voucher_no) paymentByPo.set(p.voucher_no, (paymentByPo.get(p.voucher_no) || 0) + amt);
     });
 
-    // Group PO details by po_no
+    // Helper to generate normalized keys for robust PO detail linking
+    const getPoKeys = (raw: string | number | undefined | null): string[] => {
+      if (!raw) return [];
+      const s = String(raw).trim().toUpperCase();
+      if (!s || s === '-') return [];
+      const keys = new Set<string>([s]);
+      const numOnly = s.replace(/[^0-9]/g, '');
+      if (numOnly) {
+        keys.add(numOnly);
+        keys.add(numOnly.padStart(4, '0'));
+        keys.add(String(parseInt(numOnly, 10)));
+        keys.add(`PO-${numOnly}`);
+        keys.add(`PO-${numOnly.padStart(4, '0')}`);
+        keys.add(`PO-${String(parseInt(numOnly, 10))}`);
+        keys.add(`PTF-${numOnly}`);
+        keys.add(`PTF-${numOnly.padStart(4, '0')}`);
+        keys.add(`PTF-${String(parseInt(numOnly, 10))}`);
+      }
+      return Array.from(keys);
+    };
+
+    // Group PO details by all alias variations
     const poDetailsMap = new Map<string, any[]>();
     [...(scpDetails || []), ...(poDetails || [])].forEach((item: any) => {
-      const pNo = String(item.po_no || '').trim().toUpperCase();
-      if (pNo) {
-        const list = poDetailsMap.get(pNo) || [];
-        list.push(item);
-        poDetailsMap.set(pNo, list);
-      }
+      const keys = [
+        ...getPoKeys(item.po_no),
+        ...getPoKeys(item.ptf_no),
+        ...getPoKeys(item.sauda_no),
+        ...getPoKeys(item.contract_po_no)
+      ];
+      keys.forEach(k => {
+        const list = poDetailsMap.get(k) || [];
+        const isDuplicate = list.some(existing => 
+          existing.srl_no === item.srl_no && 
+          (existing.grade_name === item.grade_name || existing.grade_code === item.grade_code) &&
+          (existing.rate_qntl === item.rate_qntl || existing.rate === item.rate)
+        );
+        if (!isDuplicate) {
+          list.push(item);
+        }
+        poDetailsMap.set(k, list);
+      });
     });
+
+    const findPoDetails = (poNo: string, saudaNo: string): any[] => {
+      const candidateKeys = [
+        ...getPoKeys(poNo),
+        ...getPoKeys(saudaNo)
+      ];
+      for (const k of candidateKeys) {
+        const found = poDetailsMap.get(k);
+        if (found && found.length > 0) return found;
+      }
+      return [];
+    };
 
     // Merge Sauda Check Point & Purchase Master records
     const allPosMap = new Map<string, any>();
@@ -483,12 +555,12 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
 
       const rawAgency = String(po.agency || po.purchase_unit_name || '').trim();
-      const agency = agencyMap.get(rawAgency.toUpperCase()) || rawAgency || '-';
+      const agency = agencyMap.get(rawAgency.toUpperCase()) || (rawAgency.toUpperCase() !== 'BALES' ? rawAgency : '-');
 
       const rawArea = String(po.area || '').trim();
       const area = areaMap.get(rawArea.toUpperCase()) || rawArea || '-';
 
-      const details = poDetailsMap.get(poNo.toUpperCase()) || [];
+      const details = findPoDetails(poNo, saudaNo);
 
       if (details.length > 0) {
         details.forEach((line: any) => {
@@ -498,7 +570,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
           const rawItemAgency = String(line.agency_name || line.agency || '').trim();
           const rawItemAgencyCode = String(line.agency_code || '').trim();
-          const itemAgency = agencyMap.get(rawItemAgency.toUpperCase()) || rawItemAgency || agencyMap.get(rawItemAgencyCode.toUpperCase()) || agency;
+          const itemAgency = agencyMap.get(rawItemAgency.toUpperCase()) || agencyMap.get(rawItemAgencyCode.toUpperCase()) || (rawItemAgency && rawItemAgency.toUpperCase() !== 'BALES' ? rawItemAgency : agency);
 
           const totalPoContract = Number(po.total_contract_mt || po.quantity || 0);
           let quantityMT = Number(line.weight_mt || line.qty || 0);
