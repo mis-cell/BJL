@@ -224,9 +224,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
 }> {
   try {
     const [
-      saudas,
       pos,
-      saudaDetails,
       poDetails,
       scps,
       scpDetails,
@@ -241,9 +239,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       areas,
       grades
     ] = await Promise.all([
-      dbModule.fetchAll('sauda_master').catch(() => []),
       dbModule.fetchAll('purchase_master').catch(() => []),
-      dbModule.fetchAll('sauda_quality_details').catch(() => []),
       dbModule.fetchAll('purchase_detail_master').catch(() => []),
       dbModule.fetchAll('sauda_check_point').catch(() => []),
       dbModule.fetchAll('sauda_check_point_details').catch(() => []),
@@ -259,7 +255,68 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('grade_master').catch(() => [])
     ]);
 
-    // Build lookup maps
+    // Build Master Lookup Maps
+    const gradeMap = new Map<string, string>();
+    (grades || []).forEach((g: any) => {
+      const gCode = String(g.grade_code || '').trim().toUpperCase();
+      const gName = String(g.grade_name || g.name || '').trim().toUpperCase();
+      if (gCode && gName) {
+        gradeMap.set(gCode, gName);
+        gradeMap.set(gName, gName);
+      } else if (gName) {
+        gradeMap.set(gName, gName);
+      }
+    });
+
+    const agencyMap = new Map<string, string>();
+    (agencies || []).forEach((a: any) => {
+      const aCode = String(a.agency_code || '').trim().toUpperCase();
+      const aName = String(a.agency_name || a.name || '').trim().toUpperCase();
+      if (aCode && aName) {
+        agencyMap.set(aCode, aName);
+        agencyMap.set(aName, aName);
+      } else if (aName) {
+        agencyMap.set(aName, aName);
+      }
+    });
+
+    const areaMap = new Map<string, string>();
+    (areas || []).forEach((ar: any) => {
+      const arCode = String(ar.area_code || '').trim().toUpperCase();
+      const arName = String(ar.area_name || ar.name || '').trim().toUpperCase();
+      if (arCode && arName) {
+        areaMap.set(arCode, arName);
+        areaMap.set(arName, arName);
+      } else if (arName) {
+        areaMap.set(arName, arName);
+      }
+    });
+
+    const brokerMap = new Map<string, string>();
+    (brokers || []).forEach((b: any) => {
+      const bCode = String(b.broker_code || '').trim().toUpperCase();
+      const bName = String(b.broker_name || b.name || '').trim().toUpperCase();
+      if (bCode && bName) {
+        brokerMap.set(bCode, bName);
+        brokerMap.set(bName, bName);
+      } else if (bName) {
+        brokerMap.set(bName, bName);
+      }
+    });
+
+    const supplyMap = new Map<string, string>();
+    (suppliers || []).forEach((s: any) => {
+      const sCode = String(s.supply_code || s.supplier_code || '').trim().toUpperCase();
+      const sName = String(s.supply_name || s.supplier_name || s.name || '').trim().toUpperCase();
+      if (sCode && sName) {
+        supplyMap.set(sCode, sName);
+        supplyMap.set(sName, sName);
+      } else if (sName) {
+        supplyMap.set(sName, sName);
+      }
+    });
+
+    // Satta Base Rates
     const baseRateMap = new Map<string, number>();
     (sattaRates || []).forEach((r: any) => {
       const d = r.start_date || r.date;
@@ -282,7 +339,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
       if (f.arrival_no) arrivalByPo.set(f.arrival_no, (arrivalByPo.get(f.arrival_no) || 0) + wt);
     });
 
-    // If no final arrival, check temporary material received
     (amad || []).forEach((a: any) => {
       const key = a.po_no || a.temporary_arrival_no;
       if (key && !arrivalByPo.has(key)) {
@@ -308,7 +364,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    // Payments by PO and Sauda
+    // Payments by PO
     const paymentByPo = new Map<string, number>();
     (payments || []).forEach((p: any) => {
       const amt = Number(p.paid_amount || (p.payment_status === 'Paid' ? p.total_amount : 0) || 0);
@@ -319,47 +375,67 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     // Group PO details by po_no
     const poDetailsMap = new Map<string, any[]>();
-    (poDetails || []).forEach((item: any) => {
-      if (item.po_no) {
-        const list = poDetailsMap.get(item.po_no) || [];
+    [...(scpDetails || []), ...(poDetails || [])].forEach((item: any) => {
+      const pNo = String(item.po_no || '').trim().toUpperCase();
+      if (pNo) {
+        const list = poDetailsMap.get(pNo) || [];
         list.push(item);
-        poDetailsMap.set(item.po_no, list);
+        poDetailsMap.set(pNo, list);
       }
     });
 
-    // Group Sauda details by sauda_id
-    const saudaDetailsMap = new Map<string, any[]>();
-    (saudaDetails || []).forEach((item: any) => {
-      if (item.sauda_id) {
-        const list = saudaDetailsMap.get(item.sauda_id) || [];
-        list.push(item);
-        saudaDetailsMap.set(item.sauda_id, list);
-      }
+    // Merge Sauda Check Point & Purchase Master records
+    const allPosMap = new Map<string, any>();
+    (pos || []).forEach((p: any) => {
+      const pNo = String(p.po_no || p.ptf_no || '').trim().toUpperCase();
+      if (pNo) allPosMap.set(pNo, p);
+    });
+    (scps || []).forEach((p: any) => {
+      const pNo = String(p.po_no || p.ptf_no || '').trim().toUpperCase();
+      if (pNo) allPosMap.set(pNo, p);
     });
 
-    // Track linked saudas so we don't duplicate
-    const linkedSaudaNos = new Set<string>();
+    const uniquePosList = Array.from(allPosMap.values());
     const transactionLines: ReportTransactionLine[] = [];
     let txnCounter = 1;
 
-    // 1. Process all Purchase Orders (Final P.O.)
-    (pos || []).forEach((po: any) => {
-      const poNo = po.po_no || '';
-      const saudaNo = po.contract_po_no || po.sauda_no || '';
-      if (saudaNo) linkedSaudaNos.add(saudaNo);
+    uniquePosList.forEach((po: any) => {
+      const poNo = String(po.po_no || po.ptf_no || '').trim();
+      if (!poNo) return;
+      const saudaNo = String(po.sauda_no || po.contract_po_no || po.po_contract || poNo).trim();
+      const date = po.po_date || po.date || po.contract_date || po.s_date || po.created_at?.split('T')[0] || '';
 
-      const date = po.po_date || po.contract_date || po.created_at?.split('T')[0] || '';
-      const supplier = po.supplier || po.party_name || po.challan_supplier || '';
-      const broker = po.broker || '';
-      const agency = po.purchase_unit_name || po.agency || '';
-      const area = po.area || '';
-      
-      const details = poDetailsMap.get(poNo) || [];
+      const rawSup = String(po.supplier || po.party_name || po.challan_supplier || '').trim();
+      const supplier = supplyMap.get(rawSup.toUpperCase()) || rawSup || 'Direct Supplier';
+
+      const rawBrk = String(po.broker || '').trim();
+      const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
+
+      const rawAgency = String(po.agency || po.purchase_unit_name || '').trim();
+      const agency = agencyMap.get(rawAgency.toUpperCase()) || rawAgency || '-';
+
+      const rawArea = String(po.area || '').trim();
+      const area = areaMap.get(rawArea.toUpperCase()) || rawArea || '-';
+
+      const details = poDetailsMap.get(poNo.toUpperCase()) || [];
+
       if (details.length > 0) {
-        // Multi-item PO lines
         details.forEach((line: any) => {
-          const grade = line.grade_code || line.grade || '';
-          const quantityMT = Number(line.weight_mt || line.qty || 0);
+          const rawGName = String(line.grade_name || '').trim();
+          const rawGCode = String(line.grade_code || line.grade || '').trim();
+          const grade = gradeMap.get(rawGName.toUpperCase()) || rawGName || gradeMap.get(rawGCode.toUpperCase()) || rawGCode || 'TD5';
+
+          const rawItemAgency = String(line.agency_name || line.agency || '').trim();
+          const rawItemAgencyCode = String(line.agency_code || '').trim();
+          const itemAgency = agencyMap.get(rawItemAgency.toUpperCase()) || rawItemAgency || agencyMap.get(rawItemAgencyCode.toUpperCase()) || agency;
+
+          const totalPoContract = Number(po.total_contract_mt || po.quantity || 0);
+          let quantityMT = Number(line.weight_mt || line.qty || 0);
+          if (quantityMT === 0 && details.length > 0 && totalPoContract > 0) {
+            quantityMT = Number((totalPoContract / details.length).toFixed(3));
+          }
+          if (quantityMT === 0) quantityMT = totalPoContract;
+
           const purchaseRate = Number(line.rate_qntl || line.rate || po.b_rate || 0);
           const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
           const rateVariance = purchaseRate - baseRate;
@@ -383,13 +459,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
 
           let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-          if (grossProfit < -100) {
-            profitStatus = 'LOSS';
-          } else if (Math.abs(grossProfit) <= 100) {
-            profitStatus = 'BREAK-EVEN';
-          } else if (profitPct < 1.0) {
-            profitStatus = 'NON-PROFITABLE';
-          }
+          if (grossProfit < -100) profitStatus = 'LOSS';
+          else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
+          else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
 
           const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
           const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
@@ -409,16 +481,16 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
           transactionLines.push({
             txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-            saudaNo: saudaNo || poNo,
+            saudaNo,
             poNo,
             date,
             month: getYearMonth(date),
             financialYear: getFinancialYear(date),
-            supplier: supplier || 'Unassigned Supplier',
-            broker: broker || 'Direct',
-            agency: agency || '-',
-            area: area || '-',
-            grade: grade || 'TD-5',
+            supplier,
+            broker,
+            agency: itemAgency,
+            area,
+            grade,
             quantityMT,
             purchaseRate,
             baseRate,
@@ -456,9 +528,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
           });
         });
       } else {
-        // Single PO entry
-        const grade = po.po_type || po.marks || 'Standard';
-        const quantityMT = Number(po.total_contract_mt || 0);
+        const rawGName = String(po.grade_name || '').trim();
+        const rawGCode = String(po.grade || po.po_type || po.marks || '').trim();
+        const grade = gradeMap.get(rawGName.toUpperCase()) || rawGName || gradeMap.get(rawGCode.toUpperCase()) || rawGCode || 'TD5';
+
+        const quantityMT = Number(po.total_contract_mt || po.quantity || 0);
         const purchaseRate = Number(po.b_rate || 0);
         const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
         const rateVariance = purchaseRate - baseRate;
@@ -482,13 +556,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
         const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
 
         let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-        if (grossProfit < -100) {
-          profitStatus = 'LOSS';
-        } else if (Math.abs(grossProfit) <= 100) {
-          profitStatus = 'BREAK-EVEN';
-        } else if (profitPct < 1.0) {
-          profitStatus = 'NON-PROFITABLE';
-        }
+        if (grossProfit < -100) profitStatus = 'LOSS';
+        else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
+        else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
 
         const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
         const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
@@ -508,219 +578,16 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
         transactionLines.push({
           txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-          saudaNo: saudaNo || poNo,
+          saudaNo,
           poNo,
           date,
           month: getYearMonth(date),
           financialYear: getFinancialYear(date),
-          supplier: supplier || 'Unassigned Supplier',
-          broker: broker || 'Direct',
-          agency: agency || '-',
-          area: area || '-',
-          grade: grade || '-',
-          quantityMT,
-          purchaseRate,
-          baseRate,
-          rateVariance,
-          rateVariancePct,
-          grossPurchaseValue,
-          baseRateValue,
-          premiumRate,
-          premiumAmount,
-          premiumPct,
-          deductionAmount,
-          deductionPct,
-          moisturePct,
-          gradeDownQty,
-          effectiveCost,
-          realizationRate,
-          realizationValue,
-          grossProfit,
-          profitPct,
-          profitStatus,
-          saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
-          arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
-          inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
-          paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
-          settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
-          arrivedWeightMT,
-          pendingWeightMT,
-          paidAmount,
-          pendingPayable,
-          claimAmount: deductionAmount > 5000 ? deductionAmount : 0,
-          claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
-          isDelayed,
-          isAbnormal: abnormalReasons.length > 0,
-          abnormalReasons
-        });
-      }
-    });
-
-    // 2. Process Saudas that haven't been converted to a PO yet
-    (saudas || []).forEach((sauda: any) => {
-      const saudaNo = sauda.sauda_no || '';
-      if (!saudaNo || linkedSaudaNos.has(saudaNo)) return; // Already linked to a PO
-
-      const date = sauda.date || sauda.created_at?.split('T')[0] || '';
-      const supplier = sauda.supplier || sauda.party_name || sauda.challan_supplier || '';
-      const broker = sauda.broker || '';
-      const agency = sauda.agency || '';
-      const area = sauda.area || '';
-      const details = saudaDetailsMap.get(sauda.sauda_id) || [];
-
-      if (details.length > 0) {
-        details.forEach((line: any) => {
-          const grade = line.grade_code || line.grade || sauda.marks || '';
-          const quantityMT = Number(line.qty || 0);
-          const purchaseRate = Number(line.rs || sauda.b_rate || 0);
-          const baseRate = baseRateMap.get(date) || Number(sauda.b_rate || defaultLatestBaseRate || purchaseRate);
-          const rateVariance = purchaseRate - baseRate;
-          const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
-          const grossPurchaseValue = quantityMT * purchaseRate * 10;
-          const baseRateValue = quantityMT * baseRate * 10;
-          const premiumRate = Math.max(0, rateVariance);
-          const premiumAmount = premiumRate > 0 ? quantityMT * premiumRate * 10 : 0;
-          const premiumPct = baseRateValue > 0 ? (premiumAmount / baseRateValue) * 100 : 0;
-
-          const inspInfo = inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
-          const deductionAmount = inspInfo.deduction;
-          const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
-          const moisturePct = inspInfo.moisture;
-          const gradeDownQty = inspInfo.gradeDown;
-
-          const effectiveCost = grossPurchaseValue + premiumAmount - deductionAmount;
-          const realizationRate = Number(sauda.realization_rate || baseRate || purchaseRate);
-          const realizationValue = quantityMT * realizationRate * 10;
-          const grossProfit = realizationValue - effectiveCost;
-          const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
-
-          let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-          if (grossProfit < -100) profitStatus = 'LOSS';
-          else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
-          else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
-
-          const arrivedWeightMT = arrivalByPo.get(saudaNo) || 0;
-          const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
-          const paidAmount = paymentByPo.get(saudaNo) || 0;
-          const pendingPayable = Math.max(0, effectiveCost - paidAmount);
-
-          const deliveryToDate = sauda.shipment_date;
-          const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;
-
-          const abnormalReasons: string[] = [];
-          if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-          if (rateVariance > 200) abnormalReasons.push(`High Premium (+₹${rateVariance.toFixed(0)})`);
-          if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-          if (grossProfit < 0) abnormalReasons.push(`Loss-Making (-₹${Math.abs(grossProfit).toLocaleString()})`);
-          if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
-          if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
-
-          transactionLines.push({
-            txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-            saudaNo,
-            poNo: 'Pending P.O.',
-            date,
-            month: getYearMonth(date),
-            financialYear: getFinancialYear(date),
-            supplier: supplier || 'Unassigned Supplier',
-            broker: broker || 'Direct',
-            agency: agency || '-',
-            area: area || '-',
-            grade: grade || '-',
-            quantityMT,
-            purchaseRate,
-            baseRate,
-            rateVariance,
-            rateVariancePct,
-            grossPurchaseValue,
-            baseRateValue,
-            premiumRate,
-            premiumAmount,
-            premiumPct,
-            deductionAmount,
-            deductionPct,
-            moisturePct,
-            gradeDownQty,
-            effectiveCost,
-            realizationRate,
-            realizationValue,
-            grossProfit,
-            profitPct,
-            profitStatus,
-            saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
-            arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
-            inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
-            paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
-            settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
-            arrivedWeightMT,
-            pendingWeightMT,
-            paidAmount,
-            pendingPayable,
-            claimAmount: deductionAmount > 5000 ? deductionAmount : 0,
-            claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
-            isDelayed,
-            isAbnormal: abnormalReasons.length > 0,
-            abnormalReasons
-          });
-        });
-      } else {
-        const grade = sauda.marks || 'Standard';
-        const quantityMT = Number(sauda.total_wt_in_ton || 0);
-        const purchaseRate = Number(sauda.b_rate || 0);
-        const baseRate = baseRateMap.get(date) || Number(sauda.b_rate || defaultLatestBaseRate || purchaseRate);
-        const rateVariance = purchaseRate - baseRate;
-        const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
-        const grossPurchaseValue = quantityMT * purchaseRate * 10;
-        const baseRateValue = quantityMT * baseRate * 10;
-        const premiumRate = Math.max(0, rateVariance);
-        const premiumAmount = premiumRate > 0 ? quantityMT * premiumRate * 10 : 0;
-        const premiumPct = baseRateValue > 0 ? (premiumAmount / baseRateValue) * 100 : 0;
-
-        const inspInfo = inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
-        const deductionAmount = inspInfo.deduction;
-        const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
-        const moisturePct = inspInfo.moisture;
-        const gradeDownQty = inspInfo.gradeDown;
-
-        const effectiveCost = grossPurchaseValue + premiumAmount - deductionAmount;
-        const realizationRate = Number(sauda.realization_rate || baseRate || purchaseRate);
-        const realizationValue = quantityMT * realizationRate * 10;
-        const grossProfit = realizationValue - effectiveCost;
-        const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
-
-        let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-        if (grossProfit < -100) profitStatus = 'LOSS';
-        else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
-        else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
-
-        const arrivedWeightMT = arrivalByPo.get(saudaNo) || 0;
-        const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
-        const paidAmount = paymentByPo.get(saudaNo) || 0;
-        const pendingPayable = Math.max(0, effectiveCost - paidAmount);
-
-        const deliveryToDate = sauda.shipment_date;
-        const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;
-
-        const abnormalReasons: string[] = [];
-        if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-        if (rateVariance > 200) abnormalReasons.push(`High Premium (+₹${rateVariance.toFixed(0)})`);
-        if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-        if (grossProfit < 0) abnormalReasons.push(`Loss-Making (-₹${Math.abs(grossProfit).toLocaleString()})`);
-        if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
-        if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
-
-        transactionLines.push({
-          txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-          saudaNo,
-          poNo: 'Pending P.O.',
-          date,
-          month: getYearMonth(date),
-          financialYear: getFinancialYear(date),
-          supplier: supplier || 'Unassigned Supplier',
-          broker: broker || 'Direct',
-          agency: agency || '-',
-          area: area || '-',
-          grade: grade || '-',
+          supplier,
+          broker,
+          agency,
+          area,
+          grade,
           quantityMT,
           purchaseRate,
           baseRate,
@@ -772,7 +639,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     transactionLines.forEach(t => {
       if (t.broker && t.broker !== 'Direct') brokerSet.add(t.broker);
-      if (t.supplier && t.supplier !== 'Unassigned Supplier') supplierSet.add(t.supplier);
+      if (t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== 'Direct Supplier') supplierSet.add(t.supplier);
       if (t.agency && t.agency !== '-') agencySet.add(t.agency);
       if (t.area && t.area !== '-') areaSet.add(t.area);
       if (t.grade && t.grade !== '-') gradeSet.add(t.grade);
