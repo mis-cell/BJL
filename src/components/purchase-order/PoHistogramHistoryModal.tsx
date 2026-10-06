@@ -419,7 +419,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.actual_ncv || i.ncv_percent || i.ncv || 0) || 0), 0) / dbInspections.length)
       : 0;
     const totalPremiumSum = dbInspections.reduce((sum, i) => sum + (parseFloat(i.premium_amount || i.premium_total || 0) || 0), 0);
-
+    
+    const inspectionmrno = dbInspections.map(a => a.mr_no || a.mr_no || a.mr_no || a.mr_no).filter(Boolean).join(', ');
     // Aggregate Payment metrics
     const totalPaidAmount = dbPayments.reduce((sum, p) => sum + (parseFloat(p.amount_paid || p.payable_net_amount || p.amount || 0) || 0), 0);
     const contractValueEst = poContractMt > 0 && poRate > 0 ? (poContractMt * 10 * poRate) : 0; // 1 MT = 10 Qtl
@@ -628,7 +629,14 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         variance: avgNcv > 0.5 ? `+${(avgNcv - 0.5).toFixed(1)}% Excess` : 'Normal',
         status: dbInspections.length === 0 ? 'not_available' : (avgNcv <= 0.5 ? 'match' : 'mismatch'),
         notes: avgNcv > 0.5 ? 'Non-Combustible Value exceeds limit.' : 'NCV within acceptance.'
+      },
+      {
+        name: 'Inspected MRS',
+        referenceValue: `${poLorries} Expected`,
+        actualValue: inspectionmrno || (dbInspections.length > 0 ? `${dbInspections.length} Recorded` : 'Pending Arrival'),
+        status: dbInspections.length === 0 ? 'not_available' : 'match'
       }
+      
     ];
 
     // -------------------------------------------------------------
