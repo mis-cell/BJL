@@ -24,18 +24,18 @@ export interface TolerancePolicy {
 export const DEFAULT_TOLERANCE_POLICY: TolerancePolicy = {
   id: '01',
   status: 'ACTIVE',
-  policy_name: 'Raw Jute Bales Standard Policy (5% or 1500 KG)',
-  tolerance_pct: 5.0,
-  max_limit_kg: 1500.0,
-  max_limit_mt: 1.5,
-  max_weight_limit_kg: 1500.0,
-  max_weight_limit_mt: 1.5,
+  policy_name: 'Sauda Contract Execution Exemption (3%)',
+  tolerance_pct: 3.0,
+  max_limit_kg: 0,
+  max_limit_mt: 0,
+  max_weight_limit_kg: 0,
+  max_weight_limit_mt: 0,
   unit: 'BALES',
   applicable_unit: 'BALES',
-  rule_formula: 'Min(5% of Sauda MT, 1.500 MT)',
+  rule_formula: '3% of Sauda Total Contract Quantity',
   is_active: true,
   is_default: true,
-  description: 'Lower of 5% of Sauda contract quantity or 1,500 KG (15.00 Qtl / 1.500 MT).'
+  description: '3% Execution Exemption calculated directly from Sauda Total Contract Quantity.'
 };
 
 let cachedActivePolicy: TolerancePolicy = DEFAULT_TOLERANCE_POLICY;

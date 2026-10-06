@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   Edit,
   Lock,
-  Unlock
+  Unlock,
+  Ban
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../../lib/permissions';
@@ -43,9 +44,8 @@ export const PoActionMenuPortal: React.FC<{
   onClose: () => void;
   onSendMail: (item: any) => void;
   onDelete: (poNo: string) => void;
-  onClosePo?: (item: any) => void;
-  onReopenPo?: (item: any) => void;
-}> = ({ actionMenu, onClose, onSendMail, onDelete, onClosePo, onReopenPo }) => {
+  onCancelPo?: (item: any) => void;
+}> = ({ actionMenu, onClose, onSendMail, onDelete, onCancelPo }) => {
   if (!actionMenu) return null;
 
   const userCtx = getCurrentUserContext();
@@ -55,25 +55,14 @@ export const PoActionMenuPortal: React.FC<{
                        isL5OrAdmin() || userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX' || 
                        Boolean((userCtx as any)?.isAdmin);
 
-  const cleanPo = String(actionMenu.item.po_no || '').trim().toUpperCase();
-  const cleanSauda = String(actionMenu.item.sauda_no || '').trim().toUpperCase();
-  const isExplicitReopened = actionMenu.item.is_reopened === true || 
-                             localStorage.getItem(`sauda_reopened_${cleanPo}`) === 'true' ||
-                             (cleanSauda && localStorage.getItem(`sauda_reopened_${cleanSauda}`) === 'true');
-  const isClosed = !isExplicitReopened && Boolean(
-    actionMenu.item.is_closed === true ||
-    actionMenu.item.status === 'closed' ||
-    localStorage.getItem(`sauda_closed_${cleanPo}`) === 'true' ||
-    (cleanSauda && localStorage.getItem(`sauda_closed_${cleanSauda}`) === 'true') ||
-    (actionMenu.item.contract_lorries > 0 && (actionMenu.item.received_lorries || 0) >= actionMenu.item.contract_lorries)
-  );
+  const isCancelled = actionMenu.item.status === 'cancelled';
 
   return createPortal(
     <>
       <div className="fixed inset-0 z-[999]" onClick={onClose} />
       <div
-        className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1.5 text-xs w-48 animate-in fade-in zoom-in-95 duration-100"
-        style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 190) }}
+        className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1.5 text-xs w-44 animate-in fade-in zoom-in-95 duration-100"
+        style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 180) }}
       >
         <button
           onClick={() => {
@@ -87,37 +76,36 @@ export const PoActionMenuPortal: React.FC<{
           <span>Email</span>
         </button>
 
-        {/* Level 4 & Admin: Close / Reopen P.O Action Button */}
+        {/* Level 4 & Admin: Cancel Sauda / Restore Sauda Action Button */}
         {isAdminOrL4 && (
           <>
             <div className="border-t border-slate-100 my-0.5" />
-            {!isClosed ? (
-              <button
-                onClick={() => {
-                  const it = actionMenu.item;
-                  onClose();
-                  onClosePo?.(it);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-amber-50 rounded-xl flex items-center gap-2.5 text-amber-900 font-bold text-xs transition-colors cursor-pointer"
-                title="Close this Purchase Order (Level 4 / Admin only)"
-              >
-                <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>Closed</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  const it = actionMenu.item;
-                  onClose();
-                  onReopenPo?.(it);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-800 font-bold text-xs transition-colors cursor-pointer"
-                title="Reopen this Closed Purchase Order with Remarks (Level 4 / Admin only)"
-              >
-                <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Reopen P.O</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                const it = actionMenu.item;
+                onClose();
+                onCancelPo?.(it);
+              }}
+              className={cn(
+                "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
+                isCancelled
+                  ? "hover:bg-emerald-50 text-emerald-700"
+                  : "hover:bg-amber-50 text-amber-900"
+              )}
+              title={isCancelled ? "Restore this cancelled Sauda" : "Cancel this Sauda (Level 4 / Admin only)"}
+            >
+              {isCancelled ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Restore Sauda</span>
+                </>
+              ) : (
+                <>
+                  <Ban className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span>Cancel Sauda</span>
+                </>
+              )}
+            </button>
           </>
         )}
 

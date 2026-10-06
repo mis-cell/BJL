@@ -98,26 +98,31 @@ export function calculateWeightTolerance(
   const absDiffMt = Math.abs(diffMt);
   const absDiffQtl = Math.abs(diffQtl);
 
-  // Dynamic policy parameters (default: 5% or 1500 KG / 1.500 MT)
+  // Dynamic policy parameters (default: 3% of Sauda Total Contract Quantity)
   const isPolicyActive = customPolicy?.is_active !== undefined ? customPolicy.is_active : true;
-  const activePct = isPolicyActive ? (Number(customPolicy?.tolerance_pct) || 5.0) : 0;
-  const activeMaxMt = isPolicyActive 
-    ? (Number(customPolicy?.max_weight_limit_mt) || (Number(customPolicy?.max_weight_limit_kg) ? Number(customPolicy?.max_weight_limit_kg) / 1000 : 1.5))
+  const activePct = isPolicyActive 
+    ? (customPolicy?.tolerance_pct !== undefined ? Number(customPolicy.tolerance_pct) : 3.0) 
     : 0;
+  const hasFixedMax = customPolicy?.max_weight_limit_mt !== undefined || customPolicy?.max_weight_limit_kg !== undefined;
+  const activeMaxMt = hasFixedMax
+    ? (Number(customPolicy?.max_weight_limit_mt) || (Number(customPolicy?.max_weight_limit_kg) ? Number(customPolicy?.max_weight_limit_kg) / 1000 : Infinity))
+    : Infinity;
 
-  // Percentage calculation on contract quantity in MT & Qtl
+  // 3% Execution Exemption calculation on Sauda contract quantity in MT & Qtl
   const pctRatio = activePct / 100;
-  const pct5Mt = contractMt * pctRatio;
-  const pct5Qtl = contractQtl * pctRatio;
-  const fixedToleranceMt = activeMaxMt; // default: 1.500 MT
-  const fixedToleranceQtl = activeMaxMt * 10; // default: 15.0 Qtl
+  const pct3Mt = contractMt * pctRatio;
+  const pct3Qtl = contractQtl * pctRatio;
+  const fixedToleranceMt = activeMaxMt !== Infinity ? activeMaxMt : pct3Mt;
+  const fixedToleranceQtl = fixedToleranceMt * 10;
 
-  // Allowed Tolerance = Lower of (Configured % of Sauda Quantity) or Configured Max Weight (e.g. 1,500 kg / 1.500 MT)
-  const toleranceMt = isPolicyActive && contractMt > 0 ? Math.min(pct5Mt, fixedToleranceMt) : 0;
-  const toleranceQtl = isPolicyActive && contractQtl > 0 ? Math.min(pct5Qtl, fixedToleranceQtl) : 0;
+  // Allowed Tolerance / Exemption = 3% of Sauda Contract Quantity (or custom policy limit if specified)
+  const toleranceMt = isPolicyActive && contractMt > 0 
+    ? (activeMaxMt !== Infinity ? Math.min(pct3Mt, activeMaxMt) : pct3Mt) 
+    : 0;
+  const toleranceQtl = toleranceMt * 10;
   const tolerancePct = contractMt > 0 ? (toleranceMt / contractMt) * 100 : 0;
   const toleranceBasis = isPolicyActive && contractMt > 0 
-    ? (pct5Mt <= fixedToleranceMt ? `${activePct}% (Lower)` : `${(fixedToleranceMt * 1000).toFixed(0)} KG (Lower)`)
+    ? `${activePct}% Sauda Exemption`
     : 'Standard';
 
   const minAcceptableMt = Math.max(0, contractMt - toleranceMt);
@@ -197,10 +202,10 @@ export function calculateWeightTolerance(
     absDiffQtl,
     unit: unitStr,
     isBales,
-    pct5Mt,
-    pct5Qtl,
-    pct3Mt: pct5Mt,
-    pct3Qtl: pct5Qtl,
+    pct5Mt: pct3Mt,
+    pct5Qtl: pct3Qtl,
+    pct3Mt,
+    pct3Qtl,
     fixedToleranceMt,
     fixedToleranceQtl,
     toleranceMt,

@@ -230,6 +230,7 @@ export default function PurchaseOrder({
     handleApproveMismatch,
     openReopenAuthModal,
     executeReopenSauda,
+    handleCancelSauda,
     handleCloseSauda,
     handlePassToFinal,
     handlePrintPo,
@@ -402,8 +403,7 @@ export default function PurchaseOrder({
         onClose={() => setActionMenu(null)}
         onSendMail={handleSendMailPo}
         onDelete={handleDeletePo}
-        onClosePo={handleCloseSauda}
-        onReopenPo={openReopenAuthModal}
+        onCancelPo={handleCancelSauda}
       />
 
       {/* Manual Close P.O Modal with Remarks (Level 4 & Admin) */}
@@ -444,6 +444,7 @@ export default function PurchaseOrder({
           allFinalArrivals={allFinalArrivals}
           allTempArrivals={allTempArrivals}
           allScpDetails={allScpDetails}
+          allInspections={allInspections}
           sattaCalculatedRates={sattaCalcs}
           sattaBaseRates={sattaBases}
         />

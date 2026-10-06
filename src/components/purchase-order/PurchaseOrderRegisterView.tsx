@@ -797,13 +797,13 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               );
                             }
 
-                            // 1. Within tolerance (Lower of 5% or 1500 kg / 1.500 MT) => Tolerable
+                            // 1. Within 3% execution exemption => Tolerable
                             if (tol.isWithinTolerance) {
                               return (
                                 <div 
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Weight within allowed tolerance (Lower of 5% or 1500 kg = ±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
+                                  title={`Weight within 3% Sauda execution exemption (±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
                                 >
                                   <span className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs group-hover:bg-emerald-100 transition-colors">
                                     ✓ TOLERABLE (±{tol.toleranceMt.toFixed(2)} MT)
@@ -1012,14 +1012,18 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       </td>
                      <td className="px-3 text-center min-w-[100px] whitespace-nowrap">
                         {isVoid ? (
-                           <div className="flex items-center justify-center gap-2">
-                             <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">VOID</span>
+                           <div className="flex items-center justify-center gap-1.5">
+                             <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">CANCELLED</span>
                              <button
-                               onClick={(e) => { e.stopPropagation(); handleDeletePo(item.po_no); }}
-                               className="p-1 text-rose-600 hover:text-rose-800 rounded transition-colors cursor-pointer"
-                               title="Delete Permanently"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                 setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
+                               }}
+                               className="px-2 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 shadow-xs transition-colors cursor-pointer bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700"
+                               title="Actions (Restore, Email, Delete)"
                              >
-                               <Trash2 className="w-3.5 h-3.5" />
+                               Actions <ChevronDown className="w-3 h-3" />
                              </button>
                            </div>
                         ) : (

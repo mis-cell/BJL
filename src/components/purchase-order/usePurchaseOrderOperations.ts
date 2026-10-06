@@ -598,6 +598,121 @@ export function usePurchaseOrderOperations({
     }
   };
 
+  const handleCancelSauda = async (item: any) => {
+    const userCtx = getCurrentUserContext();
+    const userRole = String(userCtx?.userRole || (userCtx as any)?.role || '').toUpperCase();
+    const userLevel = String(userCtx?.userLevel || (userCtx as any)?.level || '').toUpperCase();
+    const isAuthorized = isUserAdmin(userCtx) || userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
+                         isL5OrAdmin() || userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX' ||
+                         Boolean((userCtx as any)?.isAdmin);
+
+    if (!isAuthorized) {
+      setEmailNotification({
+        type: 'warning',
+        title: 'Access Denied',
+        message: 'Only an Admin or Level 4 User can Cancel a Sauda.'
+      });
+      return;
+    }
+
+    const isCurrentlyCancelled = item.status === 'cancelled';
+    const cleanPo = String(item.po_no || '').trim().toUpperCase();
+    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
+
+    if (isCurrentlyCancelled) {
+      const confirmRestore = await askConfirm(
+        `Do you want to RESTORE cancelled Sauda / P.O #${item.po_no} back to Active status?`,
+        { title: 'Restore Sauda', confirmLabel: 'Restore Sauda' }
+      );
+      if (!confirmRestore) return;
+
+      try {
+        localStorage.removeItem(`sauda_cancelled_${cleanPo}`);
+        localStorage.removeItem(`sauda_closed_${cleanPo}`);
+        if (cleanSauda) {
+          localStorage.removeItem(`sauda_cancelled_${cleanSauda}`);
+          localStorage.removeItem(`sauda_closed_${cleanSauda}`);
+        }
+
+        if (supabase) {
+          await supabase.from('sauda_check_point').update({ status: 'pending', is_closed: false }).eq('po_no', item.po_no);
+          await supabase.from('sauda_master').update({ status: 'active', is_closed: false }).or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+          await supabase.from('purchase_master').update({ status: 'pending', is_closed: false }).eq('po_no', item.po_no);
+        }
+        try {
+          await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'pending', is_closed: false });
+        } catch (e) {}
+
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, status: 'pending' } }));
+        setEmailNotification({
+          type: 'success',
+          title: 'Sauda Restored',
+          message: `Sauda #${item.po_no} has been restored to Active status.`
+        });
+        await fetchPosAndMasters();
+      } catch (e: any) {
+        setEmailNotification({ type: 'error', title: 'Restore Failed', message: e.message || String(e) });
+      }
+      return;
+    }
+
+    // Cancel Sauda
+    const confirmed = await askConfirm(
+      `Are you sure you want to CANCEL Sauda / P.O #${item.po_no}?\n\nCancelled Saudas will be marked as Cancelled (Void) and cannot accept any arrivals in Temporary Arrival.`,
+      { title: 'Cancel Sauda Confirmation', tone: 'danger', confirmLabel: 'Cancel Sauda' }
+    );
+    if (!confirmed) return;
+
+    try {
+      localStorage.setItem(`sauda_cancelled_${cleanPo}`, 'true');
+      localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
+      if (cleanSauda) {
+        localStorage.setItem(`sauda_cancelled_${cleanSauda}`, 'true');
+        localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
+      }
+
+      if (supabase) {
+        await supabase
+          .from('sauda_check_point')
+          .update({ status: 'cancelled', is_closed: true })
+          .eq('po_no', item.po_no);
+
+        await supabase
+          .from('sauda_master')
+          .update({ status: 'cancelled', is_closed: true })
+          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+
+        await supabase
+          .from('purchase_master')
+          .update({ status: 'cancelled', is_closed: true })
+          .eq('po_no', item.po_no);
+      }
+
+      try {
+        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'cancelled', is_closed: true });
+      } catch (e) {}
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, status: 'cancelled' } }));
+
+      setEmailNotification({
+        type: 'info',
+        title: 'Sauda Cancelled',
+        message: `Sauda #${item.po_no} has been cancelled successfully.`
+      });
+
+      await fetchPosAndMasters();
+    } catch (err: any) {
+      console.error("Failed to cancel sauda:", err);
+      setEmailNotification({
+        type: 'error',
+        title: 'Cancel Failed',
+        message: 'Failed to cancel sauda: ' + (err.message || String(err))
+      });
+    }
+  };
+
   const handleCloseSauda = async (item: any) => {
     const userCtx = getCurrentUserContext();
     const userRole = String(userCtx?.userRole || (userCtx as any)?.role || '').toUpperCase();
@@ -1161,6 +1276,7 @@ export function usePurchaseOrderOperations({
     handleApproveMismatch,
     openReopenAuthModal,
     executeReopenSauda,
+    handleCancelSauda,
     handleCloseSauda,
     handlePassToFinal,
     handlePrintPo,

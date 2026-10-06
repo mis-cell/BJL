@@ -185,10 +185,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       const filtered = uniquePos
         .filter((po: any) => {
-          if (!po.po_no || po.status === 'cancelled') return false;
-
+          if (!po.po_no) return false;
           const poKey = String(po.po_no).trim().toUpperCase();
           const saudaKey = String(po.sauda_no || '').trim().toUpperCase();
+          const isCancelled = po.status === 'cancelled' || 
+                              po.is_cancelled === true || 
+                              localStorage.getItem(`sauda_cancelled_${poKey}`) === 'true' ||
+                              (saudaKey && localStorage.getItem(`sauda_cancelled_${saudaKey}`) === 'true');
+          if (isCancelled) return false;
           const isCurrentMatch = initialData && initialData.po_no && (
             String(initialData.po_no).trim().toUpperCase() === poKey ||
             (saudaKey && String(initialData.po_no).trim().toUpperCase() === saudaKey)
@@ -931,17 +935,23 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       return;
     }
 
-    // Guard: Prohibit creating new temporary arrivals against closed saudas
+    // Guard: Prohibit creating new temporary arrivals against cancelled or closed saudas
     const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();
+    const isCancelledLocal = localStorage.getItem(`sauda_cancelled_${cleanEnteredPo}`) === 'true';
     const isExplicitReopened = localStorage.getItem(`sauda_reopened_${cleanEnteredPo}`) === 'true';
     const isExplicitClosedLocal = localStorage.getItem(`sauda_closed_${cleanEnteredPo}`) === 'true';
     const poObj = purchaseOrders.find((p: any) => String(p.po_no || '').trim().toUpperCase() === cleanEnteredPo);
+    const isPoObjCancelled = poObj && (poObj.status === 'cancelled' || poObj.is_cancelled === true);
     const isPoObjClosed = poObj && (poObj.is_closed === true || poObj.status === 'closed');
+    const isPoCancelled = isCancelledLocal || isPoObjCancelled;
     const isPoClosed = !isExplicitReopened && (closedSaudaMap.has(cleanEnteredPo) || isExplicitClosedLocal || isPoObjClosed);
 
-    if (!initialData && cleanEnteredPo && isPoClosed) {
-      const closedItem = closedSaudaMap.get(cleanEnteredPo) || poObj;
-      alert(`🔒 Action Prohibited: Purchase Order #${cleanEnteredPo} is CLOSED.\n\nClosed P.O.s are not accepted in Temporary Arrival. It must first be Reopened by a Level 4 user or Admin from Sauda Check Point.`);
+    if (!initialData && cleanEnteredPo && (isPoCancelled || isPoClosed)) {
+      if (isPoCancelled) {
+        alert(`🚫 Action Prohibited: Sauda / Purchase Order #${cleanEnteredPo} is CANCELLED (VOID).\n\nCancelled Saudas cannot accept any Material Receipts (MR) or Temporary Arrivals. It must first be Restored by a Level 4 user or Admin from Sauda Check Point.`);
+      } else {
+        alert(`🔒 Action Prohibited: Purchase Order #${cleanEnteredPo} is CLOSED.\n\nClosed P.O.s are not accepted in Temporary Arrival. It must first be Reopened by a Level 4 user or Admin from Sauda Check Point.`);
+      }
       return;
     }
 
