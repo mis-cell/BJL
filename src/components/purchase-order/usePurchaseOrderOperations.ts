@@ -58,6 +58,8 @@ export function usePurchaseOrderOperations({
   // Reopen Auth State
   const [closedNoticePo, setClosedNoticePo] = useState<any>(null);
   const [reopenAuthModalPo, setReopenAuthModalPo] = useState<any>(null);
+  const [closeModalPo, setCloseModalPo] = useState<any>(null);
+  const [isClosing, setIsClosing] = useState<boolean>(false);
   const [reopenUsername, setReopenUsername] = useState<string>('');
   const [reopenPassword, setReopenPassword] = useState<string>('');
   const [reopenRemarks, setReopenRemarks] = useState<string>('');
@@ -598,68 +600,145 @@ export function usePurchaseOrderOperations({
 
   const handleCloseSauda = async (item: any) => {
     const userCtx = getCurrentUserContext();
-    const userRole = String(userCtx?.userRole || '').toUpperCase();
-    const userLevel = String(userCtx?.userLevel || '').toUpperCase();
-    const isAuthorized = userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
-                         userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX';
+    const userRole = String(userCtx?.userRole || (userCtx as any)?.role || '').toUpperCase();
+    const userLevel = String(userCtx?.userLevel || (userCtx as any)?.level || '').toUpperCase();
+    const isAuthorized = isUserAdmin(userCtx) || userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
+                         isL5OrAdmin() || userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX' ||
+                         Boolean((userCtx as any)?.isAdmin);
 
     if (!isAuthorized) {
       setEmailNotification({
         type: 'warning',
         title: 'Access Denied',
-        message: 'Only an Admin or Level 4 User can manually Close a Sauda.'
+        message: 'Only an Admin or Level 4 User can manually Close a Purchase Order.'
       });
       return;
     }
 
-    const cleanPo = String(item.po_no || '').trim().toUpperCase();
-    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
-    const confirmed = await askConfirm(
-      `Are you sure you want to CLOSE Sauda #${item.po_no}? Closed Saudas cannot be edited or deleted, and will not be shown in Temporary Arrival.`,
-      { title: 'Close Sauda Confirmation', confirmLabel: 'Close Sauda' }
-    );
-    if (!confirmed) return;
+    setCloseModalPo(item);
+  };
+
+  const executeCloseSauda = async (remarks: string) => {
+    if (!closeModalPo) return;
+    setIsClosing(true);
 
     try {
+      const userCtx = getCurrentUserContext();
+      const currentUserName = userCtx?.userName || userCtx?.username || 'ADMIN';
+      const currentUserRole = userCtx?.userRole || 'L4';
+      const nowIso = new Date().toISOString();
+      const formattedTime = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      const cleanPo = String(closeModalPo.po_no || '').trim().toUpperCase();
+      const cleanSauda = String(closeModalPo.sauda_no || '').trim().toUpperCase();
+
+      const closeRemarksPayload = {
+        remarks: (remarks || '').trim() || 'Closed manually by Level 4 / Admin',
+        closed_by: currentUserName,
+        user_role: currentUserRole,
+        timestamp: nowIso,
+        closed_at: nowIso,
+        formatted_time: formattedTime
+      };
+
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+      localStorage.setItem(`sauda_close_remarks_${cleanPo}`, JSON.stringify(closeRemarksPayload));
+
       if (cleanSauda) {
         localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
+        localStorage.setItem(`sauda_close_remarks_${cleanSauda}`, JSON.stringify(closeRemarksPayload));
       }
 
       if (supabase) {
-        await supabase
-          .from('sauda_check_point')
-          .update({ is_closed: true, is_reopened: false, status: 'closed' })
-          .eq('po_no', item.po_no);
+        try {
+          await supabase
+            .from('sauda_check_point')
+            .update({
+              is_closed: true,
+              is_reopened: false,
+              status: 'closed',
+              close_remarks: closeRemarksPayload
+            })
+            .eq('po_no', closeModalPo.po_no);
+        } catch (err) {
+          console.warn("Update sauda_check_point close error:", err);
+        }
 
-        await supabase
-          .from('sauda_master')
-          .update({ is_closed: true, is_reopened: false, status: 'closed' })
-          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
+        try {
+          await supabase
+            .from('sauda_master')
+            .update({
+              is_closed: true,
+              is_reopened: false,
+              status: 'closed',
+              close_remarks: closeRemarksPayload
+            })
+            .or(`sauda_no.eq.${closeModalPo.po_no},po_no.eq.${closeModalPo.po_no}`);
+        } catch (err) {
+          console.warn("Update sauda_master close error:", err);
+        }
+
+        try {
+          await supabase
+            .from('purchase_master')
+            .update({
+              is_closed: true,
+              is_reopened: false,
+              status: 'closed',
+              close_remarks: closeRemarksPayload
+            })
+            .eq('po_no', closeModalPo.po_no);
+        } catch (err) {
+          console.warn("Update purchase_master close error:", err);
+        }
       }
+
       try {
-        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { is_closed: true, is_reopened: false, status: 'closed' });
+        await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, {
+          is_closed: true,
+          is_reopened: false,
+          status: 'closed',
+          close_remarks: closeRemarksPayload
+        });
       } catch (e) {}
 
       window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, sauda_no: item.sauda_no, status: 'closed' } }));
+      window.dispatchEvent(new CustomEvent('sauda_status_changed', {
+        detail: {
+          po_no: closeModalPo.po_no,
+          sauda_no: closeModalPo.sauda_no,
+          status: 'closed',
+          close_remarks: closeRemarksPayload
+        }
+      }));
 
       setEmailNotification({
         type: 'info',
-        title: 'Sauda Closed',
-        message: `Sauda #${item.po_no} has been closed. It is now hidden from Temporary Arrival.`
+        title: 'P.O Closed',
+        message: `Purchase Order #${closeModalPo.po_no} is now CLOSED. It will not accept any MR in Temporary Arrival.`
       });
 
-      fetchPosAndMasters();
+      setCloseModalPo(null);
+      setIsClosing(false);
+      await fetchPosAndMasters();
     } catch (err: any) {
       console.error("Failed to close sauda:", err);
       setEmailNotification({
         type: 'error',
         title: 'Operation Failed',
-        message: 'Failed to close sauda: ' + (err.message || String(err))
+        message: 'Failed to close purchase order: ' + (err.message || String(err))
       });
+      setIsClosing(false);
     }
   };
 
@@ -1046,6 +1125,10 @@ export function usePurchaseOrderOperations({
     handleExecuteEmailSend,
     closedNoticePo,
     setClosedNoticePo,
+    closeModalPo,
+    setCloseModalPo,
+    executeCloseSauda,
+    isClosing,
     reopenAuthModalPo,
     setReopenAuthModalPo,
     reopenUsername,

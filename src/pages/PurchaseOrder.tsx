@@ -17,7 +17,8 @@ import {
   GlobalConfirmModal,
   ReopenSuccessModal,
   ReopenAuditLogModal,
-  MismatchApprovalModal
+  MismatchApprovalModal,
+  PoCloseModal
 } from '../components/purchase-order/PurchaseOrderModals';
 import { PoConsignmentModal } from '../components/purchase-order/PoConsignmentModal';
 import { PoReopenModal } from '../components/purchase-order/PoReopenModal';
@@ -193,6 +194,10 @@ export default function PurchaseOrder({
     handleExecuteEmailSend,
     closedNoticePo,
     setClosedNoticePo,
+    closeModalPo,
+    setCloseModalPo,
+    executeCloseSauda,
+    isClosing,
     reopenAuthModalPo,
     setReopenAuthModalPo,
     reopenUsername,
@@ -397,7 +402,19 @@ export default function PurchaseOrder({
         onClose={() => setActionMenu(null)}
         onSendMail={handleSendMailPo}
         onDelete={handleDeletePo}
+        onClosePo={handleCloseSauda}
+        onReopenPo={openReopenAuthModal}
       />
+
+      {/* Manual Close P.O Modal with Remarks (Level 4 & Admin) */}
+      {closeModalPo && (
+        <PoCloseModal
+          po={closeModalPo}
+          onClose={() => setCloseModalPo(null)}
+          onConfirmClose={executeCloseSauda}
+          isClosing={isClosing}
+        />
+      )}
 
       {/* Floating Email & Action Notification Toast */}
       <PoEmailToastNotification

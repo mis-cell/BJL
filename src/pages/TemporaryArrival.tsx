@@ -933,9 +933,15 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
     // Guard: Prohibit creating new temporary arrivals against closed saudas
     const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();
-    if (!initialData && cleanEnteredPo && closedSaudaMap.has(cleanEnteredPo)) {
-      const closedItem = closedSaudaMap.get(cleanEnteredPo);
-      alert(`🔒 Action Prohibited: Sauda #${closedItem?.po_no || cleanEnteredPo} is CLOSED (${closedItem?.receivedLorries || 0}/${closedItem?.contractLorries || 1} Lorries Received).\n\nClosed Saudas are not accepted for Temporary Arrival. Only an Admin or Level 4 user can Reopen this Sauda from Sauda Check Point.`);
+    const isExplicitReopened = localStorage.getItem(`sauda_reopened_${cleanEnteredPo}`) === 'true';
+    const isExplicitClosedLocal = localStorage.getItem(`sauda_closed_${cleanEnteredPo}`) === 'true';
+    const poObj = purchaseOrders.find((p: any) => String(p.po_no || '').trim().toUpperCase() === cleanEnteredPo);
+    const isPoObjClosed = poObj && (poObj.is_closed === true || poObj.status === 'closed');
+    const isPoClosed = !isExplicitReopened && (closedSaudaMap.has(cleanEnteredPo) || isExplicitClosedLocal || isPoObjClosed);
+
+    if (!initialData && cleanEnteredPo && isPoClosed) {
+      const closedItem = closedSaudaMap.get(cleanEnteredPo) || poObj;
+      alert(`🔒 Action Prohibited: Purchase Order #${cleanEnteredPo} is CLOSED.\n\nClosed P.O.s are not accepted in Temporary Arrival. It must first be Reopened by a Level 4 user or Admin from Sauda Check Point.`);
       return;
     }
 

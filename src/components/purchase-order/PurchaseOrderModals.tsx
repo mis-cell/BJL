@@ -10,10 +10,12 @@ import {
   AlertCircle,
   UserCheck,
   AlertTriangle,
-  Edit
+  Edit,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
+import { isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../../lib/permissions';
 
 export interface ActionMenuState {
   x: number;
@@ -41,15 +43,37 @@ export const PoActionMenuPortal: React.FC<{
   onClose: () => void;
   onSendMail: (item: any) => void;
   onDelete: (poNo: string) => void;
-}> = ({ actionMenu, onClose, onSendMail, onDelete }) => {
+  onClosePo?: (item: any) => void;
+  onReopenPo?: (item: any) => void;
+}> = ({ actionMenu, onClose, onSendMail, onDelete, onClosePo, onReopenPo }) => {
   if (!actionMenu) return null;
+
+  const userCtx = getCurrentUserContext();
+  const userRole = String(userCtx?.userRole || (userCtx as any)?.role || '').toUpperCase();
+  const userLevel = String(userCtx?.userLevel || (userCtx as any)?.level || '').toUpperCase();
+  const isAdminOrL4 = isUserAdmin(userCtx) || userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
+                       isL5OrAdmin() || userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX' || 
+                       Boolean((userCtx as any)?.isAdmin);
+
+  const cleanPo = String(actionMenu.item.po_no || '').trim().toUpperCase();
+  const cleanSauda = String(actionMenu.item.sauda_no || '').trim().toUpperCase();
+  const isExplicitReopened = actionMenu.item.is_reopened === true || 
+                             localStorage.getItem(`sauda_reopened_${cleanPo}`) === 'true' ||
+                             (cleanSauda && localStorage.getItem(`sauda_reopened_${cleanSauda}`) === 'true');
+  const isClosed = !isExplicitReopened && Boolean(
+    actionMenu.item.is_closed === true ||
+    actionMenu.item.status === 'closed' ||
+    localStorage.getItem(`sauda_closed_${cleanPo}`) === 'true' ||
+    (cleanSauda && localStorage.getItem(`sauda_closed_${cleanSauda}`) === 'true') ||
+    (actionMenu.item.contract_lorries > 0 && (actionMenu.item.received_lorries || 0) >= actionMenu.item.contract_lorries)
+  );
 
   return createPortal(
     <>
       <div className="fixed inset-0 z-[999]" onClick={onClose} />
       <div
-        className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1 text-xs w-40 animate-in fade-in zoom-in-95 duration-100"
-        style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 160) }}
+        className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1.5 text-xs w-48 animate-in fade-in zoom-in-95 duration-100"
+        style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 190) }}
       >
         <button
           onClick={() => {
@@ -62,6 +86,41 @@ export const PoActionMenuPortal: React.FC<{
           <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>Email</span>
         </button>
+
+        {/* Level 4 & Admin: Close / Reopen P.O Action Button */}
+        {isAdminOrL4 && (
+          <>
+            <div className="border-t border-slate-100 my-0.5" />
+            {!isClosed ? (
+              <button
+                onClick={() => {
+                  const it = actionMenu.item;
+                  onClose();
+                  onClosePo?.(it);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-amber-50 rounded-xl flex items-center gap-2.5 text-amber-900 font-bold text-xs transition-colors cursor-pointer"
+                title="Close this Purchase Order (Level 4 / Admin only)"
+              >
+                <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>Closed</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  const it = actionMenu.item;
+                  onClose();
+                  onReopenPo?.(it);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-xl flex items-center gap-2.5 text-emerald-800 font-bold text-xs transition-colors cursor-pointer"
+                title="Reopen this Closed Purchase Order with Remarks (Level 4 / Admin only)"
+              >
+                <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Reopen P.O</span>
+              </button>
+            )}
+          </>
+        )}
+
         <div className="border-t border-slate-100 my-0.5" />
         <button
           onClick={() => {
@@ -441,6 +500,118 @@ export const MismatchApprovalModal: React.FC<{
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// 7. Manual Close P.O Modal with Remarks (Level 4 & Admin)
+export const PoCloseModal: React.FC<{
+  po: any | null;
+  onClose: () => void;
+  onConfirmClose: (remarks: string) => void;
+  isClosing: boolean;
+}> = ({ po, onClose, onConfirmClose, isClosing }) => {
+  const [remarks, setRemarks] = React.useState('');
+  if (!po) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+        <div className="bg-gradient-to-r from-amber-800 via-amber-900 to-slate-900 p-5 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center border border-amber-400/30">
+              <Lock className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <h3 className="font-black text-sm uppercase tracking-wide text-white">Close Purchase Order</h3>
+              <p className="text-[11px] text-amber-200 font-mono">P.O #{po.po_no}</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-amber-200 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); onConfirmClose(remarks); }} className="p-5 space-y-4">
+          <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+            <p className="font-bold flex items-center gap-1.5 text-amber-950">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Full P.O Closure Notice</span>
+            </p>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Closing this P.O will mark it as <strong>CLOSED</strong>. Once closed, <strong>no Temporary Arrival section will accept any MR</strong> for this P.O. It can only be reopened by a Level 4 user or Admin with remarks.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs space-y-1.5 font-medium">
+            <div className="flex justify-between">
+              <span className="text-slate-500">P.O / Sauda No:</span>
+              <span className="font-mono font-bold text-slate-800">#{po.po_no}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Broker / Supplier:</span>
+              <span className="font-bold text-slate-800 uppercase truncate max-w-[200px]">{po.broker || po.supplier || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Contract Quantity:</span>
+              <span className="font-mono font-bold text-slate-800">{parseFloat(po.total_contract_mt || 0).toFixed(3)} MT ({po.purchase_unit_name || 'BALES'})</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Received Weight:</span>
+              <span className="font-mono font-bold text-emerald-700">{Number(po.received_weight_mt || 0).toFixed(3)} MT ({po.received_lorries || 0}/{po.contract_lorries || 1} Lorries)</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+              <span>Closing Remarks <span className="text-rose-500">*</span></span>
+              <span className="text-[10px] text-slate-400 font-normal">Reason for closure</span>
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Enter reason for closing this P.O (e.g. Completed arrival / Short closed on trader request / Dispute settled)..."
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none resize-none font-sans"
+            />
+            <div className="flex flex-wrap gap-1 pt-1">
+              {['Full Consignment Received', 'Short Closed by Trader Request', 'Order Fulfilled & Settled', 'Cancelled / Force Closed'].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setRemarks(tag)}
+                  className="text-[9.5px] px-2 py-0.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 rounded-md border border-slate-200 transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isClosing}
+              className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isClosing || !remarks.trim()}
+              className="flex-1 py-2.5 px-4 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Lock className="w-4 h-4" />
+              <span>{isClosing ? "Closing P.O..." : "Confirm & Close P.O"}</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

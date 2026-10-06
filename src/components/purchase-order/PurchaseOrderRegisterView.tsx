@@ -697,7 +697,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                             const allowedTolMt = Math.min(contract * 0.05, 1.500);
                             const shortageOrExcessMt = Math.abs(contract - rcvd);
-                            const canShowReopen = isAdminOrL4 && isClosed && shortageOrExcessMt > allowedTolMt;
+                            const canShowReopen = isAdminOrL4 && isClosed;
 
                             let openRemarksData = item.open_remarks;
                             if (typeof openRemarksData === 'string') {
