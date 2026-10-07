@@ -421,6 +421,11 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
     const totalPremiumSum = dbInspections.reduce((sum, i) => sum + (parseFloat(i.premium_amount || i.premium_total || 0) || 0), 0);
     
     const inspectionmrno = dbInspections.map(a => a.mr_no || a.mr_no || a.mr_no || a.mr_no).filter(Boolean).join(', ');
+    const inspectionmrweught = dbInspections.map(a => a.final_receipt_wt || a.final_receipt_wt || a.final_receipt_wt || a.final_receipt_wt).filter(Boolean).join(', ');
+    /* dbInspections.length > 0
+      ? (dbInspections.reduce((sum, i) => sum + (parseFloat(i.final_receipt_wt || i.final_receipt_wt || i.final_receipt_wt || 0) || 0), 0))
+      : 0; */
+    
     // Aggregate Payment metrics
     const totalPaidAmount = dbPayments.reduce((sum, p) => sum + (parseFloat(p.amount_paid || p.payable_net_amount || p.amount || 0) || 0), 0);
     const contractValueEst = poContractMt > 0 && poRate > 0 ? (poContractMt * 10 * poRate) : 0; // 1 MT = 10 Qtl
@@ -635,8 +640,13 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         referenceValue: `${poLorries} Expected`,
         actualValue: inspectionmrno || (dbInspections.length > 0 ? `${dbInspections.length} Recorded` : 'Pending Arrival'),
         status: dbInspections.length === 0 ? 'not_available' : 'match'
+      }, 
+      {
+        name: 'Inspected MRS Weight',
+        referenceValue: `${poLorries} Expected`,
+        actualValue: inspectionmrweught || (dbInspections.length > 0 ? `${dbInspections.length} Recorded` : 'Pending Arrival'),
+        status: dbInspections.length === 0 ? 'not_available' : 'match'
       }
-      
     ];
 
     // -------------------------------------------------------------
