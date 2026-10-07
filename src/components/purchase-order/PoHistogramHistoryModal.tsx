@@ -1003,69 +1003,84 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div 
-        className="bg-[#FAF7F0] border-2 border-[#D6CAA8] w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 animate-in zoom-in-95 duration-150"
+        className="bg-[#FAF7F0] border-2 border-[#D6CAA8] w-full max-w-[1600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. MODAL HEADER BANNER */}
-        <div className="bg-gradient-to-r from-[#1E331B] via-[#2A4426] to-[#1E331B] p-4 text-white flex flex-wrap items-center justify-between gap-3 border-b border-[#D6CAA8] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-white/10 text-emerald-300 border border-white/10 shadow-xs">
-              <BarChart3 className="w-6 h-6" />
+        <div className="bg-gradient-to-r from-[#1E331B] via-[#2A4426] to-[#1E331B] px-3 py-2 text-white flex flex-wrap items-center justify-between gap-2 border-b border-[#D6CAA8] shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-white/10 text-emerald-300 border border-white/10 shadow-xs">
+              <BarChart3 className="w-5 h-5" />
             </div>
+
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-serif font-black tracking-wide text-white">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-sm sm:text-base font-serif font-black tracking-wide text-white">
                   Histogram & Lifecycle Audit
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/40 text-xs font-mono font-bold">
+
+                <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/40 text-[11px] font-mono font-bold">
                   {po.po_no}
                 </span>
+
                 {po.ptf_no && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/40 text-[10px] font-mono font-bold">
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/40 text-[9px] font-mono font-bold">
                     PTF: {po.ptf_no}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-emerald-100/80 font-sans mt-0.5">
+
+              <p className="text-[10px] text-emerald-100/80 font-sans mt-0">
                 Full-spectrum cross-stage data comparison & instant mismatch highlight across all 7 lifecycle stages
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-black/20 p-1 rounded-xl border border-white/10 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center bg-black/20 p-0.5 rounded-lg border border-white/10 text-[11px]">
               <button
                 onClick={() => setActiveTab('compare')}
                 className={cn(
-                  "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
-                  activeTab === 'compare' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
+                  "px-2 py-1 rounded-md font-bold transition-all cursor-pointer",
+                  activeTab === 'compare'
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-emerald-100 hover:text-white"
                 )}
               >
                 Compare & Highlight
               </button>
+
               <button
                 onClick={() => setActiveTab('story')}
                 className={cn(
-                  "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
-                  activeTab === 'story' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
+                  "px-2 py-1 rounded-md font-bold transition-all cursor-pointer",
+                  activeTab === 'story'
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-emerald-100 hover:text-white"
                 )}
               >
                 7-Stage Story
               </button>
+
               <button
                 onClick={() => setActiveTab('histogram')}
                 className={cn(
-                  "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
-                  activeTab === 'histogram' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
+                  "px-2 py-1 rounded-md font-bold transition-all cursor-pointer",
+                  activeTab === 'histogram'
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-emerald-100 hover:text-white"
                 )}
               >
                 Turnaround Timeline
               </button>
+
               <button
                 onClick={() => setActiveTab('mismatch_audit')}
                 className={cn(
-                  "px-3 py-1 rounded-lg font-bold transition-all cursor-pointer",
-                  activeTab === 'mismatch_audit' ? "bg-emerald-600 text-white shadow-xs" : "text-emerald-100 hover:text-white"
+                  "px-2 py-1 rounded-md font-bold transition-all cursor-pointer",
+                  activeTab === 'mismatch_audit'
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-emerald-100 hover:text-white"
                 )}
               >
                 Mismatch Board ({dbMismatches.length + dbSattaMismatches.length})
@@ -1074,83 +1089,118 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
 
             <button
               onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
               title="Close Popup"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* 2. TOP P.O. SUMMARY CARD & VISUAL ISSUE CHECKLIST */}
-        <div className="bg-white border-b border-[#D6CAA8] p-3.5 sm:p-4 shadow-2xs shrink-0 space-y-3">
+        <div className="bg-white border-b border-[#D6CAA8] px-3 py-2 shadow-2xs shrink-0 space-y-2">
+
           {/* Main Key-Value Metadata Grid */}
-          <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs">
+          <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2.5 py-1.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-2 gap-y-1.5 text-xs">
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">P.O. No.:</span>
-              <strong className="text-slate-900 font-mono text-[12px]">{po.po_no}</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">P.O. No.:</span>
+              <strong className="text-slate-900 font-mono text-[11px]">{po.po_no}</strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">P.O. Date:</span>
-              <strong className="text-slate-800">{po.po_date || po.created_at?.slice(0, 10) || '—'}</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">P.O. Date:</span>
+              <strong className="text-slate-800 text-[11px]">
+                {po.po_date || po.created_at?.slice(0, 10) || '—'}
+              </strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Supplier:</span>
-              <strong className="text-slate-800 truncate block" title={po.supplier || po.supplier_name || 'DIRECT'}>{po.supplier || po.supplier_name || 'DIRECT'}</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">Supplier:</span>
+              <strong
+                className="text-slate-800 truncate block text-[11px]"
+                title={po.supplier || po.supplier_name || 'DIRECT'}
+              >
+                {po.supplier || po.supplier_name || 'DIRECT'}
+              </strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Broker:</span>
-              <strong className="text-slate-800 truncate block" title={po.broker || po.broker_name || 'DIRECT'}>{po.broker || po.broker_name || 'DIRECT'}</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">Broker:</span>
+              <strong
+                className="text-slate-800 truncate block text-[11px]"
+                title={po.broker || po.broker_name || 'DIRECT'}
+              >
+                {po.broker || po.broker_name || 'DIRECT'}
+              </strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Contract Wt:</span>
-              <strong className="text-emerald-800 font-mono font-black">{parseFloat(po.total_contract_mt || 0).toFixed(3)} MT</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">Contract Wt:</span>
+              <strong className="text-emerald-800 font-mono font-black text-[11px]">
+                {parseFloat(po.total_contract_mt || 0).toFixed(3)} MT
+              </strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Received Wt:</span>
-              <strong className="text-slate-900 font-mono font-black">{dbArrivals.reduce((s, a) => s + getArrivalWeightMt(a), 0).toFixed(3)} MT</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">Received Wt:</span>
+              <strong className="text-slate-900 font-mono font-black text-[11px]">
+                {dbArrivals.reduce((s, a) => s + getArrivalWeightMt(a), 0).toFixed(3)} MT
+              </strong>
             </div>
+
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">Total M.R.s:</span>
-              <strong className="text-blue-900 font-mono font-black">{linkedMrs.length} ({linkedMrs.join(', ') || 'None'})</strong>
+              <span className="text-[9px] font-bold uppercase text-slate-400 block">Total M.R.s:</span>
+              <strong className="text-blue-900 font-mono font-black text-[11px]">
+                {linkedMrs.length} ({linkedMrs.join(', ') || 'None'})
+              </strong>
             </div>
           </div>
 
           {/* Overall Issue Summary Ribbon & Jump Pills */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1.5">
+
             {/* Summary Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-700">Overall Check:</span>
-              
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-bold text-slate-700">
+                Overall Check:
+              </span>
+
               {comparisonResults.summary.totalMismatches > 0 && (
-                <span className="px-2.5 py-1 rounded-lg bg-rose-100 border border-rose-300 text-rose-900 text-xs font-black inline-flex items-center gap-1.5 animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-rose-600" />
+                <span className="px-2 py-0.5 rounded-md bg-rose-100 border border-rose-300 text-rose-900 text-[10px] font-black inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
                   <span>🔴 {comparisonResults.summary.totalMismatches} Issue(s)</span>
                 </span>
               )}
 
               {comparisonResults.sections.some(s => s.status === 'pending') && (
-                <span className="px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>🟡 {comparisonResults.sections.filter(s => s.status === 'pending').length} Warning / Pending</span>
+                <span className="px-2 py-0.5 rounded-md bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span>
+                    🟡 {comparisonResults.sections.filter(s => s.status === 'pending').length} Warning / Pending
+                  </span>
                 </span>
               )}
 
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-black inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                <span>🟢 {comparisonResults.sections.filter(s => s.status === 'clean').length * 2 + 6} Checks Passed</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-900 text-[10px] font-black inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                <span>
+                  🟢 {comparisonResults.sections.filter(s => s.status === 'clean').length * 2 + 6} Checks Passed
+                </span>
               </span>
             </div>
 
             {/* Quick Section Jump Pills */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold uppercase text-slate-500 mr-1">Jump To Section:</span>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[9px] font-bold uppercase text-slate-500 mr-0.5">
+                Jump To:
+              </span>
+
               {comparisonResults.sections.map((sec) => (
                 <button
                   key={sec.id}
                   onClick={() => scrollToSection(sec.id)}
                   className={cn(
-                    "px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1",
+                    "px-1.5 py-0.5 rounded-md text-[9px] font-bold border transition-all cursor-pointer flex items-center gap-0.5",
                     sec.mismatchCount > 0
                       ? "bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200 shadow-2xs"
                       : sec.status === 'pending'
@@ -1166,9 +1216,11 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                   ) : (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   )}
+
                   <span>{sec.title}</span>
+
                   {sec.mismatchCount > 0 && (
-                    <span className="bg-rose-600 text-white px-1 rounded-full text-[9px] font-mono font-extrabold">
+                    <span className="bg-rose-600 text-white px-1 rounded-full text-[8px] font-mono font-extrabold">
                       {sec.mismatchCount}
                     </span>
                   )}
@@ -1179,20 +1231,26 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
 
           {/* Mismatch Areas Ribbon if issues exist */}
           {comparisonResults.summary.totalMismatches > 0 && (
-            <div className="pt-2 border-t border-dashed border-slate-200 flex items-center gap-2 flex-wrap text-[11px]">
-              <span className="text-[10px] font-bold uppercase text-rose-700 flex items-center gap-1">
+            <div className="pt-1.5 border-t border-dashed border-slate-200 flex items-center gap-1.5 flex-wrap text-[10px]">
+              <span className="text-[9px] font-bold uppercase text-rose-700 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-rose-600" />
-                <span>Immediate Attention Required:</span>
+                <span>Immediate Attention:</span>
               </span>
-              {comparisonResults.sections.filter(s => s.mismatchCount > 0).map(s => (
-                <span 
-                  key={`ribbon-${s.id}`} 
-                  onClick={() => scrollToSection(s.id)}
-                  className="bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md font-medium cursor-pointer hover:bg-rose-100 transition-colors"
-                >
-                  <strong>{s.title}</strong> → {s.fields.filter(f => f.status === 'mismatch').map(f => f.name).join(', ')}
-                </span>
-              ))}
+
+              {comparisonResults.sections
+                .filter(s => s.mismatchCount > 0)
+                .map(s => (
+                  <span
+                    key={`ribbon-${s.id}`}
+                    onClick={() => scrollToSection(s.id)}
+                    className="bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded-md font-medium cursor-pointer hover:bg-rose-100 transition-colors"
+                  >
+                    <strong>{s.title}</strong> → {s.fields
+                      .filter(f => f.status === 'mismatch')
+                      .map(f => f.name)
+                      .join(', ')}
+                  </span>
+                ))}
             </div>
           )}
         </div>
@@ -1747,29 +1805,28 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         </div>
 
         {/* 4. MODAL FOOTER ACTION BAR */}
-        <div className="bg-white border-t border-[#D6CAA8] p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            <span>Real-time cross-stage verification verified against Supabase Database audit ledger.</span>
+        <div className="bg-white border-t border-[#D6CAA8] px-2.5 py-1.5 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center text-[10px] text-slate-500">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {onNavigateToMismatch && (
               <button
                 onClick={() => {
                   onClose();
                   onNavigateToMismatch(po.po_no);
                 }}
-                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
               >
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+                <AlertTriangle className="w-3 h-3 text-amber-700" />
                 <span>Open Mismatch Board</span>
               </button>
             )}
 
             <button
               onClick={onClose}
-              className="px-4 py-1.5 bg-[#1E331B] hover:bg-[#152413] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              className="px-3 py-1 bg-[#1E331B] hover:bg-[#152413] text-white rounded-lg text-[10px] font-bold transition-all shadow-xs cursor-pointer"
             >
               Done / Close
             </button>
