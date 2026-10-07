@@ -185,7 +185,7 @@ export default function Reports({ onClose }: ReportsProps) {
   };
 
   return (
-    <LegacyLayout title="System Reports" onClose={onClose}>
+    <LegacyLayout title="Reports" onClose={onClose}>
       <div className="space-y-4 font-sans text-slate-800">
         
         {/* ================= HEADER BAR ================= */}
@@ -194,17 +194,14 @@ export default function Reports({ onClose }: ReportsProps) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
               <h2 className="text-lg font-black uppercase tracking-wider text-yellow-300">
-                {viewMode === 'simple' ? 'Sauda & Procurement Executive Report' : 'System Reports & Operational Audit'}
+                Reports
               </h2>
-              <span className="bg-emerald-800/80 text-emerald-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-700 font-mono uppercase">
-                100% LIVE REAL DATA
-              </span>
             </div>
-            <p className="text-xs text-emerald-100/90 mt-1">
-              {viewMode === 'simple'
-                ? 'Executive Procurement Summary — Total Deals, Arrival Progress, and Payment Status'
-                : 'Standardized 4-Priority Executive Framework: Management Dashboard → Business Analysis → Checkpoints → Drill-Down.'}
-            </p>
+            {viewMode === 'simple' && (
+              <p className="text-xs text-emerald-100/90 mt-1">
+                Executive Procurement Summary — Total Deals, Arrival Progress, and Payment Status
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
@@ -280,20 +277,6 @@ export default function Reports({ onClose }: ReportsProps) {
         ) : (
           /* MANAGEMENT ANALYSIS (PRIORITY 1 TO 4) */
           <div className="space-y-4">
-            
-            {/* Switch back banner */}
-            <div className="p-2.5 px-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
-              <span>
-                <strong>Management Mode Active:</strong> 10 Detailed Report Sections & Executive Analysis Framework (Priority 1 to 4).
-              </span>
-              <button
-                onClick={() => setViewMode('simple')}
-                className="text-emerald-800 hover:text-emerald-950 font-black underline cursor-pointer"
-              >
-                ⬅️ Switch to Executive Summary View
-              </button>
-            </div>
-
             {/* SECTION 18: REPORT NAVIGATION STRUCTURE */}
             <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
               {[
@@ -391,20 +374,6 @@ export default function Reports({ onClose }: ReportsProps) {
             {activeSection === 'detailed_reports' && (
               <Priority4Detailed dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
-
-            {/* FOOTER / DATA INTEGRITY AUDIT RIBBON */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-slate-900 text-slate-300 rounded-xl text-xs font-mono">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>REAL DATABASE AUDIT (ZERO DUMMY DATA)</span>
-              </div>
-
-              <div className="flex items-center gap-4 text-[10.5px]">
-                <span>Evaluated Records: <strong className="text-white">{dataset.transactions.length}</strong></span>
-                <span>Valid Transaction Lines: <strong className="text-emerald-400">{dataset.filtered.length}</strong></span>
-                <span>Flagged Exceptions: <strong className="text-rose-400">{dataset.metrics.abnormalCount}</strong></span>
-              </div>
-            </div>
 
           </div>
         )}
