@@ -693,13 +693,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               {/* ================= SUMMARY CARDS ================= */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
-                {/* Total Advance Paid */}
-                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f3f6e9] to-[#e4eddc] px-3 py-3 rounded-xl border border-[#c5d7bd] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
+                {/* Total Advance Paid - Green */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] px-3 py-3 rounded-xl border border-[#a5c9a8] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
 
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#174c2c] to-[#3f8054]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#174c2c] to-[#4d8a5c]" />
 
                   <div className="min-w-0 pl-1">
-                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#647c61] block truncate">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#4f7054] block truncate">
                       Total Advance Paid
                     </span>
 
@@ -708,20 +708,20 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </h3>
                   </div>
 
-                  <div className="p-2 bg-[#d5e5ca] rounded-lg text-[#174c2c] shrink-0 group-hover:bg-[#174c2c] group-hover:text-white transition-all duration-300 shadow-sm">
+                  <div className="p-2 bg-[#b7d8ba] rounded-lg text-[#174c2c] shrink-0 group-hover:bg-[#174c2c] group-hover:text-white transition-all duration-300 shadow-sm">
                     <FileText className="w-4 h-4" />
                   </div>
 
                 </div>
 
 
-                {/* Total Transactions */}
-                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e5eff0] to-[#d4e5e7] px-3 py-3 rounded-xl border border-[#bdd5d8] shadow-[0_3px_12px_rgba(30,80,100,0.05)] flex items-center justify-between min-w-0 hover:border-[#28718a]/40 hover:shadow-[0_8px_20px_rgba(40,113,138,0.12)] transition-all duration-300">
+                {/* Total Transactions - Blue */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e3f2f8] to-[#c5e1eb] px-3 py-3 rounded-xl border border-[#a9cbd7] shadow-[0_3px_12px_rgba(30,90,110,0.06)] flex items-center justify-between min-w-0 hover:border-[#28718a]/40 hover:shadow-[0_8px_20px_rgba(40,113,138,0.12)] transition-all duration-300">
 
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#28613c] to-[#3c8990]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#17617a] to-[#3c8990]" />
 
                   <div className="min-w-0 pl-1">
-                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#607c81] block truncate">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#527784] block truncate">
                       Total Transactions
                     </span>
 
@@ -730,20 +730,20 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </h3>
                   </div>
 
-                  <div className="p-2 bg-[#c7e0e2] rounded-lg text-[#286b78] shrink-0 group-hover:bg-[#286b78] group-hover:text-white transition-all duration-300 shadow-sm">
+                  <div className="p-2 bg-[#b8dce5] rounded-lg text-[#286b78] shrink-0 group-hover:bg-[#286b78] group-hover:text-white transition-all duration-300 shadow-sm">
                     <FileText className="w-4 h-4" />
                   </div>
 
                 </div>
 
 
-                {/* Total Parties */}
-                <div className="group relative overflow-hidden bg-gradient-to-br from-[#ebe7f2] to-[#ddd8e9] px-3 py-3 rounded-xl border border-[#d0c8df] shadow-[0_3px_12px_rgba(80,70,130,0.05)] flex items-center justify-between min-w-0 hover:border-[#7565a5]/40 hover:shadow-[0_8px_20px_rgba(80,70,130,0.12)] transition-all duration-300">
+                {/* Total Parties - Purple */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f0eafa] to-[#ddd3ef] px-3 py-3 rounded-xl border border-[#c9b9df] shadow-[0_3px_12px_rgba(90,70,130,0.06)] flex items-center justify-between min-w-0 hover:border-[#7565a5]/40 hover:shadow-[0_8px_20px_rgba(80,70,130,0.12)] transition-all duration-300">
 
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#4b7658] to-[#7b69aa]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#66539a] to-[#8b72b8]" />
 
                   <div className="min-w-0 pl-1">
-                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#756b8b] block truncate">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#75678d] block truncate">
                       Total Parties
                     </span>
 
@@ -752,15 +752,15 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </h3>
                   </div>
 
-                  <div className="p-2 bg-[#d4cde6] rounded-lg text-[#7565a5] shrink-0 group-hover:bg-[#7565a5] group-hover:text-white transition-all duration-300 shadow-sm">
+                  <div className="p-2 bg-[#d3c7e7] rounded-lg text-[#7565a5] shrink-0 group-hover:bg-[#7565a5] group-hover:text-white transition-all duration-300 shadow-sm">
                     <Users className="w-4 h-4" />
                   </div>
 
                 </div>
 
 
-                {/* Pending Advance */}
-                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f5edd5] to-[#ecdfb9] px-3 py-3 rounded-xl border border-[#e3d2a4] shadow-[0_3px_12px_rgba(176,138,34,0.06)] flex items-center justify-between min-w-0 hover:border-[#d4af37]/60 hover:shadow-[0_8px_20px_rgba(176,138,34,0.14)] transition-all duration-300">
+                {/* Pending Advance - Gold */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#fff8df] to-[#f1e3b5] px-3 py-3 rounded-xl border border-[#dfce96] shadow-[0_3px_12px_rgba(176,138,34,0.06)] flex items-center justify-between min-w-0 hover:border-[#d4af37]/60 hover:shadow-[0_8px_20px_rgba(176,138,34,0.14)] transition-all duration-300">
 
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#d4af37] to-[#b78b24]" />
 
@@ -774,7 +774,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </h3>
                   </div>
 
-                  <div className="p-2 bg-[#e8d8a8] rounded-lg text-[#a47d19] shrink-0 group-hover:bg-[#d4af37] group-hover:text-white transition-all duration-300 shadow-sm">
+                  <div className="p-2 bg-[#ead9a5] rounded-lg text-[#a47d19] shrink-0 group-hover:bg-[#d4af37] group-hover:text-white transition-all duration-300 shadow-sm">
                     <Clock className="w-4 h-4" />
                   </div>
 
@@ -782,62 +782,26 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
 
               </div>
 
+              {/* Month Cards */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 mt-3">
 
-              {/* ================= MONTHLY TRANSACTIONS ================= */}
-              <div className="mt-4">
-
-                <div className="flex items-center justify-between mb-2 px-1">
-
-                  <div>
-                    <h3 className="text-xs font-black text-[#17351f] uppercase tracking-wide">
-                      Monthly Transactions
-                    </h3>
-
-                    <p className="text-[9px] text-[#6c8367] mt-0.5">
-                      Select a month to filter payment records
-                    </p>
-                  </div>
-
-                  <div className="px-2.5 py-1 rounded-lg bg-[#d1dfc9] border border-[#b9ceb1] text-[9px] font-bold text-[#174c2c] shadow-[0_2px_6px_rgba(23,76,44,0.06)]">
-                    {selectedMonth === null
-                      ? "All Months"
-                      : [
-                          "January",
-                          "February",
-                          "March",
-                          "April",
-                          "May",
-                          "June",
-                          "July",
-                          "August",
-                          "September",
-                          "October",
-                          "November",
-                          "December",
-                        ][selectedMonth]
-                    }
-                  </div>
-
-                </div>
-
-
-                {/* Month Cards */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
-
-                  {[
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "May",
-                    "Jun",
-                    "Jul",
-                    "Aug",
-                    "Sep",
-                    "Oct",
-                    "Nov",
-                    "Dec",
-                  ].map((month, index) => (
+                {[
+                  "Jan",
+                  "Feb",
+                  "Mar",
+                  "Apr",
+                  "May",
+                  "Jun",
+                  "Jul",
+                  "Aug",
+                  "Sep",
+                  "Oct",
+                  "Nov",
+                  "Dec",
+                ]
+                  .map((month, index) => ({ month, index }))
+                  .filter(({ index }) => monthlyTransactions[index] > 0)
+                  .map(({ month, index }) => (
 
                     <div
                       key={month}
@@ -898,8 +862,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </div>
 
                   ))}
-
-                </div>
 
               </div>
 

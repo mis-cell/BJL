@@ -536,7 +536,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         referenceValue: `${poLorries} Expected`,
         actualValue: linkedMrs.length > 0 ? `${linkedMrs.length} MR (${linkedMrs.join(', ')})` : 'Not Arrived',
         status: linkedMrs.length === 0 ? 'not_available' : 'match',
-        isCritical: true
+        isCritical: false
       },
       {
         name: 'Challan Supplier',
