@@ -240,7 +240,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
       grades,
       markas,
       saudas,
-      saudaQualityList
+      saudaQualityList,
+      settlements
     ] = await Promise.all([
       dbModule.fetchAll('purchase_master').catch(() => []),
       dbModule.fetchAll('purchase_detail_master').catch(() => []),
@@ -258,7 +259,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('grade_master').catch(() => []),
       dbModule.fetchAll('marka_master').catch(() => []),
       dbModule.fetchAll('sauda_master').catch(() => []),
-      dbModule.fetchAll('sauda_quality_details').catch(() => [])
+      dbModule.fetchAll('sauda_quality_details').catch(() => []),
+      dbModule.fetchAll('settlement_master').catch(() => [])
     ]);
 
     // Build Master Lookup Maps
@@ -527,6 +529,68 @@ export async function loadAndProcessSystemReportData(): Promise<{
       return [];
     };
 
+    // Helper to extract numbers or valid explicit premium values
+    const parseExplicitNum = (val: any): number => {
+      if (val === undefined || val === null) return 0;
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const s = String(val).trim();
+      if (!s || s === '-' || /^(no|false)$/i.test(s)) return 0;
+      const num = parseFloat(s.replace(/[^0-9.]/g, ''));
+      return isNaN(num) ? 0 : num;
+    };
+
+    // Premium lookup map across all entity alias variations (Settlement, Payment, SCP, PO)
+    const premiumLookupMap = new Map<string, { rate: number; amount: number; source: string }>();
+    const recordPremiumEntry = (rawKey: any, rate: number, amount: number, src: string) => {
+      const keys = getPoKeys(rawKey);
+      keys.forEach(k => {
+        const existing = premiumLookupMap.get(k) || { rate: 0, amount: 0, source: '' };
+        premiumLookupMap.set(k, {
+          rate: Math.max(existing.rate, rate),
+          amount: Math.max(existing.amount, amount),
+          source: existing.source || src
+        });
+      });
+    };
+
+    (settlements || []).forEach((st: any) => {
+      const premAmt = parseExplicitNum(st.val_premium_amt || st.summary_premium_amount);
+      const premRate = parseExplicitNum(st.summary_premium_rate || st.premium_rate);
+      if (premAmt > 0 || premRate > 0) {
+        if (st.po_no) recordPremiumEntry(st.po_no, premRate, premAmt, 'Settlement');
+        if (st.sauda_no) recordPremiumEntry(st.sauda_no, premRate, premAmt, 'Settlement');
+        if (st.contract_po_no) recordPremiumEntry(st.contract_po_no, premRate, premAmt, 'Settlement');
+      }
+    });
+
+    (payments || []).forEach((pm: any) => {
+      const premAmt = parseExplicitNum(pm.val_premium_amt || pm.summary_premium_amount);
+      const premRate = parseExplicitNum(pm.premium || pm.premium_rate);
+      if (premAmt > 0 || premRate > 0) {
+        if (pm.po_no) recordPremiumEntry(pm.po_no, premRate, premAmt, 'Payment');
+        if (pm.sauda_no) recordPremiumEntry(pm.sauda_no, premRate, premAmt, 'Payment');
+        if (pm.mr_no) recordPremiumEntry(pm.mr_no, premRate, premAmt, 'Payment');
+      }
+    });
+
+    (scps || []).forEach((sc: any) => {
+      const premAmt = parseExplicitNum(sc.val_premium_amt || sc.summary_premium_amount);
+      const premRate = parseExplicitNum(sc.premium);
+      if (premAmt > 0 || premRate > 0) {
+        if (sc.po_no) recordPremiumEntry(sc.po_no, premRate, premAmt, 'SCP');
+        if (sc.sauda_no) recordPremiumEntry(sc.sauda_no, premRate, premAmt, 'SCP');
+      }
+    });
+
+    (pos || []).forEach((p: any) => {
+      const premAmt = parseExplicitNum(p.summary_premium_amount || p.val_premium_amt);
+      const premRate = parseExplicitNum(p.premium);
+      if (premAmt > 0 || premRate > 0) {
+        if (p.po_no) recordPremiumEntry(p.po_no, premRate, premAmt, 'PO');
+        if (p.sauda_no) recordPremiumEntry(p.sauda_no, premRate, premAmt, 'PO');
+      }
+    });
+
     // Merge Sauda Check Point & Purchase Master records
     const allPosMap = new Map<string, any>();
     (pos || []).forEach((p: any) => {
@@ -585,9 +649,39 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
           const grossPurchaseValue = quantityMT * purchaseRate * 10;
           const baseRateValue = quantityMT * baseRate * 10;
-          const premiumRate = Math.max(0, rateVariance);
-          const premiumAmount = premiumRate > 0 ? quantityMT * premiumRate * 10 : 0;
-          const premiumPct = baseRateValue > 0 ? (premiumAmount / baseRateValue) * 100 : 0;
+
+          // Real explicit premium resolution (do not use rateVariance):
+          const linePremRate = parseExplicitNum(line.premium ?? line.premium_rate);
+          const linePremAmt = parseExplicitNum(line.premium_amount ?? line.val_premium_amt);
+          const poKeys = [...getPoKeys(poNo), ...getPoKeys(saudaNo)];
+          let headerPrem = { rate: 0, amount: 0, source: '' };
+          for (const k of poKeys) {
+            if (premiumLookupMap.has(k)) {
+              headerPrem = premiumLookupMap.get(k)!;
+              break;
+            }
+          }
+
+          let premiumRate = 0;
+          let premiumAmount = 0;
+
+          if (linePremRate > 0) {
+            premiumRate = linePremRate;
+            premiumAmount = linePremAmt > 0 ? linePremAmt : quantityMT * premiumRate * 10;
+          } else if (linePremAmt > 0) {
+            premiumAmount = linePremAmt;
+            premiumRate = quantityMT > 0 ? premiumAmount / (quantityMT * 10) : 0;
+          } else if (headerPrem.rate > 0) {
+            premiumRate = headerPrem.rate;
+            premiumAmount = headerPrem.amount > 0 ? headerPrem.amount : quantityMT * premiumRate * 10;
+          } else if (headerPrem.amount > 0) {
+            premiumAmount = details.length > 0 && totalPoContract > 0 
+              ? (headerPrem.amount * (quantityMT / totalPoContract)) 
+              : headerPrem.amount;
+            premiumRate = quantityMT > 0 ? premiumAmount / (quantityMT * 10) : 0;
+          }
+
+          const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
 
           const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
           const deductionAmount = inspInfo.deduction;
@@ -616,9 +710,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
           const abnormalReasons: string[] = [];
           if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-          if (rateVariance > 200) abnormalReasons.push(`High Premium (+₹${rateVariance.toFixed(0)})`);
+          if (premiumRate > 100) abnormalReasons.push(`High Premium (+₹${premiumRate.toFixed(0)}/Qtl)`);
           if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-          if (grossProfit < 0) abnormalReasons.push(`Loss-Making (-₹${Math.abs(grossProfit).toLocaleString()})`);
           if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
           if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
 
@@ -682,9 +775,26 @@ export async function loadAndProcessSystemReportData(): Promise<{
         const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
         const grossPurchaseValue = quantityMT * purchaseRate * 10;
         const baseRateValue = quantityMT * baseRate * 10;
-        const premiumRate = Math.max(0, rateVariance);
-        const premiumAmount = premiumRate > 0 ? quantityMT * premiumRate * 10 : 0;
-        const premiumPct = baseRateValue > 0 ? (premiumAmount / baseRateValue) * 100 : 0;
+
+        // Real explicit premium resolution (do not use rateVariance):
+        const poKeys = [...getPoKeys(poNo), ...getPoKeys(saudaNo)];
+        let headerPrem = { rate: 0, amount: 0, source: '' };
+        for (const k of poKeys) {
+          if (premiumLookupMap.has(k)) {
+            headerPrem = premiumLookupMap.get(k)!;
+            break;
+          }
+        }
+
+        const explicitPoPremRate = parseExplicitNum(po.premium ?? po.premium_rate);
+        const explicitPoPremAmt = parseExplicitNum(po.summary_premium_amount ?? po.val_premium_amt ?? po.premium_amount);
+
+        let premiumRate = explicitPoPremRate > 0 ? explicitPoPremRate : headerPrem.rate;
+        let premiumAmount = explicitPoPremAmt > 0 ? explicitPoPremAmt : (headerPrem.amount > 0 ? headerPrem.amount : (premiumRate > 0 ? quantityMT * premiumRate * 10 : 0));
+        if (premiumRate === 0 && premiumAmount > 0 && quantityMT > 0) {
+          premiumRate = premiumAmount / (quantityMT * 10);
+        }
+        const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
 
         const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
         const deductionAmount = inspInfo.deduction;
@@ -713,9 +823,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
         const abnormalReasons: string[] = [];
         if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-        if (rateVariance > 200) abnormalReasons.push(`High Premium (+₹${rateVariance.toFixed(0)})`);
+        if (premiumRate > 100) abnormalReasons.push(`High Premium (+₹${premiumRate.toFixed(0)}/Qtl)`);
         if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-        if (grossProfit < 0) abnormalReasons.push(`Loss-Making (-₹${Math.abs(grossProfit).toLocaleString()})`);
         if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
         if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
 
@@ -919,7 +1028,7 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
 
     if (t.isAbnormal) abnormalCount++;
     if (t.deductionPct > 2) highDeductionCount++;
-    if (t.rateVariance > 100) highPremiumCount++;
+    if (t.premiumRate > 50 || t.premiumAmount > 5000) highPremiumCount++;
     if (t.moisturePct > 18) highMoistureCount++;
     if (t.gradeDownQty > 0) gradeDownCount++;
     if (t.claimAmount > 5000) highClaimCount++;

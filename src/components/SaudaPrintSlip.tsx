@@ -7,7 +7,113 @@ interface Props {
 }
 
 export default function SaudaPrintSlip({ sauda }: Props) {
-  const qualityRows = sauda.quality_details || [];
+  const rawQualityRows = sauda.quality_details || [];
+
+  // Contract-level defaults if no rows exist at all
+  const contractQuality = (sauda as any).quality || '';
+  const contractRate = Number(sauda.b_rate) || 0;
+
+  // Expand all active rows so Agency, Marka, Quality, Rs are rendered cleanly
+  const expandedList: any[] = [];
+  rawQualityRows.forEach(row => {
+    // 1. If row already has explicit applicableCombinations array
+    if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
+      row.applicableCombinations.forEach((comb: any) => {
+        if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality || comb.rs)) {
+          expandedList.push({
+            agency: String(comb.agency || row.agency || '').trim(),
+            marka: String(comb.marka || row.marka || '').trim(),
+            quality: String(comb.quality || row.quality || '').trim(),
+            rs: comb.rs ? Number(comb.rs) : (row.rs ? Number(row.rs) : 0),
+            qty: Number(comb.qty) || Number(row.qty) || 0
+          });
+        }
+      });
+    } else {
+      const agList: string[] = (
+        Array.isArray(row.agencies) && row.agencies.length > 0
+          ? row.agencies
+          : (row.agency ? String(row.agency).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+      );
+      const mkList: string[] = (
+        Array.isArray(row.markas) && row.markas.length > 0
+          ? row.markas
+          : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+      );
+
+      const rowQ = String(row.quality || '').trim();
+      const rowR = row.rs !== undefined && row.rs !== null && String(row.rs).trim() !== '' ? Number(row.rs) : 0;
+
+      if (agList.length > 0 && mkList.length > 0) {
+        if (agList.length === mkList.length && agList.length > 1) {
+          // 1-to-1 matching when matching counts provided (e.g. ACHINTALA with 39, ALAMPUR with ALAMPUR)
+          agList.forEach((ag, idx) => {
+            expandedList.push({
+              agency: ag,
+              marka: mkList[idx] || mkList[0] || '',
+              quality: rowQ,
+              rs: rowR,
+              qty: Number(row.qty) || 0
+            });
+          });
+        } else {
+          // Cross-product
+          agList.forEach(ag => {
+            mkList.forEach(mk => {
+              expandedList.push({
+                agency: ag,
+                marka: mk,
+                quality: rowQ,
+                rs: rowR,
+                qty: Number(row.qty) || 0
+              });
+            });
+          });
+        }
+      } else if (agList.length > 0) {
+        agList.forEach(ag => {
+          expandedList.push({
+            agency: ag,
+            marka: String(row.marka || '').trim(),
+            quality: rowQ,
+            rs: rowR,
+            qty: Number(row.qty) || 0
+          });
+        });
+      } else if (mkList.length > 0) {
+        mkList.forEach(mk => {
+          expandedList.push({
+            agency: String(row.agency || '').trim(),
+            marka: mk,
+            quality: rowQ,
+            rs: rowR,
+            qty: Number(row.qty) || 0
+          });
+        });
+      } else if (row.quality || row.agency || row.marka || Number(row.rs) > 0) {
+        expandedList.push({
+          agency: String(row.agency || '').trim(),
+          marka: String(row.marka || '').trim(),
+          quality: rowQ,
+          rs: rowR,
+          qty: Number(row.qty) || 0
+        });
+      }
+    }
+  });
+
+  const qualityRows = expandedList.length > 0 
+    ? expandedList 
+    : (rawQualityRows.length > 0
+        ? rawQualityRows.map(r => ({
+            ...r,
+            agency: r.agency || '',
+            marka: r.marka || '',
+            quality: r.quality || '',
+            rs: Number(r.rs) || 0
+          }))
+        : [{ agency: '', marka: '', quality: contractQuality, rs: contractRate, qty: 0 }]
+      );
   
   // Pad local qualities to at least 7 rows to match the physical slip format
   const paddedQualities = [...qualityRows];
@@ -28,7 +134,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     if (firstWithRate) {
       return `${Number(firstWithRate.rs).toLocaleString('en-IN')}/-`;
     }
-    return '17,100/-';
+    return contractRate > 0 ? `${Number(contractRate).toLocaleString('en-IN')}/-` : '';
   };
 
   return (
@@ -120,51 +226,36 @@ export default function SaudaPrintSlip({ sauda }: Props) {
           </div>
        </div>
 
-       {/* Qualities Table (List Format) */}
-       <div className="flex flex-col gap-1.5  flex-none mb-4 font-mono text-[11px]">
-          {paddedQualities.map((item, idx) => (
-             <div key={idx} className="flex items-end justify-between font-bold h-5">
-                {/* Quality */}
-                <div className="flex items-end flex-initial w-[110px]">
-                   <span className="text-black font-bold mr-1 shrink-0">Quality:</span>
-                   <span className="flex-1 border-b border-black border-dotted text-center h-4 flex items-end justify-center font-extrabold pb-0.5 uppercase text-black">
-                      {item.quality ? `${item.quality.trim().toUpperCase()}` : ''}
-                   </span>
-                </div>
-                
-                {/* Qty */}
-                <div className="flex items-end flex-initial w-[80px]">
-                   <span className="text-black font-bold mr-1 shrink-0">Qty:</span>
-                   <span className="flex-1 border-b border-black border-dotted text-center h-4 flex items-end justify-center font-bold pb-0.5 text-black">
-                      {item.qty || ''}
-                   </span>
-                </div>
-
-                {/* Agency */}
-                <div id={`printed-agency-${idx}`} className="flex items-end flex-initial w-[130px] print-hide-agency">
-                   <span className="text-black font-bold mr-1 shrink-0">Agency:</span>
-                   <span className="flex-1 border-b border-black border-dotted text-center h-4 flex items-end justify-center font-bold pb-0.5 uppercase text-black">
-                      {item.agency ? item.agency.trim().toUpperCase() : ''}
-                   </span>
-                </div>
-
-                {/* Marka */}
-                <div id={`printed-marka-${idx}`} className="flex items-end flex-initial w-[125px] print-hide-marka">
-                   <span className="text-black font-bold mr-1 shrink-0">Marka:</span>
-                   <span className="flex-1 border-b border-black border-dotted text-center h-4 flex items-end justify-center font-bold pb-0.5 uppercase text-black">
-                      {item.marka ? item.marka.trim().toUpperCase() : ''}
-                   </span>
-                </div>
-
-                {/* @ Rs. */}
-                <div className="flex items-end flex-initial w-[110px]">
-                   <span className="text-black font-bold mr-1 shrink-0">@ Rs.</span>
-                   <span className="flex-1 border-b border-black border-dotted text-center h-4 flex items-end justify-end font-bold pb-0.5 pr-2 text-black">
-                      {item.rs ? `${Number(item.rs).toLocaleString('en-IN')}/-` : ''}
-                   </span>
-                </div>
-             </div>
-          ))}
+       {/* Qualities & Combinations Table (Agency | Marka | Quality * | Rs. *) */}
+       <div className="mb-4 flex-none border-2 border-black rounded-xs overflow-hidden font-mono text-[11px]">
+          <table className="w-full border-collapse">
+             <thead>
+                <tr className="bg-neutral-100 border-b-2 border-black font-extrabold text-[11px] text-black">
+                   <th className="border-r border-black px-2 py-1 text-left w-[28%] uppercase">Agency</th>
+                   <th className="border-r border-black px-2 py-1 text-left w-[24%] uppercase">Marka</th>
+                   <th className="border-r border-black px-2 py-1 text-left w-[24%] uppercase">Quality *</th>
+                   <th className="px-2 py-1 text-right w-[24%] uppercase">Rs. *</th>
+                </tr>
+             </thead>
+             <tbody>
+                {paddedQualities.map((item, idx) => (
+                   <tr key={idx} className="border-b border-black/30 last:border-b-0 h-5">
+                      <td className="border-r border-black/30 px-2 py-0.5 font-bold uppercase truncate">
+                         {item.agency ? item.agency.trim().toUpperCase() : ''}
+                      </td>
+                      <td className="border-r border-black/30 px-2 py-0.5 font-bold uppercase truncate">
+                         {item.marka ? item.marka.trim().toUpperCase() : ''}
+                      </td>
+                      <td className="border-r border-black/30 px-2 py-0.5 font-extrabold uppercase truncate text-black">
+                         {item.quality ? item.quality.trim().toUpperCase() : ''}
+                      </td>
+                      <td className="px-2 py-0.5 text-right font-bold text-black">
+                         {item.rs && Number(item.rs) > 0 ? Number(item.rs).toLocaleString('en-IN') : ''}
+                      </td>
+                   </tr>
+                ))}
+             </tbody>
+          </table>
        </div>
 
        {/* Terms Block */}

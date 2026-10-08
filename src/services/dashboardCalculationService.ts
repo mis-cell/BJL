@@ -145,6 +145,7 @@ export interface InspectionRecord {
   premium: string;
   isPremium: boolean;
   premiumRate: number;
+  premiumAmount: number;
   premiumSource: string;
   
   // Additional claims
@@ -476,6 +477,15 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   pos.forEach(p => {
     registerPremium(p.po_no, p, "Purchase Order");
     registerPremium(p.contract_po_no, p, "Purchase Order");
+  });
+
+  // 5. Settlement Audits & Valuations
+  settlements.forEach(st => {
+    registerPremium(st.mr_no, st, "Settlement Audit");
+    registerPremium(st.po_no, st, "Settlement Audit");
+    registerPremium(st.sauda_no, st, "Settlement Audit");
+    registerPremium(st.contract_po_no, st, "Settlement Audit");
+    registerPremium(st.voucher_no, st, "Settlement Audit");
   });
 
   // Build detail rows mapping by MR No / Inspection ID
@@ -829,6 +839,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       premium: premiumData.premium,
       isPremium: premiumData.isPremium && (premiumData.rate > 0 || premiumData.amount > 0 || /yes|true/i.test(premiumData.premium)),
       premiumRate: premiumData.rate,
+      premiumAmount: premiumData.amount > 0 ? premiumData.amount : (premiumData.rate > 0 ? Number((premiumData.rate * (wtQtl > 0 ? wtQtl : (wtMt * 10))).toFixed(2)) : 0),
       premiumSource: premiumData.source,
       
       qualityDeductionAmount: gradeDownDedAmt + dustDedAmt,
@@ -1035,10 +1046,12 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       claimGradeDownSum += r.claimGradeDown;
       totChottaHbKg += r.totalChottaHabijabiKg;
       totChottaHbClaim += r.chottaHabijabiDeductionAmount;
-      if (r.isPremium && (r.premiumRate > 0 || r.premium !== "No")) {
+      if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
         premLots++;
         premRateTotal += r.premiumRate;
-        const lotPremAmt = r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+        const lotPremAmt = r.premiumAmount > 0 
+          ? r.premiumAmount 
+          : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
         premSum += lotPremAmt;
       }
       totClaim += r.totalClaimAmount;
@@ -1253,7 +1266,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       totalChottaHabijabiClaim: Number(totChottaHbClaim.toFixed(2)),
       premiumLotsCount: premLots,
       premiumTotalSum: Number(premSum.toFixed(2)),
-      avgPremiumRate: premLots > 0 ? Number((premRateTotal / premLots).toFixed(2)) : 0,
+      avgPremiumRate: premLots > 0 
+        ? (premRateTotal > 0 ? Number((premRateTotal / premLots).toFixed(2)) : (totWt > 0 ? Number((premSum / (totWt * 10)).toFixed(2)) : 0)) 
+        : 0,
       totalClaimAmount: Number(totClaim.toFixed(2)),
       lotsWithMoistureClaim: moistClaimLots,
       lotsWithQualityClaim: qualClaimLots,
@@ -1289,10 +1304,12 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalGradeDownSum += r.actualGradeDown;
     totalClaimGradeDownSum += r.claimGradeDown;
     totalChottaHabijabiKg += r.totalChottaHabijabiKg;
-    if (r.isPremium && (r.premiumRate > 0 || r.premium !== "No")) {
+    if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
       totalPremiumLots++;
       totalPremiumRateSum += r.premiumRate;
-      const lotPremAmt = r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0;
+      const lotPremAmt = r.premiumAmount > 0 
+        ? r.premiumAmount 
+        : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
       totalPremiumSum += lotPremAmt;
     }
     totalClaimAmount += r.totalClaimAmount;
@@ -1314,7 +1331,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   const overallAvgClaimDust = yearClaimDustCount > 0 ? Number((totalClaimDustSum / yearClaimDustCount).toFixed(1)) : 0;
   const overallAvgGradeDown = yearGradeDownCount > 0 ? Number((totalGradeDownSum / yearGradeDownCount).toFixed(1)) : 0;
   const overallAvgClaimGradeDown = yearClaimGradeDownCount > 0 ? Number((totalClaimGradeDownSum / yearClaimGradeDownCount).toFixed(1)) : 0;
-  const avgPremiumRate = totalPremiumLots > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : 0;
+  const avgPremiumRate = totalPremiumLots > 0 
+    ? (totalPremiumRateSum > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : (totalInspectedWeightMt > 0 ? Number((totalPremiumSum / (totalInspectedWeightMt * 10)).toFixed(2)) : 0)) 
+    : 0;
 
   const totalYearTemporaryArrivalsCount = yearArrivals.length > 0 ? yearArrivals.length : yearInspections.length;
   const totalYearPendingFmrCount = yearArrivals.filter(a => {

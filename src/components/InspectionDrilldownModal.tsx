@@ -254,6 +254,7 @@ export default function InspectionDrilldownModal({
       "Claim Grade Down %",
       "Chotta & Habi Jabi (Kg)",
       "Premium (Sauda Check Point)",
+      "Premium Amount (INR)",
       "Moisture Claim (INR)",
       "Total Deductions (INR)",
       "Status",
@@ -277,6 +278,7 @@ export default function InspectionDrilldownModal({
       r.claimGradeDown.toFixed(1),
       r.totalChottaHabijabiKg.toFixed(1),
       `"${r.premium || (r.isPremium ? 'Yes' : 'No')}"`,
+      r.premiumAmount > 0 ? r.premiumAmount.toFixed(2) : (r.premiumRate > 0 ? (r.premiumRate * r.weightMt * 10).toFixed(2) : '0.00'),
       r.moistureDeductionAmount.toFixed(2),
       r.totalClaimAmount.toFixed(2),
       `"${r.status}"`,
@@ -750,6 +752,7 @@ export default function InspectionDrilldownModal({
                     <th className="p-2.5 border-r border-emerald-900/60 text-center">Moisture %</th>
                     <th className="p-2.5 border-r border-emerald-900/60 text-center">Dust %</th>
                     <th className="p-2.5 border-r border-emerald-900/60 text-center">Grade Down %</th>
+                    <th className="p-2.5 border-r border-emerald-900/60 text-right">Premium (₹)</th>
                     <th className="p-2.5 border-r border-emerald-900/60 text-right">Total Claims (₹)</th>
                     <th className="p-2.5 text-center">Status</th>
                   </tr>
@@ -769,6 +772,18 @@ export default function InspectionDrilldownModal({
                       </td>
                       <td className="p-2.5 font-mono text-center whitespace-nowrap border-r border-slate-200">{r.actualDust.toFixed(1)}%</td>
                       <td className="p-2.5 font-mono text-center whitespace-nowrap border-r border-slate-200">{r.actualGradeDown.toFixed(1)}%</td>
+                      <td className="p-2.5 font-mono text-right whitespace-nowrap border-r border-slate-200">
+                        {r.isPremium || r.premiumAmount > 0 || r.premiumRate > 0 ? (
+                          <span className="font-bold text-amber-950 bg-amber-100/90 border border-amber-300 px-1.5 py-0.5 rounded text-[10px] inline-block text-right">
+                            {r.premiumAmount > 0 ? `₹${formatIndianCurrency(r.premiumAmount)}` : `+₹${r.premiumRate}/Qtl`}
+                            {r.premiumRate > 0 && r.premiumAmount > 0 && (
+                              <span className="text-[9px] text-amber-800 block font-semibold">(@ ₹{r.premiumRate}/Qtl)</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="p-2.5 font-mono font-bold text-right text-rose-800 whitespace-nowrap border-r border-slate-200">₹{formatIndianCurrency(r.totalClaimAmount)}</td>
                       <td className="p-2.5 text-center whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">

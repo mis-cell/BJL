@@ -293,6 +293,7 @@ export default function ExecutiveBiDashboard({
       "Claim Grade Down %",
       "Chotta & Habi Jabi (Kg)",
       "Premium (Sauda Check Point)",
+      "Premium Amount (INR)",
       "Moisture Claim (INR)",
       "Total Deductions (INR)",
       "Status"
@@ -314,6 +315,7 @@ export default function ExecutiveBiDashboard({
       r.claimGradeDown.toFixed(1),
       r.totalChottaHabijabiKg.toFixed(1),
       `"${r.premium || (r.isPremium ? 'Yes' : 'No')}"`,
+      r.premiumAmount > 0 ? r.premiumAmount.toFixed(2) : (r.premiumRate > 0 ? (r.premiumRate * r.weightMt * 10).toFixed(2) : '0.00'),
       r.moistureDeductionAmount.toFixed(2),
       r.totalClaimAmount.toFixed(2),
       `"${r.status}"`
@@ -934,8 +936,8 @@ export default function ExecutiveBiDashboard({
         {/* Year-level KPI Highlights Ribbon & Month Cards */}
         {!collapseInspectionSummary && (
           <>
-            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Final Arrival, Inspection, Payment, Settlement) */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs font-sans">
+            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Final Arrival, Inspection, Payment, Settlement, Premium) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-sans">
               {/* Card 1: Total MR & Weight (From Temporary Arrival) */}
               <div 
                 onClick={() => handleOpenInspectionModal({
@@ -1061,6 +1063,31 @@ export default function ExecutiveBiDashboard({
                 </span>
                 <span className="text-[11px] font-mono font-bold text-purple-800 mt-0.5 block truncate">
                   ₹{formatIndianCurrency(inspMetrics.totalYearSettledAmount)} {inspMetrics.yearPendingSettlementPoCount > 0 && `(${inspMetrics.yearPendingSettlementPoCount} POs Pending)`}
+                </span>
+              </div>
+
+              {/* Card 6: Total Premium (Sauda Check Point / Quality Add-on) */}
+              <div 
+                onClick={() => handleOpenInspectionModal({
+                  title: `Premium Quality Lots Summary (${activeYear})`,
+                  subtitle: `Total ${inspMetrics.totalPremiumLots} Premium MRs with ₹${formatIndianCurrency(inspMetrics.totalPremiumSum)} total premium amount (Avg ₹${inspMetrics.avgPremiumRate}/Qtl)`,
+                  inspections: (inspMetrics.allInspections || []).filter(r => r.isPremium || r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== 'No'),
+                  initialTab: 'inspections'
+                })}
+                className="bg-white p-3 rounded-xl border border-amber-300 hover:border-amber-600 shadow-2xs hover:shadow-xs transition-all cursor-pointer group bg-gradient-to-br from-white via-white to-amber-50/60"
+                title="Click to view all Premium MR inspection records"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-amber-900 font-bold block uppercase tracking-wider flex items-center gap-1">
+                    <span>⚡ Total Premium</span>
+                  </span>
+                  <span className="text-[10px] text-amber-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
+                </div>
+                <span className="font-mono font-extrabold text-amber-950 text-base block">
+                  {inspMetrics.totalPremiumLots} Lots
+                </span>
+                <span className="text-[11px] font-mono font-bold text-amber-900 mt-0.5 block truncate" title={`Total ₹${formatIndianCurrency(inspMetrics.totalPremiumSum)} ${inspMetrics.avgPremiumRate > 0 ? `(@ ₹${inspMetrics.avgPremiumRate}/Qtl)` : ''}`}>
+                  ₹{formatIndianCurrency(inspMetrics.totalPremiumSum)} {inspMetrics.avgPremiumRate > 0 && `(@ ₹${inspMetrics.avgPremiumRate}/Qtl)`}
                 </span>
               </div>
             </div>
@@ -1328,14 +1355,37 @@ export default function ExecutiveBiDashboard({
                           <span className="font-bold text-[#1E331B]">
                             {m.avgGradeDown}%
                           </span>
-                          {m.premiumLotsCount > 0 && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-amber-800 font-extrabold" title={`⚡ ${m.premiumLotsCount} Premium MRs`}>⚡{m.premiumLotsCount}</span>
-                            </>
-                          )}
                         </div>
                       </div>
+
+                      {/* 7. Premium Lots Count & Total Amount */}
+                      {m.premiumLotsCount > 0 && (
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenInspectionModal({
+                              title: `Premium Quality Lots - ${m.monthName} ${m.year}`,
+                              subtitle: `${m.premiumLotsCount} Premium MRs with ₹${formatIndianCurrency(m.premiumTotalSum)} total premium amount (Avg ₹${m.avgPremiumRate}/Qtl)`,
+                              inspections: (m.inspections || []).filter(r => r.isPremium || r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== 'No'),
+                              initialTab: 'inspections'
+                            });
+                          }}
+                          className="flex items-center justify-between py-1 border-t border-dashed border-amber-200/80 bg-amber-50/70 -mx-1 px-1 rounded hover:bg-amber-100/80 transition-colors cursor-pointer group/prem"
+                          title={`Click to view ${m.premiumLotsCount} Premium MRs • Total Amount: ₹${formatIndianCurrency(m.premiumTotalSum)} ${m.avgPremiumRate > 0 ? `(@ ₹${m.avgPremiumRate}/Qtl)` : ''}`}
+                        >
+                          <span className="text-[10.5px] text-amber-950 font-bold flex items-center gap-1">
+                            <span>⚡ Premium:</span>
+                          </span>
+                          <div className="text-right font-mono text-xs">
+                            <span className="font-black text-amber-950 group-hover/prem:underline">
+                              {m.premiumLotsCount} Lots
+                            </span>
+                            <span className="text-[10px] font-black text-amber-900 block leading-tight">
+                              ₹{formatIndianCurrency(m.premiumTotalSum)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Month Card Bottom Actions (1-Click CSV Download & Pipeline Drilldown) */}

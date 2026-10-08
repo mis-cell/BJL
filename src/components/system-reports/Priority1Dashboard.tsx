@@ -367,17 +367,6 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
           </div>
 
           <div 
-            onClick={() => onDrillDown('Loss-Making Deals', filtered.filter(t => t.grossProfit < 0))}
-            className="p-3 bg-rose-50 border border-rose-300 rounded-xl shadow-sm hover:bg-rose-100 transition cursor-pointer"
-          >
-            <span className="text-[9px] font-black text-rose-800 uppercase block">Loss Sauda</span>
-            <div className="text-base font-black text-rose-700 font-mono mt-1">
-              {metrics.lossMakingCount}
-            </div>
-            <span className="text-[8.5px] text-rose-600 block mt-0.5">Negative Margin</span>
-          </div>
-
-          <div 
             onClick={() => onDrillDown('Delayed Overdue Contracts', filtered.filter(t => t.isDelayed))}
             className="p-3 bg-amber-50 border border-amber-300 rounded-xl shadow-sm hover:bg-amber-100 transition cursor-pointer"
           >

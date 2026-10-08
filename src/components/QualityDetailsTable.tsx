@@ -328,95 +328,76 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         }
       />
 
-      {/* Explanatory Banner */}
-      {!isUser010 && (
-        <div className="mb-4 p-3 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-green-50 border border-emerald-200/90 rounded-xl text-xs text-emerald-950 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <span className="text-base">✨</span>
-            <div>
-              <span className="font-extrabold text-emerald-900 uppercase tracking-wide">
-                Normalized Database Combination Rule:
-              </span>
-              <p className="text-[11px] text-emerald-800 font-medium">
-                Select multiple <strong>Agencies</strong> and multiple <strong>Markas</strong> per Quality. The system generates and saves each applicable <strong>Agency + Marka combination as its own separate database row</strong> in Supabase with its corresponding Quality and Rate (Rs.).
-              </p>
-            </div>
-          </div>
-          <div className="shrink-0 bg-white border border-emerald-300 px-3 py-1 rounded-lg text-center shadow-2xs">
-            <span className="text-[10px] text-slate-500 font-bold block uppercase">Database Rows</span>
-            <span className="text-sm font-black text-emerald-900 font-mono">
-              {allCombinations.filter(c => c.enabled).length} Records
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Main Rows Setup Table */}
-      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs overflow-visible bg-white mb-5 w-full">
-        <div className="overflow-x-auto min-w-0 max-w-full">
-          <table className="w-full text-left border-collapse min-w-[700px] lg:min-w-full">
-            <thead className="sticky top-0 z-20 shadow-2xs">
-              <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-                {isUser010 ? (
-                  <>
-                    <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
-                      Quality
-                    </th>
-                    <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
-                      Rs.
-                    </th>
-                    <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-3.5 py-2.5 w-1/5 bg-[#EDF4EF] rounded-tl-xl">
-                      Quality <span className="text-rose-600 font-black">*</span>
-                    </th>
-                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
-                      Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
-                    </th>
-                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
-                      Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
-                    </th>
-                    <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
-                      Rs. / Rate <span className="text-rose-600 font-black">*</span>
-                    </th>
-                    <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#EAE6DD] text-xs">
-              {qualityDetails.map((qd, i) => {
-                const currentAgencies = Array.isArray(qd.agencies) && qd.agencies.length > 0
-                  ? qd.agencies
-                  : (qd.agency ? [qd.agency] : []);
+      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs bg-white mb-5 w-full overflow-visible relative z-10">
+        <table className="w-full text-left border-collapse table-fixed">
+          <thead className="sticky top-0 z-20 shadow-2xs">
+            <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
+              {isUser010 ? (
+                <>
+                  <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
+                    Quality
+                  </th>
+                  <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
+                    Rs.
+                  </th>
+                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+                </>
+              ) : (
+                <>
+                  <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF] rounded-tl-xl">
+                    Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+                  </th>
+                  <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF]">
+                    Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+                  </th>
+                  <th className="px-3 py-2.5 w-[21%] bg-[#EDF4EF]">
+                    Quality <span className="text-rose-600 font-black">*</span>
+                  </th>
+                  <th className="px-3 py-2.5 w-[13%] text-right bg-[#EDF4EF]">
+                    Rs. <span className="text-rose-600 font-black">*</span>
+                  </th>
+                  <th className="px-1 py-2.5 w-[4%] text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EAE6DD] text-xs">
+            {qualityDetails.map((qd, i) => {
+              const currentAgencies = Array.isArray(qd.agencies) && qd.agencies.length > 0
+                ? qd.agencies
+                : (qd.agency ? [qd.agency] : []);
 
-                const currentMarkas = Array.isArray(qd.markas) && qd.markas.length > 0
-                  ? qd.markas
-                  : (qd.marka ? [qd.marka] : []);
+              const currentMarkas = Array.isArray(qd.markas) && qd.markas.length > 0
+                ? qd.markas
+                : (qd.marka ? [qd.marka] : []);
 
-                // Get row's applicable combinations
-                const rowCombs = allCombinations.filter(c => c.rowIndex === i);
+              // Get row's applicable combinations
+              const rowCombs = allCombinations.filter(c => c.rowIndex === i);
 
-                return (
-                  <React.Fragment key={i}>
-                    <tr className="hover:bg-[#F9F8F5] transition-colors relative z-0 focus-within:z-30 hover:z-20">
-                      {/* Quality - SEARCHABLE SELECT */}
-                      <td className="p-2.5 align-top">
-                        <SearchableSelect
-                          id={`qd_quality_${i}`}
-                          name="qd_quality"
-                          value={qd.quality || ''}
-                          onChange={(val) => onQualityChange(i, 'quality', val)}
-                          options={gradeOptions}
-                          placeholder={isUser010 ? "Select Quality..." : "--Select Quality *--"}
-                          isRequired={!isUser010}
-                          compact={true}
-                        />
-                      </td>
-
-                      {!isUser010 && (
+              return (
+                <React.Fragment key={i}>
+                  <tr 
+                    style={{ zIndex: Math.max(10, 80 - i * 5) }}
+                    className="hover:bg-[#F9F8F5] transition-colors relative focus-within:z-[90]"
+                  >
+                      {isUser010 ? (
+                        <>
+                          {/* Quality - SEARCHABLE SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableSelect
+                              id={`qd_quality_${i}`}
+                              name="qd_quality"
+                              value={qd.quality || ''}
+                              onChange={(val) => onQualityChange(i, 'quality', val)}
+                              options={gradeOptions}
+                              placeholder="Select Quality..."
+                              isRequired={false}
+                              compact={true}
+                            />
+                          </td>
+                        </>
+                      ) : (
                         <>
                           {/* Agency - SEARCHABLE MULTI-SELECT */}
                           <td className="p-2.5 align-top">
@@ -453,6 +434,20 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                               badgeTheme="amber"
                             />
                           </td>
+
+                          {/* Quality - SEARCHABLE SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableSelect
+                              id={`qd_quality_${i}`}
+                              name="qd_quality"
+                              value={qd.quality || ''}
+                              onChange={(val) => onQualityChange(i, 'quality', val)}
+                              options={gradeOptions}
+                              placeholder="--Select Quality *--"
+                              isRequired={true}
+                              compact={true}
+                            />
+                          </td>
                         </>
                       )}
 
@@ -465,7 +460,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                           type="number"
                           step="0.01"
                           required={!isUser010}
-                          value={qd.rs ?? ''}
+                          value={qd.rs ? qd.rs : ''}
                           onChange={(e) => onQualityChange(i, 'rs', e.target.value)}
                           placeholder={isUser010 ? "Rs." : "Rs. *"}
                           className={`w-full rounded-lg px-2.5 py-2 text-xs font-bold text-right outline-none transition-all font-mono ${
@@ -532,128 +527,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
               })}
             </tbody>
           </table>
-        </div>
       </div>
-
-      {/* Section 2: Master Combinations Database Breakdown Table */}
-      {!isUser010 && allCombinations.length > 0 && (
-        <div className="rounded-xl border border-emerald-300/80 bg-white shadow-xs overflow-hidden">
-          <div className="px-4 py-3 bg-gradient-to-r from-[#174C2C] to-[#1F5E38] text-white flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-amber-300" />
-              <div>
-                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
-                  Database Row-Level View: Agency + Marka + Quality + Rs.
-                </h4>
-                <p className="text-[10px] text-emerald-100/80">
-                  Each row below will be stored as an individual record in Supabase (sauda_quality_details) for Material Mismatch & Arrival matching.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] bg-black/30 border border-emerald-400/40 text-emerald-100 font-mono px-2.5 py-0.5 rounded-full font-bold">
-                {allCombinations.filter(c => c.enabled).length} of {allCombinations.length} Active
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto min-w-0 max-w-full">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
-                  <th className="p-2.5 w-12 text-center">#</th>
-                  <th className="p-2.5 text-emerald-900">Agency</th>
-                  <th className="p-2.5 text-amber-900">Marka</th>
-                  <th className="p-2.5 text-indigo-900">Quality</th>
-                  <th className="p-2.5 text-right text-slate-900">Rate (Rs.)</th>
-                  <th className="p-2.5 text-center w-28">Status</th>
-                  <th className="p-2.5 text-center w-14">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {allCombinations.map((comb, idx) => (
-                  <tr
-                    key={idx}
-                    className={`transition-colors font-mono text-[11px] ${
-                      comb.enabled
-                        ? 'hover:bg-emerald-50/40 text-slate-800'
-                        : 'bg-slate-50 text-slate-400 line-through'
-                    }`}
-                  >
-                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
-                    
-                    {/* Agency */}
-                    <td className="p-2 font-bold text-emerald-950 font-sans">
-                      <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-emerald-900">
-                        {comb.agency || 'DEFAULT'}
-                      </span>
-                    </td>
-
-                    {/* Marka */}
-                    <td className="p-2 font-bold text-amber-950 font-sans">
-                      <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 rounded text-amber-900">
-                        {comb.marka || 'DEFAULT'}
-                      </span>
-                    </td>
-
-                    {/* Quality */}
-                    <td className="p-2 font-black text-indigo-900">
-                      <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded text-indigo-950">
-                        {comb.quality || 'N/A'}
-                      </span>
-                    </td>
-
-                    {/* Rate (Rs.) */}
-                    <td className="p-2 text-right">
-                      {comb.enabled ? (
-                        <div className="inline-flex items-center gap-1 justify-end">
-                          <span className="text-slate-400 font-normal">₹</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={comb.rs || ''}
-                            onChange={(e) => handleUpdateCombinationRate(comb.rowIndex, comb.agency, comb.marka, parseFloat(e.target.value) || 0)}
-                            className="w-24 text-right font-black text-slate-900 bg-white border border-slate-200 hover:border-emerald-500 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-slate-400">₹{comb.rs.toLocaleString()}</span>
-                      )}
-                    </td>
-
-                    {/* Status */}
-                    <td className="p-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleCombination(comb.rowIndex, comb.agency, comb.marka, comb.enabled)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase cursor-pointer transition-colors ${
-                          comb.enabled
-                            ? 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
-                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                        }`}
-                      >
-                        {comb.enabled ? '✓ Applicable' : '✕ Excluded'}
-                      </button>
-                    </td>
-
-                    {/* Action */}
-                    <td className="p-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteCombination(comb.rowIndex, comb.agency, comb.marka)}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
-                        title={comb.enabled ? 'Exclude combination' : 'Re-include'}
-                      >
-                        {comb.enabled ? <Trash2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

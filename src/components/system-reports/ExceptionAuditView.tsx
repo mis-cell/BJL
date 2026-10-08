@@ -28,7 +28,7 @@ export const ExceptionAuditView: React.FC<ExceptionAuditViewProps> = ({
               8. System-Wide Exception & Abnormal Data Control
             </h3>
             <p className="text-xs text-rose-300/80">
-              Transactions violating configured mill tolerances (Moisture &gt;18%, Premium &gt;₹100, Deductions &gt;2%, Loss Margin, Delivery Delays).
+              Transactions violating configured mill tolerances (Moisture &gt;18%, Premium &gt;₹100, Deductions &gt;2%, Quality Claims, Delivery Delays).
             </p>
           </div>
         </div>
@@ -57,7 +57,7 @@ export const ExceptionAuditView: React.FC<ExceptionAuditViewProps> = ({
                 <th className="p-2.5 text-right">Qty (MT)</th>
                 <th className="p-2.5 text-right">Purchase Rate</th>
                 <th className="p-2.5 text-right">Variance / MT</th>
-                <th className="p-2.5 text-right">Gross Profit</th>
+                <th className="p-2.5 text-right">Deduction (₹)</th>
                 <th className="p-2.5">Flagged Reason(s)</th>
                 <th className="p-2.5 text-center">Severity</th>
               </tr>
@@ -79,10 +79,8 @@ export const ExceptionAuditView: React.FC<ExceptionAuditViewProps> = ({
                     <td className="p-2.5 text-right font-bold text-amber-700">
                       {t.rateVariance > 0 ? `+₹${t.rateVariance.toFixed(0)}` : '₹0'}
                     </td>
-                    <td className="p-2.5 text-right">
-                      <span className={t.grossProfit < 0 ? 'text-rose-600 font-black' : 'text-emerald-700 font-bold'}>
-                        ₹{t.grossProfit.toLocaleString()}
-                      </span>
+                    <td className="p-2.5 text-right font-bold text-rose-700">
+                      {t.deductionAmount > 0 ? `₹${t.deductionAmount.toLocaleString()}` : '—'}
                     </td>
                     <td className="p-2.5">
                       <div className="flex flex-wrap gap-1">

@@ -255,11 +255,11 @@ export default function PoPrintSlip({ po }: Props) {
                         </td>
 
                         <td className="px-2 py-1 text-left uppercase truncate">
-                          {isFirstRow ? (item.agency_name || po.area) : ''}
+                          {item.agency_name || (isFirstRow ? po.area : '')}
                         </td>
 
                         <td className="px-2 py-1 text-left uppercase truncate">
-                          {isFirstRow ? (item.marka_name || 'NO MARK') : ''}
+                          {item.marka_name || (isFirstRow ? 'NO MARK' : '')}
                         </td>
 
                         <td className="px-2 py-1 text-left uppercase font-extrabold truncate">
