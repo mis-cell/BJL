@@ -132,9 +132,72 @@ export default function SaudaEntry({
 
       const existingCount = realQD.length;
       if (existingCount < 1) {
-        copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0 }];
+        copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }];
       } else {
-        copy.quality_details = realQD;
+        // Normalize rows and group shared (quality, rs) rows for multi-select editing
+        const groupedMap = new Map<string, any>();
+        realQD.forEach((row: any) => {
+          const q = String(row.quality || '').trim();
+          const r = Number(row.rs) || 0;
+          const key = `${q}_${r}`;
+
+          const ags: string[] = (
+            Array.isArray(row.agencies) && row.agencies.length > 0
+              ? row.agencies
+              : (row.agency ? String(row.agency).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+          );
+
+          const mks: string[] = (
+            Array.isArray(row.markas) && row.markas.length > 0
+              ? row.markas
+              : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+          );
+
+          if (!groupedMap.has(key)) {
+            groupedMap.set(key, {
+              quality: q,
+              rs: r,
+              qty: Number(row.qty) || 0,
+              agencies: [...ags],
+              markas: [...mks],
+              agency: ags[0] || '',
+              marka: mks[0] || '',
+              applicableCombinations: (row.agency && row.marka) ? [{
+                agency: row.agency,
+                marka: row.marka,
+                quality: q,
+                rs: r,
+                qty: Number(row.qty) || 0,
+                enabled: true
+              }] : []
+            });
+          } else {
+            const existing = groupedMap.get(key);
+            ags.forEach(ag => {
+              if (ag && !existing.agencies.includes(ag)) existing.agencies.push(ag);
+            });
+            mks.forEach(mk => {
+              if (mk && !existing.markas.includes(mk)) existing.markas.push(mk);
+            });
+            if (row.agency && row.marka) {
+              const alreadyHas = existing.applicableCombinations.some(
+                (c: any) => c.agency.toUpperCase() === row.agency.toUpperCase() && c.marka.toUpperCase() === row.marka.toUpperCase()
+              );
+              if (!alreadyHas) {
+                existing.applicableCombinations.push({
+                  agency: row.agency,
+                  marka: row.marka,
+                  quality: q,
+                  rs: r,
+                  qty: Number(row.qty) || 0,
+                  enabled: true
+                });
+              }
+            }
+          }
+        });
+
+        copy.quality_details = Array.from(groupedMap.values());
       }
       return copy;
     }
@@ -169,7 +232,7 @@ export default function SaudaEntry({
       superior_normal_marks: 'New (F2)',
       signature_url: '',
       status: 'pending',
-      quality_details: [{ quality: '', qty: 0, agency: '', marka: '', rs: 0 }]
+      quality_details: [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }]
     };
   };
 
@@ -496,6 +559,13 @@ export default function SaudaEntry({
         const calculatedPrice = recalculateRowRate(prev.date || today, prev.area, value);
         if (calculatedPrice !== null) {
           qd[index].rs = calculatedPrice;
+          if (Array.isArray(qd[index].applicableCombinations)) {
+            qd[index].applicableCombinations = qd[index].applicableCombinations.map((c: any) => ({
+              ...c,
+              quality: value,
+              rs: calculatedPrice
+            }));
+          }
           if (index === 0) {
             return { ...prev, quality_details: qd, b_rate: calculatedPrice };
           }
@@ -509,7 +579,10 @@ export default function SaudaEntry({
   const handleAddQualityRow = () => {
     setFormData(prev => ({
       ...prev,
-      quality_details: [...(prev.quality_details || []), { quality: '', qty: 0, agency: '', marka: '', rs: 0 }]
+      quality_details: [
+        ...(prev.quality_details || []),
+        { quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }
+      ]
     }));
   };
 
@@ -528,7 +601,7 @@ export default function SaudaEntry({
     setFormData(prev => {
       const current = [...(prev.quality_details || [])];
       if (current.length <= 1) {
-        current[0] = { quality: '', qty: 0, agency: '', marka: '', rs: 0 };
+        current[0] = { quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] };
         return { ...prev, quality_details: current };
       }
       current.splice(index, 1);
@@ -566,7 +639,7 @@ export default function SaudaEntry({
       const qdRows = formData.quality_details || [];
       for (let i = 0; i < qdRows.length; i++) {
         const row = qdRows[i];
-        if (row.quality || row.qty || row.rs || row.agency || row.marka) {
+        if (row.quality || row.qty || row.rs || row.agency || row.marka || (row.agencies && row.agencies.length > 0) || (row.markas && row.markas.length > 0)) {
           if (!row.quality) {
             alert(`Please select or fill in Quality in Row ${i + 1}.`);
             return;
@@ -617,13 +690,99 @@ export default function SaudaEntry({
 
       const qd = saudaData.quality_details;
 
-      // Extract first row agency/marka into main master record for backward compatibility
-      if (qd && qd.length > 0) {
-        const validFirst = qd.find((x: any) => x.quality || x.agency || x.marka);
-        if (validFirst) {
-          if (validFirst.agency) saudaData.agency = validFirst.agency;
-          if (validFirst.marka) saudaData.marks = validFirst.marka;
+      // Extract and normalize all applicable combinations
+      const flatCombinations: Array<{
+        quality: string;
+        agency: string;
+        marka: string;
+        rs: number;
+        qty: number;
+      }> = [];
+
+      (qd || []).forEach((row: any) => {
+        const rowQuality = String(row.quality || '').trim();
+        const rowRs = toNumericOrNull(row.rs) ?? 0;
+        const rowQty = toNumericOrNull(row.qty) ?? 0;
+
+        // 1. If row has customized applicableCombinations array
+        if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
+          row.applicableCombinations.forEach((comb: any) => {
+            if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality)) {
+              flatCombinations.push({
+                quality: String(comb.quality || rowQuality).trim(),
+                agency: String(comb.agency || '').trim(),
+                marka: String(comb.marka || '').trim(),
+                rs: toNumericOrNull(comb.rs) ?? rowRs,
+                qty: toNumericOrNull(comb.qty) ?? rowQty
+              });
+            }
+          });
+        } else {
+          // 2. Generate combinations from agencies and markas arrays
+          const rowAgencies: string[] = (
+            Array.isArray(row.agencies) && row.agencies.length > 0
+              ? row.agencies
+              : (row.agency ? String(row.agency).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+          );
+
+          const rowMarkas: string[] = (
+            Array.isArray(row.markas) && row.markas.length > 0
+              ? row.markas
+              : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
+          );
+
+          if (rowAgencies.length > 0 && rowMarkas.length > 0) {
+            rowAgencies.forEach(ag => {
+              rowMarkas.forEach(mk => {
+                flatCombinations.push({
+                  quality: rowQuality,
+                  agency: String(ag).trim(),
+                  marka: String(mk).trim(),
+                  rs: rowRs,
+                  qty: rowQty
+                });
+              });
+            });
+          } else if (rowAgencies.length > 0) {
+            rowAgencies.forEach(ag => {
+              flatCombinations.push({
+                quality: rowQuality,
+                agency: String(ag).trim(),
+                marka: String(row.marka || '').trim(),
+                rs: rowRs,
+                qty: rowQty
+              });
+            });
+          } else if (rowMarkas.length > 0) {
+            rowMarkas.forEach(mk => {
+              flatCombinations.push({
+                quality: rowQuality,
+                agency: String(row.agency || '').trim(),
+                marka: String(mk).trim(),
+                rs: rowRs,
+                qty: rowQty
+              });
+            });
+          } else if (rowQuality || rowRs > 0 || row.agency || row.marka) {
+            flatCombinations.push({
+              quality: rowQuality,
+              agency: String(row.agency || '').trim(),
+              marka: String(row.marka || '').trim(),
+              rs: rowRs,
+              qty: rowQty
+            });
+          }
         }
+      });
+
+      const allUniqueAgencies = Array.from(new Set(flatCombinations.map(c => c.agency).filter(Boolean)));
+      const allUniqueMarkas = Array.from(new Set(flatCombinations.map(c => c.marka).filter(Boolean)));
+
+      if (allUniqueAgencies.length > 0) {
+        saudaData.agency = allUniqueAgencies.join(', ');
+      }
+      if (allUniqueMarkas.length > 0) {
+        saudaData.marks = allUniqueMarkas.join(', ');
       }
 
       const SAUDA_MASTER_FIELDS = [
@@ -707,7 +866,7 @@ export default function SaudaEntry({
       saudaPayload.shipment_penalty = toNumericOrNull(saudaData.shipment_penalty) ?? 0;
       saudaPayload.marks_claim = toNumericOrNull(saudaData.marks_claim) ?? 0;
       saudaPayload.quantity_claim = toNumericOrNull(saudaData.quantity_claim) ?? 0;
-      saudaPayload.b_rate = toNumericOrNull(saudaData.b_rate) ?? 0;
+      saudaPayload.b_rate = toNumericOrNull(saudaData.b_rate) ?? (flatCombinations[0]?.rs || 0);
 
       saudaPayload.date = toDateOrNull(saudaData.date) || today;
       saudaPayload.shipment_date = toDateOrNull(saudaData.shipment_date);
@@ -732,25 +891,26 @@ export default function SaudaEntry({
         inserted = await dbModule.insert('sauda_master', saudaPayload);
       }
 
-      if (inserted && qd) {
+      if (inserted && flatCombinations.length > 0) {
         if (isEditMode) {
           await dbModule.delete('sauda_quality_details', 'sauda_id', inserted.sauda_id);
         }
 
-        for (const row of qd) {
-          if (row.quality || row.qty || row.rs || row.marka || row.agency) {
+        for (const comb of flatCombinations) {
+          if (comb.quality || comb.agency || comb.marka || comb.rs > 0) {
             try {
               await dbModule.insert('sauda_quality_details', {
                 sauda_id: inserted.sauda_id,
+                sauda_no: inserted.sauda_no || saudaData.sauda_no,
                 financial_year: inserted.financial_year || saudaData.financial_year || '2026-2027',
-                quality: String(row.quality || '').trim(),
-                qty: toNumericOrNull(row.qty) ?? 0,
-                agency: String(row.agency || '').trim(),
-                marka: String(row.marka || '').trim(),
-                rs: toNumericOrNull(row.rs) ?? 0
+                quality: String(comb.quality || '').trim(),
+                qty: toNumericOrNull(comb.qty) ?? 0,
+                agency: String(comb.agency || '').trim(),
+                marka: String(comb.marka || '').trim(),
+                rs: toNumericOrNull(comb.rs) ?? 0
               });
             } catch (e) {
-              console.error(e);
+              console.error("Failed to insert combination:", e);
             }
           }
         }
@@ -768,9 +928,9 @@ export default function SaudaEntry({
 
   return (
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
-      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
+      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full max-w-7xl 2xl:max-w-[1550px] mx-auto pb-10 px-2 sm:px-4 min-w-0">
         {/* HEADER BAR - MATCHING MILL INSPECTION AESTHETIC */}
-        <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+        <div className="bg-[#174C2C] text-white px-5 sm:px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
           {/* Left Badge & Title */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
@@ -831,60 +991,105 @@ export default function SaudaEntry({
           </button>
         </div>
 
+        {/* Responsive Quick Navigation Anchors for Wide Screens / Second Monitors */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 bg-white/90 backdrop-blur border border-slate-200/90 rounded-xl text-xs font-bold shadow-2xs scrollbar-none sticky top-0 z-30">
+          <a
+            href="#basic-details"
+            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
+          >
+            <span>📋 1. Basic Details</span>
+          </a>
+          <a
+            href="#transportation-details"
+            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
+          >
+            <span>🚚 2. Transportation</span>
+          </a>
+          <a
+            href="#quality-details"
+            className="px-3.5 py-1.5 rounded-lg bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300 flex items-center gap-1.5 transition shrink-0 shadow-2xs font-black"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+            <span>⚙️ 3. Quality Details (Multi-Agency & Marka)</span>
+          </a>
+          <a
+            href="#claims-details"
+            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
+          >
+            <span>📜 4. Shipment & Claims</span>
+          </a>
+          <a
+            href="#remarks-details"
+            className="px-3.5 py-1.5 rounded-lg bg-[#174C2C] text-white hover:bg-[#113A21] flex items-center gap-1.5 transition shrink-0 ml-auto shadow-2xs"
+          >
+            <span>💾 5. Save Contract</span>
+          </a>
+        </div>
+
         {/* 2. Main Form Content */}
-        <main ref={formContainerRef} className="flex-1 space-y-5 w-full">
+        <main ref={formContainerRef} className="flex-1 space-y-5 w-full min-w-0">
           {/* Field Color Guide */}
           <FormLegend />
 
           {/* Section 1: Basic Details */}
-          <BasicDetailsCard
-            formData={formData}
-            onChange={handleChange}
-            onSelectChange={handleSelectChange}
-            brokers={brokers}
-            suppliers={suppliers}
-            areas={areas}
-            isUser010={isUser010}
-          />
+          <div id="basic-details" className="scroll-mt-14">
+            <BasicDetailsCard
+              formData={formData}
+              onChange={handleChange}
+              onSelectChange={handleSelectChange}
+              brokers={brokers}
+              suppliers={suppliers}
+              areas={areas}
+              isUser010={isUser010}
+            />
+          </div>
 
           {/* Section 2: Transportation Details */}
-          <TransportationCard
-            formData={formData}
-            onChange={handleChange}
-            onSelectChange={handleSelectChange}
-            unitOptions={UNIT_OPTIONS}
-            isUser010={isUser010}
-          />
+          <div id="transportation-details" className="scroll-mt-14">
+            <TransportationCard
+              formData={formData}
+              onChange={handleChange}
+              onSelectChange={handleSelectChange}
+              unitOptions={UNIT_OPTIONS}
+              isUser010={isUser010}
+            />
+          </div>
 
-          {/* Section 3: Quality Details Table */}
-          <QualityDetailsTable
-            qualityDetails={formData.quality_details || []}
-            onQualityChange={handleQualityChange}
-            onAddRow={handleAddQualityRow}
-            onDeleteRow={handleDeleteQualityRow}
-            onRemoveRowAt={handleRemoveQualityRowAt}
-            grades={grades}
-            agencies={agencies}
-            markas={markas}
-            isUser010={isUser010}
-          />
+          {/* Section 3: Quality Details Table (Multiple Agency & Marka Support) */}
+          <div id="quality-details" className="scroll-mt-14">
+            <QualityDetailsTable
+              qualityDetails={formData.quality_details || []}
+              onQualityChange={handleQualityChange}
+              onAddRow={handleAddQualityRow}
+              onDeleteRow={handleDeleteQualityRow}
+              onRemoveRowAt={handleRemoveQualityRowAt}
+              grades={grades}
+              agencies={agencies}
+              markas={markas}
+              isUser010={isUser010}
+            />
+          </div>
 
           {/* Section 4: Shipment & Claims */}
-          <ShipmentClaimsCard
-            formData={formData}
-            onChange={handleChange}
-          />
+          <div id="claims-details" className="scroll-mt-14">
+            <ShipmentClaimsCard
+              formData={formData}
+              onChange={handleChange}
+            />
+          </div>
 
           {/* Section 5: Remarks & Finalisation (with Attached Action Footer) */}
-          <RemarksCard
-            formData={formData}
-            onChange={handleChange}
-            onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
-            onPrint={() => setShowPrintSlip(true)}
-            onBack={onCancel}
-            onSave={handleSave}
-            isLoading={loading}
-          />
+          <div id="remarks-details" className="scroll-mt-14">
+            <RemarksCard
+              formData={formData}
+              onChange={handleChange}
+              onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
+              onPrint={() => setShowPrintSlip(true)}
+              onBack={onCancel}
+              onSave={handleSave}
+              isLoading={loading}
+            />
+          </div>
         </main>
 
         {/* Print Slip Modal */}

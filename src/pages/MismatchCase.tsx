@@ -290,7 +290,13 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
           return (iPo && iPo === poNo) || (mPo && mPo === poNo);
         });
         const matchingAmads = amadRows.filter((a: any) => String(a.po_no || '').trim().toUpperCase() === poNo);
-        const poDetails = allDetailRecords.filter((d: any) => String(d.po_no || '').trim().toUpperCase() === poNo);
+        const poDetails = allDetailRecords.filter((d: any) => {
+          const dPo = String(d.po_no || d.sauda_no || '').trim().toUpperCase();
+          if (dPo && dPo === poNo) return true;
+          if (po.sauda_id && d.sauda_id && d.sauda_id === po.sauda_id) return true;
+          if (po.sauda_no && d.sauda_no && String(d.sauda_no).trim().toUpperCase() === String(po.sauda_no).trim().toUpperCase()) return true;
+          return false;
+        });
 
         const latestInsp = matchingAmads[0] || matchingInspections[0] || null;
         if (!latestInsp) return;

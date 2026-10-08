@@ -114,6 +114,9 @@ export interface SaudaQualityDetail {
   rs: number;
   percentage?: number;
   rate?: number;
+  agencies?: string[];
+  markas?: string[];
+  applicableCombinations?: any[];
 }
 
 export interface Sauda {
