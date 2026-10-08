@@ -9,30 +9,22 @@ interface Props {
 export default function SaudaPrintSlip({ sauda }: Props) {
   const rawQualityRows = sauda.quality_details || [];
 
-  // Determine fallback quality and rate from the contract or first valid row
-  const defaultQuality = (
-    rawQualityRows.find(q => q.quality && String(q.quality).trim() !== '')?.quality || 
-    (sauda as any).quality || 
-    'TD5'
-  );
-  const defaultRate = (
-    Number(rawQualityRows.find(q => q.rs && Number(q.rs) > 0)?.rs) || 
-    Number(sauda.b_rate) || 
-    13500
-  );
+  // Contract-level defaults if no rows exist at all
+  const contractQuality = (sauda as any).quality || '';
+  const contractRate = Number(sauda.b_rate) || 0;
 
-  // Expand all active combinations so that each Agency + Marka combination has its Quality and Rs
+  // Expand all active rows so Agency, Marka, Quality, Rs are rendered cleanly
   const expandedList: any[] = [];
   rawQualityRows.forEach(row => {
     // 1. If row already has explicit applicableCombinations array
     if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
       row.applicableCombinations.forEach((comb: any) => {
-        if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality)) {
+        if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality || comb.rs)) {
           expandedList.push({
             agency: String(comb.agency || row.agency || '').trim(),
             marka: String(comb.marka || row.marka || '').trim(),
-            quality: String(comb.quality || row.quality || defaultQuality).trim(),
-            rs: Number(comb.rs) || Number(row.rs) || defaultRate,
+            quality: String(comb.quality || row.quality || '').trim(),
+            rs: comb.rs ? Number(comb.rs) : (row.rs ? Number(row.rs) : 0),
             qty: Number(comb.qty) || Number(row.qty) || 0
           });
         }
@@ -49,8 +41,8 @@ export default function SaudaPrintSlip({ sauda }: Props) {
           : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
       );
 
-      const rowQ = String(row.quality || defaultQuality).trim();
-      const rowR = Number(row.rs) || defaultRate;
+      const rowQ = String(row.quality || '').trim();
+      const rowR = row.rs !== undefined && row.rs !== null && String(row.rs).trim() !== '' ? Number(row.rs) : 0;
 
       if (agList.length > 0 && mkList.length > 0) {
         if (agList.length === mkList.length && agList.length > 1) {
@@ -112,13 +104,16 @@ export default function SaudaPrintSlip({ sauda }: Props) {
 
   const qualityRows = expandedList.length > 0 
     ? expandedList 
-    : rawQualityRows.map(r => ({
-        ...r,
-        agency: r.agency || '',
-        marka: r.marka || '',
-        quality: r.quality || defaultQuality,
-        rs: Number(r.rs) || defaultRate
-      }));
+    : (rawQualityRows.length > 0
+        ? rawQualityRows.map(r => ({
+            ...r,
+            agency: r.agency || '',
+            marka: r.marka || '',
+            quality: r.quality || '',
+            rs: Number(r.rs) || 0
+          }))
+        : [{ agency: '', marka: '', quality: contractQuality, rs: contractRate, qty: 0 }]
+      );
   
   // Pad local qualities to at least 7 rows to match the physical slip format
   const paddedQualities = [...qualityRows];
@@ -139,7 +134,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     if (firstWithRate) {
       return `${Number(firstWithRate.rs).toLocaleString('en-IN')}/-`;
     }
-    return `${Number(defaultRate).toLocaleString('en-IN')}/-`;
+    return contractRate > 0 ? `${Number(contractRate).toLocaleString('en-IN')}/-` : '';
   };
 
   return (
@@ -231,15 +226,15 @@ export default function SaudaPrintSlip({ sauda }: Props) {
           </div>
        </div>
 
-       {/* Qualities & Combinations Table (Agency | Marka | Quality | Rs.) */}
+       {/* Qualities & Combinations Table (Agency | Marka | Quality * | Rs. *) */}
        <div className="mb-4 flex-none border-2 border-black rounded-xs overflow-hidden font-mono text-[11px]">
           <table className="w-full border-collapse">
              <thead>
                 <tr className="bg-neutral-100 border-b-2 border-black font-extrabold text-[11px] text-black">
                    <th className="border-r border-black px-2 py-1 text-left w-[28%] uppercase">Agency</th>
                    <th className="border-r border-black px-2 py-1 text-left w-[24%] uppercase">Marka</th>
-                   <th className="border-r border-black px-2 py-1 text-left w-[24%] uppercase">Quality</th>
-                   <th className="px-2 py-1 text-right w-[24%] uppercase">Rs.</th>
+                   <th className="border-r border-black px-2 py-1 text-left w-[24%] uppercase">Quality *</th>
+                   <th className="px-2 py-1 text-right w-[24%] uppercase">Rs. *</th>
                 </tr>
              </thead>
              <tbody>
@@ -255,7 +250,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
                          {item.quality ? item.quality.trim().toUpperCase() : ''}
                       </td>
                       <td className="px-2 py-0.5 text-right font-bold text-black">
-                         {item.rs ? `${Number(item.rs).toLocaleString('en-IN')}/-` : ''}
+                         {item.rs && Number(item.rs) > 0 ? Number(item.rs).toLocaleString('en-IN') : ''}
                       </td>
                    </tr>
                 ))}

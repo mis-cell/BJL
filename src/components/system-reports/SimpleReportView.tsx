@@ -533,8 +533,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           const [yearB, monthB] = String(b.key).split("-").map(Number);
 
                           return (
-                            new Date(yearB, monthB - 1) -
-                            new Date(yearA, monthA - 1)
+                            new Date(yearB, monthB - 1).getTime() -
+                            new Date(yearA, monthA - 1).getTime()
                           );
                         })
                         .map((row, idx) => (

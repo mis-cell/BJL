@@ -577,27 +577,22 @@ export default function SaudaEntry({
   };
 
   const handleAddQualityRow = () => {
-    setFormData(prev => {
-      const firstRow: any = prev.quality_details?.[0] || {};
-      const defaultQuality = firstRow.quality || '';
-      const defaultRs = firstRow.rs || prev.b_rate || '';
-      return {
-        ...prev,
-        quality_details: [
-          ...(prev.quality_details || []),
-          { 
-            quality: defaultQuality, 
-            qty: 0, 
-            agency: '', 
-            marka: '', 
-            rs: defaultRs, 
-            agencies: [], 
-            markas: [], 
-            applicableCombinations: [] 
-          }
-        ]
-      };
-    });
+    setFormData(prev => ({
+      ...prev,
+      quality_details: [
+        ...(prev.quality_details || []),
+        { 
+          quality: '', 
+          qty: 0, 
+          agency: '', 
+          marka: '', 
+          rs: 0, 
+          agencies: [], 
+          markas: [], 
+          applicableCombinations: [] 
+        }
+      ]
+    }));
   };
 
   const handleDeleteQualityRow = () => {
