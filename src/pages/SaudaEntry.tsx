@@ -577,13 +577,27 @@ export default function SaudaEntry({
   };
 
   const handleAddQualityRow = () => {
-    setFormData(prev => ({
-      ...prev,
-      quality_details: [
-        ...(prev.quality_details || []),
-        { quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }
-      ]
-    }));
+    setFormData(prev => {
+      const firstRow: any = prev.quality_details?.[0] || {};
+      const defaultQuality = firstRow.quality || '';
+      const defaultRs = firstRow.rs || prev.b_rate || '';
+      return {
+        ...prev,
+        quality_details: [
+          ...(prev.quality_details || []),
+          { 
+            quality: defaultQuality, 
+            qty: 0, 
+            agency: '', 
+            marka: '', 
+            rs: defaultRs, 
+            agencies: [], 
+            markas: [], 
+            applicableCombinations: [] 
+          }
+        ]
+      };
+    });
   };
 
   const handleDeleteQualityRow = () => {
@@ -688,7 +702,24 @@ export default function SaudaEntry({
         }
       }
 
+      const toNumericOrNull = (v: any) => {
+        if (v === null || v === undefined || String(v).trim() === '') return null;
+        const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+        return isNaN(n) ? null : n;
+      };
+
       const qd = saudaData.quality_details;
+
+      const primaryQuality = (
+        (qd || []).find((r: any) => r.quality && String(r.quality).trim() !== '')?.quality || 
+        (saudaData as any).quality || 
+        'TD5'
+      );
+      const primaryRs = (
+        toNumericOrNull((qd || []).find((r: any) => r.rs && Number(r.rs) > 0)?.rs) ?? 
+        toNumericOrNull(saudaData.b_rate) ?? 
+        13500
+      );
 
       // Extract and normalize all applicable combinations
       const flatCombinations: Array<{
@@ -700,8 +731,8 @@ export default function SaudaEntry({
       }> = [];
 
       (qd || []).forEach((row: any) => {
-        const rowQuality = String(row.quality || '').trim();
-        const rowRs = toNumericOrNull(row.rs) ?? 0;
+        const rowQuality = String(row.quality || primaryQuality).trim();
+        const rowRs = toNumericOrNull(row.rs) ?? primaryRs;
         const rowQty = toNumericOrNull(row.qty) ?? 0;
 
         // 1. If row has customized applicableCombinations array
@@ -732,17 +763,29 @@ export default function SaudaEntry({
           );
 
           if (rowAgencies.length > 0 && rowMarkas.length > 0) {
-            rowAgencies.forEach(ag => {
-              rowMarkas.forEach(mk => {
+            if (rowAgencies.length === rowMarkas.length && rowAgencies.length > 1) {
+              rowAgencies.forEach((ag, idx) => {
                 flatCombinations.push({
                   quality: rowQuality,
                   agency: String(ag).trim(),
-                  marka: String(mk).trim(),
+                  marka: String(rowMarkas[idx] || rowMarkas[0]).trim(),
                   rs: rowRs,
                   qty: rowQty
                 });
               });
-            });
+            } else {
+              rowAgencies.forEach(ag => {
+                rowMarkas.forEach(mk => {
+                  flatCombinations.push({
+                    quality: rowQuality,
+                    agency: String(ag).trim(),
+                    marka: String(mk).trim(),
+                    rs: rowRs,
+                    qty: rowQty
+                  });
+                });
+              });
+            }
           } else if (rowAgencies.length > 0) {
             rowAgencies.forEach(ag => {
               flatCombinations.push({
@@ -827,12 +870,6 @@ export default function SaudaEntry({
       const toIntegerOrNull = (v: any) => {
         if (v === null || v === undefined || String(v).trim() === '') return null;
         const n = parseInt(String(v).replace(/[^0-9\-]/g, ''), 10);
-        return isNaN(n) ? null : n;
-      };
-
-      const toNumericOrNull = (v: any) => {
-        if (v === null || v === undefined || String(v).trim() === '') return null;
-        const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
         return isNaN(n) ? null : n;
       };
 

@@ -628,7 +628,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         if (supabase) {
            const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
            const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-           if (sorted && sorted.length > 0) fullSauda.quality_details = sorted;
+           if (sorted && sorted.length > 0) {
+             const fallbackQ = (sorted.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
+             const fallbackR = Number(sauda.b_rate) || Number(sorted.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
+             fullSauda.quality_details = sorted.map((s: any) => ({
+               ...s,
+               quality: s.quality || fallbackQ,
+               rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
+             }));
+           }
         }
       }
     } catch(e) { console.error("Could not fetch qualities", e); }

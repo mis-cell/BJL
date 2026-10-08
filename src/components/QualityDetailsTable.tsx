@@ -328,33 +328,10 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         }
       />
 
-      {/* Explanatory Banner */}
-      {!isUser010 && (
-        <div className="mb-4 p-3 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-green-50 border border-emerald-200/90 rounded-xl text-xs text-emerald-950 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <span className="text-base">✨</span>
-            <div>
-              <span className="font-extrabold text-emerald-900 uppercase tracking-wide">
-                Normalized Database Combination Rule:
-              </span>
-              <p className="text-[11px] text-emerald-800 font-medium">
-                Select multiple <strong>Agencies</strong> and multiple <strong>Markas</strong> per Quality. The system generates and saves each applicable <strong>Agency + Marka combination as its own separate database row</strong> in Supabase with its corresponding Quality and Rate (Rs.).
-              </p>
-            </div>
-          </div>
-          <div className="shrink-0 bg-white border border-emerald-300 px-3 py-1 rounded-lg text-center shadow-2xs">
-            <span className="text-[10px] text-slate-500 font-bold block uppercase">Database Rows</span>
-            <span className="text-sm font-black text-emerald-900 font-mono">
-              {allCombinations.filter(c => c.enabled).length} Records
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Main Rows Setup Table */}
-      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs overflow-visible bg-white mb-5 w-full">
+      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs bg-white mb-5 w-full overflow-hidden">
         <div className="overflow-x-auto min-w-0 max-w-full">
-          <table className="w-full text-left border-collapse min-w-[700px] lg:min-w-full">
+          <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 shadow-2xs">
               <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
                 {isUser010 ? (
@@ -369,17 +346,17 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                   </>
                 ) : (
                   <>
-                    <th className="px-3.5 py-2.5 w-1/5 bg-[#EDF4EF] rounded-tl-xl">
-                      Quality <span className="text-rose-600 font-black">*</span>
-                    </th>
-                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
+                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF] rounded-tl-xl">
                       Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
                     </th>
                     <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
                       Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
                     </th>
+                    <th className="px-3.5 py-2.5 w-1/5 bg-[#EDF4EF]">
+                      Quality <span className="text-rose-600 font-black">*</span>
+                    </th>
                     <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
-                      Rs. / Rate <span className="text-rose-600 font-black">*</span>
+                      Rs. <span className="text-rose-600 font-black">*</span>
                     </th>
                     <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
                   </>
@@ -402,21 +379,23 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 return (
                   <React.Fragment key={i}>
                     <tr className="hover:bg-[#F9F8F5] transition-colors relative z-0 focus-within:z-30 hover:z-20">
-                      {/* Quality - SEARCHABLE SELECT */}
-                      <td className="p-2.5 align-top">
-                        <SearchableSelect
-                          id={`qd_quality_${i}`}
-                          name="qd_quality"
-                          value={qd.quality || ''}
-                          onChange={(val) => onQualityChange(i, 'quality', val)}
-                          options={gradeOptions}
-                          placeholder={isUser010 ? "Select Quality..." : "--Select Quality *--"}
-                          isRequired={!isUser010}
-                          compact={true}
-                        />
-                      </td>
-
-                      {!isUser010 && (
+                      {isUser010 ? (
+                        <>
+                          {/* Quality - SEARCHABLE SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableSelect
+                              id={`qd_quality_${i}`}
+                              name="qd_quality"
+                              value={qd.quality || ''}
+                              onChange={(val) => onQualityChange(i, 'quality', val)}
+                              options={gradeOptions}
+                              placeholder="Select Quality..."
+                              isRequired={false}
+                              compact={true}
+                            />
+                          </td>
+                        </>
+                      ) : (
                         <>
                           {/* Agency - SEARCHABLE MULTI-SELECT */}
                           <td className="p-2.5 align-top">
@@ -451,6 +430,20 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                               options={markaOptions}
                               placeholder="Select / search Markas..."
                               badgeTheme="amber"
+                            />
+                          </td>
+
+                          {/* Quality - SEARCHABLE SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableSelect
+                              id={`qd_quality_${i}`}
+                              name="qd_quality"
+                              value={qd.quality || ''}
+                              onChange={(val) => onQualityChange(i, 'quality', val)}
+                              options={gradeOptions}
+                              placeholder="--Select Quality *--"
+                              isRequired={true}
+                              compact={true}
                             />
                           </td>
                         </>
