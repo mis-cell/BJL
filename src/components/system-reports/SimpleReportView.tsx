@@ -483,7 +483,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               { id: 'PREMIUM' as const, label: '💰 Premium Given', icon: '💰' },
               { id: 'RANKING' as const, label: '🏆 Ranking Cards (Best, Medium, Lower)', icon: '🏆' },
               { id: 'ABNORMAL' as const, label: '⚠️ Abnormal Data vs Top Performers', icon: '⚠️' },
-              { id: 'PROFITABILITY' as const, label: '📈 Satta Wise Profitability & Loss', icon: '📈' },
+              /* { id: 'PROFITABILITY' as const, label: '📈 Satta Wise Profitability & Loss', icon: '📈' }, */
             ].map(sub => (
               <button
                 key={sub.id}
@@ -527,38 +527,71 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
-                      {currentData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
-                              {idx + 1}
-                            </span>
-                            <span>{row.key}</span>
-                          </td>
-                          <td className="p-3 text-center font-mono font-bold text-slate-600">{row.dealCount}</td>
-                          <td className="p-3 text-right font-mono font-bold text-emerald-950">{row.quantityMT.toFixed(2)} MT</td>
-                          <td className="p-3 text-right font-mono text-slate-700">{row.arrivedMT.toFixed(2)} MT</td>
-                          <td className="p-3 text-right font-mono font-bold text-slate-800">₹{Math.round(row.avgRate).toLocaleString()}</td>
-                          <td className="p-3 text-right font-mono font-black text-slate-900">{formatIndianCurrency(row.grossValue)}</td>
-                          <td className="p-3 text-right font-mono text-emerald-800 font-bold">{formatIndianCurrency(row.paidAmount)}</td>
-                          <td className="p-3 text-right font-mono text-rose-800 font-bold">{formatIndianCurrency(row.pendingPayable)}</td>
-                          <td className="p-3 text-center">
-                            {idx < Math.ceil(currentData.length * 0.3) ? (
-                              <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                🌟 Top Business Provider
+                      {[...currentData]
+                        .sort((a, b) => {
+                          const [yearA, monthA] = String(a.key).split("-").map(Number);
+                          const [yearB, monthB] = String(b.key).split("-").map(Number);
+
+                          return (
+                            new Date(yearB, monthB - 1) -
+                            new Date(yearA, monthA - 1)
+                          );
+                        })
+                        .map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
+                                {idx + 1}
                               </span>
-                            ) : idx >= currentData.length - Math.ceil(currentData.length * 0.3) ? (
-                              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                📉 Lower Business Volume
-                              </span>
-                            ) : (
-                              <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                ⚖️ Regular Business
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+
+                              <span>{row.key}</span>
+                            </td>
+
+                            <td className="p-3 text-center font-mono font-bold text-slate-600">
+                              {row.dealCount}
+                            </td>
+
+                            <td className="p-3 text-right font-mono font-bold text-emerald-950">
+                              {row.quantityMT.toFixed(2)} MT
+                            </td>
+
+                            <td className="p-3 text-right font-mono text-slate-700">
+                              {row.arrivedMT.toFixed(2)} MT
+                            </td>
+
+                            <td className="p-3 text-right font-mono font-bold text-slate-800">
+                              ₹{Math.round(row.avgRate).toLocaleString()}
+                            </td>
+
+                            <td className="p-3 text-right font-mono font-black text-slate-900">
+                              {formatIndianCurrency(row.grossValue)}
+                            </td>
+
+                            <td className="p-3 text-right font-mono text-emerald-800 font-bold">
+                              {formatIndianCurrency(row.paidAmount)}
+                            </td>
+
+                            <td className="p-3 text-right font-mono text-rose-800 font-bold">
+                              {formatIndianCurrency(row.pendingPayable)}
+                            </td>
+
+                            <td className="p-3 text-center">
+                              {idx < Math.ceil(currentData.length * 0.3) ? (
+                                <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  🌟 Top Business Provider
+                                </span>
+                              ) : idx >= currentData.length - Math.ceil(currentData.length * 0.3) ? (
+                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  📉 Lower Business Volume
+                                </span>
+                              ) : (
+                                <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  ⚖️ Regular Business
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

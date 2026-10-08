@@ -262,11 +262,11 @@ export default function Reports({ onClose }: ReportsProps) {
           <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center text-slate-400 space-y-3 shadow-xs">
             <RefreshCcw className="w-9 h-9 animate-spin text-emerald-600 mx-auto" />
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-              Loading Real Database Records...
+              Loading Records...
             </h3>
-            <span className="text-xs text-slate-500 block">
+            {/* <span className="text-xs text-slate-500 block">
               sauda_master, purchase_master, final_arrival, material_inspection, payment_master
-            </span>
+            </span> */}
           </div>
         ) : viewMode === 'simple' ? (
           /* SIMPLE VIEW FOR UNDER-LEVEL USER */
