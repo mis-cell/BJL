@@ -414,6 +414,8 @@ if (supabase) {
             -- Ensure supplementary helper columns
             ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS agency TEXT;
             ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS marka TEXT;
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS sauda_no TEXT;
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS po_no TEXT;
 
             -- Create Master Tables if not existing and disable RLS
             CREATE TABLE IF NOT EXISTS supply_master (

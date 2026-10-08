@@ -1,7 +1,18 @@
-import React from 'react';
-import { Settings, Plus, Trash2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Settings, Plus, Trash2, Layers, CheckCircle2, XCircle, Edit3, ArrowRight } from 'lucide-react';
 import SectionHeader from './SectionHeader';
 import SearchableSelect from './SearchableSelect';
+import SearchableMultiSelect from './SearchableMultiSelect';
+
+export interface ApplicableCombination {
+  id?: string;
+  agency: string;
+  marka: string;
+  quality: string;
+  rs: number;
+  qty?: number;
+  enabled?: boolean;
+}
 
 interface QualityDetailsTableProps {
   qualityDetails: any[];
@@ -27,7 +38,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   isUser010 = false
 }) => {
   // Format options lists
-  const gradeOptions = React.useMemo(() => {
+  const gradeOptions = useMemo(() => {
     const list: string[] = [];
     [...grades]
       .sort((a, b) => (a.grade_name || a.grade_code || "").localeCompare(b.grade_name || b.grade_code || ""))
@@ -38,7 +49,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
     return list;
   }, [grades]);
 
-  const agencyOptions = React.useMemo(() => {
+  const agencyOptions = useMemo(() => {
     const list: string[] = [];
     [...agencies]
       .sort((a, b) => (a.agency_name || a.name || "").localeCompare(b.agency_name || b.name || ""))
@@ -49,7 +60,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
     return list;
   }, [agencies]);
 
-  const markaOptions = React.useMemo(() => {
+  const markaOptions = useMemo(() => {
     const list: string[] = [];
     [...markas]
       .sort((a, b) => (a.marka_name || a.name || "").localeCompare(b.marka_name || b.name || ""))
@@ -60,17 +71,246 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
     return list;
   }, [markas]);
 
+  // Compute all active combinations across all rows for the master table
+  const allCombinations = useMemo(() => {
+    const results: Array<{
+      rowIndex: number;
+      combIndex: number;
+      quality: string;
+      agency: string;
+      marka: string;
+      rs: number;
+      qty: number;
+      enabled: boolean;
+    }> = [];
+
+    qualityDetails.forEach((row, rIdx) => {
+      const q = String(row.quality || '').trim();
+      const defaultRs = Number(row.rs) || 0;
+      const defaultQty = Number(row.qty) || 0;
+
+      const rowAgencies: string[] = (
+        Array.isArray(row.agencies) && row.agencies.length > 0
+          ? row.agencies
+          : (row.agency ? [row.agency] : [])
+      ).map((a: string) => String(a || '').trim()).filter(Boolean);
+
+      const rowMarkas: string[] = (
+        Array.isArray(row.markas) && row.markas.length > 0
+          ? row.markas
+          : (row.marka ? [row.marka] : [])
+      ).map((m: string) => String(m || '').trim()).filter(Boolean);
+
+      // Check if user has customized combinations in applicableCombinations
+      const appCombs: ApplicableCombination[] = Array.isArray(row.applicableCombinations)
+        ? row.applicableCombinations
+        : [];
+
+      // If user has specific applicable combinations stored
+      if (appCombs.length > 0) {
+        appCombs.forEach((c, cIdx) => {
+          results.push({
+            rowIndex: rIdx,
+            combIndex: cIdx,
+            quality: c.quality || q,
+            agency: c.agency,
+            marka: c.marka,
+            rs: Number(c.rs) || defaultRs,
+            qty: Number(c.qty) || defaultQty,
+            enabled: c.enabled !== false
+          });
+        });
+      } else if (rowAgencies.length > 0 && rowMarkas.length > 0) {
+        // Generate cross-product of agencies x markas
+        let cIdx = 0;
+        rowAgencies.forEach(ag => {
+          rowMarkas.forEach(mk => {
+            results.push({
+              rowIndex: rIdx,
+              combIndex: cIdx++,
+              quality: q,
+              agency: ag,
+              marka: mk,
+              rs: defaultRs,
+              qty: defaultQty,
+              enabled: true
+            });
+          });
+        });
+      } else if (rowAgencies.length > 0) {
+        rowAgencies.forEach((ag, cIdx) => {
+          results.push({
+            rowIndex: rIdx,
+            combIndex: cIdx,
+            quality: q,
+            agency: ag,
+            marka: String(row.marka || '-').trim(),
+            rs: defaultRs,
+            qty: defaultQty,
+            enabled: true
+          });
+        });
+      } else if (rowMarkas.length > 0) {
+        rowMarkas.forEach((mk, cIdx) => {
+          results.push({
+            rowIndex: rIdx,
+            combIndex: cIdx,
+            quality: q,
+            agency: String(row.agency || '-').trim(),
+            marka: mk,
+            rs: defaultRs,
+            qty: defaultQty,
+            enabled: true
+          });
+        });
+      } else if (q || defaultRs > 0 || row.agency || row.marka) {
+        results.push({
+          rowIndex: rIdx,
+          combIndex: 0,
+          quality: q,
+          agency: String(row.agency || '-').trim(),
+          marka: String(row.marka || '-').trim(),
+          rs: defaultRs,
+          qty: defaultQty,
+          enabled: true
+        });
+      }
+    });
+
+    return results;
+  }, [qualityDetails]);
+
+  // Handler to toggle an individual combination's applicability
+  const handleToggleCombination = (rowIndex: number, agency: string, marka: string, currentEnabled: boolean) => {
+    const row = qualityDetails[rowIndex];
+    if (!row) return;
+
+    // Build current list of applicable combinations
+    let appCombs: ApplicableCombination[] = Array.isArray(row.applicableCombinations)
+      ? [...row.applicableCombinations]
+      : [];
+
+    if (appCombs.length === 0) {
+      // Initialize from current agencies x markas
+      const rowAgencies: string[] = (
+        Array.isArray(row.agencies) && row.agencies.length > 0
+          ? row.agencies
+          : (row.agency ? [row.agency] : [''])
+      ).filter(Boolean);
+
+      const rowMarkas: string[] = (
+        Array.isArray(row.markas) && row.markas.length > 0
+          ? row.markas
+          : (row.marka ? [row.marka] : [''])
+      ).filter(Boolean);
+
+      rowAgencies.forEach(ag => {
+        rowMarkas.forEach(mk => {
+          appCombs.push({
+            agency: ag,
+            marka: mk,
+            quality: row.quality || '',
+            rs: Number(row.rs) || 0,
+            qty: Number(row.qty) || 0,
+            enabled: true
+          });
+        });
+      });
+    }
+
+    const target = appCombs.find(
+      c => c.agency.toUpperCase() === agency.toUpperCase() && c.marka.toUpperCase() === marka.toUpperCase()
+    );
+
+    if (target) {
+      target.enabled = !currentEnabled;
+    } else {
+      appCombs.push({
+        agency,
+        marka,
+        quality: row.quality || '',
+        rs: Number(row.rs) || 0,
+        qty: Number(row.qty) || 0,
+        enabled: !currentEnabled
+      });
+    }
+
+    onQualityChange(rowIndex, 'applicableCombinations', appCombs);
+  };
+
+  // Handler to delete a specific combination from the row
+  const handleDeleteCombination = (rowIndex: number, agency: string, marka: string) => {
+    handleToggleCombination(rowIndex, agency, marka, true); // disable it
+  };
+
+  // Handler to update rate for a specific combination
+  const handleUpdateCombinationRate = (rowIndex: number, agency: string, marka: string, newRate: number) => {
+    const row = qualityDetails[rowIndex];
+    if (!row) return;
+
+    let appCombs: ApplicableCombination[] = Array.isArray(row.applicableCombinations)
+      ? [...row.applicableCombinations]
+      : [];
+
+    if (appCombs.length === 0) {
+      const rowAgencies: string[] = (
+        Array.isArray(row.agencies) && row.agencies.length > 0
+          ? row.agencies
+          : (row.agency ? [row.agency] : [''])
+      ).filter(Boolean);
+
+      const rowMarkas: string[] = (
+        Array.isArray(row.markas) && row.markas.length > 0
+          ? row.markas
+          : (row.marka ? [row.marka] : [''])
+      ).filter(Boolean);
+
+      rowAgencies.forEach(ag => {
+        rowMarkas.forEach(mk => {
+          appCombs.push({
+            agency: ag,
+            marka: mk,
+            quality: row.quality || '',
+            rs: Number(row.rs) || 0,
+            qty: Number(row.qty) || 0,
+            enabled: true
+          });
+        });
+      });
+    }
+
+    const target = appCombs.find(
+      c => c.agency.toUpperCase() === agency.toUpperCase() && c.marka.toUpperCase() === marka.toUpperCase()
+    );
+
+    if (target) {
+      target.rs = newRate;
+    } else {
+      appCombs.push({
+        agency,
+        marka,
+        quality: row.quality || '',
+        rs: newRate,
+        qty: Number(row.qty) || 0,
+        enabled: true
+      });
+    }
+
+    onQualityChange(rowIndex, 'applicableCombinations', appCombs);
+  };
+
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all">
+    <div className="bg-white rounded-[18px] p-4 sm:p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all w-full max-w-full min-w-0">
       <SectionHeader
         icon={Settings}
-        title="Quality Details"
+        title="Quality Details (Multiple Agency & Marka Support)"
         rightAction={
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onAddRow}
               className="bg-[#174C2C] hover:bg-[#113A21] text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              title="Add another Quality configuration row"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Spawn Row</span>
@@ -79,6 +319,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
               type="button"
               onClick={onDeleteRow}
               className="border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              title="Remove last row"
             >
               <Trash2 className="h-3.5 w-3.5" />
               <span>Delete Row</span>
@@ -87,124 +328,334 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         }
       />
 
-      {/* Table */}
-      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs overflow-visible bg-white">
-        <table className="w-full text-left border-collapse">
-          <thead className="sticky top-0 z-20 shadow-2xs">
-            <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-              {isUser010 ? (
-                <>
-                  <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
-                    Quality
-                  </th>
-                  <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
-                    Rs.
-                  </th>
-                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                </>
-              ) : (
-                <>
-                  <th className="px-3.5 py-2.5 w-1/3 bg-[#EDF4EF] rounded-tl-xl">
-                    Quality <span className="text-rose-600 font-black">*</span>
-                  </th>
-                  <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Agency</th>
-                  <th className="px-3.5 py-2.5 w-1/4 bg-[#EDF4EF]">Marka</th>
-                  <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
-                    Rs. <span className="text-rose-600 font-black">*</span>
-                  </th>
-                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#EAE6DD] text-xs">
-            {qualityDetails.map((qd, i) => (
-              <tr key={i} className="hover:bg-[#F9F8F5] transition-colors relative z-0 focus-within:z-30 hover:z-20">
-                {/* Quality - SEARCHABLE SELECT */}
-                <td className="p-2">
-                  <SearchableSelect
-                    id={`qd_quality_${i}`}
-                    name="qd_quality"
-                    value={qd.quality || ''}
-                    onChange={(val) => onQualityChange(i, 'quality', val)}
-                    options={gradeOptions}
-                    placeholder={isUser010 ? "Select Quality..." : "--Select Quality *--"}
-                    isRequired={!isUser010}
-                    compact={true}
-                  />
-                </td>
+      {/* Explanatory Banner */}
+      {!isUser010 && (
+        <div className="mb-4 p-3 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-green-50 border border-emerald-200/90 rounded-xl text-xs text-emerald-950 flex flex-col md:flex-row md:items-center justify-between gap-2 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-base">✨</span>
+            <div>
+              <span className="font-extrabold text-emerald-900 uppercase tracking-wide">
+                Normalized Database Combination Rule:
+              </span>
+              <p className="text-[11px] text-emerald-800 font-medium">
+                Select multiple <strong>Agencies</strong> and multiple <strong>Markas</strong> per Quality. The system generates and saves each applicable <strong>Agency + Marka combination as its own separate database row</strong> in Supabase with its corresponding Quality and Rate (Rs.).
+              </p>
+            </div>
+          </div>
+          <div className="shrink-0 bg-white border border-emerald-300 px-3 py-1 rounded-lg text-center shadow-2xs">
+            <span className="text-[10px] text-slate-500 font-bold block uppercase">Database Rows</span>
+            <span className="text-sm font-black text-emerald-900 font-mono">
+              {allCombinations.filter(c => c.enabled).length} Records
+            </span>
+          </div>
+        </div>
+      )}
 
-                {!isUser010 && (
+      {/* Main Rows Setup Table */}
+      <div className="rounded-xl border border-[#E0DBCF] shadow-2xs overflow-visible bg-white mb-5 w-full">
+        <div className="overflow-x-auto min-w-0 max-w-full">
+          <table className="w-full text-left border-collapse min-w-[700px] lg:min-w-full">
+            <thead className="sticky top-0 z-20 shadow-2xs">
+              <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
+                {isUser010 ? (
                   <>
-                    {/* Agency - SEARCHABLE SELECT */}
-                    <td className="p-2">
-                      <SearchableSelect
-                        id={`agency_${i}`}
-                        name="agency"
-                        value={qd.agency || ''}
-                        onChange={(val) => onQualityChange(i, 'agency', val)}
-                        options={agencyOptions}
-                        placeholder="Search / Select Agency"
-                        compact={true}
-                        isAutoPopulated={Boolean(qd.agency)}
-                      />
-                    </td>
-
-                    {/* Marka - SEARCHABLE SELECT */}
-                    <td className="p-2">
-                      <SearchableSelect
-                        id={`marka_${i}`}
-                        name="marka"
-                        value={qd.marka || ''}
-                        onChange={(val) => onQualityChange(i, 'marka', val)}
-                        options={markaOptions}
-                        placeholder="Search / Select Marka"
-                        compact={true}
-                        isAutoPopulated={Boolean(qd.marka)}
-                      />
-                    </td>
+                    <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
+                      Quality
+                    </th>
+                    <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
+                      Rs.
+                    </th>
+                    <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-3.5 py-2.5 w-1/5 bg-[#EDF4EF] rounded-tl-xl">
+                      Quality <span className="text-rose-600 font-black">*</span>
+                    </th>
+                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
+                      Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+                    </th>
+                    <th className="px-3.5 py-2.5 w-3/10 bg-[#EDF4EF]">
+                      Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+                    </th>
+                    <th className="px-3.5 py-2.5 w-1/6 text-right bg-[#EDF4EF]">
+                      Rs. / Rate <span className="text-rose-600 font-black">*</span>
+                    </th>
+                    <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
                   </>
                 )}
-
-                {/* Rs. */}
-                <td className="p-2">
-                  <input
-                    id={`rs_${i}`}
-                    name="rs"
-                    aria-label="Rs."
-                    type="number"
-                    step="0.01"
-                    required={!isUser010}
-                    value={qd.rs ?? ''}
-                    onChange={(e) => onQualityChange(i, 'rs', e.target.value)}
-                    placeholder={isUser010 ? "Rs." : "Rs. *"}
-                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-right outline-none transition-all font-mono ${
-                      isUser010
-                        ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
-                        : "bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
-                    }`}
-                  />
-                </td>
-
-                {/* Action Delete */}
-                <td className="p-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => onRemoveRowAt(i)}
-                    title="Delete row"
-                    className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-[#EAE6DD] text-xs">
+              {qualityDetails.map((qd, i) => {
+                const currentAgencies = Array.isArray(qd.agencies) && qd.agencies.length > 0
+                  ? qd.agencies
+                  : (qd.agency ? [qd.agency] : []);
+
+                const currentMarkas = Array.isArray(qd.markas) && qd.markas.length > 0
+                  ? qd.markas
+                  : (qd.marka ? [qd.marka] : []);
+
+                // Get row's applicable combinations
+                const rowCombs = allCombinations.filter(c => c.rowIndex === i);
+
+                return (
+                  <React.Fragment key={i}>
+                    <tr className="hover:bg-[#F9F8F5] transition-colors relative z-0 focus-within:z-30 hover:z-20">
+                      {/* Quality - SEARCHABLE SELECT */}
+                      <td className="p-2.5 align-top">
+                        <SearchableSelect
+                          id={`qd_quality_${i}`}
+                          name="qd_quality"
+                          value={qd.quality || ''}
+                          onChange={(val) => onQualityChange(i, 'quality', val)}
+                          options={gradeOptions}
+                          placeholder={isUser010 ? "Select Quality..." : "--Select Quality *--"}
+                          isRequired={!isUser010}
+                          compact={true}
+                        />
+                      </td>
+
+                      {!isUser010 && (
+                        <>
+                          {/* Agency - SEARCHABLE MULTI-SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableMultiSelect
+                              id={`agency_${i}`}
+                              name="agency"
+                              selectedValues={currentAgencies}
+                              onChange={(vals) => {
+                                onQualityChange(i, 'agencies', vals);
+                                onQualityChange(i, 'agency', vals[0] || '');
+                                // Reset custom combinations so they regenerate for the new agency selection
+                                onQualityChange(i, 'applicableCombinations', undefined);
+                              }}
+                              options={agencyOptions}
+                              placeholder="Select / search Agencies..."
+                              badgeTheme="emerald"
+                            />
+                          </td>
+
+                          {/* Marka - SEARCHABLE MULTI-SELECT */}
+                          <td className="p-2.5 align-top">
+                            <SearchableMultiSelect
+                              id={`marka_${i}`}
+                              name="marka"
+                              selectedValues={currentMarkas}
+                              onChange={(vals) => {
+                                onQualityChange(i, 'markas', vals);
+                                onQualityChange(i, 'marka', vals[0] || '');
+                                // Reset custom combinations so they regenerate for the new marka selection
+                                onQualityChange(i, 'applicableCombinations', undefined);
+                              }}
+                              options={markaOptions}
+                              placeholder="Select / search Markas..."
+                              badgeTheme="amber"
+                            />
+                          </td>
+                        </>
+                      )}
+
+                      {/* Rs. / Rate */}
+                      <td className="p-2.5 align-top">
+                        <input
+                          id={`rs_${i}`}
+                          name="rs"
+                          aria-label="Rs."
+                          type="number"
+                          step="0.01"
+                          required={!isUser010}
+                          value={qd.rs ?? ''}
+                          onChange={(e) => onQualityChange(i, 'rs', e.target.value)}
+                          placeholder={isUser010 ? "Rs." : "Rs. *"}
+                          className={`w-full rounded-lg px-2.5 py-2 text-xs font-bold text-right outline-none transition-all font-mono ${
+                            isUser010
+                              ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                              : "bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
+                          }`}
+                        />
+                      </td>
+
+                      {/* Action Delete Row */}
+                      <td className="p-2.5 align-top text-center">
+                        <button
+                          type="button"
+                          onClick={() => onRemoveRowAt(i)}
+                          title="Delete row"
+                          className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Sub-row: Preview and individual combination chips for this row */}
+                    {!isUser010 && rowCombs.length > 1 && (
+                      <tr className="bg-slate-50/70 border-b border-slate-200/80">
+                        <td colSpan={5} className="px-4 py-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1 shrink-0">
+                              <Layers className="w-3.5 h-3.5 text-emerald-700" />
+                              Applicable Combinations for {qd.quality || 'Row'}:
+                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                              {rowCombs.map((comb, cIdx) => (
+                                <button
+                                  key={cIdx}
+                                  type="button"
+                                  onClick={() => handleToggleCombination(i, comb.agency, comb.marka, comb.enabled)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all cursor-pointer shadow-2xs ${
+                                    comb.enabled
+                                      ? 'bg-emerald-100/90 text-emerald-950 border-emerald-300 hover:bg-emerald-200'
+                                      : 'bg-slate-100 text-slate-400 border-slate-200 line-through hover:bg-slate-200'
+                                  }`}
+                                  title={comb.enabled ? 'Click to exclude this combination' : 'Click to re-include this combination'}
+                                >
+                                  {comb.enabled ? (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-700 shrink-0" />
+                                  ) : (
+                                    <XCircle className="w-3 h-3 text-slate-400 shrink-0" />
+                                  )}
+                                  <span>{comb.agency} + {comb.marka}</span>
+                                  <span className="font-mono text-emerald-800 font-black">
+                                    ₹{Number(comb.rs).toLocaleString()}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Section 2: Master Combinations Database Breakdown Table */}
+      {!isUser010 && allCombinations.length > 0 && (
+        <div className="rounded-xl border border-emerald-300/80 bg-white shadow-xs overflow-hidden">
+          <div className="px-4 py-3 bg-gradient-to-r from-[#174C2C] to-[#1F5E38] text-white flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-300" />
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  Database Row-Level View: Agency + Marka + Quality + Rs.
+                </h4>
+                <p className="text-[10px] text-emerald-100/80">
+                  Each row below will be stored as an individual record in Supabase (sauda_quality_details) for Material Mismatch & Arrival matching.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] bg-black/30 border border-emerald-400/40 text-emerald-100 font-mono px-2.5 py-0.5 rounded-full font-bold">
+                {allCombinations.filter(c => c.enabled).length} of {allCombinations.length} Active
+              </span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto min-w-0 max-w-full">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
+                  <th className="p-2.5 w-12 text-center">#</th>
+                  <th className="p-2.5 text-emerald-900">Agency</th>
+                  <th className="p-2.5 text-amber-900">Marka</th>
+                  <th className="p-2.5 text-indigo-900">Quality</th>
+                  <th className="p-2.5 text-right text-slate-900">Rate (Rs.)</th>
+                  <th className="p-2.5 text-center w-28">Status</th>
+                  <th className="p-2.5 text-center w-14">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {allCombinations.map((comb, idx) => (
+                  <tr
+                    key={idx}
+                    className={`transition-colors font-mono text-[11px] ${
+                      comb.enabled
+                        ? 'hover:bg-emerald-50/40 text-slate-800'
+                        : 'bg-slate-50 text-slate-400 line-through'
+                    }`}
+                  >
+                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                    
+                    {/* Agency */}
+                    <td className="p-2 font-bold text-emerald-950 font-sans">
+                      <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-emerald-900">
+                        {comb.agency || 'DEFAULT'}
+                      </span>
+                    </td>
+
+                    {/* Marka */}
+                    <td className="p-2 font-bold text-amber-950 font-sans">
+                      <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 rounded text-amber-900">
+                        {comb.marka || 'DEFAULT'}
+                      </span>
+                    </td>
+
+                    {/* Quality */}
+                    <td className="p-2 font-black text-indigo-900">
+                      <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded text-indigo-950">
+                        {comb.quality || 'N/A'}
+                      </span>
+                    </td>
+
+                    {/* Rate (Rs.) */}
+                    <td className="p-2 text-right">
+                      {comb.enabled ? (
+                        <div className="inline-flex items-center gap-1 justify-end">
+                          <span className="text-slate-400 font-normal">₹</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={comb.rs || ''}
+                            onChange={(e) => handleUpdateCombinationRate(comb.rowIndex, comb.agency, comb.marka, parseFloat(e.target.value) || 0)}
+                            className="w-24 text-right font-black text-slate-900 bg-white border border-slate-200 hover:border-emerald-500 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">₹{comb.rs.toLocaleString()}</span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="p-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCombination(comb.rowIndex, comb.agency, comb.marka, comb.enabled)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase cursor-pointer transition-colors ${
+                          comb.enabled
+                            ? 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
+                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                        }`}
+                      >
+                        {comb.enabled ? '✓ Applicable' : '✕ Excluded'}
+                      </button>
+                    </td>
+
+                    {/* Action */}
+                    <td className="p-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCombination(comb.rowIndex, comb.agency, comb.marka)}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
+                        title={comb.enabled ? 'Exclude combination' : 'Re-include'}
+                      >
+                        {comb.enabled ? <Trash2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default QualityDetailsTable;
-
