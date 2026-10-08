@@ -433,15 +433,125 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     }
 
     if (isPrem || premRate > 0 || premAmount > 0) {
-      premiumMap.set(clean, {
-        premium: premStr || (premRate > 0 ? `₹${premRate}/Qtl` : "Yes"),
-        isPremium: true,
-        rate: premRate,
-        amount: Number(premAmount.toFixed(2)),
-        source: sourceName
-      });
+      const existing = premiumMap.get(clean);
+      if (existing) {
+        existing.amount = Number((existing.amount + premAmount).toFixed(2));
+        if (premRate > 0) {
+          existing.rate = Math.max(existing.rate, premRate);
+          existing.premium = `₹${existing.rate}/Qtl`;
+        }
+        existing.isPremium = true;
+      } else {
+        premiumMap.set(clean, {
+          premium: premStr || (premRate > 0 ? `₹${premRate}/Qtl` : "Yes"),
+          isPremium: true,
+          rate: premRate,
+          amount: Number(premAmount.toFixed(2)),
+          source: sourceName
+        });
+      }
     }
   };
+
+  // Dedicated Payment Section MR Premium index
+  // Each MR can have multiple detail rows (e.g. 2 grades, each with premium rate * quintals)
+  const paymentMrPremiumMap = new Map<string, {
+    mrNo: string;
+    cleanMr: string;
+    voucherNo: string;
+    date: string;
+    year: number;
+    month: number;
+    rate: number;
+    weightQtl: number;
+    amount: number;
+    supplier?: string;
+    broker?: string;
+    juteGrade?: string;
+  }>();
+
+  // Index payment records by voucher and MR for fast metadata lookup
+  const paymentMetaMap = new Map<string, any>();
+  paymentRecords.forEach(pm => {
+    if (pm.voucher_no) paymentMetaMap.set(normalizePoRef(pm.voucher_no), pm);
+    if (pm.mr_no) paymentMetaMap.set(normalizePoRef(pm.mr_no), pm);
+    if (pm.arrival_no) paymentMetaMap.set(normalizePoRef(pm.arrival_no), pm);
+  });
+
+  // 1. Process paymentDetails (Material Grade Details breakdown with Premium)
+  paymentDetails.forEach(det => {
+    const rawMr = String(det.mr_no || det.arrival_no || '').trim();
+    const cleanMr = normalizePoRef(rawMr);
+    const premRate = Number(det.premium || det.rate_premium || 0);
+    const premAmtExplicit = Number(det.summary_premium_amount || det.val_premium_amt || 0);
+    const qtl = Number(det.quantity_qtl || 0) || (Number(det.arr_qty_wt || det.wt_quantity || 0) * 10);
+    const calcAmt = premAmtExplicit > 0 ? premAmtExplicit : (premRate > 0 && qtl > 0 ? Number((premRate * qtl).toFixed(2)) : 0);
+
+    if (cleanMr && (premRate > 0 || calcAmt > 0)) {
+      const pmMeta = paymentMetaMap.get(normalizePoRef(det.voucher_no)) || paymentMetaMap.get(cleanMr) || {};
+      const dateStr = pmMeta.payment_date || pmMeta.date || det.created_at || pmMeta.created_at || '';
+      const { year: detYear, month: detMonth, isValid } = parseRecordDate(dateStr);
+
+      const existing = paymentMrPremiumMap.get(cleanMr);
+      if (existing) {
+        existing.amount = Number((existing.amount + calcAmt).toFixed(2));
+        existing.weightQtl = Number((existing.weightQtl + qtl).toFixed(2));
+        if (premRate > 0) existing.rate = Math.max(existing.rate, premRate);
+        if (!existing.date && dateStr) {
+          existing.date = dateStr;
+          existing.year = detYear;
+          existing.month = detMonth;
+        }
+      } else {
+        paymentMrPremiumMap.set(cleanMr, {
+          mrNo: rawMr,
+          cleanMr,
+          voucherNo: det.voucher_no || pmMeta.voucher_no || '',
+          date: dateStr,
+          year: isValid ? detYear : (activeYear || 2026),
+          month: isValid ? detMonth : 7,
+          rate: premRate,
+          weightQtl: qtl,
+          amount: calcAmt,
+          supplier: pmMeta.supplier || pmMeta.party_name || pmMeta.supplier_name || 'DIRECT SUPPLIER',
+          broker: pmMeta.broker || pmMeta.broker_name || 'DIRECT',
+          juteGrade: det.grade || det.jute_grade || 'TD-5'
+        });
+      }
+    }
+  });
+
+  // 2. Process paymentRecords (Payment Master header records)
+  paymentRecords.forEach(pm => {
+    const rawMr = String(pm.mr_no || pm.arrival_no || '').trim();
+    const cleanMr = normalizePoRef(rawMr);
+    const premAmt = Number(pm.val_premium_amt || pm.summary_premium_amount || 0);
+    const premRate = Number(pm.premium || pm.premium_rate || 0);
+    if (cleanMr && (premAmt > 0 || premRate > 0)) {
+      const dateStr = pm.payment_date || pm.date || pm.created_at || '';
+      const { year: pmYear, month: pmMonth, isValid } = parseRecordDate(dateStr);
+      const existing = paymentMrPremiumMap.get(cleanMr);
+      if (existing) {
+        if (existing.amount === 0 && premAmt > 0) existing.amount = premAmt;
+        if (existing.rate === 0 && premRate > 0) existing.rate = premRate;
+      } else {
+        paymentMrPremiumMap.set(cleanMr, {
+          mrNo: rawMr,
+          cleanMr,
+          voucherNo: pm.voucher_no || '',
+          date: dateStr,
+          year: isValid ? pmYear : (activeYear || 2026),
+          month: isValid ? pmMonth : 7,
+          rate: premRate,
+          weightQtl: Number(pm.quantity_qtl || 0),
+          amount: premAmt,
+          supplier: pm.supplier || pm.party_name || pm.supplier_name || 'DIRECT SUPPLIER',
+          broker: pm.broker || pm.broker_name || 'DIRECT',
+          juteGrade: pm.jute_grade || pm.grade || 'TD-5'
+        });
+      }
+    }
+  });
 
   // 1. Payment Details (Material Grade Details breakdown with Premium ₹/Qtl * Weight MT)
   paymentDetails.forEach(det => {
@@ -567,6 +677,70 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     }
   });
 
+  // 5. Process Payment records and Payment Details so Payment Section MRs are included
+  paymentRecords.forEach((item, idx) => {
+    const rawMr = item.mr_no || item.arrival_no || `PAY-${idx}`;
+    const mr = normalizePoRef(rawMr);
+    if (!mr) return;
+    if (!mapByMr.has(mr)) {
+      mapByMr.set(mr, {
+        ...item,
+        mr_no: rawMr,
+        arrival_date: item.payment_date || item.date || item.created_at,
+        is_inspected: true,
+        status: item.status || 'Paid',
+        inspection_source: 'payment'
+      });
+    } else {
+      const existing = mapByMr.get(mr);
+      mapByMr.set(mr, {
+        ...existing,
+        is_inspected: true,
+        payment_date: item.payment_date || item.date || existing.payment_date,
+        paid_amount: item.paid_amount || item.payable_amt || existing.paid_amount
+      });
+    }
+  });
+
+  paymentDetails.forEach((item, idx) => {
+    const rawMr = item.mr_no || item.arrival_no || `PD-${idx}`;
+    const mr = normalizePoRef(rawMr);
+    if (!mr) return;
+    if (!mapByMr.has(mr)) {
+      mapByMr.set(mr, {
+        ...item,
+        mr_no: rawMr,
+        arrival_date: item.created_at || item.bill_date || item.date,
+        is_inspected: true,
+        status: 'Paid',
+        inspection_source: 'payment'
+      });
+    }
+  });
+
+  // 6. Ensure all MRs with Premium from Payment Section exist in mapByMr
+  paymentMrPremiumMap.forEach((entry, cleanMr) => {
+    if (!mapByMr.has(cleanMr)) {
+      mapByMr.set(cleanMr, {
+        id: `pay-prem-${cleanMr}`,
+        mr_no: entry.mrNo,
+        arrival_date: entry.date,
+        supplier_name: entry.supplier,
+        broker_name: entry.broker,
+        jute_grade: entry.juteGrade,
+        quantity_qtl: entry.weightQtl,
+        weight_mt: Number((entry.weightQtl / 10).toFixed(3)),
+        premium: entry.rate > 0 ? `₹${entry.rate}/Qtl` : 'Yes',
+        is_premium: true,
+        premium_rate: entry.rate,
+        summary_premium_amount: entry.amount,
+        is_inspected: true,
+        status: 'Paid',
+        inspection_source: 'payment'
+      });
+    }
+  });
+
   const parsedInspections: InspectionRecord[] = [];
   const yearsSet = new Set<number>();
 
@@ -605,7 +779,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
         wtMt = rawNet > 50 ? (rawNet / 10) : rawNet;
       }
     }
-    const wtQtl = wtMt * 10;
+    let wtQtl = wtMt * 10;
 
     // 1. Moisture % & Claim (read accurately from INSPECTION MODULE REGISTER)
     let actualM = 0;
@@ -753,6 +927,22 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     // 5. Premium: Highest priority from Payment Operations (Premium ₹/Qtl * Weight MT) / Sauda Check Point
     let premiumData = premiumMap.get(cleanMr) || premiumMap.get(cleanPo) || { premium: "No", isPremium: false, rate: 0, amount: 0, source: "Payment Operations / SCP" };
+    
+    // Explicit priority from Payment Section MR Premium index
+    const payPrem = paymentMrPremiumMap.get(cleanMr);
+    if (payPrem && (payPrem.amount > 0 || payPrem.rate > 0)) {
+      premiumData = {
+        premium: payPrem.rate > 0 ? `₹${payPrem.rate}/Qtl` : (payPrem.amount > 0 ? `₹${payPrem.amount}` : "Yes"),
+        isPremium: true,
+        rate: payPrem.rate,
+        amount: payPrem.amount,
+        source: "Payment Section"
+      };
+      if (payPrem.weightQtl > 0 && wtQtl === 0) {
+        wtQtl = payPrem.weightQtl;
+        wtMt = Number((payPrem.weightQtl / 10).toFixed(3));
+      }
+    }
     
     // Check if raw inspection itself or related details have premium
     if (!premiumData.isPremium) {
@@ -1027,14 +1217,25 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     let claimGradeDownSum = 0;
     let totChottaHbKg = 0;
     let totChottaHbClaim = 0;
-    let premLots = 0;
-    let premSum = 0;
-    let premRateTotal = 0;
     let totClaim = 0;
     let moistClaimLots = 0;
     let qualClaimLots = 0;
 
     const qualitySourceList = completedInspections;
+
+    // Direct aggregation of MRs with Premium from Payment Section and Inspections
+    const monthPremiumMrMap = new Map<string, { rate: number; amount: number; qtl: number }>();
+
+    // 1. All Payment Section MRs with Premium for this month and activeYear
+    paymentMrPremiumMap.forEach(p => {
+      if (p.year === activeYear && p.month === mIdx && (p.amount > 0 || p.rate > 0)) {
+        monthPremiumMrMap.set(p.cleanMr, {
+          rate: p.rate,
+          amount: p.amount,
+          qtl: p.weightQtl
+        });
+      }
+    });
 
     qualitySourceList.forEach(r => {
       totWt += r.weightMt;
@@ -1046,18 +1247,35 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       claimGradeDownSum += r.claimGradeDown;
       totChottaHbKg += r.totalChottaHabijabiKg;
       totChottaHbClaim += r.chottaHabijabiDeductionAmount;
-      if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
-        premLots++;
-        premRateTotal += r.premiumRate;
-        const lotPremAmt = r.premiumAmount > 0 
-          ? r.premiumAmount 
-          : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
-        premSum += lotPremAmt;
-      }
       totClaim += r.totalClaimAmount;
       if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistClaimLots++;
       if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
+
+      if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
+        const clean = r.cleanMrNo || r.mrNo;
+        if (clean && !monthPremiumMrMap.has(clean)) {
+          const lotPremAmt = r.premiumAmount > 0 
+            ? r.premiumAmount 
+            : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
+          monthPremiumMrMap.set(clean, {
+            rate: r.premiumRate,
+            amount: lotPremAmt,
+            qtl: r.weightQtl || (r.weightMt * 10)
+          });
+        }
+      }
     });
+
+    const premLots = monthPremiumMrMap.size;
+    let premSum = 0;
+    let premRateTotal = 0;
+    let premQtlTotal = 0;
+    monthPremiumMrMap.forEach(v => {
+      premSum += v.amount;
+      premRateTotal += v.rate;
+      premQtlTotal += v.qtl;
+    });
+    premSum = Number(premSum.toFixed(2));
 
     const moistCount = qualitySourceList.filter(r => r.actualMoisture > 0).length;
     const claimMoistCount = qualitySourceList.filter(r => r.claimMoisture > 0).length;
@@ -1289,12 +1507,24 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   let totalGradeDownSum = 0;
   let totalClaimGradeDownSum = 0;
   let totalChottaHabijabiKg = 0;
-  let totalPremiumLots = 0;
-  let totalPremiumSum = 0;
-  let totalPremiumRateSum = 0;
   let totalClaimAmount = 0;
 
   const qualitySourceAll = inspectedRecords;
+
+  // Direct aggregation of MRs with Premium for activeYear from Payment Section and Inspections
+  const yearPremiumMrMap = new Map<string, { rate: number; amount: number; qtl: number }>();
+
+  // 1. All Payment Section MRs with Premium for activeYear
+  paymentMrPremiumMap.forEach(p => {
+    if (p.year === activeYear && (p.amount > 0 || p.rate > 0)) {
+      yearPremiumMrMap.set(p.cleanMr, {
+        rate: p.rate,
+        amount: p.amount,
+        qtl: p.weightQtl
+      });
+    }
+  });
+
   qualitySourceAll.forEach(r => {
     totalInspectedWeightMt += r.weightMt;
     totalMoistSum += r.actualMoisture;
@@ -1304,16 +1534,36 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalGradeDownSum += r.actualGradeDown;
     totalClaimGradeDownSum += r.claimGradeDown;
     totalChottaHabijabiKg += r.totalChottaHabijabiKg;
-    if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
-      totalPremiumLots++;
-      totalPremiumRateSum += r.premiumRate;
-      const lotPremAmt = r.premiumAmount > 0 
-        ? r.premiumAmount 
-        : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
-      totalPremiumSum += lotPremAmt;
-    }
     totalClaimAmount += r.totalClaimAmount;
+
+    if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
+      const clean = r.cleanMrNo || r.mrNo;
+      if (clean && !yearPremiumMrMap.has(clean)) {
+        const lotPremAmt = r.premiumAmount > 0 
+          ? r.premiumAmount 
+          : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
+        yearPremiumMrMap.set(clean, {
+          rate: r.premiumRate,
+          amount: lotPremAmt,
+          qtl: r.weightQtl || (r.weightMt * 10)
+        });
+      }
+    }
   });
+
+  const totalPremiumLots = yearPremiumMrMap.size;
+  let totalPremiumSum = 0;
+  let totalPremiumRateSum = 0;
+  let totalPremiumQtlSum = 0;
+  yearPremiumMrMap.forEach(v => {
+    totalPremiumSum += v.amount;
+    totalPremiumRateSum += v.rate;
+    totalPremiumQtlSum += v.qtl;
+  });
+  totalPremiumSum = Number(totalPremiumSum.toFixed(2));
+  const avgPremiumRate = totalPremiumLots > 0 
+    ? (totalPremiumQtlSum > 0 && totalPremiumSum > 0 ? Number((totalPremiumSum / totalPremiumQtlSum).toFixed(2)) : (totalPremiumRateSum > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : 0)) 
+    : 0;
 
   const yearMoistCount = qualitySourceAll.filter(r => r.actualMoisture > 0).length;
   const yearClaimMoistCount = qualitySourceAll.filter(r => r.claimMoisture > 0).length;
@@ -1331,9 +1581,6 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
   const overallAvgClaimDust = yearClaimDustCount > 0 ? Number((totalClaimDustSum / yearClaimDustCount).toFixed(1)) : 0;
   const overallAvgGradeDown = yearGradeDownCount > 0 ? Number((totalGradeDownSum / yearGradeDownCount).toFixed(1)) : 0;
   const overallAvgClaimGradeDown = yearClaimGradeDownCount > 0 ? Number((totalClaimGradeDownSum / yearClaimGradeDownCount).toFixed(1)) : 0;
-  const avgPremiumRate = totalPremiumLots > 0 
-    ? (totalPremiumRateSum > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : (totalInspectedWeightMt > 0 ? Number((totalPremiumSum / (totalInspectedWeightMt * 10)).toFixed(2)) : 0)) 
-    : 0;
 
   const totalYearTemporaryArrivalsCount = yearArrivals.length > 0 ? yearArrivals.length : yearInspections.length;
   const totalYearPendingFmrCount = yearArrivals.filter(a => {

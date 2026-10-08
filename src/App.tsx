@@ -54,38 +54,61 @@ import { cn } from "./lib/utils";
 import bjlAsset from "./assets/asset_bjl.png";
 import { SystemNoticeModal } from "./components/SystemNoticeModal";
 
+// Resilient dynamic loader that auto-reloads if an app deployment changed chunk hashes
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  componentImport: () => Promise<{ default: T }>
+) {
+  return React.lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error: any) {
+      const isChunkError = /dynamically imported module|failed to fetch.*module|loading chunk/i.test(
+        error?.message || ''
+      );
+      const lastReload = Number(sessionStorage.getItem('bjl_last_lazy_reload') || '0');
+      const now = Date.now();
+      if (isChunkError && now - lastReload > 15000) {
+        sessionStorage.setItem('bjl_last_lazy_reload', String(now));
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+      throw error;
+    }
+  });
+}
+
 // Lazy-loaded page components for fast initial load & code-splitting
-const TemporaryArrival = React.lazy(() => import("./pages/TemporaryArrival"));
-const AmadRegister = React.lazy(() => import("./pages/AmadRegister"));
-const SaudaEntry = React.lazy(() => import("./pages/SaudaEntry"));
-const BardanaVouchers = React.lazy(() => import("./pages/BardanaVouchers"));
-const DirectoryView = React.lazy(() => import("./pages/DirectoryView"));
-const Reports = React.lazy(() => import("./pages/Reports"));
-const Dashboard = React.lazy(() => import("./pages/Dashboard"));
-const StockSummary = React.lazy(() => import("./pages/StockSummary"));
-const ConfigGuide = React.lazy(() => import("./pages/ConfigGuide"));
-const SaudaRegister = React.lazy(() => import("./pages/SaudaRegister"));
-const SmsSaudaDesk = React.lazy(() => import("./pages/SmsSaudaDesk"));
-const SattaRegister = React.lazy(() => import("./pages/SattaRegister"));
-const SattaEntry = React.lazy(() => import("./pages/SattaEntry"));
-const SattaChart = React.lazy(() => import("./pages/SattaChart"));
-const PurchaseOrder = React.lazy(() => import("./pages/PurchaseOrder"));
-const MaterialIssue = React.lazy(() => import("./pages/MaterialIssue"));
-const AdminDesk = React.lazy(() => import("./pages/AdminDesk"));
-const AIPortal = React.lazy(() => import("./pages/AIPortal"));
-const MaterialInspection = React.lazy(() => import("./pages/MaterialInspection"));
-const Inspection = React.lazy(() => import("./pages/Inspection"));
-const WeightBridge = React.lazy(() => import("./pages/WeightBridge"));
-const MrSettlement = React.lazy(() => import("./pages/MrSettlement"));
-const ClosingStockEntry = React.lazy(() => import("./pages/ClosingStockEntry"));
-const MismatchCase = React.lazy(() => import("./pages/MismatchCase"));
-const ClubPOMR = React.lazy(() => import("./pages/ClubPOMR"));
-const FinalArrival = React.lazy(() => import("./pages/FinalArrival"));
-const RequisitionDesk = React.lazy(() => import("./pages/RequisitionDesk"));
-const PaymentModule = React.lazy(() => import("./pages/PaymentModule"));
-const TredeReport = React.lazy(() => import("./pages/TredeReport"));
-const LorryDispatchSystem = React.lazy(() => import("./pages/LorryDispatchSystem"));
-const SystemChangeLogPage = React.lazy(() => import("./pages/SystemChangeLogPage"));
+const TemporaryArrival = lazyWithRetry(() => import("./pages/TemporaryArrival"));
+const AmadRegister = lazyWithRetry(() => import("./pages/AmadRegister"));
+const SaudaEntry = lazyWithRetry(() => import("./pages/SaudaEntry"));
+const BardanaVouchers = lazyWithRetry(() => import("./pages/BardanaVouchers"));
+const DirectoryView = lazyWithRetry(() => import("./pages/DirectoryView"));
+const Reports = lazyWithRetry(() => import("./pages/Reports"));
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const StockSummary = lazyWithRetry(() => import("./pages/StockSummary"));
+const ConfigGuide = lazyWithRetry(() => import("./pages/ConfigGuide"));
+const SaudaRegister = lazyWithRetry(() => import("./pages/SaudaRegister"));
+const SmsSaudaDesk = lazyWithRetry(() => import("./pages/SmsSaudaDesk"));
+const SattaRegister = lazyWithRetry(() => import("./pages/SattaRegister"));
+const SattaEntry = lazyWithRetry(() => import("./pages/SattaEntry"));
+const SattaChart = lazyWithRetry(() => import("./pages/SattaChart"));
+const PurchaseOrder = lazyWithRetry(() => import("./pages/PurchaseOrder"));
+const MaterialIssue = lazyWithRetry(() => import("./pages/MaterialIssue"));
+const AdminDesk = lazyWithRetry(() => import("./pages/AdminDesk"));
+const AIPortal = lazyWithRetry(() => import("./pages/AIPortal"));
+const MaterialInspection = lazyWithRetry(() => import("./pages/MaterialInspection"));
+const Inspection = lazyWithRetry(() => import("./pages/Inspection"));
+const WeightBridge = lazyWithRetry(() => import("./pages/WeightBridge"));
+const MrSettlement = lazyWithRetry(() => import("./pages/MrSettlement"));
+const ClosingStockEntry = lazyWithRetry(() => import("./pages/ClosingStockEntry"));
+const MismatchCase = lazyWithRetry(() => import("./pages/MismatchCase"));
+const ClubPOMR = lazyWithRetry(() => import("./pages/ClubPOMR"));
+const FinalArrival = lazyWithRetry(() => import("./pages/FinalArrival"));
+const RequisitionDesk = lazyWithRetry(() => import("./pages/RequisitionDesk"));
+const PaymentModule = lazyWithRetry(() => import("./pages/PaymentModule"));
+const TredeReport = lazyWithRetry(() => import("./pages/TredeReport"));
+const LorryDispatchSystem = lazyWithRetry(() => import("./pages/LorryDispatchSystem"));
+const SystemChangeLogPage = lazyWithRetry(() => import("./pages/SystemChangeLogPage"));
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
 
