@@ -546,25 +546,16 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 </span>
                               ) : idx >= currentData.length - Math.ceil(currentData.length * 0.3) ? (
                                 <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  Recent Quarter
+                                  📉 Lower Business Volume
                                 </span>
-                              ) : null}
+                              ) : (
+                                <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                  ⚖️ Regular Business
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}
-                              </span>
-                            ) : idx >= currentData.length - Math.ceil(currentData.length * 0.3) ? (
-                              <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                📉 Lower Business Volume
-                              </span>
-                            ) : (
-                              <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                ⚖️ Regular Business
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
                     </tbody>
                   </table>
                 </div>
