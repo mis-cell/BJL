@@ -16,7 +16,6 @@ import ShipmentClaimsCard from '../components/ShipmentClaimsCard';
 import RemarksCard from '../components/RemarksCard';
 import FooterActions from '../components/FooterActions';
 import SaudaPrintSlip from '../components/SaudaPrintSlip';
-import FormLegend from '../components/FormLegend';
 
 const UNIT_OPTIONS = ["BALES", "DRUMS", "LOOSE", "P.BALES", "H.BALES"];
 
@@ -1023,46 +1022,8 @@ export default function SaudaEntry({
           </button>
         </div>
 
-        {/* Responsive Quick Navigation Anchors for Wide Screens / Second Monitors */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-1 bg-white/90 backdrop-blur border border-slate-200/90 rounded-xl text-xs font-bold shadow-2xs scrollbar-none sticky top-0 z-30">
-          <a
-            href="#basic-details"
-            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
-          >
-            <span>📋 1. Basic Details</span>
-          </a>
-          <a
-            href="#transportation-details"
-            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
-          >
-            <span>🚚 2. Transportation</span>
-          </a>
-          <a
-            href="#quality-details"
-            className="px-3.5 py-1.5 rounded-lg bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300 flex items-center gap-1.5 transition shrink-0 shadow-2xs font-black"
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
-            <span>⚙️ 3. Quality Details (Multi-Agency & Marka)</span>
-          </a>
-          <a
-            href="#claims-details"
-            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-1.5 transition shrink-0"
-          >
-            <span>📜 4. Shipment & Claims</span>
-          </a>
-          <a
-            href="#remarks-details"
-            className="px-3.5 py-1.5 rounded-lg bg-[#174C2C] text-white hover:bg-[#113A21] flex items-center gap-1.5 transition shrink-0 ml-auto shadow-2xs"
-          >
-            <span>💾 5. Save Contract</span>
-          </a>
-        </div>
-
         {/* 2. Main Form Content */}
         <main ref={formContainerRef} className="flex-1 space-y-5 w-full min-w-0">
-          {/* Field Color Guide */}
-          <FormLegend />
-
           {/* Section 1: Basic Details */}
           <div id="basic-details" className="scroll-mt-14">
             <BasicDetailsCard
