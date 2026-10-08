@@ -402,7 +402,7 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
       // Standard comprehensive transaction lines
       headers = [
         'Txn ID', 'Date', 'Sauda No', 'PO No', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade',
-        'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Variance', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost', 'Gross Profit', 'Status'
+        'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Variance', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost'
       ];
       rows = filteredTransactions.map(t => [
         t.txnId,
@@ -421,9 +421,7 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
         t.grossPurchaseValue.toFixed(2),
         t.premiumAmount.toFixed(2),
         t.deductionAmount.toFixed(2),
-        t.effectiveCost.toFixed(2),
-        t.grossProfit.toFixed(2),
-        t.profitStatus
+        t.effectiveCost.toFixed(2)
       ]);
     }
 
@@ -1055,9 +1053,9 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
                   <th className="p-2.5 text-right">Base Rate</th>
                   <th className="p-2.5 text-right">Variance</th>
                   <th className="p-2.5 text-right">Gross Value</th>
+                  <th className="p-2.5 text-right">Premium</th>
+                  <th className="p-2.5 text-right">Deductions</th>
                   <th className="p-2.5 text-right">Eff. Cost</th>
-                  <th className="p-2.5 text-right">Profit</th>
-                  <th className="p-2.5 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -1084,21 +1082,9 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
                       </span>
                     </td>
                     <td className="p-2 text-right">₹{t.grossPurchaseValue.toLocaleString()}</td>
+                    <td className="p-2 text-right text-amber-700 font-bold">{t.premiumAmount > 0 ? `₹${t.premiumAmount.toLocaleString()}` : '—'}</td>
+                    <td className="p-2 text-right text-rose-700 font-bold">{t.deductionAmount > 0 ? `₹${t.deductionAmount.toLocaleString()}` : '—'}</td>
                     <td className="p-2 text-right text-slate-900 font-bold">₹{t.effectiveCost.toLocaleString()}</td>
-                    <td className="p-2 text-right">
-                      <span className={t.grossProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
-                        {t.grossProfit >= 0 ? `+₹${t.grossProfit.toLocaleString()}` : `-₹${Math.abs(t.grossProfit).toLocaleString()}`}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                        t.profitStatus === 'PROFITABLE' ? 'bg-emerald-100 text-emerald-800' :
-                        t.profitStatus === 'LOSS' ? 'bg-rose-100 text-rose-800' :
-                        t.profitStatus === 'BREAK-EVEN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {t.profitStatus}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>

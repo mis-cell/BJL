@@ -11,7 +11,7 @@ import {
 interface Priority2AnalysisProps {
   dataset: SystemReportDataset;
   onDrillDown: (title: string, txns: ReportTransactionLine[]) => void;
-  defaultSubTab?: 'business' | 'profitability' | 'premium' | 'deduction' | 'ranking';
+  defaultSubTab?: 'business' | 'premium' | 'deduction' | 'ranking';
 }
 
 type DimensionType = 'broker' | 'supplier' | 'agency' | 'area' | 'grade' | 'month' | 'saudaNo' | 'poNo';
@@ -19,10 +19,10 @@ type DimensionType = 'broker' | 'supplier' | 'agency' | 'area' | 'grade' | 'mont
 export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
   dataset,
   onDrillDown,
-  defaultSubTab = 'profitability'
+  defaultSubTab = 'business'
 }) => {
   const { filtered, metrics } = dataset;
-  const [subTab, setSubTab] = useState<'business' | 'profitability' | 'premium' | 'deduction' | 'ranking'>(defaultSubTab);
+  const [subTab, setSubTab] = useState<'business' | 'premium' | 'deduction' | 'ranking'>(defaultSubTab);
   const [dimension, setDimension] = useState<DimensionType>('broker');
 
   // Compute grouped rows
@@ -51,11 +51,10 @@ export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
           {[
-            { id: 'profitability' as const, label: '2. Profitability Analysis' },
             { id: 'business' as const, label: '1. Business Performance' },
-            { id: 'premium' as const, label: '3. Premium Analysis' },
-            { id: 'deduction' as const, label: '4. Deduction Analysis' },
-            { id: 'ranking' as const, label: '5. Performance Rankings' }
+            { id: 'premium' as const, label: '2. Premium Analysis' },
+            { id: 'deduction' as const, label: '3. Deduction Analysis' },
+            { id: 'ranking' as const, label: '4. Performance Rankings' }
           ].map(t => (
             <button
               key={t.id}
@@ -92,63 +91,6 @@ export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
         </div>
       </div>
 
-      {/* TOP PROFITABILITY METRIC CARDS (Specification Section 28) */}
-      {subTab === 'profitability' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-          <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-            <span className="text-[9px] font-bold text-slate-500 uppercase block">Total Business</span>
-            <div className="text-sm font-black text-slate-900 font-mono mt-0.5">
-              ₹{metrics.totalPurchaseValue.toLocaleString()}
-            </div>
-            <span className="text-[8.5px] text-slate-400 block mt-0.5">Landed Turnout</span>
-          </div>
-
-          <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-            <span className="text-[9px] font-bold text-slate-500 uppercase block">Total Cost</span>
-            <div className="text-sm font-black text-slate-800 font-mono mt-0.5">
-              ₹{(metrics.totalPurchaseValue + metrics.totalPremium - metrics.totalDeduction).toLocaleString()}
-            </div>
-            <span className="text-[8.5px] text-slate-400 block mt-0.5">Effective Landing</span>
-          </div>
-
-          <div className="p-3 bg-white border border-emerald-300 rounded-xl shadow-sm bg-emerald-50/30">
-            <span className="text-[9px] font-black text-emerald-800 uppercase block">Gross Margin</span>
-            <div className={`text-sm font-black font-mono mt-0.5 ${metrics.grossProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-              ₹{metrics.grossProfit.toLocaleString()}
-            </div>
-            <span className="text-[8.5px] text-emerald-600 font-bold block mt-0.5">
-              {metrics.profitMarginPct.toFixed(2)}% Margin
-            </span>
-          </div>
-
-          <div className="p-3 bg-white border border-rose-200 rounded-xl shadow-sm bg-rose-50/30">
-            <span className="text-[9px] font-black text-rose-800 uppercase block">Total Loss</span>
-            <div className="text-sm font-black text-rose-700 font-mono mt-0.5">
-              ₹{metrics.totalLoss.toLocaleString()}
-            </div>
-            <span className="text-[8.5px] text-rose-600 font-bold block mt-0.5">
-              {metrics.lossMakingCount} Loss Deals
-            </span>
-          </div>
-
-          <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-            <span className="text-[9px] font-bold text-slate-500 uppercase block">Profitable Saudas</span>
-            <div className="text-sm font-black text-emerald-700 font-mono mt-0.5">
-              {metrics.profitableCount} / {metrics.totalSaudaCount}
-            </div>
-            <span className="text-[8.5px] text-slate-400 block mt-0.5">Net Positive</span>
-          </div>
-
-          <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-            <span className="text-[9px] font-bold text-slate-500 uppercase block">Rate Variance</span>
-            <div className="text-sm font-black text-amber-700 font-mono mt-0.5">
-              +₹{(metrics.weightedPurchaseRate - metrics.weightedBaseRate).toFixed(1)}/Qtl
-            </div>
-            <span className="text-[8.5px] text-slate-400 block mt-0.5">Pur vs Base Rate</span>
-          </div>
-        </div>
-      )}
-
       {/* MAIN DATA TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -178,10 +120,8 @@ export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
                 {subTab === 'premium' && <th className="p-3 text-right">Premium %</th>}
                 {subTab === 'deduction' && <th className="p-3 text-right">Deductions (₹)</th>}
                 {subTab === 'deduction' && <th className="p-3 text-right">Avg Moisture</th>}
+                <th className="p-3 text-right">Gross Value (₹)</th>
                 <th className="p-3 text-right">Landed Cost (₹)</th>
-                <th className="p-3 text-right">Gross Margin (₹)</th>
-                <th className="p-3 text-right">Profit %</th>
-                <th className="p-3 text-center">Status</th>
                 <th className="p-3 text-center w-12">Drill</th>
               </tr>
             </thead>
@@ -226,26 +166,8 @@ export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
                       </td>
                     )}
 
+                    <td className="p-2.5 text-right text-slate-900 font-bold">₹{row.purchaseValue.toLocaleString()}</td>
                     <td className="p-2.5 text-right text-slate-900 font-bold">₹{row.effectiveCost.toLocaleString()}</td>
-                    <td className="p-2.5 text-right">
-                      <span className={row.grossProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
-                        {row.grossProfit >= 0 ? `+₹${row.grossProfit.toLocaleString()}` : `-₹${Math.abs(row.grossProfit).toLocaleString()}`}
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-right">
-                      <span className={row.profitPct >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
-                        {row.profitPct.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                        row.status === 'PROFITABLE' ? 'bg-emerald-100 text-emerald-800' :
-                        row.status === 'LOSS' ? 'bg-rose-100 text-rose-800' :
-                        row.status === 'BREAK-EVEN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </td>
                     <td className="p-2.5 text-center text-emerald-600">
                       <ChevronRight className="w-4 h-4 mx-auto" />
                     </td>

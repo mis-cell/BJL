@@ -90,7 +90,6 @@ export const ContributionView: React.FC<ContributionViewProps> = ({
                 <th className="p-3 text-right">Business Value (₹)</th>
                 <th className="p-3 text-right">Share %</th>
                 <th className="p-3 text-center">Contribution Tier</th>
-                <th className="p-3 text-right">Gross Margin (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-700">
@@ -112,11 +111,6 @@ export const ContributionView: React.FC<ContributionViewProps> = ({
                     <td className="p-2.5 text-center">
                       <span className={`px-2 py-0.5 rounded text-[9.5px] font-black uppercase ${item.tierColor}`}>
                         {item.tier}
-                      </span>
-                    </td>
-                    <td className="p-2.5 text-right font-bold">
-                      <span className={item.grossProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
-                        ₹{item.grossProfit.toLocaleString()}
                       </span>
                     </td>
                   </tr>

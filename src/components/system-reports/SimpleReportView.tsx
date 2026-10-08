@@ -77,7 +77,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     } else if (quickFilter === 'COMPLETED') {
       list = list.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID');
     } else if (quickFilter === 'ALERTS') {
-      list = list.filter(t => t.isAbnormal || t.deductionAmount > 0 || t.grossProfit < 0);
+      list = list.filter(t => t.isAbnormal || t.deductionAmount > 0);
     }
 
     // Date filter
@@ -117,7 +117,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   }, [transactions, quickFilter, dateFilter, searchQuery, sortField, sortAsc]);
 
   // Active Sub-Analysis View for Dimensional Tabs
-  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING' | 'ABNORMAL' | 'PROFITABILITY'>('VOLUME');
+  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING' | 'ABNORMAL'>('VOLUME');
 
   // Aggregation Helper Function for multi-dimensional analysis
   const aggregateByDimension = (keyGetter: (t: ReportTransactionLine) => string) => {
@@ -130,12 +130,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       grossValue: number;
       deductionAmount: number;
       premiumAmount: number;
-      grossProfit: number;
       paidAmount: number;
       pendingPayable: number;
       avgRate: number;
-      profitableDeals: number;
-      lossDeals: number;
       abnormalDeals: number;
       moistureSum: number;
       moistureCount: number;
@@ -159,12 +156,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         grossValue: 0,
         deductionAmount: 0,
         premiumAmount: 0,
-        grossProfit: 0,
         paidAmount: 0,
         pendingPayable: 0,
         avgRate: 0,
-        profitableDeals: 0,
-        lossDeals: 0,
         abnormalDeals: 0,
         moistureSum: 0,
         moistureCount: 0,
@@ -183,17 +177,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       existing.grossValue += t.grossPurchaseValue;
       existing.deductionAmount += t.deductionAmount;
       existing.premiumAmount += t.premiumAmount;
-      existing.grossProfit += t.grossProfit;
       existing.paidAmount += t.paidAmount;
       existing.pendingPayable += t.pendingPayable;
 
-      if (t.grossProfit >= 0 && t.profitStatus !== 'LOSS') {
-        existing.profitableDeals += 1;
-      } else {
-        existing.lossDeals += 1;
-      }
-
-      if (t.isAbnormal || t.moisturePct > 14 || t.deductionAmount > 0 || t.grossProfit < 0) {
+      if (t.isAbnormal || t.moisturePct > 14 || t.deductionAmount > 0) {
         existing.abnormalDeals += 1;
       }
 
@@ -217,9 +204,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       const avgMoisture = item.moistureCount > 0 ? (item.moistureSum / item.moistureCount) : 0;
       
       let tier: 'BEST' | 'MEDIUM' | 'LOWER' = 'MEDIUM';
-      if (item.grossProfit >= 0 && item.abnormalDeals === 0 && item.quantityMT >= 10) {
+      if (item.abnormalDeals === 0 && item.deductionAmount === 0 && item.quantityMT >= 10) {
         tier = 'BEST';
-      } else if (item.grossProfit < 0 || item.abnormalDeals > 1 || item.quantityMT < 5) {
+      } else if (item.abnormalDeals > 1 || item.deductionAmount > 5000 || item.quantityMT < 5) {
         tier = 'LOWER';
       }
 
@@ -248,7 +235,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       pendingDelivery: transactions.filter(t => t.pendingWeightMT > 0.01).length,
       paymentDue: transactions.filter(t => t.pendingPayable > 100).length,
       completed: transactions.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID').length,
-      alerts: transactions.filter(t => t.isAbnormal || t.deductionAmount > 0 || t.grossProfit < 0).length
+      alerts: transactions.filter(t => t.isAbnormal || t.deductionAmount > 0).length
     };
   }, [transactions]);
 
@@ -460,7 +447,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 {activeTab === 'MONTH' && 'Monthly Progress & Analytics'}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Toggle below to analyze Deductions, Pipeline Checkpoints, Premium, Performance Rankings, Abnormal Data, or Profitability.
+                Toggle below to analyze Deductions, Pipeline Checkpoints, Premium, Performance Rankings, or Abnormal Data.
               </p>
             </div>
             {onOpenManagementView && (
@@ -483,7 +470,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               { id: 'PREMIUM' as const, label: '💰 Premium Given', icon: '💰' },
               { id: 'RANKING' as const, label: '🏆 Ranking Cards (Best, Medium, Lower)', icon: '🏆' },
               { id: 'ABNORMAL' as const, label: '⚠️ Abnormal Data vs Top Performers', icon: '⚠️' },
-              /* { id: 'PROFITABILITY' as const, label: '📈 Satta Wise Profitability & Loss', icon: '📈' }, */
             ].map(sub => (
               <button
                 key={sub.id}
@@ -741,7 +727,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
                       <span className="text-xs font-black uppercase text-emerald-900 block">🥇 Best Performers ({bests.length})</span>
-                      <p className="text-[10px] text-emerald-700 mt-1">High business volume, profitable deals, and zero quality issues.</p>
+                      <p className="text-[10px] text-emerald-700 mt-1">High business volume, prompt delivery, and zero quality issues.</p>
                       <div className="mt-2 space-y-1">
                         {bests.slice(0, 5).map((b, i) => (
                           <div key={i} className="flex justify-between text-xs font-bold text-emerald-950">
@@ -767,7 +753,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
                     <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl">
                       <span className="text-xs font-black uppercase text-rose-900 block">🥉 Lower Performers ({lowers.length})</span>
-                      <p className="text-[10px] text-rose-700 mt-1">Low volume, high deduction claims, or loss-making transactions.</p>
+                      <p className="text-[10px] text-rose-700 mt-1">Low volume, high deduction claims, or quality issues.</p>
                       <div className="mt-2 space-y-1">
                         {lowers.slice(0, 5).map((l, i) => (
                           <div key={i} className="flex justify-between text-xs font-bold text-rose-950">
@@ -825,51 +811,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               );
             }
 
-            if (subAnalysisMode === 'PROFITABILITY') {
-              return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                        <th className="p-3">Entity Name</th>
-                        <th className="p-3 text-center">Total Deals</th>
-                        <th className="p-3 text-center text-emerald-800">Profitable Deals</th>
-                        <th className="p-3 text-center text-rose-800">Loss-Making Deals</th>
-                        <th className="p-3 text-right">Net Profit / Loss (₹)</th>
-                        <th className="p-3 text-center">Satta Profitability</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {currentData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-bold text-slate-900">{row.key}</td>
-                          <td className="p-3 text-center font-mono">{row.dealCount}</td>
-                          <td className="p-3 text-center font-mono font-bold text-emerald-800">{row.profitableDeals}</td>
-                          <td className="p-3 text-center font-mono font-bold text-rose-800">{row.lossDeals}</td>
-                          <td className="p-3 text-right font-mono font-black">
-                            <span className={row.grossProfit >= 0 ? 'text-emerald-800' : 'text-rose-800'}>
-                              {row.grossProfit >= 0 ? `+${formatIndianCurrency(row.grossProfit)}` : formatIndianCurrency(row.grossProfit)}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">
-                            {row.grossProfit >= 0 ? (
-                              <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                📈 Profitable Business
-                              </span>
-                            ) : (
-                              <span className="bg-rose-100 text-rose-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                📉 Loss / Non-Profitable POs
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            }
-
             return null;
           })()}
         </div>
@@ -912,7 +853,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <strong className="text-2xl font-black text-amber-950 font-mono block mt-1">
                 {metrics.abnormalCount} Deals
               </strong>
-              <span className="text-[10px] text-amber-700 mt-1 block">High Moisture, High Deduction, or Loss-Making</span>
+              <span className="text-[10px] text-amber-700 mt-1 block">High Moisture, High Deduction, or Quality Exception</span>
             </div>
           </div>
 

@@ -36,7 +36,6 @@ import { SimpleReportView } from '../components/system-reports/SimpleReportView'
 export type ReportNavSection = 
   | 'dashboard'
   | 'business_analysis'
-  | 'profitability_analysis'
   | 'premium_analysis'
   | 'deduction_claim'
   | 'sauda_checkpoints'
@@ -168,11 +167,11 @@ export default function Reports({ onClose }: ReportsProps) {
     if (!filteredTransactions.length) return;
     const headers = [
       'Txn ID', 'Date', 'Sauda No', 'PO No', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade',
-      'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost', 'Gross Profit', 'Status'
+      'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost'
     ];
     const rows = filteredTransactions.map(t => [
       t.txnId, t.date, t.saudaNo, t.poNo, `"${t.supplier}"`, `"${t.broker}"`, `"${t.agency}"`, `"${t.area}"`, t.grade,
-      t.quantityMT, t.purchaseRate, t.baseRate, t.grossPurchaseValue, t.premiumAmount, t.deductionAmount, t.effectiveCost, t.grossProfit, t.profitStatus
+      t.quantityMT, t.purchaseRate, t.baseRate, t.grossPurchaseValue, t.premiumAmount, t.deductionAmount, t.effectiveCost
     ]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encoded = encodeURI(csvContent);
@@ -282,14 +281,13 @@ export default function Reports({ onClose }: ReportsProps) {
               {[
                 { id: 'dashboard' as const, label: '1. Dashboard', icon: LayoutDashboard, badge: 'Priority 1' },
                 { id: 'business_analysis' as const, label: '2. Business Analysis', icon: BarChart3, badge: 'P2' },
-                { id: 'profitability_analysis' as const, label: '3. Profitability Analysis', icon: TrendingUp, badge: 'P2' },
-                { id: 'premium_analysis' as const, label: '4. Premium Analysis', icon: Percent, badge: 'P2' },
-                { id: 'deduction_claim' as const, label: '5. Deduction & Claim', icon: Scissors, badge: 'P3' },
-                { id: 'sauda_checkpoints' as const, label: '6. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
-                { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-                { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
-                { id: 'detailed_reports' as const, label: '10. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
+                { id: 'premium_analysis' as const, label: '3. Premium Analysis', icon: Percent, badge: 'P2' },
+                { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
+                { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
+                { id: 'performance_ranking' as const, label: '6. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '7. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '8. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'detailed_reports' as const, label: '9. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -335,12 +333,7 @@ export default function Reports({ onClose }: ReportsProps) {
               <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="business" />
             )}
 
-            {/* 3. Profitability Analysis (Priority 2 & Rules 20-30) */}
-            {activeSection === 'profitability_analysis' && (
-              <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="profitability" />
-            )}
-
-            {/* 4. Premium Analysis (Priority 2) */}
+            {/* 3. Premium Analysis (Priority 2) */}
             {activeSection === 'premium_analysis' && (
               <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="premium" />
             )}

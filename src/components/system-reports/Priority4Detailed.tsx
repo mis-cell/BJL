@@ -50,8 +50,7 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
       'Txn ID', 'Date', 'Sauda No', 'PO No', 'Supplier', 'Broker', 'Agency', 'Area', 'Grade',
       'Quantity (MT)', 'Purchase Rate (₹/Qtl)', 'Base Rate (₹/Qtl)', 'Rate Variance (₹)',
       'Gross Purchase Value (₹)', 'Premium Amount (₹)', 'Deduction Amount (₹)',
-      'Effective Landed Cost (₹)', 'Realization Value (₹)', 'Gross Profit (₹)',
-      'Profit %', 'Status', 'Arrived MT', 'Pending Delivery MT', 'Paid Amount (₹)', 'Pending Payable (₹)'
+      'Effective Landed Cost (₹)', 'Arrived MT', 'Pending Delivery MT', 'Paid Amount (₹)', 'Pending Payable (₹)'
     ];
 
     const rows = filtered.map(t => [
@@ -72,10 +71,6 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
       t.premiumAmount.toFixed(2),
       t.deductionAmount.toFixed(2),
       t.effectiveCost.toFixed(2),
-      t.realizationValue.toFixed(2),
-      t.grossProfit.toFixed(2),
-      t.profitPct.toFixed(2),
-      t.profitStatus,
       t.arrivedWeightMT.toFixed(3),
       t.pendingWeightMT.toFixed(3),
       t.paidAmount.toFixed(2),
@@ -134,9 +129,9 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
                 <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('baseRate')}>Base Rate</th>
                 <th className="p-2.5 text-right">Variance</th>
                 <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('grossPurchaseValue')}>Purchase Val</th>
+                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('premiumAmount')}>Premium</th>
+                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('deductionAmount')}>Deductions</th>
                 <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('effectiveCost')}>Eff. Cost</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('grossProfit')}>Gross Profit</th>
-                <th className="p-2.5 text-center">Profit Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-700 font-medium">
@@ -167,21 +162,9 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
                     </span>
                   </td>
                   <td className="p-2 text-right">₹{t.grossPurchaseValue.toLocaleString()}</td>
+                  <td className="p-2 text-right text-amber-700 font-bold">{t.premiumAmount > 0 ? `₹${t.premiumAmount.toLocaleString()}` : '—'}</td>
+                  <td className="p-2 text-right text-rose-700 font-bold">{t.deductionAmount > 0 ? `₹${t.deductionAmount.toLocaleString()}` : '—'}</td>
                   <td className="p-2 text-right text-slate-900 font-bold">₹{t.effectiveCost.toLocaleString()}</td>
-                  <td className="p-2 text-right">
-                    <span className={t.grossProfit >= 0 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
-                      {t.grossProfit >= 0 ? `+₹${t.grossProfit.toLocaleString()}` : `-₹${Math.abs(t.grossProfit).toLocaleString()}`}
-                    </span>
-                  </td>
-                  <td className="p-2 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                      t.profitStatus === 'PROFITABLE' ? 'bg-emerald-100 text-emerald-800' :
-                      t.profitStatus === 'LOSS' ? 'bg-rose-100 text-rose-800' :
-                      t.profitStatus === 'BREAK-EVEN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
-                    }`}>
-                      {t.profitStatus}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>
