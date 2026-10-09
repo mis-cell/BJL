@@ -196,11 +196,11 @@ export default function Reports({ onClose }: ReportsProps) {
                 Report
               </h2>
             </div>
-            {viewMode === 'simple' && (
+            {/* {viewMode === 'simple' && (
               <p className="text-xs text-emerald-100/90 mt-1">
                 Executive Procurement Summary — Total Deals, Arrival Progress, and Payment Status
               </p>
-            )}
+            )} */}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">

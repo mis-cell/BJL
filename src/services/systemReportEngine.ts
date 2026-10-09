@@ -438,7 +438,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     // Arrival by PO and Sauda
     const arrivalByPo = new Map<string, number>();
     (finals || []).forEach((f: any) => {
-      const wt = Number(f.electronic_net_weight || f.net_weight || 0);
+      const wt = Number(f.electronic_net_weight || f.weight_reduced || 0);
       if (f.po_no) arrivalByPo.set(f.po_no, (arrivalByPo.get(f.po_no) || 0) + wt);
       if (f.contract_po_no) arrivalByPo.set(f.contract_po_no, (arrivalByPo.get(f.contract_po_no) || 0) + wt);
       if (f.sauda_no) arrivalByPo.set(f.sauda_no, (arrivalByPo.get(f.sauda_no) || 0) + wt);
@@ -473,7 +473,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     // Payments by PO & MR (combining payment_master and payment_details)
     const paymentByPo = new Map<string, number>();
     (payments || []).forEach((p: any) => {
-      const amt = Number(p.paid_amount || (p.payment_status === 'Paid' ? p.total_amount : 0) || 0);
+      const amt = Number(p.payable_amt ||  0);
       if (p.po_no) paymentByPo.set(p.po_no, (paymentByPo.get(p.po_no) || 0) + amt);
       if (p.mr_no) paymentByPo.set(p.mr_no, (paymentByPo.get(p.mr_no) || 0) + amt);
       if (p.voucher_no) paymentByPo.set(p.voucher_no, (paymentByPo.get(p.voucher_no) || 0) + amt);
@@ -685,7 +685,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
           const rateVariance = purchaseRate - baseRate;
           const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
-          const grossPurchaseValue = quantityMT * purchaseRate * 10;
+          //const grossPurchaseValue = quantityMT * purchaseRate * 10;
+          const grossPurchaseValue = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
           const baseRateValue = quantityMT * baseRate * 10;
 
           // Real explicit premium resolution strictly from payment_master & payment_details:
@@ -726,7 +727,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const moisturePct = inspInfo.moisture;
           const gradeDownQty = inspInfo.gradeDown;
 
-          const effectiveCost = grossPurchaseValue + premiumAmount - deductionAmount;
+          //const effectiveCost = grossPurchaseValue - deductionAmount;
+          const effectiveCost = grossPurchaseValue;
           const realizationRate = Number(po.realization_rate || baseRate || purchaseRate);
           const realizationValue = quantityMT * realizationRate * 10;
           const grossProfit = realizationValue - effectiveCost;
@@ -740,7 +742,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
           const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
           const paidAmount = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
-          const pendingPayable = Math.max(0, effectiveCost - paidAmount);
+          const pendingPayable = Math.max(0, effectiveCost - paidAmount - deductionAmount);
 
           const deliveryToDate = po.delivery_to;
           const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;

@@ -395,7 +395,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       {/* ================= MULTI-DIMENSIONAL ANALYSIS NAVIGATION TABS ================= */}
       <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
         {[
-          { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 },
+          /* { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 }, */
+          { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length },
           { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.length },
           { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.length },
           { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.length },
@@ -403,8 +404,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           { id: 'SUPPLIER' as const, label: 'Supplier Wise', icon: Users, count: supplierData.length },
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
-          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
-          { id: 'ALL_DEALS' as const, label: 'All Transactions Ledger', icon: FileText, count: filteredList.length }
+          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck }
+          
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -507,14 +508,14 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         <th className="p-3 text-right">Contract Weight (MT)</th>
                         <th className="p-3 text-right">Arrived Weight (MT)</th>
                         <th className="p-3 text-right">Avg Rate (₹/Qtl)</th>
-                        <th className="p-3 text-right">Total Business Value</th>
+                        <th className="p-3 text-right">Total Value</th>
                         <th className="p-3 text-right text-emerald-800">Paid Amount (₹)</th>
                         <th className="p-3 text-right text-rose-800">Pending Balance</th>
-                        <th className="p-3 text-center">Volume Tag</th>
+                        {/* <th className="p-3 text-center">Volume Tag</th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
-{[...currentData]
+                    {[...currentData]
                         .sort((a, b) => {
                           const [yearA, monthA] = String(a.key).split("-").map(Number);
                           const [yearB, monthB] = String(b.key).split("-").map(Number);
@@ -539,7 +540,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3 text-right font-mono font-black text-slate-900">{formatIndianCurrency(row.grossValue)}</td>
                             <td className="p-3 text-right font-mono text-emerald-800 font-bold">{formatIndianCurrency(row.paidAmount)}</td>
                             <td className="p-3 text-right font-mono text-rose-800 font-bold">{formatIndianCurrency(row.pendingPayable)}</td>
-                            <td className="p-3 text-center">
+                            {/* <td className="p-3 text-center">
                               {idx < Math.ceil(currentData.length * 0.3) ? (
                                 <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
                                   🌟 Top Business Provider
@@ -553,7 +554,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                   ⚖️ Regular Business
                                 </span>
                               )}
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                     </tbody>
@@ -657,8 +658,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         <th className="p-3 text-center">Deals</th>
                         <th className="p-3 text-right">Contract MT</th>
                         <th className="p-3 text-right text-emerald-700">Total Premium Given (₹)</th>
-                        <th className="p-3 text-right">Avg Premium Rate (₹/Qtl)</th>
-                        <th className="p-3 text-center">Premium Status</th>
+                        {/* <th className="p-3 text-right">Avg Premium Rate (₹/Qtl)</th> */}
+                       {/*  <th className="p-3 text-center">Premium Status</th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -672,10 +673,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3 text-right font-mono font-black text-emerald-800">
                               {row.premiumAmount > 0 ? `+₹${Math.round(row.premiumAmount).toLocaleString()}` : '₹0'}
                             </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-800">
+                            {/* <td className="p-3 text-right font-mono font-bold text-slate-800">
                               ₹{premRate.toFixed(2)}
-                            </td>
-                            <td className="p-3 text-center">
+                            </td> */}
+                            {/* <td className="p-3 text-center">
                               {row.premiumAmount > 0 ? (
                                 <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
                                   🌟 Premium Granted
@@ -685,7 +686,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                   Standard Base Rate
                                 </span>
                               )}
-                            </td>
+                            </td> */}
                           </tr>
                         );
                       })}
@@ -756,7 +757,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         <th className="p-3 text-center">Deals</th>
                         <th className="p-3 text-center text-amber-800">Abnormal / Flagged Deals</th>
                         <th className="p-3 text-right text-rose-700">Quality Deductions (₹)</th>
-                        <th className="p-3 text-center">Performance Rating</th>
+                        {/* <th className="p-3 text-center">Performance Rating</th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -770,7 +771,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <td className="p-3 text-right font-mono font-bold text-rose-700">
                             {row.deductionAmount > 0 ? `-₹${Math.round(row.deductionAmount).toLocaleString()}` : '₹0'}
                           </td>
-                          <td className="p-3 text-center">
+                          {/* <td className="p-3 text-center">
                             {row.abnormalDeals === 0 ? (
                               <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
                                 🌟 Very Good Performer
@@ -780,7 +781,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 ⚠️ Quality Claims Flagged
                               </span>
                             )}
-                          </td>
+                          </td> */}
                         </tr>
                       ))}
                     </tbody>
@@ -847,7 +848,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     <th className="p-2.5">Supplier / Party</th>
                     <th className="p-2.5 text-center">Deals</th>
                     <th className="p-2.5 text-right">Contract MT</th>
-                    <th className="p-2.5 text-right">Total Business Value</th>
+                    <th className="p-2.5 text-right">Total Value</th>
                     <th className="p-2.5 text-right text-rose-700">Deduction Amount (₹)</th>
                     <th className="p-2.5 text-right">Deduction % of Value</th>
                   </tr>
@@ -919,9 +920,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <FileText className="w-4 h-4 text-emerald-700" />
               Complete Transaction Ledger ({filteredList.length} Records)
             </h3>
-            <p className="text-xs text-slate-500">
+            {/* <p className="text-xs text-slate-500">
               Click any transaction row to open the complete Executive Sauda Deal Slip.
-            </p>
+            </p> */}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -1017,7 +1018,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             <span>✓ Completed ({tabCounts.completed})</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => setQuickFilter('ALERTS')}
             className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
               quickFilter === 'ALERTS'
@@ -1026,7 +1027,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             }`}
           >
             <span>⚠️ Issues & Alerts ({tabCounts.alerts})</span>
-          </button>
+          </button> */}
 
           {(searchQuery || quickFilter !== 'ALL' || dateFilter !== 'ALL') && (
             <button
