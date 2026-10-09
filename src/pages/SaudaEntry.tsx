@@ -1084,7 +1084,7 @@ export default function SaudaEntry({
             />
           </div>
 
-          {/* Section 3: Quality Details Table (Multiple Agency & Marka Support) */}
+          {/* Section 3: Quality Details */}
           <div id="quality-details" className="scroll-mt-14">
             <QualityDetailsTable
               qualityDetails={formData.quality_details || []}

@@ -523,7 +523,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
-      setSaudaList(saudasData || []);
+      // Restrict strictly to September month
+      const isSeptember = (s: any) => {
+        const dStr = s.date || s.b_date || s.created_at || '';
+        if (!dStr) return false;
+        const d = new Date(dStr);
+        return !isNaN(d.getTime()) && d.getMonth() === 8;
+      };
+      setSaudaList((saudasData || []).filter(isSeptember));
       setPoList(posData || []);
       setArrivalsList(arrivalsData || []);
       setScpList(scpData || []);
@@ -957,6 +964,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     if (startDate && (!s.date || new Date(s.date) < new Date(startDate))) return false;
     if (endDate && (!s.date || new Date(s.date) > new Date(endDate))) return false;
+
+    // Constrain strictly to September month
+    const saudaDateStr = s.date || (s as any).b_date || (s as any).created_at || '';
+    if (saudaDateStr) {
+      const d = new Date(saudaDateStr);
+      if (!isNaN(d.getTime()) && d.getMonth() !== 8) return false;
+    }
 
     return true;
   }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
