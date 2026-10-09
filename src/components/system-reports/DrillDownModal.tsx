@@ -33,6 +33,10 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
     value: string;
   } | null>(null);
 
+  const isPremiumDrillDown = useMemo(() => {
+    return (title || '').toLowerCase().includes('premium');
+  }, [title]);
+
   // 1. Grouped Suppliers
   const supplierGroups = useMemo(() => {
     const map = new Map<string, {
@@ -398,6 +402,24 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
         g.saudaSet.size,
         g.totalQuantityMT.toFixed(2)
       ]);
+    } else if (isPremiumDrillDown) {
+      headers = ['#', 'Date', 'Sauda / PO', 'Broker', 'Area & Grade', 'Qty (MT)', 'Premium (₹/Qtl)', 'Premium'];
+      rows = filteredTransactions.map((t, idx) => {
+        const rateStr = t.premiumRate > 0
+          ? t.premiumRate.toFixed(0)
+          : (t.quantityMT > 0 && t.premiumAmount > 0 ? (t.premiumAmount / (t.quantityMT * 10)).toFixed(0) : '0');
+        const areaGrade = t.area && t.area !== '-' ? `${t.grade} (${t.area})` : t.grade;
+        return [
+          idx + 1,
+          t.date,
+          `"${t.poNo || t.saudaNo}"`,
+          `"${t.broker || 'DIRECT'}"`,
+          `"${areaGrade}"`,
+          t.quantityMT.toFixed(2),
+          rateStr,
+          t.premiumAmount.toFixed(2)
+        ];
+      });
     } else {
       // Standard comprehensive transaction lines
       headers = [
@@ -535,7 +557,16 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
                 <span className="text-slate-600">Total Volume: <strong className="text-emerald-800 font-black">{filteredGrades.reduce((a, b) => a + b.totalQuantityMT, 0).toFixed(2)} MT</strong></span>
               </>
             )}
-            {viewMode === 'transactions' && (
+            {viewMode === 'transactions' && isPremiumDrillDown && (
+              <>
+                <span className="text-slate-600">Lines: <strong className="text-emerald-950 font-black">{filteredTransactions.length}</strong></span>
+                <span className="text-slate-600">Weight: <strong className="text-emerald-800 font-black">{filteredTransactions.reduce((a, b) => a + b.quantityMT, 0).toFixed(2)} MT</strong></span>
+                <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                  Total Premium: <strong className="font-black text-amber-950">₹{filteredTransactions.reduce((a, b) => a + b.premiumAmount, 0).toLocaleString()}</strong>
+                </span>
+              </>
+            )}
+            {viewMode === 'transactions' && !isPremiumDrillDown && (
               <>
                 <span className="text-slate-600">Lines: <strong className="text-emerald-950 font-black">{filteredTransactions.length}</strong></span>
                 <span className="text-slate-600">Weight: <strong className="text-emerald-800 font-black">{filteredTransactions.reduce((a, b) => a + b.quantityMT, 0).toFixed(2)} MT</strong></span>
@@ -1037,8 +1068,84 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
             </table>
           )}
 
-          {/* ================= 8. COMPREHENSIVE TRANSACTIONS VIEW ================= */}
-          {viewMode === 'transactions' && (
+          {/* ================= 8. TRANSACTIONS WITH PREMIUM VIEW (SPECIFIC USER FIELDS) ================= */}
+          {viewMode === 'transactions' && isPremiumDrillDown && (
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Date</th>
+                  <th className="p-2.5">Sauda / PO</th>
+                  <th className="p-2.5">Broker</th>
+                  <th className="p-2.5">Area & Grade</th>
+                  <th className="p-2.5 text-right">Qty (MT)</th>
+                  <th className="p-2.5 text-right font-black text-amber-800">Premium (₹/Qtl)</th>
+                  <th className="p-2.5 text-right font-black text-amber-950">Premium</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                {filteredTransactions.map((t, idx) => (
+                  <tr key={t.txnId || idx} className="hover:bg-amber-50/50 transition font-mono text-[11px]">
+                    <td className="p-2.5 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2.5 text-slate-600 whitespace-nowrap">{t.date}</td>
+                    <td className="p-2.5 font-bold text-emerald-950">
+                      <div>{t.poNo}</div>
+                      {t.saudaNo && t.saudaNo !== t.poNo && (
+                        <div className="text-[10px] text-slate-400 font-normal">{t.saudaNo}</div>
+                      )}
+                    </td>
+                    <td className="p-2.5 max-w-[150px] truncate font-sans font-medium text-slate-800" title={t.broker}>
+                      {t.broker || 'DIRECT'}
+                    </td>
+                    <td className="p-2.5 font-sans">
+                      <span className="font-bold text-slate-800">{t.grade}</span>
+                      {t.area && t.area !== '-' && (
+                        <span className="text-[10px] text-slate-500 block">{t.area}</span>
+                      )}
+                    </td>
+                    <td className="p-2.5 text-right font-bold text-emerald-900">{t.quantityMT.toFixed(2)}</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-amber-800">
+                      {t.premiumRate > 0
+                        ? `+₹${t.premiumRate.toFixed(0)}/Qtl`
+                        : (t.quantityMT > 0 && t.premiumAmount > 0
+                            ? `+₹${(t.premiumAmount / (t.quantityMT * 10)).toFixed(0)}/Qtl`
+                            : '—')}
+                    </td>
+                    <td className="p-2.5 text-right text-amber-800 font-black text-xs font-mono">
+                      ₹{t.premiumAmount.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-amber-50/80 text-amber-950 font-black text-xs border-t-2 border-amber-300 font-mono">
+                  <td className="p-2.5 text-center">Totals</td>
+                  <td className="p-2.5" colSpan={4}>
+                    {filteredTransactions.length} Premium Transaction{filteredTransactions.length !== 1 ? 's' : ''}
+                  </td>
+                  <td className="p-2.5 text-right text-emerald-900 font-bold">
+                    {filteredTransactions.reduce((acc, t) => acc + t.quantityMT, 0).toFixed(2)} MT
+                  </td>
+                  <td className="p-2.5 text-right text-amber-800">
+                    Avg: ₹{
+                      filteredTransactions.reduce((acc, t) => acc + t.quantityMT, 0) > 0
+                        ? (
+                            filteredTransactions.reduce((acc, t) => acc + t.premiumAmount, 0) /
+                            (filteredTransactions.reduce((acc, t) => acc + t.quantityMT, 0) * 10)
+                          ).toFixed(0)
+                        : '0'
+                    }/Qtl
+                  </td>
+                  <td className="p-2.5 text-right font-black text-amber-900 text-sm">
+                    ₹{filteredTransactions.reduce((acc, t) => acc + t.premiumAmount, 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+
+          {/* ================= 9. GENERAL COMPREHENSIVE TRANSACTIONS VIEW ================= */}
+          {viewMode === 'transactions' && !isPremiumDrillDown && (
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">

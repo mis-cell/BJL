@@ -263,17 +263,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const isUser2 = isUserId2();
   const isAdminOrL4 = isUserAdmin() || isL5OrAdmin();
 
-  const canSeeChecked = isAdminOrL4 && !isUser10;
-  const canSeeRejected = (isAdminOrL4 || isUser2) && !isUser10;
-  const canSeeAllHistory = isAdminOrL4 && !isUser10 && !isUser2;
-
-  useEffect(() => {
-    if (isUser10 && !isUserAdmin()) {
-      if (statusTab !== 'pending') setStatusTab('pending');
-    } else if (isUser2 && !isUserAdmin() && !isL5OrAdmin()) {
-      if (statusTab === 'checked' || statusTab === 'all') setStatusTab('pending');
-    }
-  }, [statusTab, isUser10, isUser2]);
+  const canSeeChecked = true;
+  const canSeeRejected = true;
+  const canSeeAllHistory = true;
 
   const isCheckedSauda = (s: Sauda) => {
     return Boolean(
@@ -294,7 +286,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const isPendingUncheckedSauda = (s: Sauda) => {
-    return !isCheckedSauda(s) && !isRejectedSauda(s) && !isSaudaInCheckPointOrPo(s);
+    return !isCheckedSauda(s) && !isRejectedSauda(s);
   };
 
   const handleMarkCheck = async (entry: Sauda) => {
@@ -966,11 +958,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     if (startDate && (!s.date || new Date(s.date) < new Date(startDate))) return false;
     if (endDate && (!s.date || new Date(s.date) > new Date(endDate))) return false;
 
-    if (!canViewCompletedData()) {
-      const saudaStatus = getSaudaStatusAndWeight(s).status;
-      if (saudaStatus === 'completed') return false;
-    }
-
     return true;
   }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
 
@@ -1585,16 +1572,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </div>
           </div>
         </div>
-
-        {/* 5. Floating Quick Action Button */}
-        <button
-          onClick={onNew}
-          className="fixed bottom-12 right-8 z-30 bg-[#174C2C] hover:bg-[#103A20] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#0d301b] group"
-          title="Quick Add New Sauda"
-        >
-          <Plus className="h-5 w-5 text-amber-300 group-hover:rotate-90 transition-transform duration-300" />
-          <span className="pr-1">Quick Add</span>
-        </button>
       </div>
 
       {printingBook && (

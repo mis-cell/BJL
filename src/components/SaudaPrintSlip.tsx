@@ -215,9 +215,14 @@ export default function SaudaPrintSlip({ sauda }: Props) {
                 </span>
              </div>
           </div>
-          <div className="flex justify-between items-end gap-4">
-             <div className="text-black font-bold shrink-0">Unit : Bales/H. Bales/Drums/Loose</div>
-             <div className="flex w-[210px] items-end shrink-0">
+          <div className="flex justify-between gap-6">
+             <div className="flex flex-1 items-end">
+                <span className="whitespace-nowrap mr-2 text-black font-bold shrink-0">Unit :</span>
+                <span className="flex-1 border-b border-black border-dotted text-center pb-0.5 font-bold text-black uppercase">
+                   {sauda.unit_type || (sauda as any).unit || (sauda as any).unit_name || (sauda as any).unitType || 'BALES'}
+                </span>
+             </div>
+             <div className="flex flex-1 items-end">
                 <span className="whitespace-nowrap mr-2 text-black font-bold shrink-0">Total Wt. :</span>
                 <span className="flex-1 border-b border-black border-dotted text-center pb-0.5 font-bold text-black inline-flex justify-center items-center">
                    {sauda.total_wt_in_ton ? `${sauda.total_wt_in_ton} tons` : ''}

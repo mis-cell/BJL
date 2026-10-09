@@ -187,10 +187,10 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
   // 7. Reports & Administration
   {
     id: 'reports',
-    label: 'System Reports',
+    label: 'Report',
     category: 'Reports & Administration',
     pageId: 'reports',
-    aliases: ['reports', 'system_reports', 'system reports', 'analytical_reports']
+    aliases: ['report', 'reports', 'system_reports', 'system reports', 'analytical_reports']
   },
   {
     id: 'vyapari',

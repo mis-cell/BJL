@@ -389,7 +389,7 @@ export default function LegacyLayout({
       label: 'Reports & Admin',
       icon: BarChart3,
       subItems: [
-        { id: 'reports', label: 'System Reports', icon: BarChart3, pageId: 'reports' },
+        { id: 'reports', label: 'Report', icon: BarChart3, pageId: 'reports' },
         { id: 'system_change_logs', label: 'System Change Log', icon: History, pageId: 'system_change_logs' },
         { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
         { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
@@ -717,7 +717,7 @@ export default function LegacyLayout({
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-[#1E4D2C] text-white flex items-center gap-2 font-bold cursor-pointer transition-colors"
                     >
-                      <span>📊 System Reports</span>
+                      <span>📊 Report</span>
                     </button>
                   )}
                   <button

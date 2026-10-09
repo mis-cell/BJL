@@ -375,6 +375,18 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
               // Get row's applicable combinations
               const rowCombs = allCombinations.filter(c => c.rowIndex === i);
 
+              // Disallow duplicate Quality selection: filter out qualities selected in other rows
+              const otherRowQualities = new Set(
+                qualityDetails
+                  .filter((_, idx) => idx !== i)
+                  .map(r => String(r.quality || '').trim().toUpperCase())
+                  .filter(Boolean)
+              );
+              const availableGradeOptions = gradeOptions.filter(g => {
+                const norm = String(g).trim().toUpperCase();
+                return norm === String(qd.quality || '').trim().toUpperCase() || !otherRowQualities.has(norm);
+              });
+
               return (
                 <React.Fragment key={i}>
                   <tr 
@@ -390,7 +402,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                               name="qd_quality"
                               value={qd.quality || ''}
                               onChange={(val) => onQualityChange(i, 'quality', val)}
-                              options={gradeOptions}
+                              options={availableGradeOptions}
                               placeholder="Select Quality..."
                               isRequired={false}
                               compact={true}
@@ -442,7 +454,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                               name="qd_quality"
                               value={qd.quality || ''}
                               onChange={(val) => onQualityChange(i, 'quality', val)}
-                              options={gradeOptions}
+                              options={availableGradeOptions}
                               placeholder="--Select Quality *--"
                               isRequired={true}
                               compact={true}

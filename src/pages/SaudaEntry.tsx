@@ -552,7 +552,30 @@ export default function SaudaEntry({
   const handleQualityChange = (index: number, field: string, value: any) => {
     setFormData(prev => {
       const qd = [...(prev.quality_details || [])];
+
+      // Prevent selecting duplicate Quality across rows
+      if (field === 'quality' && value) {
+        const normVal = String(value).trim().toUpperCase();
+        const alreadyExists = qd.some((r, rIdx) => rIdx !== index && String(r.quality || '').trim().toUpperCase() === normVal);
+        if (alreadyExists) {
+          alert(`Quality "${value}" is already selected in another row. Each quality can only be added once.`);
+          return prev;
+        }
+      }
+
       qd[index] = { ...qd[index], [field]: value };
+
+      // When modifying agencies or markas on the first row (index 0), automatically propagate to all subsequent spawned rows
+      if (index === 0 && (field === 'agencies' || field === 'markas')) {
+        for (let j = 1; j < qd.length; j++) {
+          qd[j] = {
+            ...qd[j],
+            [field]: Array.isArray(value) ? [...value] : value,
+            [field === 'agencies' ? 'agency' : 'marka']: Array.isArray(value) ? (value[0] || '') : value,
+            applicableCombinations: undefined
+          };
+        }
+      }
 
       if (field === 'quality' && value && prev.area) {
         const calculatedPrice = recalculateRowRate(prev.date || today, prev.area, value);
@@ -576,22 +599,35 @@ export default function SaudaEntry({
   };
 
   const handleAddQualityRow = () => {
-    setFormData(prev => ({
-      ...prev,
-      quality_details: [
-        ...(prev.quality_details || []),
-        { 
-          quality: '', 
-          qty: 0, 
-          agency: '', 
-          marka: '', 
-          rs: 0, 
-          agencies: [], 
-          markas: [], 
-          applicableCombinations: [] 
-        }
-      ]
-    }));
+    setFormData(prev => {
+      const qdList = prev.quality_details || [];
+      const firstRow: any = qdList[0] || {};
+      const defaultAgencies = Array.isArray(firstRow.agencies) && firstRow.agencies.length > 0
+        ? [...firstRow.agencies]
+        : (firstRow.agency ? [firstRow.agency] : []);
+      const defaultMarkas = Array.isArray(firstRow.markas) && firstRow.markas.length > 0
+        ? [...firstRow.markas]
+        : (firstRow.marka ? [firstRow.marka] : []);
+      const defaultAgency = firstRow.agency || defaultAgencies[0] || '';
+      const defaultMarka = firstRow.marka || defaultMarkas[0] || '';
+
+      return {
+        ...prev,
+        quality_details: [
+          ...qdList,
+          { 
+            quality: '', 
+            qty: 0, 
+            agency: defaultAgency, 
+            marka: defaultMarka, 
+            rs: 0, 
+            agencies: defaultAgencies, 
+            markas: defaultMarkas, 
+            applicableCombinations: undefined 
+          }
+        ]
+      };
+    });
   };
 
   const handleDeleteQualityRow = () => {

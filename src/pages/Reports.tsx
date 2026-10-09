@@ -184,7 +184,7 @@ export default function Reports({ onClose }: ReportsProps) {
   };
 
   return (
-    <LegacyLayout title="Reports" onClose={onClose}>
+    <LegacyLayout title="Report" onClose={onClose}>
       <div className="space-y-4 font-sans text-slate-800">
         
         {/* ================= HEADER BAR ================= */}
@@ -193,7 +193,7 @@ export default function Reports({ onClose }: ReportsProps) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
               <h2 className="text-lg font-black uppercase tracking-wider text-yellow-300">
-                Reports
+                Report
               </h2>
             </div>
             {viewMode === 'simple' && (
