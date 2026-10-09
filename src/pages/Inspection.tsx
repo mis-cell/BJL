@@ -136,14 +136,16 @@ export default function Inspection({ onNavigate, onClose }: InspectionProps) {
           </div>
         )}
 
-        {/* HEADER TOOLBAR */}
-        <InspectionActionBar
-          viewMode={viewMode}
-          onBack={() => setViewMode("dashboard")}
-          onOpenNewForm={handleOpenNewForm}
-          onRefresh={() => fetchInspectionRecords(true)}
-          loading={loading}
-        />
+        {/* HEADER TOOLBAR - ONLY SHOWN IN FORM MODE */}
+        {viewMode === "form" && (
+          <InspectionActionBar
+            viewMode={viewMode}
+            onBack={() => setViewMode("dashboard")}
+            onOpenNewForm={handleOpenNewForm}
+            onRefresh={() => fetchInspectionRecords(true)}
+            loading={loading}
+          />
+        )}
 
         {/* VIEW MODE SWITCH */}
         {viewMode === "dashboard" ? (

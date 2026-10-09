@@ -524,65 +524,65 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     <LegacyLayout title="SMS SAUDA DESK ↔ SAUDA DESK MATCHING SYSTEM" onClose={onClose}>
       <div className="flex-1 flex flex-col min-h-0 bg-slate-100 p-3 sm:p-4 font-sans ">
         
-        {/* TOP KPI STATS SUMMARY */}
+        {/* TOP KPI STATS SUMMARY (Light & Colorful) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
           
-          {/* Card 1: Total Inbound SMS */}
-          <div className="bg-white border border-slate-300 rounded-lg p-3 flex items-center justify-between shadow-xs">
+          {/* Card 1: Total Inbound SMS (Light Indigo/Blue) */}
+          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 border border-blue-200 rounded-xl p-3 flex items-center justify-between shadow-xs hover:shadow-md transition-all">
             <div className="flex flex-col">
-              <span className="text-[#024a68] font-extrabold text-2xl sm:text-3xl font-mono leading-none tracking-tight">
+              <span className="text-blue-950 font-black text-2xl sm:text-3xl font-mono leading-none tracking-tight">
                 {kpiStats.total}
               </span>
-              <span className="text-slate-500 font-bold text-[10px] uppercase tracking-wider mt-1">
+              <span className="text-blue-700 font-extrabold text-[10px] uppercase tracking-wider mt-1">
                 Total Inbound SMS
               </span>
             </div>
-            <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[#024a68]">
+            <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
               <MessageSquare className="h-5 w-5" />
             </div>
           </div>
 
-          {/* Card 2: Pending Matching */}
-          <div className="bg-white border border-slate-300 rounded-lg p-3 flex items-center justify-between shadow-xs">
+          {/* Card 2: Pending Matching (Light Amber/Orange) */}
+          <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50/60 border border-amber-200 rounded-xl p-3 flex items-center justify-between shadow-xs hover:shadow-md transition-all">
             <div className="flex flex-col">
-              <span className="text-amber-600 font-extrabold text-2xl sm:text-3xl font-mono leading-none tracking-tight">
+              <span className="text-amber-950 font-black text-2xl sm:text-3xl font-mono leading-none tracking-tight">
                 {kpiStats.pending}
               </span>
-              <span className="text-slate-500 font-bold text-[10px] uppercase tracking-wider mt-1">
+              <span className="text-amber-700 font-extrabold text-[10px] uppercase tracking-wider mt-1">
                 Pending Verification
               </span>
             </div>
-            <div className="p-2.5 bg-amber-50 border border-amber-100 rounded-lg text-amber-600">
+            <div className="p-2.5 bg-amber-100/80 border border-amber-200 rounded-xl text-amber-600 shadow-xs">
               <Clock className="h-5 w-5" />
             </div>
           </div>
 
-          {/* Card 3: Suggested Matches Found */}
-          <div className="bg-white border border-slate-300 rounded-lg p-3 flex items-center justify-between shadow-xs">
+          {/* Card 3: Suggested Matches Found (Light Purple/Violet) */}
+          <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 border border-purple-200 rounded-xl p-3 flex items-center justify-between shadow-xs hover:shadow-md transition-all">
             <div className="flex flex-col">
-              <span className="text-sky-600 font-extrabold text-2xl sm:text-3xl font-mono leading-none tracking-tight">
+              <span className="text-purple-950 font-black text-2xl sm:text-3xl font-mono leading-none tracking-tight">
                 {kpiStats.suggestedMatches}
               </span>
-              <span className="text-slate-500 font-bold text-[10px] uppercase tracking-wider mt-1">
+              <span className="text-purple-700 font-extrabold text-[10px] uppercase tracking-wider mt-1">
                 Suggested Matches (≥50%)
               </span>
             </div>
-            <div className="p-2.5 bg-sky-50 border border-sky-100 rounded-lg text-sky-600">
+            <div className="p-2.5 bg-purple-100/80 border border-purple-200 rounded-xl text-purple-600 shadow-xs">
               <Sparkles className="h-5 w-5" />
             </div>
           </div>
 
-          {/* Card 4: Sauda Done & Linked */}
-          <div className="bg-white border border-slate-300 rounded-lg p-3 flex items-center justify-between shadow-xs">
+          {/* Card 4: Sauda Done & Linked (Light Emerald/Teal) */}
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 border border-emerald-200 rounded-xl p-3 flex items-center justify-between shadow-xs hover:shadow-md transition-all">
             <div className="flex flex-col">
-              <span className="text-emerald-700 font-extrabold text-2xl sm:text-3xl font-mono leading-none tracking-tight">
+              <span className="text-emerald-950 font-black text-2xl sm:text-3xl font-mono leading-none tracking-tight">
                 {kpiStats.done}
               </span>
-              <span className="text-slate-500 font-bold text-[10px] uppercase tracking-wider mt-1">
+              <span className="text-emerald-700 font-extrabold text-[10px] uppercase tracking-wider mt-1">
                 Sauda Done (Linked)
               </span>
             </div>
-            <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-700">
+            <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>

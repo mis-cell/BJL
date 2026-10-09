@@ -78,49 +78,60 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Top Stats */}
+      {/* Top Stats (Light & Colorful) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        {/* Card 1: Total Inspections (Light Indigo/Blue) */}
+        <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 rounded-xl p-3.5 border border-blue-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+            <div className="text-[10px] text-blue-700 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
               <span>Total Inspections</span>
               {isDateFiltered && (
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded font-semibold lowercase">
                   filtered
                 </span>
               )}
             </div>
-            <div className="text-2xl font-black text-blue-900 mt-1">{totalInspections}</div>
+            <div className="text-xl sm:text-2xl font-black text-blue-950 font-mono tracking-tight mt-0.5">{totalInspections}</div>
           </div>
-          <CheckCircle className="w-8 h-8 text-blue-500/30" />
+          <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
+            <CheckCircle className="w-5 h-5" />
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+
+        {/* Card 2: Avg Actual Moisture (Light Emerald/Teal) */}
+        <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-xl p-3.5 border border-emerald-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+            <div className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
               <span>Avg Actual Moisture</span>
               {isDateFiltered && (
-                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded font-semibold lowercase">
                   filtered
                 </span>
               )}
             </div>
-            <div className="text-2xl font-black text-emerald-800 mt-1">{avgMoisture}%</div>
+            <div className="text-xl sm:text-2xl font-black text-emerald-950 font-mono tracking-tight mt-0.5">{avgMoisture}%</div>
           </div>
-          <Clock className="w-8 h-8 text-emerald-500/30" />
+          <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
+            <Clock className="w-5 h-5" />
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+
+        {/* Card 3: Total Deductions (Light Amber/Orange) */}
+        <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50/60 rounded-xl p-3.5 border border-amber-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-500 font-bold uppercase flex items-center gap-1.5">
+            <div className="text-[10px] text-amber-700 font-extrabold uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
               <span>Total Deductions (₹)</span>
               {isDateFiltered && (
-                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-semibold lowercase">
+                <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-semibold lowercase">
                   filtered
                 </span>
               )}
             </div>
-            <div className="text-2xl font-black text-amber-800 mt-1">{formatIndianCurrency(totalDeductions)}</div>
+            <div className="text-xl sm:text-2xl font-black text-amber-950 font-mono tracking-tight mt-0.5">{formatIndianCurrency(totalDeductions)}</div>
           </div>
-          <Printer className="w-8 h-8 text-amber-500/30" />
+          <div className="p-2.5 bg-amber-100/80 border border-amber-200 rounded-xl text-amber-600 shadow-xs">
+            <Printer className="w-5 h-5" />
+          </div>
         </div>
       </div>
 

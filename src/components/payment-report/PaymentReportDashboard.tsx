@@ -53,74 +53,77 @@ export const PaymentReportDashboard: React.FC<PaymentReportDashboardProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      {/* Dashboard Summary Cards */}
+      {/* Dashboard Summary Cards (Light & Colorful) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 auto-rows-fr">
-        {/* Total Vouchers */}
-        <div className="h-full min-w-0 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-3 rounded-xl border border-blue-400/40 shadow-md flex items-center justify-between">
+        {/* Total Vouchers (Light Indigo/Blue) */}
+        <div className="h-full min-w-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 p-3 rounded-xl border border-blue-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-100">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">
               Total Vouchers
             </p>
-            <h3 className="text-xl font-black mt-0.5">
+            <h3 className="text-xl font-black text-blue-950 font-mono mt-0.5">
               {paymentList.length}
             </h3>
+            <p className="text-[9px] text-blue-600 font-semibold mt-0.5 truncate">
+              Vouchers Registered
+            </p>
           </div>
-          <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+          <div className="shrink-0 ml-2 p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
             <Wallet className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Total Paid Amount */}
-        <div className="h-full min-w-0 bg-gradient-to-br from-emerald-600 to-emerald-800 text-white p-3 rounded-xl border border-emerald-400/40 shadow-md flex items-center justify-between">
+        {/* Total Paid Amount (Light Emerald/Teal) */}
+        <div className="h-full min-w-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 p-3 rounded-xl border border-emerald-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">
               Total Paid Amount
             </p>
-            <h3 className="text-lg font-black mt-0.5 truncate">
+            <h3 className="text-xl font-black text-emerald-950 font-mono mt-0.5 truncate">
               {formatIndianCurrency(totalPaidSum)}
             </h3>
-            <p className="text-[9px] text-emerald-200 mt-0.5 truncate">
+            <p className="text-[9px] text-emerald-600 font-semibold mt-0.5 truncate">
               {completedCount} Vouchers Cleared
             </p>
           </div>
-          <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+          <div className="shrink-0 ml-2 p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Total Payable Value */}
-        <div className="h-full min-w-0 bg-gradient-to-br from-violet-600 to-violet-800 text-white p-3 rounded-xl border border-violet-400/40 shadow-md flex items-center justify-between">
+        {/* Total Payable Value (Light Purple/Violet) */}
+        <div className="h-full min-w-0 bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 p-3 rounded-xl border border-purple-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-100">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700">
               Total Payable Value
             </p>
-            <h3 className="text-lg font-black mt-0.5 truncate">
+            <h3 className="text-xl font-black text-purple-950 font-mono mt-0.5 truncate">
               {formatIndianCurrency(totalPayableSum)}
             </h3>
-            <p className="text-[9px] text-violet-200 mt-0.5 truncate">
+            <p className="text-[9px] text-purple-600 font-semibold mt-0.5 truncate">
               Total Gross Invoice Value
             </p>
           </div>
-          <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+          <div className="shrink-0 ml-2 p-2.5 bg-purple-100/80 border border-purple-200 rounded-xl text-purple-600 shadow-xs">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Pending / Retention */}
-        <div className="h-full min-w-0 bg-gradient-to-br from-orange-500 to-orange-700 text-white p-3 rounded-xl border border-orange-300/50 shadow-md flex items-center justify-between">
+        {/* Pending / Retention (Light Rose) */}
+        <div className="h-full min-w-0 bg-gradient-to-br from-rose-50 via-white to-rose-50/60 p-3 rounded-xl border border-rose-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-orange-100 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-rose-600" />
               Pending / Retention
             </p>
-            <h3 className="text-lg font-black mt-0.5 text-white truncate">
+            <h3 className="text-xl font-black text-rose-950 font-mono mt-0.5 truncate">
               {formatIndianCurrency(totalPendingSum)}
             </h3>
-            <p className="text-[9px] text-orange-100 mt-0.5 font-semibold truncate">
+            <p className="text-[9px] text-rose-600 font-semibold mt-0.5 truncate">
               {pendingCount} Outstanding / Retention
             </p>
           </div>
-          <div className="shrink-0 ml-2 p-2 bg-white/15 rounded-lg text-white">
+          <div className="shrink-0 ml-2 p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-600 shadow-xs">
             <Clock className="w-5 h-5" />
           </div>
         </div>

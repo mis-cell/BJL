@@ -188,87 +188,87 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
     <div className="space-y-2.5">
       {/* Top Stat Cards & Chart layout (Colour Full as per card titles) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {/* Card 1: Active Pending P.O. (Vibrant Rose) */}
+        {/* Card 1: Active Pending P.O. (Light Rose) */}
         <div 
           onClick={() => setStatusFilter('pending')}
-          className={`rounded-xl p-3 shadow-md hover:shadow-lg transition-all flex items-center justify-between cursor-pointer border text-white ${
+          className={`rounded-xl p-3 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer border ${
             statusFilter === 'pending' 
-              ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 border-white/60 ring-2 ring-white scale-[1.02]' 
-              : 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 border-rose-400/40 hover:-translate-y-0.5'
+              ? 'bg-rose-100/90 border-rose-400 ring-2 ring-rose-400/50 scale-[1.02]' 
+              : 'bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-200 hover:-translate-y-0.5'
           }`}
           title="Filter table by Active Pending P.O."
         >
           <div>
-            <p className="text-[10px] font-extrabold text-rose-100 uppercase tracking-wider mb-0.5">Active Pending P.O.</p>
-            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">{totalPendingPos}</p>
+            <p className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider mb-0.5">Active Pending P.O.</p>
+            <p className="text-xl sm:text-2xl font-black text-rose-950 font-mono tracking-tight">{totalPendingPos}</p>
           </div>
-          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
+          <div className="p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-600 shadow-xs">
             <Clock className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 2: Total Generated POs (Vibrant Indigo/Blue) */}
+        {/* Card 2: Total Generated POs (Light Indigo/Blue) */}
         <div 
           onClick={() => setStatusFilter('all')}
-          className={`rounded-xl p-3 shadow-md hover:shadow-lg transition-all flex items-center justify-between cursor-pointer border text-white ${
+          className={`rounded-xl p-3 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer border ${
             statusFilter === 'all' 
-              ? 'bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-900 border-white/60 ring-2 ring-white scale-[1.02]' 
-              : 'bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 border-indigo-400/40 hover:-translate-y-0.5'
+              ? 'bg-blue-100/90 border-blue-400 ring-2 ring-blue-400/50 scale-[1.02]' 
+              : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 border-blue-200 hover:-translate-y-0.5'
           }`}
           title="Show all generated P.O records"
         >
           <div>
-            <p className="text-[10px] font-extrabold text-blue-100 uppercase tracking-wider mb-0.5">Total Generated POs</p>
-            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">{totalGeneratedPos}</p>
+            <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mb-0.5">Total Generated POs</p>
+            <p className="text-xl sm:text-2xl font-black text-blue-950 font-mono tracking-tight">{totalGeneratedPos}</p>
           </div>
-          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
+          <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
             <ClipboardList className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 3: Cumulative PO Weight (Vibrant Emerald/Teal) */}
-        <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-xl p-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-between border border-emerald-400/40 text-white">
+        {/* Card 3: Cumulative PO Weight (Light Emerald/Teal) */}
+        <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-xl p-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-between border border-emerald-200">
           <div>
-            <p className="text-[10px] font-extrabold text-emerald-100 uppercase tracking-wider mb-0.5">Cumulative PO Weight</p>
-            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
-              {cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-emerald-200">Tons</span>
+            <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider mb-0.5">Cumulative PO Weight</p>
+            <p className="text-xl sm:text-2xl font-black text-emerald-950 font-mono tracking-tight">
+              {cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-emerald-700">Tons</span>
             </p>
           </div>
-          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
+          <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
             <TrendingUp className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 4: Status Mix (Vibrant Purple/Violet) */}
-        <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-xl p-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-between gap-2 border border-purple-400/40 text-white">
+        {/* Card 4: Status Mix (Light Purple/Violet) */}
+        <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 rounded-xl p-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-between gap-2 border border-purple-200">
           <div className="flex-1 min-w-[85px]">
-            <p className="text-[10px] font-extrabold text-purple-100 uppercase tracking-wider mb-1">Status Mix</p>
+            <p className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider mb-1">Status Mix</p>
             <div className="space-y-1">
               <button 
                 onClick={() => setStatusFilter('pending')}
                 className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
-                  statusFilter === 'pending' ? 'bg-white text-rose-800 shadow-xs' : 'bg-black/20 text-purple-100 hover:bg-black/30'
+                  statusFilter === 'pending' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 border border-rose-200/80 hover:bg-rose-100'
                 }`}
                 title="Filter by Pending"
               >
-                <span className="w-2 h-2 rounded-full inline-block bg-rose-400" />
+                <span className={`w-2 h-2 rounded-full inline-block ${statusFilter === 'pending' ? 'bg-white' : 'bg-rose-500'}`} />
                 <span className="truncate">Pending ({totalPendingPos})</span>
               </button>
               <button 
                 onClick={() => setStatusFilter('completed')}
                 className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
-                  statusFilter === 'completed' ? 'bg-white text-emerald-800 shadow-xs' : 'bg-black/20 text-purple-100 hover:bg-black/30'
+                  statusFilter === 'completed' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100'
                 }`}
                 title="Filter by Completed"
               >
-                <span className="w-2 h-2 rounded-full inline-block bg-emerald-300" />
+                <span className={`w-2 h-2 rounded-full inline-block ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
                 <span className="truncate">Completed ({totalCompletedPos})</span>
               </button>
             </div>
           </div>
           <div className="w-14 h-11 relative flex justify-center items-center shrink-0">
             {scopedPos.length === 0 ? (
-              <div className="text-purple-200 text-[8.5px] font-bold">No Data</div>
+              <div className="text-purple-400 text-[8.5px] font-bold">No Data</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%" minWidth={80} minHeight={44}>
                 <PieChart>
@@ -282,12 +282,12 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                     dataKey="value"
                   >
                     {statusPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[index]} stroke="#4c1d95" strokeWidth={1} />
+                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[index]} stroke="#c084fc" strokeWidth={1} />
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    contentStyle={{ background: '#1e1b4b', border: '1px solid #6366f1', color: '#fff', fontSize: '9px', borderRadius: '8px', padding: '2px 6px' }}
-                    itemStyle={{ padding: 0, color: '#fff' }}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #c084fc', color: '#1e1b4b', fontSize: '9px', borderRadius: '8px', padding: '2px 6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                    itemStyle={{ padding: 0, color: '#1e1b4b' }}
                     formatter={(value: any, name: any) => [`${value} POs`, name]}
                   />
                 </PieChart>

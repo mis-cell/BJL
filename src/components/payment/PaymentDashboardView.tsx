@@ -366,98 +366,98 @@ export function PaymentDashboardView({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Card 1: Total Vouchers */}
-          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3 rounded-xl border border-indigo-700/50 shadow-sm flex items-center justify-between">
+          {/* Card 1: Total Vouchers (Light Indigo/Blue) */}
+          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 rounded-xl p-3 border border-blue-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
-              <h3 className="text-xl font-black mt-0.5">{yearMonthFilteredPayments.length}</h3>
-              <p className="text-[9px] text-indigo-300 mt-0.5 truncate">Total Voucher Count</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">Total Vouchers</p>
+              <h3 className="text-xl font-black text-blue-950 font-mono mt-0.5">{yearMonthFilteredPayments.length}</h3>
+              <p className="text-[9px] text-blue-600 font-semibold mt-0.5 truncate">Total Voucher Count</p>
             </div>
-            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-300 shrink-0 ml-2">
+            <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs shrink-0 ml-2">
               <Wallet className="w-5 h-5" />
             </div>
           </div>
 
-          {/* Card 2: Total Paid Amount */}
+          {/* Card 2: Total Paid Amount (Light Emerald/Teal) */}
           <div 
-            className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between"
+            className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-xl p-3 border border-emerald-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between"
             title={`Exact Amount: ${formatIndianCurrency(totalPaidSum)}`}
           >
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Total Paid Amount</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Total Paid Amount</p>
               <h3 
-                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                className="text-xl font-black text-emerald-950 font-mono mt-0.5 truncate tracking-tight cursor-default"
                 title={`Exact: ${formatIndianCurrency(totalPaidSum)}`}
               >
                 {formatIndianCompactCurrency(totalPaidSum)}
               </h3>
-              <p className="text-[9px] text-emerald-300 mt-0.5 truncate">{completedCount} Vouchers Cleared</p>
+              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5 truncate">{completedCount} Vouchers Cleared</p>
             </div>
-            <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300 shrink-0 ml-2">
+            <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs shrink-0 ml-2">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
 
-          {/* Card 3: Total Payable Value */}
+          {/* Card 3: Total Payable Value (Light Purple/Violet) */}
           <div 
-            className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between"
+            className="bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 rounded-xl p-3 border border-purple-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between"
             title={`Exact Amount: ${formatIndianCurrency(totalPayableSum)}`}
           >
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">Total Payable Value</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700">Total Payable Value</p>
               <h3 
-                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                className="text-xl font-black text-purple-950 font-mono mt-0.5 truncate tracking-tight cursor-default"
                 title={`Exact: ${formatIndianCurrency(totalPayableSum)}`}
               >
                 {formatIndianCompactCurrency(totalPayableSum)}
               </h3>
-              <p className="text-[9px] text-purple-300 mt-0.5 truncate">Total Gross Invoice Value</p>
+              <p className="text-[9px] text-purple-600 font-semibold mt-0.5 truncate">Total Gross Invoice Value</p>
             </div>
-            <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300 shrink-0 ml-2">
+            <div className="p-2.5 bg-purple-100/80 border border-purple-200 rounded-xl text-purple-600 shadow-xs shrink-0 ml-2">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
 
-          {/* Card 4: Pending / Retention */}
+          {/* Card 4: Pending / Retention (Light Rose) */}
           <div 
-            className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30"
+            className="bg-gradient-to-br from-rose-50 via-white to-rose-50/60 rounded-xl p-3 border border-rose-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between"
             title={`Exact Amount: ${formatIndianCurrency(totalPendingSum)}`}
           >
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-amber-400" />
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-rose-600" />
                 Pending / Retention
               </p>
               <h3 
-                className="text-xl font-black mt-0.5 text-amber-300 truncate tracking-tight cursor-default"
+                className="text-xl font-black text-rose-950 font-mono mt-0.5 truncate tracking-tight cursor-default"
                 title={`Exact: ${formatIndianCurrency(totalPendingSum)}`}
               >
                 {formatIndianCompactCurrency(totalPendingSum)}
               </h3>
-              <p className="text-[9px] text-amber-200 mt-0.5 font-semibold truncate">{pendingCount} Outstanding / Retention</p>
+              <p className="text-[9px] text-rose-600 font-semibold mt-0.5 truncate">{pendingCount} Outstanding / Retention</p>
             </div>
-            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
-              <Clock className="w-5 h-5 text-amber-400" />
+            <div className="p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-600 shadow-xs shrink-0 ml-2">
+              <Clock className="w-5 h-5 text-rose-600" />
             </div>
           </div>
 
-          {/* Card 5: Premium */}
+          {/* Card 5: Premium (Light Amber/Orange) */}
           <div 
-            className="bg-gradient-to-br from-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-700/50 shadow-sm flex items-center justify-between"
+            className="bg-gradient-to-br from-amber-50 via-white to-orange-50/60 rounded-xl p-3 border border-amber-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between"
             title={`Exact Amount: ${formatIndianCurrency(totalPremiumData.sum)}`}
           >
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Premium</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700">Premium</p>
               <h3 
-                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                className="text-xl font-black text-amber-950 font-mono mt-0.5 truncate tracking-tight cursor-default"
                 title={`Exact: ${formatIndianCurrency(totalPremiumData.sum)}`}
               >
                 {formatIndianCompactCurrency(totalPremiumData.sum)}
               </h3>
-              <p className="text-[9px] text-amber-300 mt-0.5 truncate">{totalPremiumData.count} MR{totalPremiumData.count !== 1 ? 's' : ''} with Premium</p>
+              <p className="text-[9px] text-amber-600 font-semibold mt-0.5 truncate">{totalPremiumData.count} MR{totalPremiumData.count !== 1 ? 's' : ''} with Premium</p>
             </div>
-            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
-              <Award className="w-5 h-5 text-amber-400" />
+            <div className="p-2.5 bg-amber-100/80 border border-amber-200 rounded-xl text-amber-600 shadow-xs shrink-0 ml-2">
+              <Award className="w-5 h-5 text-amber-600" />
             </div>
           </div>
         </div>

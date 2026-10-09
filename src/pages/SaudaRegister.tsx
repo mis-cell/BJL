@@ -992,68 +992,68 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   return (
     <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Limited ERP Console" onClose={onClose}>
       <div className="space-y-4 relative pb-10 font-sans">
-        {/* 1. Four Modern Enterprise KPI Cards (Colour Full) */}
+        {/* 1. Four Modern Enterprise KPI Cards (Light & Colorful) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Active Pending Saudas (Vibrant Rose) */}
-          <div className="bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 rounded-[18px] border border-rose-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
+          {/* Card 1: Active Pending Saudas (Light Rose) */}
+          <div className="bg-gradient-to-br from-rose-50 via-white to-rose-50/60 rounded-[18px] border border-rose-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
             <div>
-              <p className="text-2xl font-black text-white tracking-tight font-mono">{pendingSaudasCount}</p>
-              <p className="text-[10px] font-extrabold text-rose-100 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-rose-100 bg-black/20 rounded-md">
+              <p className="text-2xl font-black text-rose-950 tracking-tight font-mono">{pendingSaudasCount}</p>
+              <p className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-rose-700 bg-rose-100 rounded-md border border-rose-200/60">
                 Awaiting Check Point
               </span>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
+            <div className="p-3 bg-rose-100/80 border border-rose-200 rounded-2xl text-rose-600 shadow-xs">
               <Clock className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 2: Total Registered Saudas (Vibrant Indigo/Blue) */}
-          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 rounded-[18px] border border-indigo-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
+          {/* Card 2: Total Registered Saudas (Light Indigo/Blue) */}
+          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 rounded-[18px] border border-blue-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
             <div>
-              <p className="text-2xl font-black text-white tracking-tight font-mono">{totalSaudas}</p>
-              <p className="text-[10px] font-extrabold text-blue-100 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-blue-100 bg-black/20 rounded-md">
+              <p className="text-2xl font-black text-blue-950 tracking-tight font-mono">{totalSaudas}</p>
+              <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-blue-700 bg-blue-100 rounded-md border border-blue-200/60">
                 {completedSaudas.length} in Check Point
               </span>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
+            <div className="p-3 bg-blue-100/80 border border-blue-200 rounded-2xl text-blue-600 shadow-xs">
               <ClipboardList className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 3: Cumulative Sauda Weight (Vibrant Emerald/Teal) */}
-          <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-[18px] border border-emerald-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
+          {/* Card 3: Cumulative Sauda Weight (Light Emerald/Teal) */}
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-[18px] border border-emerald-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
             <div>
-              <p className="text-2xl font-black text-white tracking-tight font-mono">
-                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-bold text-emerald-200">Tons</span>
+              <p className="text-2xl font-black text-emerald-950 tracking-tight font-mono">
+                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-bold text-emerald-700">Tons</span>
               </p>
-              <p className="text-[10px] font-extrabold text-emerald-100 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider mt-0.5">
                 {statusTab === 'pending' ? "Pending Sauda Weight" : "Cumulative Sauda Weight"}
               </p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-100 bg-black/20 rounded-md">
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-md border border-emerald-200/60">
                 {statusTab === 'pending' ? "Active Allocation" : "All Processed"}
               </span>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
+            <div className="p-3 bg-emerald-100/80 border border-emerald-200 rounded-2xl text-emerald-600 shadow-xs">
               <Scale className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 4: Book Total Value (Vibrant Amber/Orange) */}
-          <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-[18px] border border-amber-300/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
+          {/* Card 4: Book Total Value (Light Amber/Orange) */}
+          <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50/60 rounded-[18px] border border-amber-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
             <div>
-              <p className="text-2xl font-black text-white tracking-tight font-mono">
+              <p className="text-2xl font-black text-amber-950 tracking-tight font-mono">
                 ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] font-extrabold text-amber-100 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider mt-0.5">
                 {statusTab === 'pending' ? "Pending Book Value" : "Book Total Value"}
               </p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-100 bg-black/20 rounded-md">
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded-md border border-amber-200/60">
                 Verified Valuation
               </span>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
+            <div className="p-3 bg-amber-100/80 border border-amber-200 rounded-2xl text-amber-600 shadow-xs">
               <IndianRupee className="h-6 w-6" />
             </div>
           </div>
