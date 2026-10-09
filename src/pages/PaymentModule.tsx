@@ -126,7 +126,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           </div>
           <div>
             <h2 className="text-sm font-black uppercase tracking-wider">Payment Operations</h2>
-            <p className="text-[10px] text-purple-200">Real-Time Supabase `payment_master` Sync</p>
           </div>
         </div>
 

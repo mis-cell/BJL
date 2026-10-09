@@ -165,9 +165,6 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
             <div className="text-base font-black text-amber-800 font-mono mt-1">
               ₹{metrics.totalPremium.toLocaleString()}
             </div>
-            <span className="text-[10px] text-amber-600 font-mono mt-1 block">
-              Above Base Rate
-            </span>
           </div>
 
           {/* Deduction */}

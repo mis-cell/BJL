@@ -552,13 +552,31 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     // Premium lookup map across all entity alias variations (Settlement, Payment, SCP, PO)
     const premiumLookupMap = new Map<string, { rate: number; amount: number; source: string }>();
-    const recordPremiumEntry = (rawKey: any, rate: number, amount: number, src: string) => {
+    const recordPremiumEntry = (rawKey: any, rate: number, amount: number, src: string, refObj?: any) => {
+      let validRate = rate > 0 && rate < 1000 ? rate : 0;
+      let validAmt = amount > 0 ? amount : 0;
+
+      // Guard against total invoice or payment amounts (e.g. 115,700) passed into val_premium_amt or summary_premium_amount
+      if (refObj) {
+        const totalInvoiceAmt = parseExplicitNum(refObj.total_amount || refObj.paid_amount || refObj.payable_amt || refObj.val_material_value);
+        if (totalInvoiceAmt > 0 && Math.abs(validAmt - totalInvoiceAmt) < 1) {
+          validAmt = 0;
+        }
+      }
+
+      // If amount is >= 50,000 without an explicit small rate (e.g. <= 300 ₹/Qtl), it is an invoice total, not premium
+      if (validAmt >= 50000 && validRate === 0) {
+        validAmt = 0;
+      }
+
+      if (validRate === 0 && validAmt === 0) return;
+
       const keys = getPoKeys(rawKey);
       keys.forEach(k => {
         const existing = premiumLookupMap.get(k) || { rate: 0, amount: 0, source: '' };
         premiumLookupMap.set(k, {
-          rate: Math.max(existing.rate, rate),
-          amount: Math.max(existing.amount, amount),
+          rate: Math.max(existing.rate, validRate),
+          amount: Math.max(existing.amount, validAmt),
           source: existing.source || src
         });
       });
@@ -568,9 +586,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const premAmt = parseExplicitNum(st.val_premium_amt || st.summary_premium_amount);
       const premRate = parseExplicitNum(st.summary_premium_rate || st.premium_rate);
       if (premAmt > 0 || premRate > 0) {
-        if (st.po_no) recordPremiumEntry(st.po_no, premRate, premAmt, 'Settlement');
-        if (st.sauda_no) recordPremiumEntry(st.sauda_no, premRate, premAmt, 'Settlement');
-        if (st.contract_po_no) recordPremiumEntry(st.contract_po_no, premRate, premAmt, 'Settlement');
+        if (st.po_no) recordPremiumEntry(st.po_no, premRate, premAmt, 'Settlement', st);
+        if (st.sauda_no) recordPremiumEntry(st.sauda_no, premRate, premAmt, 'Settlement', st);
+        if (st.contract_po_no) recordPremiumEntry(st.contract_po_no, premRate, premAmt, 'Settlement', st);
       }
     });
 
@@ -578,9 +596,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const premAmt = parseExplicitNum(pm.val_premium_amt || pm.summary_premium_amount);
       const premRate = parseExplicitNum(pm.premium || pm.premium_rate);
       if (premAmt > 0 || premRate > 0) {
-        if (pm.po_no) recordPremiumEntry(pm.po_no, premRate, premAmt, 'Payment');
-        if (pm.sauda_no) recordPremiumEntry(pm.sauda_no, premRate, premAmt, 'Payment');
-        if (pm.mr_no) recordPremiumEntry(pm.mr_no, premRate, premAmt, 'Payment');
+        if (pm.po_no) recordPremiumEntry(pm.po_no, premRate, premAmt, 'Payment', pm);
+        if (pm.sauda_no) recordPremiumEntry(pm.sauda_no, premRate, premAmt, 'Payment', pm);
+        if (pm.mr_no) recordPremiumEntry(pm.mr_no, premRate, premAmt, 'Payment', pm);
       }
     });
 
@@ -588,9 +606,9 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const premRate = parseExplicitNum(pd.premium || pd.premium_rate);
       const premAmt = parseExplicitNum(pd.premium_amount || pd.val_premium_amt);
       if (premAmt > 0 || premRate > 0) {
-        if (pd.po_no) recordPremiumEntry(pd.po_no, premRate, premAmt, 'PaymentDetail');
-        if (pd.sauda_no) recordPremiumEntry(pd.sauda_no, premRate, premAmt, 'PaymentDetail');
-        if (pd.mr_no) recordPremiumEntry(pd.mr_no, premRate, premAmt, 'PaymentDetail');
+        if (pd.po_no) recordPremiumEntry(pd.po_no, premRate, premAmt, 'PaymentDetail', pd);
+        if (pd.sauda_no) recordPremiumEntry(pd.sauda_no, premRate, premAmt, 'PaymentDetail', pd);
+        if (pd.mr_no) recordPremiumEntry(pd.mr_no, premRate, premAmt, 'PaymentDetail', pd);
       }
     });
 

@@ -5,6 +5,7 @@ import {
   TrendingUp, 
   Clock, 
   FileCheck, 
+  Award,
   Search, 
   BookOpen, 
   Download,
@@ -180,6 +181,13 @@ export function PaymentDashboardView({
     }).length;
   }, [yearMonthFilteredPayments]);
 
+  const totalPremiumSum = useMemo(() => {
+    return yearMonthFilteredPayments.reduce((sum, p) => {
+      const prem = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium || (p as any).val_premium || 0);
+      return sum + (prem > 0 && prem < 500000 ? prem : 0);
+    }, 0);
+  }, [yearMonthFilteredPayments]);
+
   // Combined with text search for the data table
   /* const finalFilteredPayments = useMemo(() => {
     alert('1')
@@ -330,9 +338,6 @@ export function PaymentDashboardView({
               <Wallet className="w-4 h-4 text-purple-700" />
               Payment KPI Summary
             </span>
-            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300">
-              {activeScopeLabel}
-            </span>
           </div>
 
           {selectedMonth !== null && (
@@ -352,7 +357,7 @@ export function PaymentDashboardView({
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
               <h3 className="text-xl font-black mt-0.5">{yearMonthFilteredPayments.length}</h3>
-              <p className="text-[9px] text-indigo-300 mt-0.5 truncate">{activeScopeLabel}</p>
+              <p className="text-[9px] text-indigo-300 mt-0.5 truncate">Total Voucher Count</p>
             </div>
             <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-300 shrink-0 ml-2">
               <Wallet className="w-5 h-5" />
@@ -398,15 +403,15 @@ export function PaymentDashboardView({
             </div>
           </div>
 
-          {/* Card 5: Verified Arrivals */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-950 text-white p-3 rounded-xl border border-slate-700/50 shadow-sm flex items-center justify-between">
+          {/* Card 5: Premium */}
+          <div className="bg-gradient-to-br from-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-700/50 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Verified Arrivals</p>
-              <h3 className="text-xl font-black mt-0.5">{scopedVerifiedArrivals.length}</h3>
-              <p className="text-[9px] text-slate-400 mt-0.5">Ready for Payment</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Premium</p>
+              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPremiumSum)}</h3>
+              <p className="text-[9px] text-amber-300 mt-0.5">Total Premium Paid</p>
             </div>
-            <div className="p-2 bg-slate-700/40 rounded-lg text-slate-300 shrink-0 ml-2">
-              <FileCheck className="w-5 h-5" />
+            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
+              <Award className="w-5 h-5 text-amber-400" />
             </div>
           </div>
         </div>
