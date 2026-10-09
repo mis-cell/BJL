@@ -100,6 +100,7 @@ export interface SystemReportDataset {
     // Financial Summary (B)
     totalPurchaseValue: number;
     totalPremium: number;
+    premiumMRCount: number;
     totalDeduction: number;
     totalClaim: number;
     totalSettlement: number;
@@ -553,7 +554,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     // Premium lookup map across all entity alias variations (Settlement, Payment, SCP, PO)
     const premiumLookupMap = new Map<string, { rate: number; amount: number; source: string }>();
     const recordPremiumEntry = (rawKey: any, rate: number, amount: number, src: string, refObj?: any) => {
-      let validRate = rate > 0 && rate < 1000 ? rate : 0;
+      let validRate = rate > 0 && rate < 2000 ? rate : 0;
       let validAmt = amount > 0 ? amount : 0;
 
       // Guard against total invoice or payment amounts (e.g. 115,700) passed into val_premium_amt or summary_premium_amount
@@ -562,11 +563,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
         if (totalInvoiceAmt > 0 && Math.abs(validAmt - totalInvoiceAmt) < 1) {
           validAmt = 0;
         }
-      }
-
-      // If amount is >= 50,000 without an explicit small rate (e.g. <= 300 ₹/Qtl), it is an invoice total, not premium
-      if (validAmt >= 50000 && validRate === 0) {
-        validAmt = 0;
       }
 
       if (validRate === 0 && validAmt === 0) return;
@@ -1018,13 +1014,18 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
   const agencySet = new Set<string>();
   const areaSet = new Set<string>();
   const gradeSet = new Set<string>();
+  const premiumMRSet = new Set<string>();
 
-  txns.forEach(t => {
+  txns.forEach((t, idx) => {
     totalQuantityMT += t.quantityMT;
     totalPurchaseValue += t.grossPurchaseValue;
     totalBusinessValue += t.grossPurchaseValue;
     effectiveCostSum += t.effectiveCost;
     totalPremium += t.premiumAmount;
+    if (t.premiumAmount > 0) {
+      const mrKey = t.poNo || t.saudaNo || t.txnId || `TXN-${idx}`;
+      premiumMRSet.add(mrKey);
+    }
     totalDeduction += t.deductionAmount;
     totalClaim += t.claimAmount;
     totalSettlement += t.claimSettled;
@@ -1091,6 +1092,7 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
 
     totalPurchaseValue,
     totalPremium,
+    premiumMRCount: premiumMRSet.size,
     totalDeduction,
     totalClaim,
     totalSettlement,

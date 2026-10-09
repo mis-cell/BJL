@@ -159,12 +159,20 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
           {/* Premium */}
           <div 
             onClick={() => onDrillDown('Transactions with Premium', filtered.filter(t => t.premiumAmount > 0))}
-            className="p-3.5 bg-white border border-amber-200 rounded-xl shadow-sm hover:shadow transition cursor-pointer"
+            className="p-3.5 bg-white border border-amber-200 rounded-xl shadow-sm hover:shadow transition cursor-pointer flex flex-col justify-between"
           >
-            <span className="text-[9.5px] font-bold text-amber-700 uppercase block">Total Premium Paid</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold text-amber-700 uppercase block">Total Premium Paid</span>
+              <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-mono">
+                {metrics.premiumMRCount || filtered.filter(t => t.premiumAmount > 0).length} MR{ (metrics.premiumMRCount || filtered.filter(t => t.premiumAmount > 0).length) !== 1 ? 's' : '' }
+              </span>
+            </div>
             <div className="text-base font-black text-amber-800 font-mono mt-1">
               ₹{metrics.totalPremium.toLocaleString()}
             </div>
+            <span className="text-[10px] text-amber-700 font-mono mt-1 block">
+              {metrics.premiumMRCount || filtered.filter(t => t.premiumAmount > 0).length} MR{ (metrics.premiumMRCount || filtered.filter(t => t.premiumAmount > 0).length) !== 1 ? 's' : '' } with Premium Amount
+            </span>
           </div>
 
           {/* Deduction */}

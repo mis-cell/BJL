@@ -271,17 +271,30 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         if (payDetailsData.length > 0) {
           const detailsMap = new Map<string, any[]>();
           payDetailsData.forEach((d: any) => {
-            const key = String(d.voucher_no || d.payment_id || '').trim();
-            if (key) {
+            const keys = [d.voucher_no, d.payment_id, d.master_id, d.mr_no, d.po_no]
+              .map(k => String(k || '').trim().toUpperCase())
+              .filter(Boolean);
+            keys.forEach(key => {
               const list = detailsMap.get(key) || [];
-              list.push(d);
+              if (!list.includes(d)) list.push(d);
               detailsMap.set(key, list);
-            }
+            });
           });
           payData = payData.map((p: any) => {
-            const key = String(p.voucher_no || p.payment_id || '').trim();
-            const details = detailsMap.get(key);
-            return details && details.length > 0 ? { ...p, details } : p;
+            const pKeys = [p.voucher_no, p.payment_id, p.mr_no, p.po_no]
+              .map(k => String(k || '').trim().toUpperCase())
+              .filter(Boolean);
+            let details: any[] = p.details || [];
+            if (details.length === 0) {
+              for (const key of pKeys) {
+                const found = detailsMap.get(key);
+                if (found && found.length > 0) {
+                  details = found;
+                  break;
+                }
+              }
+            }
+            return details.length > 0 ? { ...p, details } : p;
           });
         }
 

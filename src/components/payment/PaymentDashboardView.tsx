@@ -185,18 +185,21 @@ export function PaymentDashboardView({
     }).length;
   }, [yearMonthFilteredPayments]);
 
-  const totalPremiumSum = useMemo(() => {
-    return yearMonthFilteredPayments.reduce((sum, p) => {
-      let prem = 0;
+  const totalPremiumData = useMemo(() => {
+    let sum = 0;
+    let count = 0;
+
+    yearMonthFilteredPayments.forEach(p => {
+      let mrPrem = 0;
 
       // 1. Explicit master premium amount fields
       const explicitAmt = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium_amount || (p as any).val_premium || 0);
-      const invoiceTotal = Number(p.payable_amt || p.total_amount || p.paid_amount || 0);
+      const invoiceTotal = Number(p.payable_amt || p.total_amount || p.paid_amount || p.val_material_value || 0);
 
       // Validate explicit master amount is not an invoice total misclassification
-      if (explicitAmt > 0 && explicitAmt < 500000) {
+      if (explicitAmt > 0) {
         if (invoiceTotal === 0 || Math.abs(explicitAmt - invoiceTotal) > 1) {
-          prem = explicitAmt;
+          mrPrem = explicitAmt;
         }
       }
 
@@ -207,27 +210,44 @@ export function PaymentDashboardView({
         detailsList.forEach((col: any) => {
           const colAmt = Number(col.premium_amount || col.val_premium_amt || 0);
           const colRate = Number(col.premium || col.premium_rate || 0);
-          if (colAmt > 0 && colAmt < 100000) {
+          if (colAmt > 0 && Math.abs(colAmt - invoiceTotal) > 1) {
             detailsPremSum += colAmt;
-          } else if (colRate > 0 && colRate < 1000) {
-            const qtl = Number(col.quantity_qtl) || (col.arr_qty_wt ? col.arr_qty_wt * 10 : 0) || (col.quantity ? col.quantity * 10 : 0);
+          } else if (colRate > 0 && colRate < 2000) {
+            let qtl = Number(col.quantity_qtl || 0);
+            if (qtl === 0) {
+              const rawWt = Number(col.arr_qty_wt || col.wt_quantity || col.quantity || col.weight_mt || 0);
+              if (rawWt > 1000) {
+                qtl = rawWt / 10;
+              } else if (rawWt > 100) {
+                qtl = rawWt / 10;
+              } else if (rawWt > 0) {
+                qtl = rawWt * 10;
+              }
+            }
             if (qtl > 0) {
               detailsPremSum += colRate * qtl;
             }
           }
         });
         if (detailsPremSum > 0) {
-          prem = Math.max(prem, detailsPremSum);
+          mrPrem = Math.max(mrPrem, detailsPremSum);
         }
       }
 
       // 3. Master level premium rate (p.summary_rate_qtel or p.premium or p.premium_rate)
-      if (prem === 0) {
+      if (mrPrem === 0) {
         const masterRate = Number((p as any).premium || (p as any).premium_rate || (p as any).summary_premium_rate || (p as any).val_premium_rate || 0);
-        if (masterRate > 0 && masterRate < 1000) {
+        if (masterRate > 0 && masterRate < 2000) {
           let totalQtl = 0;
           if (Array.isArray(detailsList) && detailsList.length > 0) {
-            totalQtl = detailsList.reduce((qSum, col) => qSum + (Number(col.quantity_qtl) || (col.arr_qty_wt ? col.arr_qty_wt * 10 : 0) || (col.quantity ? col.quantity * 10 : 0)), 0);
+            totalQtl = detailsList.reduce((qSum: number, col: any) => {
+              let q = Number(col.quantity_qtl || 0);
+              if (q === 0) {
+                const rawWt = Number(col.arr_qty_wt || col.wt_quantity || col.quantity || 0);
+                q = rawWt > 1000 ? rawWt / 10 : (rawWt > 100 ? rawWt / 10 : rawWt * 10);
+              }
+              return qSum + q;
+            }, 0);
           }
           if (totalQtl === 0) {
             const unitRate = Number(p.rate_qntl || (p as any).summary_rate_qtel || 1);
@@ -236,13 +256,13 @@ export function PaymentDashboardView({
             }
           }
           if (totalQtl > 0) {
-            prem = masterRate * totalQtl;
+            mrPrem = masterRate * totalQtl;
           }
         }
       }
 
       // 4. Cross reference matched PO or Sauda Check Point
-      if (prem === 0 && (p.po_no || (p as any).sauda_no || p.mr_no)) {
+      if (mrPrem === 0 && (p.po_no || (p as any).sauda_no || p.mr_no)) {
         const targetKey = String(p.po_no || (p as any).sauda_no || p.mr_no || '').trim().toUpperCase();
         if (targetKey) {
           const matchedPo = (purchaseOrders || []).find(po => {
@@ -256,13 +276,13 @@ export function PaymentDashboardView({
           if (matchedPo) {
             const poAmt = Number(matchedPo.val_premium_amt || matchedPo.summary_premium_amount || 0);
             const poRate = Number(matchedPo.premium || matchedPo.premium_rate || matchedPo.val_premium_rate || 0);
-            if (poAmt > 0 && poAmt < 500000 && Math.abs(poAmt - invoiceTotal) > 1) {
-              prem = poAmt;
-            } else if (poRate > 0 && poRate < 1000) {
+            if (poAmt > 0 && Math.abs(poAmt - invoiceTotal) > 1) {
+              mrPrem = poAmt;
+            } else if (poRate > 0 && poRate < 2000) {
               const baseRate = Number(p.rate_qntl || matchedPo.b_rate || matchedPo.rate_qntl || 1);
               if (baseRate > 0 && invoiceTotal > 0) {
                 const qtyQtl = invoiceTotal / baseRate;
-                prem = poRate * qtyQtl;
+                mrPrem = poRate * qtyQtl;
               }
             }
           }
@@ -270,12 +290,17 @@ export function PaymentDashboardView({
       }
 
       // Sanity filter against misclassified gross invoice sums
-      if (prem >= 500000 || (invoiceTotal > 0 && Math.abs(prem - invoiceTotal) < 1)) {
-        prem = 0;
+      if (invoiceTotal > 0 && Math.abs(mrPrem - invoiceTotal) < 1) {
+        mrPrem = 0;
       }
 
-      return sum + (prem > 0 ? prem : 0);
-    }, 0);
+      if (mrPrem > 0) {
+        sum += Math.round(mrPrem);
+        count += 1;
+      }
+    });
+
+    return { sum, count };
   }, [yearMonthFilteredPayments, purchaseOrders, saudaCheckPoints]);
 
   // Combined with text search for the data table
@@ -497,8 +522,8 @@ export function PaymentDashboardView({
           <div className="bg-gradient-to-br from-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-700/50 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Premium</p>
-              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPremiumSum)}</h3>
-              <p className="text-[9px] text-amber-300 mt-0.5">Total Premium Paid</p>
+              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPremiumData.sum)}</h3>
+              <p className="text-[9px] text-amber-300 mt-0.5">{totalPremiumData.count} MR{totalPremiumData.count !== 1 ? 's' : ''} with Premium</p>
             </div>
             <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
               <Award className="w-5 h-5 text-amber-400" />
