@@ -249,19 +249,40 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           setCachedSattaDiffs(sattaRes);
         }
 
+        let payDetailsData: any[] = [];
         try {
-          const { data: pData, error: pErr } = await supabase
-            .from('payment_master')
-            .select('*')
-            .order('created_at', { ascending: false });
-          if (!pErr && pData) {
-            payData = pData;
+          const [pRes, pdRes] = await Promise.all([
+            supabase.from('payment_master').select('*').order('created_at', { ascending: false }),
+            supabase.from('payment_details').select('*')
+          ]);
+          if (!pRes.error && pRes.data) {
+            payData = pRes.data;
           } else {
             const { data: pDataPlain } = await supabase.from('payment_master').select('*');
             if (pDataPlain) payData = pDataPlain;
           }
+          if (pdRes && !pdRes.error && pdRes.data) {
+            payDetailsData = pdRes.data;
+          }
         } catch (err) {
           console.warn("Supabase payment_master fetch error:", err);
+        }
+
+        if (payDetailsData.length > 0) {
+          const detailsMap = new Map<string, any[]>();
+          payDetailsData.forEach((d: any) => {
+            const key = String(d.voucher_no || d.payment_id || '').trim();
+            if (key) {
+              const list = detailsMap.get(key) || [];
+              list.push(d);
+              detailsMap.set(key, list);
+            }
+          });
+          payData = payData.map((p: any) => {
+            const key = String(p.voucher_no || p.payment_id || '').trim();
+            const details = detailsMap.get(key);
+            return details && details.length > 0 ? { ...p, details } : p;
+          });
         }
 
         try {

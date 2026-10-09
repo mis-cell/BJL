@@ -29,6 +29,8 @@ import { PaginationControls } from '../PaginationControls';
 export interface PaymentDashboardViewProps {
   paymentList: PaymentMaster[];
   verifiedArrivals: any[];
+  purchaseOrders?: any[];
+  saudaCheckPoints?: any[];
   searchFilter: string;
   setSearchFilter: (s: string) => void;
   currentPage: number;
@@ -64,6 +66,8 @@ function getArrivalDate(a: any): string {
 export function PaymentDashboardView({
   paymentList,
   verifiedArrivals,
+  purchaseOrders = [],
+  saudaCheckPoints = [],
   searchFilter,
   setSearchFilter,
   currentPage,
@@ -183,10 +187,96 @@ export function PaymentDashboardView({
 
   const totalPremiumSum = useMemo(() => {
     return yearMonthFilteredPayments.reduce((sum, p) => {
-      const prem = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium || (p as any).val_premium || 0);
-      return sum + (prem > 0 && prem < 500000 ? prem : 0);
+      let prem = 0;
+
+      // 1. Explicit master premium amount fields
+      const explicitAmt = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium_amount || (p as any).val_premium || 0);
+      const invoiceTotal = Number(p.payable_amt || p.total_amount || p.paid_amount || 0);
+
+      // Validate explicit master amount is not an invoice total misclassification
+      if (explicitAmt > 0 && explicitAmt < 500000) {
+        if (invoiceTotal === 0 || Math.abs(explicitAmt - invoiceTotal) > 1) {
+          prem = explicitAmt;
+        }
+      }
+
+      // 2. Check details array (payment_details rows or columns)
+      const detailsList = (p as any).details || (p as any).payment_details || (p as any).grid_details;
+      if (Array.isArray(detailsList) && detailsList.length > 0) {
+        let detailsPremSum = 0;
+        detailsList.forEach((col: any) => {
+          const colAmt = Number(col.premium_amount || col.val_premium_amt || 0);
+          const colRate = Number(col.premium || col.premium_rate || 0);
+          if (colAmt > 0 && colAmt < 100000) {
+            detailsPremSum += colAmt;
+          } else if (colRate > 0 && colRate < 1000) {
+            const qtl = Number(col.quantity_qtl) || (col.arr_qty_wt ? col.arr_qty_wt * 10 : 0) || (col.quantity ? col.quantity * 10 : 0);
+            if (qtl > 0) {
+              detailsPremSum += colRate * qtl;
+            }
+          }
+        });
+        if (detailsPremSum > 0) {
+          prem = Math.max(prem, detailsPremSum);
+        }
+      }
+
+      // 3. Master level premium rate (p.summary_rate_qtel or p.premium or p.premium_rate)
+      if (prem === 0) {
+        const masterRate = Number((p as any).premium || (p as any).premium_rate || (p as any).summary_premium_rate || (p as any).val_premium_rate || 0);
+        if (masterRate > 0 && masterRate < 1000) {
+          let totalQtl = 0;
+          if (Array.isArray(detailsList) && detailsList.length > 0) {
+            totalQtl = detailsList.reduce((qSum, col) => qSum + (Number(col.quantity_qtl) || (col.arr_qty_wt ? col.arr_qty_wt * 10 : 0) || (col.quantity ? col.quantity * 10 : 0)), 0);
+          }
+          if (totalQtl === 0) {
+            const unitRate = Number(p.rate_qntl || (p as any).summary_rate_qtel || 1);
+            if (unitRate > 0 && invoiceTotal > 0) {
+              totalQtl = invoiceTotal / unitRate;
+            }
+          }
+          if (totalQtl > 0) {
+            prem = masterRate * totalQtl;
+          }
+        }
+      }
+
+      // 4. Cross reference matched PO or Sauda Check Point
+      if (prem === 0 && (p.po_no || (p as any).sauda_no || p.mr_no)) {
+        const targetKey = String(p.po_no || (p as any).sauda_no || p.mr_no || '').trim().toUpperCase();
+        if (targetKey) {
+          const matchedPo = (purchaseOrders || []).find(po => {
+            const pNo = String(po.po_no || po.contract_po_no || po.sauda_no || '').trim().toUpperCase();
+            return pNo && (pNo === targetKey || pNo.includes(targetKey) || targetKey.includes(pNo));
+          }) || (saudaCheckPoints || []).find(sc => {
+            const sNo = String(sc.po_no || sc.contract_po_no || sc.sauda_no || '').trim().toUpperCase();
+            return sNo && (sNo === targetKey || sNo.includes(targetKey) || targetKey.includes(sNo));
+          });
+
+          if (matchedPo) {
+            const poAmt = Number(matchedPo.val_premium_amt || matchedPo.summary_premium_amount || 0);
+            const poRate = Number(matchedPo.premium || matchedPo.premium_rate || matchedPo.val_premium_rate || 0);
+            if (poAmt > 0 && poAmt < 500000 && Math.abs(poAmt - invoiceTotal) > 1) {
+              prem = poAmt;
+            } else if (poRate > 0 && poRate < 1000) {
+              const baseRate = Number(p.rate_qntl || matchedPo.b_rate || matchedPo.rate_qntl || 1);
+              if (baseRate > 0 && invoiceTotal > 0) {
+                const qtyQtl = invoiceTotal / baseRate;
+                prem = poRate * qtyQtl;
+              }
+            }
+          }
+        }
+      }
+
+      // Sanity filter against misclassified gross invoice sums
+      if (prem >= 500000 || (invoiceTotal > 0 && Math.abs(prem - invoiceTotal) < 1)) {
+        prem = 0;
+      }
+
+      return sum + (prem > 0 ? prem : 0);
     }, 0);
-  }, [yearMonthFilteredPayments]);
+  }, [yearMonthFilteredPayments, purchaseOrders, saudaCheckPoints]);
 
   // Combined with text search for the data table
   /* const finalFilteredPayments = useMemo(() => {
@@ -544,7 +634,7 @@ export function PaymentDashboardView({
             Payment Master Records ({finalFilteredPayments.length})
           </h3>
           <span className="text-[10px] text-slate-500 font-semibold">
-            Real-Time Supabase `payment_master` • {activeScopeLabel}
+            {activeScopeLabel}
           </span>
         </div>
 

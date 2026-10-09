@@ -211,6 +211,8 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         <PaymentDashboardView
           paymentList={paymentList}
           verifiedArrivals={verifiedArrivals}
+          purchaseOrders={purchaseOrders}
+          saudaCheckPoints={saudaCheckPoints}
           searchFilter={searchFilter}
           setSearchFilter={setSearchFilter}
           currentPage={currentPage}
