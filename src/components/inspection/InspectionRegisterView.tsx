@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle, Clock, Calendar, X, Filter } from "lucide-react";
+import { Search, Printer, Edit, Trash2, FileSpreadsheet, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle, Clock, Calendar, X, Filter, Plus, RefreshCw } from "lucide-react";
 import { PaginationControls } from "../PaginationControls";
 import { InspectionMasterRecord } from "../../types/inspection.types";
 import { formatIndianCurrency } from "../../lib/utils";
@@ -35,6 +35,8 @@ export interface InspectionRegisterViewProps {
   onEditRecord: (rec: InspectionMasterRecord) => void;
   onPrintRecord: (rec: InspectionMasterRecord) => void;
   onDeleteRecord: (mr_no: string) => Promise<void>;
+  onOpenNewForm?: () => void;
+  onRefresh?: () => void;
 }
 
 export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
@@ -68,6 +70,8 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
   onEditRecord,
   onPrintRecord,
   onDeleteRecord,
+  onOpenNewForm,
+  onRefresh,
 }) => {
   const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const isDateFiltered = Boolean(startDate || endDate || (datePreset && datePreset !== "all"));
@@ -135,59 +139,28 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
             />
           </div>
 
-          {/* Date Filter Quick Presets */}
-          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200 text-xs">
-            <div className="flex items-center gap-1 text-slate-500 pl-1.5 pr-1 font-semibold text-[11px]">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Date:</span>
-            </div>
-            <select
-              value={datePreset}
-              onChange={(e) => onDatePresetChange && onDatePresetChange(e.target.value)}
-              className="text-xs py-1 px-2 rounded-md border-0 bg-white shadow-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="this_week">This Week</option>
-              <option value="this_month">This Month</option>
-              <option value="last_month">Last Month</option>
-              <option value="custom">Custom Range</option>
-            </select>
-          </div>
-
-          {/* Date Range Inputs */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-xs">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">From</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                if (setStartDate) setStartDate(e.target.value);
-                if (onDatePresetChange && datePreset !== "custom") onDatePresetChange("custom");
-              }}
-              className="text-xs py-0.5 px-1.5 rounded border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none"
-              title="Arrival Start Date"
-            />
-            <span className="text-[10px] text-slate-400 font-bold uppercase">To</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                if (setEndDate) setEndDate(e.target.value);
-                if (onDatePresetChange && datePreset !== "custom") onDatePresetChange("custom");
-              }}
-              className="text-xs py-0.5 px-1.5 rounded border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none"
-              title="Arrival End Date"
-            />
-            {isDateFiltered && onClearDateFilter && (
+          {/* New Inspection Form & Refresh Buttons beside Search */}
+          <div className="flex items-center gap-2">
+            {onOpenNewForm && (
               <button
                 type="button"
-                onClick={onClearDateFilter}
-                className="p-1 hover:bg-rose-100 text-rose-600 rounded transition-colors cursor-pointer"
-                title="Clear date filter"
+                onClick={onOpenNewForm}
+                className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 border border-emerald-400/50 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
               >
-                <X className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4 text-amber-300" />
+                <span>New Inspection Form</span>
+              </button>
+            )}
+
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={loading}
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-700 transition-all cursor-pointer shadow-xs disabled:opacity-50 active:scale-95"
+                title="Refresh Data"
+              >
+                <RefreshCw className={`w-4 h-4 text-emerald-700 ${loading ? "animate-spin" : ""}`} />
               </button>
             )}
           </div>
@@ -213,33 +186,6 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
             <span>Export CSV</span>
           </button>
         </div>
-
-        {/* Active Filter Chips Bar if filtered */}
-        {isDateFiltered && (
-          <div className="flex items-center justify-between bg-emerald-50/80 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs text-emerald-900 font-medium">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-emerald-700" />
-              <span>
-                Filtering by date:{" "}
-                <strong className="text-emerald-800">
-                  {startDate ? startDate : "Start"} {endDate ? `to ${endDate}` : ""}
-                  {datePreset && datePreset !== "all" && datePreset !== "custom" && ` (${datePreset.replace('_', ' ')})`}
-                </strong>
-                {" — "}
-                <span className="font-bold">{filteredRecords.length}</span> record{filteredRecords.length !== 1 ? 's' : ''} matched
-              </span>
-            </div>
-            {onClearDateFilter && (
-              <button
-                onClick={onClearDateFilter}
-                className="text-[11px] font-bold text-emerald-700 hover:text-rose-700 hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <X className="w-3 h-3" />
-                <span>Reset Date Filter</span>
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Table */}

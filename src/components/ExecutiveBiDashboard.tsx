@@ -348,26 +348,12 @@ export default function ExecutiveBiDashboard({
               <Activity className="w-5 h-5 animate-pulse" />
             </div>
             <h1 className="text-xl sm:text-2xl font-serif font-black tracking-wide">
-              Executive BI Operations Command Center
+              Command Center
             </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={toggleAllPanels}
-            className={cn(
-              "px-3 py-1.5 border rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs",
-              allPanelsCollapsed 
-                ? "bg-amber-400/20 text-amber-300 border-amber-400/40 hover:bg-amber-400/30" 
-                : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
-            )}
-            title={allPanelsCollapsed ? "Expand all granular breakdown panels" : "Collapse all granular breakdown panels (View only KPI Summary Cards)"}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>{allPanelsCollapsed ? "Expand All Panels" : "Collapse All Panels"}</span>
-          </button>
-
           <button
             onClick={onRefresh}
             disabled={loading}
@@ -376,23 +362,6 @@ export default function ExecutiveBiDashboard({
           >
             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
             <span>{loading ? "Refreshing..." : "Refresh"}</span>
-          </button>
-
-          <button
-            onClick={handlePrintPdf}
-            className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/60 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
-            title="Print Dashboard"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print</span>
-          </button>
-
-          <button
-            onClick={() => setIsFullScreen(!isFullScreen)}
-            className="p-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all shadow-xs cursor-pointer"
-            title={isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
-          >
-            {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -758,10 +727,7 @@ export default function ExecutiveBiDashboard({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-serif font-black text-[#1E331B] tracking-wide flex items-center gap-2">
-                <span>Month-Wise Contract and Payment Summary</span>
-                <span className="text-xs font-mono font-bold bg-[#EAE2D2] text-[#1E331B] px-2 py-0.5 rounded-md border border-[#D6CAA8]">
-                  FY / Year {activeYear}
-                </span>
+                <span>Contract</span>
               </h2>
             </div>
           </div>
@@ -873,268 +839,19 @@ export default function ExecutiveBiDashboard({
 
       </div>
 
-      {/* 4. INSPECTION SUMMARY (CLAIM, QUALITY & SAUDA CHECK POINT PREMIUM) */}
+      {/* 4. PIPELINE & PENDING P.O. TRACKER */}
       <div className="bg-[#FAF7F0] border-2 border-[#D6CAA8] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D6CAA8] pb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#1E331B] text-white rounded-xl shadow-xs">
-              <Droplets className="w-5 h-5 text-emerald-300" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-serif font-black tracking-wide text-[#1E331B] flex items-center gap-2">
-                <span>Inspection Summary</span>
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => handleOpenInspectionModal({
-                title: `Inspection Summary Log (${activeYear})`,
-                subtitle: `Viewing all ${inspMetrics.totalInspectionsCount} inspection records for ${activeYear}`,
-                inspections: inspMetrics.allInspections
-              })}
-              className="h-8 px-3 bg-[#1E331B] text-white text-xs font-bold rounded-xl hover:bg-[#2A4426] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="View all inspection records"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Inspection Log</span>
-            </button>
-
-            <button
-              onClick={handleExportInspectionCsv}
-              className="h-8 px-3 bg-white border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-xl hover:bg-[#FAF7F0] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="Download inspection CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>CSV</span>
-            </button>
-
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('material_inspection')}
-                className="h-8 px-3 bg-emerald-700 text-white text-xs font-bold rounded-xl hover:bg-emerald-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Go to Material Inspection module"
-              >
-                <span>Go to Inspection Module</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            <button
-              onClick={() => setCollapseInspectionSummary(!collapseInspectionSummary)}
-              className="h-8 px-3 bg-white border border-[#D6CAA8] text-[#1E331B] text-xs font-bold rounded-xl hover:bg-[#FAF7F0] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title={collapseInspectionSummary ? "Expand Inspection Summary" : "Collapse Inspection Summary"}
-            >
-              {collapseInspectionSummary ? <ChevronDown className="w-3.5 h-3.5 text-emerald-800" /> : <ChevronUp className="w-3.5 h-3.5 text-emerald-800" />}
-              <span>{collapseInspectionSummary ? "Expand" : "Collapse"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Year-level KPI Highlights Ribbon & Month Cards */}
-        {!collapseInspectionSummary && (
-          <>
-            {/* Year-level KPI Highlights Ribbon (Total Counts of MR/Weight, Final Arrival, Inspection, Payment, Settlement, Premium) */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-sans">
-              {/* Card 1: Total MR & Weight (From Temporary Arrival) */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `All Temporary MRs & Gate Deliveries (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearTemporaryArrivalsCount} MRs with ${inspMetrics.totalYearBales.toLocaleString()} Bales/Drums and ${inspMetrics.totalYearArrivalWeightMt.toFixed(1)} MT arrival weight`,
-                  inspections: inspMetrics.allInspections,
-                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                  initialTab: 'inspections'
-                })}
-                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-[#1E331B] shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view all Temporary Arrival MR records"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-[#5A6E54] font-bold block uppercase tracking-wider">MR / Temp Arrival</span>
-                  <span className="text-[10px] text-[#2E6B3E] font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-[#1E331B] text-base block">
-                  {inspMetrics.totalYearTemporaryArrivalsCount} MR
-                </span>
-                <span className="text-[11px] font-mono font-bold text-emerald-900 mt-0.5 block truncate">
-                  {inspMetrics.totalYearBales.toLocaleString()} Bales • {inspMetrics.totalYearArrivalWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 1 })} MT
-                </span>
-              </div>
-
-              {/* Card 2: Final Arrival / FMR */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `Final Arrival (FMR) Breakdown (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearFinalArrivalsCount} Final MRs created • ${inspMetrics.yearPendingFmrPoCount} Pending P.O.s (${inspMetrics.totalYearPendingFmrCount} Below FMR)`,
-                  inspections: inspMetrics.allInspections,
-                  pendingFmrList: inspMetrics.allYearPendingFmrList,
-                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                  initialTab: 'pending_fmr'
-                })}
-                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-teal-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view Final Arrival breakdown"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-teal-900 font-bold block uppercase tracking-wider">Final Arrival (FMR)</span>
-                  <span className="text-[10px] text-teal-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-teal-950 text-base block">
-                  {inspMetrics.totalYearFinalArrivalsCount} FMR
-                </span>
-                <span className="text-[11px] text-teal-800 font-medium mt-0.5 block truncate">
-                  {inspMetrics.totalYearPendingFmrCount > 0 ? `${inspMetrics.yearPendingFmrPoCount} POs (${inspMetrics.totalYearPendingFmrCount} Below FMR)` : 'All FMR Completed'}
-                </span>
-              </div>
-
-              {/* Card 3: Total Inspection Count */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `Total Inspections Breakdown (${activeYear})`,
-                  subtitle: `Completed Inspections: ${inspMetrics.totalYearInspectionsCount} • Pending Inspection: ${inspMetrics.yearPendingInspectionPoCount} P.O.s (${inspMetrics.allYearPendingInspectionList.length} MRs)`,
-                  inspections: inspMetrics.allInspections,
-                  pendingInspectionList: inspMetrics.allYearPendingInspectionList,
-                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                  initialTab: 'pending_insp'
-                })}
-                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-blue-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view inspection breakdown"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-blue-900 font-bold block uppercase tracking-wider">Mill Inspection</span>
-                  <span className="text-[10px] text-blue-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-blue-950 text-base block">
-                  {inspMetrics.totalYearInspectionsCount} Insp
-                </span>
-                <span className="text-[11px] text-blue-800 font-medium mt-0.5 block truncate">
-                  {inspMetrics.allYearPendingInspectionList.length > 0 
-                    ? `${inspMetrics.yearPendingInspectionPoCount} POs Pending • ${inspMetrics.totalYearInspectionsCount} Done` 
-                    : (inspMetrics.totalYearInspectionsCount > 0 ? '100% Inspected' : 'No Inspections')}
-                </span>
-              </div>
-
-              {/* Card 4: Total Payment Count */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `Total Payments Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearPaymentsCount} payment voucher records with ₹${formatIndianCurrency(inspMetrics.totalYearPaidAmount)} paid • ${inspMetrics.yearPendingPaymentPoCount} P.O.s Pending Payment`,
-                  inspections: inspMetrics.allInspections,
-                  payments: paymentRecords,
-                  pendingPaymentList: inspMetrics.allYearPendingPaymentList,
-                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                  initialTab: 'pending_paym'
-                })}
-                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-emerald-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view payment voucher records"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-emerald-900 font-bold block uppercase tracking-wider">Total Payment</span>
-                  <span className="text-[10px] text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-emerald-950 text-base block">
-                  {inspMetrics.totalYearPaymentsCount} Vouchers
-                </span>
-                <span className="text-[11px] font-mono font-bold text-emerald-800 mt-0.5 block truncate">
-                  ₹{formatIndianCurrency(inspMetrics.totalYearPaidAmount)} Paid {inspMetrics.yearPendingPaymentPoCount > 0 && `(${inspMetrics.yearPendingPaymentPoCount} POs Pending)`}
-                </span>
-              </div>
-
-              {/* Card 5: Total Settlement Count */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `Total Settlements Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalYearSettlementsCount} audited settlement records with ₹${formatIndianCurrency(inspMetrics.totalYearSettledAmount)} settled • ${inspMetrics.yearPendingSettlementPoCount} P.O.s Pending Settlement`,
-                  inspections: inspMetrics.allInspections,
-                  settlements: settlements,
-                  pendingSettlementList: inspMetrics.allYearPendingSettlementList,
-                  allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                  initialTab: 'pending_sett'
-                })}
-                className="bg-white p-3 rounded-xl border border-[#D6CAA8] hover:border-purple-700 shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
-                title="Click to view settlement records"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-purple-900 font-bold block uppercase tracking-wider">Total Settlement</span>
-                  <span className="text-[10px] text-purple-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-purple-950 text-base block">
-                  {inspMetrics.totalYearSettlementsCount} Settled
-                </span>
-                <span className="text-[11px] font-mono font-bold text-purple-800 mt-0.5 block truncate">
-                  ₹{formatIndianCurrency(inspMetrics.totalYearSettledAmount)} {inspMetrics.yearPendingSettlementPoCount > 0 && `(${inspMetrics.yearPendingSettlementPoCount} POs Pending)`}
-                </span>
-              </div>
-
-              {/* Card 6: Total Premium (Sauda Check Point / Quality Add-on) */}
-              <div 
-                onClick={() => handleOpenInspectionModal({
-                  title: `Premium Quality Lots Summary (${activeYear})`,
-                  subtitle: `Total ${inspMetrics.totalPremiumLots} Premium MRs with ₹${formatIndianCurrency(inspMetrics.totalPremiumSum)} total premium amount (Avg ₹${inspMetrics.avgPremiumRate}/Qtl)`,
-                  inspections: (inspMetrics.allInspections || []).filter(r => r.isPremium || r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== 'No'),
-                  initialTab: 'inspections'
-                })}
-                className="bg-white p-3 rounded-xl border border-amber-300 hover:border-amber-600 shadow-2xs hover:shadow-xs transition-all cursor-pointer group bg-gradient-to-br from-white via-white to-amber-50/60"
-                title="Click to view all Premium MR inspection records"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-amber-900 font-bold block uppercase tracking-wider flex items-center gap-1">
-                    <span>⚡ Total Premium</span>
-                  </span>
-                  <span className="text-[10px] text-amber-700 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
-                </div>
-                <span className="font-mono font-extrabold text-amber-950 text-base block">
-                  {inspMetrics.totalPremiumLots} Lots
-                </span>
-                <span className="text-[11px] font-mono font-bold text-amber-900 mt-0.5 block truncate" title={`Total ₹${formatIndianCurrency(inspMetrics.totalPremiumSum)} ${inspMetrics.avgPremiumRate > 0 ? `(@ ₹${inspMetrics.avgPremiumRate}/Qtl)` : ''}`}>
-                  ₹{formatIndianCurrency(inspMetrics.totalPremiumSum)} {inspMetrics.avgPremiumRate > 0 && `(@ ₹${inspMetrics.avgPremiumRate}/Qtl)`}
-                </span>
-              </div>
-            </div>
-
-            {/* Pipeline Workflow & Pending P.O. Tracker Banner ({activeYear}) */}
-            <div className="bg-gradient-to-r from-[#FAF7F0] via-[#F3ECE0] to-[#FAF7F0] border-2 border-[#D6CAA8] rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+        {/* Pipeline Workflow & Pending P.O. Tracker Banner ({activeYear}) */}
+        <div className="bg-gradient-to-r from-[#FAF7F0] via-[#F3ECE0] to-[#FAF7F0] border-2 border-[#D6CAA8] rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-[#1E331B] text-emerald-300 rounded-lg shrink-0">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
                   <h4 className="font-serif font-black text-[#1E331B] text-xs sm:text-sm flex items-center gap-1.5">
-                    <span>Year {activeYear} Pipeline & Pending P.O. Tracker</span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-200/90 text-amber-950 font-extrabold rounded-full border border-amber-400/60 shadow-2xs">
-                      {inspMetrics.yearTotalPendingPoCount} Total Pending P.O.s
-                    </span>
+                    <span>P.O. Tracker</span>
                   </h4>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => handleOpenInspectionModal({
-                    title: `All Pending Pipeline P.O.s (${activeYear})`,
-                    subtitle: `Total ${inspMetrics.allYearPendingPipelineList.length} pending items across ${inspMetrics.yearTotalPendingPoCount} unique P.O. numbers for year ${activeYear}`,
-                    allPendingPipelineList: inspMetrics.allYearPendingPipelineList,
-                    pendingFmrList: inspMetrics.allYearPendingFmrList,
-                    pendingInspectionList: inspMetrics.allYearPendingInspectionList,
-                    pendingPaymentList: inspMetrics.allYearPendingPaymentList,
-                    pendingSettlementList: inspMetrics.allYearPendingSettlementList,
-                    initialTab: 'pipeline'
-                  })}
-                  className="px-3 py-1.5 bg-[#1E331B] hover:bg-[#2A4426] text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
-                  title="View complete list of pending P.O. numbers with stages and actions"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View Pending P.O. List ({inspMetrics.yearTotalPendingPoCount})</span>
-                </button>
-
-                <button
-                  onClick={() => exportPendingPoListCsv(inspMetrics.allYearPendingPipelineList, `All_Pending_POs_Pipeline_${activeYear}_${new Date().toISOString().slice(0, 10)}.csv`)}
-                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  title="Download All Pending P.O.s across all stages for the year in CSV"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Pending P.O. CSV</span>
-                </button>
               </div>
             </div>
 
@@ -1420,8 +1137,6 @@ export default function ExecutiveBiDashboard({
                 <p className="text-xs text-[#5A6E54]/80 mt-0.5">Records logged in Material Inspection module will automatically display here.</p>
               </div>
             )}
-          </>
-        )}
 
       </div>
 

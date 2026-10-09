@@ -186,83 +186,89 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
   return (
     <div className="space-y-2.5">
-      {/* Top Stat Cards & Chart layout (Compressed for clean single view) */}
+      {/* Top Stat Cards & Chart layout (Colour Full as per card titles) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {/* Card 1: Pending POs */}
+        {/* Card 1: Active Pending P.O. (Vibrant Rose) */}
         <div 
           onClick={() => setStatusFilter('pending')}
-          className={`bg-white border rounded-xl p-2.5 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'pending' ? 'ring-2 ring-rose-500 border-rose-400 bg-rose-50/20' : 'border-slate-200'
+          className={`rounded-xl p-3 shadow-md hover:shadow-lg transition-all flex items-center justify-between cursor-pointer border text-white ${
+            statusFilter === 'pending' 
+              ? 'bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 border-white/60 ring-2 ring-white scale-[1.02]' 
+              : 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 border-rose-400/40 hover:-translate-y-0.5'
           }`}
           title="Filter table by Active Pending P.O."
         >
           <div>
-            <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Active Pending P.O.</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">{totalPendingPos}</p>
+            <p className="text-[10px] font-extrabold text-rose-100 uppercase tracking-wider mb-0.5">Active Pending P.O.</p>
+            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">{totalPendingPos}</p>
           </div>
-          <div className="p-2 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 shadow-2xs">
+          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
             <Clock className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 2: Generated POs */}
+        {/* Card 2: Total Generated POs (Vibrant Indigo/Blue) */}
         <div 
           onClick={() => setStatusFilter('all')}
-          className={`bg-white border rounded-xl p-2.5 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between cursor-pointer ${
-            statusFilter === 'all' ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/20' : 'border-slate-200'
+          className={`rounded-xl p-3 shadow-md hover:shadow-lg transition-all flex items-center justify-between cursor-pointer border text-white ${
+            statusFilter === 'all' 
+              ? 'bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-900 border-white/60 ring-2 ring-white scale-[1.02]' 
+              : 'bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 border-indigo-400/40 hover:-translate-y-0.5'
           }`}
           title="Show all generated P.O records"
         >
           <div>
-            <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total Generated POs</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">{totalGeneratedPos}</p>
+            <p className="text-[10px] font-extrabold text-blue-100 uppercase tracking-wider mb-0.5">Total Generated POs</p>
+            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">{totalGeneratedPos}</p>
           </div>
-          <div className="p-2 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 shadow-2xs">
+          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
             <ClipboardList className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 3: Cumulative PO Weight */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-2xs hover:shadow-xs transition-shadow flex items-center justify-between">
+        {/* Card 3: Cumulative PO Weight (Vibrant Emerald/Teal) */}
+        <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-xl p-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-between border border-emerald-400/40 text-white">
           <div>
-            <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Cumulative PO Weight</p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-800 font-mono tracking-tight">{cumulativeWeight.toFixed(2)} <span className="text-[10px] font-bold text-slate-500">Tons</span></p>
+            <p className="text-[10px] font-extrabold text-emerald-100 uppercase tracking-wider mb-0.5">Cumulative PO Weight</p>
+            <p className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
+              {cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-emerald-200">Tons</span>
+            </p>
           </div>
-          <div className="p-2 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 shadow-2xs">
+          <div className="p-2.5 bg-white/20 backdrop-blur-xs border border-white/30 rounded-xl text-white shadow-xs">
             <TrendingUp className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Card 4: Status Distribution Pie Chart Widget */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-2xs hover:shadow-xs transition-shadow flex items-center justify-between gap-2">
+        {/* Card 4: Status Mix (Vibrant Purple/Violet) */}
+        <div className="bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-xl p-3 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-between gap-2 border border-purple-400/40 text-white">
           <div className="flex-1 min-w-[85px]">
-            <p className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Status Mix</p>
-            <div className="space-y-0.5">
+            <p className="text-[10px] font-extrabold text-purple-100 uppercase tracking-wider mb-1">Status Mix</p>
+            <div className="space-y-1">
               <button 
                 onClick={() => setStatusFilter('pending')}
-                className={`flex items-center gap-1.5 px-1 py-0.5 rounded transition-all cursor-pointer text-left w-full ${
-                  statusFilter === 'pending' ? 'bg-rose-100/70 font-black' : 'hover:bg-slate-100'
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
+                  statusFilter === 'pending' ? 'bg-white text-rose-800 shadow-xs' : 'bg-black/20 text-purple-100 hover:bg-black/30'
                 }`}
                 title="Filter by Pending"
               >
-                <span className="w-2 h-2 rounded-full inline-block bg-rose-600" />
-                <span className="text-[11px] font-bold text-rose-700 truncate">Pending ({totalPendingPos})</span>
+                <span className="w-2 h-2 rounded-full inline-block bg-rose-400" />
+                <span className="truncate">Pending ({totalPendingPos})</span>
               </button>
               <button 
                 onClick={() => setStatusFilter('completed')}
-                className={`flex items-center gap-1.5 px-1 py-0.5 rounded transition-all cursor-pointer text-left w-full ${
-                  statusFilter === 'completed' ? 'bg-emerald-100/70 font-black' : 'hover:bg-slate-100'
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
+                  statusFilter === 'completed' ? 'bg-white text-emerald-800 shadow-xs' : 'bg-black/20 text-purple-100 hover:bg-black/30'
                 }`}
                 title="Filter by Completed"
               >
-                <span className="w-2 h-2 rounded-full inline-block bg-emerald-600" />
-                <span className="text-[11px] font-bold text-emerald-700 truncate">Completed ({totalCompletedPos})</span>
+                <span className="w-2 h-2 rounded-full inline-block bg-emerald-300" />
+                <span className="truncate">Completed ({totalCompletedPos})</span>
               </button>
             </div>
           </div>
           <div className="w-14 h-11 relative flex justify-center items-center shrink-0">
             {scopedPos.length === 0 ? (
-              <div className="text-slate-400 text-[8.5px] font-bold">No Data</div>
+              <div className="text-purple-200 text-[8.5px] font-bold">No Data</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%" minWidth={80} minHeight={44}>
                 <PieChart>
@@ -276,12 +282,12 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                     dataKey="value"
                   >
                     {statusPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[index]} />
+                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[index]} stroke="#4c1d95" strokeWidth={1} />
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    contentStyle={{ background: '#f8fafc', border: '1px solid #cbd5e1', fontSize: '9px', borderRadius: '8px', padding: '2px 6px' }}
-                    itemStyle={{ padding: 0 }}
+                    contentStyle={{ background: '#1e1b4b', border: '1px solid #6366f1', color: '#fff', fontSize: '9px', borderRadius: '8px', padding: '2px 6px' }}
+                    itemStyle={{ padding: 0, color: '#fff' }}
                     formatter={(value: any, name: any) => [`${value} POs`, name]}
                   />
                 </PieChart>
@@ -292,8 +298,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
       </div>
 
       {/* Register Search and Mode Controls */}
-      <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs flex flex-wrap lg:flex-nowrap items-center gap-2 justify-between">
-        <div className="relative flex-1 min-w-[240px]">
+      <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex flex-wrap items-center gap-2 justify-between">
+        {/* Search Box */}
+        <div className="relative flex-1 min-w-[200px] sm:min-w-[240px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input  id="search_by_po_no_broker_na_2911" name="search_by_po_no_broker_na" aria-label="Search by PO No, Broker Name, Supplier Name, Station/Area..."
             className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
@@ -303,17 +310,95 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
           />
         </div>
 
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-0.5 text-xs">
-          <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1.5">From</span>
-          <input  id="startdate_2921" name="startdate" aria-label="startdate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
-          <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1.5">To</span>
-          <input  id="enddate_2923" name="enddate" aria-label="enddate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
+        {/* Beside Search Box: New Manual P.O (PTF) & Status Filter Buttons */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {isTempPo && (
+            <button
+              onClick={handleGlobalAdd}
+              className="bg-[#174C2C] hover:bg-[#103A20] text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Create empty PTF PO directly"
+            >
+              <Plus className="w-3.5 h-3.5 text-emerald-300" />
+              <span>New Manual P.O (PTF)</span>
+            </button>
+          )}
+
+          {/* Status Filter Toggle Options */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg gap-0.5 border border-slate-200 shrink-0">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                statusFilter === 'all'
+                  ? 'bg-slate-900 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Show all Purchase Orders"
+            >
+              All ({totalGeneratedPos})
+            </button>
+            <button
+              onClick={() => setStatusFilter('pending')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                statusFilter === 'pending'
+                  ? 'bg-rose-600 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-rose-700'
+              }`}
+              title="Show only Active Pending Purchase Orders"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'pending' ? 'bg-white' : 'bg-rose-500'}`} />
+              Pending ({totalPendingPos})
+            </button>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                statusFilter === 'completed'
+                  ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-emerald-800'
+              }`}
+              title="Show Completed / Fully Received Purchase Orders"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
+              Completed ({totalCompletedPos})
+            </button>
+            <button
+              onClick={() => setStatusFilter('short')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                statusFilter === 'short'
+                  ? 'bg-amber-600 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-amber-800'
+              }`}
+              title="Show Short Weight Purchase Orders"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'short' ? 'bg-white' : 'bg-amber-500'}`} />
+              Short Wt ({totalShortPos})
+            </button>
+            <button
+              onClick={() => setStatusFilter('excess')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                statusFilter === 'excess'
+                  ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-blue-800'
+              }`}
+              title="Show Excess Weight Purchase Orders"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'excess' ? 'bg-white' : 'bg-blue-500'}`} />
+              Excess Wt ({totalExcessPos})
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Date Filters & Quick Actions */}
+        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5 text-xs">
+            <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1">From</span>
+            <input  id="startdate_2921" name="startdate" aria-label="startdate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1">To</span>
+            <input  id="enddate_2923" name="enddate" aria-label="enddate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+
           <button 
             onClick={handleCsvDownload} 
-            className="bg-[#174C2C] hover:bg-[#103A20] text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            className="bg-[#174C2C] hover:bg-[#103A20] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
             title="Download filtered records as CSV"
           >
             <Download className="h-3.5 w-3.5 text-emerald-200" /> Export CSV
@@ -321,100 +406,18 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
           <button
             onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setStatusFilter('all'); }}
             title="Clear search and status filter"
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
           >
             <X className="h-3.5 w-3.5" /> Clear
           </button>
           <button 
             onClick={fetchPosAndMasters}
             title="Refresh Purchase Orders from database"
-            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" disabled={loading}
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" disabled={loading}
           >
             <RefreshCcw className={`h-3.5 w-3.5 text-emerald-600 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
-      </div>
-
-      {/* Top Toolbar Action Belt (Deleted Print Selected & Delete Selected) */}
-      <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs flex flex-wrap items-center justify-between gap-2">
-         <div className="flex flex-wrap items-center gap-2">
-           {isTempPo && (
-             <button
-               onClick={handleGlobalAdd}
-               className="bg-[#174C2C] hover:bg-[#103A20] text-white px-3.5 py-1.5 rounded-lg font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-               title="Create empty PTF PO directly"
-             >
-               <Plus className="w-3.5 h-3.5 text-emerald-300" /> New Manual P.O (PTF)
-             </button>
-           )}
-
-           {/* Status Filter Toggle Options */}
-           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg gap-0.5 border border-slate-200">
-             <button
-               onClick={() => setStatusFilter('all')}
-               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                 statusFilter === 'all'
-                   ? 'bg-white text-slate-900 shadow-2xs border border-slate-200 font-extrabold'
-                   : 'text-slate-600 hover:text-slate-900'
-               }`}
-               title="Show all Purchase Orders"
-             >
-               All ({totalGeneratedPos})
-             </button>
-             <button
-               onClick={() => setStatusFilter('pending')}
-               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                 statusFilter === 'pending'
-                   ? 'bg-rose-50 text-rose-800 border border-rose-200 shadow-2xs font-extrabold'
-                   : 'text-slate-600 hover:text-rose-700'
-               }`}
-               title="Show only Active Pending Purchase Orders"
-             >
-               <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-               Pending ({totalPendingPos})
-             </button>
-             <button
-               onClick={() => setStatusFilter('completed')}
-               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                 statusFilter === 'completed'
-                   ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
-                   : 'text-slate-600 hover:text-emerald-800'
-               }`}
-               title="Show Completed / Fully Received Purchase Orders"
-             >
-               <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
-               Completed ({totalCompletedPos})
-             </button>
-             <button
-               onClick={() => setStatusFilter('short')}
-               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                 statusFilter === 'short'
-                   ? 'bg-amber-600 text-white shadow-2xs font-extrabold'
-                   : 'text-slate-600 hover:text-amber-800'
-               }`}
-               title="Show Short Weight Purchase Orders"
-             >
-               <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'short' ? 'bg-white' : 'bg-amber-500'}`} />
-               Short Wt ({totalShortPos})
-             </button>
-             <button
-               onClick={() => setStatusFilter('excess')}
-               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                 statusFilter === 'excess'
-                   ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
-                   : 'text-slate-600 hover:text-blue-800'
-               }`}
-               title="Show Excess Weight Purchase Orders"
-             >
-               <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'excess' ? 'bg-white' : 'bg-blue-500'}`} />
-               Excess Wt ({totalExcessPos})
-             </button>
-           </div>
-         </div>
-
-         <div className="text-[11px] text-slate-500 font-medium italic">
-           Click row to select. Double-click to open & edit.
-         </div>
       </div>
 
       {/* PO Grid Table */}

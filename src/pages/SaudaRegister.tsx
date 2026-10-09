@@ -992,69 +992,82 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   return (
     <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Limited ERP Console" onClose={onClose}>
       <div className="space-y-4 relative pb-10 font-sans">
-        {/* 1. Four Modern Enterprise KPI Cards */}
+        {/* 1. Four Modern Enterprise KPI Cards (Colour Full) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Active Pending Saudas */}
-          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+          {/* Card 1: Active Pending Saudas (Vibrant Rose) */}
+          <div className="bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 rounded-[18px] border border-rose-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{pendingSaudasCount}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
-              <p className="text-[9px] font-semibold text-rose-500 mt-0.5">Awaiting Check Point</p>
+              <p className="text-2xl font-black text-white tracking-tight font-mono">{pendingSaudasCount}</p>
+              <p className="text-[10px] font-extrabold text-rose-100 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-rose-100 bg-black/20 rounded-md">
+                Awaiting Check Point
+              </span>
             </div>
-            <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-2xl text-rose-600 shadow-2xs">
+            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
               <Clock className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 2: Total Registered Saudas */}
-          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+          {/* Card 2: Total Registered Saudas (Vibrant Indigo/Blue) */}
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 rounded-[18px] border border-indigo-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">{totalSaudas}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
-              <p className="text-[9px] font-semibold text-slate-400 mt-0.5">{completedSaudas.length} in Check Point</p>
+              <p className="text-2xl font-black text-white tracking-tight font-mono">{totalSaudas}</p>
+              <p className="text-[10px] font-extrabold text-blue-100 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-blue-100 bg-black/20 rounded-md">
+                {completedSaudas.length} in Check Point
+              </span>
             </div>
-            <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-2xl text-blue-600 shadow-2xs">
+            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
               <ClipboardList className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 3: Cumulative Sauda Weight */}
-          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+          {/* Card 3: Cumulative Sauda Weight (Vibrant Emerald/Teal) */}
+          <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-[18px] border border-emerald-400/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
-                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-semibold text-slate-500">Tons</span>
+              <p className="text-2xl font-black text-white tracking-tight font-mono">
+                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-bold text-emerald-200">Tons</span>
               </p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] font-extrabold text-emerald-100 uppercase tracking-wider mt-0.5">
                 {statusTab === 'pending' ? "Pending Sauda Weight" : "Cumulative Sauda Weight"}
               </p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-100 bg-black/20 rounded-md">
+                {statusTab === 'pending' ? "Active Allocation" : "All Processed"}
+              </span>
             </div>
-            <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-emerald-700 shadow-2xs">
+            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
               <Scale className="h-6 w-6" />
             </div>
           </div>
 
-          {/* Card 4: Book Total Value */}
-          <div className="bg-white rounded-[18px] border border-slate-200/90 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+          {/* Card 4: Book Total Value (Vibrant Amber/Orange) */}
+          <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-[18px] border border-amber-300/40 p-4 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between text-white">
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight font-mono">
+              <p className="text-2xl font-black text-white tracking-tight font-mono">
                 ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] font-extrabold text-amber-100 uppercase tracking-wider mt-0.5">
                 {statusTab === 'pending' ? "Pending Book Value" : "Book Total Value"}
               </p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-100 bg-black/20 rounded-md">
+                Verified Valuation
+              </span>
             </div>
-            <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-2xl text-amber-600 shadow-2xs">
+            <div className="p-3 bg-white/20 backdrop-blur-xs border border-white/30 rounded-2xl text-white shadow-xs">
               <IndianRupee className="h-6 w-6" />
             </div>
           </div>
         </div>
 
-        {/* 2. Large Search & Date Filter Section */}
-        <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap lg:flex-nowrap items-center gap-3 justify-between">
-          {/* Large Search Box */}
-          <div className="relative flex-1 min-w-0 sm:min-w-[220px] w-full sm:w-auto">
+        {/* 2. Search & Action Toolbar Section */}
+        <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap items-center gap-3 justify-between">
+          {/* Left: Search Box */}
+          <div className="relative flex-1 min-w-[200px] sm:min-w-[240px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input  id="search_broker_or_supplier_830" name="search_broker_or_supplier" aria-label="Search Broker or Supplier..."
+            <input 
+              id="search_broker_or_supplier_830" 
+              name="search_broker_or_supplier" 
+              aria-label="Search Broker or Supplier..."
               type="text"
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
               placeholder="Search Broker or Supplier..."
@@ -1065,9 +1078,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           
           {/* Date Filters & Quick Actions */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
               <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">From</span>
-              <input  id="startdate_843" name="startdate" aria-label="startdate"
+              <input 
+                id="startdate_843" 
+                name="startdate" 
+                aria-label="startdate"
                 type="date" 
                 className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
                 value={startDate} 
@@ -1075,9 +1091,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               />
             </div>
 
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
               <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">To</span>
-              <input  id="enddate_853" name="enddate" aria-label="enddate"
+              <input 
+                id="enddate_853" 
+                name="enddate" 
+                aria-label="enddate"
                 type="date" 
                 className="bg-transparent font-medium text-slate-700 outline-none text-xs" 
                 value={endDate} 
@@ -1087,7 +1106,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
             <button 
               onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); }}
-              className="px-3.5 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer active:scale-95" 
+              className="px-2.5 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl flex items-center gap-1 transition-all cursor-pointer active:scale-95" 
               title="Clear search and filter"
             >
               <X className="h-3.5 w-3.5" />
@@ -1097,105 +1116,25 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             <button 
               onClick={fetchSaudas}
               disabled={isRefreshing}
-              className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              className="px-2.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               title="Refresh Sauda database"
             >
               <RefreshCcw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
-        </div>
 
-        {/* 3. Action Toolbar (Green Filled & White Outline Buttons) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 my-1">
-          {isUser10 ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* <button
+          {/* Buttons Moved Beside Search Section: New Sauda, Print Book, Main Dashboard, Checked, Reject */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {!isUser10 && (
+              <button
                 onClick={onNew}
-                className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                className="bg-[#174C2C] hover:bg-[#103A20] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Plus className="h-4 w-4 text-amber-300" />
                 <span>New Sauda</span>
-              </button> */}
-
-              <button
-                onClick={() => {
-                  if (selectedSaudaId) {
-                    const sauda = saudaList.find(s => s.sauda_id === selectedSaudaId);
-                    if (sauda) handlePrint(sauda);
-                  } else {
-                    setPrintingBook(true);
-                  }
-                }}
-                className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-              >
-                <Printer className="h-4 w-4" />
-                <span>Print Book</span>
               </button>
-
-              {/* Quick Section Switchers Beside Print Book */}
-              <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setStatusTab('pending')}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                    statusTab === 'pending'
-                      ? "bg-[#174C2C] text-white shadow-2xs"
-                      : "text-slate-700 hover:bg-slate-200"
-                  )}
-                  title="Main Dashboard (Pending Saudas)"
-                >
-                  <span>Main Dashboard</span>
-                  <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
-                </button>
-
-                {canSeeChecked && (
-                  <button
-                    type="button"
-                    onClick={() => setStatusTab('checked')}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                      statusTab === 'checked'
-                        ? "bg-emerald-800 text-white shadow-2xs"
-                        : "text-emerald-800 hover:bg-emerald-100/60"
-                    )}
-                    title="Checked Section"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Checked</span>
-                    <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
-                  </button>
-                )}
-
-                {canSeeRejected && (
-                  <button
-                    type="button"
-                    onClick={() => setStatusTab('rejected')}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                      statusTab === 'rejected'
-                        ? "bg-rose-800 text-white shadow-2xs"
-                        : "text-rose-800 hover:bg-rose-100/60"
-                    )}
-                    title="Reject Section"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    <span>Reject Section</span>
-                    <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ):(
-            <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={onNew}
-              className="bg-[#174C2C] hover:bg-[#103A20] text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Plus className="h-4 w-4 text-amber-300" />
-              <span>New Sauda</span>
-            </button>
+            )}
 
             <button
               onClick={() => {
@@ -1206,13 +1145,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   setPrintingBook(true);
                 }
               }}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Printer className="h-4 w-4" />
               <span>Print Book</span>
             </button>
 
-            {/* Quick Section Switchers Beside Print Book */}
+            {/* Quick Section Switchers Beside Search */}
             <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
               <button
                 type="button"
@@ -1239,7 +1178,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       ? "bg-emerald-800 text-white shadow-2xs"
                       : "text-emerald-800 hover:bg-emerald-100/60"
                   )}
-                  title="Checked Section"
+                  title="Checked"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Checked</span>
@@ -1257,22 +1196,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       ? "bg-rose-800 text-white shadow-2xs"
                       : "text-rose-800 hover:bg-rose-100/60"
                   )}
-                  title="Reject Section"
+                  title="Reject"
                 >
                   <X className="w-3.5 h-3.5" />
-                  <span>Reject Section</span>
+                  <span>Reject</span>
                   <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
                 </button>
               )}
             </div>
-          </div>
-          )}
-
-          <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl px-4 py-1.5 flex flex-col text-right">
-            <span className="text-[10px] font-extrabold uppercase text-amber-800 tracking-wider">Book Total Value</span>
-            <span className="text-base font-black text-[#174C2C] font-mono">
-              ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
           </div>
         </div>
 

@@ -185,6 +185,8 @@ export default function Inspection({ onNavigate, onClose }: InspectionProps) {
             onEditRecord={handleEditRecord}
             onPrintRecord={handlePrintRecord}
             onDeleteRecord={handleDeleteRecord}
+            onOpenNewForm={handleOpenNewForm}
+            onRefresh={() => fetchInspectionRecords(true)}
           />
         ) : (
           <div className="space-y-6">
