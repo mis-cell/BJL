@@ -468,18 +468,26 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-950 to-green-950 text-white px-5 py-3.5 flex items-center justify-between border-b border-emerald-800">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-yellow-400 text-emerald-950">
-                Sauda Check Point Drill-Down
-              </span>
+            {isPremiumDrillDown ? (
               <h3 className="text-base sm:text-lg font-black uppercase tracking-wide text-yellow-300">
-                {title}
+                Premium
               </h3>
-            </div>
-            {subtitle && (
-              <p className="text-xs text-emerald-200/90 mt-0.5">
-                {subtitle}
-              </p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-yellow-400 text-emerald-950">
+                    Sauda Check Point Drill-Down
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wide text-yellow-300">
+                    {title}
+                  </h3>
+                </div>
+                {subtitle && (
+                  <p className="text-xs text-emerald-200/90 mt-0.5">
+                    {subtitle}
+                  </p>
+                )}
+              </>
             )}
           </div>
 

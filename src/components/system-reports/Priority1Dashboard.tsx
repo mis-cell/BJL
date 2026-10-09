@@ -158,7 +158,7 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
 
           {/* Premium */}
           <div 
-            onClick={() => onDrillDown('Transactions with Premium', filtered.filter(t => t.premiumAmount > 0))}
+            onClick={() => onDrillDown('Premium', filtered.filter(t => t.premiumAmount > 0))}
             className="p-3.5 bg-white border border-amber-200 rounded-xl shadow-sm hover:shadow transition cursor-pointer flex flex-col justify-between"
           >
             <div className="flex items-center justify-between">
