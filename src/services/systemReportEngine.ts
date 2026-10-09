@@ -232,6 +232,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       finals,
       inspections,
       payments,
+      paymentDetails,
       sattaRates,
       brokers,
       suppliers,
@@ -251,6 +252,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('final_arrival').catch(() => []),
       dbModule.fetchAll('material_inspection').catch(() => []),
       dbModule.fetchAll('payment_master').catch(() => []),
+      dbModule.fetchAll('payment_details').catch(() => []),
       dbModule.fetchAll('satta_base_rates').catch(() => []),
       dbModule.fetchAll('broker_master').catch(() => []),
       dbModule.fetchAll('supply_master').catch(() => []),
@@ -464,13 +466,22 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    // Payments by PO
+    // Payments by PO & MR (combining payment_master and payment_details)
     const paymentByPo = new Map<string, number>();
     (payments || []).forEach((p: any) => {
       const amt = Number(p.paid_amount || (p.payment_status === 'Paid' ? p.total_amount : 0) || 0);
       if (p.po_no) paymentByPo.set(p.po_no, (paymentByPo.get(p.po_no) || 0) + amt);
       if (p.mr_no) paymentByPo.set(p.mr_no, (paymentByPo.get(p.mr_no) || 0) + amt);
       if (p.voucher_no) paymentByPo.set(p.voucher_no, (paymentByPo.get(p.voucher_no) || 0) + amt);
+    });
+
+    (paymentDetails || []).forEach((pd: any) => {
+      const amt = Number(pd.amount || pd.net_amt || (pd.sett_rate && pd.quantity_qtl ? pd.sett_rate * pd.quantity_qtl : 0) || 0);
+      if (amt > 0) {
+        if (pd.po_no) paymentByPo.set(pd.po_no, Math.max(paymentByPo.get(pd.po_no) || 0, amt));
+        if (pd.mr_no) paymentByPo.set(pd.mr_no, Math.max(paymentByPo.get(pd.mr_no) || 0, amt));
+        if (pd.sauda_no) paymentByPo.set(pd.sauda_no, Math.max(paymentByPo.get(pd.sauda_no) || 0, amt));
+      }
     });
 
     // Helper to generate normalized keys for robust PO detail linking
@@ -570,6 +581,16 @@ export async function loadAndProcessSystemReportData(): Promise<{
         if (pm.po_no) recordPremiumEntry(pm.po_no, premRate, premAmt, 'Payment');
         if (pm.sauda_no) recordPremiumEntry(pm.sauda_no, premRate, premAmt, 'Payment');
         if (pm.mr_no) recordPremiumEntry(pm.mr_no, premRate, premAmt, 'Payment');
+      }
+    });
+
+    (paymentDetails || []).forEach((pd: any) => {
+      const premRate = parseExplicitNum(pd.premium || pd.premium_rate);
+      const premAmt = parseExplicitNum(pd.premium_amount || pd.val_premium_amt);
+      if (premAmt > 0 || premRate > 0) {
+        if (pd.po_no) recordPremiumEntry(pd.po_no, premRate, premAmt, 'PaymentDetail');
+        if (pd.sauda_no) recordPremiumEntry(pd.sauda_no, premRate, premAmt, 'PaymentDetail');
+        if (pd.mr_no) recordPremiumEntry(pd.mr_no, premRate, premAmt, 'PaymentDetail');
       }
     });
 
