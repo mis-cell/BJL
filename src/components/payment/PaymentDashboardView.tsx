@@ -22,7 +22,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { PaymentMaster } from '../../types/payment.types';
-import { cn, formatIndianCurrency } from '../../lib/utils';
+import { cn, formatIndianCurrency, formatIndianCompactCurrency } from '../../lib/utils';
 import { parseRecordDate } from '../../services/dashboardCalculationService';
 import { aggregatePremiumsFromTables, filterAggregatedPremiums } from '../../services/paymentCalculationEngine';
 import { PaginationControls } from '../PaginationControls';
@@ -341,10 +341,13 @@ export function PaymentDashboardView({
       {/* 1. TOP EXECUTIVE SUMMARY CARDS (DYNAMIC MONTH-WISE KPI METRICS) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5">
               <Wallet className="w-4 h-4 text-purple-700" />
               Payment KPI Summary
+            </span>
+            <span className="text-[10px] font-semibold text-purple-800 bg-purple-100/90 px-2 py-0.5 rounded-full border border-purple-200">
+              C = Crore • L = Lakh • K = Thousand
             </span>
           </div>
 
@@ -362,7 +365,7 @@ export function PaymentDashboardView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Card 1: Total Vouchers */}
           <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-3 rounded-xl border border-indigo-700/50 shadow-sm flex items-center justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Total Vouchers</p>
               <h3 className="text-xl font-black mt-0.5">{yearMonthFilteredPayments.length}</h3>
               <p className="text-[9px] text-indigo-300 mt-0.5 truncate">Total Voucher Count</p>
@@ -373,11 +376,19 @@ export function PaymentDashboardView({
           </div>
 
           {/* Card 2: Total Paid Amount */}
-          <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between">
-            <div>
+          <div 
+            className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-3 rounded-xl border border-emerald-700/50 shadow-sm flex items-center justify-between"
+            title={`Exact Amount: ${formatIndianCurrency(totalPaidSum)}`}
+          >
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Total Paid Amount</p>
-              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPaidSum)}</h3>
-              <p className="text-[9px] text-emerald-300 mt-0.5">{completedCount} Vouchers Cleared</p>
+              <h3 
+                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                title={`Exact: ${formatIndianCurrency(totalPaidSum)}`}
+              >
+                {formatIndianCompactCurrency(totalPaidSum)}
+              </h3>
+              <p className="text-[9px] text-emerald-300 mt-0.5 truncate">{completedCount} Vouchers Cleared</p>
             </div>
             <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-300 shrink-0 ml-2">
               <DollarSign className="w-5 h-5" />
@@ -385,11 +396,19 @@ export function PaymentDashboardView({
           </div>
 
           {/* Card 3: Total Payable Value */}
-          <div className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between">
-            <div>
+          <div 
+            className="bg-gradient-to-br from-purple-900 to-slate-900 text-white p-3 rounded-xl border border-purple-700/50 shadow-sm flex items-center justify-between"
+            title={`Exact Amount: ${formatIndianCurrency(totalPayableSum)}`}
+          >
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-purple-200">Total Payable Value</p>
-              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPayableSum)}</h3>
-              <p className="text-[9px] text-purple-300 mt-0.5">Total Gross Invoice Value</p>
+              <h3 
+                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                title={`Exact: ${formatIndianCurrency(totalPayableSum)}`}
+              >
+                {formatIndianCompactCurrency(totalPayableSum)}
+              </h3>
+              <p className="text-[9px] text-purple-300 mt-0.5 truncate">Total Gross Invoice Value</p>
             </div>
             <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300 shrink-0 ml-2">
               <TrendingUp className="w-5 h-5" />
@@ -397,14 +416,22 @@ export function PaymentDashboardView({
           </div>
 
           {/* Card 4: Pending / Retention */}
-          <div className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30">
-            <div>
+          <div 
+            className="bg-gradient-to-br from-amber-950 via-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-600/60 shadow-sm flex items-center justify-between ring-2 ring-amber-500/30"
+            title={`Exact Amount: ${formatIndianCurrency(totalPendingSum)}`}
+          >
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-amber-400" />
                 Pending / Retention
               </p>
-              <h3 className="text-lg font-black mt-0.5 text-amber-300 truncate">{formatIndianCurrency(totalPendingSum)}</h3>
-              <p className="text-[9px] text-amber-200 mt-0.5 font-semibold">{pendingCount} Outstanding / Retention</p>
+              <h3 
+                className="text-xl font-black mt-0.5 text-amber-300 truncate tracking-tight cursor-default"
+                title={`Exact: ${formatIndianCurrency(totalPendingSum)}`}
+              >
+                {formatIndianCompactCurrency(totalPendingSum)}
+              </h3>
+              <p className="text-[9px] text-amber-200 mt-0.5 font-semibold truncate">{pendingCount} Outstanding / Retention</p>
             </div>
             <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
               <Clock className="w-5 h-5 text-amber-400" />
@@ -412,11 +439,19 @@ export function PaymentDashboardView({
           </div>
 
           {/* Card 5: Premium */}
-          <div className="bg-gradient-to-br from-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-700/50 shadow-sm flex items-center justify-between">
-            <div>
+          <div 
+            className="bg-gradient-to-br from-amber-900 to-slate-900 text-white p-3 rounded-xl border border-amber-700/50 shadow-sm flex items-center justify-between"
+            title={`Exact Amount: ${formatIndianCurrency(totalPremiumData.sum)}`}
+          >
+            <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Premium</p>
-              <h3 className="text-lg font-black mt-0.5 truncate">{formatIndianCurrency(totalPremiumData.sum)}</h3>
-              <p className="text-[9px] text-amber-300 mt-0.5">{totalPremiumData.count} MR{totalPremiumData.count !== 1 ? 's' : ''} with Premium</p>
+              <h3 
+                className="text-xl font-black mt-0.5 truncate tracking-tight cursor-default"
+                title={`Exact: ${formatIndianCurrency(totalPremiumData.sum)}`}
+              >
+                {formatIndianCompactCurrency(totalPremiumData.sum)}
+              </h3>
+              <p className="text-[9px] text-amber-300 mt-0.5 truncate">{totalPremiumData.count} MR{totalPremiumData.count !== 1 ? 's' : ''} with Premium</p>
             </div>
             <div className="p-2 bg-amber-500/20 rounded-lg text-amber-300 shrink-0 ml-2">
               <Award className="w-5 h-5 text-amber-400" />

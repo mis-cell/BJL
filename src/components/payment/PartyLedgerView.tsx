@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { BookOpen, Printer, ArrowLeft, Clock, FileText } from 'lucide-react';
 import { PaymentMaster } from '../../types/payment.types';
-import { cn, formatIndianCurrency } from '../../lib/utils';
+import { cn, formatIndianCurrency, formatIndianCompactCurrency } from '../../lib/utils';
 import { PaginationControls } from '../PaginationControls';
 
 export interface PartyLedgerViewProps {
@@ -114,29 +114,29 @@ export function PartyLedgerView({
           <p className="text-[9px] text-slate-400 mt-1">{partyLedgerRecords.length} Payment Transactions</p>
         </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm" title={`Exact: ${formatIndianCurrency(partyTotalPayable)}`}>
           <p className="text-[10px] font-bold uppercase text-slate-500">Total Invoice / Payable Value</p>
-          <h4 className="text-base font-black text-slate-800 mt-0.5">
-            {formatIndianCurrency(partyTotalPayable)}
+          <h4 className="text-base font-black text-slate-800 mt-0.5 cursor-default">
+            {formatIndianCompactCurrency(partyTotalPayable)}
           </h4>
           <p className="text-[9px] text-slate-400 mt-1">Gross Contract Bill Value</p>
         </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm" title={`Exact: ${formatIndianCurrency(partyTotalPaid)}`}>
           <p className="text-[10px] font-bold uppercase text-slate-500">Total Amount Paid</p>
-          <h4 className="text-base font-black text-emerald-700 mt-0.5">
-            {formatIndianCurrency(partyTotalPaid)}
+          <h4 className="text-base font-black text-emerald-700 mt-0.5 cursor-default">
+            {formatIndianCompactCurrency(partyTotalPaid)}
           </h4>
           <p className="text-[9px] text-emerald-600 font-semibold mt-1">Total Cleared Disbursed</p>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-3.5 rounded-xl border border-amber-300 shadow-sm">
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-3.5 rounded-xl border border-amber-300 shadow-sm" title={`Exact: ${formatIndianCurrency(partyTotalPending)}`}>
           <p className="text-[10px] font-black uppercase text-amber-800 flex items-center gap-1">
             <Clock className="w-3 h-3 text-amber-600" />
             Net Pending / Retention Balance
           </p>
-          <h4 className="text-base font-black text-amber-900 mt-0.5">
-            {formatIndianCurrency(partyTotalPending)}
+          <h4 className="text-base font-black text-amber-900 mt-0.5 cursor-default">
+            {formatIndianCompactCurrency(partyTotalPending)}
           </h4>
           <p className="text-[9px] text-amber-700 font-bold mt-1">Outstanding Retention Payable</p>
         </div>

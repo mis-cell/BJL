@@ -154,6 +154,61 @@ export function formatIndianCurrency(
 }
 
 /**
+ * Formats a currency amount into Indian abbreviated format (K for Thousand, L for Lakh, C for Crore).
+ * Examples:
+ * - 1,000 -> ₹1K
+ * - 25,000 -> ₹25K
+ * - 1,00,000 -> ₹1L
+ * - 1,50,000 -> ₹1.5L
+ * - 3,85,172.61 -> ₹3.85L
+ * - 1,00,00,000 -> ₹1C
+ * - 35,75,22,000 -> ₹35.75C
+ * - 38,46,50,515.01 -> ₹38.47C
+ * - 2,71,28,515.01 -> ₹2.71C
+ * - 500 -> ₹500
+ * - 0 -> ₹0
+ */
+export function formatIndianCompactCurrency(
+  val: number | string | null | undefined,
+  includeSymbol: boolean = true,
+  maxDecimals: number = 2
+): string {
+  if (val === null || val === undefined || val === '') return includeSymbol ? '₹0' : '0';
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
+  if (isNaN(num) || num === 0) return includeSymbol ? '₹0' : '0';
+
+  const isNeg = num < 0;
+  const absNum = Math.abs(num);
+
+  let formattedNum = '';
+  let suffix = '';
+
+  if (absNum >= 10000000) {
+    // 1 Crore = 10,000,000
+    const valInCrores = absNum / 10000000;
+    formattedNum = parseFloat(valInCrores.toFixed(maxDecimals)).toString();
+    suffix = 'C';
+  } else if (absNum >= 100000) {
+    // 1 Lakh = 100,000
+    const valInLakhs = absNum / 100000;
+    formattedNum = parseFloat(valInLakhs.toFixed(maxDecimals)).toString();
+    suffix = 'L';
+  } else if (absNum >= 1000) {
+    // 1 Thousand = 1,000
+    const valInThousands = absNum / 1000;
+    formattedNum = parseFloat(valInThousands.toFixed(maxDecimals)).toString();
+    suffix = 'K';
+  } else {
+    // Below 1,000
+    formattedNum = parseFloat(absNum.toFixed(maxDecimals)).toString();
+    suffix = '';
+  }
+
+  const prefix = includeSymbol ? (isNeg ? '-₹' : '₹') : (isNeg ? '-' : '');
+  return `${prefix}${formattedNum}${suffix}`;
+}
+
+/**
  * Calculates Paid Amount using FLOOR(amount / 1000) * 1000 to always round DOWN to the nearest ₹1,000.
  * Examples:
  * ₹7,76,074.77 -> ₹7,76,000
