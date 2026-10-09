@@ -58,7 +58,7 @@ import {
   LineChart, 
   Line 
 } from 'recharts';
-import { cn, formatIndianCurrency } from '../lib/utils';
+import { cn, formatIndianCurrency, formatIndianCompactCurrency } from '../lib/utils';
 import { hasModulePermission } from '../lib/permissions';
 import { 
   computeDashboardMetrics, 
@@ -517,8 +517,11 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="my-1">
-                <div className="text-lg sm:text-xl font-mono font-extrabold text-[#1E331B] tracking-tight leading-tight truncate">
-                  ₹{formatIndianCurrency(dbMetrics.totalPayableValue)}
+                <div 
+                  className="text-lg sm:text-xl font-mono font-extrabold text-[#1E331B] tracking-tight leading-tight truncate"
+                  title={`₹${formatIndianCurrency(dbMetrics.totalPayableValue)}`}
+                >
+                  {formatIndianCompactCurrency(dbMetrics.totalPayableValue)}
                 </div>
                 <div className="text-[10px] font-sans font-semibold text-[#5A6E54] mt-0.5">
                   Authoritative Payable Value
@@ -570,8 +573,11 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="my-1">
-                <div className="text-lg sm:text-xl font-mono font-extrabold text-emerald-800 tracking-tight leading-tight truncate">
-                  ₹{formatIndianCurrency(dbMetrics.totalPaidAmount)}
+                <div 
+                  className="text-lg sm:text-xl font-mono font-extrabold text-emerald-800 tracking-tight leading-tight truncate"
+                  title={`₹${formatIndianCurrency(dbMetrics.totalPaidAmount)}`}
+                >
+                  {formatIndianCompactCurrency(dbMetrics.totalPaidAmount)}
                 </div>
                 <div className="text-[10px] font-sans font-semibold text-[#5A6E54] mt-0.5">
                   Cleared / Advance Paid
@@ -623,8 +629,11 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="my-1">
-                <div className="text-lg sm:text-xl font-mono font-extrabold text-rose-800 tracking-tight leading-tight truncate">
-                  ₹{formatIndianCurrency(dbMetrics.totalRemainingAmount)}
+                <div 
+                  className="text-lg sm:text-xl font-mono font-extrabold text-rose-800 tracking-tight leading-tight truncate"
+                  title={`₹${formatIndianCurrency(dbMetrics.totalRemainingAmount)}`}
+                >
+                  {formatIndianCompactCurrency(dbMetrics.totalRemainingAmount)}
                 </div>
                 <div className="text-[10px] font-sans font-semibold text-[#5A6E54] mt-0.5">
                   Unpaid Outstanding Dues
