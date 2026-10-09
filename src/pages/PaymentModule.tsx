@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Wallet, 
-  BookOpen, 
   ArrowLeft, 
   Plus, 
   AlertTriangle, 
@@ -130,32 +129,6 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('dashboard')}
-            className={cn(
-              "px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer",
-              viewMode === 'dashboard'
-                ? "bg-purple-600 text-white border-purple-400 shadow"
-                : "bg-purple-900/60 text-purple-200 border-purple-700 hover:bg-purple-800"
-            )}
-          >
-            <Wallet className="w-3.5 h-3.5" />
-            Payment Dashboard
-          </button>
-
-          <button
-            onClick={() => setViewMode('ledger')}
-            className={cn(
-              "px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer",
-              viewMode === 'ledger'
-                ? "bg-purple-600 text-white border-purple-400 shadow"
-                : "bg-purple-900/60 text-purple-200 border-purple-700 hover:bg-purple-800"
-            )}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            Party Ledger Accounts
-          </button>
-
           {viewMode === 'entry' ? (
             <LegacyButton
               onClick={() => { setViewMode('dashboard'); setMasterData(initialMaster()); setIsEdit(false); }}
