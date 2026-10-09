@@ -24,6 +24,7 @@ import {
 import { PaymentMaster } from '../../types/payment.types';
 import { cn, formatIndianCurrency } from '../../lib/utils';
 import { parseRecordDate } from '../../services/dashboardCalculationService';
+import { aggregatePremiumsFromTables, filterAggregatedPremiums } from '../../services/paymentCalculationEngine';
 import { PaginationControls } from '../PaginationControls';
 
 export interface PaymentDashboardViewProps {
@@ -185,123 +186,15 @@ export function PaymentDashboardView({
     }).length;
   }, [yearMonthFilteredPayments]);
 
+  // Robust unified premium aggregation across payment_master and payment_details
+  const aggregatedPremiums = useMemo(() => {
+    const allDetails = paymentList.flatMap(p => (p as any).details || (p as any).payment_details || (p as any).grid_details || []);
+    return aggregatePremiumsFromTables(paymentList, allDetails);
+  }, [paymentList]);
+
   const totalPremiumData = useMemo(() => {
-    let sum = 0;
-    let count = 0;
-
-    yearMonthFilteredPayments.forEach(p => {
-      let mrPrem = 0;
-
-      // 1. Explicit master premium amount fields
-      const explicitAmt = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium_amount || (p as any).val_premium || 0);
-      const invoiceTotal = Number(p.payable_amt || p.total_amount || p.paid_amount || p.val_material_value || 0);
-
-      // Validate explicit master amount is not an invoice total misclassification
-      if (explicitAmt > 0) {
-        if (invoiceTotal === 0 || Math.abs(explicitAmt - invoiceTotal) > 1) {
-          mrPrem = explicitAmt;
-        }
-      }
-
-      // 2. Check details array (payment_details rows or columns)
-      const detailsList = (p as any).details || (p as any).payment_details || (p as any).grid_details;
-      if (Array.isArray(detailsList) && detailsList.length > 0) {
-        let detailsPremSum = 0;
-        detailsList.forEach((col: any) => {
-          const colAmt = Number(col.premium_amount || col.val_premium_amt || 0);
-          const colRate = Number(col.premium || col.premium_rate || 0);
-          if (colAmt > 0 && Math.abs(colAmt - invoiceTotal) > 1) {
-            detailsPremSum += colAmt;
-          } else if (colRate > 0 && colRate < 2000) {
-            let qtl = Number(col.quantity_qtl || 0);
-            if (qtl === 0) {
-              const rawWt = Number(col.arr_qty_wt || col.wt_quantity || col.quantity || col.weight_mt || 0);
-              if (rawWt > 1000) {
-                qtl = rawWt / 10;
-              } else if (rawWt > 100) {
-                qtl = rawWt / 10;
-              } else if (rawWt > 0) {
-                qtl = rawWt * 10;
-              }
-            }
-            if (qtl > 0) {
-              detailsPremSum += colRate * qtl;
-            }
-          }
-        });
-        if (detailsPremSum > 0) {
-          mrPrem = Math.max(mrPrem, detailsPremSum);
-        }
-      }
-
-      // 3. Master level premium rate (p.summary_rate_qtel or p.premium or p.premium_rate)
-      if (mrPrem === 0) {
-        const masterRate = Number((p as any).premium || (p as any).premium_rate || (p as any).summary_premium_rate || (p as any).val_premium_rate || 0);
-        if (masterRate > 0 && masterRate < 2000) {
-          let totalQtl = 0;
-          if (Array.isArray(detailsList) && detailsList.length > 0) {
-            totalQtl = detailsList.reduce((qSum: number, col: any) => {
-              let q = Number(col.quantity_qtl || 0);
-              if (q === 0) {
-                const rawWt = Number(col.arr_qty_wt || col.wt_quantity || col.quantity || 0);
-                q = rawWt > 1000 ? rawWt / 10 : (rawWt > 100 ? rawWt / 10 : rawWt * 10);
-              }
-              return qSum + q;
-            }, 0);
-          }
-          if (totalQtl === 0) {
-            const unitRate = Number(p.rate_qntl || (p as any).summary_rate_qtel || 1);
-            if (unitRate > 0 && invoiceTotal > 0) {
-              totalQtl = invoiceTotal / unitRate;
-            }
-          }
-          if (totalQtl > 0) {
-            mrPrem = masterRate * totalQtl;
-          }
-        }
-      }
-
-      // 4. Cross reference matched PO or Sauda Check Point
-      if (mrPrem === 0 && (p.po_no || (p as any).sauda_no || p.mr_no)) {
-        const targetKey = String(p.po_no || (p as any).sauda_no || p.mr_no || '').trim().toUpperCase();
-        if (targetKey) {
-          const matchedPo = (purchaseOrders || []).find(po => {
-            const pNo = String(po.po_no || po.contract_po_no || po.sauda_no || '').trim().toUpperCase();
-            return pNo && (pNo === targetKey || pNo.includes(targetKey) || targetKey.includes(pNo));
-          }) || (saudaCheckPoints || []).find(sc => {
-            const sNo = String(sc.po_no || sc.contract_po_no || sc.sauda_no || '').trim().toUpperCase();
-            return sNo && (sNo === targetKey || sNo.includes(targetKey) || targetKey.includes(sNo));
-          });
-
-          if (matchedPo) {
-            const poAmt = Number(matchedPo.val_premium_amt || matchedPo.summary_premium_amount || 0);
-            const poRate = Number(matchedPo.premium || matchedPo.premium_rate || matchedPo.val_premium_rate || 0);
-            if (poAmt > 0 && Math.abs(poAmt - invoiceTotal) > 1) {
-              mrPrem = poAmt;
-            } else if (poRate > 0 && poRate < 2000) {
-              const baseRate = Number(p.rate_qntl || matchedPo.b_rate || matchedPo.rate_qntl || 1);
-              if (baseRate > 0 && invoiceTotal > 0) {
-                const qtyQtl = invoiceTotal / baseRate;
-                mrPrem = poRate * qtyQtl;
-              }
-            }
-          }
-        }
-      }
-
-      // Sanity filter against misclassified gross invoice sums
-      if (invoiceTotal > 0 && Math.abs(mrPrem - invoiceTotal) < 1) {
-        mrPrem = 0;
-      }
-
-      if (mrPrem > 0) {
-        sum += Math.round(mrPrem);
-        count += 1;
-      }
-    });
-
-    return { sum, count };
-  }, [yearMonthFilteredPayments, purchaseOrders, saudaCheckPoints]);
+    return filterAggregatedPremiums(aggregatedPremiums, activeYear, selectedMonth);
+  }, [aggregatedPremiums, activeYear, selectedMonth]);
 
   // Combined with text search for the data table
   /* const finalFilteredPayments = useMemo(() => {

@@ -1,4 +1,5 @@
 import { dbModule } from './dbModule';
+import { aggregatePremiumsFromTables } from './paymentCalculationEngine';
 
 export interface ReportTransactionLine {
   txnId: string;
@@ -49,6 +50,8 @@ export interface ReportTransactionLine {
   isDelayed: boolean;
   isAbnormal: boolean;
   abnormalReasons: string[];
+  mrNo?: string;
+  voucherNo?: string;
 }
 
 export interface ReportFilterCriteria {
@@ -578,6 +581,26 @@ export async function loadAndProcessSystemReportData(): Promise<{
       });
     };
 
+    // 1. Process payment_master + payment_details using the authoritative unified calculation engine
+    const unifiedPremiums = aggregatePremiumsFromTables(payments, paymentDetails);
+
+    // Register all unified MR premiums under their PO, MR, and Voucher aliases
+    unifiedPremiums.mrsWithPremium.forEach(pm => {
+      const keys = [
+        ...getPoKeys(pm.poNo),
+        ...getPoKeys(pm.mrNo),
+        ...getPoKeys(pm.voucherNo)
+      ];
+      keys.forEach(k => {
+        const existing = premiumLookupMap.get(k) || { rate: 0, amount: 0, source: '' };
+        premiumLookupMap.set(k, {
+          rate: Math.max(existing.rate, pm.avgPremiumRatePerQtl),
+          amount: existing.amount + pm.totalPremiumAmount,
+          source: 'PaymentOperations'
+        });
+      });
+    });
+
     (settlements || []).forEach((st: any) => {
       const premAmt = parseExplicitNum(st.val_premium_amt || st.summary_premium_amount);
       const premRate = parseExplicitNum(st.summary_premium_rate || st.premium_rate);
@@ -585,26 +608,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
         if (st.po_no) recordPremiumEntry(st.po_no, premRate, premAmt, 'Settlement', st);
         if (st.sauda_no) recordPremiumEntry(st.sauda_no, premRate, premAmt, 'Settlement', st);
         if (st.contract_po_no) recordPremiumEntry(st.contract_po_no, premRate, premAmt, 'Settlement', st);
-      }
-    });
-
-    (payments || []).forEach((pm: any) => {
-      const premAmt = parseExplicitNum(pm.val_premium_amt || pm.summary_premium_amount);
-      const premRate = parseExplicitNum(pm.premium || pm.premium_rate);
-      if (premAmt > 0 || premRate > 0) {
-        if (pm.po_no) recordPremiumEntry(pm.po_no, premRate, premAmt, 'Payment', pm);
-        if (pm.sauda_no) recordPremiumEntry(pm.sauda_no, premRate, premAmt, 'Payment', pm);
-        if (pm.mr_no) recordPremiumEntry(pm.mr_no, premRate, premAmt, 'Payment', pm);
-      }
-    });
-
-    (paymentDetails || []).forEach((pd: any) => {
-      const premRate = parseExplicitNum(pd.premium || pd.premium_rate);
-      const premAmt = parseExplicitNum(pd.premium_amount || pd.val_premium_amt);
-      if (premAmt > 0 || premRate > 0) {
-        if (pd.po_no) recordPremiumEntry(pd.po_no, premRate, premAmt, 'PaymentDetail', pd);
-        if (pd.sauda_no) recordPremiumEntry(pd.sauda_no, premRate, premAmt, 'PaymentDetail', pd);
-        if (pd.mr_no) recordPremiumEntry(pd.mr_no, premRate, premAmt, 'PaymentDetail', pd);
       }
     });
 
@@ -662,7 +665,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const details = findPoDetails(poNo, saudaNo);
 
       if (details.length > 0) {
-        details.forEach((line: any) => {
+        details.forEach((line: any, dIdx: number) => {
           const rawGName = String(line.grade_name || line.grade || '').trim();
           const rawGCode = String(line.grade_code || line.quality || '').trim();
           const grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
@@ -685,10 +688,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const grossPurchaseValue = quantityMT * purchaseRate * 10;
           const baseRateValue = quantityMT * baseRate * 10;
 
-          // Real explicit premium resolution (do not use rateVariance):
-          const linePremRate = parseExplicitNum(line.premium ?? line.premium_rate);
-          const linePremAmt = parseExplicitNum(line.premium_amount ?? line.val_premium_amt);
-          const poKeys = [...getPoKeys(poNo), ...getPoKeys(saudaNo)];
+          // Real explicit premium resolution strictly from payment_master & payment_details:
+          const poKeys = getPoKeys(poNo);
           let headerPrem = { rate: 0, amount: 0, source: '' };
           for (const k of poKeys) {
             if (premiumLookupMap.has(k)) {
@@ -700,20 +701,21 @@ export async function loadAndProcessSystemReportData(): Promise<{
           let premiumRate = 0;
           let premiumAmount = 0;
 
-          if (linePremRate > 0) {
-            premiumRate = linePremRate;
-            premiumAmount = linePremAmt > 0 ? linePremAmt : quantityMT * premiumRate * 10;
-          } else if (linePremAmt > 0) {
-            premiumAmount = linePremAmt;
-            premiumRate = quantityMT > 0 ? premiumAmount / (quantityMT * 10) : 0;
-          } else if (headerPrem.rate > 0) {
-            premiumRate = headerPrem.rate;
-            premiumAmount = headerPrem.amount > 0 ? headerPrem.amount : quantityMT * premiumRate * 10;
-          } else if (headerPrem.amount > 0) {
-            premiumAmount = details.length > 0 && totalPoContract > 0 
-              ? (headerPrem.amount * (quantityMT / totalPoContract)) 
-              : headerPrem.amount;
-            premiumRate = quantityMT > 0 ? premiumAmount / (quantityMT * 10) : 0;
+          const cleanPoKey = poNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const matchedMrs = unifiedPremiums.byPoMap.get(cleanPoKey) || [];
+          const poTotalPremium = matchedMrs.reduce((s, m) => s + m.totalPremiumAmount, 0);
+          const poAvgRate = matchedMrs.length > 0 ? (matchedMrs[0].avgPremiumRatePerQtl || 0) : 0;
+
+          if (poTotalPremium > 0) {
+            if (details.length > 1) {
+              const baseShare = Math.floor((poTotalPremium / details.length) * 100) / 100;
+              premiumAmount = (dIdx === details.length - 1)
+                ? Number((poTotalPremium - (baseShare * (details.length - 1))).toFixed(2))
+                : baseShare;
+            } else {
+              premiumAmount = poTotalPremium;
+            }
+            premiumRate = poAvgRate;
           }
 
           const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
@@ -750,10 +752,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
           if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
           if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
 
+          const matchedMrNo = matchedMrs.map(m => m.mrNo).filter(Boolean).join(', ') || undefined;
+          const matchedVoucherNo = matchedMrs.map(m => m.voucherNo).filter(Boolean).join(', ') || undefined;
+
           transactionLines.push({
             txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
             saudaNo,
             poNo,
+            mrNo: matchedMrNo,
+            voucherNo: matchedVoucherNo,
             date,
             month: getYearMonth(date),
             financialYear: getFinancialYear(date),
@@ -811,8 +818,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
         const grossPurchaseValue = quantityMT * purchaseRate * 10;
         const baseRateValue = quantityMT * baseRate * 10;
 
-        // Real explicit premium resolution (do not use rateVariance):
-        const poKeys = [...getPoKeys(poNo), ...getPoKeys(saudaNo)];
+        // Real explicit premium resolution (matched strictly by PO number):
+        const poKeys = getPoKeys(poNo);
         let headerPrem = { rate: 0, amount: 0, source: '' };
         for (const k of poKeys) {
           if (premiumLookupMap.has(k)) {
@@ -821,11 +828,18 @@ export async function loadAndProcessSystemReportData(): Promise<{
           }
         }
 
-        const explicitPoPremRate = parseExplicitNum(po.premium ?? po.premium_rate);
-        const explicitPoPremAmt = parseExplicitNum(po.summary_premium_amount ?? po.val_premium_amt ?? po.premium_amount);
+        const cleanPoKey = poNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const matchedMrs = unifiedPremiums.byPoMap.get(cleanPoKey) || [];
+        const poTotalPremium = matchedMrs.reduce((s, m) => s + m.totalPremiumAmount, 0);
+        const poAvgRate = matchedMrs.length > 0 ? (matchedMrs[0].avgPremiumRatePerQtl || 0) : 0;
 
-        let premiumRate = explicitPoPremRate > 0 ? explicitPoPremRate : headerPrem.rate;
-        let premiumAmount = explicitPoPremAmt > 0 ? explicitPoPremAmt : (headerPrem.amount > 0 ? headerPrem.amount : (premiumRate > 0 ? quantityMT * premiumRate * 10 : 0));
+        let premiumRate = 0;
+        let premiumAmount = 0;
+
+        if (poTotalPremium > 0) {
+          premiumAmount = poTotalPremium;
+          premiumRate = poAvgRate;
+        }
         if (premiumRate === 0 && premiumAmount > 0 && quantityMT > 0) {
           premiumRate = premiumAmount / (quantityMT * 10);
         }
@@ -863,10 +877,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
         if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
         if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
 
+        const matchedMrNo = matchedMrs.map(m => m.mrNo).filter(Boolean).join(', ') || undefined;
+        const matchedVoucherNo = matchedMrs.map(m => m.voucherNo).filter(Boolean).join(', ') || undefined;
+
         transactionLines.push({
           txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
           saudaNo,
           poNo,
+          mrNo: matchedMrNo,
+          voucherNo: matchedVoucherNo,
           date,
           month: getYearMonth(date),
           financialYear: getFinancialYear(date),
@@ -1023,8 +1042,15 @@ export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemRep
     effectiveCostSum += t.effectiveCost;
     totalPremium += t.premiumAmount;
     if (t.premiumAmount > 0) {
-      const mrKey = t.poNo || t.saudaNo || t.txnId || `TXN-${idx}`;
-      premiumMRSet.add(mrKey);
+      if (t.mrNo) {
+        t.mrNo.split(',').forEach(m => {
+          const trimmed = m.trim();
+          if (trimmed) premiumMRSet.add(trimmed);
+        });
+      } else {
+        const mrKey = t.poNo || t.saudaNo || t.txnId || `TXN-${idx}`;
+        premiumMRSet.add(mrKey);
+      }
     }
     totalDeduction += t.deductionAmount;
     totalClaim += t.claimAmount;

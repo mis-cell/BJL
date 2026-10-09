@@ -10,6 +10,7 @@
  */
 
 import { formatIndianCurrency } from '../lib/utils';
+import { aggregatePremiumsFromTables, filterAggregatedPremiums } from './paymentCalculationEngine';
 
 export interface UnifiedContractRecord {
   id: string;
@@ -389,6 +390,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     settlements = [],
     selectedYear 
   } = params;
+
+  // Unified payment & details premium calculation engine
+  const unifiedPremiums = aggregatePremiumsFromTables(paymentRecords, paymentDetails);
 
   // Build Premium lookup map by normalized MR Number & PO Number & Voucher Number
   // Priority: 1. Payment Operations ("Material Grade Details Breakdown"), 2. Sauda Check Point, 3. PO
@@ -1223,19 +1227,12 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     const qualitySourceList = completedInspections;
 
-    // Direct aggregation of MRs with Premium from Payment Section and Inspections
-    const monthPremiumMrMap = new Map<string, { rate: number; amount: number; qtl: number }>();
-
-    // 1. All Payment Section MRs with Premium for this month and activeYear
-    paymentMrPremiumMap.forEach(p => {
-      if (p.year === activeYear && p.month === mIdx && (p.amount > 0 || p.rate > 0)) {
-        monthPremiumMrMap.set(p.cleanMr, {
-          rate: p.rate,
-          amount: p.amount,
-          qtl: p.weightQtl
-        });
-      }
-    });
+    // Direct aggregation of MRs with Premium from unified engine
+    const monthPrem = filterAggregatedPremiums(unifiedPremiums, activeYear, mIdx);
+    const premLots = monthPrem.count;
+    const premSum = monthPrem.sum;
+    const premRateTotal = monthPrem.mrs.reduce((acc, m) => acc + m.avgPremiumRatePerQtl, 0);
+    const premQtlTotal = monthPrem.mrs.reduce((acc, m) => acc + m.totalQuantityQtl, 0);
 
     qualitySourceList.forEach(r => {
       totWt += r.weightMt;
@@ -1250,32 +1247,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       totClaim += r.totalClaimAmount;
       if (r.claimMoisture > 0 || r.moistureDeductionAmount > 0) moistClaimLots++;
       if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
-
-      if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
-        const clean = r.cleanMrNo || r.mrNo;
-        if (clean && !monthPremiumMrMap.has(clean)) {
-          const lotPremAmt = r.premiumAmount > 0 
-            ? r.premiumAmount 
-            : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
-          monthPremiumMrMap.set(clean, {
-            rate: r.premiumRate,
-            amount: lotPremAmt,
-            qtl: r.weightQtl || (r.weightMt * 10)
-          });
-        }
-      }
     });
-
-    const premLots = monthPremiumMrMap.size;
-    let premSum = 0;
-    let premRateTotal = 0;
-    let premQtlTotal = 0;
-    monthPremiumMrMap.forEach(v => {
-      premSum += v.amount;
-      premRateTotal += v.rate;
-      premQtlTotal += v.qtl;
-    });
-    premSum = Number(premSum.toFixed(2));
 
     const moistCount = qualitySourceList.filter(r => r.actualMoisture > 0).length;
     const claimMoistCount = qualitySourceList.filter(r => r.claimMoisture > 0).length;
@@ -1536,31 +1508,13 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     totalChottaHabijabiKg += r.totalChottaHabijabiKg;
     totalClaimAmount += r.totalClaimAmount;
 
-    if (r.isPremium && (r.premiumRate > 0 || r.premiumAmount > 0 || r.premium !== "No")) {
-      const clean = r.cleanMrNo || r.mrNo;
-      if (clean && !yearPremiumMrMap.has(clean)) {
-        const lotPremAmt = r.premiumAmount > 0 
-          ? r.premiumAmount 
-          : (r.premiumRate > 0 ? (r.premiumRate * (r.weightMt * 10)) : 0);
-        yearPremiumMrMap.set(clean, {
-          rate: r.premiumRate,
-          amount: lotPremAmt,
-          qtl: r.weightQtl || (r.weightMt * 10)
-        });
-      }
-    }
   });
 
-  const totalPremiumLots = yearPremiumMrMap.size;
-  let totalPremiumSum = 0;
-  let totalPremiumRateSum = 0;
-  let totalPremiumQtlSum = 0;
-  yearPremiumMrMap.forEach(v => {
-    totalPremiumSum += v.amount;
-    totalPremiumRateSum += v.rate;
-    totalPremiumQtlSum += v.qtl;
-  });
-  totalPremiumSum = Number(totalPremiumSum.toFixed(2));
+  const yearPrem = filterAggregatedPremiums(unifiedPremiums, activeYear, null);
+  const totalPremiumLots = yearPrem.count;
+  const totalPremiumSum = yearPrem.sum;
+  const totalPremiumRateSum = yearPrem.mrs.reduce((acc, m) => acc + m.avgPremiumRatePerQtl, 0);
+  const totalPremiumQtlSum = yearPrem.mrs.reduce((acc, m) => acc + m.totalQuantityQtl, 0);
   const avgPremiumRate = totalPremiumLots > 0 
     ? (totalPremiumQtlSum > 0 && totalPremiumSum > 0 ? Number((totalPremiumSum / totalPremiumQtlSum).toFixed(2)) : (totalPremiumRateSum > 0 ? Number((totalPremiumRateSum / totalPremiumLots).toFixed(2)) : 0)) 
     : 0;
