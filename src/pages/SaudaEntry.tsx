@@ -890,6 +890,10 @@ export default function SaudaEntry({
         'signature_url',
         'status',
         'approval_status',
+        'created_by',
+        'is_checked',
+        'checked_by',
+        'checked_at',
         'approved_by',
         'approved_at',
         'rejected_by',
@@ -950,6 +954,29 @@ export default function SaudaEntry({
           saudaPayload.sauda_id = match.sauda_id;
           isEditMode = true;
         }
+      }
+
+      // Maker-Checker Workflow Enforcements:
+      // When a user creates a new entry or resubmits a previously rejected entry, reset status to PENDING
+      // for the Checker (User ID 010) to verify again.
+      const isWasRejected = initialData && (
+        String(initialData.status || '').toUpperCase() === 'REJECTED' ||
+        String(initialData.approval_status || '').toUpperCase() === 'REJECTED' ||
+        Boolean(initialData.rejected_by)
+      );
+
+      if (!isEditMode || isWasRejected) {
+        saudaPayload.status = 'PENDING';
+        saudaPayload.approval_status = 'PENDING';
+        saudaPayload.is_checked = false;
+        saudaPayload.checked_by = null;
+        saudaPayload.checked_at = null;
+        saudaPayload.rejected_by = null;
+        saudaPayload.rejected_at = null;
+      }
+
+      if (!isEditMode && !saudaPayload.created_by) {
+        saudaPayload.created_by = userCtx.userName || userCtx.username || userCtx.userId || 'Rahul (002)';
       }
 
       if (saudaPayload.sauda_id) {
