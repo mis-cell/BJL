@@ -142,6 +142,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       millInspectionCount: number;
       paymentOperationCount: number;
       settlementCount: number;
+      poCount: number;
+      poQuantityMT: number;
+      poGrossValue: number;
     }>();
 
     filteredList.forEach(t => {
@@ -167,7 +170,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         finalArrivalCount: 0,
         millInspectionCount: 0,
         paymentOperationCount: 0,
-        settlementCount: 0
+        settlementCount: 0,
+        poCount: 0,
+        poQuantityMT: 0,
+        poGrossValue: 0
       };
 
       existing.dealCount += 1;
@@ -179,6 +185,13 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       existing.premiumAmount += t.premiumAmount;
       existing.paidAmount += t.paidAmount;
       existing.pendingPayable += t.pendingPayable;
+
+      const hasValidPO = Boolean(t.poNo && t.poNo !== 'Pending P.O.' && t.poNo !== '-');
+      if (hasValidPO) {
+        existing.poCount += 1;
+        existing.poQuantityMT += t.quantityMT;
+        existing.poGrossValue += t.grossPurchaseValue;
+      }
 
       if (t.isAbnormal || t.moisturePct > 14 || t.deductionAmount > 0) {
         existing.abnormalDeals += 1;
@@ -528,6 +541,108 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             const currentData = activeTab === 'MONTH' ? [...totalcurrentData].sort((a, b) => { const [yearA, monthA] = String(a.key).split('-').map(Number); const [yearB, monthB] = String(b.key).split('-').map(Number); return ( new Date(yearB, monthB - 1).getTime() - new Date(yearA, monthA - 1).getTime() ); }) : totalcurrentData;
 
             if (subAnalysisMode === 'VOLUME') {
+              if (activeTab === 'MONTH') {
+                return (
+                  <div className="space-y-4">
+                    {/* Month Summary Cards for Sauda Check Point + Final P.O */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="p-3.5 bg-gradient-to-br from-emerald-50 to-green-100 border border-emerald-300 rounded-xl shadow-xs">
+                        <span className="text-xs font-black uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                          <span>🟢</span> 1. Sauda Check Point Section (Month Wise Total)
+                        </span>
+                        <div className="mt-2.5 grid grid-cols-3 gap-2 font-mono text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">Total Deals</span>
+                            <strong className="text-slate-900 font-bold text-sm">{monthData.reduce((acc, m) => acc + m.dealCount, 0)} Deals</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">Contract Weight</span>
+                            <strong className="text-emerald-900 font-bold text-sm">{monthData.reduce((acc, m) => acc + m.quantityMT, 0).toFixed(2)} MT</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">Sauda Value</span>
+                            <strong className="text-slate-900 font-bold text-sm">{formatIndianCurrency(monthData.reduce((acc, m) => acc + m.grossValue, 0))}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-300 rounded-xl shadow-xs">
+                        <span className="text-xs font-black uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
+                          <span>📄</span> 2. Final P.O Section (Month Wise Total)
+                        </span>
+                        <div className="mt-2.5 grid grid-cols-3 gap-2 font-mono text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">Total Final POs</span>
+                            <strong className="text-slate-900 font-bold text-sm">{monthData.reduce((acc, m) => acc + m.poCount, 0)} POs</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">PO Weight</span>
+                            <strong className="text-blue-900 font-bold text-sm">{monthData.reduce((acc, m) => acc + m.poQuantityMT, 0).toFixed(2)} MT</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase block font-sans font-bold">PO Value</span>
+                            <strong className="text-slate-900 font-bold text-sm">{formatIndianCurrency(monthData.reduce((acc, m) => acc + m.poGrossValue, 0))}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Integrated Both Section Month Wise Table */}
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
+                      <table className="w-full text-xs text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider">
+                            <th className="p-3 border-r border-slate-800" rowSpan={2}>Month</th>
+                            <th className="p-2 text-center bg-emerald-950 text-emerald-200 border-r border-emerald-900" colSpan={4}>
+                              🟢 SAUDA CHECK POINT SECTION
+                            </th>
+                            <th className="p-2 text-center bg-blue-950 text-blue-200" colSpan={5}>
+                              📄 FINAL P.O SECTION
+                            </th>
+                          </tr>
+                          <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
+                            <th className="p-2.5 text-center bg-emerald-50">Deals</th>
+                            <th className="p-2.5 text-right bg-emerald-50">Contract Wt (MT)</th>
+                            <th className="p-2.5 text-right bg-emerald-50">Avg Rate (₹)</th>
+                            <th className="p-2.5 text-right bg-emerald-50 border-r border-slate-200">Sauda Value</th>
+                            
+                            <th className="p-2.5 text-center bg-blue-50">Final POs</th>
+                            <th className="p-2.5 text-right bg-blue-50">PO Weight (MT)</th>
+                            <th className="p-2.5 text-right bg-blue-50">Arrived Wt (MT)</th>
+                            <th className="p-2.5 text-right bg-blue-50">Paid Amount</th>
+                            <th className="p-2.5 text-right bg-blue-50 text-rose-800">Pending Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
+                          {currentData.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition">
+                              <td className="p-2.5 font-bold text-slate-900 font-sans border-r border-slate-200 flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">
+                                  {idx + 1}
+                                </span>
+                                <span>{row.key}</span>
+                              </td>
+                              {/* Sauda Check Point */}
+                              <td className="p-2.5 text-center font-bold text-emerald-900 bg-emerald-50/30">{row.dealCount}</td>
+                              <td className="p-2.5 text-right font-bold text-emerald-950 bg-emerald-50/30">{row.quantityMT.toFixed(2)} MT</td>
+                              <td className="p-2.5 text-right text-slate-800 bg-emerald-50/30">₹{Math.round(row.avgRate).toLocaleString()}</td>
+                              <td className="p-2.5 text-right font-bold text-slate-900 bg-emerald-50/30 border-r border-slate-200">{formatIndianCurrency(row.grossValue)}</td>
+
+                              {/* Final PO */}
+                              <td className="p-2.5 text-center font-bold text-blue-900 bg-blue-50/30">{row.poCount}</td>
+                              <td className="p-2.5 text-right font-bold text-blue-950 bg-blue-50/30">{row.poQuantityMT.toFixed(2)} MT</td>
+                              <td className="p-2.5 text-right text-slate-700 bg-blue-50/30">{row.arrivedMT.toFixed(2)} MT</td>
+                              <td className="p-2.5 text-right font-bold text-emerald-800 bg-blue-50/30">{formatIndianCurrency(row.paidAmount)}</td>
+                              <td className="p-2.5 text-right font-bold text-rose-800 bg-blue-50/30">{formatIndianCurrency(row.pendingPayable)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left border-collapse">
@@ -570,21 +685,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3 text-right font-mono font-black text-slate-900">{formatIndianCurrency(row.grossValue)}</td>
                             <td className="p-3 text-right font-mono text-emerald-800 font-bold">{formatIndianCurrency(row.paidAmount)}</td>
                             <td className="p-3 text-right font-mono text-rose-800 font-bold">{formatIndianCurrency(row.pendingPayable)}</td>
-                            {/* <td className="p-3 text-center">
-                              {idx < Math.ceil(currentData.length * 0.3) ? (
-                                <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  🌟 Top Business Provider
-                                </span>
-                              ) : idx >= currentData.length - Math.ceil(currentData.length * 0.3) ? (
-                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  📉 Lower Business Volume
-                                </span>
-                              ) : (
-                                <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  ⚖️ Regular Business
-                                </span>
-                              )}
-                            </td> */}
                           </tr>
                         ))}
                     </tbody>
