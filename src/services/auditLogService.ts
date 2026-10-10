@@ -147,7 +147,7 @@ export async function logChange(params: {
     window.dispatchEvent(new CustomEvent('app-audit-logged', { detail: logEntry }));
   }
 
-  // 3. Persist to Supabase app_audit_logs table asynchronously
+  // 3. Persist to Supabase app_audit_logs & user_activity_logs tables asynchronously
   if (supabase) {
     try {
       supabase
@@ -176,6 +176,27 @@ export async function logChange(params: {
           },
           err => {
             console.warn('Supabase audit log insert error:', err);
+          }
+        );
+
+      supabase
+        .from('user_activity_logs')
+        .insert({
+          username: logEntry.user_name,
+          activity_type: logEntry.action || 'UPDATE',
+          module_name: logEntry.module,
+          action_details: logEntry.remarks || `${logEntry.field_label || logEntry.field_name} changed from "${formattedOld}" to "${formattedNew}"`,
+          ip_address: 'Local',
+          created_at: nowIso
+        })
+        .then(
+          ({ error }) => {
+            if (error) {
+              console.warn('Could not insert to user_activity_logs:', error.message);
+            }
+          },
+          err => {
+            console.warn('user_activity_logs insert error:', err);
           }
         );
     } catch (e) {
@@ -285,6 +306,53 @@ export async function fetchAppAuditLogs(filters?: AuditLogFilters): Promise<AppA
       const { data, error } = await query;
       if (!error && data && Array.isArray(data)) {
         dbLogs = data;
+      }
+
+      // Also query user_activity_logs table to combine ALL activity logs
+      try {
+        let actQuery = supabase
+          .from('user_activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(filters?.limit || 500);
+
+        if (filters?.module && filters.module !== 'ALL') {
+          actQuery = actQuery.ilike('module_name', `%${filters.module}%`);
+        }
+        if (filters?.userName && filters.userName !== 'ALL') {
+          actQuery = actQuery.ilike('username', `%${filters.userName}%`);
+        }
+        if (filters?.dateFrom) {
+          actQuery = actQuery.gte('created_at', `${filters.dateFrom}T00:00:00`);
+        }
+        if (filters?.dateTo) {
+          actQuery = actQuery.lte('created_at', `${filters.dateTo}T23:59:59`);
+        }
+
+        const { data: actData, error: actErr } = await actQuery;
+        if (!actErr && actData && Array.isArray(actData)) {
+          for (const row of actData) {
+            const rowId = `ual_${row.log_id || Math.random()}`;
+            dbLogs.push({
+              id: rowId,
+              timestamp: row.created_at || new Date().toISOString(),
+              created_at: row.created_at || new Date().toISOString(),
+              module: row.module_name || 'System Activity',
+              entity_name: row.activity_type || 'User Activity',
+              record_id: `LOG-${row.log_id || 'REF'}`,
+              action: (row.activity_type?.toUpperCase() as any) || 'UPDATE',
+              field_name: row.activity_type || 'Activity',
+              field_label: 'Activity Log Details',
+              old_value: '—',
+              new_value: row.action_details || 'Recorded',
+              user_name: row.username || 'System User',
+              user_role: 'User',
+              remarks: row.action_details || 'Activity log'
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not query user_activity_logs:', e);
       }
     } catch (e) {
       console.warn('Could not query app_audit_logs from Supabase:', e);

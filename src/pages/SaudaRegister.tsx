@@ -334,7 +334,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const currentlyRejected = isRejectedSauda(entry);
     const nextRejected = !currentlyRejected;
-    const rejectorName = userCtx.userName || userCtx.username || userCtx.userId || 'Admin';
+    const rejectorName = userCtx.userName || userCtx.username || userCtx.userId || 'User';
 
     const updatePayload = {
       is_checked: false,
@@ -1241,8 +1241,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     String(entry.approval_status || '').toUpperCase() === 'REJECTED' ||
                     Boolean(entry.rejected_by)
                   );
+                  const userCtx = getCurrentUserContext();
                   const checkerName = entry.checked_by || entry.approved_by || (isChecked ? 'User 10' : '');
-                  const rejectorName = entry.rejected_by || (isRejected ? 'Admin' : '');
+                  const rejectorName = entry.rejected_by || (isRejected ? (userCtx.userName || userCtx.username || 'User') : '');
 
                   return (
                     <tr 

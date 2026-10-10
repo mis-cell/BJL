@@ -661,17 +661,40 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
 export function getCurrentUserContext(): UserContext {
   if (typeof window !== 'undefined') {
     try {
-      const saved = window.localStorage.getItem('bally_user_context');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedCtx = window.localStorage.getItem('bally_user_context');
+      const savedSess = window.localStorage.getItem('bally_auth_session');
+      let merged: any = { ...currentUserContext };
+
+      if (savedCtx) {
+        const parsed = JSON.parse(savedCtx);
         if (parsed && typeof parsed === 'object') {
-          currentUserContext = {
-            ...currentUserContext,
-            ...parsed,
-            allowedModules: normalizeAllowedModules(parsed.allowedModules || parsed.allowed_modules || []),
-          };
+          merged = { ...merged, ...parsed };
         }
       }
+
+      if (savedSess) {
+        const parsed = JSON.parse(savedSess);
+        if (parsed && typeof parsed === 'object') {
+          const nameVal = parsed.userName || parsed.username || parsed.name || parsed.userId || parsed.user_id;
+          if (nameVal) {
+            merged.userName = merged.userName || nameVal;
+            merged.username = merged.username || nameVal;
+          }
+          if (parsed.role) merged.userRole = merged.userRole || parsed.role;
+          if (parsed.level) merged.userLevel = merged.userLevel || parsed.level;
+          if (parsed.userId) merged.userId = merged.userId || parsed.userId;
+        }
+      }
+
+      if (merged.userName || merged.username) {
+        merged.userName = merged.userName || merged.username;
+        merged.username = merged.username || merged.userName;
+      }
+
+      currentUserContext = {
+        ...merged,
+        allowedModules: normalizeAllowedModules(merged.allowedModules || merged.allowed_modules || []),
+      };
     } catch {
       // Ignore fallback errors
     }
